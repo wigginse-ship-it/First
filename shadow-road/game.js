@@ -185,15 +185,25 @@ function doHits() {
     P.hits.set(p, now); hitProp(p, m);
   }
 }
+// critical hits: a small base chance, much better from behind or against helpless enemies
+function critChance(e) {
+  let c = .06 + .015 * (save.wl[P.w] - 1);
+  if ((P.x - e.x) * e.facing < 0) c += .25;                 // struck from behind
+  if (e.state === 'down' || e.frozen > 0) c += .3;           // staggered, knocked down or frozen
+  else if (e.air) c += .12;                                  // juggled in the air
+  return Math.min(.75, c);
+}
 function strike(e, base, dir, m, echo) {
   let dmg = Math.round(base * rand(.9, 1.1) * (stillT > 0 ? 2 : 1));
-  hurtEnemy(e, dmg, dir, m);
+  const crit = !m.trump && Math.random() < critChance(e);
+  if (crit) dmg = Math.round(dmg * 1.8);
+  hurtEnemy(e, dmg, dir, m, crit);
   if (brandT > 0 && !m.trump && !m.el && !e.dead) applyElement(e, base, dir);
   if (mirrorT > 0 && !echo) echoes.push({ e, dmg: base * .6, dir, m, t: .14 });
 }
 const MAT_COL = { goo: ['#D88AAE', '#F0C8D8', '#FFF4E8'], fur: ['#B86A3E', '#E8C08A', '#FFF4E8'], spark: ['#F0D890', '#E0A0C0', '#FFF8E8'], rock: ['#9A8E80', '#7EA460', '#E8D08A'], metal: ['#F0D890', '#FFF8E8', '#9FD8E8'], crystal: ['#9FD8E0', '#D8A0C8', '#FFFFFF'], flesh: ['#8E2A40', '#C8607A', '#F0D8C8'] };
 const MAT_SFX = { goo: 'hit-goo', fur: 'hit-flesh', spark: 'hit-crystal', rock: 'hit-flesh', metal: 'hit-metal', crystal: 'hit-crystal', flesh: 'hit-flesh' };
-function hurtEnemy(e, dmg, dir, m) {
+function hurtEnemy(e, dmg, dir, m, crit) {
   const pw = m.power || 0;
   e.hp -= dmg; e.flash = .09; e.sqx = 1 + .18 + .1 * pw; e.sqy = 1 - .16 - .06 * pw;
   hitstop = Math.max(hitstop, [.045, .075, .12][pw]); e.jit = hitstop + .04;
@@ -203,7 +213,11 @@ function hurtEnemy(e, dmg, dir, m) {
   burst(hx, e.y, hz, MAT_COL[e.def.mat], 7 + pw * 6, e.def.mat, dir);
   fx.push({ kind: 'slash', x: hx, y: e.y, z: hz, ang: rand(-.6, .6) + (m.launch ? -1.2 : 0), t: .16, max: .16, size: 18 + pw * 10, col: pw === 2 ? '#D8AA55' : '#FFFFFF' });
   fx.push({ kind: 'ring', x: hx, y: e.y, z: hz, t: .2, max: .2, r: 10 + pw * 8, col: '#FFFFFF' });
-  floatText(e.x, e.y, e.z + e.hh + 10, String(dmg), pw === 2 ? '#D8AA55' : '#FFFFFF', 14 + pw * 4);
+  if (crit) {
+    floatText(e.x, e.y, e.z + e.hh + 14, dmg + '!', '#FFB35A', 22 + pw * 4); floatText(e.x, e.y, e.z + e.hh + 50, 'CRITICAL', '#FFE2A0', 11);
+    fx.push({ kind: 'crit', x: hx, y: e.y, z: hz, t: .3, max: .3, r: 34 + pw * 10 });
+    hitstop = Math.max(hitstop, .14); flashT = Math.max(flashT, .04); zoom = Math.max(zoom, .04); shakeMag = Math.max(shakeMag, 7); sfx('crit');
+  } else floatText(e.x, e.y, e.z + e.hh + 10, String(dmg), pw === 2 ? '#D8AA55' : '#FFFFFF', 14 + pw * 4);
   sfx(MAT_SFX[e.def.mat], pw * .5);
   comboN++; comboT = 1.8; refreshCombo(true);
   if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg);
@@ -238,7 +252,7 @@ function hurtEnemy(e, dmg, dir, m) {
 const DEATH_BY = { sword: 'slice', staff: 'crumple', hammer: 'splat' };
 function killEnemy(e, dir, m) {
   e.dead = true; e.state = 'dying'; e.dir = dir;
-  e.death = m.trump ? 'pop' : DEATH_BY[P.w] || 'pop';
+  e.death = m.trump ? 'pop' : P.w === 'hammer' ? (m.smash ? 'splat' : 'pop') : DEATH_BY[P.w] || 'pop'; // the hammer only splats on a downward smash
   hitstop = Math.max(hitstop, .13); zoom = Math.max(zoom, .05); flashT = .06;
   const cols = MAT_COL[e.def.mat], cy = e.z + e.hh * .5;
   if (e.death === 'pop') {
@@ -268,7 +282,7 @@ function killEnemy(e, dir, m) {
   if (last || e.boss) slowmo = e.boss ? 1.4 : .45;
   if (e.boss) { shakeMag = 10; clearT = 3.2; sfx('slam'); }
 }
-function popEnemy(e) { // the dying body bursts on landing and drops loot
+function popEnemy(e) { // the body hits the ground in a burst of debris and drops its loot
   burst(e.x, e.y, e.hh * .4, MAT_COL[e.def.mat], 26, e.def.mat, 0, true);
   fx.push({ kind: 'ring', x: e.x, y: e.y, z: 6, t: .35, max: .35, r: 40 + e.hw, col: MAT_COL[e.def.mat][0], flat: 1 });
   sfx('break');

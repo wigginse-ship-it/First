@@ -113,7 +113,7 @@ function renderForge(note) {
     const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
-      <p>${owned ? w.desc : (id === 'sword' ? 'A brass automaton in the Skyport carries it.' : id === 'staff' ? 'A moss golem in Bloomwild Vale carries it.' : 'A thornboar in Bloomwild Vale carries it.') + ' Look for the gold shimmer.'}</p><ul>${moves}</ul>
+      <p>${owned ? w.desc : 'Someone in ' + (id === 'sword' ? 'the Clockwork Skyport' : 'Bloomwild Vale') + ' is carrying it. Beat enemies there and it will drop.'}</p><ul>${moves}</ul>
       ${owned ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Learn next move · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');

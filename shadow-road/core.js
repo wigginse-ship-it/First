@@ -83,6 +83,8 @@ function sfx(k, power = 1) {
       case 'slice': noise(0.12, 0.3, 5200, 2); tone(2400, 0.25, 'sine', 0.06, 600); noise(0.25, 0.2, 700); break;
       case 'crunch': noise(0.2, 0.4, 600, 1.4); tone(110, 0.2, 'square', 0.1, 50); noise(0.1, 0.3, 2400, 3); break;
       case 'roar': noise(0.9, 0.5, 260, 0.5); tone(70, 0.9, 'sawtooth', 0.12, 45); tone(110, 0.7, 'square', 0.05, 60); break;
+      case 'crit': tone(1760, 0.18, 'triangle', 0.1, 2640); tone(2637, 0.3, 'sine', 0.06); noise(0.12, 0.35, 3000, 1.5); break;
+      case 'growl': tone(90, 0.45, 'sawtooth', 0.07, 60); noise(0.4, 0.12, 300, 0.7); break;
       case 'break': noise(0.25, 0.35, 1800, 0.7); tone(1200, 0.3, 'sine', 0.06, 2400); break;
     }
   } catch (e) {}

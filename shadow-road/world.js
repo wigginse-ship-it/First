@@ -40,7 +40,13 @@ function spawnEnemy(type, side, isBoss) {
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
   enemies.push(e); return e;
 }
-let hazards = []; // telegraphed boss attacks: ground marks that erupt, falling strikes, lane beams
+let hazards = [], carriers = [], corpses = [];
+// the fallen stay where they fell for the rest of the world (the oldest fade once there are too many)
+function toCorpse(e, kind) {
+  e.remove = true; e.corpse = true; e.z = 0; e.vx = e.vz = 0;
+  if (kind) e.death = kind;
+  corpses.push(e); if (corpses.length > 30) corpses.shift();
+} // telegraphed boss attacks: ground marks that erupt, falling strikes, lane beams
 function attackers() { let n = 0; for (const e of enemies) if (!e.dead && ['wind', 'strike', 'dash', 'pounce', 'leap'].includes(e.state)) n++; return n; }
 function leftWall() { return (lockX !== null ? lockX : camX) + 14; }
 function rightWall() { return (lockX !== null ? lockX : camX) + VW - 14; }
@@ -70,10 +76,10 @@ function updateEnemy(e, dt) {
   switch (e.state) {
     case 'dying':
       e.t -= dt;
-      if (e.death === 'pop') { if (e.t <= 0 && !e.popped) { e.popped = true; popEnemy(e); e.remove = true; } return; }
+      if (e.death === 'pop') { if (e.t <= 0 && !e.popped) { e.popped = true; popEnemy(e); toCorpse(e, 'lie'); } return; }
       e.x += e.vx * dt; e.vx *= Math.pow(.03, dt);
       if (fly && e.z > 0) { e.vz -= GRAV * dt; e.z = Math.max(0, e.z + e.vz * dt); if (e.z === 0) { dust(e.x, e.y, 6); e.vz = 0; } }
-      if (e.t <= 0) e.remove = true;
+      if (e.t <= 0) toCorpse(e);
       return;
     case 'hurt':
       e.t -= dt; if (!e.air) { e.x += e.vx * dt; e.vx *= Math.pow(.02, dt); if (Math.abs(e.vx) > 160 && Math.random() < .5) dust(e.x, e.y, 1); }
@@ -132,7 +138,7 @@ function updateEnemy(e, dt) {
 }
 function enemyLand(e) {
   e.sqx = 1.35; e.sqy = .65;
-  if (e.state === 'dying') { if (e.death === 'pop' && !e.popped) { e.popped = true; popEnemy(e); e.remove = true; } return; }
+  if (e.state === 'dying') { if (e.death === 'pop' && !e.popped) { e.popped = true; popEnemy(e); toCorpse(e, 'lie'); } return; }
   if (e.bounce) { e.bounce = false; e.vz = 300 * (e.boss ? .4 : e.def.weight); e.air = true; shakeMag = Math.max(shakeMag, 5); dust(e.x, e.y, 8); sfx('slam'); return; }
   if (e.state === 'leap') { slamLand(e); return; }
   if (e.state === 'pounce') { dust(e.x, e.y, 5); recover(e, .6); return; }
@@ -157,7 +163,12 @@ function approach(e, tx, ty, dt, k) {
   }
   e.y = clamp(e.y, FLOOR_TOP + 8, FLOOR_BOT);
 }
-function wind(e, t) { e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0; }
+// bosses take longer to wind up, so every big attack can be read and dodged
+const BOSS_WIND = { bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
+function wind(e, t) {
+  if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * (e.enraged ? .85 : 1); sfx('growl'); if (e.plan === 'slam') e.ty = P.y, e.tx = P.x; }
+  e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
+}
 function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]); }
 function execute(e) {
   const p = e.plan;
@@ -166,7 +177,7 @@ function execute(e) {
   else if (p === 'shoot') { bolt(e, e.y); recover(e, .5); }
   else if (p === 'volley') { [-22, 0, 22].forEach(o => bolt(e, clamp(e.y + o, FLOOR_TOP + 6, FLOOR_BOT))); recover(e, .8); }
   else if (p === 'charge') { e.state = 'dash'; e.t = .8; e.struck = false; sfx('whoosh'); }
-  else if (p === 'slam') { e.state = 'leap'; e.vz = 420; e.vx = (P.x - e.x) / .84; e.ty = P.y; }
+  else if (p === 'slam') { const tx = e.boss && e.tx !== undefined ? e.tx : P.x; e.state = 'leap'; e.vz = 420; e.vx = (tx - e.x) / .84; e.ty = e.boss && e.ty !== undefined ? e.ty : P.y; e.tx = undefined; }
   else if (p === 'sweep') { e.state = 'strike'; e.t = .3; e.around = true; sfx('whoosh'); shakeMag = Math.max(shakeMag, 3); }
   else if (p === 'roll') { e.state = 'dash'; e.t = .9; e.rolls = e.enraged ? 3 : 2; e.struck = false; sfx('whoosh'); }
   else if (p === 'erupt') {
@@ -210,6 +221,7 @@ function bolt(e, y) {
 function updateLoot(dt) {
   for (const k of loot) {
     k.t += dt;
+    k.x = clamp(k.x, leftWall() + 12, rightWall() - 12); // loot never lands outside where you can walk
     if (k.z > 0 || k.vz > 0) { k.vz -= GRAV * dt; k.z = Math.max(0, k.z + k.vz * dt); k.x += k.vx * dt; if (k.z === 0) { k.vz = Math.abs(k.vz) > 120 ? -k.vz * .4 : 0; k.vx *= .5; } }
     const d = Math.hypot(P.x - k.x, (P.y - k.y) * 1.5);
     if (P.state === 'dead' || k.t < .5) continue;
@@ -237,11 +249,13 @@ function gainWeapon(id) {
 function startStage(i) {
   stageIdx = i; stage = STAGES[i];
   P = newPlayer();
-  enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = [];
+  enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; corpses = [];
   props = stage.pods.map(x => ({ kind: 'pod', x, y: FLOOR_TOP + 46 + (x % 3) * 18, hp: 1, theme: stage.theme }));
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
   runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stag = null; brandT = 0;
+  // each run, a random enemy in a random wave carries each weapon this world can give
+  carriers = stage.drops.map(d => { const w = Math.floor(Math.random() * stage.waves.length); return { weapon: d.weapon, wave: w, slot: Math.floor(Math.random() * stage.waves[w].length) }; });
   buildBackground(stage.theme, i * 97 + 13);
   $('#bossbar').hidden = true; $('#go').hidden = true;
   refreshHud(true); refreshCombo();
@@ -253,7 +267,7 @@ function updateWorld(dt) {
     waveActive = true; lockX = clamp(camX, 0, stage.len - VW); $('#go').hidden = true;
     const wave = stage.waves[waveIdx];
     wave.forEach((t, j) => spawnQ.push({ type: t, side: j % 2 ? -1 : 1, at: j * .8, drop: null }));
-    for (const d of stage.drops) if (d.wave === waveIdx && !save.owned[d.weapon]) spawnQ[wave.indexOf(d.type)].drop = d.weapon; // this enemy carries a weapon
+    for (const d of carriers) if (d.wave === waveIdx && !save.owned[d.weapon]) spawnQ[d.slot].drop = d.weapon; // nothing marks the carrier
   }
   if (!bossSpawned && waveIdx >= stage.waves.length && P.x > stage.len - VW * .75) {
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;

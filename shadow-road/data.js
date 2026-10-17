@@ -26,14 +26,14 @@ const WEAPONS = {
     tree: {
       L:    { dur: .44, h: [.4, .62], x0: 0, x1: 62, dmg: 15, kb: 200, arc: [-2, 1.2], lunge: 50, power: 1 },
       LL:   { dur: .5,  h: [.4, .62], x0: 0, x1: 62, dmg: 17, kb: 260, arc: [1.2, -1.8], lunge: 60, power: 1 },
-      H:    { dur: .64, h: [.45, .62], x0: 0, x1: 66, dmg: 24, kb: 90, launch: 330, arc: [-2.7, 1.5], hop: 140, bounce: 1, shock: 70, power: 2 },
+      H:    { smash: 1, dur: .64, h: [.45, .62], x0: 0, x1: 66, dmg: 24, kb: 90, launch: 330, arc: [-2.7, 1.5], hop: 140, bounce: 1, shock: 70, power: 2 },
       D:    { dur: .56, h: [.1, .6], x0: 0, x1: 60, dmg: 18, kb: 360, arc: [1.4, 1.4], lunge: 440, crouch: 1, power: 1 },
       R:    { dur: .6,  h: [.25, .7], x0: 0, x1: 64, dmg: 22, kb: 300, arc: [-P_, P_], around: 1, rot: -TAU, lunge: 120, power: 2 },
-      A:    { dur: .55, h: [.15, .97], x0: 0, x1: 54, dmg: 22, kb: 160, arc: [-2, 1.5], dive: 1, shock: 64, power: 2 },
+      A:    { smash: 1, dur: .55, h: [.15, .97], x0: 0, x1: 54, dmg: 22, kb: 160, arc: [-2, 1.5], dive: 1, shock: 64, power: 2 },
       LLL:  { lvl: 2, name: 'Hammer Cyclone', desc: 'Spin with the hammer held out, hitting everyone around you many times.', how: 'Attack ×3', dur: .85, h: [.12, .88], x0: 0, x1: 62, dmg: 9, kb: 200, arc: [-P_, 3 * P_], around: 1, multi: .13, lunge: 140, power: 1 },
       LH:   { lvl: 3, name: 'Golf Swing', desc: 'An upward swing that launches enemies sky-high, ready for juggling.', how: 'Attack, Heavy', dur: .55, h: [.35, .6], x0: 0, x1: 62, dmg: 20, kb: 80, launch: 560, arc: [2.3, -2.6], power: 2 },
-      HH:   { lvl: 4, name: 'Earthquake', desc: 'Leap, flip and slam down hard enough to launch everything near you.', how: 'Heavy, Heavy', dur: .78, h: [.62, .78], x0: 0, x1: 70, dmg: 28, kb: 200, launch: 380, arc: [-2.8, 1.5], hop: 320, rot: -TAU, around: 1, shock: 140, power: 2 },
-      LLH:  { lvl: 5, name: 'Comet Drop', desc: 'Somersault high into the air and come down like a falling star.', how: 'Attack ×2, Heavy', dur: .8, h: [.62, .8], x0: 0, x1: 70, dmg: 38, kb: 160, launch: 300, arc: [-2.8, 1.5], hop: 420, rot: TAU, lunge: 220, bounce: 1, shock: 110, power: 2 },
+      HH:   { smash: 1, lvl: 4, name: 'Earthquake', desc: 'Leap, flip and slam down hard enough to launch everything near you.', how: 'Heavy, Heavy', dur: .78, h: [.62, .78], x0: 0, x1: 70, dmg: 28, kb: 200, launch: 380, arc: [-2.8, 1.5], hop: 320, rot: -TAU, around: 1, shock: 140, power: 2 },
+      LLH:  { smash: 1, lvl: 5, name: 'Comet Drop', desc: 'Somersault high into the air and come down like a falling star.', how: 'Attack ×2, Heavy', dur: .8, h: [.62, .8], x0: 0, x1: 70, dmg: 38, kb: 160, launch: 300, arc: [-2.8, 1.5], hop: 420, rot: TAU, lunge: 220, bounce: 1, shock: 110, power: 2 },
     } },
   staff: { name: 'Bowstaff', reach: 54, look: 'staff', desc: 'Long reach, spins that hit all around, and big acrobatics.',
     tree: {

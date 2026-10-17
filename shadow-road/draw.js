@@ -48,7 +48,6 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
 }
 function drawEnemy(e, t) {
   if (e.state === 'dying' && e.death && e.death !== 'pop') { drawDeath(e, t); return; }
-  if (e.state === 'dying' && e.t < .5 && Math.floor(t * 24) % 2) return;
   const scale = e.boss ? 1 : 1;
   const a = { walk: e.walk, t, wind: e.state === 'wind' ? 1 - e.t / e.windMax : 0, atk: ['strike', 'dash', 'pounce'].includes(e.state), hurt: ['hurt', 'down', 'dying'].includes(e.state) };
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') { a.pose = humanEnemyPose(e); if (e.state === 'down' || (e.state === 'dying' && !e.air)) a.pose.down = 1; }
@@ -60,13 +59,6 @@ function drawEnemy(e, t) {
     ctx.fillStyle = gg; circle(e.x, cy, e.hh * 1.3); ctx.fill(); ctx.restore();
     if (Math.random() < .5) parts.push({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: e.z + rand(0, e.hh), vx: rand(-20, 20), vy: 0, vz: rand(60, 120), life: .8, max: .8, col: pick(['#FF9A5A', '#FFD27A', '#E86A80']), size: rand(2, 3.5), shape: 'star', rot: 0, vr: 6 });
   }
-  if (e.dropWeapon && !save.owned[e.dropWeapon] && !e.dead) {
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    const gg = ctx.createRadialGradient(e.x, e.y - e.z - e.hh / 2, 4, e.x, e.y - e.z - e.hh / 2, e.hh);
-    gg.addColorStop(0, `rgba(255,214,120,${.35 + .15 * Math.sin(t * 5)})`); gg.addColorStop(1, 'rgba(255,214,120,0)');
-    ctx.fillStyle = gg; circle(e.x, e.y - e.z - e.hh / 2, e.hh); ctx.fill(); ctx.restore();
-    ctx.save(); ctx.translate(e.x - 22, e.y - e.z - e.hh - 30 + Math.sin(t * 3) * 3); ctx.rotate(-.5); ctx.scale(.7, .7); drawWeapon(e.dropWeapon); ctx.restore();
-  }
   const jx = e.jit > 0 ? rand(-3, 3) : 0;
   ctx.save();
   ctx.translate(e.x + jx, e.y - e.z);
@@ -74,6 +66,7 @@ function drawEnemy(e, t) {
   if ((e.state === 'down' || (e.state === 'dying' && !e.air)) && !a.pose) rot = e.def.move === 'hop' ? 0 : -1.35;
   ctx.scale(e.facing, 1);
   if (rot) { ctx.translate(0, -e.hh * .5); ctx.rotate(rot * e.facing); ctx.translate(0, e.hh * .5); }
+  if (e.boss && e.state === 'wind') { const w = 1 - e.t / e.windMax; ctx.translate(-e.hw * .6, 0); ctx.rotate(-.1 * w); ctx.translate(e.hw * .6, 0); } // rears back before striking
   ctx.scale(e.sqx * scale, e.sqy * scale);
   if (e.state === 'down' && e.def.move === 'hop') ctx.scale(1.3, .55);
   FLASH = e.flash > 0 || (e.state === 'wind' && e.t < .25 && Math.floor(t * 20) % 2 === 0);
@@ -98,15 +91,21 @@ function drawEnemy(e, t) {
 }
 // ---------- weapon-specific deaths ----------
 function drawDeath(e, t) {
-  const el = e.dmax - e.t, dl = (e.dir || 1) * e.facing; // dl: knock direction in the enemy's own facing space
+  const el = e.corpse ? (e.dmax || 1) : e.dmax - e.t, dl = (e.dir || 1) * e.facing; // dl: knock direction in the enemy's own facing space
   const a = { walk: 0, t, wind: 0, atk: false, hurt: true };
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') a.pose = { arm: -1, lean: -.3 };
   const draw = () => CREATURES[e.def.draw](e, a);
   shadow(e.x, e.y, e.hw * 1.1);
-  ctx.save(); ctx.globalAlpha = Math.min(1, e.t / .6);
+  ctx.save(); ctx.globalAlpha = e.fade !== undefined ? e.fade : 1;
   ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1);
   FLASH = el < .08;
-  if (e.death === 'slice') {
+  if (e.death === 'lie') { // knocked flat and left where it landed
+    FLASH = false;
+    if (e.def.move === 'hop') ctx.scale(1.4, .5);
+    else if (a.pose) { a.pose.down = 1; }
+    else { ctx.rotate(-1.4 * Math.sign(dl || 1)); ctx.translate(e.hh * .45 * Math.sign(dl || 1), -e.hw * .2); }
+    draw();
+  } else if (e.death === 'slice') {
     const cutY = -e.hh * .5, ang = e.cut * dl;
     const piece = (upper) => {
       ctx.save();
@@ -194,6 +193,8 @@ function drawScene(t) {
   // resting debris lies flat on the floor under everything
   for (const p of parts) if (p.rest) drawPart(p);
   for (const h of hazards) if (h.kind !== 'beam') drawHazard(h, t);
+  for (const e of enemies) if (e.boss && e.state === 'wind' && e.plan !== 'roar') drawTell(e, t);
+  corpses.forEach((c, i) => { c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; drawDeath(c, t); });
   const list = [];
   for (const p of props) list.push([p.y, () => { FLASH = p.flash > 0; drawPod(p, t); FLASH = false; }]);
   for (const k of loot) list.push([k.y, () => drawLoot(k, t)]);
@@ -255,6 +256,11 @@ function drawFx(f) {
     const len = f.size * (1.6 - k * .6);
     ctx.fillStyle = f.col; ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(0, -3 * k - 1); ctx.lineTo(len, 0); ctx.lineTo(0, 3 * k + 1); ctx.closePath(); ctx.fill();
     ctx.rotate(1.2); ctx.beginPath(); ctx.moveTo(-len * .6, 0); ctx.lineTo(0, -2 * k - .5); ctx.lineTo(len * .6, 0); ctx.lineTo(0, 2 * k + .5); ctx.closePath(); ctx.fill();
+  } else if (f.kind === 'crit') { // a starburst of light on a critical hit
+    ctx.translate(f.x, f.y - f.z); const r = f.r * (1.3 - k * .5);
+    ctx.fillStyle = 'rgba(255,200,120,.95)';
+    for (let i = 0; i < 8; i++) { ctx.rotate(TAU / 8); ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(r * (i % 2 ? .6 : 1), 0); ctx.lineTo(0, 3); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,.95)'; circle(0, 0, 6 * k + 2); ctx.fill();
   } else if (f.kind === 'bolt') { // forked lightning between two enemies
     const r = mulberry(Math.floor(f.seed * 1000 + f.t * 60));
     ctx.strokeStyle = f.col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(f.x, f.y - f.z);
@@ -333,4 +339,31 @@ function drawHazard(h, t) {
     }
     ctx.restore();
   }
+}
+
+// a boss shows where its attack will land: a red zone that fills as the wind-up runs out
+function drawTell(e, t) {
+  const k = 1 - e.t / e.windMax, a = .12 + .3 * k + .1 * Math.sin(t * 20), p = e.plan, f = e.facing;
+  ctx.save();
+  ctx.fillStyle = `rgba(230,70,70,${a})`; ctx.strokeStyle = `rgba(255,120,110,${.5 + .4 * k})`; ctx.lineWidth = 2;
+  if (p === 'bite' || p === 'swing') {
+    const len = e.def.reach + e.hw, x0 = f > 0 ? e.x : e.x - len;
+    rrect(x0, e.y - 20, len, 40, 18); ctx.fill(); ctx.stroke();
+  } else if (p === 'sweep') {
+    ell(e.x, e.y, e.def.reach + e.hw, (e.def.reach + e.hw) * .3); ctx.fill(); ctx.stroke();
+  } else if (p === 'roll' || p === 'charge') {
+    const x1 = f > 0 ? camX + VW : camX, x0 = e.x;
+    ctx.fillRect(Math.min(x0, x1), e.y - 16, Math.abs(x1 - x0), 32);
+    for (let i = 1; i < 6; i++) { const ax = x0 + f * (i * 70 + (t * 160) % 70); ctx.beginPath(); ctx.moveTo(ax, e.y - 10); ctx.lineTo(ax + f * 14, e.y); ctx.lineTo(ax, e.y + 10); ctx.stroke(); }
+  } else if (p === 'slam' && e.tx !== undefined) {
+    ell(e.tx, e.ty, 95, 30); ctx.fill(); ctx.stroke();
+  } else if (p === 'groundwave') {
+    const x1 = f > 0 ? camX + VW : camX; ctx.fillRect(Math.min(e.x, x1), e.y - 10, Math.abs(x1 - e.x), 20);
+  }
+  ctx.restore();
+  // the boss itself glows with warning
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const cy = e.y - e.z - e.hh * .55, g = ctx.createRadialGradient(e.x, cy, 10, e.x, cy, e.hh);
+  g.addColorStop(0, `rgba(255,80,60,${.15 + .3 * k})`); g.addColorStop(1, 'rgba(255,80,60,0)');
+  ctx.fillStyle = g; circle(e.x, cy, e.hh); ctx.fill(); ctx.restore();
 }
