@@ -7,6 +7,7 @@ let enemies = [], projs = [], parts = [], fx = [], nums = [], loot = [], props =
 let camX = 0, lockX = null, waveIdx = 0, waveActive = false, bossSpawned = false, boss = null;
 let hitstop = 0, shakeMag = 0, shakeDir = 0, zoom = 0, slowmo = 0, clearT = 0, flashT = 0, hurtFlash = 0;
 let runShards = 0, runSigils = 0, comboN = 0, comboT = 0, trumpCharge = 0, mirrorT = 0, stillT = 0, stag = null;
+let brandT = 0, brandEl = 'fire', brandN = 0;
 
 function newPlayer() {
   return { x: 80, y: 300, z: 0, vx: 0, vz: 0, facing: 1, state: 'idle', t: 0, hp: maxHp(), inv: 0, walk: 0,
@@ -187,10 +188,11 @@ function doHits() {
 function strike(e, base, dir, m, echo) {
   let dmg = Math.round(base * rand(.9, 1.1) * (stillT > 0 ? 2 : 1));
   hurtEnemy(e, dmg, dir, m);
+  if (brandT > 0 && !m.trump && !m.el && !e.dead) applyElement(e, base, dir);
   if (mirrorT > 0 && !echo) echoes.push({ e, dmg: base * .6, dir, m, t: .14 });
 }
-const MAT_COL = { goo: ['#D88AAE', '#F0C8D8', '#FFF4E8'], fur: ['#B86A3E', '#E8C08A', '#FFF4E8'], spark: ['#F0D890', '#E0A0C0', '#FFF8E8'], rock: ['#9A8E80', '#7EA460', '#E8D08A'], metal: ['#F0D890', '#FFF8E8', '#9FD8E8'], crystal: ['#9FD8E0', '#D8A0C8', '#FFFFFF'] };
-const MAT_SFX = { goo: 'hit-goo', fur: 'hit-flesh', spark: 'hit-crystal', rock: 'hit-flesh', metal: 'hit-metal', crystal: 'hit-crystal' };
+const MAT_COL = { goo: ['#D88AAE', '#F0C8D8', '#FFF4E8'], fur: ['#B86A3E', '#E8C08A', '#FFF4E8'], spark: ['#F0D890', '#E0A0C0', '#FFF8E8'], rock: ['#9A8E80', '#7EA460', '#E8D08A'], metal: ['#F0D890', '#FFF8E8', '#9FD8E8'], crystal: ['#9FD8E0', '#D8A0C8', '#FFFFFF'], flesh: ['#8E2A40', '#C8607A', '#F0D8C8'] };
+const MAT_SFX = { goo: 'hit-goo', fur: 'hit-flesh', spark: 'hit-crystal', rock: 'hit-flesh', metal: 'hit-metal', crystal: 'hit-crystal', flesh: 'hit-flesh' };
 function hurtEnemy(e, dmg, dir, m) {
   const pw = m.power || 0;
   e.hp -= dmg; e.flash = .09; e.sqx = 1 + .18 + .1 * pw; e.sqy = 1 - .16 - .06 * pw;
@@ -207,10 +209,17 @@ function hurtEnemy(e, dmg, dir, m) {
   if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg);
   if (e.hp <= 0) { killEnemy(e, dir, m); return; }
   e.cd = Math.max(e.cd, .4);
+  if (e.boss && (e.state === 'down' || e.stagger)) return; // a staggered boss stays down while you punish it
   if (e.poiseMax && !e.air) {
     e.poise -= 1 + pw;
     if (e.poise > 0) { e.vx = dir * (m.kb || 0) * .12; e.flinch = .12; return; }
     e.poise = e.poiseMax;
+    if (e.boss) { // poise broken: the boss collapses and is open for a few seconds
+      e.state = 'down'; e.t = 2.4; e.plan = null; e.rolls = 0; e.around = false;
+      if (e.def.move === 'fly') { e.air = true; e.vz = 0; e.stagger = 2.4; }
+      floatText(e.x, e.y, e.z + e.hh + 24, 'STAGGERED', '#EED48A', 18); sfx('crunch'); shakeMag = 10; zoom = .05;
+      return;
+    }
   }
   if (stillT > 0) return; // frozen enemies just take the damage
   e.state = 'hurt'; e.t = .26 + .12 * pw; e.plan = null;
@@ -225,10 +234,36 @@ function hurtEnemy(e, dmg, dir, m) {
     } else { e.vz = Math.min(e.vz, -100); }
   }
 }
+// each weapon finishes enemies its own way: the sword cuts them in two, the staff caves them in, the hammer flattens them
+const DEATH_BY = { sword: 'slice', staff: 'crumple', hammer: 'splat' };
 function killEnemy(e, dir, m) {
-  e.dead = true; e.state = 'dying'; e.t = 1.2; e.air = true;
-  e.vx = dir * Math.max(260, (m.kb || 0) * 1.2) * (e.boss ? .3 : 1); e.vz = Math.max(e.vz, e.boss ? 200 : 300); e.spin = dir * 12 * (e.boss ? .15 : 1);
+  e.dead = true; e.state = 'dying'; e.dir = dir;
+  e.death = m.trump ? 'pop' : DEATH_BY[P.w] || 'pop';
   hitstop = Math.max(hitstop, .13); zoom = Math.max(zoom, .05); flashT = .06;
+  const cols = MAT_COL[e.def.mat], cy = e.z + e.hh * .5;
+  if (e.death === 'pop') {
+    e.t = 1.2; e.air = true;
+    e.vx = dir * Math.max(260, (m.kb || 0) * 1.2) * (e.boss ? .3 : 1); e.vz = Math.max(e.vz, e.boss ? 200 : 300); e.spin = dir * 12 * (e.boss ? .15 : 1);
+  } else {
+    e.air = false; e.spin = 0; e.rotA = 0; e.vz = 0; e.dmax = e.t = e.death === 'splat' ? 2.4 : 2;
+    e.vx = dir * (e.death === 'crumple' ? 170 : e.death === 'slice' ? 40 : 0) * (e.boss ? .3 : 1);
+    dropLoot(e);
+    if (e.death === 'slice') {
+      e.cut = rand(-.45, .45);
+      for (let i = -6; i <= 6; i++) burst(e.x + Math.cos(e.cut) * i * e.hw * .25, e.y, cy + Math.sin(-e.cut) * i * e.hw * .25, cols, 2, e.def.mat, dir);
+      fx.push({ kind: 'slash', x: e.x, y: e.y, z: cy, ang: -e.cut, t: .3, max: .3, size: 46 + e.hw, col: '#FFFFFF' });
+      sfx('slice');
+    } else if (e.death === 'crumple') {
+      e.dents = [0, 1, 2].map(() => ({ x: rand(-.6, .6), y: rand(.25, .85), r: rand(3, 6) }));
+      burst(e.x, e.y, cy, cols, 14, e.def.mat === 'flesh' ? 'rock' : e.def.mat, dir);
+      sfx('crunch'); shakeMag = Math.max(shakeMag, 5);
+    } else {
+      e.z = 0; e.splat = [...Array(11)].map((_, i) => ({ a: i / 11 * TAU + rand(-.2, .2), l: rand(.8, 1.6), w: rand(3, 6) }));
+      for (let i = 0; i < 26; i++) parts.push({ x: e.x, y: e.y + rand(-6, 6), z: 2, vx: Math.cos(i / 26 * TAU) * rand(120, 260), vy: Math.sin(i / 26 * TAU) * rand(20, 60), vz: rand(60, 200), life: rand(1.5, 3), max: 3, col: pick(cols), size: rand(3, 6), shape: e.def.mat === 'metal' ? 'bolt' : e.def.mat === 'crystal' ? 'shard' : 'blob', rot: 0, vr: rand(-10, 10) });
+      fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 60 + e.hw * 1.5, col: cols[0], flat: 1 });
+      sfx('slam'); sfx('hit-goo'); shakeMag = Math.max(shakeMag, 9);
+    }
+  }
   const last = !enemies.some(o => !o.dead) && !spawnQ.length;
   if (last || e.boss) slowmo = e.boss ? 1.4 : .45;
   if (e.boss) { shakeMag = 10; clearT = 3.2; sfx('slam'); }
@@ -237,6 +272,9 @@ function popEnemy(e) { // the dying body bursts on landing and drops loot
   burst(e.x, e.y, e.hh * .4, MAT_COL[e.def.mat], 26, e.def.mat, 0, true);
   fx.push({ kind: 'ring', x: e.x, y: e.y, z: 6, t: .35, max: .35, r: 40 + e.hw, col: MAT_COL[e.def.mat][0], flat: 1 });
   sfx('break');
+  dropLoot(e);
+}
+function dropLoot(e) {
   const [a, b] = e.def.shards || [30, 40];
   const n = Math.round(rand(a, b) * (1 + .3 * save.cycle)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
@@ -291,23 +329,60 @@ function playTrump() {
   banner(card.name, 'TRUMP PLAYED', 1.4);
   if (save.trump === 'stag') stag = { x: camX - 60, y: P.y, hit: new Set(), t: 0 };
   else if (save.trump === 'mirror') mirrorT = 10;
+  else if (save.trump === 'brand') { brandEl = ['fire', 'frost', 'storm'][brandN++ % 3]; brandT = 15; banner(ELEMENTS[brandEl].name, 'YOUR WEAPON IS BRANDED FOR 15 SECONDS', 1.6); burst(P.x, P.y, 50, [ELEMENTS[brandEl].col, '#FFFFFF'], 30, 'spark', 0, true); }
   else if (save.trump === 'stillness') stillT = 5;
   else if (save.trump === 'phoenix') {
     P.hp = Math.min(maxHp(), P.hp + maxHp() * .5);
     burst(P.x, P.y, 30, ['#EED48A', '#D8834A', '#D04A62', '#FFFFFF'], 50, 'spark', 0, true);
     fx.push({ kind: 'ring', x: P.x, y: P.y, z: 20, t: .5, max: .5, r: 150, col: '#D8834A', flat: 1 });
-    for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 150) strike(e, 30, Math.sign(e.x - P.x) || 1, { dmg: 30, kb: 420, launch: 300, power: 2 }, true);
+    for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 150) strike(e, 30, Math.sign(e.x - P.x) || 1, { dmg: 30, kb: 420, launch: 300, power: 2, trump: 1 }, true);
   }
   refreshHud();
 }
 function updateTrumps(dt) {
-  mirrorT = Math.max(0, mirrorT - dt); stillT = Math.max(0, stillT - dt);
+  mirrorT = Math.max(0, mirrorT - dt); stillT = Math.max(0, stillT - dt); brandT = Math.max(0, brandT - dt);
+  if (brandT > 0 && Math.random() < .7) { // the branded weapon sheds its element
+    const el = ELEMENTS[brandEl];
+    parts.push({ x: P.x + P.facing * rand(10, 40), y: P.y, z: rand(30, 60), vx: rand(-20, 20), vy: 0, vz: brandEl === 'frost' ? -10 : rand(40, 90), life: .5, max: .5, col: pick([el.col, '#FFFFFF']), size: rand(2, 3.5), shape: 'star', rot: 0, vr: 5 });
+  }
   for (const ec of echoes) { ec.t -= dt; if (ec.t <= 0 && !ec.e.dead) strike(ec.e, ec.dmg, ec.dir, ec.m, true); }
   echoes = echoes.filter(ec => ec.t > 0);
   if (stag) {
     stag.t += dt; stag.x += 620 * dt;
     if (Math.random() < .8) burst(stag.x - 20, stag.y, rand(10, 50), ['#BFF5FF', '#FFFFFF', '#EED48A'], 2, 'spark');
-    for (const e of enemies) if (!e.dead && !stag.hit.has(e) && Math.abs(e.x - stag.x) < 34 && Math.abs(e.y - stag.y) < 60) { stag.hit.add(e); strike(e, 45, 1, { dmg: 45, kb: 380, launch: 460, power: 2 }, true); }
+    for (const e of enemies) if (!e.dead && !stag.hit.has(e) && Math.abs(e.x - stag.x) < 34 && Math.abs(e.y - stag.y) < 60) { stag.hit.add(e); strike(e, 45, 1, { dmg: 45, kb: 380, launch: 460, power: 2, trump: 1 }, true); }
     if (stag.x > camX + VW + 80) stag = null;
   }
+}
+
+// ---------- elemental brand ----------
+function applyElement(e, base, dir) {
+  const el = ELEMENTS[brandEl], cy = e.z + e.hh * .5;
+  if (brandEl === 'fire') { e.burn = 3.2; e.burnBase = Math.max(3, base * .18); }
+  else if (brandEl === 'frost') {
+    e.chill = 3; e.frost = (e.frost || 0) + 1;
+    if (e.frost >= 4) { e.frost = 0; e.frozen = 1.8; e.state = e.state === 'dying' ? e.state : 'hurt'; e.t = 1.8; burst(e.x, e.y, cy, ['#9FE0FF', '#FFFFFF', '#6EA8D8'], 16, 'crystal', 0, true); floatText(e.x, e.y, e.z + e.hh + 18, 'FROZEN', el.col, 15); sfx('hit-crystal'); }
+  } else {
+    const near = enemies.filter(o => o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < 140).sort((p, q) => Math.abs(p.x - e.x) - Math.abs(q.x - e.x)).slice(0, 2);
+    for (const o of near) {
+      fx.push({ kind: 'bolt', x: e.x, y: e.y, z: cy, x2: o.x, y2: o.y, z2: o.z + o.hh * .5, t: .2, max: .2, col: el.col, seed: Math.random() * 99 });
+      strike(o, base * .5, Math.sign(o.x - e.x) || dir, { dmg: base * .5, kb: 60, power: 0, el: 1 });
+    }
+    sfx('shoot');
+  }
+  burst(e.x, e.y, cy, [el.col, '#FFFFFF'], 6, 'spark', dir);
+}
+function updateElements(e, dt) { // burning, chill and freeze on one enemy; returns true while frozen solid
+  if (e.burn > 0 && !e.dead) {
+    e.burn -= dt; e.burnTick = (e.burnTick || 0) - dt;
+    if (Math.random() < .6) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(0, e.hh), vx: rand(-10, 10), vy: 0, vz: rand(80, 140), life: .5, max: .5, col: pick(['#FF8A4A', '#FFD27A', '#E85A3A']), size: rand(2.5, 4), shape: 'puff', rot: 0, vr: 0 });
+    if (e.burnTick <= 0) {
+      e.burnTick = .5; const d = Math.round(e.burnBase); e.hp -= d;
+      floatText(e.x, e.y, e.z + e.hh + 6, String(d), '#FF8A4A', 11);
+      if (e.hp <= 0) killEnemy(e, 1, { trump: 1 });
+    }
+  }
+  if (e.chill > 0) e.chill -= dt;
+  if (e.frozen > 0 && !e.dead) { e.frozen -= dt; return true; }
+  return false;
 }

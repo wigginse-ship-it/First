@@ -4,7 +4,7 @@ function burst(x, y, z, cols, n, mat, dir = 0, big) {
   cols = Array.isArray(cols) ? cols : [cols];
   for (let i = 0; i < n && parts.length < 420; i++) {
     const sp = big ? rand(80, 260) : rand(60, 200), a = rand(0, TAU);
-    const shape = mat === 'goo' ? 'blob' : mat === 'metal' ? (i % 3 ? 'streak' : 'bolt') : mat === 'crystal' ? 'shard' : mat === 'rock' ? 'chunk' : mat === 'fur' ? 'tuft' : 'star';
+    const shape = mat === 'flesh' ? (i % 2 ? 'blob' : 'tuft') : mat === 'goo' ? 'blob' : mat === 'metal' ? (i % 3 ? 'streak' : 'bolt') : mat === 'crystal' ? 'shard' : mat === 'rock' ? 'chunk' : mat === 'fur' ? 'tuft' : 'star';
     parts.push({ x, y: y + rand(-4, 4), z, vx: Math.cos(a) * sp * .8 + dir * rand(40, 160), vy: rand(-30, 30), vz: rand(60, big ? 380 : 260),
       life: rand(.4, .8) + (shape !== 'streak' && shape !== 'star' ? rand(1.2, 2.6) : 0), max: 0, col: pick(cols), size: rand(2, big ? 6 : 4.5), shape, rot: rand(0, TAU), vr: rand(-12, 12), rest: false });
     parts[parts.length - 1].max = parts[parts.length - 1].life;
@@ -40,6 +40,7 @@ function spawnEnemy(type, side, isBoss) {
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
   enemies.push(e); return e;
 }
+let hazards = []; // telegraphed boss attacks: ground marks that erupt, falling strikes, lane beams
 function attackers() { let n = 0; for (const e of enemies) if (!e.dead && ['wind', 'strike', 'dash', 'pounce', 'leap'].includes(e.state)) n++; return n; }
 function leftWall() { return (lockX !== null ? lockX : camX) + 14; }
 function rightWall() { return (lockX !== null ? lockX : camX) + VW - 14; }
@@ -47,7 +48,9 @@ function updateEnemy(e, dt) {
   e.flash = Math.max(0, e.flash - dt); e.jit = Math.max(0, e.jit - dt); e.flinch = Math.max(0, (e.flinch || 0) - dt);
   e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12);
   if (stillT > 0 && !e.dead) return;
-  e.cd -= dt;
+  if (updateElements(e, dt)) return;
+  if (e.boss && !e.enraged && !e.dead && e.hp < e.maxHp * .5 && ['idle', 'recover'].includes(e.state)) { e.enraged = true; e.plan = 'roar'; wind(e, .5); }
+  e.cd -= dt * (e.enraged ? 1.5 : 1);
   const fly = e.def.move === 'fly';
   const ballistic = e.air || e.state === 'leap' || e.state === 'pounce' || (!fly && (e.z > 0 || e.vz > 0)); // vz > 0 lets a hop leave the ground
   if (ballistic) {
@@ -59,13 +62,19 @@ function updateEnemy(e, dt) {
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.z + 20, t: .25, max: .25, r: 30, col: '#FFFFFF' });
     }
     if (e.z <= 0) { e.z = 0; enemyLand(e); }
-  } else if (fly && !['down', 'dying'].includes(e.state)) {
+  } else if (fly && !['down', 'dying'].includes(e.state) && !e.dead) {
     e.z += (e.def.hover + Math.sin(performance.now() / 300 + e.walk) * 6 - e.z) * Math.min(1, dt * 3);
   }
   e.x = clamp(e.x, camX - 60, camX + VW + 60);
   const dxp = P.x - e.x, dyp = P.y - e.y;
   switch (e.state) {
-    case 'dying': e.t -= dt; if (e.t <= 0 && !e.popped) { e.popped = true; popEnemy(e); e.remove = true; } return;
+    case 'dying':
+      e.t -= dt;
+      if (e.death === 'pop') { if (e.t <= 0 && !e.popped) { e.popped = true; popEnemy(e); e.remove = true; } return; }
+      e.x += e.vx * dt; e.vx *= Math.pow(.03, dt);
+      if (fly && e.z > 0) { e.vz -= GRAV * dt; e.z = Math.max(0, e.z + e.vz * dt); if (e.z === 0) { dust(e.x, e.y, 6); e.vz = 0; } }
+      if (e.t <= 0) e.remove = true;
+      return;
     case 'hurt':
       e.t -= dt; if (!e.air) { e.x += e.vx * dt; e.vx *= Math.pow(.02, dt); if (Math.abs(e.vx) > 160 && Math.random() < .5) dust(e.x, e.y, 1); }
       if (e.t <= 0 && !e.air) { e.state = 'idle'; e.jug = 0; }
@@ -75,12 +84,13 @@ function updateEnemy(e, dt) {
       if (e.t <= 0) { e.state = 'idle'; e.rotA = 0; e.cd = Math.max(e.cd, .6); e.jug = 0; e.walls = 0; }
       return;
     case 'idle': {
-      if (!e.plan) e.plan = pick(e.def.plans);
+      if (!e.plan) e.plan = pick(e.boss ? (e.enraged ? e.def.p2 : e.def.p1) : e.def.plans);
       const p = e.plan, side = Math.sign(e.x - P.x) || 1;
       e.facing = -side;
       // anyone outside the view walks straight in before doing anything else
       const inL = camX + 26 + e.hw, inR = camX + VW - 26 - e.hw;
       if (e.x < inL || e.x > inR) { approach(e, clamp(e.x, inL + 30, inR - 30), P.y, dt, 1.5); return; }
+      if (p === 'roar') { wind(e, .45); return; }
       const melee = p === 'bite' || p === 'swing' || p === 'pounce';
       const busy = attackers() >= 2 && !e.boss;
       let tx, ready;
@@ -100,16 +110,18 @@ function updateEnemy(e, dt) {
       e.t -= dt;
       if (!e.struck) {
         e.struck = true;
-        const fwd = (P.x - e.x) * e.facing, reach = e.def.reach + e.hw;
+        const fwd = (P.x - e.x) * (e.around ? Math.sign(P.x - e.x) || 1 : e.facing), reach = e.def.reach + e.hw;
         if (fwd > -10 && fwd < reach && Math.abs(dyp) < 18 + e.hw * .2 && P.z < 40) playerDamage(e.dmg, e.x, e.hw > 22 || e.boss);
       }
-      if (e.t <= 0) recover(e, .5);
+      if (e.t <= 0) { e.around = false; recover(e, .5); }
       return;
     case 'dash':
-      e.t -= dt; e.x += e.facing * (e.boss ? 330 : 300) * dt;
+      e.t -= dt; e.x += e.facing * (e.plan === 'roll' ? 400 : e.boss ? 330 : 300) * dt; if (e.plan === 'roll') e.rotA += e.facing * dt * 14;
       if (Math.random() < .7) dust(e.x - e.facing * e.hw, e.y, 1);
       if (!e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 18 && P.z < 30) { e.struck = true; playerDamage(Math.round(e.dmg * 1.2), e.x, true); }
-      if (e.t <= 0 || e.x < leftWall() || e.x > rightWall()) { e.x = clamp(e.x, leftWall(), rightWall()); recover(e, .8); }
+      if (e.rolls > 0 && (e.x < leftWall() || e.x > rightWall())) { // the rolling shell rebounds off the edges
+        e.rolls--; e.facing *= -1; e.t = .9; e.struck = false; e.x = clamp(e.x, leftWall(), rightWall()); shakeMag = 8; sfx('slam'); dust(e.x, e.y, 10);
+      } else if (e.t <= 0 || e.x < leftWall() || e.x > rightWall()) { e.rolls = 0; e.x = clamp(e.x, leftWall(), rightWall()); recover(e, .8); }
       return;
     case 'pounce': case 'leap':
       if (e.state === 'pounce' && !e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 16 && zOverlap(P.z, 60, e.z, e.hh)) { e.struck = true; playerDamage(e.dmg, e.x, false); }
@@ -120,15 +132,15 @@ function updateEnemy(e, dt) {
 }
 function enemyLand(e) {
   e.sqx = 1.35; e.sqy = .65;
-  if (e.state === 'dying') { if (!e.popped) { e.popped = true; popEnemy(e); e.remove = true; } return; }
+  if (e.state === 'dying') { if (e.death === 'pop' && !e.popped) { e.popped = true; popEnemy(e); e.remove = true; } return; }
   if (e.bounce) { e.bounce = false; e.vz = 300 * (e.boss ? .4 : e.def.weight); e.air = true; shakeMag = Math.max(shakeMag, 5); dust(e.x, e.y, 8); sfx('slam'); return; }
   if (e.state === 'leap') { slamLand(e); return; }
   if (e.state === 'pounce') { dust(e.x, e.y, 5); recover(e, .6); return; }
-  if (e.air) { e.air = false; e.spin = 0; e.state = 'down'; e.t = .85; e.walls = 0; dust(e.x, e.y, 8); shakeMag = Math.max(shakeMag, 2.5); }
+  if (e.air) { e.air = false; e.spin = 0; e.state = 'down'; e.t = e.stagger || .85; e.stagger = 0; e.walls = 0; dust(e.x, e.y, 8); shakeMag = Math.max(shakeMag, 2.5); }
   if (e.def.move === 'hop') { e.sq = .7; }
 }
 function approach(e, tx, ty, dt, k) {
-  const dx = tx - e.x, dy = ty - e.y, sp = e.def.spd * k;
+  const dx = tx - e.x, dy = ty - e.y, sp = e.def.spd * k * (e.enraged ? 1.3 : 1) * (e.chill > 0 ? .5 : 1);
   const moving = Math.abs(dx) > 3 || Math.abs(dy) > 3;
   if (e.def.move === 'hop') { // jellybloom-style hopping
     e.sq += (1 - e.sq) * Math.min(1, dt * 8);
@@ -155,6 +167,27 @@ function execute(e) {
   else if (p === 'volley') { [-22, 0, 22].forEach(o => bolt(e, clamp(e.y + o, FLOOR_TOP + 6, FLOOR_BOT))); recover(e, .8); }
   else if (p === 'charge') { e.state = 'dash'; e.t = .8; e.struck = false; sfx('whoosh'); }
   else if (p === 'slam') { e.state = 'leap'; e.vz = 420; e.vx = (P.x - e.x) / .84; e.ty = P.y; }
+  else if (p === 'sweep') { e.state = 'strike'; e.t = .3; e.around = true; sfx('whoosh'); shakeMag = Math.max(shakeMag, 3); }
+  else if (p === 'roll') { e.state = 'dash'; e.t = .9; e.rolls = e.enraged ? 3 : 2; e.struck = false; sfx('whoosh'); }
+  else if (p === 'erupt') {
+    const spots = e.enraged ? [[0, 0], [-70, -14], [70, 14]] : [[0, 0]];
+    for (const [ox, oy] of spots) hazards.push({ kind: 'spike', x: P.x + ox, y: clamp(P.y + oy, FLOOR_TOP + 8, FLOOR_BOT), r: 40, t: .95, max: .95, dmg: e.dmg, col: e.def.mat === 'crystal' ? '159,216,224' : '126,164,96' });
+    sfx('charge'); recover(e, .8);
+  }
+  else if (p === 'rain') {
+    const n = e.enraged ? 7 : 5;
+    for (let i = 0; i < n; i++) hazards.push({ kind: 'fall', x: P.x + rand(-130, 130) * (i ? 1 : 0), y: clamp(P.y + rand(-34, 34) * (i ? 1 : 0), FLOOR_TOP + 8, FLOOR_BOT), r: 28, t: .85 + i * .16, max: .85 + i * .16, dmg: Math.round(e.dmg * .8), col: e.def.mat === 'metal' ? '232,106,128' : e.def.mat === 'crystal' ? '216,160,232' : '216,186,120' });
+    recover(e, .9);
+  }
+  else if (p === 'beam') { hazards.push({ kind: 'beam', y: P.y, t: 1.25, max: 1.25, dmg: Math.round(e.dmg * 1.4), col: e.def.mat === 'metal' ? '255,120,140' : '200,170,255', hit: false }); sfx('charge', 2); recover(e, 1.4); }
+  else if (p === 'groundwave') { for (const d of e.enraged ? [-1, 1] : [e.facing]) projs.push({ owner: 'e', ground: 1, x: e.x + d * e.hw, y: e.y, z: 0, vx: d * 260, dmg: e.dmg, life: 3, col: '#EED48A' }); shakeMag = 8; sfx('slam'); recover(e, .7); }
+  else if (p === 'breath') { [-44, -22, 0, 22, 44].forEach((o, i) => setTimeout(() => !e.dead && bolt(e, clamp(e.y + o, FLOOR_TOP + 6, FLOOR_BOT)), i * 60)); recover(e, 1); }
+  else if (p === 'roar') {
+    banner(e.def.name, e.enraged ? 'ENRAGED' : e.def.title, 1.8); sfx('roar'); shakeMag = 14; zoom = .06; flashT = .12;
+    fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.hh * .6, t: .7, max: .7, r: 240, col: '#FFFFFF' });
+    if (Math.abs(P.x - e.x) < 200 && P.state !== 'dodge' && P.state !== 'dead') { P.state = 'hurt'; P.knocked = false; P.t = .5; P.vx = Math.sign(P.x - e.x || 1) * 320; }
+    recover(e, .6);
+  }
   else if (p === 'summon') {
     if (enemies.filter(o => !o.dead && !o.boss).length < 3) e.def.summon.forEach((s, i) => spawnEnemy(s, i % 2 ? -1 : 1));
     burst(e.x, e.y, 60, ['#D08AB0', '#EED48A', '#FFFFFF'], 20, 'spark'); recover(e, .6);
@@ -204,11 +237,11 @@ function gainWeapon(id) {
 function startStage(i) {
   stageIdx = i; stage = STAGES[i];
   P = newPlayer();
-  enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = [];
+  enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = [];
   props = stage.pods.map(x => ({ kind: 'pod', x, y: FLOOR_TOP + 46 + (x % 3) * 18, hp: 1, theme: stage.theme }));
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
-  runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stag = null;
+  runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stag = null; brandT = 0;
   buildBackground(stage.theme, i * 97 + 13);
   $('#bossbar').hidden = true; $('#go').hidden = true;
   refreshHud(true); refreshCombo();
@@ -226,7 +259,7 @@ function updateWorld(dt) {
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;
     boss = spawnEnemy(stage.boss, 1, true);
     $('#bossname').textContent = boss.def.name; $('#bossbar').hidden = false;
-    banner(boss.def.name, 'GUARDIAN OF THIS SHADOW', 2);
+    boss.plan = 'roar';
   }
   for (const s of spawnQ) s.at -= dt;
   while (spawnQ.length && spawnQ[0].at <= 0) { const s = spawnQ.shift(); const e = spawnEnemy(s.type, s.side); if (s.drop) e.dropWeapon = s.drop; }
@@ -241,7 +274,8 @@ function updateWorld(dt) {
   if (stillT <= 0) for (const p of projs) {
     p.x += p.vx * dt; p.life -= dt;
     if (p.owner === 'e') {
-      if (Math.abs(p.x - P.x) < 12 && Math.abs(p.y - P.y) < 12 && P.z < 40 && P.state !== 'dead') { playerDamage(p.dmg, p.x - p.vx, false); p.life = 0; }
+      if (p.ground && Math.random() < .7) dust(p.x, p.y, 1);
+      if (Math.abs(p.x - P.x) < (p.ground ? 16 : 12) && Math.abs(p.y - P.y) < (p.ground ? 16 : 12) && P.z < (p.ground ? 14 : 40) && P.state !== 'dead') { playerDamage(p.dmg, p.x - p.vx, false); p.life = 0; }
     } else {
       for (const e of enemies) if (!e.dead && !p.hit.has(e) && Math.abs(p.x - e.x) < 24 && Math.abs(p.y - e.y) < 26) { p.hit.add(e); strike(e, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 300, power: 2 }); }
       if (Math.random() < .9) parts.push({ x: p.x, y: p.y + rand(-10, 10), z: rand(0, 40), vx: 0, vy: 0, vz: 40, life: .4, max: .4, col: '#D08AB0', size: 3, shape: 'star', rot: 0, vr: 4 });
@@ -250,11 +284,29 @@ function updateWorld(dt) {
   projs = projs.filter(p => p.life > 0 && p.x > camX - 60 && p.x < camX + VW + 60);
   for (const p of props) p.flash = Math.max(0, (p.flash || 0) - dt);
   props = props.filter(p => !p.broken);
-  updateLoot(dt); updateTrumps(dt);
+  updateLoot(dt); updateTrumps(dt); updateHazards(dt);
   if (comboT > 0) { comboT -= dt; if (comboT <= 0) endCombo(); }
   if (clearT > 0) { clearT -= dt; if (clearT <= 0) stageClear(); }
 }
 function endCombo() {
   if (comboN >= 10) { const b = Math.floor(comboN / 5); save.shards += b; runShards += b; floatText(P.x, P.y, 96, `${comboN} HITS · +${b} SHARDS`, '#7EC2B0', 14); }
   comboN = 0; refreshCombo();
+}
+
+function updateHazards(dt) {
+  if (stillT > 0) return;
+  for (const h of hazards) {
+    h.t -= dt;
+    if (h.kind === 'beam') {
+      if (h.t < .35 && !h.fired) { h.fired = true; sfx('shoot'); shakeMag = Math.max(shakeMag, 7); flashT = .05; }
+      if (h.fired && !h.hit && Math.abs(P.y - h.y) < 14 && P.z < 60) { h.hit = true; playerDamage(h.dmg, P.x - P.facing, true); }
+    } else if (h.t <= 0 && !h.done) {
+      h.done = true;
+      if (Math.hypot(P.x - h.x, (P.y - h.y) * 2.2) < h.r + 8 && P.z < 24) playerDamage(h.dmg, h.x, true);
+      burst(h.x, h.y, 4, [`rgb(${h.col})`, '#FFFFFF'], 14, h.kind === 'spike' ? 'crystal' : 'rock', 0, true);
+      fx.push({ kind: 'ring', x: h.x, y: h.y, z: 2, t: .3, max: .3, r: h.r * 1.4, col: '#FFFFFF', flat: 1 });
+      shakeMag = Math.max(shakeMag, 5); sfx(h.kind === 'spike' ? 'crunch' : 'slam');
+    }
+  }
+  hazards = hazards.filter(h => h.t > -.4);
 }

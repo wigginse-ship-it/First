@@ -45,6 +45,10 @@ function drawWeapon(kind, pose) {
     }
     return;
   }
+  if (kind === 'dagger') { limb([6, 0, 17, 0], '#4A3A2A', 3.5); ctx.beginPath(); ctx.moveTo(18, -3); ctx.lineTo(36, 0); ctx.lineTo(18, 3); ctx.closePath(); ctx.fillStyle = C('#D8DCE6'); ctx.fill(); outline(1.2); return; }
+  if (kind === 'bow') { ctx.strokeStyle = C('#6E4A2A'); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(10, 0, 18, -1.3, 1.3); ctx.stroke(); ctx.strokeStyle = C('#E8E0D0'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(10 + Math.cos(-1.3) * 18, Math.sin(-1.3) * 18); ctx.lineTo(2, 0); ctx.lineTo(10 + Math.cos(1.3) * 18, Math.sin(1.3) * 18); ctx.stroke(); circle(17, 0, 4); ctx.fillStyle = C('#E8C4A4'); ctx.fill(); return; }
+  if (kind === 'rifle') { rrect(2, -3, 34, 6, 2); ctx.fillStyle = C('#5A4A3E'); ctx.fill(); outline(1.4); ctx.fillStyle = C('#9A7038'); ctx.fillRect(14, -4.5, 12, 2); ctx.fillStyle = C('#9FD8E8'); circle(36, 0, 2.2); ctx.fill(); return; }
+  if (kind === 'orb') { limb([4, 0, 30, 0], '#3A3050', 3); ctx.save(); if (!FLASH) { ctx.shadowColor = '#9FE8F0'; ctx.shadowBlur = 10; } circle(33, 0, 6); ctx.fillStyle = C('#BFF0F5'); ctx.fill(); ctx.restore(); return; }
   if (kind === 'cannon') { rrect(4, -6, 26, 12, 4); ctx.fillStyle = C('#3CC6C0'); ctx.fill(); outline(); ctx.fillStyle = C('#FFF4A8'); circle(30, 0, 3); ctx.fill(); return; }
 }
 
@@ -61,6 +65,21 @@ function drawHumanoid(look, pose) {
     const flow = (pose.flow || 0) + Math.abs(sw) * 4;
     ctx.beginPath(); ctx.moveTo(-3, -46 + cr); ctx.quadraticCurveTo(-18 - flow, -30 + cr, -16 - flow * 1.4, -8 + Math.sin(walk * .5) * 3);
     ctx.lineTo(-4, -14 + cr); ctx.closePath(); ctx.fillStyle = C(look.cape); ctx.fill(); outline(1.8);
+  }
+  // long hair streams behind the head
+  if (look.longHair) {
+    const flow = (pose.flow || 0) * .8 + Math.abs(sw) * 2;
+    ctx.beginPath(); ctx.moveTo(-4, -64 + cr); ctx.quadraticCurveTo(-14 - flow, -56 + cr, -12 - flow * 1.3, -38 + cr + Math.sin(walk * .7) * 2);
+    ctx.lineTo(-6, -44 + cr); ctx.quadraticCurveTo(-6, -54 + cr, 0, -60 + cr); ctx.closePath(); ctx.fillStyle = C(look.hair); ctx.fill(); outline(1.4);
+  }
+  // tattered coat tails swing from the waist
+  if (look.coat) {
+    const flow = (pose.flow || 0) + Math.abs(sw) * 5;
+    for (const [dx, k] of [[-2, 1], [3, .7]]) {
+      ctx.beginPath(); ctx.moveTo(dx - 6, -30 + cr); ctx.quadraticCurveTo(dx - 12 - flow * k, -16 + cr, dx - 14 - flow * 1.5 * k, -4 + Math.sin(walk + dx) * 2);
+      ctx.lineTo(dx - 10 - flow * k, -8); ctx.lineTo(dx - 8 - flow * k * .8, -2); ctx.lineTo(dx - 4, -10 + cr * .5); ctx.lineTo(dx + 2, -28 + cr); ctx.closePath();
+      ctx.fillStyle = C(k === 1 ? look.coat : look.coat2 || look.coat); ctx.fill(); outline(1.4);
+    }
   }
   // back arm
   const ba = pose.backArm ?? (1.25 - sw * .4);
@@ -91,6 +110,7 @@ function drawHumanoid(look, pose) {
     rrect(-9, -48 + cr, 18, 25, 6); ctx.fillStyle = C(look.body); ctx.fill(); outline();
     ctx.fillStyle = C(look.trim); ctx.fillRect(-9, -28 + cr, 18, 3.5); ctx.fillRect(-1.5, -48 + cr, 3, 20);
     if (look.rose) { ctx.fillStyle = C('#F4F6FF'); circle(5, -42 + cr, 2.2); ctx.fill(); }
+    if (look.chain) { ctx.strokeStyle = C(look.trim); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-8, -26 + cr); ctx.quadraticCurveTo(-2, -20 + cr, 6, -25 + cr); ctx.stroke(); }
   }
   // head
   const hy = -58 + cr;
@@ -100,9 +120,16 @@ function drawHumanoid(look, pose) {
     if (look.plume) { ctx.fillStyle = C(look.plume); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.quadraticCurveTo(-14, hy - 18, -20, hy - 8); ctx.quadraticCurveTo(-12, hy - 10, -6, hy - 4); ctx.fill(); }
   } else {
     circle(1, hy, 8.5); ctx.fillStyle = C(look.skin); ctx.fill(); outline();
-    ctx.fillStyle = C(look.hair); ctx.beginPath(); ctx.arc(0, hy - 1, 9, Math.PI * .95, Math.PI * 2.05); ctx.lineTo(-8, hy + 6); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = C(look.crown || '#D8AA55'); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.lineTo(-4, hy - 13); ctx.lineTo(-1, hy - 9); ctx.lineTo(2, hy - 14); ctx.lineTo(4, hy - 9); ctx.lineTo(6, hy - 12); ctx.lineTo(7, hy - 7); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = C(OUT); ctx.fillRect(4.5, hy - 1, 2, 3);
+    if (look.hood) { // a deep hood hides the face in shadow
+      ctx.fillStyle = C(look.hood); ctx.beginPath(); ctx.moveTo(-10, hy + 7); ctx.quadraticCurveTo(-12, hy - 12, 2, hy - 12); ctx.quadraticCurveTo(12, hy - 10, 10, hy + 2); ctx.lineTo(4, hy + 1); ctx.quadraticCurveTo(2, hy - 6, -4, hy - 2); ctx.lineTo(-5, hy + 8); ctx.closePath(); ctx.fill(); outline(1.4);
+    } else {
+      ctx.fillStyle = C(look.hair); ctx.beginPath(); ctx.arc(0, hy - 1, 9, Math.PI * .95, Math.PI * 2.05); ctx.lineTo(-8, hy + 6); ctx.closePath(); ctx.fill();
+      if (look.fringe) { ctx.beginPath(); ctx.moveTo(2, hy - 9); ctx.quadraticCurveTo(10, hy - 6, 8, hy + 2); ctx.lineTo(5, hy - 3); ctx.closePath(); ctx.fill(); }
+    }
+    if (look.crown) { ctx.fillStyle = C(look.crown); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.lineTo(-4, hy - 13); ctx.lineTo(-1, hy - 9); ctx.lineTo(2, hy - 14); ctx.lineTo(4, hy - 9); ctx.lineTo(6, hy - 12); ctx.lineTo(7, hy - 7); ctx.closePath(); ctx.fill(); }
+    if (look.mask) { ctx.fillStyle = C(look.mask); ctx.fillRect(-1, hy + 1, 9, 4); }
+    if (look.eye) { ctx.save(); if (!FLASH) { ctx.shadowColor = look.eye; ctx.shadowBlur = 6; } ctx.fillStyle = C(look.eye); ctx.fillRect(4, hy - 1.5, 3, 2.2); ctx.restore(); }
+    else { ctx.fillStyle = C(OUT); ctx.fillRect(4.5, hy - 1, 2, 3); }
   }
   // front arm + weapon
   const arm = pose.arm ?? (1.1 + sw * .35);
@@ -111,6 +138,7 @@ function drawHumanoid(look, pose) {
   limb([0, 0, 15, 0], look.sleeve || look.body, 5.5);
   drawWeapon(pose.weapon || look.weapon, pose);
   ctx.restore();
+  if (look.pauldron) { ctx.beginPath(); ctx.ellipse(1, -45 + cr, 8, 6, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); ctx.fillStyle = C(look.pauldron); ctx.fill(); outline(1.4); ctx.fillStyle = C(look.trim); ctx.fillRect(-4, -47 + cr, 9, 1.5); }
   ctx.restore();
   ctx.restore();
 }
@@ -125,8 +153,19 @@ function drawTrail(cx, cy, pose) {
   }
   ctx.restore();
 }
-const HERO = { skin: '#E8C4A4', hair: '#2A1E3A', body: '#2E4C86', sleeve: '#27406F', trim: '#D8AA55', legs: '#232845', boots: '#5A3A28', cape: '#9E2F48', crown: '#E0B55A', rose: 1 };
+// the fallen prince of shadow: pale, silver-haired, a torn coat and one blackened pauldron, a violet ember for an eye
+const HERO = { skin: '#D9CCD2', hair: '#CFCBDA', longHair: 1, fringe: 1, body: '#2A2433', sleeve: '#231E2C', trim: '#9A96AE', legs: '#1C1824', boots: '#2E2630', coat: '#2F2838', coat2: '#3A3046', pauldron: '#3E3A4C', eye: '#B89CFF', chain: 1 };
+// human enemies, a third of every world
+const HUMANS = {
+  bandit:   { skin: '#C9A07E', hood: '#5A6A3E', body: '#6E5A3E', sleeve: '#5A4A34', trim: '#A88A5A', legs: '#3E3428', boots: '#2E2418', mask: '#3A3428', weapon: 'dagger' },
+  archer:   { skin: '#D2AE8C', hood: '#3E5A4A', body: '#4E6A52', sleeve: '#3E5642', trim: '#C9B07A', legs: '#2E3A30', boots: '#2A2418', weapon: 'bow' },
+  corsair:  { skin: '#C0906E', hair: '#2A1E1A', body: '#8A3A3A', sleeve: '#6E2E2E', trim: '#D8AA55', legs: '#2E2A38', boots: '#3A2418', mask: '#2A2030', weapon: 'blade' },
+  gunner:   { skin: '#D8B898', hair: '#5A3A2A', body: '#3E5A70', sleeve: '#344C5E', trim: '#C9A060', legs: '#2A2E3A', boots: '#2E2418', weapon: 'rifle', pauldron: '#8A6A3A' },
+  cultist:  { skin: '#B8A0C0', hood: '#4A2A5A', body: '#3A2048', sleeve: '#30183C', trim: '#C878A8', legs: '#24142E', boots: '#1A0E20', eye: '#E8A0D8', weapon: 'prism' },
+  witch:    { skin: '#D8C0D0', hood: '#2E3A6A', body: '#283460', sleeve: '#222C52', trim: '#8CC8D0', legs: '#1A2040', boots: '#141830', eye: '#9FE8F0', weapon: 'orb' },
+};
 const KNIGHT = { robot: 1, body: '#B88A48', sleeve: '#9A7038', trim: '#4E9A90', legs: '#6A4A28', boots: '#43301C', helm: '#C99B55', visor: '#9FF0E8', core: '#9FF0E8', plume: '#4E9A90', weapon: 'blade' };
+const KNIGHT_MOSS = { robot: 1, body: '#7E8A6A', sleeve: '#6A7458', trim: '#5E8A52', legs: '#4A503E', boots: '#33382A', helm: '#8A9474', visor: '#EED48A', core: '#EED48A', plume: '#5E8A52', weapon: 'blade' };
 const COLOSSUS = { robot: 1, body: '#A87A3A', sleeve: '#8A6030', trim: '#3E8A84', legs: '#5A3E22', boots: '#3A2816', helm: '#C2934E', visor: '#E86A80', core: '#F08A9A', plume: '#B8445A', weapon: 'cannon', cape: '#2E5E62' };
 
 // ---------- worlds (painted in layers: far ridges fade into the sky, near things are rich and dark) ----------

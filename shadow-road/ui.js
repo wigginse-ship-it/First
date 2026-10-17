@@ -44,7 +44,7 @@ function play(i) {
   save.started = true; persist(); clearInput();
   startStage(i); mode = 'play'; showOnly(null);
 }
-function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
+function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
 function resume() { mode = 'play'; clearInput(); showOnly(null); }
 function gameOver() {
   mode = 'over'; persist();
@@ -66,6 +66,34 @@ function stageClear() {
   } else openForge(`WORLD CLEARED: +${runShards} SHARDS, +${runSigils} SIGILS`);
 }
 
+// ---------- explaining moves: inputs shown as button chips ----------
+const CHIP = { A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], RUN: ['RUN', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
+function inputsFor(id, m) {
+  if (!m.key) return ['HOLD3'];
+  if (m.key === 'D') return ['RUN', '+A']; if (m.key === 'DH') return ['RUN', '+H'];
+  if (m.key === 'A') return ['JUMP', '+A']; if (m.key === 'R') return ['DODGE', '+A'];
+  return m.key.split('').map((c, i) => c === 'L' ? 'A' : (id === 'sword' && i === 0 ? 'HOLD' : 'H'));
+}
+function chips(id, m) {
+  return '<span class="chips">' + inputsFor(id, m).map((tk, i) => {
+    const plus = tk[0] === '+', c = CHIP[plus ? tk.slice(1) : tk];
+    return (i ? `<i>${plus ? '+' : '›'}</i>` : '') + `<span class="chip ${c[1]}">${c[0]}</span>`;
+  }).join('') + '</span>';
+}
+const BASICS = [
+  { key: 'L', name: 'Combo', desc: 'Tap Attack again and again to chain the full combo.', seq: ['A', 'A', 'A'] },
+  { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge.' },
+  { key: 'D', name: 'Dash attack', desc: 'Flick the joystick twice to run, then attack.' },
+  { key: 'A', name: 'Air attack', desc: 'Jump, then attack while in the air.' },
+  { key: 'R', name: 'Dodge counter', desc: 'Tap Attack during a roll to spring out of it.' },
+];
+function moveListHtml(id) {
+  const lvl = save.wl[id];
+  const basics = BASICS.map(b => `<li class="got"><b>${b.name}</b> ${b.seq ? '<span class="chips">' + b.seq.map((tk, i) => (i ? '<i>›</i>' : '') + `<span class="chip a">ATTACK</span>`).join('') + '</span>' : chips(id, b.key === 'H' && id === 'sword' ? { key: 'H' } : b)}<br><em>${b.desc}</em></li>`).join('');
+  const learned = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${lvl >= m.lvl ? m.desc : m.lvl === lvl + 1 ? 'Next at the forge: ' + m.desc : 'Locked: ' + m.desc}</em></li>`).join('');
+  return `<ul class="moves">${basics}${learned}</ul>`;
+}
+
 // ---------- the forge ----------
 const wCost = (lvl) => ({ s: 30 * lvl, g: lvl >= 2 ? lvl - 1 : 0 });
 const aCost = (lvl) => ({ s: 35 * lvl, g: lvl >= 3 ? lvl - 2 : 0 });
@@ -83,7 +111,7 @@ function renderForge(note) {
     const w = WEAPONS[id], owned = save.owned[id], lvl = save.wl[id], max = lvl >= 5, c = wCost(lvl);
     const can = owned && !max && save.shards >= c.s && save.sigils >= c.g;
     const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
-    const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}">LV${m.lvl} ${m.name} <em>· ${m.how}</em></li>`).join('');
+    const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
       <p>${owned ? w.desc : (id === 'sword' ? 'A brass automaton in the Skyport carries it.' : id === 'staff' ? 'A moss golem in Bloomwild Vale carries it.' : 'A thornboar in Bloomwild Vale carries it.') + ' Look for the gold shimmer.'}</p><ul>${moves}</ul>
       ${owned ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Learn next move · ${costTxt(c)}`}</button>` : ''}`;
@@ -93,7 +121,7 @@ function renderForge(note) {
       if (!can) return;
       save.shards -= c.s; save.sigils -= c.g; save.wl[id]++; persist(); sfx('buy');
       const learned = unlockList(id).find(m => m.lvl === save.wl[id]);
-      renderForge(`${w.name} is now level ${save.wl[id]}.${learned ? ` New move: ${learned.name} (${learned.how}).` : ''}`);
+      renderForge(`${w.name} is now level ${save.wl[id]}.${learned ? ` New move: ${learned.name}. ${learned.how}.` : ''}`);
     });
     wrap.appendChild(d);
   }
@@ -130,12 +158,13 @@ function drawTrumpArt(canvas, id) {
   const g = canvas.getContext('2d'), old = ctx; ctx = g;
   g.setTransform(canvas.width / 96, 0, 0, canvas.width / 96, 0, 0);
   const bg = g.createLinearGradient(0, 0, 0, 96);
-  const cols = { stag: ['#8FB8D8', '#2A1D5C'], mirror: ['#C9B8FF', '#2A1D5C'], phoenix: ['#D8834A', '#5A1D3C'], stillness: ['#8FE9FF', '#1C1240'] }[id];
+  const cols = { brand: ['#E8945A', '#2A1D3C'], stag: ['#8FB8D8', '#2A1D5C'], mirror: ['#C9B8FF', '#2A1D5C'], phoenix: ['#D8834A', '#5A1D3C'], stillness: ['#8FE9FF', '#1C1240'] }[id];
   bg.addColorStop(0, cols[0]); bg.addColorStop(1, cols[1]); g.fillStyle = bg; rrect(14, 4, 68, 88, 8); g.fill();
   g.lineWidth = 2; g.strokeStyle = '#D8AA55'; g.stroke();
   g.save(); g.translate(48, 48);
   if (id === 'stag') { g.translate(-14, 30); g.scale(.62, .62); drawStag({ x: 0, y: 0 }, 1); }
   else if (id === 'mirror') { g.translate(0, 30); g.scale(.62, .62); g.globalAlpha = .5; g.save(); g.translate(-14, 0); drawHumanoid(HERO, { arm: -.6, weapon: 'staff' }); g.restore(); g.globalAlpha = 1; g.translate(12, 0); g.scale(-1, 1); drawHumanoid(HERO, { arm: -.6, weapon: 'staff' }); }
+  else if (id === 'brand') { g.save(); g.rotate(-.6); g.scale(1.1, 1.1); drawWeapon('sword', { glow: '#FF8A4A' }); g.restore(); g.fillStyle = '#9FE0FF'; g.beginPath(); g.moveTo(-18, 18); g.lineTo(-12, 8); g.lineTo(-6, 18); g.fill(); g.strokeStyle = '#E8E0FF'; g.lineWidth = 2; g.beginPath(); g.moveTo(14, -24); g.lineTo(8, -12); g.lineTo(16, -10); g.lineTo(10, 2); g.stroke(); }
   else if (id === 'phoenix') { g.fillStyle = '#EED48A'; g.beginPath(); g.moveTo(0, -30); g.quadraticCurveTo(30, -10, 26, 20); g.quadraticCurveTo(10, 4, 0, 30); g.quadraticCurveTo(-10, 4, -26, 20); g.quadraticCurveTo(-30, -10, 0, -30); g.fill(); g.fillStyle = '#D04A62'; circle(0, -6, 8); g.fill(); }
   else { g.strokeStyle = '#FFFFFF'; g.lineWidth = 3; circle(0, 0, 26); g.stroke(); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -18); g.moveTo(0, 0); g.lineTo(12, 6); g.stroke(); }
   g.restore(); ctx = old;

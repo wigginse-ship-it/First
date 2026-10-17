@@ -123,6 +123,20 @@
   .buy { font: 700 12px var(--label); padding: 9px 12px; border-radius: 6px; border: 0; cursor: pointer; background: linear-gradient(#E6BE6E, #C2913E); color: #2A1A0A; width: 100%; margin-top: 4px; }
   .buy.pink { background: linear-gradient(#D8889A, #A84A64); color: #FFF4F0; }
   .buy:disabled { background: #2E2444; color: #7E7290; cursor: default; }
+  .chips { display: inline-flex; flex-wrap: wrap; gap: 3px; align-items: center; vertical-align: middle; }
+  .chips i { font-style: normal; color: var(--soft); font-size: 11px; }
+  .chip { font: 700 9px var(--label); letter-spacing: .06em; padding: 2px 6px; border-radius: 9px; border: 1px solid; color: var(--text); }
+  .chip.a { border-color: #C8485A; background: rgba(160,50,70,.45); }
+  .chip.h { border-color: #D8AA55; background: rgba(150,110,40,.45); }
+  .chip.r { border-color: #7EC2B0; background: rgba(60,120,110,.4); }
+  .chip.j { border-color: #8FB8D8; background: rgba(60,100,140,.45); }
+  .chip.d { border-color: #9A86C8; background: rgba(80,60,130,.45); }
+  .card li b, .moves b { color: var(--text); font-weight: 600; }
+  .movebox { width: 100%; max-width: 560px; text-align: left; }
+  .moves { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; }
+  .moves li { opacity: .55; line-height: 1.4; } .moves li.got, .moves li.next { opacity: 1; }
+  .moves li.next b { color: var(--gold); }
+  .moves em { font-style: normal; color: var(--soft); font-size: 12.5px; }
   .note { font-size: 13px; font-weight: 700; color: var(--mint); min-height: 18px; }
   #rotateOv { display: none; z-index: 6; }
   #app.port.playing #rotateOv { display: block; }
@@ -138,7 +152,7 @@
     <div class="hud-l">
       <div class="wcard"><canvas id="wcardCv" width="72" height="72"></canvas><b id="wlv">LV1</b></div>
       <div class="bars">
-        <div class="who">PRINCE OF THE ROAD</div>
+        <div class="who">PRINCE OF SHADOW</div>
         <div class="bar"><i id="hp"></i></div>
         <div class="bar tbar" id="tbarWrap" hidden><i id="tbar"></i></div>
         <div class="wname" id="wname">FISTS</div>
@@ -169,7 +183,7 @@
     <div class="wrap">
       <div class="kicker">A STORYBOOK BEAT 'EM UP</div>
       <h1 class="logo">Shadow <em>Road</em></h1>
-      <p class="lede">Every world between here and the true city is only its shadow: blooming valleys, clockwork skies, prism storms. You set out with bare fists. Take weapons from the creatures who carry them, beat the guardians, and forge your arsenal between worlds.</p>
+      <p class="lede">Cast out of the true city, the fallen Prince of Shadow walks the road home through its shadow worlds: blooming valleys, clockwork skies, prism storms. You set out with bare fists. Take weapons from those who carry them, break the guardians, and forge your arsenal between worlds.</p>
       <div class="row">
         <button class="cta" id="contBtn" type="button">Continue</button>
         <button class="cta alt" id="newBtn" type="button">New journey</button>
@@ -216,6 +230,8 @@
         <button class="cta alt" id="quitBtn" type="button">Quit to title</button>
       </div>
       <p class="small">Shards, sigils, weapons and upgrades are saved. Quitting restarts this world.</p>
+      <h3 class="h3" id="moveTitle">Moves</h3>
+      <div id="moveList" class="movebox"></div>
     </div>
   </div>
 

@@ -22,7 +22,7 @@ const freshSave = () => ({
   owned: { fists: true, hammer: false, staff: false, sword: false },
   wl: { fists: 1, hammer: 1, staff: 1, sword: 1 },
   armor: 1, weapon: 'fists',
-  trumps: { stag: false, mirror: false, phoenix: false, stillness: false }, trump: null,
+  trumps: { stag: false, brand: false, mirror: false, phoenix: false, stillness: false }, trump: null,
 });
 let save = freshSave();
 try {
@@ -80,6 +80,9 @@ function sfx(k, power = 1) {
       case 'charge': tone(400 + 200 * power, 0.14, 'sine', 0.09, 800 + 300 * power); break;
       case 'trump': [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, 0.4, 'sine', 0.1, 0, i * 0.05)); noise(0.5, 0.15, 3000, 0.5); break;
       case 'buy': tone(660, 0.1, 'triangle', 0.1); tone(990, 0.16, 'triangle', 0.1, 0, 0.09); break;
+      case 'slice': noise(0.12, 0.3, 5200, 2); tone(2400, 0.25, 'sine', 0.06, 600); noise(0.25, 0.2, 700); break;
+      case 'crunch': noise(0.2, 0.4, 600, 1.4); tone(110, 0.2, 'square', 0.1, 50); noise(0.1, 0.3, 2400, 3); break;
+      case 'roar': noise(0.9, 0.5, 260, 0.5); tone(70, 0.9, 'sawtooth', 0.12, 45); tone(110, 0.7, 'square', 0.05, 60); break;
       case 'break': noise(0.25, 0.35, 1800, 0.7); tone(1200, 0.3, 'sine', 0.06, 2400); break;
     }
   } catch (e) {}
