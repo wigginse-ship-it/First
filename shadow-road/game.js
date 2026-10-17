@@ -195,7 +195,7 @@ function addGhost() { if (ghosts.length < 14) ghosts.push({ x: P.x, y: P.y, z: P
 function zOverlap(az, ah, bz, bh) { return az < bz + bh && bz < az + ah; }
 function inReach(m, tx, ty, tz, hw, hh) {
   if (Math.abs(ty - P.y) > (m.depth || 18) + hw * .3) return false;
-  if (!zOverlap(P.z - 6, 84, tz, hh)) return false; // a standing swing reaches about head height and a little above
+  if (!zOverlap(P.z - 6, 70, tz, hh)) return false;
   if (m.around) return Math.abs(tx - P.x) <= m.x1 + hw;
   const dx = (tx - P.x) * P.facing;
   return dx >= m.x0 - hw && dx <= m.x1 + hw;
@@ -208,7 +208,8 @@ function doHits() {
     if (last !== undefined && !(m.multi && now - last >= m.multi)) continue;
     // long-bodied enemies (the wyrm) can be hit anywhere along the body trailing behind the head
     const tail = e.def.tail ? e.def.tail * (e.size || 1) : 0, bx = tail ? clamp(P.x, Math.min(e.x, e.x - e.facing * tail), Math.max(e.x, e.x - e.facing * tail)) : e.x;
-    if (!inReach(m, bx, e.y, e.z, e.hw, e.hh)) continue;
+    const down = e.def.reachDown || 0; // a hit box stretched toward the floor, so a high flyer can be hit from the ground
+    if (!inReach(m, bx, e.y, e.z - down, e.hw, e.hh + down)) continue;
     P.hits.set(e, now);
     if (m.launcher) { P.chaseT = .9; P.chaseX = e.x; }
     const dir = m.around ? (Math.sign(e.x - P.x) || P.facing) : P.facing;
