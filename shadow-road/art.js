@@ -23,42 +23,46 @@ function shadow(x, y, rx) { // cast on the floor, so it is painted under the ink
   if (inkG && ctx === inkG) onMain(f); else f();
 }
 
-// a defined face in three-quarter profile: high brow, straight nose, firm jaw and chin, stern brows, green eyes
+// the hero's face, drawn the way good sprite art handles a face at this size: a three-quarter view,
+// two flat tones of skin with a hard shadow edge, dark brows over simple eyes, the nose only a shadow,
+// and the hair as a few big chunky locks with one band of light on them
 function drawCorwinHead(look, hy) {
-  const sk = look.skin;
-  ctx.fillStyle = C(shade(sk, -.25)); ctx.fillRect(-1.8, hy + 5, 5.4, 6.5); // neck
-  ctx.beginPath(); // the head's outline, from the nape over the crown, down the face to the chin and back along the jaw
-  ctx.moveTo(-3, hy + 6.5);
-  ctx.quadraticCurveTo(-8.4, hy + 1, -7, hy - 5); ctx.quadraticCurveTo(-4.5, hy - 10.6, 2, hy - 10.4);
-  ctx.quadraticCurveTo(7.4, hy - 9.6, 8.3, hy - 4); // forehead
-  ctx.lineTo(8.9, hy - 2.4); ctx.lineTo(8.2, hy - .8); // brow ridge, then into the eye socket
-  ctx.lineTo(10.4, hy + 2.6); ctx.lineTo(8.6, hy + 3.3); // a straight nose
-  ctx.lineTo(9, hy + 4.4); ctx.lineTo(8.4, hy + 5.4); // lips
-  ctx.quadraticCurveTo(9.2, hy + 6.4, 8.6, hy + 7.6); // a firm chin
-  ctx.quadraticCurveTo(5, hy + 9.2, 0.6, hy + 7); // the jaw
-  ctx.closePath();
-  const sg = ctx.createRadialGradient(5.5, hy - 3, 1, 2, hy + 1, 11); sg.addColorStop(0, C(shade(sk, .14))); sg.addColorStop(.6, C(sk)); sg.addColorStop(1, C(shade(sk, -.24)));
-  ctx.fillStyle = sg; ctx.fill(); outline(1.1);
-  if (!FLASH) {
-    ctx.fillStyle = 'rgba(70,45,40,.18)'; ctx.beginPath(); ctx.moveTo(1, hy + 6.8); ctx.quadraticCurveTo(5, hy + 8.8, 8.5, hy + 7.4); ctx.quadraticCurveTo(8.6, hy + 5.6, 7.6, hy + 5.2); ctx.quadraticCurveTo(4, hy + 6, 2.6, hy + 3.4); ctx.closePath(); ctx.fill(); // shadow along the jaw
-    ctx.strokeStyle = 'rgba(90,55,45,.45)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(3.4, hy + 1.2); ctx.quadraticCurveTo(5, hy + 3.6, 6.6, hy + 4); ctx.stroke(); // cheekbone
-    ctx.beginPath(); ctx.moveTo(8.3, hy - .4); ctx.lineTo(9.3, hy + 2.2); ctx.stroke(); // side of the nose
-  }
-  ctx.fillStyle = C(shade(sk, -.18)); ell(-1.2, hy + 1.4, 1.7, 2.5); ctx.fill(); // ear
-  ctx.fillStyle = C('#EFE8E0'); ctx.beginPath(); ctx.moveTo(4.4, hy - .6); ctx.quadraticCurveTo(5.9, hy - 1.9, 7.5, hy - .8); ctx.quadraticCurveTo(6, hy + .2, 4.4, hy - .6); ctx.fill(); // the eye
-  ctx.fillStyle = C(look.eye); circle(6.3, hy - .75, 1); ctx.fill();
-  ctx.fillStyle = C('#101010'); circle(6.45, hy - .75, .45); ctx.fill();
-  ctx.strokeStyle = C('#1A1214'); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(4.2, hy - .5); ctx.quadraticCurveTo(5.9, hy - 2.1, 7.7, hy - .9); ctx.stroke(); // upper lid
-  ctx.fillStyle = C(look.hair); ctx.beginPath(); ctx.moveTo(3, hy - 3.2); ctx.lineTo(8.5, hy - 2.9); ctx.lineTo(8.1, hy - 1.9); ctx.lineTo(3.4, hy - 2.1); ctx.closePath(); ctx.fill(); // a heavy, level brow
-  ctx.strokeStyle = C(shade(sk, -.5)); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(7.2, hy + 4.5); ctx.lineTo(8.8, hy + 4.3); ctx.stroke(); // mouth
-  // black hair, swept back from the brow and falling past the ears to the collar
+  const sk = look.skin, shadowSk = shade(sk, -.3), ink = '#141016';
+  ctx.fillStyle = C(shade(sk, -.38)); ctx.fillRect(-1.6, hy + 5, 5.6, 6.5); // neck, in the jaw's shadow
+  const head = () => {
+    ctx.beginPath(); ctx.moveTo(-6, hy - 7);
+    ctx.quadraticCurveTo(0, hy - 10.4, 5.4, hy - 9.2); ctx.quadraticCurveTo(9.2, hy - 7.6, 9.2, hy - 3); // crown and brow
+    ctx.lineTo(9.6, hy + 2.4); ctx.quadraticCurveTo(9.4, hy + 6.6, 7.6, hy + 8.2); // cheek down to a square chin
+    ctx.quadraticCurveTo(5, hy + 9.4, 1.4, hy + 7.6); ctx.lineTo(-4.4, hy + 3.6); // jaw back to the ear
+    ctx.quadraticCurveTo(-8.4, hy + 1, -6, hy - 7); ctx.closePath();
+  };
+  head(); ctx.fillStyle = C(sk); ctx.fill();
+  ctx.save(); head(); ctx.clip(); // the hard-edged shadow side, turned away from the light
+  ctx.fillStyle = C(shadowSk); ctx.beginPath(); ctx.moveTo(-10, hy - 12); ctx.lineTo(1, hy - 12); ctx.quadraticCurveTo(-.4, hy + 1, 2.4, hy + 6.2); ctx.quadraticCurveTo(6, hy + 7.6, 9.4, hy + 6.6); ctx.lineTo(9.4, hy + 12); ctx.lineTo(-10, hy + 12); ctx.closePath(); ctx.fill();
+  ctx.fillRect(3, hy - 2.6, 7, 1.1); // the brow throws a shadow across the eyes
+  ctx.beginPath(); ctx.moveTo(8.7, hy - .6); ctx.lineTo(9.8, hy + 2.6); ctx.lineTo(8, hy + 2.6); ctx.closePath(); ctx.fill(); // the nose, told by its shadow
+  ctx.restore();
+  head(); outline(1.1);
+  ctx.fillStyle = C(shade(sk, -.42)); ell(-2.4, hy + 1.8, 1.4, 2.1); ctx.fill(); // ear
+  // eyes: a dark lash line with a glint of green; the far eye is narrower, turned away
+  ctx.fillStyle = C(ink); ctx.beginPath(); ctx.moveTo(4.2, hy - 1.4); ctx.lineTo(7.3, hy - 1.6); ctx.lineTo(7, hy + .3); ctx.lineTo(4.6, hy + .2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(8.4, hy - 1.5); ctx.lineTo(9.6, hy - 1.6); ctx.lineTo(9.5, hy + .2); ctx.lineTo(8.5, hy + .2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C(look.eye); ctx.fillRect(5.6, hy - 1, 1.3, 1.1); ctx.fillRect(8.8, hy - 1, .6, 1);
+  // brows: heavy and level, drawing down toward the nose
+  ctx.fillStyle = C(ink); ctx.beginPath(); ctx.moveTo(3.4, hy - 3.6); ctx.lineTo(7.8, hy - 3.2); ctx.lineTo(7.6, hy - 2.1); ctx.lineTo(3.8, hy - 2.5); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(8.5, hy - 3.1); ctx.lineTo(9.8, hy - 3.5); ctx.lineTo(9.7, hy - 2.5); ctx.lineTo(8.5, hy - 2.1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C(shade(sk, -.5)); ctx.fillRect(6.6, hy + 4.4, 2.4, .8); // a set mouth
+  // black hair: swept-back bulk falling to the collar, a sideburn, and a few heavy locks over the brow
   ctx.fillStyle = C(look.hair); ctx.beginPath();
-  ctx.moveTo(7.6, hy - 6.6); ctx.quadraticCurveTo(7, hy - 11.8, 0, hy - 12); ctx.quadraticCurveTo(-8.4, hy - 11.4, -9.4, hy - 3);
-  ctx.quadraticCurveTo(-10.4, hy + 4, -8, hy + 10); ctx.lineTo(-4.5, hy + 8.5); ctx.quadraticCurveTo(-3.8, hy + 3, -2.4, hy - 1);
-  ctx.quadraticCurveTo(.6, hy + .4, 1.4, hy + 3.6); ctx.quadraticCurveTo(2.2, hy - 2.6, 2.2, hy - 5.6); // sideburn and temple
-  ctx.quadraticCurveTo(5, hy - 7.6, 7.6, hy - 6.6); ctx.closePath(); ctx.fill(); outline(1);
-  ctx.strokeStyle = C('#4A4A5C'); ctx.lineWidth = .7; ctx.beginPath(); // strands catching the light
-  ctx.moveTo(6, hy - 7.4); ctx.quadraticCurveTo(0, hy - 11, -6, hy - 7); ctx.moveTo(4, hy - 9.6); ctx.quadraticCurveTo(-3, hy - 10.6, -8, hy - 2); ctx.moveTo(-6.4, hy + 1); ctx.quadraticCurveTo(-8, hy + 5, -7, hy + 8.6); ctx.stroke();
+  ctx.moveTo(10, hy - 5);
+  ctx.quadraticCurveTo(9.4, hy - 11.4, 2, hy - 12.4); ctx.quadraticCurveTo(-6.6, hy - 12.6, -9.6, hy - 5);
+  ctx.quadraticCurveTo(-11.2, hy + 3, -9.2, hy + 11); ctx.lineTo(-6.8, hy + 8.6); ctx.lineTo(-5.6, hy + 11.6); ctx.lineTo(-3.6, hy + 5.6);
+  ctx.quadraticCurveTo(-4, hy + 1, -3, hy - 1.6); ctx.lineTo(-.6, hy - 1.4); ctx.lineTo(-.2, hy + 3.4); ctx.lineTo(1.8, hy - 4.4);
+  ctx.lineTo(4.4, hy - 4.8); ctx.lineTo(5.4, hy - 2.8); ctx.lineTo(6.6, hy - 5.4); ctx.lineTo(8.4, hy - 3.8); ctx.closePath();
+  ctx.fill(); outline(1.1);
+  ctx.fillStyle = C('#454A62'); ctx.beginPath(); // one band of cool light along the top of the hair
+  ctx.moveTo(7.4, hy - 9); ctx.quadraticCurveTo(1, hy - 12, -6.4, hy - 8.4); ctx.quadraticCurveTo(0, hy - 10.4, 6.6, hy - 7.6); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-8.8, hy - 1); ctx.quadraticCurveTo(-9.6, hy + 4, -8.4, hy + 8.4); ctx.quadraticCurveTo(-8.4, hy + 3, -7.6, hy - .6); ctx.closePath(); ctx.fill();
 }
 
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
@@ -266,7 +270,7 @@ function drawTrail(cx, cy, pose) {
   onPage(() => brushArc((o, h) => { ctx.beginPath(); const cut = (hi - lo) * h * .25; ctx.arc(cx, cy, Math.max(1, r + o - 4), lead ? lo + cut : lo, lead ? hi : hi - cut); }, pose.trailCol, (pose.trailW || 6) * 1.6, .85));
 }
 // the Prince of Shadow, after Corwin: black hair to the shoulder, green eyes, dressed in black and silver with a silver rose
-const HERO = { corwin: 1, rose: 1, glove: '#2A2830', skin: '#DCC4AE', hair: '#141218', longHair: 1, body: '#1E1C24', sleeve: '#1A181F', trim: '#B8BECC', legs: '#17151B', boots: '#26222A', coat: '#22202A', coat2: '#2C2A36', pauldron: '#3A3A46', eye: '#4FAE6A', chain: 1 };
+const HERO = { corwin: 1, rose: 1, glove: '#2A2830', skin: '#DCC4AE', hair: '#141218', body: '#1E1C24', sleeve: '#1A181F', trim: '#B8BECC', legs: '#17151B', boots: '#26222A', coat: '#22202A', coat2: '#2C2A36', pauldron: '#3A3A46', eye: '#4FAE6A', chain: 1 };
 // the hero's armor shows its forge level: 2 a leather strap and shoulder guard, 3 a steel breastplate, 4 silver trim, 5 shadow-plate with runes
 function heroLook() {
   const a = save.armor, L = Object.assign({}, HERO);
