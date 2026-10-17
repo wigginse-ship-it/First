@@ -85,7 +85,7 @@ function renderForge(note) {
     const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}">LV${m.lvl} ${m.name} <em>· ${m.how}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
-      <p>${owned ? w.desc : 'Smash weapon shrines and beat guardians to find it.'}</p><ul>${moves}</ul>
+      <p>${owned ? w.desc : (id === 'sword' ? 'A brass automaton in the Skyport carries it.' : id === 'staff' ? 'A moss golem in Bloomwild Vale carries it.' : 'A thornboar in Bloomwild Vale carries it.') + ' Look for the gold shimmer.'}</p><ul>${moves}</ul>
       ${owned ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Learn next move · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
@@ -130,13 +130,13 @@ function drawTrumpArt(canvas, id) {
   const g = canvas.getContext('2d'), old = ctx; ctx = g;
   g.setTransform(canvas.width / 96, 0, 0, canvas.width / 96, 0, 0);
   const bg = g.createLinearGradient(0, 0, 0, 96);
-  const cols = { stag: ['#6FD3FF', '#2A1D5C'], mirror: ['#C9B8FF', '#2A1D5C'], phoenix: ['#FF8A3D', '#5A1D3C'], stillness: ['#8FE9FF', '#1C1240'] }[id];
+  const cols = { stag: ['#8FB8D8', '#2A1D5C'], mirror: ['#C9B8FF', '#2A1D5C'], phoenix: ['#D8834A', '#5A1D3C'], stillness: ['#8FE9FF', '#1C1240'] }[id];
   bg.addColorStop(0, cols[0]); bg.addColorStop(1, cols[1]); g.fillStyle = bg; rrect(14, 4, 68, 88, 8); g.fill();
-  g.lineWidth = 2; g.strokeStyle = '#FFC94A'; g.stroke();
+  g.lineWidth = 2; g.strokeStyle = '#D8AA55'; g.stroke();
   g.save(); g.translate(48, 48);
   if (id === 'stag') { g.translate(-14, 30); g.scale(.62, .62); drawStag({ x: 0, y: 0 }, 1); }
   else if (id === 'mirror') { g.translate(0, 30); g.scale(.62, .62); g.globalAlpha = .5; g.save(); g.translate(-14, 0); drawHumanoid(HERO, { arm: -.6, weapon: 'staff' }); g.restore(); g.globalAlpha = 1; g.translate(12, 0); g.scale(-1, 1); drawHumanoid(HERO, { arm: -.6, weapon: 'staff' }); }
-  else if (id === 'phoenix') { g.fillStyle = '#FFE46B'; g.beginPath(); g.moveTo(0, -30); g.quadraticCurveTo(30, -10, 26, 20); g.quadraticCurveTo(10, 4, 0, 30); g.quadraticCurveTo(-10, 4, -26, 20); g.quadraticCurveTo(-30, -10, 0, -30); g.fill(); g.fillStyle = '#FF4F7B'; circle(0, -6, 8); g.fill(); }
+  else if (id === 'phoenix') { g.fillStyle = '#EED48A'; g.beginPath(); g.moveTo(0, -30); g.quadraticCurveTo(30, -10, 26, 20); g.quadraticCurveTo(10, 4, 0, 30); g.quadraticCurveTo(-10, 4, -26, 20); g.quadraticCurveTo(-30, -10, 0, -30); g.fill(); g.fillStyle = '#D04A62'; circle(0, -6, 8); g.fill(); }
   else { g.strokeStyle = '#FFFFFF'; g.lineWidth = 3; circle(0, 0, 26); g.stroke(); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -18); g.moveTo(0, 0); g.lineTo(12, 6); g.stroke(); }
   g.restore(); ctx = old;
 }

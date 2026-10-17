@@ -83,7 +83,7 @@ function updatePlayer(dt) {
       P.ct += dt;
       const maxL = save.wl.sword >= 4 ? 3 : 2;
       const lvl = P.ct >= 1.5 && maxL === 3 ? 3 : P.ct >= .95 ? 2 : P.ct >= .45 ? 1 : 0;
-      if (lvl > P.clvl) { P.clvl = lvl; sfx('charge', lvl); burst(P.x - P.facing * 6, P.y, 56, lvl === 3 ? '#FF6FB5' : '#FFC94A', 8 + lvl * 4, 'spark'); zoom = Math.max(zoom, .02); }
+      if (lvl > P.clvl) { P.clvl = lvl; sfx('charge', lvl); burst(P.x - P.facing * 6, P.y, 56, lvl === 3 ? '#C8607A' : '#D8AA55', 8 + lvl * 4, 'spark'); zoom = Math.max(zoom, .02); }
       if (Math.abs(mx) > 0.3) P.facing = Math.sign(mx);
       if (pressed.dodge) { startDodge(); break; }
       if (!input.heavy) { const m = Object.assign({ key: 'H' }, WEAPONS.sword.charged[P.clvl]); begin(m); P.seq = 'H'; }
@@ -91,6 +91,8 @@ function updatePlayer(dt) {
     }
     case 'dodge':
       P.t -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
+      if (pressed.light || pressed.heavy) P.dq = true; // attack out of a roll
+      if (P.dq && P.t < .2) { P.dq = false; P.inv = Math.max(P.inv, .15); begin(w.tree.R); break; }
       P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .04; addGhost(); }
       if (P.t <= 0) P.state = 'idle';
       break;
@@ -143,16 +145,16 @@ function startDodge() {
   let dx = input.mx, dy = input.my;
   if (!dx && !dy) dx = P.facing;
   const d = Math.hypot(dx, dy) || 1;
-  P.state = 'dodge'; P.t = .34; P.dvx = dx / d * 300; P.dvy = dy / d * 150; P.inv = Math.max(P.inv, .36); P.seq = '';
+  P.state = 'dodge'; P.t = .34; P.dq = false; P.dvx = dx / d * 300; P.dvy = dy / d * 150; P.inv = Math.max(P.inv, .36); P.seq = '';
   if (dx) P.facing = Math.sign(dx);
   sfx('whoosh');
 }
 function swapWeapon() {
   const owned = WEAPON_ORDER.filter(id => save.owned[id]);
-  if (owned.length < 2) { floatText(P.x, P.y, 80, 'FIND A WEAPON SHRINE', '#FFFFFF', 12); return; }
+  if (owned.length < 2) { floatText(P.x, P.y, 80, 'BEAT GLOWING ENEMIES FOR WEAPONS', '#FFFFFF', 12); return; }
   P.w = owned[(owned.indexOf(P.w) + 1) % owned.length]; save.weapon = P.w; P.seq = '';
-  refreshHud(true); floatText(P.x, P.y, 80, WEAPONS[P.w].name.toUpperCase(), '#FFC94A', 14);
-  burst(P.x, P.y, 40, '#FFC94A', 10, 'spark');
+  refreshHud(true); floatText(P.x, P.y, 80, WEAPONS[P.w].name.toUpperCase(), '#D8AA55', 14);
+  burst(P.x, P.y, 40, '#D8AA55', 10, 'spark');
 }
 function addGhost() { if (ghosts.length < 14) ghosts.push({ x: P.x, y: P.y, z: P.z, facing: P.facing, pose: playerPose(), a: .4 }); }
 
@@ -187,7 +189,7 @@ function strike(e, base, dir, m, echo) {
   hurtEnemy(e, dmg, dir, m);
   if (mirrorT > 0 && !echo) echoes.push({ e, dmg: base * .6, dir, m, t: .14 });
 }
-const MAT_COL = { goo: ['#FF7FC8', '#FFB3E0', '#FFFFFF'], fur: ['#E07A3A', '#FFD27A', '#FFFFFF'], spark: ['#FFE46B', '#FF8FD0', '#FFFFFF'], rock: ['#A89A8A', '#6FCB5A', '#FFE46B'], metal: ['#FFE46B', '#FFFFFF', '#6FD3FF'], crystal: ['#8FE9FF', '#FF8FD0', '#FFFFFF'] };
+const MAT_COL = { goo: ['#D88AAE', '#F0C8D8', '#FFF4E8'], fur: ['#B86A3E', '#E8C08A', '#FFF4E8'], spark: ['#F0D890', '#E0A0C0', '#FFF8E8'], rock: ['#9A8E80', '#7EA460', '#E8D08A'], metal: ['#F0D890', '#FFF8E8', '#9FD8E8'], crystal: ['#9FD8E0', '#D8A0C8', '#FFFFFF'] };
 const MAT_SFX = { goo: 'hit-goo', fur: 'hit-flesh', spark: 'hit-crystal', rock: 'hit-flesh', metal: 'hit-metal', crystal: 'hit-crystal' };
 function hurtEnemy(e, dmg, dir, m) {
   const pw = m.power || 0;
@@ -197,9 +199,9 @@ function hurtEnemy(e, dmg, dir, m) {
   if (pw === 2) zoom = Math.max(zoom, .045);
   const hx = e.x - dir * e.hw * .4, hz = e.z + e.hh * .55;
   burst(hx, e.y, hz, MAT_COL[e.def.mat], 7 + pw * 6, e.def.mat, dir);
-  fx.push({ kind: 'slash', x: hx, y: e.y, z: hz, ang: rand(-.6, .6) + (m.launch ? -1.2 : 0), t: .16, max: .16, size: 18 + pw * 10, col: pw === 2 ? '#FFC94A' : '#FFFFFF' });
+  fx.push({ kind: 'slash', x: hx, y: e.y, z: hz, ang: rand(-.6, .6) + (m.launch ? -1.2 : 0), t: .16, max: .16, size: 18 + pw * 10, col: pw === 2 ? '#D8AA55' : '#FFFFFF' });
   fx.push({ kind: 'ring', x: hx, y: e.y, z: hz, t: .2, max: .2, r: 10 + pw * 8, col: '#FFFFFF' });
-  floatText(e.x, e.y, e.z + e.hh + 10, String(dmg), pw === 2 ? '#FFC94A' : '#FFFFFF', 14 + pw * 4);
+  floatText(e.x, e.y, e.z + e.hh + 10, String(dmg), pw === 2 ? '#D8AA55' : '#FFFFFF', 14 + pw * 4);
   sfx(MAT_SFX[e.def.mat], pw * .5);
   comboN++; comboT = 1.8; refreshCombo(true);
   if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg);
@@ -249,7 +251,7 @@ function makeLoot(kind, x, y, val, weapon) {
 function shockwave(x, y, r, m) {
   P.shocked = true; sfx('slam'); shakeMag = Math.max(shakeMag, 8); zoom = Math.max(zoom, .04);
   fx.push({ kind: 'ring', x, y, z: 2, t: .4, max: .4, r: r * 1.3, col: '#FFFFFF', flat: 1 });
-  burst(x, y, 4, ['#FFFFFF', '#FFE46B', '#E9D8B0'], 20, 'rock', 0, true);
+  burst(x, y, 4, ['#FFFFFF', '#EED48A', '#E9D8B0'], 20, 'rock', 0, true);
   for (const e of enemies) {
     if (e.dead || P.hits.get(e) === -1) continue;
     if (Math.hypot(e.x - x, (e.y - y) * 2) < r + e.hw && e.z < 40) {
@@ -261,24 +263,19 @@ function shockwave(x, y, r, m) {
 function hitProp(p, m) {
   p.hp -= (m.power || 0) >= 1 ? 2 : 1; p.flash = .1;
   hitstop = Math.max(hitstop, .05); shakeMag = Math.max(shakeMag, 3);
-  burst(p.x, p.y, 40, ['#E6FBFF', '#8FB8FF', '#FFE46B'], 10, 'crystal', P.facing);
+  burst(p.x, p.y, 40, ['#E6FBFF', '#8FB8FF', '#EED48A'], 10, 'crystal', P.facing);
   sfx('hit-crystal');
   if (p.hp > 0) return;
   p.broken = true; sfx('break'); zoom = Math.max(zoom, .04);
-  burst(p.x, p.y, 40, ['#E6FBFF', '#8FB8FF', '#FFE46B', '#FF8FD0'], 30, 'crystal', 0, true);
-  if (p.kind === 'shrine') {
-    if (p.weapon && !save.owned[p.weapon]) loot.push(makeLoot('weapon', p.x, p.y, 0, p.weapon));
-    else { for (let i = 0; i < 5; i++) loot.push(makeLoot('shard', p.x, p.y, 5)); loot.push(makeLoot('sigil', p.x, p.y, 1)); }
-  } else {
-    for (let i = 0; i < 4; i++) loot.push(makeLoot('shard', p.x, p.y, 2));
-    if (Math.random() < .5) loot.push(makeLoot('heal', p.x, p.y, 20));
-  }
+  burst(p.x, p.y, 40, ['#E6FBFF', '#8FB8FF', '#EED48A', '#D08AB0'], 30, 'crystal', 0, true);
+  for (let i = 0; i < 4; i++) loot.push(makeLoot('shard', p.x, p.y, 2));
+  if (Math.random() < .5) loot.push(makeLoot('heal', p.x, p.y, 20));
 }
 function playerDamage(dmg, fromX, big) {
   if (P.inv > 0 || P.state === 'dead' || P.state === 'dodge') return;
   P.hp -= dmg; P.inv = .8; shakeMag = Math.max(shakeMag, big ? 7 : 4); hitstop = .07; hurtFlash = .25;
-  floatText(P.x, P.y, 70, '-' + dmg, '#FF5A6E', 16); sfx('hurt');
-  burst(P.x, P.y, 34, ['#FF5A6E', '#FFFFFF'], 10, 'spark');
+  floatText(P.x, P.y, 70, '-' + dmg, '#D0566A', 16); sfx('hurt');
+  burst(P.x, P.y, 34, ['#D0566A', '#FFFFFF'], 10, 'spark');
   const dir = Math.sign(P.x - fromX) || -P.facing;
   P.vx = dir * (big ? 240 : 130); P.facing = -dir; P.seq = '';
   comboN = 0; refreshCombo();
@@ -297,8 +294,8 @@ function playTrump() {
   else if (save.trump === 'stillness') stillT = 5;
   else if (save.trump === 'phoenix') {
     P.hp = Math.min(maxHp(), P.hp + maxHp() * .5);
-    burst(P.x, P.y, 30, ['#FFE46B', '#FF8A3D', '#FF4F7B', '#FFFFFF'], 50, 'spark', 0, true);
-    fx.push({ kind: 'ring', x: P.x, y: P.y, z: 20, t: .5, max: .5, r: 150, col: '#FF8A3D', flat: 1 });
+    burst(P.x, P.y, 30, ['#EED48A', '#D8834A', '#D04A62', '#FFFFFF'], 50, 'spark', 0, true);
+    fx.push({ kind: 'ring', x: P.x, y: P.y, z: 20, t: .5, max: .5, r: 150, col: '#D8834A', flat: 1 });
     for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 150) strike(e, 30, Math.sign(e.x - P.x) || 1, { dmg: 30, kb: 420, launch: 300, power: 2 }, true);
   }
   refreshHud();
@@ -309,7 +306,7 @@ function updateTrumps(dt) {
   echoes = echoes.filter(ec => ec.t > 0);
   if (stag) {
     stag.t += dt; stag.x += 620 * dt;
-    if (Math.random() < .8) burst(stag.x - 20, stag.y, rand(10, 50), ['#BFF5FF', '#FFFFFF', '#FFE46B'], 2, 'spark');
+    if (Math.random() < .8) burst(stag.x - 20, stag.y, rand(10, 50), ['#BFF5FF', '#FFFFFF', '#EED48A'], 2, 'spark');
     for (const e of enemies) if (!e.dead && !stag.hit.has(e) && Math.abs(e.x - stag.x) < 34 && Math.abs(e.y - stag.y) < 60) { stag.hit.add(e); strike(e, 45, 1, { dmg: 45, kb: 380, launch: 460, power: 2 }, true); }
     if (stag.x > camX + VW + 80) stag = null;
   }

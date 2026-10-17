@@ -37,7 +37,7 @@ function spawnEnemy(type, side, isBoss) {
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
     dmg: Math.round(scaleStat(def.dmg, .3)), cd: rand(.6, 1.4), poiseMax: def.poise || 0, poise: def.poise || 0,
-    state: 'idle', t: 0, plan: null, flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
+    state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
   enemies.push(e); return e;
 }
 function attackers() { let n = 0; for (const e of enemies) if (!e.dead && ['wind', 'strike', 'dash', 'pounce', 'leap'].includes(e.state)) n++; return n; }
@@ -49,13 +49,13 @@ function updateEnemy(e, dt) {
   if (stillT > 0 && !e.dead) return;
   e.cd -= dt;
   const fly = e.def.move === 'fly';
-  const ballistic = e.air || e.state === 'leap' || e.state === 'pounce' || (!fly && e.z > 0);
+  const ballistic = e.air || e.state === 'leap' || e.state === 'pounce' || (!fly && (e.z > 0 || e.vz > 0)); // vz > 0 lets a hop leave the ground
   if (ballistic) {
     e.vz -= GRAV * dt; e.z += e.vz * dt; e.x += e.vx * dt; e.rotA += e.spin * dt;
     if (e.wallOK && (e.walls || 0) < 2 && ((e.x < leftWall() && e.vx < -150) || (e.x > rightWall() && e.vx > 150))) {
       e.vx = -e.vx * .55; e.vz = Math.max(e.vz, 200); e.walls++; e.wallOK = e.walls < 2;
       shakeMag = Math.max(shakeMag, 6); hitstop = Math.max(hitstop, .06); sfx('slam');
-      burst(e.x, e.y, e.z + 20, ['#FFFFFF', '#FFE46B'], 12, 'spark', Math.sign(e.vx));
+      burst(e.x, e.y, e.z + 20, ['#FFFFFF', '#EED48A'], 12, 'spark', Math.sign(e.vx));
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.z + 20, t: .25, max: .25, r: 30, col: '#FFFFFF' });
     }
     if (e.z <= 0) { e.z = 0; enemyLand(e); }
@@ -76,25 +76,23 @@ function updateEnemy(e, dt) {
       return;
     case 'idle': {
       if (!e.plan) e.plan = pick(e.def.plans);
-      const p = e.plan;
-      e.facing = Math.sign(dxp) || e.facing;
-      if (p === 'shoot' || p === 'volley') {
-        const side = Math.sign(e.x - P.x) || 1;
-        approach(e, clamp(P.x + side * 170, leftWall() + 10, rightWall() - 10), P.y, dt, .9);
-        if (e.cd <= 0 && Math.abs(dyp) < 10 && attackers() < 2) wind(e, e.def.wind);
-      } else if (p === 'charge') {
-        approach(e, e.x, P.y, dt, 1.3);
-        if (e.cd <= 0 && Math.abs(dyp) < 10 && attackers() < 2) wind(e, e.def.wind + .2);
-      } else if (p === 'slam' || p === 'summon') {
-        approach(e, P.x - Math.sign(dxp) * 110, P.y, dt, .7);
-        if (e.cd <= 0 && attackers() < 2) wind(e, p === 'slam' ? .5 : .8);
-      } else {
-        const reach = p === 'pounce' ? 90 : e.def.reach;
-        const side = Math.sign(e.x - P.x) || 1;
-        const tx = P.x + side * (reach * .75 + e.hw * .5);
-        if (Math.abs(e.x - tx) < 10 && Math.abs(dyp) < 8) { e.walk = 0; if (e.cd <= 0 && attackers() < 2 && P.state !== 'dead') wind(e, e.def.wind); }
-        else approach(e, tx, P.y, dt, attackers() >= 2 && !e.boss ? .55 : 1);
-      }
+      const p = e.plan, side = Math.sign(e.x - P.x) || 1;
+      e.facing = -side;
+      // anyone outside the view walks straight in before doing anything else
+      const inL = camX + 26 + e.hw, inR = camX + VW - 26 - e.hw;
+      if (e.x < inL || e.x > inR) { approach(e, clamp(e.x, inL + 30, inR - 30), P.y, dt, 1.5); return; }
+      const melee = p === 'bite' || p === 'swing' || p === 'pounce';
+      const busy = attackers() >= 2 && !e.boss;
+      let tx, ready;
+      if (p === 'shoot' || p === 'volley') { tx = P.x + side * 150; ready = Math.abs(dyp) < 10; }
+      else if (p === 'charge') { tx = P.x + side * 150; ready = Math.abs(dyp) < 10 && Math.abs(e.x - tx) < 50; }
+      else if (p === 'slam' || p === 'summon') { tx = P.x + side * 100; ready = true; }
+      else { const reach = p === 'pounce' ? 90 : e.def.reach; tx = P.x + side * (reach * .75 + e.hw * .5); ready = Math.abs(e.x - tx) < 10 && Math.abs(dyp) < 8; }
+      if (busy && !ready) tx = P.x + side * Math.max(90, Math.abs(tx - P.x)); // wait close by, spread out, never far away
+      tx = clamp(tx, inL, inR);
+      if (ready && e.cd <= 0 && !busy && P.state !== 'dead') wind(e, p === 'charge' ? e.def.wind + .2 : p === 'slam' ? .5 : p === 'summon' ? .8 : e.def.wind);
+      else if (ready && melee) e.walk = 0;
+      else approach(e, tx, P.y + (busy ? e.slot : 0), dt, busy ? .85 : 1.2);
       return;
     }
     case 'wind': e.t -= dt; if (e.plan !== 'charge') e.facing = Math.sign(dxp) || e.facing; if (e.t <= 0) execute(e); return;
@@ -159,7 +157,7 @@ function execute(e) {
   else if (p === 'slam') { e.state = 'leap'; e.vz = 420; e.vx = (P.x - e.x) / .84; e.ty = P.y; }
   else if (p === 'summon') {
     if (enemies.filter(o => !o.dead && !o.boss).length < 3) e.def.summon.forEach((s, i) => spawnEnemy(s, i % 2 ? -1 : 1));
-    burst(e.x, e.y, 60, ['#FF8FD0', '#FFE46B', '#FFFFFF'], 20, 'spark'); recover(e, .6);
+    burst(e.x, e.y, 60, ['#D08AB0', '#EED48A', '#FFFFFF'], 20, 'spark'); recover(e, .6);
   }
 }
 function slamLand(e) {
@@ -171,7 +169,7 @@ function slamLand(e) {
 }
 function bolt(e, y) {
   projs.push({ owner: 'e', x: e.x + e.facing * (e.hw + 6), y, z: Math.max(24, e.z + e.hh * .5), vx: e.facing * (e.boss ? 230 : 200), dmg: e.dmg, life: 3.5,
-    col: e.def.mat === 'metal' ? '#FF4F7B' : e.def.mat === 'crystal' || e.def.mat === 'goo' ? '#8FE9FF' : '#FFE46B' });
+    col: e.def.mat === 'metal' ? '#D04A62' : e.def.mat === 'crystal' || e.def.mat === 'goo' ? '#8FE9FF' : '#EED48A' });
   sfx('shoot');
 }
 
@@ -187,8 +185,8 @@ function updateLoot(dt) {
     if (d < 14) {
       k.got = true; sfx('pick');
       if (k.kind === 'shard') { save.shards += k.val; runShards += k.val; }
-      else if (k.kind === 'sigil') { save.sigils += k.val; runSigils += k.val; floatText(P.x, P.y, 80, '+SIGIL', '#FF6FB5', 14); }
-      else { P.hp = Math.min(maxHp(), P.hp + k.val); floatText(P.x, P.y, 80, '+' + k.val, '#48E5C2', 15); }
+      else if (k.kind === 'sigil') { save.sigils += k.val; runSigils += k.val; floatText(P.x, P.y, 80, '+SIGIL', '#C8607A', 14); }
+      else { P.hp = Math.min(maxHp(), P.hp + k.val); floatText(P.x, P.y, 80, '+' + k.val, '#7EC2B0', 15); }
       refreshHud();
     }
   }
@@ -197,7 +195,7 @@ function updateLoot(dt) {
 function gainWeapon(id) {
   save.owned[id] = true; save.weapon = id; P.w = id; P.seq = ''; persist();
   sfx('weapon'); flashT = .15; zoom = .05; slowmo = .4;
-  burst(P.x, P.y, 50, ['#FFE46B', '#FFFFFF', '#FF8FD0'], 30, 'spark', 0, true);
+  burst(P.x, P.y, 50, ['#EED48A', '#FFFFFF', '#D08AB0'], 30, 'spark', 0, true);
   banner(WEAPONS[id].name + ' found', 'NEW WEAPON · SWAP TO CHANGE · LEVEL IT AT THE FORGE', 2.6);
   refreshHud(true);
 }
@@ -207,8 +205,7 @@ function startStage(i) {
   stageIdx = i; stage = STAGES[i];
   P = newPlayer();
   enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = [];
-  props = stage.shrines.map(s => ({ kind: 'shrine', x: s.x, y: FLOOR_TOP + 56, hp: 3, weapon: s.weapon }))
-    .concat(stage.pods.map(x => ({ kind: 'pod', x, y: FLOOR_TOP + 46 + (x % 3) * 18, hp: 1, theme: stage.theme })));
+  props = stage.pods.map(x => ({ kind: 'pod', x, y: FLOOR_TOP + 46 + (x % 3) * 18, hp: 1, theme: stage.theme }));
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
   runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stag = null;
@@ -221,7 +218,9 @@ const waveAt = (i) => 520 + i * ((stage.len - 1300) / stage.waves.length);
 function updateWorld(dt) {
   if (!waveActive && waveIdx < stage.waves.length && P.x > waveAt(waveIdx)) {
     waveActive = true; lockX = clamp(camX, 0, stage.len - VW); $('#go').hidden = true;
-    stage.waves[waveIdx].forEach((t, j) => spawnQ.push({ type: t, side: j % 2 ? -1 : 1, at: j * .8, drop: stage.drop && stage.drop.wave === waveIdx && j === 0 ? stage.drop.weapon : null }));
+    const wave = stage.waves[waveIdx];
+    wave.forEach((t, j) => spawnQ.push({ type: t, side: j % 2 ? -1 : 1, at: j * .8, drop: null }));
+    for (const d of stage.drops) if (d.wave === waveIdx && !save.owned[d.weapon]) spawnQ[wave.indexOf(d.type)].drop = d.weapon; // this enemy carries a weapon
   }
   if (!bossSpawned && waveIdx >= stage.waves.length && P.x > stage.len - VW * .75) {
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;
@@ -245,7 +244,7 @@ function updateWorld(dt) {
       if (Math.abs(p.x - P.x) < 12 && Math.abs(p.y - P.y) < 12 && P.z < 40 && P.state !== 'dead') { playerDamage(p.dmg, p.x - p.vx, false); p.life = 0; }
     } else {
       for (const e of enemies) if (!e.dead && !p.hit.has(e) && Math.abs(p.x - e.x) < 24 && Math.abs(p.y - e.y) < 26) { p.hit.add(e); strike(e, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 300, power: 2 }); }
-      if (Math.random() < .9) parts.push({ x: p.x, y: p.y + rand(-10, 10), z: rand(0, 40), vx: 0, vy: 0, vz: 40, life: .4, max: .4, col: '#FF8FD0', size: 3, shape: 'star', rot: 0, vr: 4 });
+      if (Math.random() < .9) parts.push({ x: p.x, y: p.y + rand(-10, 10), z: rand(0, 40), vx: 0, vy: 0, vz: 40, life: .4, max: .4, col: '#D08AB0', size: 3, shape: 'star', rot: 0, vr: 4 });
     }
   }
   projs = projs.filter(p => p.life > 0 && p.x > camX - 60 && p.x < camX + VW + 60);
@@ -256,6 +255,6 @@ function updateWorld(dt) {
   if (clearT > 0) { clearT -= dt; if (clearT <= 0) stageClear(); }
 }
 function endCombo() {
-  if (comboN >= 10) { const b = Math.floor(comboN / 5); save.shards += b; runShards += b; floatText(P.x, P.y, 96, `${comboN} HITS · +${b} SHARDS`, '#48E5C2', 14); }
+  if (comboN >= 10) { const b = Math.floor(comboN / 5); save.shards += b; runShards += b; floatText(P.x, P.y, 96, `${comboN} HITS · +${b} SHARDS`, '#7EC2B0', 14); }
   comboN = 0; refreshCombo();
 }

@@ -1,7 +1,7 @@
 'use strict';
 // ---------- weapons ----------
 // Each weapon is a combo tree. Keys are the inputs so far: L = Attack, H = Heavy,
-// D = attack while running, DH = heavy while running, A = attack in the air.
+// D = attack while running, DH = heavy while running, A = attack in the air, R = attack out of a dodge roll.
 // A move: dur (s), h = active window as a fraction of dur, x0..x1 = reach in front, depth = lane tolerance,
 // dmg, kb = knockback speed, launch = upward speed given to the enemy, lunge/hop = how the player moves,
 // rot = full-body spin over the move, arc = weapon swing angles, around = hits both sides,
@@ -15,6 +15,7 @@ const WEAPONS = {
       LLL:  { dur: .4,  h: [.3, .65], x0: 0, x1: 40, dmg: 12, kb: 300, kick: 1, lunge: 120, hop: 170, power: 1 },
       H:    { dur: .48, h: [.25, .55], x0: 0, x1: 34, dmg: 13, kb: 60, launch: 430, arc: [1.6, -1.8], hop: 210, power: 1 },
       D:    { dur: .44, h: [.1, .7], x0: 0, x1: 40, dmg: 12, kb: 300, kick: 1, lunge: 420, hop: 190, power: 1 },
+      R:    { dur: .5,  h: [.2, .6], x0: 0, x1: 36, dmg: 14, kb: 80, launch: 380, kick: 1, lunge: 220, hop: 240, rot: -TAU * .5, power: 1 },
       A:    { dur: .5,  h: [.1, .95], x0: 0, x1: 38, dmg: 10, kb: 180, kick: 1, dive: 1, power: 1 },
       LH:   { lvl: 2, name: 'Shoulder Bash', how: 'Attack, Heavy', dur: .45, h: [.15, .7], x0: 0, x1: 38, dmg: 15, kb: 420, lunge: 460, arc: [.2, .2], power: 2, wall: 1 },
       LLH:  { lvl: 3, name: 'Whirlwind Kick', how: 'Attack ×2, Heavy', dur: .62, h: [.15, .85], x0: 0, x1: 42, dmg: 6, kb: 220, kick: 1, around: 1, multi: .11, hop: 260, rot: -TAU, power: 1 },
@@ -27,6 +28,7 @@ const WEAPONS = {
       LL:   { dur: .5,  h: [.4, .62], x0: 0, x1: 62, dmg: 17, kb: 260, arc: [1.2, -1.8], lunge: 60, power: 1 },
       H:    { dur: .64, h: [.45, .62], x0: 0, x1: 66, dmg: 24, kb: 90, launch: 330, arc: [-2.7, 1.5], hop: 140, bounce: 1, shock: 70, power: 2 },
       D:    { dur: .56, h: [.1, .6], x0: 0, x1: 60, dmg: 18, kb: 360, arc: [1.4, 1.4], lunge: 440, crouch: 1, power: 1 },
+      R:    { dur: .6,  h: [.25, .7], x0: 0, x1: 64, dmg: 22, kb: 300, arc: [-P_, P_], around: 1, rot: -TAU, lunge: 120, power: 2 },
       A:    { dur: .55, h: [.15, .97], x0: 0, x1: 54, dmg: 22, kb: 160, arc: [-2, 1.5], dive: 1, shock: 64, power: 2 },
       LLL:  { lvl: 2, name: 'Hammer Cyclone', how: 'Attack ×3', dur: .85, h: [.12, .88], x0: 0, x1: 62, dmg: 9, kb: 200, arc: [-P_, 3 * P_], around: 1, multi: .13, lunge: 140, power: 1 },
       LH:   { lvl: 3, name: 'Golf Swing', how: 'Attack, Heavy', dur: .55, h: [.35, .6], x0: 0, x1: 62, dmg: 20, kb: 80, launch: 560, arc: [2.3, -2.6], power: 2 },
@@ -41,6 +43,7 @@ const WEAPONS = {
       LLLL: { dur: .5,  h: [.2, .8], x0: 0, x1: 70, dmg: 13, kb: 260, arc: [-P_, P_], around: 1, hop: 150, power: 1 },
       H:    { dur: .55, h: [.3, .75], x0: 0, x1: 70, dmg: 12, kb: 90, launch: 320, arc: [-P_, 1.5 * P_], around: 1, depth: 24, power: 1 },
       D:    { dur: .62, h: [.35, .85], x0: 0, x1: 46, dmg: 18, kb: 220, launch: 340, kick: 1, lunge: 400, hop: 320, power: 1 },
+      R:    { dur: .55, h: [.2, .8], x0: 0, x1: 68, dmg: 8, kb: 140, arc: [-P_, 2 * P_], around: 1, multi: .12, hop: 200, lunge: 260, rot: -TAU, power: 1 },
       A:    { dur: .5,  h: [.1, .9], x0: 0, x1: 66, dmg: 6, kb: 120, arc: [-1.6, 4.6], around: 1, multi: .12 },
       LH:   { lvl: 2, name: 'Rising Spiral', how: 'Attack, Heavy', dur: .62, h: [.15, .8], x0: 0, x1: 66, dmg: 7, kb: 60, launch: 440, arc: [-P_, 3 * P_], around: 1, multi: .12, hop: 380, rot: -TAU, power: 1 },
       HL:   { lvl: 3, name: 'Pole Flip', how: 'Heavy, Attack', dur: .62, h: [.5, .75], x0: 0, x1: 70, dmg: 18, kb: 160, arc: [-2, 1.4], hop: 300, rot: TAU, lunge: 260, bounce: 1, power: 1 },
@@ -52,6 +55,7 @@ const WEAPONS = {
       L:    { dur: .5,  h: [.4, .62], x0: 0, x1: 84, dmg: 18, kb: 200, arc: [-1.9, 1.1], lunge: 50, depth: 20, power: 1 },
       LL:   { dur: .6,  h: [.4, .62], x0: 0, x1: 86, dmg: 22, kb: 300, arc: [1.1, -1.7], lunge: 60, depth: 20, power: 1 },
       D:    { dur: .55, h: [.1, .6], x0: 0, x1: 88, dmg: 22, kb: 420, arc: [.1, .1], lunge: 480, power: 1, wall: 1 },
+      R:    { dur: .6,  h: [.3, .7], x0: 0, x1: 86, dmg: 28, kb: 320, arc: [-P_, P_], around: 1, rot: TAU, lunge: 160, power: 2, depth: 22 },
       A:    { dur: .55, h: [.15, .97], x0: 0, x1: 70, dmg: 24, kb: 160, arc: [-2, 1.5], dive: 1, shock: 60, bounce: 1, power: 2 },
       LLL:  { lvl: 2, name: 'Wheel Cleave', how: 'Attack ×3', dur: .62, h: [.25, .7], x0: 0, x1: 86, dmg: 26, kb: 320, arc: [-P_, P_], around: 1, hop: 160, rot: -TAU, power: 2 },
       LH:   { lvl: 3, name: 'Rising Slash', how: 'Attack, Heavy', dur: .55, h: [.2, .55], x0: 0, x1: 80, dmg: 22, kb: 80, launch: 500, arc: [1.6, -2.3], hop: 320, power: 1 },
@@ -101,15 +105,15 @@ const BOSSES = {
 // ---------- stages ----------
 const STAGES = [
   { name: 'Bloomwild Vale', sub: 'THE FIRST SHADOW', theme: 'bloom', len: 2600,
-    shrines: [{ x: 300, weapon: 'hammer' }], pods: [880, 1650],
-    waves: [['slime', 'slime', 'boar'], ['wisp', 'slime', 'boar', 'slime'], ['golem', 'slime', 'wisp', 'boar']],
-    drop: { wave: 2, weapon: 'staff' }, boss: 'mossback' },
+    pods: [880, 1650],
+    waves: [['slime', 'boar', 'slime'], ['wisp', 'slime', 'boar', 'slime'], ['golem', 'slime', 'wisp', 'boar']],
+    drops: [{ wave: 0, type: 'boar', weapon: 'hammer' }, { wave: 2, type: 'golem', weapon: 'staff' }], boss: 'mossback' },
   { name: 'The Clockwork Skyport', sub: 'THE SECOND SHADOW', theme: 'sky', len: 2700,
-    shrines: [{ x: 1250, weapon: 'sword' }], pods: [700, 1900],
+    pods: [700, 1900],
     waves: [['spider', 'drone', 'spider'], ['knight', 'drone', 'spider', 'knight'], ['tank', 'knight', 'drone', 'spider', 'spider']],
-    boss: 'colossus' },
+    drops: [{ wave: 1, type: 'knight', weapon: 'sword' }], boss: 'colossus' },
   { name: 'The Prism Rim', sub: 'THE THIRD SHADOW', theme: 'prism', len: 2800,
-    shrines: [{ x: 1300, weapon: null }], pods: [650, 1500, 2100],
+    pods: [650, 1500, 2100], drops: [],
     waves: [['imp', 'imp', 'jelly', 'shardling'], ['shardling', 'jelly', 'imp', 'imp', 'jelly'], ['cgolem', 'imp', 'jelly', 'shardling', 'imp']],
     boss: 'wyrm' },
 ];
