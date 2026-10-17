@@ -23,12 +23,11 @@
     background: var(--wall-bottom);
     color: var(--cream);
     font-family: var(--body);
-    overflow: hidden;
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
-  #stage { position: fixed; inset: 0; touch-action: none; cursor: pointer; }
+  #stage { position: relative; width: 100%; height: 100%; min-height: 560px; overflow: hidden; touch-action: none; cursor: pointer; }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
   .hud {
@@ -183,6 +182,8 @@
     dpr = Math.min(window.devicePixelRatio || 1, 3);
     cvs.width = Math.round(W * dpr); cvs.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (!W || !H) return;
+    if (stack && !oldW) { reset(); return; }
     if (stack && oldW) {
       const shift = (W - oldW) / 2;
       stack.forEach(l => l.cx += shift);
@@ -416,6 +417,7 @@
   stack.push({ cx: W / 2 + 6, w: baseW - 12, syrup: false }, { cx: W / 2 + 2, w: baseW - 20, syrup: true });
   spawn();
   window.addEventListener('resize', resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
   requestAnimationFrame(frame);
   document.getElementById('startBtn').focus({ preventScroll: true });
 })();
