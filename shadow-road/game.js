@@ -1,6 +1,8 @@
 'use strict';
 // ---------- run state ----------
 const SPX = 112, SPY = 72, RUN = 240, JUMP = 360;
+// lighter weapons let you move faster; the hammer and great sword keep the base pace
+const W_SPEED = { fists: 1.3, staff: 1.18, hammer: 1, sword: 1 };
 let mode = 'title';
 let stage = null, stageIdx = 0, P = null;
 let enemies = [], projs = [], parts = [], fx = [], nums = [], loot = [], props = [], ghosts = [], echoes = [], spawnQ = [];
@@ -47,25 +49,25 @@ function updatePlayer(dt) {
     P.z += P.vz * dt;
     if (P.z <= 0) { P.z = 0; P.vz = 0; onLand(); }
   }
-  const mx = input.mx, my = input.my;
+  const mx = input.mx, my = input.my, sp = W_SPEED[P.w] || 1;
   switch (P.state) {
     case 'idle': case 'walk': case 'run': {
       if (pressed.swap) swapWeapon();
       if (pressed.trump) playTrump();
       const running = input.run && Math.abs(mx) > 0.3;
-      if (pressed.jump) { if (P.chaseT > 0) { chaseJump(); break; } P.vz = JUMP; P.state = 'jump'; P.jvx = running ? Math.sign(mx) * RUN * 1.05 : mx * SPX; P.jvy = my * SPY; P.airN = 0; sfx('jump'); dust(P.x, P.y, 5); break; }
+      if (pressed.jump) { if (P.chaseT > 0) { chaseJump(); break; } P.vz = JUMP; P.state = 'jump'; P.jvx = running ? Math.sign(mx) * RUN * sp * 1.05 : mx * SPX * sp; P.jvy = my * SPY * sp; P.airN = 0; sfx('jump'); dust(P.x, P.y, 5); break; }
       if (pressed.dodge) { startDodge(); break; }
       if (input.light && P.holdL >= .2 && !P.holdUsed) { begin(w.tree.X); break; } // hold Attack: launcher
       if (pressed.light) { const walking = Math.abs(mx) > .5 || Math.abs(my) > .5; begin(running ? w.tree.D : walking && unlocked(w.tree.M) ? w.tree.M : nextMove('L')); break; }
       if (pressed.heavy) { begin(running ? (unlocked(w.tree.DH) ? w.tree.DH : w.tree.D) : nextMove('H')); break; }
       P.seq = '';
       if (running) {
-        P.state = 'run'; P.facing = Math.sign(mx); P.x += P.facing * RUN * dt; P.y += my * SPY * .6 * dt; P.walk += dt * 20;
+        P.state = 'run'; P.facing = Math.sign(mx); P.x += P.facing * RUN * sp * dt; P.y += my * SPY * sp * .6 * dt; P.walk += dt * 20 * sp;
         P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .05; addGhost(); }
         if (Math.random() < dt * 14) dust(P.x - P.facing * 8, P.y, 1);
       } else {
         const moving = mx !== 0 || my !== 0;
-        P.x += mx * SPX * dt; P.y += my * SPY * dt;
+        P.x += mx * SPX * sp * dt; P.y += my * SPY * sp * dt;
         if (Math.abs(mx) > 0.1) P.facing = Math.sign(mx);
         P.state = moving ? 'walk' : 'idle'; P.walk = moving ? P.walk + dt * 13 : 0;
       }
@@ -125,6 +127,10 @@ function updatePlayer(dt) {
       P.t -= dt; P.x += P.vx * dt; P.vx *= Math.pow(.01, dt);
       if (P.t <= 0 && mode === 'play') gameOver();
       break;
+  }
+  if (P.carry > 0) { // momentum from landing a hit: you surge after whatever you just knocked away
+    if (P.state === 'atk' || P.state === 'air') P.x += P.facing * P.carry * dt; else P.carry = 0;
+    P.carry *= Math.pow(.02, dt);
   }
   P.y = clamp(P.y, FLOOR_TOP + 6, FLOOR_BOT);
   P.x = clamp(P.x, camX + 14, lockX !== null ? lockX + VW - 14 : stage.len - 14);
@@ -235,6 +241,7 @@ function strike(e, base, dir, m, echo) {
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
   const dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' ? 1 : .85)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
   hurtEnemy(e, dmg, dir, m, crit);
+  if (m === P.move && dir === P.facing && !m.around && !(m.lunge >= 300)) P.carry = Math.max(P.carry || 0, Math.min(Math.abs(e.vx) * (e.air ? 1.4 : .8), 340));
   if (brandT > 0 && !m.trump && !m.el && !e.dead) applyElement(e, base, dir);
   if (mirrorT > 0 && !echo) echoes.push({ e, dmg: base * .6, dir, m, t: .14 });
 }
