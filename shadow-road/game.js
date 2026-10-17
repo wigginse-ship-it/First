@@ -203,7 +203,7 @@ function inReach(m, tx, ty, tz, hw, hh) {
 function doHits() {
   const m = P.move, now = P.t;
   for (const e of enemies) {
-    if (e.dead || (e.state === 'down' && !m.bounce && !m.shock)) continue;
+    if (e.dead || (e.state === 'down' && !e.boss && !m.bounce && !m.shock)) continue; // a staggered boss can be hit by anything
     const last = P.hits.get(e);
     if (last !== undefined && !(m.multi && now - last >= m.multi)) continue;
     if (!inReach(m, e.x, e.y, e.z, e.hw, e.hh)) continue;

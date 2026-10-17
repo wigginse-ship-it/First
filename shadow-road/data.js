@@ -137,11 +137,11 @@ const EDEF = {
 };
 const BOSSES = {
   // bosses fight in three phases (at 2/3 and 1/3 health they roar, drop health for you and get faster); p2 attacks join from phase two
-  mossback: { name: 'Old Mossback', title: 'THE WALKING GROVE', draw: 'mossback', mat: 'rock', move: 'ground', hp: 420, spd: 46, hw: 60, hh: 96, dmg: 13, reach: 84, wind: .7, cd: [.7, 1.4], weight: .3, poise: 9,
+  mossback: { name: 'Old Mossback', title: 'THE WALKING GROVE', draw: 'mossback', mat: 'rock', move: 'ground', hp: 780, spd: 46, hw: 60, hh: 96, dmg: 16, reach: 84, wind: .7, cd: [.7, 1.4], weight: .3, poise: 9,
     p1: ['bite', 'sweep', 'roll', 'erupt'], p2: ['bite', 'sweep', 'roll', 'erupt', 'rain'] },
-  colossus: { name: 'The Brass Colossus', title: 'WARDEN OF THE SKYPORT', draw: 'colossus', mat: 'metal', move: 'ground', hp: 520, spd: 52, hw: 34, hh: 118, dmg: 14, reach: 80, wind: .6, cd: [.7, 1.3], weight: .3, poise: 9, ranged: 1,
+  colossus: { name: 'The Brass Colossus', title: 'WARDEN OF THE SKYPORT', draw: 'colossus', mat: 'metal', move: 'ground', hp: 900, spd: 52, hw: 34, hh: 118, dmg: 17, reach: 80, wind: .6, cd: [.7, 1.3], weight: .3, poise: 9, ranged: 1,
     p1: ['swing', 'volley', 'groundwave', 'charge'], p2: ['swing', 'groundwave', 'beam', 'rain', 'volley'] },
-  wyrm:     { name: 'The Kaleidoscope Wyrm', title: 'EATER OF COLORS', draw: 'wyrm', mat: 'crystal', move: 'fly', hover: 64, hp: 640, spd: 64, hw: 44, hh: 56, dmg: 15, reach: 80, wind: .6, cd: [.6, 1.2], weight: .3, poise: 10, ranged: 1,
+  wyrm:     { name: 'The Kaleidoscope Wyrm', title: 'EATER OF COLORS', draw: 'wyrm', mat: 'crystal', move: 'fly', hover: 64, hp: 1080, spd: 64, hw: 44, hh: 56, dmg: 19, reach: 80, wind: .6, cd: [.6, 1.2], weight: .3, poise: 10, ranged: 1,
     p1: ['bite', 'breath', 'charge', 'rain'], p2: ['bite', 'breath', 'beam', 'erupt', 'rain', 'slam'] },
 };
 

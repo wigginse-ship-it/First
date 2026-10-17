@@ -153,8 +153,8 @@ function drawTrail(cx, cy, pose) {
   }
   ctx.restore();
 }
-// the fallen prince of shadow: pale, silver-haired, a torn coat and one blackened pauldron, a violet ember for an eye
-const HERO = { skin: '#D9CCD2', hair: '#CFCBDA', longHair: 1, fringe: 1, body: '#2A2433', sleeve: '#231E2C', trim: '#9A96AE', legs: '#1C1824', boots: '#2E2630', coat: '#2F2838', coat2: '#3A3046', pauldron: '#3E3A4C', eye: '#B89CFF', chain: 1 };
+// the fallen prince of shadow: pale, raven-haired, a torn coat and one blackened pauldron, a violet ember for an eye
+const HERO = { skin: '#D9CCD2', hair: '#1C1726', longHair: 1, fringe: 1, body: '#2A2433', sleeve: '#231E2C', trim: '#9A96AE', legs: '#1C1824', boots: '#2E2630', coat: '#2F2838', coat2: '#3A3046', pauldron: '#3E3A4C', eye: '#B89CFF', chain: 1 };
 // human enemies, a third of every world
 const HUMANS = {
   bandit:   { skin: '#C9A07E', hood: '#5A6A3E', body: '#6E5A3E', sleeve: '#5A4A34', trim: '#A88A5A', legs: '#3E3428', boots: '#2E2418', mask: '#3A3428', weapon: 'dagger' },
