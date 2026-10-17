@@ -23,6 +23,44 @@ function shadow(x, y, rx) { // cast on the floor, so it is painted under the ink
   if (inkG && ctx === inkG) onMain(f); else f();
 }
 
+// a defined face in three-quarter profile: high brow, straight nose, firm jaw and chin, stern brows, green eyes
+function drawCorwinHead(look, hy) {
+  const sk = look.skin;
+  ctx.fillStyle = C(shade(sk, -.25)); ctx.fillRect(-1.8, hy + 5, 5.4, 6.5); // neck
+  ctx.beginPath(); // the head's outline, from the nape over the crown, down the face to the chin and back along the jaw
+  ctx.moveTo(-3, hy + 6.5);
+  ctx.quadraticCurveTo(-8.4, hy + 1, -7, hy - 5); ctx.quadraticCurveTo(-4.5, hy - 10.6, 2, hy - 10.4);
+  ctx.quadraticCurveTo(7.4, hy - 9.6, 8.3, hy - 4); // forehead
+  ctx.lineTo(8.9, hy - 2.4); ctx.lineTo(8.2, hy - .8); // brow ridge, then into the eye socket
+  ctx.lineTo(10.4, hy + 2.6); ctx.lineTo(8.6, hy + 3.3); // a straight nose
+  ctx.lineTo(9, hy + 4.4); ctx.lineTo(8.4, hy + 5.4); // lips
+  ctx.quadraticCurveTo(9.2, hy + 6.4, 8.6, hy + 7.6); // a firm chin
+  ctx.quadraticCurveTo(5, hy + 9.2, 0.6, hy + 7); // the jaw
+  ctx.closePath();
+  const sg = ctx.createRadialGradient(5.5, hy - 3, 1, 2, hy + 1, 11); sg.addColorStop(0, C(shade(sk, .14))); sg.addColorStop(.6, C(sk)); sg.addColorStop(1, C(shade(sk, -.24)));
+  ctx.fillStyle = sg; ctx.fill(); outline(1.1);
+  if (!FLASH) {
+    ctx.fillStyle = 'rgba(70,45,40,.18)'; ctx.beginPath(); ctx.moveTo(1, hy + 6.8); ctx.quadraticCurveTo(5, hy + 8.8, 8.5, hy + 7.4); ctx.quadraticCurveTo(8.6, hy + 5.6, 7.6, hy + 5.2); ctx.quadraticCurveTo(4, hy + 6, 2.6, hy + 3.4); ctx.closePath(); ctx.fill(); // shadow along the jaw
+    ctx.strokeStyle = 'rgba(90,55,45,.45)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(3.4, hy + 1.2); ctx.quadraticCurveTo(5, hy + 3.6, 6.6, hy + 4); ctx.stroke(); // cheekbone
+    ctx.beginPath(); ctx.moveTo(8.3, hy - .4); ctx.lineTo(9.3, hy + 2.2); ctx.stroke(); // side of the nose
+  }
+  ctx.fillStyle = C(shade(sk, -.18)); ell(-1.2, hy + 1.4, 1.7, 2.5); ctx.fill(); // ear
+  ctx.fillStyle = C('#EFE8E0'); ctx.beginPath(); ctx.moveTo(4.4, hy - .6); ctx.quadraticCurveTo(5.9, hy - 1.9, 7.5, hy - .8); ctx.quadraticCurveTo(6, hy + .2, 4.4, hy - .6); ctx.fill(); // the eye
+  ctx.fillStyle = C(look.eye); circle(6.3, hy - .75, 1); ctx.fill();
+  ctx.fillStyle = C('#101010'); circle(6.45, hy - .75, .45); ctx.fill();
+  ctx.strokeStyle = C('#1A1214'); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(4.2, hy - .5); ctx.quadraticCurveTo(5.9, hy - 2.1, 7.7, hy - .9); ctx.stroke(); // upper lid
+  ctx.fillStyle = C(look.hair); ctx.beginPath(); ctx.moveTo(3, hy - 3.2); ctx.lineTo(8.5, hy - 2.9); ctx.lineTo(8.1, hy - 1.9); ctx.lineTo(3.4, hy - 2.1); ctx.closePath(); ctx.fill(); // a heavy, level brow
+  ctx.strokeStyle = C(shade(sk, -.5)); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(7.2, hy + 4.5); ctx.lineTo(8.8, hy + 4.3); ctx.stroke(); // mouth
+  // black hair, swept back from the brow and falling past the ears to the collar
+  ctx.fillStyle = C(look.hair); ctx.beginPath();
+  ctx.moveTo(7.6, hy - 6.6); ctx.quadraticCurveTo(7, hy - 11.8, 0, hy - 12); ctx.quadraticCurveTo(-8.4, hy - 11.4, -9.4, hy - 3);
+  ctx.quadraticCurveTo(-10.4, hy + 4, -8, hy + 10); ctx.lineTo(-4.5, hy + 8.5); ctx.quadraticCurveTo(-3.8, hy + 3, -2.4, hy - 1);
+  ctx.quadraticCurveTo(.6, hy + .4, 1.4, hy + 3.6); ctx.quadraticCurveTo(2.2, hy - 2.6, 2.2, hy - 5.6); // sideburn and temple
+  ctx.quadraticCurveTo(5, hy - 7.6, 7.6, hy - 6.6); ctx.closePath(); ctx.fill(); outline(1);
+  ctx.strokeStyle = C('#4A4A5C'); ctx.lineWidth = .7; ctx.beginPath(); // strands catching the light
+  ctx.moveTo(6, hy - 7.4); ctx.quadraticCurveTo(0, hy - 11, -6, hy - 7); ctx.moveTo(4, hy - 9.6); ctx.quadraticCurveTo(-3, hy - 10.6, -8, hy - 2); ctx.moveTo(-6.4, hy + 1); ctx.quadraticCurveTo(-8, hy + 5, -7, hy + 8.6); ctx.stroke();
+}
+
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
 function drawWeapon(kind, pose) {
   if (kind === 'fists' || !kind) { circle(17, 0, 4.5); ctx.fillStyle = C((pose && pose.glove) || '#FFF1E0'); ctx.fill(); outline(1.5); return; }
@@ -90,11 +128,15 @@ function drawHumanoid(look, pose) {
     ctx.beginPath(); ctx.moveTo(-3, -46 + cr); ctx.quadraticCurveTo(-18 - flow, -30 + cr, -16 - flow * 1.4, -8 + Math.sin(walk * .5) * 3);
     ctx.lineTo(-4, -14 + cr); ctx.closePath(); ctx.fillStyle = C(look.cape); ctx.fill(); outline(1.8);
   }
+  // the hero's head is drawn a little larger than life, so his face reads at a glance
+  const hs = look.corwin ? 1.28 : 1, headScale = () => { ctx.translate(1, -51 + cr); ctx.scale(hs, hs); ctx.translate(-1, 51 - cr); };
   // long hair streams behind the head
   if (look.longHair) {
+    ctx.save(); headScale();
     const flow = (pose.flow || 0) * .8 + Math.abs(sw) * 2;
     ctx.beginPath(); ctx.moveTo(-4, -64 + cr); ctx.quadraticCurveTo(-14 - flow, -56 + cr, -12 - flow * 1.3, -38 + cr + Math.sin(walk * .7) * 2);
     ctx.lineTo(-6, -44 + cr); ctx.quadraticCurveTo(-6, -54 + cr, 0, -60 + cr); ctx.closePath(); ctx.fillStyle = C(look.hair); ctx.fill(); outline(1.4);
+    ctx.restore();
   }
   // tattered coat tails swing from the waist
   if (look.coat) {
@@ -146,7 +188,12 @@ function drawHumanoid(look, pose) {
     }
     ctx.fillStyle = C(look.trim); ctx.fillRect(-9, -28 + cr, 18, 3.5); if (!look.plate) ctx.fillRect(-1.5, ty, 3, 20);
     ctx.fillStyle = C('#C9A86A'); ctx.fillRect(1, -28.5 + cr, 3.5, 4.5); ctx.fillStyle = C(shade(look.trim, -.5)); ctx.fillRect(2, -27.5 + cr, 1.5, 2.5); // buckle
-    if (look.rose) { ctx.fillStyle = C('#F4F6FF'); circle(5, -42 + cr, 2.2); ctx.fill(); }
+    if (look.rose) { // his silver rose, pinned at the breast
+      const rx = -4.4, ry = -41.5 + cr; ctx.save(); ctx.translate(rx, ry); ctx.scale(1.5, 1.5); ctx.translate(-rx, -ry);
+      ctx.strokeStyle = C('#5E6E5A'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(rx, ry + 1.5); ctx.lineTo(rx - 1.5, ry + 5); ctx.stroke();
+      for (let i = 0; i < 5; i++) { const a = i / 5 * TAU - .3; ctx.fillStyle = C(i % 2 ? '#C8CEDA' : '#E8ECF4'); ell(rx + Math.cos(a) * 1.3, ry + Math.sin(a) * 1.3, 1.5, 1.1, a); ctx.fill(); }
+      ctx.fillStyle = C('#8E96A8'); circle(rx, ry, .8); ctx.fill(); ctx.restore();
+    }
     if (look.chain) { ctx.strokeStyle = C(look.trim); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-8, -26 + cr); ctx.quadraticCurveTo(-2, -20 + cr, 6, -25 + cr); ctx.stroke(); }
   }
   // head
@@ -155,6 +202,8 @@ function drawHumanoid(look, pose) {
     rrect(-8, hy - 8, 17, 15, 4); ctx.fillStyle = C(look.helm); ctx.fill(); outline();
     ctx.fillStyle = C(look.visor); ctx.fillRect(1, hy - 3, 8, 3.5);
     if (look.plume) { ctx.fillStyle = C(look.plume); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.quadraticCurveTo(-14, hy - 18, -20, hy - 8); ctx.quadraticCurveTo(-12, hy - 10, -6, hy - 4); ctx.fill(); }
+  } else if (look.corwin) {
+    ctx.save(); headScale(); drawCorwinHead(look, hy); ctx.restore();
   } else {
     ctx.fillStyle = C(shade(look.skin, -.22)); ctx.fillRect(-1.5, hy + 5, 5, 6); // neck
     const sg = ctx.createRadialGradient(4, hy - 3, 1, 1, hy, 10); sg.addColorStop(0, C(shade(look.skin, .12))); sg.addColorStop(1, C(shade(look.skin, -.18)));
@@ -216,13 +265,14 @@ function drawTrail(cx, cy, pose) {
   const lo = Math.min(a0, a1), hi = Math.max(a0, a1), lead = a1 > a0;
   onPage(() => brushArc((o, h) => { ctx.beginPath(); const cut = (hi - lo) * h * .25; ctx.arc(cx, cy, Math.max(1, r + o - 4), lead ? lo + cut : lo, lead ? hi : hi - cut); }, pose.trailCol, (pose.trailW || 6) * 1.6, .85));
 }
-const HERO = { glove: '#3A3040', skin: '#D9CCD2', hair: '#1C1726', longHair: 1, fringe: 1, body: '#2A2433', sleeve: '#231E2C', trim: '#9A96AE', legs: '#1C1824', boots: '#2E2630', coat: '#2F2838', coat2: '#3A3046', pauldron: '#3E3A4C', eye: '#B89CFF', chain: 1 };
-// the hero's armor shows its forge level: 2 a leather strap and shoulder guard, 3 a steel breastplate, 4 gold trim, 5 shadow-plate with runes
+// the Prince of Shadow, after Corwin: black hair to the shoulder, green eyes, dressed in black and silver with a silver rose
+const HERO = { corwin: 1, rose: 1, glove: '#2A2830', skin: '#DCC4AE', hair: '#141218', longHair: 1, body: '#1E1C24', sleeve: '#1A181F', trim: '#B8BECC', legs: '#17151B', boots: '#26222A', coat: '#22202A', coat2: '#2C2A36', pauldron: '#3A3A46', eye: '#4FAE6A', chain: 1 };
+// the hero's armor shows its forge level: 2 a leather strap and shoulder guard, 3 a steel breastplate, 4 silver trim, 5 shadow-plate with runes
 function heroLook() {
   const a = save.armor, L = Object.assign({}, HERO);
   if (a >= 2) { L.strap = '#4A3A2E'; L.pauldron = '#5A4A3E'; }
   if (a >= 3) { L.plate = '#8E96A8'; L.pauldron = '#8E96A8'; L.strap = null; }
-  if (a >= 4) { L.plateTrim = '#D8AA55'; L.trim = '#D8AA55'; }
+  if (a >= 4) { L.plateTrim = '#E4E8F0'; L.trim = '#E4E8F0'; } // bright silver, his colors
   if (a >= 5) { L.plate = '#3A344E'; L.pauldron = '#2E2A40'; L.runes = '#B89CFF'; }
   return L;
 }
@@ -349,8 +399,8 @@ function buildBackground(themeId, seed) {
     }
   }
   ctx = old;
-  paintLayer(fc, { ink: '#3A2A48', bleed: .3, gran: .45, line: .22, lw: 1, hatch: 0 });
-  paintLayer(mc, { ink: '#1E1219', bleed: .45, gran: .65, line: .8, lw: 1.1, hatch: .22 });
+  paintLayer(fc, { ink: '#3A2A30', line: .3, lw: .9, brush: .8, hatch: 0, seed: 3 });
+  paintLayer(mc, { ink: '#1A100C', line: .85, lw: 1.1, brush: 1, hatch: .2, seed: 7 });
   bgFar = fc; bgMid = mc;
   if (!grain) { // canvas-and-brush texture laid over the whole picture
     grain = document.createElement('canvas'); grain.width = grain.height = 256;
@@ -392,9 +442,9 @@ function drawFloor(themeId, th, camX, t) {
   DAB_X = camX;
   drawFloorLayer(themeId, th, camX, t);
   DAB_X = 0;
-  // the ground is a wash too: pigment settles in it and the near edge is hatched in shadow
+  // the ground is brushed in too, and its near edge is modelled into shadow with fine strokes
   ctx.save(); ctx.beginPath(); ctx.rect(0, FLOOR_TOP - 2, VW, VH - FLOOR_TOP + 2); ctx.clip();
-  ctx.translate(-(camX % 512), 0); ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'gran');
+  ctx.translate(-(camX % 512), 0); ctx.fillStyle = texPat(ctx, 'brush');
   ctx.save(); ctx.scale(.5, .5); ctx.fillRect(0, (FLOOR_TOP - 2) * 2, (VW + 512) * 2, (VH - FLOOR_TOP + 2) * 2); ctx.restore();
   ctx.globalAlpha = .16; ctx.fillStyle = texPat(ctx, 'hatch'); ctx.scale(.5, .5); ctx.fillRect(0, (VH - 34) * 2, (VW + 512) * 2, 68);
   ctx.restore();
@@ -439,7 +489,7 @@ function drawFloorLayer(themeId, th, camX, t) {
 function gradeFrame(themeId) {
   const gd = THEMES[themeId].grade, y = Y_OFF, h = VIEW_H;
   ctx.save();
-  ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${gd.desat})`; ctx.fillRect(0, y, VW, h);
+  ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${gd.desat * .35})`; // panel paintings keep their pigments rich ctx.fillRect(0, y, VW, h);
   ctx.globalCompositeOperation = 'soft-light';
   const lg = ctx.createLinearGradient(0, y, 0, y + h); lg.addColorStop(0, gd.top); lg.addColorStop(1, gd.bot); ctx.fillStyle = lg; ctx.fillRect(0, y, VW, h);
   ctx.globalCompositeOperation = 'multiply';
