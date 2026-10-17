@@ -48,7 +48,7 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
 }
 function drawEnemy(e, t) {
   if (e.state === 'dying' && e.death && e.death !== 'pop') { drawDeath(e, t); return; }
-  const scale = e.boss ? 1 : 1;
+  const scale = e.boss ? e.size : 1;
   const a = { walk: e.dead ? 0 : e.walk, t: e.dead ? e.deadAt : t, wind: e.state === 'wind' ? 1 - e.t / e.windMax : 0, atk: ['strike', 'dash', 'pounce'].includes(e.state), hurt: ['hurt', 'down', 'dying'].includes(e.state) };
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') { a.pose = humanEnemyPose(e); if (e.state === 'down' || (e.state === 'dying' && !e.air)) a.pose.down = 1; }
   shadow(e.x, e.y, e.hw * 1.1 * Math.max(.4, 1 - e.z / 200));
@@ -97,7 +97,7 @@ function drawDeath(e, t) {
   const draw = () => CREATURES[e.def.draw](e, a);
   shadow(e.x, e.y, e.hw * 1.1);
   ctx.save(); ctx.globalAlpha = e.fade !== undefined ? e.fade : 1;
-  ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1);
+  ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); if (e.boss) ctx.scale(e.size, e.size);
   FLASH = el < .08;
   if (e.death === 'lie') { // knocked flat and left where it landed
     FLASH = false;

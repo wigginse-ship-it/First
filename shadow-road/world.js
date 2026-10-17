@@ -36,10 +36,13 @@ function spawnEnemy(type, side, isBoss) {
   const hp = Math.round(scaleStat(def.hp, .5));
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
-    dmg: Math.round(scaleStat(def.dmg, .3)), cd: rand(.6, 1.4), poiseMax: def.poise || 0, poise: def.poise || 0,
+    dmg: Math.round(scaleStat(def.dmg, .3) * (isBoss ? 1.6 : 1.35)), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
+  if (isBoss) { e.phase = 1; e.baseDmg = e.dmg; e.size = 1.15; e.hw = def.hw * e.size; e.hh = def.hh * e.size; e.rageT = 0; e.staggers = 0; }
   enemies.push(e); return e;
 }
+// a boss's damage: higher each phase, and higher again while enraged
+const edmg = (e) => Math.round(e.dmg * (e.enraged ? 1.2 : 1));
 let hazards = [], carriers = [], corpses = [];
 // the fallen stay where they fell for the rest of the world (the oldest fade once there are too many)
 function toCorpse(e, kind) {
@@ -55,14 +58,20 @@ function updateEnemy(e, dt) {
   e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12);
   if (stillT > 0 && !e.dead) return;
   if (updateElements(e, dt)) return;
-  if (e.boss && !e.dead && ['idle', 'recover'].includes(e.state)) { // phase changes: roar, get faster, leave health behind
-    const ph = e.hp < e.maxHp * .34 ? 3 : e.hp < e.maxHp * .67 ? 2 : 1;
-    if (ph > (e.phase || 1)) {
-      for (let q = (e.phase || 1) + 1; q <= ph; q++) phaseDrop(e);
-      e.phase = ph; e.enraged = true; e.plan = 'roar'; wind(e, .5);
+  if (e.boss && !e.dead) {
+    e.rageT = Math.max(0, e.rageT - dt); e.enraged = e.rageT > 0;
+    if (['idle', 'recover'].includes(e.state)) {
+      const ph = e.hp < e.maxHp * .34 ? 3 : e.hp < e.maxHp * .67 ? 2 : 1;
+      if (ph > e.phase) { // a new phase: it transforms, grows, hits harder, and flies into a rage
+        for (let q = e.phase + 1; q <= ph; q++) phaseDrop(e);
+        e.phase = ph; e.size = 1.15 * (1 + .09 * (ph - 1)); e.hw = e.def.hw * e.size; e.hh = e.def.hh * e.size;
+        e.dmg = Math.round(e.baseDmg * [1, 1.15, 1.32][ph - 1]);
+        e.rageT = 10; e.roarWhy = 'phase'; e.plan = 'roar'; wind(e, .5);
+        burst(e.x, e.y, e.hh * .6, ['#FFFFFF', '#FFB35A', '#E86A80'], 40, e.def.mat, 0, true);
+      } else if (e.rageQ) { e.rageQ = false; e.rageT = 10; e.roarWhy = 'rage'; e.plan = 'roar'; wind(e, .45); }
     }
   }
-  e.cd -= dt * (e.phase === 3 ? 1.8 : e.enraged ? 1.4 : 1);
+  e.cd -= dt * (e.boss ? [1, 1.35, 1.7][e.phase - 1] * (e.enraged ? 1.4 : 1) : 1);
   const fly = e.def.move === 'fly';
   const ballistic = e.air || e.state === 'leap' || e.state === 'pounce' || (!fly && (e.z > 0 || e.vz > 0)); // vz > 0 lets a hop leave the ground
   if (ballistic) {
@@ -96,7 +105,7 @@ function updateEnemy(e, dt) {
       if (e.t <= 0) { e.state = 'idle'; e.rotA = 0; e.cd = Math.max(e.cd, .6); e.jug = 0; e.walls = 0; }
       return;
     case 'idle': {
-      if (!e.plan) e.plan = pick(e.boss ? (e.enraged ? e.def.p2 : e.def.p1) : e.def.plans);
+      if (!e.plan) e.plan = pick(e.boss ? (e.phase >= 2 ? e.def.p2 : e.def.p1) : e.def.plans);
       const p = e.plan, side = Math.sign(e.x - P.x) || 1;
       e.facing = -side;
       // anyone outside the view walks straight in before doing anything else
@@ -123,20 +132,20 @@ function updateEnemy(e, dt) {
       if (!e.struck) {
         e.struck = true;
         const fwd = (P.x - e.x) * (e.around ? Math.sign(P.x - e.x) || 1 : e.facing), reach = e.def.reach + e.hw;
-        if (fwd > -10 && fwd < reach && Math.abs(dyp) < 18 + e.hw * .2 && P.z < 40) playerDamage(e.dmg, e.x, e.hw > 22 || e.boss);
+        if (fwd > -10 && fwd < reach && Math.abs(dyp) < 18 + e.hw * .2 && P.z < 40) playerDamage(edmg(e), e.x, e.hw > 22 || e.boss);
       }
       if (e.t <= 0) { e.around = false; recover(e, .5); }
       return;
     case 'dash':
       e.t -= dt; e.x += e.facing * (e.plan === 'roll' ? 400 : e.boss ? 330 : 300) * dt; if (e.plan === 'roll') e.rotA += e.facing * dt * 14;
       if (Math.random() < .7) dust(e.x - e.facing * e.hw, e.y, 1);
-      if (!e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 18 && P.z < 30) { e.struck = true; playerDamage(Math.round(e.dmg * 1.2), e.x, true); }
+      if (!e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 18 && P.z < 30) { e.struck = true; playerDamage(Math.round(edmg(e) * 1.2), e.x, true); }
       if (e.rolls > 0 && (e.x < leftWall() || e.x > rightWall())) { // the rolling shell rebounds off the edges
         e.rolls--; e.facing *= -1; e.t = .9; e.struck = false; e.x = clamp(e.x, leftWall(), rightWall()); shakeMag = 8; sfx('slam'); dust(e.x, e.y, 10);
       } else if (e.t <= 0 || e.x < leftWall() || e.x > rightWall()) { e.rolls = 0; e.x = clamp(e.x, leftWall(), rightWall()); recover(e, .8); }
       return;
     case 'pounce': case 'leap':
-      if (e.state === 'pounce' && !e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 16 && zOverlap(P.z, 60, e.z, e.hh)) { e.struck = true; playerDamage(e.dmg, e.x, false); }
+      if (e.state === 'pounce' && !e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 16 && zOverlap(P.z, 60, e.z, e.hh)) { e.struck = true; playerDamage(edmg(e), e.x, false); }
       if (e.state === 'leap') e.y += (e.ty - e.y) * Math.min(1, dt * 3);
       return;
     case 'recover': e.t -= dt; if (e.t <= 0) { e.state = 'idle'; e.plan = null; } return;
@@ -152,7 +161,7 @@ function enemyLand(e) {
   if (e.def.move === 'hop') { e.sq = .7; }
 }
 function approach(e, tx, ty, dt, k) {
-  const dx = tx - e.x, dy = ty - e.y, sp = e.def.spd * k * (e.phase === 3 ? 1.45 : e.enraged ? 1.25 : 1) * (e.chill > 0 ? .5 : 1);
+  const dx = tx - e.x, dy = ty - e.y, sp = e.def.spd * k * (e.boss ? [1, 1.15, 1.35][e.phase - 1] * (e.enraged ? 1.2 : 1) : 1) * (e.chill > 0 ? .5 : 1);
   const moving = Math.abs(dx) > 3 || Math.abs(dy) > 3;
   if (e.def.move === 'hop') { // jellybloom-style hopping
     e.sq += (1 - e.sq) * Math.min(1, dt * 8);
@@ -172,7 +181,7 @@ function approach(e, tx, ty, dt, k) {
 // bosses take longer to wind up, so every big attack can be read and dodged
 const BOSS_WIND = { bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
 function wind(e, t) {
-  if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * (e.enraged ? .85 : 1); sfx('growl'); if (e.plan === 'slam') e.ty = P.y, e.tx = P.x; }
+  if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * [1, .88, .76][e.phase - 1] * (e.enraged ? .9 : 1); sfx('growl'); if (e.plan === 'slam') e.ty = P.y, e.tx = P.x; }
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
 }
 function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]); }
@@ -185,22 +194,22 @@ function execute(e) {
   else if (p === 'charge') { e.state = 'dash'; e.t = .8; e.struck = false; sfx('whoosh'); }
   else if (p === 'slam') { const tx = e.boss && e.tx !== undefined ? e.tx : P.x; e.state = 'leap'; e.vz = 420; e.vx = (tx - e.x) / .84; e.ty = e.boss && e.ty !== undefined ? e.ty : P.y; e.tx = undefined; }
   else if (p === 'sweep') { e.state = 'strike'; e.t = .3; e.around = true; sfx('whoosh'); shakeMag = Math.max(shakeMag, 3); }
-  else if (p === 'roll') { e.state = 'dash'; e.t = .9; e.rolls = e.enraged ? 3 : 2; e.struck = false; sfx('whoosh'); }
+  else if (p === 'roll') { e.state = 'dash'; e.t = .9; e.rolls = e.phase + 1; e.struck = false; sfx('whoosh'); }
   else if (p === 'erupt') {
-    const spots = e.enraged ? [[0, 0], [-70, -14], [70, 14]] : [[0, 0]];
-    for (const [ox, oy] of spots) hazards.push({ kind: 'spike', x: P.x + ox, y: clamp(P.y + oy, FLOOR_TOP + 8, FLOOR_BOT), r: 40, t: .95, max: .95, dmg: e.dmg, col: e.def.mat === 'crystal' ? '159,216,224' : '126,164,96' });
+    const spots = [[0, 0], [-70, -14], [70, 14], [-140, 10], [140, -10]].slice(0, e.phase * 2 - 1);
+    for (const [ox, oy] of spots) hazards.push({ kind: 'spike', x: P.x + ox, y: clamp(P.y + oy, FLOOR_TOP + 8, FLOOR_BOT), r: 40, t: .95, max: .95, dmg: edmg(e), col: e.def.mat === 'crystal' ? '159,216,224' : '126,164,96' });
     sfx('charge'); recover(e, .8);
   }
   else if (p === 'rain') {
-    const n = e.enraged ? 7 : 5;
-    for (let i = 0; i < n; i++) hazards.push({ kind: 'fall', x: P.x + rand(-130, 130) * (i ? 1 : 0), y: clamp(P.y + rand(-34, 34) * (i ? 1 : 0), FLOOR_TOP + 8, FLOOR_BOT), r: 28, t: .85 + i * .16, max: .85 + i * .16, dmg: Math.round(e.dmg * .8), col: e.def.mat === 'metal' ? '232,106,128' : e.def.mat === 'crystal' ? '216,160,232' : '216,186,120' });
+    const n = 3 + e.phase * 2;
+    for (let i = 0; i < n; i++) hazards.push({ kind: 'fall', x: P.x + rand(-130, 130) * (i ? 1 : 0), y: clamp(P.y + rand(-34, 34) * (i ? 1 : 0), FLOOR_TOP + 8, FLOOR_BOT), r: 28, t: .85 + i * .16, max: .85 + i * .16, dmg: Math.round(edmg(e) * .8), col: e.def.mat === 'metal' ? '232,106,128' : e.def.mat === 'crystal' ? '216,160,232' : '216,186,120' });
     recover(e, .9);
   }
-  else if (p === 'beam') { hazards.push({ kind: 'beam', y: P.y, t: 1.25, max: 1.25, dmg: Math.round(e.dmg * 1.4), col: e.def.mat === 'metal' ? '255,120,140' : '200,170,255', hit: false }); sfx('charge', 2); recover(e, 1.4); }
-  else if (p === 'groundwave') { for (const d of e.enraged ? [-1, 1] : [e.facing]) projs.push({ owner: 'e', ground: 1, x: e.x + d * e.hw, y: e.y, z: 0, vx: d * 260, dmg: e.dmg, life: 3, col: '#EED48A' }); shakeMag = 8; sfx('slam'); recover(e, .7); }
+  else if (p === 'beam') { if (e.phase === 3) hazards.push({ kind: 'beam', y: clamp(P.y + (P.y > 290 ? -46 : 46), FLOOR_TOP + 8, FLOOR_BOT), t: 1.25, max: 1.25, dmg: Math.round(edmg(e) * 1.4), col: '255,170,120', hit: false }); hazards.push({ kind: 'beam', y: P.y, t: 1.25, max: 1.25, dmg: Math.round(edmg(e) * 1.4), col: e.def.mat === 'metal' ? '255,120,140' : '200,170,255', hit: false }); sfx('charge', 2); recover(e, 1.4); }
+  else if (p === 'groundwave') { for (const d of e.phase >= 2 ? [-1, 1] : [e.facing]) projs.push({ owner: 'e', ground: 1, x: e.x + d * e.hw, y: e.y, z: 0, vx: d * 260, dmg: edmg(e), life: 3, col: '#EED48A' }); shakeMag = 8; sfx('slam'); recover(e, .7); }
   else if (p === 'breath') { [-44, -22, 0, 22, 44].forEach((o, i) => setTimeout(() => !e.dead && bolt(e, clamp(e.y + o, FLOOR_TOP + 6, FLOOR_BOT)), i * 60)); recover(e, 1); }
   else if (p === 'roar') {
-    banner(e.def.name, e.phase === 3 ? 'FINAL PHASE' : e.enraged ? 'PHASE TWO' : e.def.title, 1.8); sfx('roar'); shakeMag = 14; zoom = .06; flashT = .12;
+    banner(e.def.name, e.roarWhy === 'rage' ? 'ENRAGED' : e.roarWhy === 'phase' ? (e.phase === 3 ? 'FINAL PHASE · ENRAGED' : 'PHASE TWO · ENRAGED') : e.def.title, 1.8); e.roarWhy = null; sfx('roar'); shakeMag = 14; zoom = .06; flashT = .12;
     fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.hh * .6, t: .7, max: .7, r: 240, col: '#FFFFFF' });
     if (Math.abs(P.x - e.x) < 200 && P.state !== 'dodge' && P.state !== 'dead') { P.state = 'hurt'; P.knocked = false; P.t = .5; P.vx = Math.sign(P.x - e.x || 1) * 320; }
     recover(e, .6);
@@ -219,11 +228,11 @@ function slamLand(e) {
   shakeMag = 9; sfx('slam'); e.vx = 0;
   fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 110, col: '#FFFFFF', flat: 1 });
   burst(e.x, e.y, 4, ['#FFFFFF', '#E9D8B0'], 18, 'rock', 0, true);
-  if (Math.hypot(P.x - e.x, (P.y - e.y) * 2) < 95 && P.z < 16) playerDamage(Math.round(e.dmg * 1.3), e.x, true);
+  if (Math.hypot(P.x - e.x, (P.y - e.y) * 2) < 95 && P.z < 16) playerDamage(Math.round(edmg(e) * 1.3), e.x, true);
   recover(e, .9);
 }
 function bolt(e, y) {
-  projs.push({ owner: 'e', x: e.x + e.facing * (e.hw + 6), y, z: Math.max(24, e.z + e.hh * .5), vx: e.facing * (e.boss ? 230 : 200), dmg: e.dmg, life: 3.5,
+  projs.push({ owner: 'e', x: e.x + e.facing * (e.hw + 6), y, z: Math.max(24, e.z + e.hh * .5), vx: e.facing * (e.boss ? 230 : 200), dmg: edmg(e), life: 3.5,
     col: e.def.mat === 'metal' ? '#D04A62' : e.def.mat === 'crystal' || e.def.mat === 'goo' ? '#8FE9FF' : '#EED48A' });
   sfx('shoot');
 }
@@ -249,7 +258,7 @@ function updateLoot(dt) {
   loot = loot.filter(k => !k.got);
 }
 function gainWeapon(id) {
-  save.owned[id] = true; save.weapon = id; P.w = id; P.seq = ''; persist();
+  save.owned[id] = true; save.weapon = id; P.w = id; P.seq = ''; delete save.pity[id]; persist();
   sfx('weapon'); flashT = .15; zoom = .05; slowmo = .4;
   burst(P.x, P.y, 50, ['#EED48A', '#FFFFFF', '#D08AB0'], 30, 'spark', 0, true);
   banner(WEAPONS[id].name + ' found', 'NEW WEAPON · SWAP TO CHANGE · LEVEL IT AT THE FORGE', 2.6);
@@ -266,7 +275,14 @@ function startStage(i) {
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
   runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stag = null; brandT = 0;
   // each run, a random enemy in a random wave carries each weapon this world can give
-  carriers = stage.drops.map(d => { const w = Math.floor(Math.random() * stage.waves.length); return { weapon: d.weapon, wave: w, slot: Math.floor(Math.random() * stage.waves[w].length) }; });
+  carriers = [];
+  for (const d of stage.drops) {
+    if (save.owned[d.weapon]) continue;
+    if (Math.random() < d.chance + (save.pity[d.weapon] || 0)) {
+      const w = 1 + Math.floor(Math.random() * (stage.waves.length - 1));
+      carriers.push({ weapon: d.weapon, wave: w, slot: Math.floor(Math.random() * stage.waves[w].length) });
+    } else { save.pity[d.weapon] = Math.min(.5, (save.pity[d.weapon] || 0) + .15); persist(); }
+  }
   buildBackground(stage.theme, i * 97 + 13);
   $('#bossbar').hidden = true; $('#go').hidden = true;
   refreshHud(true); refreshCombo();

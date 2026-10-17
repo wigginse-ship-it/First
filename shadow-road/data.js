@@ -150,11 +150,11 @@ const STAGES = [
   { name: 'Bloomwild Vale', sub: 'THE FIRST SHADOW', theme: 'bloom', len: 2600,
     pods: [880, 1650],
     waves: [['bandit', 'boar', 'lantern'], ['archer', 'slime', 'sentinel', 'bandit', 'wisp', 'lantern'], ['golem', 'bandit', 'sentinel', 'archer', 'slime', 'lantern']],
-    drops: [{ wave: 0, type: 'boar', weapon: 'hammer' }, { wave: 2, type: 'golem', weapon: 'staff' }], boss: 'mossback' },
+    drops: [{ weapon: 'hammer', chance: .4 }, { weapon: 'staff', chance: .25 }], boss: 'mossback' }, // chance per run; misses raise the odds next time
   { name: 'The Clockwork Skyport', sub: 'THE SECOND SHADOW', theme: 'sky', len: 2700,
     pods: [700, 1900],
     waves: [['corsair', 'skyray', 'spider'], ['knight', 'corsair', 'gunner', 'cloudram', 'skyray', 'drone'], ['tank', 'gunner', 'corsair', 'cloudram', 'skyray', 'spider']],
-    drops: [{ wave: 1, type: 'knight', weapon: 'sword' }], boss: 'colossus' },
+    drops: [{ weapon: 'sword', chance: .35 }], boss: 'colossus' },
   { name: 'The Prism Rim', sub: 'THE THIRD SHADOW', theme: 'prism', len: 2800,
     pods: [650, 1500, 2100], drops: [],
     waves: [['cultist', 'imp', 'sdrone'], ['witch', 'cultist', 'jelly', 'imp', 'sdrone', 'sdrone'], ['cgolem', 'cultist', 'witch', 'shardling', 'jelly', 'sdrone']],

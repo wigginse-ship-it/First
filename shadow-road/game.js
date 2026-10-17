@@ -227,10 +227,10 @@ function critChance(e) {
   return Math.min(.75, c);
 }
 function strike(e, base, dir, m, echo) {
-  let dmg = Math.round(base * rand(.9, 1.1) * (stillT > 0 ? 2 : 1));
-  if (P.z > 15 && e.air) dmg = Math.round(dmg * 1.25); // aerial bonus
+  let raw = base * rand(.9, 1.1) * (stillT > 0 ? 2 : 1);
+  if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
-  if (crit) dmg = Math.round(dmg * 1.8);
+  const dmg = Math.round(raw * (crit ? 1.8 : .85)); // normal hits are a little weaker; crits keep their full punch
   hurtEnemy(e, dmg, dir, m, crit);
   if (brandT > 0 && !m.trump && !m.el && !e.dead) applyElement(e, base, dir);
   if (mirrorT > 0 && !echo) echoes.push({ e, dmg: base * .6, dir, m, t: .14 });
@@ -257,14 +257,17 @@ function hurtEnemy(e, dmg, dir, m, crit) {
   if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg);
   if (e.hp <= 0) { killEnemy(e, dir, m); return; }
   e.cd = Math.max(e.cd, .4);
+  if (e.boss && !e.enraged) { e.rageBuild = (e.rageBuild || 0) + dmg; if (e.rageBuild > e.maxHp * .14) { e.rageBuild = 0; e.rageQ = true; } } // punish it hard and it flies into a rage
   if (e.boss && (e.state === 'down' || e.stagger)) return; // a staggered boss stays down while you punish it
   if (e.poiseMax && !e.air) {
     e.poise -= 1 + pw;
     if (e.poise > 0) { e.vx = dir * (m.kb || 0) * .12; e.flinch = .12; return; }
     e.poise = e.poiseMax;
     if (e.boss) { // poise broken: the boss collapses and is open for a few seconds
-      e.state = 'down'; e.t = 2.4; e.plan = null; e.rolls = 0; e.around = false;
-      if (e.def.move === 'fly') { e.air = true; e.vz = 0; e.stagger = 2.4; }
+      const st = Math.max(.8, 1.5 - .2 * e.staggers); // each stagger is shorter, and the next one takes more to cause
+      e.staggers++; e.poiseMax = e.def.poise * 1.6 + 5 * e.staggers; e.poise = e.poiseMax;
+      e.state = 'down'; e.t = st; e.plan = null; e.rolls = 0; e.around = false;
+      if (e.def.move === 'fly') { e.air = true; e.vz = 0; e.stagger = st; }
       floatText(e.x, e.y, e.z + e.hh + 24, 'STAGGERED', '#EED48A', 18); sfx('crunch'); shakeMag = 10; zoom = .05;
       return;
     }

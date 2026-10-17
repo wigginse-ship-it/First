@@ -123,7 +123,7 @@ const CREATURES = {
     eyes(10, -26, 2.6, a);
   },
   mossback(e, a) { // an ancient tortoise carrying a grove on its back
-    const ph = a.walk, rage = e.enraged, lunge = a.atk ? 22 : a.wind ? -10 * a.wind : Math.sin(a.t * 1.6) * 2;
+    const ph = a.walk, rage = e.enraged, phase = e.phase || 1, lunge = a.atk ? 22 : a.wind ? -10 * a.wind : Math.sin(a.t * 1.6) * 2;
     ctx.save(); ctx.scale(1.3, 1.3);
     limb([-58, -22, -86, -10 + Math.sin(a.t * 2) * 3, -96, -16], '#5A6E48', 12); // stone tail
     [[-40, 0], [-18, 1], [18, 0], [40, 1]].forEach(([x, p]) => { limb([x, -24, x + Math.sin(ph + p * 3) * 7, -2], '#56704A', 16); ctx.fillStyle = C('#D8CFB8'); for (let c = -1; c <= 1; c++) { ctx.beginPath(); ctx.moveTo(x + Math.sin(ph + p * 3) * 7 + c * 5, 0); ctx.lineTo(x + Math.sin(ph + p * 3) * 7 + c * 5 + 3, 4); ctx.lineTo(x + Math.sin(ph + p * 3) * 7 + c * 5 + 6, 0); ctx.fill(); } });
@@ -132,24 +132,33 @@ const CREATURES = {
     ctx.fillStyle = C('#4E6A3E'); ctx.beginPath(); ctx.moveTo(-4, 10); ctx.quadraticCurveTo(4, 30, 10, 22); ctx.quadraticCurveTo(14, 30, 18, 14); ctx.closePath(); ctx.fill();
     circle(4, 0, 18); ctx.fillStyle = C('#7E9A64'); ctx.fill(); outline(2.2);
     ctx.strokeStyle = C('#D8CFB8'); ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-4, -14); ctx.quadraticCurveTo(-18, -34, -6, -46); ctx.stroke(); ctx.beginPath(); ctx.moveTo(8, -16); ctx.quadraticCurveTo(10, -36, 26, -40); ctx.stroke();
-    ctx.save(); if (!FLASH) { ctx.shadowColor = rage ? '#FF8A4A' : '#EED48A'; ctx.shadowBlur = 10; } ctx.fillStyle = C(rage ? '#FF9A5A' : '#EED48A'); ell(10, -4, 5, 3.5); ctx.fill(); ctx.restore();
+    ctx.save(); if (!FLASH) { ctx.shadowColor = rage ? '#FF8A4A' : '#EED48A'; ctx.shadowBlur = 10; } ctx.fillStyle = C(phase === 3 ? '#FF5A3A' : rage ? '#FF9A5A' : '#EED48A'); ell(10, -4, 5, 3.5); ctx.fill(); ctx.restore();
     ctx.fillStyle = C('#C9A86A'); ctx.beginPath(); ctx.moveTo(14, 4); ctx.lineTo(30, 8 + (a.atk ? 8 : 0)); ctx.lineTo(14, 14); ctx.fill(); outline(1.5);
     ctx.restore();
     ctx.beginPath(); ctx.ellipse(0, -34, 64, 50, 0, Math.PI, 0); ctx.closePath(); // the shell
-    const g = ctx.createLinearGradient(0, -84, 0, -34); g.addColorStop(0, C('#6E8A58')); g.addColorStop(1, C('#34503A')); ctx.fillStyle = g; ctx.fill(); outline(2.6);
+    const g = ctx.createLinearGradient(0, -84, 0, -34); g.addColorStop(0, C(phase === 3 ? '#4A4038' : '#6E8A58')); g.addColorStop(1, C(phase === 3 ? '#221C1C' : '#34503A')); ctx.fillStyle = g; ctx.fill(); outline(2.6);
+    if (phase >= 2) { // phase two: thorns burst through the shell
+      ctx.fillStyle = C(phase === 3 ? '#2A1A16' : '#5A3E2A');
+      for (let i = 0; i < 11; i++) { const an = Math.PI + (i + .5) / 11 * Math.PI, bx = Math.cos(an) * 62, by = -34 + Math.sin(an) * 48; ctx.beginPath(); ctx.moveTo(bx - 4, by + 2); ctx.lineTo(bx + Math.cos(an) * 14, by + Math.sin(an) * 14); ctx.lineTo(bx + 4, by + 2); ctx.closePath(); ctx.fill(); outline(1.2); }
+    }
     ctx.save(); if (!FLASH) { ctx.shadowColor = rage ? '#FF7A3A' : '#9FE8C8'; ctx.shadowBlur = rage ? 12 : 6; }
     ctx.strokeStyle = C(rage ? 'rgba(255,140,80,.9)' : 'rgba(159,232,200,.55)'); ctx.lineWidth = 2;
     [[-34, -54], [0, -66], [34, -54], [-17, -42], [17, -42]].forEach(([x, y]) => { ctx.beginPath(); for (let k = 0; k < 6; k++) { const an = k / 6 * TAU; ctx.lineTo(x + Math.cos(an) * 12, y + Math.sin(an) * 9); } ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x, y - 4); ctx.lineTo(x + 4, y); ctx.stroke(); });
     ctx.restore();
     ctx.fillStyle = C('#D8CFB8'); rrect(-66, -38, 132, 9, 4); ctx.fill(); outline(2);
     limb([-12, -80, -14, -118, -2, -138], '#4A3A30', 7); limb([-13, -108, -30, -124], '#4A3A30', 4); // the grove
-    for (let i = 0; i < 16; i++) { const an = i * 2.4, d = (i % 5) * 6; dab(-8 + Math.cos(an) * d * 1.6, -138 + Math.sin(an) * d, 11 + (i % 3) * 3, C(i % 3 ? '#3D6A52' : '#2F5446'), .95); }
+    for (let i = 0; i < 16; i++) { const an = i * 2.4, d = (i % 5) * 6; dab(-8 + Math.cos(an) * d * 1.6, -138 + Math.sin(an) * d, 11 + (i % 3) * 3, C(phase === 3 ? (i % 3 ? '#5A3A2A' : '#3A2620') : i % 3 ? '#3D6A52' : '#2F5446'), .95); }
+    if (phase === 3 && !e.dead) { // phase three: the grove on its back is ablaze
+      ctx.save(); ctx.globalCompositeOperation = FLASH ? 'source-over' : 'lighter';
+      for (let i = 0; i < 7; i++) { const fx = -24 + i * 7, fy = -150 - Math.abs(Math.sin(a.t * 9 + i)) * 14; const fg = ctx.createRadialGradient(fx, fy, 1, fx, fy, 14); fg.addColorStop(0, 'rgba(255,220,140,.9)'); fg.addColorStop(1, 'rgba(255,90,40,0)'); ctx.fillStyle = fg; circle(fx, fy, 14); ctx.fill(); }
+      ctx.restore();
+    }
     for (let i = 0; i < 7; i++) { const an = i * 2.1 + .5, d = 6 + (i * 7) % 18; dab(-8 + Math.cos(an) * d * 1.5, -140 + Math.sin(an) * d * .8, 2.4, C(rage ? '#F09A5A' : '#E8B8C8'), .95); }
     ctx.fillStyle = C('#8A8478'); rrect(22, -92, 20, 12, 5); ctx.fill(); outline(1.5); dab(30, -94, 6, C('#5E8A52'), 1);
     ctx.restore();
   },
   colossus(e, a) { // a walking fortress of brass with a furnace for a heart
-    const rage = e.enraged;
+    const rage = e.enraged, phase = e.phase || 1;
     ctx.save(); ctx.scale(1.9, 1.9);
     for (const [x, h] of [[-12, 20], [-6, 26]]) { rrect(x - 2, -66 - h, 5, h, 1.5); ctx.fillStyle = C('#5A4A3E'); ctx.fill(); outline(1.2); } // smokestacks
     drawHumanoid(COLOSSUS, a.pose);
@@ -158,11 +167,19 @@ const CREATURES = {
     ctx.save(); if (!FLASH) { ctx.shadowColor = rage ? '#FF5A4A' : '#F2A65A'; ctx.shadowBlur = rage ? 16 : 8; } // the furnace
     rrect(-6, -44, 12, 10, 2); ctx.fillStyle = C(rage ? '#FFB08A' : '#E8945A'); ctx.fill(); ctx.restore();
     ctx.strokeStyle = C('#4A3A2A'); ctx.lineWidth = 1.2; for (let i = -4; i <= 4; i += 4) { ctx.beginPath(); ctx.moveTo(i, -44); ctx.lineTo(i, -34); ctx.stroke(); }
+    if (phase >= 2) { // phase two: plates blown away, a cracked and glowing core
+      ctx.strokeStyle = C('#2A1E16'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-9, -50); ctx.lineTo(-4, -46); ctx.lineTo(-7, -40); ctx.moveTo(8, -32); ctx.lineTo(4, -28); ctx.lineTo(7, -25); ctx.stroke();
+      ctx.save(); if (!FLASH) { ctx.shadowColor = '#FF7A4A'; ctx.shadowBlur = 14; } ctx.fillStyle = C('#FFD2A0'); circle(0, -39, phase === 3 ? 6 : 4.5); ctx.fill(); ctx.restore();
+    }
+    if (phase === 3 && !FLASH) { // phase three: red-hot all over
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,70,40,${.18 + .08 * Math.sin(a.t * 8)})`; rrect(-14, -66, 28, 66, 8); ctx.fill(); ctx.restore();
+    }
     ctx.restore();
+    if (phase >= 2 && !e.dead && !FLASH && Math.random() < .25) parts.push({ x: e.x + rand(-14, 14), y: e.y, z: e.z + rand(70, 110), vx: rand(-80, 80), vy: 0, vz: rand(40, 160), life: .5, max: .5, col: pick(['#FFD27A', '#FF9A5A']), size: 2, shape: 'streak', rot: 0, vr: 0 });
     if (!FLASH && !e.dead && Math.random() < .3) parts.push({ x: e.x - e.facing * 18, y: e.y, z: e.z + 168 + rand(0, 10), vx: rand(-10, 10), vy: 0, vz: 30, life: 1, max: 1, col: rage ? 'rgba(80,60,60,.5)' : 'rgba(220,210,200,.45)', size: rand(5, 9), shape: 'puff', rot: 0, vr: 0 });
   },
   wyrm(e, a) { // a serpent of living crystal that drinks color
-    const n = 15, rage = e.enraged, hueBase = rage ? 300 : 0;
+    const n = 15, rage = e.enraged, phase = e.phase || 1, hueBase = rage ? 300 : 0;
     const segs = [];
     for (let i = n; i >= 1; i--) segs.push([i, -i * 12, -20 + Math.sin(a.t * 3 - i * .5) * 14 + i * 1.3, 18 - i * .85]);
     for (const [i, x, y, r] of segs) {
@@ -171,9 +188,10 @@ const CREATURES = {
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-30, -44); ctx.lineTo(-6, -34); ctx.lineTo(-18, -62); ctx.lineTo(10, -30); ctx.closePath();
         ctx.fillStyle = C(`hsla(${(hueBase + a.t * 40 + s * 40) % 360},45%,72%,.75)`); ctx.fill(); outline(1.6); ctx.restore();
       }
-      circle(x, y, r); ctx.fillStyle = C(`hsl(${(hueBase + a.t * 50 + i * 26) % 360},${rage ? 70 : 50}%,${rage ? 64 : 60}%)`); ctx.fill(); outline(2);
+      circle(x, y, r); ctx.fillStyle = C(phase === 3 ? (i % 2 ? '#1E1428' : '#2E2038') : `hsl(${(hueBase + a.t * 50 + i * 26) % 360},${rage ? 70 : 50}%,${rage ? 64 : 60}%)`); ctx.fill(); outline(2);
+      if (phase === 3) { ctx.strokeStyle = C('#E8C06A'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, r - 2, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
       ctx.fillStyle = C('rgba(255,255,255,.5)'); circle(x - r * .3, y - r * .35, r * .3); ctx.fill();
-      if (i % 2 === 0) { ctx.fillStyle = C(rage ? '#FFD27A' : '#F2E2A8'); ctx.beginPath(); ctx.moveTo(x - 4, y - r + 2); ctx.lineTo(x, y - r - 11); ctx.lineTo(x + 4, y - r + 2); ctx.fill(); }
+      if (i % 2 === 0 || phase >= 2) { ctx.fillStyle = C(phase === 3 ? '#E8C06A' : rage ? '#FFD27A' : '#F2E2A8'); ctx.beginPath(); ctx.moveTo(x - 4, y - r + 2); ctx.lineTo(x, y - r - 11); ctx.lineTo(x + 4, y - r + 2); ctx.fill(); }
     }
     const open = a.atk ? .8 : a.wind ? .45 * a.wind : .1;
     ctx.save(); ctx.translate(10, -24);
@@ -182,7 +200,8 @@ const CREATURES = {
     ctx.fillStyle = C('#FFFFFF'); for (let i = 6; i < 32; i += 6) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 2, -4); ctx.lineTo(i + 4, 0); ctx.fill(); } ctx.restore();
     ctx.save(); ctx.rotate(-open * .4); rrect(-8, -18, 44, 20, 9); ctx.fillStyle = C('#A07AC8'); ctx.fill(); outline(2.2);
     ctx.fillStyle = C('#FFFFFF'); for (let i = 8; i < 34; i += 6) { ctx.beginPath(); ctx.moveTo(i, 2); ctx.lineTo(i + 2, 6); ctx.lineTo(i + 4, 2); ctx.fill(); } ctx.restore();
-    ctx.save(); if (!FLASH) { ctx.shadowColor = rage ? '#FFB060' : '#9FE8F0'; ctx.shadowBlur = 10; } ctx.fillStyle = C(rage ? '#FFD08A' : '#DFF8FF'); ell(14, -10, 6, 4); ctx.fill(); ctx.restore();
+    ctx.save(); if (!FLASH) { ctx.shadowColor = rage ? '#FFB060' : '#9FE8F0'; ctx.shadowBlur = 10; } ctx.fillStyle = C(phase === 3 ? '#FFFFFF' : rage ? '#FFD08A' : '#DFF8FF'); ell(14, -10, phase === 3 ? 7 : 6, 4); ctx.fill(); ctx.restore();
+    if (phase === 3 && !e.dead && !FLASH && Math.random() < .4) parts.push({ x: e.x - e.facing * rand(20, 150), y: e.y, z: e.z + rand(0, 50), vx: 0, vy: 0, vz: rand(20, 60), life: .8, max: .8, col: pick(['#E8C06A', '#FFF0C0']), size: 2.5, shape: 'star', rot: 0, vr: 4 });
     ctx.fillStyle = C(OUT); ell(16, -10, 1.6, 3.4); ctx.fill();
     ctx.restore();
   },
