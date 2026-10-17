@@ -339,7 +339,7 @@ function updateWorld(dt) {
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;
     boss = spawnEnemy(stage.boss, 1, true);
     $('#bossname').textContent = boss.def.name; $('#bossbar').hidden = false;
-    boss.plan = 'roar';
+    boss.plan = 'roar'; playMusic('boss');
   }
   for (const s of spawnQ) s.at -= dt;
   while (spawnQ.length && spawnQ[0].at <= 0) { const s = spawnQ.shift(); const e = spawnEnemy(s.type, s.side); if (s.drop) e.dropWeapon = s.drop; }

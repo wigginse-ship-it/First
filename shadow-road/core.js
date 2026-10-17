@@ -45,6 +45,7 @@ function audioInit() {
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   } catch (e) { actx = null; }
+  if (actx && musicWant) playMusic(musicWant); // music waits for the first touch
 }
 function tone(freq, dur, type, vol, slide, delay = 0) {
   const t0 = actx.currentTime + delay;

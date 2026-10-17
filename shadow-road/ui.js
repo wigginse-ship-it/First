@@ -42,14 +42,14 @@ function showOnly(id) {
 }
 function play(i) {
   save.started = true; persist(); clearInput();
-  startStage(i); mode = 'play'; showOnly(null);
+  startStage(i); mode = 'play'; showOnly(null); playMusic(STAGES[i].theme);
 }
-function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
+function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
 function resume() { mode = 'play'; clearInput(); showOnly(null); }
 function gameOver() {
   mode = 'over'; persist();
   $('#overText').textContent = `${stage.name} got the better of you this time. You keep everything you picked up: ${runShards} shards and ${runSigils} sigil${runSigils === 1 ? '' : 's'}. Spend them at the forge, or jump straight back in.`;
-  showOnly('overOv');
+  showOnly('overOv'); playMusic('fallen');
 }
 function stageClear() {
   for (const k of loot) { // sweep up loot still on the ground
@@ -62,7 +62,7 @@ function stageClear() {
   if (save.stage >= STAGES.length) {
     mode = 'win';
     $('#winText').textContent = 'All three shadows are behind you. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and Trump cards come with you.';
-    showOnly('winOv');
+    showOnly('winOv'); playMusic('title');
   } else openForge(`WORLD CLEARED: +${runShards} SHARDS, +${runSigils} SIGILS`);
 }
 
@@ -102,7 +102,7 @@ const wCost = (lvl) => ({ s: 30 * lvl, g: lvl >= 2 ? lvl - 1 : 0 });
 const aCost = (lvl) => ({ s: 35 * lvl, g: lvl >= 3 ? lvl - 2 : 0 });
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
-  mode = 'forge'; showOnly('forgeOv');
+  mode = 'forge'; showOnly('forgeOv'); playMusic('title');
   $('#forgeKicker').textContent = kicker || 'BETWEEN WORLDS';
   renderForge();
   $('#forgeOv').scrollTop = 0;
@@ -195,7 +195,8 @@ $('#forgeTitleBtn').addEventListener('click', () => { mode = 'title'; refreshTit
 $('#pauseBtn').addEventListener('click', pauseGame);
 $('#resumeBtn').addEventListener('click', resume);
 $('#sfxBtn').addEventListener('click', () => { sfxOn = !sfxOn; try { localStorage.setItem('shadowroad-sfx', sfxOn ? '1' : '0'); } catch (e) {} $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); });
-$('#quitBtn').addEventListener('click', () => { persist(); mode = 'title'; refreshTitle(); showOnly('titleOv'); });
+$('#quitBtn').addEventListener('click', () => { persist(); mode = 'title'; refreshTitle(); showOnly('titleOv'); playMusic('title'); });
+$('#musicBtn').addEventListener('click', () => { setMusic(!musicOn); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); });
 $('#retryBtn').addEventListener('click', () => play(save.stage));
 $('#overForgeBtn').addEventListener('click', () => openForge('REGROUP AND REFORGE'));
 $('#cycleBtn').addEventListener('click', () => { save.cycle++; save.stage = 0; persist(); openForge('CYCLE ' + (save.cycle + 1) + ' BEGINS'); });
@@ -258,5 +259,5 @@ startStage(Math.min(save.stage, STAGES.length - 1));
 $('#banner').classList.remove('on'); bannerT = 0;
 P.x = 200; P.state = 'walk';
 [['slime', 330], ['boar', 420]].forEach(([k, x]) => { const e = spawnEnemy(k, 1); e.x = x; e.facing = -1; });
-refreshTitle(); showOnly('titleOv');
+refreshTitle(); showOnly('titleOv'); playMusic('title');
 requestAnimationFrame(frame);
