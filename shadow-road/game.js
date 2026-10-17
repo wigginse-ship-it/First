@@ -230,7 +230,7 @@ function strike(e, base, dir, m, echo) {
   let raw = base * rand(.9, 1.1) * (stillT > 0 ? 2 : 1);
   if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
-  const dmg = Math.round(raw * (crit ? 1.8 : .85)); // normal hits are a little weaker; crits keep their full punch
+  const dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' ? 1 : .85)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
   hurtEnemy(e, dmg, dir, m, crit);
   if (brandT > 0 && !m.trump && !m.el && !e.dead) applyElement(e, base, dir);
   if (mirrorT > 0 && !echo) echoes.push({ e, dmg: base * .6, dir, m, t: .14 });
