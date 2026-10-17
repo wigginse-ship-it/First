@@ -118,14 +118,14 @@ function renderForge(note) {
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
       <p>${bare ? w.desc + ' Bare hands never level up: find weapons to grow stronger.' : owned ? w.desc + ' All its combos are yours from the start; each level teaches a new move.' : 'Someone in ' + (id === 'sword' ? 'the Clockwork Skyport' : 'Bloomwild Vale') + ' is carrying it. Beat enemies there and it will drop.'}</p><ul>${moves}</ul>
-      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Learn next move · ${costTxt(c)}`}</button>` : ''}`;
+      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
     if (b) b.addEventListener('click', () => {
       if (!can) return;
       save.shards -= c.s; save.sigils -= c.g; save.wl[id]++; persist(); sfx('buy');
       const learned = unlockList(id).find(m => m.lvl === save.wl[id]);
-      renderForge(`${w.name} is now level ${save.wl[id]}.${learned ? ` New move: ${learned.name}. ${learned.how}.` : ''}`);
+      renderForge(`${w.name} is now level ${save.wl[id]}: damage ×${wMult(id).toFixed(1)}.${learned ? ` New move: ${learned.name}. ${learned.how}.` : ''}`);
     });
     wrap.appendChild(d);
   }

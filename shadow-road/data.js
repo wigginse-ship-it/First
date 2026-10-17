@@ -103,7 +103,7 @@ function unlockList(id) {
   if (w.extra) list.push(...w.extra);
   return list.sort((a, b) => a.lvl - b.lvl);
 }
-const wMult = (id) => 1 + 0.2 * (save.wl[id] - 1);
+const wMult = (id) => 1 + 0.2 * (save.wl[id] - 1); // every weapon level adds 20% damage on top of its new move
 const maxHp = () => 120 + 30 * (save.armor - 1);
 
 // ---------- enemies ----------
