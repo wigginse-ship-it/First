@@ -44,10 +44,12 @@ function drawCorwinHead(look, hy) {
   ctx.restore();
   head(); outline(1.1);
   ctx.fillStyle = C(shade(sk, -.42)); ell(-2.4, hy + 1.8, 1.4, 2.1); ctx.fill(); // ear
-  // eyes: a dark lash line with a glint of green; the far eye is narrower, turned away
-  ctx.fillStyle = C(ink); ctx.beginPath(); ctx.moveTo(4.2, hy - 1.4); ctx.lineTo(7.3, hy - 1.6); ctx.lineTo(7, hy + .3); ctx.lineTo(4.6, hy + .2); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(8.4, hy - 1.5); ctx.lineTo(9.6, hy - 1.6); ctx.lineTo(9.5, hy + .2); ctx.lineTo(8.5, hy + .2); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = C(look.eye); ctx.fillRect(5.6, hy - 1, 1.3, 1.1); ctx.fillRect(8.8, hy - 1, .6, 1);
+  // eyes: whites with the green irises pushed to the front corners, so he looks ahead where he's facing
+  ctx.fillStyle = C('#EDE6DC'); ctx.beginPath(); ctx.moveTo(4.4, hy - 1.2); ctx.lineTo(7.3, hy - 1.4); ctx.lineTo(7, hy + .3); ctx.lineTo(4.8, hy + .2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(8.5, hy - 1.3); ctx.lineTo(9.6, hy - 1.4); ctx.lineTo(9.5, hy + .2); ctx.lineTo(8.6, hy + .2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C(look.eye); ctx.fillRect(5.9, hy - 1.3, 1.3, 1.5); ctx.fillRect(9, hy - 1.3, .6, 1.4);
+  ctx.fillStyle = C(ink); ctx.fillRect(6.4, hy - 1, .8, .9); ctx.fillRect(9.2, hy - 1, .4, .8); // pupils, at the front of each iris
+  ctx.fillRect(4.2, hy - 1.6, 3.2, .7); ctx.fillRect(8.4, hy - 1.6, 1.3, .6); // upper lash lines
   // brows: heavy and level, drawing down toward the nose
   ctx.fillStyle = C(ink); ctx.beginPath(); ctx.moveTo(3.4, hy - 3.6); ctx.lineTo(7.8, hy - 3.2); ctx.lineTo(7.6, hy - 2.1); ctx.lineTo(3.8, hy - 2.5); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(8.5, hy - 3.1); ctx.lineTo(9.8, hy - 3.5); ctx.lineTo(9.7, hy - 2.5); ctx.lineTo(8.5, hy - 2.1); ctx.closePath(); ctx.fill();
