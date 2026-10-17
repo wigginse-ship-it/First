@@ -13,32 +13,53 @@ function limb(pts, col, w) { // a thick round-capped limb with an outline
   ctx.strokeStyle = FLASH ? '#fff' : OUT; ctx.lineWidth = w + 2.2; ctx.stroke();
   ctx.strokeStyle = C(col); ctx.lineWidth = w; ctx.stroke();
 }
+function shade(hex, amt) { // lighten (amt > 0) or darken (amt < 0) a #rrggbb color, for painted light and shadow
+  if (!hex || hex[0] !== '#' || hex.length !== 7) return hex;
+  const n = parseInt(hex.slice(1), 16), f = (c) => Math.round(amt > 0 ? c + (255 - c) * amt : c * (1 + amt));
+  return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(f).map(c => c.toString(16).padStart(2, '0')).join('');
+}
 function shadow(x, y, rx) { ctx.fillStyle = 'rgba(40,20,80,.28)'; ell(x, y, rx, rx * .28); ctx.fill(); }
 
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
 function drawWeapon(kind, pose) {
-  if (kind === 'fists' || !kind) { circle(17, 0, 4.5); ctx.fillStyle = C('#FFF1E0'); ctx.fill(); outline(1.5); return; }
+  if (kind === 'fists' || !kind) { circle(17, 0, 4.5); ctx.fillStyle = C((pose && pose.glove) || '#FFF1E0'); ctx.fill(); outline(1.5); return; }
+  // the hero's weapons change as they level: 1 iron and wood, 2 steel and leather, 3 gold and a gem, 4 runes that glow, 5 shadow-steel with a violet aura
+  const tier = (pose && pose.tier) || 1, hand = (pose && pose.glove) || '#FFF1E0';
+  const glowRune = (x, y, w, h, col) => { ctx.save(); if (!FLASH) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillStyle = C(col); ctx.fillRect(x, y, w, h); ctx.restore(); };
   if (kind === 'hammer') {
-    limb([4, 0, 44, 0], '#9A6234', 4);
-    rrect(36, -12, 18, 24, 4); ctx.fillStyle = C('#8E9BB8'); ctx.fill(); outline();
-    ctx.fillStyle = C('#D8AA55'); ctx.fillRect(43, -12, 4, 24);
-    ctx.fillStyle = C('#8FB8D8'); circle(45, 0, 2.6); ctx.fill();
-    circle(17, 0, 4); ctx.fillStyle = C('#FFF1E0'); ctx.fill(); return;
+    const big = tier >= 4 ? 3 : 0, head = ['#7E8494', '#A8B0C2', '#B8BCC8', '#9AA4BC', '#2E2A3E'][tier - 1];
+    limb([4, 0, 44 + big, 0], tier >= 5 ? '#241E2E' : tier >= 2 ? '#6A4A30' : '#9A6234', 4);
+    if (tier >= 2) { ctx.fillStyle = C('#3A2A20'); for (let x = 8; x < 30; x += 5) ctx.fillRect(x, -2.4, 2, 4.8); } // leather wraps
+    const hg = ctx.createLinearGradient(0, -12 - big, 0, 12 + big); hg.addColorStop(0, C(shade(head, .3))); hg.addColorStop(1, C(shade(head, -.3)));
+    rrect(36 + big * .5, -12 - big, 18 + big, 24 + big * 2, 4); ctx.fillStyle = hg; ctx.fill(); outline();
+    if (tier >= 3) { ctx.fillStyle = C('#D8AA55'); ctx.fillRect(37 + big * .5, -12 - big, 2.5, 24 + big * 2); ctx.fillRect(51 + big * 1.5, -12 - big, 2.5, 24 + big * 2); }
+    ctx.fillStyle = C(tier >= 5 ? '#B89CFF' : tier >= 3 ? '#C8607A' : '#8FB8D8'); circle(45 + big, 0, 2.6 + (tier >= 3 ? 1 : 0)); ctx.fill();
+    if (tier >= 4) { glowRune(40 + big, -9 - big, 1.4, 6, tier >= 5 ? '#B89CFF' : '#9FE8F0'); glowRune(49 + big, 3, 1.4, 6, tier >= 5 ? '#B89CFF' : '#9FE8F0'); }
+    if (tier >= 5 && !FLASH) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(184,156,255,.25)'; rrect(32, -18, 30, 36, 10); ctx.fill(); ctx.restore(); }
+    circle(17, 0, 4); ctx.fillStyle = C(hand); ctx.fill(); return;
   }
   if (kind === 'staff') {
-    limb([-28, 0, 58, 0], '#B56B2E', 3.5);
-    ctx.fillStyle = C('#D8AA55'); ctx.fillRect(-30, -2.5, 6, 5); ctx.fillRect(54, -2.5, 6, 5);
-    ctx.strokeStyle = C('#C8607A'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.quadraticCurveTo(-34, 8, -38 + Math.sin(performance.now() / 120) * 3, 14); ctx.stroke();
-    circle(17, 0, 4); ctx.fillStyle = C('#FFF1E0'); ctx.fill(); return;
+    const len = 58 + (tier >= 4 ? 6 : 0), cap = ['#C9A86A', '#A8B0C2', '#D8AA55', '#D8AA55', '#B89CFF'][tier - 1];
+    limb([-28, 0, len, 0], ['#B56B2E', '#8A5A3A', '#2E2440', '#2E2440', '#1C1626'][tier - 1], 3.5);
+    if (tier >= 2) { ctx.fillStyle = C(tier >= 3 ? '#D8AA55' : '#5A3A28'); for (const x of [-8, 6, 26, 40]) ctx.fillRect(x, -2.3, 2, 4.6); } // bands
+    ctx.fillStyle = C(cap); rrect(-32, -3, 7, 6, 2); ctx.fill(); rrect(len - 4, -3, 7, 6, 2); ctx.fill();
+    if (tier >= 4) for (const x of [-30, len - 2]) { ctx.save(); if (!FLASH) { ctx.shadowColor = tier >= 5 ? '#B89CFF' : '#9FE8F0'; ctx.shadowBlur = 10; } ctx.fillStyle = C(tier >= 5 ? '#D8C8FF' : '#BFF5FF'); ctx.beginPath(); ctx.moveTo(x - 1, -6); ctx.lineTo(x + 3, 0); ctx.lineTo(x - 1, 6); ctx.lineTo(x - 5, 0); ctx.closePath(); ctx.fill(); ctx.restore(); }
+    ctx.strokeStyle = C(tier >= 5 ? '#8A6ACF' : '#C8607A'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.quadraticCurveTo(-34, 8, -38 + Math.sin(performance.now() / 120) * 3, 14); ctx.stroke(); // ribbon
+    circle(17, 0, 4); ctx.fillStyle = C(hand); ctx.fill(); return;
   }
   if (kind === 'sword' || kind === 'blade' || kind === 'prism') {
-    const len = kind === 'sword' ? 64 : 44;
-    const bc = kind === 'prism' ? '#C9F6FF' : kind === 'blade' ? '#BFF5EF' : '#E8F0FF';
-    limb([6, 0, 17, 0], '#5A3A2A', 4);
-    rrect(16, -9, 4, 18, 2); ctx.fillStyle = C('#D8AA55'); ctx.fill(); outline(1.5);
+    const hero = kind === 'sword', len = hero ? 64 + (tier >= 4 ? 8 : tier >= 2 ? 3 : 0) : 44;
+    const bc = kind === 'prism' ? '#C9F6FF' : kind === 'blade' ? '#BFF5EF' : ['#C8CCD4', '#E2E8F2', '#E8F0FF', '#DDE6FF', '#2A2236'][tier - 1];
+    const edge = hero && tier >= 5 ? '#B89CFF' : '#FFFFFF';
+    limb([6, 0, 17, 0], hero && tier >= 2 ? '#3A2A20' : '#5A3A2A', 4);
+    if (hero && tier >= 3) { ctx.fillStyle = C('#D8AA55'); ctx.beginPath(); ctx.moveTo(18, -4); ctx.lineTo(14, -12); ctx.lineTo(21, -5); ctx.lineTo(21, 5); ctx.lineTo(14, 12); ctx.lineTo(18, 4); ctx.closePath(); ctx.fill(); outline(1.2); ctx.fillStyle = C('#C8607A'); circle(19.5, 0, 2); ctx.fill(); } // winged crossguard with a gem
+    else { rrect(16, -9, 4, 18, 2); ctx.fillStyle = C(hero && tier >= 2 ? '#A8B0C2' : '#D8AA55'); ctx.fill(); outline(1.5); }
     ctx.beginPath(); ctx.moveTo(20, -5); ctx.lineTo(20 + len, -3); ctx.lineTo(26 + len, 0); ctx.lineTo(20 + len, 3); ctx.lineTo(20, 5); ctx.closePath();
-    ctx.fillStyle = C(bc); ctx.fill(); outline(1.8);
-    ctx.fillStyle = C('#FFFFFF'); ctx.fillRect(22, -3, len - 4, 1.4);
+    const bg = ctx.createLinearGradient(0, -5, 0, 5); bg.addColorStop(0, C(shade(bc, .35))); bg.addColorStop(.5, C(bc)); bg.addColorStop(1, C(shade(bc, -.25)));
+    ctx.fillStyle = bg; ctx.fill(); outline(1.8);
+    ctx.fillStyle = C(edge); ctx.fillRect(22, -3, len - 4, 1.4);
+    if (hero && tier >= 4) for (let x = 28; x < 16 + len; x += 9) glowRune(x, -.8, 4, 1.6, tier >= 5 ? '#B89CFF' : '#9FE8F0'); // runes down the fuller
+    if (hero && tier >= 5 && !FLASH) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(184,156,255,.22)'; rrect(18, -9, len + 12, 18, 9); ctx.fill(); ctx.restore(); }
     if (pose && pose.glow) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .55;
       ctx.fillStyle = pose.glow; rrect(16, -10, len + 14, 20, 8); ctx.fill(); ctx.restore();
@@ -98,7 +119,7 @@ function drawHumanoid(look, pose) {
     const k1 = cr ? 8 : Math.max(0, sw) * 5, k2 = cr ? 8 : Math.max(0, -sw) * 5;
     limb([-3, hipY, -3 + f1 * .5 + k1, -13 + cr * .4, -3 + f1, 0], look.legs, 6);
     limb([3, hipY, 3 + f2 * .5 + k2, -13 + cr * .4, 3 + f2, 0], look.legs, 6);
-    ctx.fillStyle = C(look.boots); rrect(-6 + f1, -4, 9, 5, 2); ctx.fill(); rrect(0 + f2, -4, 9, 5, 2); ctx.fill();
+    for (const f of [f1, f2 + 6]) { ctx.fillStyle = C(look.boots); rrect(-6 + f, -5, 9, 6, 2); ctx.fill(); ctx.fillStyle = C(shade(look.boots, .25)); ctx.fillRect(-6 + f, -6.5, 6, 2); ctx.fillStyle = C(shade(look.boots, -.45)); ctx.fillRect(-6 + f, -.8, 9.5, 1.2); }
   }
   // torso (leans around the hips)
   ctx.save(); ctx.translate(0, hipY); ctx.rotate(pose.lean || 0); ctx.translate(0, -hipY);
@@ -107,8 +128,21 @@ function drawHumanoid(look, pose) {
     ctx.fillStyle = C(look.trim); ctx.fillRect(-11, -30 + cr, 22, 4);
     ctx.save(); ctx.globalCompositeOperation = FLASH ? 'source-over' : 'lighter'; ctx.fillStyle = C(look.core); circle(0, -40 + cr, 4.5); ctx.fill(); ctx.restore();
   } else {
-    rrect(-9, -48 + cr, 18, 25, 6); ctx.fillStyle = C(look.body); ctx.fill(); outline();
-    ctx.fillStyle = C(look.trim); ctx.fillRect(-9, -28 + cr, 18, 3.5); ctx.fillRect(-1.5, -48 + cr, 3, 20);
+    const ty = -48 + cr;
+    const tg = ctx.createLinearGradient(-9, ty, 9, ty + 25); // lit from the upper right, like the low sun
+    tg.addColorStop(0, C(shade(look.body, -.3))); tg.addColorStop(.6, C(look.body)); tg.addColorStop(1, C(shade(look.body, .16)));
+    rrect(-9, ty, 18, 25, 6); ctx.fillStyle = tg; ctx.fill(); outline();
+    ctx.strokeStyle = C(shade(look.body, -.4)); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-5, ty + 7); ctx.quadraticCurveTo(-3, ty + 12, -4, ty + 18); ctx.moveTo(4, ty + 10); ctx.quadraticCurveTo(6, ty + 15, 5, ty + 20); ctx.stroke(); // cloth folds
+    ctx.fillStyle = C(shade(look.body, .2)); ctx.beginPath(); ctx.moveTo(-6, ty + 1); ctx.lineTo(0, ty + 7); ctx.lineTo(6, ty + 1); ctx.lineTo(3, ty); ctx.lineTo(0, ty + 3); ctx.lineTo(-3, ty); ctx.closePath(); ctx.fill(); // collar
+    if (look.strap) { ctx.strokeStyle = C(look.strap); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(-8, ty + 3); ctx.lineTo(7, ty + 20); ctx.stroke(); }
+    if (look.plate) { // breastplate, lit and trimmed
+      const pg = ctx.createLinearGradient(-8, ty, 8, ty + 18); pg.addColorStop(0, C(shade(look.plate, -.25))); pg.addColorStop(.55, C(look.plate)); pg.addColorStop(.75, C(shade(look.plate, .45))); pg.addColorStop(1, C(look.plate));
+      ctx.beginPath(); ctx.moveTo(-8, ty + 3); ctx.quadraticCurveTo(0, ty - 1, 8, ty + 3); ctx.lineTo(7, ty + 16); ctx.quadraticCurveTo(0, ty + 21, -7, ty + 16); ctx.closePath(); ctx.fillStyle = pg; ctx.fill(); outline(1.3);
+      if (look.plateTrim) { ctx.strokeStyle = C(look.plateTrim); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-7, ty + 15); ctx.quadraticCurveTo(0, ty + 20, 7, ty + 15); ctx.moveTo(0, ty + 1); ctx.lineTo(0, ty + 18); ctx.stroke(); }
+      if (look.runes) { ctx.save(); if (!FLASH) { ctx.shadowColor = look.runes; ctx.shadowBlur = 6; } ctx.strokeStyle = C(look.runes); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-4, ty + 6); ctx.lineTo(-2, ty + 10); ctx.lineTo(-4, ty + 13); ctx.moveTo(4, ty + 6); ctx.lineTo(2, ty + 10); ctx.lineTo(4, ty + 13); ctx.stroke(); ctx.restore(); }
+    }
+    ctx.fillStyle = C(look.trim); ctx.fillRect(-9, -28 + cr, 18, 3.5); if (!look.plate) ctx.fillRect(-1.5, ty, 3, 20);
+    ctx.fillStyle = C('#C9A86A'); ctx.fillRect(1, -28.5 + cr, 3.5, 4.5); ctx.fillStyle = C(shade(look.trim, -.5)); ctx.fillRect(2, -27.5 + cr, 1.5, 2.5); // buckle
     if (look.rose) { ctx.fillStyle = C('#F4F6FF'); circle(5, -42 + cr, 2.2); ctx.fill(); }
     if (look.chain) { ctx.strokeStyle = C(look.trim); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-8, -26 + cr); ctx.quadraticCurveTo(-2, -20 + cr, 6, -25 + cr); ctx.stroke(); }
   }
@@ -119,27 +153,47 @@ function drawHumanoid(look, pose) {
     ctx.fillStyle = C(look.visor); ctx.fillRect(1, hy - 3, 8, 3.5);
     if (look.plume) { ctx.fillStyle = C(look.plume); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.quadraticCurveTo(-14, hy - 18, -20, hy - 8); ctx.quadraticCurveTo(-12, hy - 10, -6, hy - 4); ctx.fill(); }
   } else {
-    circle(1, hy, 8.5); ctx.fillStyle = C(look.skin); ctx.fill(); outline();
+    ctx.fillStyle = C(shade(look.skin, -.22)); ctx.fillRect(-1.5, hy + 5, 5, 6); // neck
+    const sg = ctx.createRadialGradient(4, hy - 3, 1, 1, hy, 10); sg.addColorStop(0, C(shade(look.skin, .12))); sg.addColorStop(1, C(shade(look.skin, -.18)));
+    ell(1, hy, 7.8, 8.8); ctx.fillStyle = sg; ctx.fill(); outline();
+    ell(-3.2, hy + 1, 1.8, 2.6); ctx.fillStyle = C(shade(look.skin, -.15)); ctx.fill(); // ear
+    if (!look.mask) { ctx.strokeStyle = C(shade(look.skin, -.45)); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(7.6, hy - .6); ctx.lineTo(8.7, hy + 1.8); ctx.lineTo(7.4, hy + 2.3); ctx.moveTo(5, hy + 4.6); ctx.quadraticCurveTo(6.2, hy + 5.2, 7.3, hy + 4.4); ctx.stroke(); } // nose and mouth
+    ell(5, hy - .8, 2.1, 1.5); ctx.fillStyle = C('#F2ECE6'); ctx.fill(); // the eye
+    if (look.eye) { ctx.save(); if (!FLASH) { ctx.shadowColor = look.eye; ctx.shadowBlur = 6; } ctx.fillStyle = C(look.eye); circle(5.6, hy - .8, 1.3); ctx.fill(); ctx.restore(); }
+    else { ctx.fillStyle = C(look.iris || '#3A2E2A'); circle(5.6, hy - .8, 1.2); ctx.fill(); }
+    ctx.fillStyle = C('#FFFFFF'); ctx.fillRect(5.8, hy - 1.6, .8, .8);
+    ctx.strokeStyle = C(look.hair || look.hood || OUT); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(2.6, hy - 3.6); ctx.quadraticCurveTo(5, hy - 4.6, 7.4, hy - 3.4); ctx.stroke(); // brow
     if (look.hood) { // a deep hood hides the face in shadow
       ctx.fillStyle = C(look.hood); ctx.beginPath(); ctx.moveTo(-10, hy + 7); ctx.quadraticCurveTo(-12, hy - 12, 2, hy - 12); ctx.quadraticCurveTo(12, hy - 10, 10, hy + 2); ctx.lineTo(4, hy + 1); ctx.quadraticCurveTo(2, hy - 6, -4, hy - 2); ctx.lineTo(-5, hy + 8); ctx.closePath(); ctx.fill(); outline(1.4);
     } else {
-      ctx.fillStyle = C(look.hair); ctx.beginPath(); ctx.arc(0, hy - 1, 9, Math.PI * .95, Math.PI * 2.05); ctx.lineTo(-8, hy + 6); ctx.closePath(); ctx.fill();
-      if (look.fringe) { ctx.beginPath(); ctx.moveTo(2, hy - 9); ctx.quadraticCurveTo(10, hy - 6, 8, hy + 2); ctx.lineTo(5, hy - 3); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = C(look.hair); ctx.beginPath(); // hair with a real hairline above the brow
+      ctx.moveTo(-8.6, hy + 6); ctx.quadraticCurveTo(-11, hy - 6, -3, hy - 9.6); ctx.quadraticCurveTo(5, hy - 11.2, 8.6, hy - 4.4); ctx.quadraticCurveTo(5, hy - 6.6, 1, hy - 6.2); ctx.quadraticCurveTo(-3, hy - 5, -4, hy + 2.5); ctx.closePath(); ctx.fill(); outline(1);
+      if (look.fringe) { ctx.beginPath(); ctx.moveTo(1, hy - 8); ctx.quadraticCurveTo(7, hy - 6, 6.5, hy - 1.5); ctx.quadraticCurveTo(5, hy - 4.5, 2.5, hy - 5.5); ctx.closePath(); ctx.fill(); }
+      ctx.strokeStyle = C(shade(look.hair, .35)); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-6, hy - 5); ctx.quadraticCurveTo(-2, hy - 9, 4, hy - 8.4); ctx.moveTo(-7, hy); ctx.quadraticCurveTo(-6, hy - 4, -3, hy - 6.5); ctx.stroke(); // locks catching the light
     }
     if (look.crown) { ctx.fillStyle = C(look.crown); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.lineTo(-4, hy - 13); ctx.lineTo(-1, hy - 9); ctx.lineTo(2, hy - 14); ctx.lineTo(4, hy - 9); ctx.lineTo(6, hy - 12); ctx.lineTo(7, hy - 7); ctx.closePath(); ctx.fill(); }
-    if (look.mask) { ctx.fillStyle = C(look.mask); ctx.fillRect(-1, hy + 1, 9, 4); }
-    if (look.eye) { ctx.save(); if (!FLASH) { ctx.shadowColor = look.eye; ctx.shadowBlur = 6; } ctx.fillStyle = C(look.eye); ctx.fillRect(4, hy - 1.5, 3, 2.2); ctx.restore(); }
-    else { ctx.fillStyle = C(OUT); ctx.fillRect(4.5, hy - 1, 2, 3); }
+    if (look.mask) { ctx.fillStyle = C(look.mask); ctx.beginPath(); ctx.moveTo(-1, hy + 1.5); ctx.lineTo(9, hy + 1); ctx.lineTo(8, hy + 6.5); ctx.lineTo(0, hy + 7); ctx.closePath(); ctx.fill(); }
   }
   // front arm + weapon
   const arm = pose.arm ?? (1.1 + sw * .35);
   if (pose.trail) drawTrail(0, -45 + cr, pose);
+  if (pose.flat) drawFlatTrail(1, -45 + cr, pose.flat);
   ctx.save(); ctx.translate(1, -45 + cr); ctx.rotate(arm);
-  limb([0, 0, 15, 0], look.sleeve || look.body, 5.5);
+  if (pose.sweep !== undefined) ctx.scale(Math.sign(pose.sweep || 1) * Math.max(.14, Math.abs(pose.sweep)), 1); // a horizontal swing: the weapon comes around the body
+  const reach = 15 + (pose.ext || 0) * 12; // a thrust drives the arm out
+  limb([0, 0, reach, 0], look.sleeve || look.body, 5.5);
+  pose.glove = look.glove;
+  if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); }
+  ctx.translate(reach - 15, 0);
   drawWeapon(pose.weapon || look.weapon, pose);
   ctx.restore();
   if (look.pauldron) { ctx.beginPath(); ctx.ellipse(1, -45 + cr, 8, 6, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); ctx.fillStyle = C(look.pauldron); ctx.fill(); outline(1.4); ctx.fillStyle = C(look.trim); ctx.fillRect(-4, -47 + cr, 9, 1.5); }
   ctx.restore();
+  ctx.restore();
+}
+function drawFlatTrail(cx, cy, f) { // the trail of a horizontal swing: a flattened arc around the waist
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 3; i++) { ctx.strokeStyle = f.col; ctx.globalAlpha = .5 - i * .14; ctx.lineWidth = f.w - i * 1.5; ctx.beginPath(); ctx.ellipse(cx, cy + 6, f.r - i * 5, (f.r - i * 5) * .3, 0, f.rev ? Math.PI * (1 - f.k) : 0, f.rev ? Math.PI : Math.PI * f.k, false); ctx.stroke(); }
   ctx.restore();
 }
 function drawTrail(cx, cy, pose) {
@@ -154,7 +208,16 @@ function drawTrail(cx, cy, pose) {
   ctx.restore();
 }
 // the fallen prince of shadow: pale, raven-haired, a torn coat and one blackened pauldron, a violet ember for an eye
-const HERO = { skin: '#D9CCD2', hair: '#1C1726', longHair: 1, fringe: 1, body: '#2A2433', sleeve: '#231E2C', trim: '#9A96AE', legs: '#1C1824', boots: '#2E2630', coat: '#2F2838', coat2: '#3A3046', pauldron: '#3E3A4C', eye: '#B89CFF', chain: 1 };
+const HERO = { glove: '#3A3040', skin: '#D9CCD2', hair: '#1C1726', longHair: 1, fringe: 1, body: '#2A2433', sleeve: '#231E2C', trim: '#9A96AE', legs: '#1C1824', boots: '#2E2630', coat: '#2F2838', coat2: '#3A3046', pauldron: '#3E3A4C', eye: '#B89CFF', chain: 1 };
+// the hero's armor shows its forge level: 2 a leather strap and shoulder guard, 3 a steel breastplate, 4 gold trim, 5 shadow-plate with runes
+function heroLook() {
+  const a = save.armor, L = Object.assign({}, HERO);
+  if (a >= 2) { L.strap = '#4A3A2E'; L.pauldron = '#5A4A3E'; }
+  if (a >= 3) { L.plate = '#8E96A8'; L.pauldron = '#8E96A8'; L.strap = null; }
+  if (a >= 4) { L.plateTrim = '#D8AA55'; L.trim = '#D8AA55'; }
+  if (a >= 5) { L.plate = '#3A344E'; L.pauldron = '#2E2A40'; L.runes = '#B89CFF'; }
+  return L;
+}
 // human enemies, a third of every world
 const HUMANS = {
   bandit:   { skin: '#C9A07E', hood: '#5A6A3E', body: '#6E5A3E', sleeve: '#5A4A34', trim: '#A88A5A', legs: '#3E3428', boots: '#2E2418', mask: '#3A3428', weapon: 'dagger' },

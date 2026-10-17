@@ -2,19 +2,30 @@
 const TRAIL = { fists: 'rgba(255,255,255,.9)', hammer: 'rgba(216,170,85,.95)', staff: 'rgba(126,194,176,.95)', sword: 'rgba(143,184,216,.95)' };
 const ease = (k) => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
 function playerPose() {
-  const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look };
+  const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : save.wl[P.w] };
   if (P.state === 'atk' || P.state === 'air') {
     const m = P.move, k = P.t / m.dur, arc = m.arc || [1, 1];
     const kk = k < m.h[0] ? 0 : k > m.h[1] ? 1 : (k - m.h[0]) / (m.h[1] - m.h[0]);
     pose.arm = lerp(arc[0], arc[1], kk); pose.walk = 0;
+    const tcol = brandT > 0 ? `rgba(${ELEMENTS[brandEl].rgb},.95)` : m.power === 2 ? 'rgba(216,170,85,.95)' : TRAIL[P.w];
+    if (m.style === 'thrust') { // pull back, then drive straight out
+      pose.arm = arc[0]; pose.ext = k < m.h[0] ? -.35 : Math.min(1, kk * 1.6);
+      if (k >= m.h[0] && k <= m.h[1] + .1) pose.streak = { len: w.reach + 26, a: .8 * (1 - Math.max(0, kk - .6)), col: tcol };
+      pose.lean = .22 * Math.max(0, pose.ext);
+    } else if (m.style === 'sweep' || m.style === 'sweepR') { // come around the body, side to side
+      const rev = m.style === 'sweepR';
+      pose.arm = arc[0]; pose.sweep = rev ? lerp(1, -1, kk) : lerp(-1, 1, kk); pose.ext = .4;
+      if (k >= m.h[0] && k <= m.h[1] + .12) pose.flat = { r: w.reach + 22, k: kk, rev, col: tcol, w: P.w === 'sword' || P.w === 'hammer' ? 8 : 5 };
+      pose.lean = .1;
+    }
     if (m.kick) { pose.kick = 1; pose.arm = -.5; }
     if (m.crouch || m.dive) pose.crouch = 1;
     if (m.rot) pose.rot = m.rot * ease(k / .75);
-    if (k >= m.h[0] && k <= m.h[1] + .12 && !m.kick && Math.abs(arc[1] - arc[0]) > .1) {
+    if (!m.style && k >= m.h[0] && k <= m.h[1] + .12 && !m.kick && Math.abs(arc[1] - arc[0]) > .1) {
       pose.trail = w.reach + 18; pose.trailFrom = arc[0];
       pose.trailCol = brandT > 0 ? `rgba(${ELEMENTS[brandEl].rgb},.95)` : m.power === 2 ? 'rgba(216,170,85,.95)' : TRAIL[P.w]; pose.trailW = P.w === 'sword' || P.w === 'hammer' ? 9 : 6;
     }
-    pose.lean = m.power ? .16 : .08;
+    if (!m.style) pose.lean = m.power ? .16 : .08;
     pose.flow = Math.abs(P.vx) * .02;
   } else if (P.state === 'charge') {
     pose.arm = -2.2; pose.crouch = 1; pose.walk = 0;
@@ -43,7 +54,7 @@ function humanEnemyPose(e) {
 function drawPlayerAt(x, y, z, facing, pose, alpha) {
   ctx.save(); ctx.globalAlpha = alpha;
   ctx.translate(x, y - z); ctx.scale(facing, 1);
-  drawHumanoid(HERO, pose);
+  drawHumanoid(heroLook(), pose);
   ctx.restore();
 }
 function drawEnemy(e, t) {
@@ -223,6 +234,9 @@ function drawScene(t) {
   ctx.globalAlpha = 1;
   ctx.restore();
   gradeFrame(stage.theme);
+  if (boss && !boss.dead) { // the boss arena is lit in the boss's own color
+    ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = { mossback: 'rgba(120,170,80,.35)', colossus: 'rgba(230,120,60,.35)', wyrm: 'rgba(150,90,220,.4)' }[boss.def.draw]; ctx.fillRect(0, Y_OFF, VW, VIEW_H); ctx.restore();
+  }
   if (stillT > 0) { ctx.fillStyle = 'rgba(111,180,255,.14)'; ctx.fillRect(0, Y_OFF, VW, VIEW_H); }
   if (flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(.7, flashT * 4)})`; ctx.fillRect(0, Y_OFF, VW, VIEW_H); }
   if (hurtFlash > 0) {
@@ -300,12 +314,38 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   const s = canvas.width / 64 * (scale || 1);
   g.setTransform(s, 0, 0, s, 0, 0);
   ctx.translate(30, 63); ctx.scale(.7, .7);
-  drawHumanoid(HERO, { arm: id === 'sword' ? -1 : id === 'staff' ? -.6 : id === 'hammer' ? -1.2 : .2, weapon: id, walk: 0 });
+  drawHumanoid(heroLook(), { arm: id === 'sword' ? -1 : id === 'staff' ? -.6 : id === 'hammer' ? -1.2 : .2, weapon: id, walk: 0, tier: id === 'fists' ? 1 : save.wl[id] });
   ctx = old;
 }
 
 function drawHazard(h, t) {
   const k = 1 - Math.max(0, h.t) / h.max;
+  if (h.kind === 'ring') { // a shockwave ring rolling across the floor
+    if (h.delay > 0) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,220,160,.85)'; ctx.lineWidth = 7; ell(h.x, h.y, h.r, h.r * .3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ell(h.x, h.y, h.r, h.r * .3); ctx.stroke(); ctx.restore(); return;
+  }
+  if (h.kind === 'mine') { // a brass mine with a blinking light; it lands, arms, then waits for you
+    if (h.done) return;
+    const z = Math.max(0, h.drop) / .45 * 120;
+    shadow(h.x, h.y, 9);
+    rrect(h.x - 9, h.y - z - 8, 18, 8, 4); ctx.fillStyle = '#8A6A3A'; ctx.fill(); outline(1.4);
+    const on = h.arm > 0 ? Math.sin(t * 10) > 0 : Math.sin(t * 26) > 0;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = h.arm > 0 ? 'rgba(255,210,120,.9)' : on ? 'rgba(255,80,60,1)' : 'rgba(255,80,60,.3)'; circle(h.x, h.y - z - 9, 3); ctx.fill();
+    if (h.arm <= 0) { ctx.strokeStyle = 'rgba(255,90,70,.35)'; ctx.lineWidth = 1.5; ell(h.x, h.y, 36, 12); ctx.stroke(); }
+    ctx.restore(); return;
+  }
+  if (h.kind === 'wall') { // a sweeping wall of crystal with one way through
+    ctx.save();
+    for (let y = FLOOR_TOP + 6; y <= FLOOR_BOT; y += 9) {
+      if (Math.abs(y - h.gapY) < 20) continue;
+      const hgt = 70 + Math.sin(y * .7) * 12;
+      ctx.beginPath(); ctx.moveTo(h.x - 7, y); ctx.lineTo(h.x + 2, y - hgt); ctx.lineTo(h.x + 8, y); ctx.closePath();
+      ctx.fillStyle = h.wait > 0 ? 'rgba(216,160,232,.35)' : 'rgba(216,160,232,.85)'; ctx.fill(); if (h.wait <= 0) outline(1.2);
+    }
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,255,255,${.25 + .2 * Math.sin(t * 12)})`; ell(h.x, h.gapY, 18, 8); ctx.fill();
+    ctx.restore(); return;
+  }
   if (h.kind === 'beam') {
     const y = h.y - 22, x0 = camX - 20, w = VW + 40;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -357,6 +397,12 @@ function drawTell(e, t) {
     for (let i = 1; i < 6; i++) { const ax = x0 + f * (i * 70 + (t * 160) % 70); ctx.beginPath(); ctx.moveTo(ax, e.y - 10); ctx.lineTo(ax + f * 14, e.y); ctx.lineTo(ax, e.y + 10); ctx.stroke(); }
   } else if (p === 'slam' && e.tx !== undefined) {
     ell(e.tx, e.ty, 95, 30); ctx.fill(); ctx.stroke();
+  } else if (p === 'quake') {
+    for (let i = 1; i <= 3; i++) { ell(e.x, e.y, 60 * i * k, 18 * i * k); ctx.stroke(); }
+  } else if (p === 'dive' && e.tx !== undefined) {
+    ell(e.tx, e.ty, 70, 22); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(e.tx - 14, e.ty); ctx.lineTo(e.tx + 14, e.ty); ctx.moveTo(e.tx, e.ty - 6); ctx.lineTo(e.tx, e.ty + 6); ctx.stroke();
+  } else if (p === 'magnet') {
+    ctx.strokeStyle = `rgba(159,216,232,${.4 + .5 * k})`; for (let i = 0; i < 3; i++) { ell(e.x, e.y - e.hh * .5, 50 + i * 30 - (t * 60 % 30), (50 + i * 30 - (t * 60 % 30)) * .6); ctx.stroke(); }
   } else if (p === 'groundwave') {
     const x1 = f > 0 ? camX + VW : camX; ctx.fillRect(Math.min(e.x, x1), e.y - 10, Math.abs(x1 - e.x), 20);
   }

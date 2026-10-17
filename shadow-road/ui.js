@@ -117,7 +117,7 @@ function renderForge(note) {
     const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
-      <p>${bare ? w.desc + ' Bare hands never level up: find weapons to grow stronger.' : owned ? w.desc + ' All its combos are yours from the start; each level teaches a new move.' : 'Someone in ' + (id === 'sword' ? 'the Clockwork Skyport' : 'Bloomwild Vale') + ' is carrying it. Beat enemies there and it will drop.'}</p><ul>${moves}</ul>
+      <p>${bare ? w.desc + ' Bare hands never level up: find weapons to grow stronger.' : owned ? w.desc + ' All its combos are yours from the start; each level teaches a new move.' : 'Not found yet. Any enemy in any world might be carrying it, and each world without a find makes the next one likelier.'}</p><ul>${moves}</ul>
       ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');

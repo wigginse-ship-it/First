@@ -16,7 +16,8 @@ const WEAPONS = {
     tree: {
       L:    { dur: .2,  h: [.3, .6], x0: 0, x1: 34, dmg: 6, kb: 50, arc: [.9, -.15], lunge: 70 },
       LL:   { dur: .22, h: [.3, .6], x0: 0, x1: 34, dmg: 7, kb: 50, arc: [.9, -.15], lunge: 70 },
-      LLL:  { name: 'Roundhouse', dur: .4, h: [.3, .65], x0: 0, x1: 40, dmg: 12, kb: 300, kick: 1, lunge: 120, hop: 170, power: 1 },
+      LLL:  { name: 'Hook', dur: .3, h: [.3, .65], x0: 0, x1: 38, dmg: 9, kb: 160, arc: [.3, .3], lunge: 60 },
+      LLLL: { name: 'Roundhouse', dur: .4, h: [.3, .65], x0: 0, x1: 40, dmg: 12, kb: 300, kick: 1, lunge: 120, hop: 170, power: 1 },
       H:    { name: 'Jumping Uppercut', dur: .48, h: [.25, .55], x0: 0, x1: 34, dmg: 13, kb: 60, launch: 430, arc: [1.6, -1.8], hop: 210, power: 1 },
       LH:   { name: 'Shoulder Bash', dur: .45, h: [.15, .7], x0: 0, x1: 38, dmg: 15, kb: 420, lunge: 460, arc: [.2, .2], power: 2, wall: 1 },
       LLH:  { name: 'Whirlwind Kick', dur: .62, h: [.15, .85], x0: 0, x1: 42, dmg: 6, kb: 220, kick: 1, around: 1, multi: .11, hop: 260, rot: -TAU, power: 1 },
@@ -30,8 +31,8 @@ const WEAPONS = {
     } },
   hammer: { name: 'Hammer', reach: 46, look: 'hammer', desc: 'Slow and crushing. Every heavy shakes the ground.',
     tree: {
-      L:    { dur: .44, h: [.4, .62], x0: 0, x1: 62, dmg: 15, kb: 200, arc: [-2, 1.2], lunge: 50, power: 1 },
-      LL:   { dur: .5,  h: [.4, .62], x0: 0, x1: 62, dmg: 17, kb: 260, arc: [1.2, -1.8], lunge: 60, power: 1 },
+      L:    { dur: .46, h: [.35, .65], x0: 0, x1: 64, dmg: 15, kb: 220, arc: [.35, .35], lunge: 50, depth: 24, power: 1 },
+      LL:   { dur: .5,  h: [.35, .65], x0: 0, x1: 64, dmg: 17, kb: 260, arc: [.35, .35], lunge: 60, depth: 24, power: 1 },
       LLL:  { name: 'Hammer Cyclone', dur: .85, h: [.12, .88], x0: 0, x1: 62, dmg: 9, kb: 200, arc: [-P_, 3 * P_], around: 1, multi: .13, lunge: 140, power: 1 },
       H:    { name: 'Overhead Smash', smash: 1, dur: .64, h: [.45, .62], x0: 0, x1: 66, dmg: 24, kb: 90, launch: 330, arc: [-2.7, 1.5], hop: 140, bounce: 1, shock: 70, power: 2 },
       LH:   { name: 'Golf Swing', dur: .55, h: [.35, .6], x0: 0, x1: 62, dmg: 20, kb: 80, launch: 560, arc: [2.3, -2.6], power: 2 },
@@ -51,8 +52,8 @@ const WEAPONS = {
   staff: { name: 'Bowstaff', reach: 54, look: 'staff', desc: 'Long reach, spins that hit all around, and big acrobatics.',
     tree: {
       L:    { dur: .26, h: [.3, .6], x0: 8, x1: 72, dmg: 7, kb: 50, arc: [.25, -.05], lunge: 50 },
-      LL:   { dur: .28, h: [.3, .6], x0: 0, x1: 68, dmg: 7, kb: 50, arc: [-1.4, 1.0], lunge: 50 },
-      LLL:  { dur: .28, h: [.3, .6], x0: 0, x1: 68, dmg: 8, kb: 60, arc: [1.0, -1.4], lunge: 50 },
+      LL:   { name: 'Low Sweep', dur: .3, h: [.3, .65], x0: 0, x1: 70, dmg: 7, kb: 70, arc: [.9, .9], lunge: 40, depth: 28 },
+      LLL:  { name: 'Double Jab', dur: .32, h: [.2, .75], x0: 8, x1: 76, dmg: 5, kb: 60, arc: [.1, .1], multi: .12, lunge: 40 },
       LLLL: { name: 'Spinning Finish', dur: .5, h: [.2, .8], x0: 0, x1: 70, dmg: 13, kb: 260, arc: [-P_, P_], around: 1, hop: 150, power: 1 },
       H:    { name: 'Sweep', dur: .55, h: [.3, .75], x0: 0, x1: 70, dmg: 12, kb: 90, launch: 320, arc: [-P_, 1.5 * P_], around: 1, depth: 24, power: 1 },
       LH:   { name: 'Rising Spiral', dur: .62, h: [.15, .8], x0: 0, x1: 66, dmg: 7, kb: 60, launch: 440, arc: [-P_, 3 * P_], around: 1, multi: .12, hop: 380, rot: -TAU, power: 1 },
@@ -73,8 +74,9 @@ const WEAPONS = {
   sword: { name: 'Great Sword', reach: 64, look: 'sword', charge: true, desc: 'Huge damage. Hold Heavy to charge, release to strike.',
     tree: {
       L:    { dur: .5,  h: [.4, .62], x0: 0, x1: 84, dmg: 18, kb: 200, arc: [-1.9, 1.1], lunge: 50, depth: 20, power: 1 },
-      LL:   { dur: .6,  h: [.4, .62], x0: 0, x1: 86, dmg: 22, kb: 300, arc: [1.1, -1.7], lunge: 60, depth: 20, power: 1 },
-      LLL:  { name: 'Wheel Cleave', dur: .62, h: [.25, .7], x0: 0, x1: 86, dmg: 26, kb: 320, arc: [-P_, P_], around: 1, hop: 160, rot: -TAU, power: 2 },
+      LL:   { name: 'Horizontal Cleave', dur: .55, h: [.35, .65], x0: 0, x1: 90, dmg: 22, kb: 300, arc: [.25, .25], lunge: 60, depth: 28, power: 1 },
+      LLL:  { name: 'Piercing Thrust', dur: .5, h: [.35, .6], x0: 0, x1: 112, dmg: 24, kb: 340, arc: [.05, .05], lunge: 120, power: 1, wall: 1 },
+      LLLL: { name: 'Wheel Cleave', dur: .62, h: [.25, .7], x0: 0, x1: 86, dmg: 26, kb: 320, arc: [-P_, P_], around: 1, hop: 160, rot: -TAU, power: 2 },
       LH:   { name: 'Rising Slash', dur: .55, h: [.2, .55], x0: 0, x1: 80, dmg: 22, kb: 80, launch: 500, arc: [1.6, -2.3], hop: 320, power: 1 },
       HL:   { name: 'Helm Splitter', dur: .75, h: [.55, .75], x0: 0, x1: 86, dmg: 44, kb: 160, arc: [-2.7, 1.5], hop: 340, rot: TAU, lunge: 170, bounce: 1, shock: 90, power: 2 },
       X:    { name: 'Upward Cleave', dur: .55, h: [.3, .55], x0: 0, x1: 84, dmg: 18, kb: 40, launch: 580, arc: [1.6, -2.3], launcher: 1, power: 1 },
@@ -96,6 +98,14 @@ const WEAPONS = {
     extra: [{ lvl: 2, name: 'Shadow Cleave', how: 'Hold Heavy past the third flash', desc: 'Charge past the third flash and your swing sends a wave of shadow down the street.' }] },
 };
 const WEAPON_ORDER = ['fists', 'hammer', 'staff', 'sword'];
+// how each swing moves: thrust = a stab straight out, sweep / sweepR = horizontal, around the body; the rest swing on their arcs
+const STYLES = {
+  fists: { L: 'thrust', LL: 'thrust', LLL: 'sweep', LH: 'thrust', A: 'thrust' },
+  hammer: { L: 'sweep', LL: 'sweepR', D: 'sweep', A: 'sweep', AA: 'sweepR', DH: 'sweep' },
+  staff: { L: 'thrust', LL: 'sweep', LLL: 'thrust', LLH: 'thrust', M: 'thrust', AA: 'sweep' },
+  sword: { LL: 'sweep', LLL: 'thrust', D: 'thrust', A: 'sweep', AA: 'thrust', RH: 'sweep', DH: 'sweep' },
+};
+for (const id in STYLES) for (const k in STYLES[id]) if (WEAPONS[id].tree[k]) WEAPONS[id].tree[k].style = STYLES[id][k];
 for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) WEAPONS[id].tree[k].key = k;
 function unlockList(id) {
   const w = WEAPONS[id], list = [];
@@ -136,13 +146,14 @@ const EDEF = {
   cgolem:    { name: 'Prism Construct', draw: 'golem', mat: 'crystal', move: 'ground', hp: 150, spd: 40, hw: 24, hh: 58, dmg: 19, plans: ['swing', 'slam'], wind: .7, cd: [1.5, 2.5], reach: 50, weight: .55, poise: 3, shards: [12, 16], sigil: .5, crystal: 1 },
 };
 const BOSSES = {
-  // bosses fight in three phases (at 2/3 and 1/3 health they roar, drop health for you and get faster); p2 attacks join from phase two
+  // bosses fight in three phases (at 2/3 and 1/3 health they roar, drop health for you and get faster); each phase adds an attack.
+// No two bosses share an attack type: each fight is its own puzzle.
   mossback: { name: 'Old Mossback', title: 'THE WALKING GROVE', draw: 'mossback', mat: 'rock', move: 'ground', hp: 780, spd: 46, hw: 60, hh: 96, dmg: 16, reach: 84, wind: .7, cd: [.7, 1.4], weight: .3, poise: 9,
-    p1: ['bite', 'sweep', 'roll', 'erupt'], p2: ['bite', 'sweep', 'roll', 'erupt', 'rain'] },
+    p1: ['bite', 'sweep', 'roll'], p2: ['bite', 'sweep', 'roll', 'erupt'], p3: ['bite', 'sweep', 'roll', 'erupt', 'quake'] },
   colossus: { name: 'The Brass Colossus', title: 'WARDEN OF THE SKYPORT', draw: 'colossus', mat: 'metal', move: 'ground', hp: 900, spd: 52, hw: 34, hh: 118, dmg: 17, reach: 80, wind: .6, cd: [.7, 1.3], weight: .3, poise: 9, ranged: 1,
-    p1: ['swing', 'volley', 'groundwave', 'charge'], p2: ['swing', 'groundwave', 'beam', 'rain', 'volley'] },
+    p1: ['swing', 'volley', 'groundwave'], p2: ['swing', 'volley', 'groundwave', 'beam', 'mines'], p3: ['swing', 'volley', 'groundwave', 'beam', 'mines', 'magnet'] },
   wyrm:     { name: 'The Kaleidoscope Wyrm', title: 'EATER OF COLORS', draw: 'wyrm', mat: 'crystal', move: 'fly', hover: 64, tail: 150, reachDown: 50, hp: 1080, spd: 64, hw: 44, hh: 56, dmg: 19, reach: 80, wind: .6, cd: [.6, 1.2], weight: .3, poise: 10, ranged: 1,
-    p1: ['bite', 'breath', 'charge', 'rain'], p2: ['bite', 'breath', 'beam', 'erupt', 'rain', 'slam'] },
+    p1: ['dive', 'breath', 'rain'], p2: ['dive', 'breath', 'rain', 'orbit'], p3: ['dive', 'breath', 'rain', 'orbit', 'prismwall'] },
 };
 
 // ---------- stages ----------
@@ -150,13 +161,13 @@ const STAGES = [
   { name: 'Bloomwild Vale', sub: 'THE FIRST SHADOW', theme: 'bloom', len: 2600,
     pods: [880, 1650],
     waves: [['bandit', 'boar', 'lantern'], ['archer', 'slime', 'sentinel', 'bandit', 'wisp', 'lantern'], ['golem', 'bandit', 'sentinel', 'archer', 'slime', 'lantern']],
-    drops: [{ weapon: 'hammer', chance: .4 }, { weapon: 'staff', chance: .25 }], boss: 'mossback' }, // chance per run; misses raise the odds next time
+    drop: [.5, .1], boss: 'mossback' }, // odds of a first and a second weapon in this world; any weapon you lack can be the one
   { name: 'The Clockwork Skyport', sub: 'THE SECOND SHADOW', theme: 'sky', len: 2700,
     pods: [700, 1900],
     waves: [['corsair', 'skyray', 'spider'], ['knight', 'corsair', 'gunner', 'cloudram', 'skyray', 'drone'], ['tank', 'gunner', 'corsair', 'cloudram', 'skyray', 'spider']],
-    drops: [{ weapon: 'sword', chance: .35 }], boss: 'colossus' },
+    drop: [.65, .25], boss: 'colossus' },
   { name: 'The Prism Rim', sub: 'THE THIRD SHADOW', theme: 'prism', len: 2800,
-    pods: [650, 1500, 2100], drops: [],
+    pods: [650, 1500, 2100], drop: [.8, .4],
     waves: [['cultist', 'imp', 'sdrone'], ['witch', 'cultist', 'jelly', 'imp', 'sdrone', 'sdrone'], ['cgolem', 'cultist', 'witch', 'shardling', 'jelly', 'sdrone']],
     boss: 'wyrm' },
 ];

@@ -83,7 +83,9 @@ function updateEnemy(e, dt) {
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.z + 20, t: .25, max: .25, r: 30, col: '#FFFFFF' });
     }
     if (e.z <= 0) { e.z = 0; enemyLand(e); }
-  } else if (fly && !['down', 'dying'].includes(e.state) && !e.dead) {
+  } else if (fly && e.state === 'wind' && e.plan === 'dive') { e.z += (e.def.hover + 70 - e.z) * Math.min(1, dt * 4); // rears up high
+  } else if (fly && (e.grounded || 0) > 0) { e.grounded -= dt; // sprawled on the floor after a dive: hit it now
+  } else if (fly && !['down', 'dying', 'dive'].includes(e.state) && !e.dead) {
     e.z += (e.def.hover + Math.sin(performance.now() / 300 + e.walk) * 6 - e.z) * Math.min(1, dt * 3);
   }
   e.x = clamp(e.x, camX - 60, camX + VW + 60);
@@ -105,7 +107,7 @@ function updateEnemy(e, dt) {
       if (e.t <= 0) { e.state = 'idle'; e.rotA = 0; e.cd = Math.max(e.cd, .6); e.jug = 0; e.walls = 0; }
       return;
     case 'idle': {
-      if (!e.plan) e.plan = pick(e.boss ? (e.phase >= 2 ? e.def.p2 : e.def.p1) : e.def.plans);
+      if (!e.plan) e.plan = pick(e.boss ? [e.def.p1, e.def.p2, e.def.p3][e.phase - 1] : e.def.plans);
       const p = e.plan, side = Math.sign(e.x - P.x) || 1;
       e.facing = -side;
       // anyone outside the view walks straight in before doing anything else
@@ -142,12 +144,26 @@ function updateEnemy(e, dt) {
       if (!e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 18 && P.z < 30) { e.struck = true; playerDamage(Math.round(edmg(e) * 1.2), e.x, true); }
       if (e.rolls > 0 && (e.x < leftWall() || e.x > rightWall())) { // the rolling shell rebounds off the edges
         e.rolls--; e.facing *= -1; e.t = .9; e.struck = false; e.x = clamp(e.x, leftWall(), rightWall()); shakeMag = 8; sfx('slam'); dust(e.x, e.y, 10);
-      } else if (e.t <= 0 || e.x < leftWall() || e.x > rightWall()) { e.rolls = 0; e.x = clamp(e.x, leftWall(), rightWall()); recover(e, .8); }
+      } else if (e.t <= 0 || e.x < leftWall() || e.x > rightWall()) { e.rolls = 0; e.rotA = 0; e.x = clamp(e.x, leftWall(), rightWall()); recover(e, .8); }
       return;
     case 'pounce': case 'leap':
       if (e.state === 'pounce' && !e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 16 && zOverlap(P.z, 60, e.z, e.hh)) { e.struck = true; playerDamage(edmg(e), e.x, false); }
       if (e.state === 'leap') e.y += (e.ty - e.y) * Math.min(1, dt * 3);
       return;
+    case 'dive': { // the wyrm plunges at the marked spot
+      e.t -= dt; const k = 1 - Math.max(0, e.t) / .5;
+      e.x = lerp(e.dx0, e.tx, k); e.y = lerp(e.dy0, e.ty, k); e.z = lerp(e.dz0, 0, k);
+      if (!e.struck && Math.abs(P.x - e.x) < e.hw + 10 && Math.abs(P.y - e.y) < 22 && P.z < 40) { e.struck = true; playerDamage(Math.round(edmg(e) * 1.2), e.x, true); }
+      if (e.t <= 0) { e.z = 0; e.grounded = 1.3; shakeMag = 10; sfx('slam'); burst(e.x, e.y, 6, ['#FFFFFF', '#D8A0E8', '#9FD8E0'], 24, 'crystal', 0, true); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .4, max: .4, r: 90, col: '#FFFFFF', flat: 1 }); recover(e, 1.3); }
+      return;
+    }
+    case 'pull': { // the colossus drags you in on a magnetic field, then strikes
+      e.t -= dt;
+      if (P.state !== 'dodge' && P.state !== 'dead') { P.x += Math.sign(e.x - P.x) * 150 * dt; P.y += Math.sign(e.y - P.y) * 40 * dt; }
+      if (Math.random() < .8) parts.push({ x: P.x + rand(-60, 60), y: P.y, z: rand(10, 70), vx: Math.sign(e.x - P.x) * 220, vy: 0, vz: 0, life: .35, max: .35, col: '#9FD8E8', size: 2, shape: 'streak', rot: 0, vr: 0 });
+      if (e.t <= 0) { e.plan = 'swing'; e.around = true; e.state = 'strike'; e.t = .3; e.struck = false; sfx('slam'); shakeMag = 8; }
+      return;
+    }
     case 'recover': e.t -= dt; if (e.t <= 0) { e.state = 'idle'; e.plan = null; } return;
   }
 }
@@ -179,9 +195,9 @@ function approach(e, tx, ty, dt, k) {
   e.y = clamp(e.y, FLOOR_TOP + 8, FLOOR_BOT);
 }
 // bosses take longer to wind up, so every big attack can be read and dodged
-const BOSS_WIND = { bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
+const BOSS_WIND = { quake: .9, mines: .7, magnet: .8, dive: .95, orbit: .7, prismwall: .6, bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
 function wind(e, t) {
-  if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * [1, .88, .76][e.phase - 1] * (e.enraged ? .9 : 1); sfx('growl'); if (e.plan === 'slam') e.ty = P.y, e.tx = P.x; }
+  if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * [1, .88, .76][e.phase - 1] * (e.enraged ? .9 : 1); sfx('growl'); if (e.plan === 'slam' || e.plan === 'dive') e.ty = P.y, e.tx = P.x; }
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
 }
 function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]); }
@@ -213,6 +229,25 @@ function execute(e) {
     fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.hh * .6, t: .7, max: .7, r: 240, col: '#FFFFFF' });
     if (Math.abs(P.x - e.x) < 200 && P.state !== 'dodge' && P.state !== 'dead') { P.state = 'hurt'; P.knocked = false; P.t = .5; P.vx = Math.sign(P.x - e.x || 1) * 320; }
     recover(e, .6);
+  }
+  else if (p === 'quake') { // shockwave rings ripple out across the floor: jump them
+    for (let i = 0; i < e.phase; i++) hazards.push({ kind: 'ring', x: e.x, y: e.y, r: 10, delay: i * .5, speed: 250, dmg: Math.round(edmg(e) * .8), t: 9, max: 9 });
+    shakeMag = 12; sfx('slam'); recover(e, .6 + e.phase * .4);
+  }
+  else if (p === 'mines') { // proximity mines lobbed around you
+    for (let i = 0; i < 2 + e.phase; i++) hazards.push({ kind: 'mine', x: clamp(P.x + rand(-150, 150), leftWall() + 20, rightWall() - 20), y: clamp(P.y + rand(-40, 40), FLOOR_TOP + 10, FLOOR_BOT), drop: .45 + i * .1, arm: .9 + i * .1, t: 6, max: 6, r: 52, dmg: edmg(e) });
+    sfx('shoot'); recover(e, .8);
+  }
+  else if (p === 'magnet') { e.state = 'pull'; e.t = 1.2; sfx('charge', 2); }
+  else if (p === 'dive') { e.state = 'dive'; e.t = .5; e.struck = false; e.dx0 = e.x; e.dy0 = e.y; e.dz0 = e.z; e.tx = e.tx ?? P.x; e.ty = e.ty ?? P.y; sfx('whoosh'); }
+  else if (p === 'orbit') { // shards circle the wyrm, then burst outward
+    for (let i = 0; i < 8; i++) projs.push({ owner: 'e', orbit: e, ang: i / 8 * TAU, rad: 20, otime: 1.1, x: e.x, y: e.y, z: e.z + 20, vx: 0, vy: 0, dmg: Math.round(edmg(e) * .7), life: 5, col: '#D8A0E8' });
+    sfx('charge'); recover(e, 1.3);
+  }
+  else if (p === 'prismwall') { // a crystal wall sweeps across the arena with a single gap
+    const from = Math.random() < .5 ? -1 : 1;
+    hazards.push({ kind: 'wall', x: from < 0 ? leftWall() - 10 : rightWall() + 10, dir: -from, gapY: rand(FLOOR_TOP + 24, FLOOR_BOT - 18), wait: .9, speed: 230, dmg: edmg(e), t: 6, max: 6, hit: false });
+    sfx('charge', 2); recover(e, 1.6);
   }
   else if (p === 'summon') {
     if (enemies.filter(o => !o.dead && !o.boss).length < 3) e.def.summon.forEach((s, i) => spawnEnemy(s, i % 2 ? -1 : 1));
@@ -258,7 +293,7 @@ function updateLoot(dt) {
   loot = loot.filter(k => !k.got);
 }
 function gainWeapon(id) {
-  save.owned[id] = true; save.weapon = id; P.w = id; P.seq = ''; delete save.pity[id]; persist();
+  save.owned[id] = true; save.weapon = id; P.w = id; P.seq = ''; persist();
   sfx('weapon'); flashT = .15; zoom = .05; slowmo = .4;
   burst(P.x, P.y, 50, ['#EED48A', '#FFFFFF', '#D08AB0'], 30, 'spark', 0, true);
   banner(WEAPONS[id].name + ' found', 'NEW WEAPON · SWAP TO CHANGE · LEVEL IT AT THE FORGE', 2.6);
@@ -275,14 +310,18 @@ function startStage(i) {
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
   runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stag = null; brandT = 0;
   // each run, a random enemy in a random wave carries each weapon this world can give
+  // weapons you don't own yet, in a random order: any of them can turn up in any world
   carriers = [];
-  for (const d of stage.drops) {
-    if (save.owned[d.weapon]) continue;
-    if (Math.random() < d.chance + (save.pity[d.weapon] || 0)) {
-      const w = 1 + Math.floor(Math.random() * (stage.waves.length - 1));
-      carriers.push({ weapon: d.weapon, wave: w, slot: Math.floor(Math.random() * stage.waves[w].length) });
-    } else { save.pity[d.weapon] = Math.min(.5, (save.pity[d.weapon] || 0) + .15); persist(); }
-  }
+  const pool = WEAPON_ORDER.filter(id => id !== 'fists' && !save.owned[id]).sort(() => Math.random() - .5);
+  stage.drop.forEach((chance, n) => {
+    if (!pool[n]) return;
+    if (Math.random() < chance + (n === 0 ? save.pity.any || 0 : 0)) {
+      const w = 1 + Math.floor(Math.random() * (stage.waves.length - 1)); // never the first wave
+      carriers.push({ weapon: pool[n], wave: w, slot: Math.floor(Math.random() * stage.waves[w].length) });
+      if (n === 0) delete save.pity.any;
+    } else if (n === 0) { save.pity.any = Math.min(.5, (save.pity.any || 0) + .2); }
+  });
+  persist();
   buildBackground(stage.theme, i * 97 + 13);
   $('#bossbar').hidden = true; $('#go').hidden = true;
   refreshHud(true); refreshCombo();
@@ -313,7 +352,12 @@ function updateWorld(dt) {
   for (const e of enemies) updateEnemy(e, dt);
   enemies = enemies.filter(e => !e.remove);
   if (stillT <= 0) for (const p of projs) {
-    p.x += p.vx * dt; p.life -= dt;
+    if (p.orbit) {
+      const o = p.orbit;
+      if (p.otime > 0 && !o.dead) { p.otime -= dt; p.ang += 4 * dt; p.rad = Math.min(84, p.rad + 90 * dt); p.x = o.x + Math.cos(p.ang) * p.rad; p.y = clamp(o.y + Math.sin(p.ang) * p.rad * .35, FLOOR_TOP + 4, FLOOR_BOT); p.z = o.z + 20; }
+      else { p.orbit = null; p.vx = Math.cos(p.ang) * 230; p.vy = Math.sin(p.ang) * 70; }
+    }
+    p.x += p.vx * dt; p.y = clamp(p.y + (p.vy || 0) * dt, FLOOR_TOP + 4, FLOOR_BOT); p.life -= dt;
     if (p.owner === 'e') {
       if (p.ground && Math.random() < .7) dust(p.x, p.y, 1);
       if (Math.abs(p.x - P.x) < (p.ground ? 16 : 12) && Math.abs(p.y - P.y) < (p.ground ? 16 : 12) && P.z < (p.ground ? 14 : 40) && P.state !== 'dead') { playerDamage(p.dmg, p.x - p.vx, false); p.life = 0; }
@@ -326,6 +370,12 @@ function updateWorld(dt) {
   for (const p of props) p.flash = Math.max(0, (p.flash || 0) - dt);
   props = props.filter(p => !p.broken);
   updateLoot(dt); updateTrumps(dt); updateHazards(dt);
+  if (boss && !boss.dead && Math.random() < dt * 14) { // each boss's arena has its own weather
+    const kind = boss.def.draw, x = camX + rand(0, VW);
+    if (kind === 'mossback') parts.push({ x, y: rand(FLOOR_TOP, FLOOR_BOT), z: 260, vx: rand(-30, 10), vy: 0, vz: -40, life: 5, max: 5, col: pick(['#C9A86A', '#8A6A3A', boss.phase === 3 ? '#FF8A4A' : '#7EA460']), size: 3, shape: 'tuft', rot: rand(0, 6), vr: 2 });
+    else if (kind === 'colossus') parts.push({ x, y: rand(FLOOR_TOP, FLOOR_BOT), z: 0, vx: 0, vy: 0, vz: rand(40, 80), life: 1.4, max: 1.4, col: 'rgba(230,220,210,.35)', size: rand(6, 10), shape: 'puff', rot: 0, vr: 0 });
+    else parts.push({ x, y: rand(FLOOR_TOP, FLOOR_BOT), z: rand(20, 160), vx: rand(-10, 10), vy: 0, vz: 30, life: 1.6, max: 1.6, col: pick(['#D8A0E8', '#9FD8E0', '#FFF0C0']), size: 2, shape: 'star', rot: 0, vr: 3 });
+  }
   if (comboT > 0) { comboT -= dt; if (comboT <= 0) endCombo(); }
   if (clearT > 0) { clearT -= dt; if (clearT <= 0) stageClear(); }
 }
@@ -338,6 +388,31 @@ function updateHazards(dt) {
   if (stillT > 0) return;
   for (const h of hazards) {
     h.t -= dt;
+    if (h.kind === 'ring') {
+      if (h.delay > 0) { h.delay -= dt; continue; }
+      h.r += h.speed * dt;
+      const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2);
+      if (!h.hit && Math.abs(d - h.r) < 14 && P.z < 10) { h.hit = true; playerDamage(h.dmg, h.x, true); }
+      if (h.r > 520) h.t = -1;
+      continue;
+    }
+    if (h.kind === 'mine') {
+      h.drop -= dt; h.arm -= dt;
+      const near = Math.hypot(P.x - h.x, (P.y - h.y) * 2) < 36;
+      if (!h.done && h.arm <= 0 && (near || h.t <= .05)) {
+        h.done = true; h.t = Math.min(h.t, 0);
+        if (Math.hypot(P.x - h.x, (P.y - h.y) * 2) < h.r && P.z < 24) playerDamage(h.dmg, h.x, true);
+        burst(h.x, h.y, 6, ['#FFD27A', '#FF7A4A', '#FFFFFF'], 18, 'metal', 0, true); fx.push({ kind: 'ring', x: h.x, y: h.y, z: 4, t: .35, max: .35, r: h.r * 1.3, col: '#FFB35A', flat: 1 }); shakeMag = Math.max(shakeMag, 6); sfx('slam');
+      }
+      continue;
+    }
+    if (h.kind === 'wall') {
+      if (h.wait > 0) { h.wait -= dt; continue; }
+      h.x += h.dir * h.speed * dt;
+      if (!h.hit && Math.abs(P.x - h.x) < 12 && Math.abs(P.y - h.gapY) > 20 && P.state !== 'dead') { h.hit = true; playerDamage(h.dmg, h.x - h.dir * 20, true); }
+      if (h.x < camX - 40 || h.x > camX + VW + 40) h.t = -1;
+      continue;
+    }
     if (h.kind === 'beam') {
       if (h.t < .35 && !h.fired) { h.fired = true; sfx('shoot'); shakeMag = Math.max(shakeMag, 7); flashT = .05; }
       if (h.fired && !h.hit && Math.abs(P.y - h.y) < 14 && P.z < 60) { h.hit = true; playerDamage(h.dmg, P.x - P.facing, true); }
@@ -349,5 +424,5 @@ function updateHazards(dt) {
       shakeMag = Math.max(shakeMag, 5); sfx(h.kind === 'spike' ? 'crunch' : 'slam');
     }
   }
-  hazards = hazards.filter(h => h.t > -.4);
+  hazards = hazards.filter(h => h.t > -.4 || (h.kind === 'mine' && !h.done));
 }
