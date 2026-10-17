@@ -305,6 +305,11 @@ function drawFx(f) {
 }
 function drawProj(p, t) {
   const x = p.x, y = p.y - p.z;
+  if (p.quake) { // the hammer's fault line: shards of rock bursting up in a running crack
+    ctx.strokeStyle = '#2A1B2C'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - Math.sign(p.vx) * 60, p.y); for (let i = 0; i <= 6; i++) ctx.lineTo(x - Math.sign(p.vx) * (60 - i * 10), p.y + (i % 2 ? 3 : -2)); ctx.stroke();
+    for (let i = 0; i < 4; i++) { const sx = x - Math.sign(p.vx) * i * 12, h = (22 - i * 5) * (1 + .2 * Math.sin(t * 30 + i)); ctx.fillStyle = i % 2 ? '#8A7458' : '#B89A6E'; ctx.beginPath(); ctx.moveTo(sx - 7, p.y); ctx.lineTo(sx - 1, p.y - h); ctx.lineTo(sx + 2, p.y - h * .7); ctx.lineTo(sx + 7, p.y); ctx.closePath(); ctx.fill(); outline(1.2); }
+    return;
+  }
   if (p.ground) { // a shockwave tearing along the floor: jump it
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 3; i++) { const g = ctx.createRadialGradient(x - Math.sign(p.vx) * i * 10, p.y, 2, x - Math.sign(p.vx) * i * 10, p.y, 26 - i * 5); g.addColorStop(0, 'rgba(255,230,170,.8)'); g.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = g; ell(x - Math.sign(p.vx) * i * 10, p.y - 8, 26 - i * 5, 16 - i * 3); ctx.fill(); }

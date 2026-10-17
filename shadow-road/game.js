@@ -156,7 +156,8 @@ function runMove(dt) {
   if (m.shock && !m.hop && !P.shocked && k >= m.h[0]) shockwave(P.x + P.facing * (m.x1 * .7), P.y, m.shock, m);
   if (m.wave && !P.waved && k >= m.h[0]) {
     P.waved = true;
-    projs.push({ owner: 'p', x: P.x + P.facing * 40, y: P.y, z: 0, vx: P.facing * 340, dmg: Math.round(40 * wMult('sword')), life: 1, hit: new Set(), wave: 1 });
+    const quake = m.waveKind === 'quake'; // the hammer's crack runs along the ground; the sword's wave is a crescent of light
+    projs.push({ owner: 'p', x: P.x + P.facing * 40, y: P.y, z: 0, vx: P.facing * (quake ? 300 : 340), dmg: Math.round((m.wave === 1 ? 40 : m.wave) * wMult(P.w)), life: quake ? .9 : 1, hit: new Set(), wave: 1, quake });
   }
   if (k > .3) { if (pressed.light) P.q = 'L'; if (pressed.heavy) P.q = 'H'; }
   if (pressed.dodge && k > .4) { startDodge(); return; }

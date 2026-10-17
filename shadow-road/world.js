@@ -362,8 +362,9 @@ function updateWorld(dt) {
       if (p.ground && Math.random() < .7) dust(p.x, p.y, 1);
       if (Math.abs(p.x - P.x) < (p.ground ? 16 : 12) && Math.abs(p.y - P.y) < (p.ground ? 16 : 12) && P.z < (p.ground ? 14 : 40) && P.state !== 'dead') { playerDamage(p.dmg, p.x - p.vx, false); p.life = 0; }
     } else {
-      for (const e of enemies) if (!e.dead && !p.hit.has(e) && Math.abs(p.x - e.x) < 24 && Math.abs(p.y - e.y) < 26) { p.hit.add(e); strike(e, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 300, power: 2 }); }
-      if (Math.random() < .9) parts.push({ x: p.x, y: p.y + rand(-10, 10), z: rand(0, 40), vx: 0, vy: 0, vz: 40, life: .4, max: .4, col: '#D08AB0', size: 3, shape: 'star', rot: 0, vr: 4 });
+      for (const e of enemies) if (!e.dead && !p.hit.has(e) && Math.abs(p.x - e.x) < 24 && Math.abs(p.y - e.y) < 26) { p.hit.add(e); strike(e, p.dmg, Math.sign(p.vx), p.quake ? { dmg: p.dmg, kb: 120, launch: 380, power: 2, smash: 1 } : { dmg: p.dmg, kb: 300, launch: 300, power: 2 }); }
+      if (p.quake) { if (Math.random() < .8) dust(p.x, p.y, 1); }
+      else if (Math.random() < .9) parts.push({ x: p.x, y: p.y + rand(-10, 10), z: rand(0, 40), vx: 0, vy: 0, vz: 40, life: .4, max: .4, col: '#D08AB0', size: 3, shape: 'star', rot: 0, vr: 4 });
     }
   }
   projs = projs.filter(p => p.life > 0 && p.x > camX - 60 && p.x < camX + VW + 60);

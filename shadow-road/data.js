@@ -19,6 +19,7 @@ const WEAPONS = {
       LLL:  { name: 'Hook', dur: .3, h: [.3, .65], x0: 0, x1: 38, dmg: 9, kb: 160, arc: [.3, .3], lunge: 60 },
       LLLL: { name: 'Roundhouse', dur: .4, h: [.3, .65], x0: 0, x1: 40, dmg: 12, kb: 300, kick: 1, lunge: 120, hop: 170, power: 1 },
       H:    { name: 'Jumping Uppercut', dur: .48, h: [.25, .55], x0: 0, x1: 34, dmg: 13, kb: 60, launch: 430, arc: [1.6, -1.8], hop: 210, lunge: 210, power: 1 },
+      HH:   { name: 'Thunder Palm', dur: .46, h: [.3, .6], x0: 0, x1: 42, dmg: 16, kb: 380, arc: [.2, .2], lunge: 200, power: 2, wall: 1 }, // both palms driven forward hard enough to bounce them off a wall
       LH:   { name: 'Shoulder Bash', dur: .45, h: [.15, .7], x0: 0, x1: 38, dmg: 15, kb: 420, lunge: 460, arc: [.2, .2], power: 2, wall: 1 },
       LLH:  { name: 'Whirlwind Kick', dur: .62, h: [.15, .85], x0: 0, x1: 42, dmg: 6, kb: 220, kick: 1, around: 1, multi: .11, hop: 260, rot: -TAU, power: 1 },
       HL:   { name: 'Sky Hammer', dur: .55, h: [.55, .8], x0: 0, x1: 40, dmg: 18, kb: 120, arc: [-2.6, 1.4], hop: 280, lunge: 110, bounce: 1, power: 2 },
@@ -36,7 +37,7 @@ const WEAPONS = {
       LLL:  { name: 'Hammer Cyclone', dur: .85, h: [.12, .88], x0: 0, x1: 62, dmg: 9, kb: 200, arc: [-P_, 3 * P_], around: 1, multi: .13, lunge: 140, power: 1 },
       H:    { name: 'Overhead Smash', smash: 1, dur: .64, h: [.45, .62], x0: 0, x1: 66, dmg: 24, kb: 90, launch: 330, arc: [-2.7, 1.5], hop: 140, lunge: 150, bounce: 1, shock: 70, power: 2 },
       LH:   { name: 'Golf Swing', dur: .55, h: [.35, .6], x0: 0, x1: 62, dmg: 20, kb: 80, launch: 560, arc: [2.3, -2.6], power: 2 },
-      HH:   { name: 'Earthquake', smash: 1, dur: .78, h: [.62, .78], x0: 0, x1: 70, dmg: 28, kb: 200, launch: 380, arc: [-2.8, 1.5], hop: 320, rot: -TAU, around: 1, shock: 140, power: 2 },
+      HH:   { name: 'Fault Line', smash: 1, dur: .62, h: [.42, .62], x0: 0, x1: 68, dmg: 26, kb: 120, launch: 340, arc: [-2.8, 1.5], lunge: 90, shock: 60, wave: 30, waveKind: 'quake', power: 2 }, // drive the hammer into the ground and split the earth in a line ahead
       LLH:  { name: 'Comet Drop', smash: 1, dur: .8, h: [.62, .8], x0: 0, x1: 70, dmg: 38, kb: 160, launch: 300, arc: [-2.8, 1.5], hop: 420, rot: TAU, lunge: 220, bounce: 1, shock: 110, power: 2 },
       X:    { name: 'Uplift', dur: .55, h: [.3, .55], x0: 0, x1: 62, dmg: 16, kb: 40, launch: 580, arc: [2.3, -2.4], launcher: 1, power: 1 },
       A:    { dur: .36, h: [.25, .6], x0: 0, x1: 58, dmg: 12, kb: 120, arc: [-1.8, 1.0] },
@@ -59,7 +60,7 @@ const WEAPONS = {
       LH:   { name: 'Rising Spiral', dur: .62, h: [.15, .8], x0: 0, x1: 66, dmg: 7, kb: 60, launch: 440, arc: [-P_, 3 * P_], around: 1, multi: .12, hop: 380, rot: -TAU, power: 1 },
       HL:   { name: 'Pole Flip', dur: .62, h: [.5, .75], x0: 0, x1: 70, dmg: 18, kb: 160, arc: [-2, 1.4], hop: 300, rot: TAU, lunge: 260, bounce: 1, power: 1 },
       LLH:  { name: 'Thousand Strikes', dur: .9, h: [.08, .85], x0: 8, x1: 76, dmg: 4, kb: 40, arc: [.15, -.15], multi: .07, lunge: 30, power: 0 },
-      HH:   { name: 'Storm Vault', dur: .7, h: [.35, .8], x0: 0, x1: 48, dmg: 24, kb: 260, launch: 520, kick: 1, lunge: 320, hop: 440, rot: -TAU, power: 2 },
+      HH:   { name: 'Sweeping Tide', dur: .6, h: [.2, .62], x0: 0, x1: 80, depth: 34, dmg: 20, kb: 90, launch: 280, arc: [-P_, 3 * P_], around: 1, crouch: 1, lunge: 90, bounce: 1, power: 2 }, // a low full-circle sweep that knocks everyone around you off their feet
       X:    { name: 'Rising Pole', dur: .45, h: [.3, .6], x0: 0, x1: 68, dmg: 10, kb: 40, launch: 580, arc: [1.4, -1.8], launcher: 1, power: 1 },
       A:    { dur: .3,  h: [.15, .7], x0: 0, x1: 66, dmg: 6, kb: 80, arc: [-1.6, 1.6], around: 1, multi: .12 },
       AA:   { dur: .3,  h: [.15, .7], x0: 0, x1: 66, dmg: 6, kb: 80, arc: [1.6, -1.6], around: 1, multi: .12 },
@@ -100,9 +101,9 @@ const WEAPONS = {
 const WEAPON_ORDER = ['fists', 'hammer', 'staff', 'sword'];
 // how each swing moves: thrust = a stab straight out, sweep / sweepR = horizontal, around the body; the rest swing on their arcs
 const STYLES = {
-  fists: { L: 'thrust', LL: 'thrust', LLL: 'sweep', LH: 'thrust', A: 'thrust' },
+  fists: { L: 'thrust', LL: 'thrust', LLL: 'sweep', LH: 'thrust', HH: 'thrust', A: 'thrust' },
   hammer: { L: 'sweep', LL: 'sweepR', D: 'sweep', A: 'sweep', AA: 'sweepR', DH: 'sweep' },
-  staff: { L: 'thrust', LL: 'sweep', LLL: 'thrust', LLH: 'thrust', M: 'thrust', AA: 'sweep' },
+  staff: { L: 'thrust', LL: 'sweep', HH: 'sweep', LLL: 'thrust', LLH: 'thrust', M: 'thrust', AA: 'sweep' },
   sword: { LL: 'sweep', LLL: 'thrust', D: 'thrust', A: 'sweep', AA: 'thrust', RH: 'sweep', DH: 'sweep' },
 };
 for (const id in STYLES) for (const k in STYLES[id]) if (WEAPONS[id].tree[k]) WEAPONS[id].tree[k].style = STYLES[id][k];
