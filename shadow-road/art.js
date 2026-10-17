@@ -242,8 +242,9 @@ const THEMES = {
 };
 let bgFar = null, bgMid = null, bgKey = '', grain = null;
 function makeLayer(w, h) { const c = document.createElement('canvas'); c.width = Math.ceil(w * K); c.height = Math.ceil(h * K); const g = c.getContext('2d'); g.scale(K, K); return [c, g]; }
-function dab(x, y, r, col, a = 1) { // a brush dab; its shape comes from its position so it never flickers
-  const h = Math.abs(Math.sin(x * 12.99 + y * 78.23)) * 1000 % 1;
+let DAB_X = 0; // world offset while painting scrolling layers, so a dab keeps its shape as it scrolls past
+function dab(x, y, r, col, a = 1) { // a brush dab; its shape comes from its world position so it never flickers
+  const h = Math.abs(Math.sin((x + DAB_X) * 12.99 + y * 78.23)) * 1000 % 1;
   ctx.globalAlpha = a; ctx.fillStyle = col; ell(x, y, r, r * (.72 + h * .28), h * 3); ctx.fill(); ctx.globalAlpha = 1;
 }
 function softDab(x, y, r, rgb, a) { // a feathered puff of color, for clouds and nebulae
@@ -372,6 +373,11 @@ function drawWorld(themeId, camX, t) {
   drawFloor(themeId, th, camX, t);
 }
 function drawFloor(themeId, th, camX, t) {
+  DAB_X = camX;
+  drawFloorLayer(themeId, th, camX, t);
+  DAB_X = 0;
+}
+function drawFloorLayer(themeId, th, camX, t) {
   const fg = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH);
   fg.addColorStop(0, th.floorA); fg.addColorStop(1, th.floorB);
   ctx.fillStyle = fg; ctx.fillRect(0, FLOOR_TOP - 4, VW, VH - FLOOR_TOP + 4);
