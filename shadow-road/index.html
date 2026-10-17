@@ -49,7 +49,9 @@
   .pause { pointer-events: auto; width: 38px; height: 38px; border-radius: 50%; background: rgba(21,17,31,.6); border: 1.5px solid rgba(216,170,85,.8); color: var(--text); font: 700 13px var(--label); cursor: pointer; }
   #bossbar { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: min(34%, 360px); display: grid; gap: 3px; justify-items: center; pointer-events: none; }
   #bossbar span { font: 700 14px var(--label); color: var(--text); text-shadow: 0 2px 0 rgba(0,0,0,.6), 0 0 12px rgba(255,111,181,.8); white-space: nowrap; }
-  #bossbar .bar { width: 100%; height: 14px; border-color: var(--gold); }
+  #bossbar .bar { width: 100%; height: 14px; border-color: var(--gold); position: relative; }
+  #bossbar .bar::before, #bossbar .bar::after { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(21,17,31,.85); z-index: 1; }
+  #bossbar .bar::before { left: 34%; } #bossbar .bar::after { left: 67%; }
   #bossbar i { background: linear-gradient(#E08AA0, var(--petal)); }
   #combo { position: absolute; right: max(18px, env(safe-area-inset-right, 0px)); top: 26%; text-align: right; pointer-events: none; opacity: 0; transition: opacity .25s; }
   #combo.on { opacity: 1; }
@@ -192,8 +194,8 @@
       <div class="howto">
         <div><b>MOVE &amp; RUN</b>Joystick to walk. Flick it twice in a direction to run. On a keyboard: arrows, double-tap to run.</div>
         <div><b>MIX YOUR COMBOS</b>Attack and Heavy chain together: try Attack, Attack, Heavy. Each weapon has its own routes. J and K.</div>
+        <div><b>LAUNCH &amp; JUGGLE</b>Hold Attack to launch an enemy, tap Jump to follow them up, then Attack up to three times in the air.</div>
         <div><b>DASH ATTACKS</b>Attack or Heavy while running.</div>
-        <div><b>AIR ATTACKS</b>Jump, then Attack. Space.</div>
         <div><b>DODGE &amp; COUNTER</b>A roll you can't be hit during. Tap Attack mid-roll to spring out of it with a dodge-attack. L.</div>
         <div><b>WEAPONS</b>Somewhere in each world, an enemy is carrying a weapon. Beat enough of them and it drops. Swap with Q.</div>
         <div><b>CRITICAL HITS</b>Hit enemies from behind, or while they're staggered, knocked down or airborne, for a much better chance of a critical.</div>
@@ -210,7 +212,7 @@
       <div class="matbar"><span class="s">&#9670; <span id="fShards">0</span> shards</span><span class="g">&#10022; <span id="fSigils">0</span> sigils</span></div>
       <div class="note" id="forgeNote"></div>
       <h3 class="h3">Weapons</h3>
-      <p class="small">Each level teaches one new move.</p>
+      <p class="small">Every combo is yours from the start. Each level teaches a brand-new move: Heavy in the air, Attack while walking, hold Heavy, then Heavy while running.</p>
       <div class="cards" id="forgeCards"></div>
       <h3 class="h3">Trump Cards</h3>
       <p class="small">Sigils are the ink for Trump cards. Inscribe one, take it into battle, and play it when your hits have charged it.</p>

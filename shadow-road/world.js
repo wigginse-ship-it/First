@@ -55,8 +55,14 @@ function updateEnemy(e, dt) {
   e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12);
   if (stillT > 0 && !e.dead) return;
   if (updateElements(e, dt)) return;
-  if (e.boss && !e.enraged && !e.dead && e.hp < e.maxHp * .5 && ['idle', 'recover'].includes(e.state)) { e.enraged = true; e.plan = 'roar'; wind(e, .5); }
-  e.cd -= dt * (e.enraged ? 1.5 : 1);
+  if (e.boss && !e.dead && ['idle', 'recover'].includes(e.state)) { // phase changes: roar, get faster, leave health behind
+    const ph = e.hp < e.maxHp * .34 ? 3 : e.hp < e.maxHp * .67 ? 2 : 1;
+    if (ph > (e.phase || 1)) {
+      for (let q = (e.phase || 1) + 1; q <= ph; q++) phaseDrop(e);
+      e.phase = ph; e.enraged = true; e.plan = 'roar'; wind(e, .5);
+    }
+  }
+  e.cd -= dt * (e.phase === 3 ? 1.8 : e.enraged ? 1.4 : 1);
   const fly = e.def.move === 'fly';
   const ballistic = e.air || e.state === 'leap' || e.state === 'pounce' || (!fly && (e.z > 0 || e.vz > 0)); // vz > 0 lets a hop leave the ground
   if (ballistic) {
@@ -146,7 +152,7 @@ function enemyLand(e) {
   if (e.def.move === 'hop') { e.sq = .7; }
 }
 function approach(e, tx, ty, dt, k) {
-  const dx = tx - e.x, dy = ty - e.y, sp = e.def.spd * k * (e.enraged ? 1.3 : 1) * (e.chill > 0 ? .5 : 1);
+  const dx = tx - e.x, dy = ty - e.y, sp = e.def.spd * k * (e.phase === 3 ? 1.45 : e.enraged ? 1.25 : 1) * (e.chill > 0 ? .5 : 1);
   const moving = Math.abs(dx) > 3 || Math.abs(dy) > 3;
   if (e.def.move === 'hop') { // jellybloom-style hopping
     e.sq += (1 - e.sq) * Math.min(1, dt * 8);
@@ -194,7 +200,7 @@ function execute(e) {
   else if (p === 'groundwave') { for (const d of e.enraged ? [-1, 1] : [e.facing]) projs.push({ owner: 'e', ground: 1, x: e.x + d * e.hw, y: e.y, z: 0, vx: d * 260, dmg: e.dmg, life: 3, col: '#EED48A' }); shakeMag = 8; sfx('slam'); recover(e, .7); }
   else if (p === 'breath') { [-44, -22, 0, 22, 44].forEach((o, i) => setTimeout(() => !e.dead && bolt(e, clamp(e.y + o, FLOOR_TOP + 6, FLOOR_BOT)), i * 60)); recover(e, 1); }
   else if (p === 'roar') {
-    banner(e.def.name, e.enraged ? 'ENRAGED' : e.def.title, 1.8); sfx('roar'); shakeMag = 14; zoom = .06; flashT = .12;
+    banner(e.def.name, e.phase === 3 ? 'FINAL PHASE' : e.enraged ? 'PHASE TWO' : e.def.title, 1.8); sfx('roar'); shakeMag = 14; zoom = .06; flashT = .12;
     fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.hh * .6, t: .7, max: .7, r: 240, col: '#FFFFFF' });
     if (Math.abs(P.x - e.x) < 200 && P.state !== 'dodge' && P.state !== 'dead') { P.state = 'hurt'; P.knocked = false; P.t = .5; P.vx = Math.sign(P.x - e.x || 1) * 320; }
     recover(e, .6);
@@ -203,6 +209,11 @@ function execute(e) {
     if (enemies.filter(o => !o.dead && !o.boss).length < 3) e.def.summon.forEach((s, i) => spawnEnemy(s, i % 2 ? -1 : 1));
     burst(e.x, e.y, 60, ['#D08AB0', '#EED48A', '#FFFFFF'], 20, 'spark'); recover(e, .6);
   }
+}
+function phaseDrop(e) { // each cleared boss phase leaves a little health on the floor
+  floatText(e.x, e.y, e.z + e.hh + 30, 'PHASE CLEARED', '#EED48A', 16);
+  for (let i = 0; i < 2; i++) loot.push(makeLoot('heal', e.x - e.facing * 30, e.y, 22));
+  for (let i = 0; i < 3; i++) loot.push(makeLoot('shard', e.x, e.y, 4));
 }
 function slamLand(e) {
   shakeMag = 9; sfx('slam'); e.vx = 0;

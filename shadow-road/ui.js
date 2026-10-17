@@ -67,11 +67,12 @@ function stageClear() {
 }
 
 // ---------- explaining moves: inputs shown as button chips ----------
-const CHIP = { A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], RUN: ['RUN', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
+const CHIP = { A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLDA: ['HOLD ATTACK', 'a'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], RUN: ['RUN', 'r'], WALK: ['WALK', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
+const KEY_INPUTS = { RH: ['DODGE', '+H'], J2: ['JUMP', 'JUMP'], AX: ['JUMP', '+HOLDA'], X: ['HOLDA'], M: ['WALK', '+A'], AH: ['JUMP', '+H'], HC: ['HOLD'], D: ['RUN', '+A'], DH: ['RUN', '+H'], A: ['JUMP', '+A'], R: ['DODGE', '+A'] };
 function inputsFor(id, m) {
   if (!m.key) return ['HOLD3'];
-  if (m.key === 'D') return ['RUN', '+A']; if (m.key === 'DH') return ['RUN', '+H'];
-  if (m.key === 'A') return ['JUMP', '+A']; if (m.key === 'R') return ['DODGE', '+A'];
+  if (m.seq) return m.seq;
+  if (KEY_INPUTS[m.key]) return KEY_INPUTS[m.key];
   return m.key.split('').map((c, i) => c === 'L' ? 'A' : (id === 'sword' && i === 0 ? 'HOLD' : 'H'));
 }
 function chips(id, m) {
@@ -82,16 +83,18 @@ function chips(id, m) {
 }
 const BASICS = [
   { key: 'L', name: 'Combo', desc: 'Tap Attack again and again to chain the full combo.', seq: ['A', 'A', 'A'] },
-  { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge.' },
+  { key: 'X', name: 'Launcher', desc: 'Hold Attack to throw an enemy into the air. Tap Jump right after to leap up after them.' },
+  { key: 'A', name: 'Air combo', desc: 'Up to three Attacks in the air. Air hits keep enemies floating and hit harder; the third drives them into the ground.', seq: ['JUMP', '+A', 'A', 'A'] },
+  { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge. Mix it into combos below.', seq: ['H'] },
   { key: 'D', name: 'Dash attack', desc: 'Flick the joystick twice to run, then attack.' },
-  { key: 'A', name: 'Air attack', desc: 'Jump, then attack while in the air.' },
   { key: 'R', name: 'Dodge counter', desc: 'Tap Attack during a roll to spring out of it.' },
 ];
 function moveListHtml(id) {
-  const lvl = save.wl[id];
-  const basics = BASICS.map(b => `<li class="got"><b>${b.name}</b> ${b.seq ? '<span class="chips">' + b.seq.map((tk, i) => (i ? '<i>›</i>' : '') + `<span class="chip a">ATTACK</span>`).join('') + '</span>' : chips(id, b.key === 'H' && id === 'sword' ? { key: 'H' } : b)}<br><em>${b.desc}</em></li>`).join('');
+  const lvl = save.wl[id], tree = WEAPONS[id].tree;
+  const basics = BASICS.map(b => `<li class="got"><b>${b.name}</b> ${chips(id, b)}<br><em>${b.desc}</em></li>`).join('');
+  const combos = Object.values(tree).filter(m => m.name && !m.lvl && m.key !== 'X').map(m => `<li class="got"><b>${m.name}</b> ${chips(id, m)}</li>`).join('');
   const learned = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${lvl >= m.lvl ? m.desc : m.lvl === lvl + 1 ? 'Next at the forge: ' + m.desc : 'Locked: ' + m.desc}</em></li>`).join('');
-  return `<ul class="moves">${basics}${learned}</ul>`;
+  return `<ul class="moves">${basics}${combos}${learned}</ul>`;
 }
 
 // ---------- the forge ----------
@@ -109,12 +112,13 @@ function renderForge(note) {
   const wrap = $('#forgeCards'); wrap.innerHTML = '';
   for (const id of WEAPON_ORDER) {
     const w = WEAPONS[id], owned = save.owned[id], lvl = save.wl[id], max = lvl >= 5, c = wCost(lvl);
-    const can = owned && !max && save.shards >= c.s && save.sigils >= c.g;
+    const bare = id === 'fists'; // fists never level up
+    const can = owned && !bare && !max && save.shards >= c.s && save.sigils >= c.g;
     const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
-    d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
-      <p>${owned ? w.desc : 'Someone in ' + (id === 'sword' ? 'the Clockwork Skyport' : 'Bloomwild Vale') + ' is carrying it. Beat enemies there and it will drop.'}</p><ul>${moves}</ul>
-      ${owned ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Learn next move · ${costTxt(c)}`}</button>` : ''}`;
+    d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
+      <p>${bare ? w.desc + ' Bare hands never level up: find weapons to grow stronger.' : owned ? w.desc + ' All its combos are yours from the start; each level teaches a new move.' : 'Someone in ' + (id === 'sword' ? 'the Clockwork Skyport' : 'Bloomwild Vale') + ' is carrying it. Beat enemies there and it will drop.'}</p><ul>${moves}</ul>
+      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Learn next move · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
     if (b) b.addEventListener('click', () => {
@@ -224,12 +228,14 @@ if (window.ResizeObserver) new ResizeObserver(layout).observe(app);
 // ---------- main loop ----------
 let last = performance.now();
 function frame(now) {
-  let dt = Math.min(1 / 30, (now - last) / 1000); last = now;
+  const rawDt = Math.min(.25, (now - last) / 1000); // real seconds, even if the frame rate drops
+  let dt = Math.min(1 / 30, rawDt); last = now;
   const t = now / 1000;
   if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('#banner').classList.remove('on'); }
   const live = mode === 'play' && !app.classList.contains('port');
   if (live) {
     readMove();
+    if (input.light) P.holdL = (P.holdL || 0) + rawDt; else { P.holdL = 0; P.holdUsed = false; } // real time, so hit freezes don't stall a held button
     if (slowmo > 0) { slowmo -= dt; dt *= .3; }
     if (hitstop > 0) hitstop -= dt;
     else { updatePlayer(dt); updateWorld(dt); }

@@ -159,7 +159,7 @@ const CREATURES = {
     rrect(-6, -44, 12, 10, 2); ctx.fillStyle = C(rage ? '#FFB08A' : '#E8945A'); ctx.fill(); ctx.restore();
     ctx.strokeStyle = C('#4A3A2A'); ctx.lineWidth = 1.2; for (let i = -4; i <= 4; i += 4) { ctx.beginPath(); ctx.moveTo(i, -44); ctx.lineTo(i, -34); ctx.stroke(); }
     ctx.restore();
-    if (!FLASH && Math.random() < .3) parts.push({ x: e.x - e.facing * 18, y: e.y, z: e.z + 168 + rand(0, 10), vx: rand(-10, 10), vy: 0, vz: 30, life: 1, max: 1, col: rage ? 'rgba(80,60,60,.5)' : 'rgba(220,210,200,.45)', size: rand(5, 9), shape: 'puff', rot: 0, vr: 0 });
+    if (!FLASH && !e.dead && Math.random() < .3) parts.push({ x: e.x - e.facing * 18, y: e.y, z: e.z + 168 + rand(0, 10), vx: rand(-10, 10), vy: 0, vz: 30, life: 1, max: 1, col: rage ? 'rgba(80,60,60,.5)' : 'rgba(220,210,200,.45)', size: rand(5, 9), shape: 'puff', rot: 0, vr: 0 });
   },
   wyrm(e, a) { // a serpent of living crystal that drinks color
     const n = 15, rage = e.enraged, hueBase = rage ? 300 : 0;

@@ -49,7 +49,7 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
 function drawEnemy(e, t) {
   if (e.state === 'dying' && e.death && e.death !== 'pop') { drawDeath(e, t); return; }
   const scale = e.boss ? 1 : 1;
-  const a = { walk: e.walk, t, wind: e.state === 'wind' ? 1 - e.t / e.windMax : 0, atk: ['strike', 'dash', 'pounce'].includes(e.state), hurt: ['hurt', 'down', 'dying'].includes(e.state) };
+  const a = { walk: e.dead ? 0 : e.walk, t: e.dead ? e.deadAt : t, wind: e.state === 'wind' ? 1 - e.t / e.windMax : 0, atk: ['strike', 'dash', 'pounce'].includes(e.state), hurt: ['hurt', 'down', 'dying'].includes(e.state) };
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') { a.pose = humanEnemyPose(e); if (e.state === 'down' || (e.state === 'dying' && !e.air)) a.pose.down = 1; }
   shadow(e.x, e.y, e.hw * 1.1 * Math.max(.4, 1 - e.z / 200));
   if (e.boss && e.enraged && !e.dead) { // an enraged boss smoulders
@@ -92,7 +92,7 @@ function drawEnemy(e, t) {
 // ---------- weapon-specific deaths ----------
 function drawDeath(e, t) {
   const el = e.corpse ? (e.dmax || 1) : e.dmax - e.t, dl = (e.dir || 1) * e.facing; // dl: knock direction in the enemy's own facing space
-  const a = { walk: 0, t, wind: 0, atk: false, hurt: true };
+  const a = { walk: 0, t: e.deadAt || t, wind: 0, atk: false, hurt: true }; // the clock stops: no whirring rotors or flapping wings
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') a.pose = { arm: -1, lean: -.3 };
   const draw = () => CREATURES[e.def.draw](e, a);
   shadow(e.x, e.y, e.hw * 1.1);
