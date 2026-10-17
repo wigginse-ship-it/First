@@ -172,6 +172,7 @@ function drawTrumpArt(canvas, id) {
   else if (id === 'phoenix') { g.fillStyle = '#EED48A'; g.beginPath(); g.moveTo(0, -30); g.quadraticCurveTo(30, -10, 26, 20); g.quadraticCurveTo(10, 4, 0, 30); g.quadraticCurveTo(-10, 4, -26, 20); g.quadraticCurveTo(-30, -10, 0, -30); g.fill(); g.fillStyle = '#D04A62'; circle(0, -6, 8); g.fill(); }
   else { g.strokeStyle = '#FFFFFF'; g.lineWidth = 3; circle(0, 0, 26); g.stroke(); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -18); g.moveTo(0, 0); g.lineTo(12, 6); g.stroke(); }
   g.restore(); ctx = old;
+  paintCard(canvas, canvas.width / 96);
 }
 
 // ---------- title & buttons ----------
@@ -249,7 +250,7 @@ function frame(now) {
     P.walk += dt * 8; updateFx(dt);
   }
   ctx.setTransform(K, 0, 0, K, 0, -Y_OFF * K);
-  if (stage && P) drawScene(t);
+  if (stage && P) { drawScene(t); if (live) paintPerf(rawDt); }
   requestAnimationFrame(frame);
 }
 

@@ -84,6 +84,7 @@ function drawEnemy(e, t) {
   CREATURES[e.def.draw](e, a);
   FLASH = false;
   ctx.restore();
+  if (!e.dead) hatchActor(e.x, e.y - e.z, e.hw * scale, e.hh * scale);
   if ((e.chill > 0 || e.frozen > 0) && !e.dead) { // frost: a pale blue sheen, or a block of ice
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = e.frozen > 0 ? 'rgba(170,220,255,.5)' : 'rgba(140,200,255,.22)'; ell(e.x, e.y - e.z - e.hh / 2, e.hw + 6, e.hh / 2 + 6); ctx.fill(); ctx.restore();
     if (e.frozen > 0) { ctx.strokeStyle = 'rgba(230,248,255,.9)'; ctx.lineWidth = 1.5; rrect(e.x - e.hw - 6, e.y - e.z - e.hh - 6, e.hw * 2 + 12, e.hh + 8, 4); ctx.stroke(); }
@@ -205,21 +206,34 @@ function drawScene(t) {
   for (const p of parts) if (p.rest) drawPart(p);
   for (const h of hazards) if (h.kind !== 'beam') drawHazard(h, t);
   for (const e of enemies) if (e.boss && e.state === 'wind' && e.plan !== 'roar') drawTell(e, t);
+  // every figure is painted into the ink layer; this box (generous, so swings and debris fit) is where the ink work happens
+  const boxes = [], box = (x, y, z, hw, hh) => boxes.push([x - hw, y - z - hh, x + hw, y + 12]);
+  box(P.x, P.y, P.z, 160, 170);
+  for (const e of enemies) { const s = e.boss ? e.size : 1; box(e.x, e.y, e.z, (e.hw + 110 + (e.def.tail || 0)) * s, (e.hh + 90) * s); }
+  for (const c of corpses) box(c.x, c.y, 0, 110, 110);
+  for (const p of props) box(p.x, p.y, 0, 60, 100);
+  for (const k of loot) box(k.x, k.y, k.z || 0, 40, 50);
+  for (const p of projs) box(p.x, p.y, p.z || 0, 50, 50);
+  if (stag) box(stag.x, stag.y, 0, 90, 130);
+  inkBegin(boxes);
   corpses.forEach((c, i) => { c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; drawDeath(c, t); });
   const list = [];
   for (const p of props) list.push([p.y, () => { FLASH = p.flash > 0; drawPod(p, t); FLASH = false; }]);
   for (const k of loot) list.push([k.y, () => drawLoot(k, t)]);
   for (const e of enemies) list.push([e.y, () => drawEnemy(e, t)]);
-  for (const g of ghosts) list.push([g.y - .1, () => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .6); ctx.restore(); }]);
-  if (mirrorT > 0) list.push([P.y - .05, () => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(P.x - P.facing * 34, P.y - 6, P.z, P.facing, playerPose(), .55); ctx.restore(); }]);
+  // afterimages are light, not ink, so they are painted straight onto the page
+  for (const g of ghosts) list.push([g.y - .1, () => onMain(() => { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .6); })]);
+  if (mirrorT > 0) list.push([P.y - .05, () => onMain(() => { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(P.x - P.facing * 34, P.y - 6, P.z, P.facing, playerPose(), .55); })]);
   list.push([P.y + .1, () => {
     shadow(P.x, P.y, 13 * Math.max(.5, 1 - P.z / 220));
     if (P.inv > 0 && !['dodge', 'down', 'dead'].includes(P.state) && Math.floor(t * 18) % 2) return;
     drawPlayerAt(P.x, P.y, P.z, P.facing, playerPose(), 1);
+    hatchActor(P.x, P.y - P.z, 13, 50);
   }]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
   if (stag) list.push([stag.y + .2, () => drawStag(stag, t)]);
   list.sort((a, b) => a[0] - b[0]).forEach(o => o[1]());
+  inkEnd(t);
   for (const p of parts) if (!p.rest) drawPart(p);
   for (const h of hazards) if (h.kind === 'beam') drawHazard(h, t);
   for (const f of fx) drawFx(f);
@@ -245,6 +259,7 @@ function drawScene(t) {
     ctx.fillStyle = g; ctx.fillRect(0, Y_OFF, VW, VIEW_H);
   }
   if (slowmo > 0) { ctx.fillStyle = `rgba(255,220,140,${Math.min(.12, slowmo * .1)})`; ctx.fillRect(0, Y_OFF, VW, VIEW_H); }
+  paperFrame();
 }
 function drawPart(p) {
   const a = p.rest ? Math.min(1, p.life / .6) : Math.min(1, p.life / Math.min(.3, p.max));
@@ -316,6 +331,7 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   ctx.translate(30, 63); ctx.scale(.7, .7);
   drawHumanoid(heroLook(), { arm: id === 'sword' ? -1 : id === 'staff' ? -.6 : id === 'hammer' ? -1.2 : .2, weapon: id, walk: 0, tier: id === 'fists' ? 1 : save.wl[id] });
   ctx = old;
+  paintCard(canvas, s * .7);
 }
 
 function drawHazard(h, t) {

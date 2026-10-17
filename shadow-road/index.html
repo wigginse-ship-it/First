@@ -89,6 +89,11 @@
     background: radial-gradient(ellipse at 50% -10%, rgba(232,170,110,.42), transparent 60%), radial-gradient(ellipse at 0% 100%, rgba(90,110,170,.35), transparent 55%), linear-gradient(#3A2A4E, #15111F);
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px; }
   .ov.glass { background: rgba(21,17,31,.82); }
+  /* menus are painted on the same paper as the game: the paper's tooth and dried watercolor blooms laid over the color */
+  .paper .ov { background-image: var(--wash), var(--paper), radial-gradient(ellipse at 50% -10%, rgba(232,170,110,.42), transparent 60%), radial-gradient(ellipse at 0% 100%, rgba(90,110,170,.35), transparent 55%), linear-gradient(#3A2A4E, #15111F);
+    background-blend-mode: normal, multiply, normal, normal, normal; background-size: 512px 256px, 256px 256px, auto, auto, auto; }
+  .paper .ov.glass { background: var(--paper) rgba(21,17,31,.82); background-blend-mode: multiply; background-size: 256px 256px; }
+  .paper .card { background-image: var(--wash), var(--paper), linear-gradient(170deg, var(--panel2), var(--ink) 80%); background-blend-mode: normal, multiply, normal; background-size: 512px 256px, 256px 256px, auto; }
   .wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 14px; justify-items: center; text-align: center; }
   .center { align-content: center; min-height: 100%; }
   .logo { font: 700 clamp(40px, 9vw, 80px) var(--title); line-height: 1.05; margin: 4px 0 0; color: var(--text); text-wrap: balance;
@@ -273,6 +278,7 @@
 <script src="music.js"></script>
 <script src="data.js"></script>
 <script src="art.js"></script>
+<script src="paint.js"></script>
 <script src="creatures.js"></script>
 <script src="game.js"></script>
 <script src="world.js"></script>

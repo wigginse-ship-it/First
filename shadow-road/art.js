@@ -18,7 +18,10 @@ function shade(hex, amt) { // lighten (amt > 0) or darken (amt < 0) a #rrggbb co
   const n = parseInt(hex.slice(1), 16), f = (c) => Math.round(amt > 0 ? c + (255 - c) * amt : c * (1 + amt));
   return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(f).map(c => c.toString(16).padStart(2, '0')).join('');
 }
-function shadow(x, y, rx) { ctx.fillStyle = 'rgba(40,20,80,.28)'; ell(x, y, rx, rx * .28); ctx.fill(); }
+function shadow(x, y, rx) { // cast on the floor, so it is painted under the inked figures
+  const f = () => { ctx.fillStyle = 'rgba(40,20,60,.3)'; ell(x, y, rx, rx * .28); ctx.fill(); };
+  if (inkG && ctx === inkG) onMain(f); else f();
+}
 
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
 function drawWeapon(kind, pose) {
@@ -191,23 +194,28 @@ function drawHumanoid(look, pose) {
   ctx.restore();
   ctx.restore();
 }
-function drawFlatTrail(cx, cy, f) { // the trail of a horizontal swing: a flattened arc around the waist
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 3; i++) { ctx.strokeStyle = f.col; ctx.globalAlpha = .5 - i * .14; ctx.lineWidth = f.w - i * 1.5; ctx.beginPath(); ctx.ellipse(cx, cy + 6, f.r - i * 5, (f.r - i * 5) * .3, 0, f.rev ? Math.PI * (1 - f.k) : 0, f.rev ? Math.PI : Math.PI * f.k, false); ctx.stroke(); }
+// swing trails are dry-brush strokes of light: many thin bristle lines instead of one solid band.
+// They are painted straight onto the page so the ink pass does not outline them.
+function brushArc(path, col, w, a) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = col; ctx.lineCap = 'round';
+  const n = 7;
+  for (let i = 0; i < n; i++) {
+    const h = Math.abs(Math.sin(i * 12.9898 + 4.1)) * 1000 % 1, k = i / (n - 1);
+    ctx.globalAlpha = a * (.35 + h * .65) * (1 - k * .5); ctx.lineWidth = .8 + h * w * .35;
+    path((k - .3) * w * 1.6, h); ctx.stroke();
+  }
   ctx.restore();
+}
+function onPage(f) { if (inkG && ctx === inkG) onMain(f); else f(); }
+function drawFlatTrail(cx, cy, f) { // the trail of a horizontal swing: a flattened arc around the waist
+  onPage(() => brushArc((o, h) => { const r = f.r + o; ctx.beginPath(); ctx.ellipse(cx, cy + 6, Math.max(1, r), Math.max(1, r * .3), 0, f.rev ? Math.PI * (1 - f.k * (.85 + h * .15)) : 0, f.rev ? Math.PI : Math.PI * f.k * (.85 + h * .15), false); }, f.col, f.w, .8));
 }
 function drawTrail(cx, cy, pose) {
   const a0 = pose.trailFrom, a1 = pose.arm, r = pose.trail;
   if (Math.abs(a1 - a0) < .05) return;
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  const lo = Math.min(a0, a1), hi = Math.max(a0, a1);
-  for (let i = 0; i < 3; i++) {
-    ctx.strokeStyle = pose.trailCol; ctx.globalAlpha = .55 - i * .15; ctx.lineWidth = (pose.trailW || 6) - i * 1.5;
-    ctx.beginPath(); ctx.arc(cx, cy, r - i * 6, lo, hi); ctx.stroke();
-  }
-  ctx.restore();
+  const lo = Math.min(a0, a1), hi = Math.max(a0, a1), lead = a1 > a0;
+  onPage(() => brushArc((o, h) => { ctx.beginPath(); const cut = (hi - lo) * h * .25; ctx.arc(cx, cy, Math.max(1, r + o - 4), lead ? lo + cut : lo, lead ? hi : hi - cut); }, pose.trailCol, (pose.trailW || 6) * 1.6, .85));
 }
-// the fallen prince of shadow: pale, raven-haired, a torn coat and one blackened pauldron, a violet ember for an eye
 const HERO = { glove: '#3A3040', skin: '#D9CCD2', hair: '#1C1726', longHair: 1, fringe: 1, body: '#2A2433', sleeve: '#231E2C', trim: '#9A96AE', legs: '#1C1824', boots: '#2E2630', coat: '#2F2838', coat2: '#3A3046', pauldron: '#3E3A4C', eye: '#B89CFF', chain: 1 };
 // the hero's armor shows its forge level: 2 a leather strap and shoulder guard, 3 a steel breastplate, 4 gold trim, 5 shadow-plate with runes
 function heroLook() {
@@ -246,6 +254,11 @@ let DAB_X = 0; // world offset while painting scrolling layers, so a dab keeps i
 function dab(x, y, r, col, a = 1) { // a brush dab; its shape comes from its world position so it never flickers
   const h = Math.abs(Math.sin((x + DAB_X) * 12.99 + y * 78.23)) * 1000 % 1;
   ctx.globalAlpha = a; ctx.fillStyle = col; ell(x, y, r, r * (.72 + h * .28), h * 3); ctx.fill(); ctx.globalAlpha = 1;
+}
+function inkDab(x, y, r, col) { // a dab of foliage with a loose pen line around it
+  const h = Math.abs(Math.sin((x + DAB_X) * 12.99 + y * 78.23)) * 1000 % 1;
+  ctx.fillStyle = col; ell(x, y, r, r * (.72 + h * .28), h * 3); ctx.fill();
+  ctx.strokeStyle = 'rgba(30,18,25,.55)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.ellipse(x, y, r, r * (.72 + h * .28), h * 3, Math.PI * (1.0 + h * .3), Math.PI * (1.9 + h * .3)); ctx.stroke();
 }
 function softDab(x, y, r, rgb, a) { // a feathered puff of color, for clouds and nebulae
   const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(.55, `rgba(${rgb},${a * .55})`); g.addColorStop(1, `rgba(${rgb},0)`);
@@ -336,6 +349,8 @@ function buildBackground(themeId, seed) {
     }
   }
   ctx = old;
+  paintLayer(fc, { ink: '#3A2A48', bleed: .3, gran: .45, line: .22, lw: 1, hatch: 0 });
+  paintLayer(mc, { ink: '#1E1219', bleed: .45, gran: .65, line: .8, lw: 1.1, hatch: .22 });
   bgFar = fc; bgMid = mc;
   if (!grain) { // canvas-and-brush texture laid over the whole picture
     grain = document.createElement('canvas'); grain.width = grain.height = 256;
@@ -352,6 +367,7 @@ function drawWorld(themeId, camX, t) {
   const sx = VW * th.sun[0] - camX * .02, sy = Y_OFF + VIEW_H * th.sun[1];
   const sg = ctx.createRadialGradient(sx, sy, 4, sx, sy, 160); sg.addColorStop(0, `rgba(${th.sun[2]},.95)`); sg.addColorStop(.15, `rgba(${th.sun[2]},.5)`); sg.addColorStop(1, `rgba(${th.sun[2]},0)`);
   ctx.fillStyle = sg; ctx.fillRect(sx - 160, sy - 160, 320, 320);
+  skyWash(camX);
   if (themeId === 'prism') {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 3; i++) { ctx.strokeStyle = `hsla(${170 + i * 60 + Math.sin(t * .3) * 20},60%,60%,.12)`; ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(-20, 80 + i * 24); for (let x = 0; x <= VW + 40; x += 40) ctx.lineTo(x, 80 + i * 24 + Math.sin(x * .01 + t * .5 + i) * 16); ctx.stroke(); }
@@ -376,6 +392,12 @@ function drawFloor(themeId, th, camX, t) {
   DAB_X = camX;
   drawFloorLayer(themeId, th, camX, t);
   DAB_X = 0;
+  // the ground is a wash too: pigment settles in it and the near edge is hatched in shadow
+  ctx.save(); ctx.beginPath(); ctx.rect(0, FLOOR_TOP - 2, VW, VH - FLOOR_TOP + 2); ctx.clip();
+  ctx.translate(-(camX % 512), 0); ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'gran');
+  ctx.save(); ctx.scale(.5, .5); ctx.fillRect(0, (FLOOR_TOP - 2) * 2, (VW + 512) * 2, (VH - FLOOR_TOP + 2) * 2); ctx.restore();
+  ctx.globalAlpha = .16; ctx.fillStyle = texPat(ctx, 'hatch'); ctx.scale(.5, .5); ctx.fillRect(0, (VH - 34) * 2, (VW + 512) * 2, 68);
+  ctx.restore();
 }
 function drawFloorLayer(themeId, th, camX, t) {
   const fg = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH);
@@ -384,7 +406,7 @@ function drawFloorLayer(themeId, th, camX, t) {
   const off = (n) => ((-camX) % n + n) % n - n;
   const hsh = (x) => { const s = Math.sin(x * 12.9898) * 43758.5453; return s - Math.floor(s); }; // stable per-tile randomness
   if (themeId === 'bloom') {
-    for (let x = off(46); x < VW + 46; x += 46) { const w = Math.floor((x + camX) / 46); dab(x, FLOOR_TOP - 6, 22, '#2F5446', 1); dab(x + 22, FLOOR_TOP - 10, 18, '#3D6A52', 1); if (hsh(w) > .6) { ctx.save(); ctx.shadowColor = '#F2C9A0'; ctx.shadowBlur = 6; dab(x + 12, FLOOR_TOP - 18, 2.5, '#F6D6B8', 1); ctx.restore(); } }
+    for (let x = off(46); x < VW + 46; x += 46) { const w = Math.floor((x + camX) / 46); inkDab(x, FLOOR_TOP - 6, 22, '#2F5446'); inkDab(x + 22, FLOOR_TOP - 10, 18, '#3D6A52'); if (hsh(w) > .6) { ctx.save(); ctx.shadowColor = '#F2C9A0'; ctx.shadowBlur = 6; dab(x + 12, FLOOR_TOP - 18, 2.5, '#F6D6B8', 1); ctx.restore(); } }
     const pg = ctx.createLinearGradient(0, FLOOR_TOP + 30, 0, FLOOR_TOP + 92); pg.addColorStop(0, 'rgba(184,154,114,0)'); pg.addColorStop(.3, 'rgba(184,154,114,.85)'); pg.addColorStop(.75, 'rgba(160,128,92,.85)'); pg.addColorStop(1, 'rgba(160,128,92,0)');
     ctx.fillStyle = pg; ctx.fillRect(0, FLOOR_TOP + 30, VW, 62);
     for (let x = off(34); x < VW + 34; x += 34) { const w = Math.floor((x + camX) / 34); dab(x + hsh(w) * 20, FLOOR_TOP + 46 + hsh(w + 1) * 36, 6 + hsh(w + 2) * 6, hsh(w + 3) > .5 ? '#C9AE86' : '#9A7E5E', .55); }
@@ -420,7 +442,6 @@ function gradeFrame(themeId) {
   ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${gd.desat})`; ctx.fillRect(0, y, VW, h);
   ctx.globalCompositeOperation = 'soft-light';
   const lg = ctx.createLinearGradient(0, y, 0, y + h); lg.addColorStop(0, gd.top); lg.addColorStop(1, gd.bot); ctx.fillStyle = lg; ctx.fillRect(0, y, VW, h);
-  if (grain) { ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = .28; ctx.fillStyle = ctx.createPattern(grain, 'repeat'); ctx.fillRect(0, y, VW, h); ctx.globalAlpha = 1; }
   ctx.globalCompositeOperation = 'multiply';
   const vg = ctx.createRadialGradient(VW / 2, y + h * .55, h * .45, VW / 2, y + h * .55, VW * .72); vg.addColorStop(0, 'rgba(255,255,255,0)'); vg.addColorStop(1, gd.vig);
   ctx.fillStyle = vg; ctx.fillRect(0, y, VW, h);
