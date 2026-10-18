@@ -33,7 +33,7 @@ function updateFx(dt) {
 const scaleStat = (v, k) => v * (1 + k * save.cycle);
 function spawnEnemy(type, side, isBoss) {
   const def = isBoss ? BOSSES[type] : EDEF[type];
-  const hp = Math.round(scaleStat(def.hp, .5));
+  const hp = Math.round(scaleStat(def.hp, .5) * (!isBoss && def.ranged ? .65 : 1)); // shooters are fragile: close the gap and they drop fast
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
     dmg: Math.round(scaleStat(def.dmg, .3) * (isBoss ? 1.6 : 1.35)), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
