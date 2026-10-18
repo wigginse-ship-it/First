@@ -475,6 +475,106 @@
   AW_FAR.chaos2 = spiresFar; AW_MID.chaos2 = spiresMid; AW_FLOOR.chaos2 = spiresFloor;
 
   // ======================================================================================================
+  // THE RIM OF THE ABYSS: the last dais at the edge of everything; overhead the Abyss turns like a storm round the black sun
+  // ======================================================================================================
+  function buildVortex(seed) {
+    const S = 760, [c, g] = makeLayer(S, S), old = ctx, rnd = mulberry(seed); ctx = g; ctx.translate(S / 2, S / 2);
+    // arms of dark cloud wound into the eye, their leading edges lit by the fire at the bottom of the Abyss
+    for (let arm = 0; arm < 5; arm++) for (let i = 0; i < 46; i++) {
+      const k = i / 46, a = arm / 5 * TAU + k * 4.2, d = 40 + k * 330, r = 14 + k * 50;
+      const x = Math.cos(a) * d, y = Math.sin(a) * d * .62, col = ['#2A1028', '#3A1432', '#4A1A34', '#2E1230', '#3E1838'][(i + arm) % 5];
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a + Math.PI / 2); ctx.globalAlpha = .55 + rnd() * .3; ctx.fillStyle = col; ell(0, 0, r, r * .34); ctx.fill();
+      ctx.globalAlpha = .45 * (1 - k * .6); ctx.fillStyle = k < .5 ? '#E88A50' : '#B0506A'; ell(-r * .1, -r * .22, r * .8, r * .07); ctx.fill(); ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    addB(() => { softDab(0, 0, 120, '255,150,90', .35); softDab(0, 0, 60, '255,220,170', .4);
+      for (let arm = 0; arm < 5; arm++) { ctx.strokeStyle = 'rgba(255,170,100,.2)'; ctx.lineWidth = 2; ctx.beginPath(); for (let k = 0; k <= 1; k += .02) { const a = arm / 5 * TAU + k * 4.2 + .3, d = 50 + k * 320; ctx.lineTo(Math.cos(a) * d, Math.sin(a) * d * .62); } ctx.stroke(); } });
+    ctx = old; paintLayer(c, { ink: '#140810', line: .3, lw: .8, brush: .8, hatch: 0, seed: 5 }); return c;
+  }
+  function statue(x, base, h, rnd) { // a Lord of Chaos in black stone, hooded and crowned with horns, leaning on a sword
+    const w = h * .26, P = { base: '#2E2434', lit: '#9A6A6A', dark: '#120C16' }, dir = AW_SUN;
+    const sideG = (x0, x1) => { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(dir > 0 ? 0 : 1, P.dark); g.addColorStop(.5, P.base); g.addColorStop(dir > 0 ? 1 : 0, P.lit); return g; };
+    ctx.fillStyle = sideG(x - w * 1.3, x + w * 1.3); ctx.fillRect(x - w * 1.3, base - h * .1, w * 2.6, h * .1); // the plinth
+    ctx.fillStyle = '#C9A040'; ctx.fillRect(x - w * 1.3, base - h * .1, w * 2.6, 1.2);
+    const robe = [x - w * 1.1, base - h * .1, x - w * .7, base - h * .62, x - w * .45, base - h * .8, x + w * .45, base - h * .8, x + w * .7, base - h * .62, x + w * 1.1, base - h * .1];
+    poly(robe); ctx.fillStyle = sideG(x - w, x + w); ctx.fill();
+    ctx.strokeStyle = 'rgba(10,6,12,.6)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(x + i * w * .2, base - h * .7); ctx.quadraticCurveTo(x + i * w * .3, base - h * .4, x + i * w * .42, base - h * .1); } ctx.stroke(); // folds
+    // the hood, a void of a face, the crown of horns
+    const hy = base - h * .86; ctx.fillStyle = sideG(x - w * .5, x + w * .5); blob([x - w * .5, hy + w * .3, x - w * .45, hy - w * .4, x, hy - w * .6, x + w * .45, hy - w * .4, x + w * .5, hy + w * .3, x, hy + w * .45]); ctx.fill();
+    ctx.fillStyle = '#05030A'; ell(x, hy, w * .24, w * .3); ctx.fill();
+    awGlow('rgba(255,190,90,.9)', 6, () => { ctx.fillStyle = '#FFC060'; circle(x - w * .09, hy - w * .04, 1.3); ctx.fill(); circle(x + w * .09, hy - w * .04, 1.3); ctx.fill(); });
+    for (let i = -2; i <= 2; i++) { ctx.fillStyle = i % 2 ? '#1A1220' : '#2A1E2C'; const bx = x + i * w * .18; poly([bx - 2.4, hy - w * .5, bx + i * 3, hy - w * .5 - h * (.06 + (2 - Math.abs(i)) * .025), bx + 2.4, hy - w * .5]); ctx.fill(); }
+    // the sword held point-down before it, both hands on the pommel
+    ctx.fillStyle = '#3A3044'; ctx.fillRect(x - 1.6, base - h * .56, 3.2, h * .46); ctx.fillStyle = '#7A6A8A'; ctx.fillRect(x + (dir > 0 ? .4 : -1.4), base - h * .56, 1, h * .46);
+    ctx.fillStyle = '#C9A040'; ctx.fillRect(x - w * .4, base - h * .58, w * .8, 2.4); circle(x, base - h * .62, 2.6); ctx.fill();
+    ctx.fillStyle = sideG(x - w * .3, x + w * .3); ell(x, base - h * .65, w * .3, w * .16); ctx.fill();
+    for (let i = 0; i < 12; i++) dab(x + (rnd() - .5) * w * 1.6, base - rnd() * h * .8, 2 + rnd() * 3, rnd() < .5 ? P.dark : P.base, .3);
+  }
+  function rimFar(rnd, th, f) {
+    AW_SUN = 1;
+    buildSky(30, 13, '120,40,60', ['house', 'meadow', 'tower', 'stairs', 'prism', 'meadow'], '255,200,140');
+    retire(vortC); vortC = buildVortex(29);
+    // the far rim: cliffs of the Abyss's lip curving away, black against the glow, their edges burning
+    for (const [base, amp, col, edge, seed] of [[206, 26, '#2A1220', 'rgba(255,140,80,.55)', 3], [222, 18, '#1A0A16', 'rgba(255,120,70,.45)', 9]]) {
+      const wv = awWave(seed, [[3, amp], [7, amp * .5], [17, amp * .25], [31, amp * .1]]);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, T); for (let x = 0; x <= AW_W; x += 4) ctx.lineTo(x, base + wv(x) - Math.abs(Math.sin(x * .09)) * 4); ctx.lineTo(AW_W, T); ctx.fill();
+      awGlow('rgba(255,150,80,.8)', 4, () => { ctx.strokeStyle = edge; ctx.lineWidth = 1.2; ctx.beginPath(); for (let x = 0; x <= AW_W; x += 4) ctx.lineTo(x, base + wv(x) - Math.abs(Math.sin(x * .09)) * 4); ctx.stroke(); });
+      for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => { const y = base + wv(x) - 2; ctx.fillStyle = col; poly([x - 3, y + 2, x - 1, y - 18 - r() * 30, x + 1, y - 18 - r() * 30, x + 3, y + 2]); ctx.fill(); }); // broken towers on the rim
+    }
+    hazeBand(f, th.haze, 200, T, .3);
+  }
+  function rimMid(rnd) {
+    // the two Lords of Chaos who stand at the last edge, one each side of the dais; between them broken pillars and chains
+    AW_SUN = 1; awWR(225, 60, rnd, (x, r) => statue(x, T + 4, 168, r));
+    AW_SUN = -1; awWR(775, 60, rnd, (x, r) => statue(x, T + 4, 168, r));
+    AW_SUN = 1;
+    for (const [x, h] of [[90, 90], [360, 60], [640, 40], [1020, 110], [1180, 70]]) awWR(x + rnd() * 30, 20, rnd, (x, r) => { // broken pillars
+      const w = 9 + r() * 4, g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, '#120C16'); g.addColorStop(.6, '#2E2434'); g.addColorStop(1, '#6A4A56'); ctx.fillStyle = g;
+      poly([x - w, T + 4, x - w, T - h, x - w * .3, T - h - 6, x + w * .2, T - h + 2, x + w, T - h - 4, x + w, T + 4]); ctx.fill();
+      ctx.strokeStyle = 'rgba(10,6,12,.5)'; ctx.lineWidth = .8; for (let y = T - h + 10; y < T; y += 14) { ctx.beginPath(); ctx.moveTo(x - w, y); ctx.lineTo(x + w, y + 1); ctx.stroke(); }
+    });
+    chain(240, T - 120, 760, T - 120, 60, '#1A1018', '#7A5A60');
+    for (let i = 0; i < 14; i++) awWR(rnd() * AW_W, 16, rnd, (x, r) => crag(x, T - 6 - r() * 20, 5 + r() * 8, r, OBS, { veins: r() < .5 ? 1 : 0 }));
+  }
+  function rimFloor(rnd, th) {
+    rimSeams = [];
+    { const g = ctx.createLinearGradient(0, T - 3, 0, VH); g.addColorStop(0, '#4A2A32'); g.addColorStop(.2, '#2A1A26'); g.addColorStop(1, '#0C080E'); ctx.fillStyle = g; ctx.fillRect(0, T - 3, AW_W, VH - T + 3); }
+    const plates = crackNet(rnd, T + 3, [10, 12, 15, 18, 22, 26], { min: 2, max: 4.4 });
+    for (const p of plates) { poly(p.pts); ctx.fillStyle = p.k < .5 ? `rgba(120,80,110,${.08 + p.k2 * .1})` : `rgba(0,0,0,${.12 + p.k2 * .25})`; ctx.fill();
+      ctx.save(); poly(p.pts); ctx.clip(); for (let i = 0; i < 3; i++) dab(p.x + rnd() * p.w, p.y + rnd() * p.h, p.h * .4, rnd() < .5 ? '#4A3444' : '#08050A', .25); ctx.restore(); }
+    for (const p of plates) { ctx.strokeStyle = '#05030A'; ctx.lineWidth = 1.2 + p.row * .12; poly(p.pts); ctx.stroke(); ctx.strokeStyle = 'rgba(230,160,140,.3)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(p.pts[0], p.pts[1] + 1); ctx.lineTo(p.x + p.w - 1, p.pts[1] + 1); ctx.stroke(); }
+    // the great sign set into the dais where it waits: rings, and the arms of the Logrus spiraling out of the middle
+    const sx = 700, sy = T + 58, R = 200;
+    awGlow('rgba(255,170,80,.9)', 6, () => {
+      ctx.strokeStyle = 'rgba(230,170,80,.6)'; ctx.lineWidth = 1.6; ell(sx, sy, R, R * .2); ctx.stroke(); ctx.lineWidth = 1; ell(sx, sy, R * .9, R * .18); ctx.stroke(); ell(sx, sy, R * .3, R * .06); ctx.stroke();
+      ctx.beginPath(); for (let k = 0; k < 48; k++) { const a = k / 48 * TAU, c = Math.cos(a), s = Math.sin(a); ctx.moveTo(sx + c * R * .9, sy + s * R * .18); ctx.lineTo(sx + c * R, sy + s * R * .2); } ctx.stroke();
+    });
+    for (let arm = 0; arm < 7; arm++) { const pts = []; for (let k = 0; k <= 1.001; k += .06) { const a = arm / 7 * TAU + k * 2.6 + Math.sin(k * 9 + arm) * .15, d = R * (.3 + k * .6); pts.push([sx + Math.cos(a) * d, sy + Math.sin(a) * d * .2]); }
+      rimSeams.push({ pts, ph: arm * .9 }); awGlow('rgba(255,150,70,.9)', 5, () => { ctx.strokeStyle = 'rgba(255,170,90,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); }); }
+    // the broken back edge of the dais, the glow of the Abyss rising behind it
+    ctx.fillStyle = '#1A0E16'; ctx.beginPath(); ctx.moveTo(0, T + 4); for (let x = 0; x <= AW_W; x += 5) ctx.lineTo(x, T - 1 - Math.abs(Math.sin(x * .21) * 3 + Math.sin(x * .07) * 3)); ctx.lineTo(AW_W, T + 4); ctx.fill();
+    for (let i = 0; i < 18; i++) awWR(rnd() * AW_W, 10, rnd, (x, r) => { const hgt = 5 + r() * 12, w = 2 + r() * 4; poly([x - w, T + 3, x + (r() - .5) * 4, T + 3 - hgt, x + w, T + 3]); ctx.fillStyle = '#120A16'; ctx.fill(); });
+    const ey = 350, g = ctx.createLinearGradient(0, ey, 0, VH); g.addColorStop(0, '#1A0A10'); g.addColorStop(1, '#6A2418'); ctx.fillStyle = g; ctx.fillRect(0, ey, AW_W, VH - ey);
+    ctx.fillStyle = '#0C080E'; ctx.beginPath(); ctx.moveTo(0, ey - 2); for (let x = 0; x <= AW_W; x += 6) ctx.lineTo(x, ey + 2 + Math.abs(Math.sin(x * .29) * 4)); ctx.lineTo(AW_W, ey - 2); ctx.fill();
+    const sh = ctx.createLinearGradient(0, VH - 44, 0, VH - 10); sh.addColorStop(0, 'rgba(6,2,8,0)'); sh.addColorStop(1, 'rgba(6,2,8,.45)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 44, AW_W, 34);
+  }
+  THEMES.chaosBoss = {
+    name: 'the rim of the abyss', sky: ['#06030A', '#1A0818', '#4A1426', '#A0402E'], sun: [0.5, 0.27, '255,190,120'], haze: '120,40,50',
+    floorA: '#2A1A26', floorB: '#0C080E', path: '#FF9A50', skyKind: 'none',
+    grade: { desat: .08, top: 'rgba(60,30,130,.5)', bot: 'rgba(220,90,50,.42)', vig: 'rgba(8,2,10,.7)' },
+    liveSky(camX, t) {
+      const th = THEMES.chaosBoss, sx = VW * th.sun[0] - camX * .02, sy = Y_OFF + VIEW_H * th.sun[1];
+      if (vortC) { ctx.save(); ctx.translate(sx, sy); ctx.rotate(t * .025); ctx.scale(1, 1); ctx.globalAlpha = .95; ctx.drawImage(vortC, -380, -380, 760, 760); ctx.restore(); }
+      skyEclipse(th, camX);
+      const W = VW + 260; // fragments of worlds, falling slowly round into the eye
+      frags.forEach((f, i) => { const a = t * .03 + i / frags.length * TAU, d = 150 + (i % 3) * 50 + Math.sin(t * .05 + i) * 20, s = .3 + (i % 3) * .1;
+        const x = sx + Math.cos(a) * d * 1.3, y = sy + Math.sin(a) * d * .5; ctx.save(); ctx.translate(x, y); ctx.rotate(a * .5); ctx.globalAlpha = .85; ctx.drawImage(f.c, -60 * s, -60 * s, 120 * s, 120 * s); ctx.restore(); });
+    },
+    liveFloor(camX, t) { liveSeams(rimSeams, camX, t, '255,170,90', .22, .2); liveEmbers(camX, t, 70, T - 40, T + 100, '255,160,90'); },
+  };
+  AW_FAR.chaosBoss = rimFar; AW_MID.chaosBoss = rimMid; AW_FLOOR.chaosBoss = rimFloor;
+
+  // ======================================================================================================
   // THE HUMANS OF THE COURTS: their looks for drawHumanoid, and their weapons
   // ======================================================================================================
   Object.assign(HUMANS, {
@@ -1320,6 +1420,70 @@
     for (const p of parts) if (!p.w4 && p.shape === 'star' && p.max === 1.6 && (p.col === '#D8A0E8' || p.col === '#9FD8E0' || p.col === '#FFF0C0')) { p.w4 = 1; p.col = pick(['#FF9A50', '#FFD08A', '#8A6AB0']); }
   };
   requestAnimationFrame(tintLoop);
+
+  // ======================================================================================================
+  // PASSAGES
+  // ======================================================================================================
+  // THE LOGRUS (Black Road -> Thelbane): the sign of Chaos reaches in from every edge like spilled ink and closes over
+  // everything; then the dark burns away from the middle like paper held to a flame, its edge glowing, onto the spires
+  TRANS_FX.w4logrus = (T, p, c, inP, t) => {
+    const X1 = VW, Y0 = Y_OFF, Y1 = VH, H = Y1 - Y0, cx = X1 / 2, cy = Y0 + H / 2;
+    if (inP) {
+      ctx.fillStyle = `rgba(8,4,12,${Math.pow(c, 3)})`; ctx.fillRect(0, Y0, X1, H);
+      for (let i = 0; i < 44; i++) { // tendrils of ink from all four edges, curling as they come
+        const side = i % 4, u = hash1(i * 3.3), len = (110 + hash1(i + 7) * 260) * c, w = 14 + hash1(i + 2) * 26;
+        const [x0, y0, ang] = side === 0 ? [u * X1, Y0 - 4, Math.PI / 2] : side === 1 ? [u * X1, Y1 + 4, -Math.PI / 2] : side === 2 ? [-4, Y0 + u * H, 0] : [X1 + 4, Y0 + u * H, Math.PI];
+        const curl = (hash1(i + 11) - .5) * 2.2, mx = x0 + Math.cos(ang + curl * .3) * len * .55, my = y0 + Math.sin(ang + curl * .3) * len * .55, ex = x0 + Math.cos(ang + curl) * len, ey = y0 + Math.sin(ang + curl) * len;
+        const s = taper(x0, y0, mx, my, ex, ey, w, .6, 8); trace(s.L, s.R); ctx.fillStyle = '#0A0610'; ctx.fill();
+        ctx.strokeStyle = `rgba(150,100,200,${.55 * c})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(s.L[0], s.L[1]); for (let k = 2; k < s.L.length; k += 2) ctx.lineTo(s.L[k], s.L[k + 1]); ctx.stroke();
+      }
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(230,180,90,${.5 * c})`; ctx.lineWidth = 1.6; ctx.beginPath(); // the gold of the Logrus, burning in the ink
+      for (let i = 0; i < 9; i++) { let x = cx + (hash1(i) - .5) * X1 * .9, y = cy + (hash1(i + 4) - .5) * H * .8, a = hash1(i + 9) * TAU; ctx.moveTo(x, y); for (let s = 0; s < 10 * c; s++) { a += Math.sin(i * 3 + s) * .9; x += Math.cos(a) * 14; y += Math.sin(a) * 10; ctx.lineTo(x, y); } }
+      ctx.stroke(); ctx.restore();
+    } else {
+      const q = 1 - c, R = Math.hypot(X1, H) * .62 * ease(q), edge = (a) => R * (1 + .12 * Math.sin(a * 5 + 1) + .07 * Math.sin(a * 11 + 3) + .04 * Math.sin(a * 23));
+      const hole = (k) => { ctx.moveTo(cx + edge(0) * k, cy); for (let i = 1; i <= 72; i++) { const a = i / 72 * TAU; ctx.lineTo(cx + Math.cos(a) * edge(a) * k, cy + Math.sin(a) * edge(a) * k * .7); } ctx.closePath(); };
+      ctx.beginPath(); ctx.rect(-10, Y0 - 10, X1 + 20, H + 20); hole(1); ctx.fillStyle = '#0A0610'; ctx.fill('evenodd');
+      ctx.beginPath(); hole(1); ctx.strokeStyle = 'rgba(60,24,20,.9)'; ctx.lineWidth = 9; ctx.stroke(); // the charred rim
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); hole(1); ctx.strokeStyle = 'rgba(255,140,60,.85)'; ctx.lineWidth = 3; ctx.stroke(); ctx.strokeStyle = 'rgba(255,230,160,.9)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+      for (let i = 0; i < 24; i++) { const a = hash1(i) * TAU, d = edge(a) * (1 + hash1(i + 3) * .1); ctx.fillStyle = `rgba(255,${150 + hash1(i + 5) * 80},80,${c})`; circle(cx + Math.cos(a) * d, cy + Math.sin(a) * d * .7 - hash1(i + 8) * 20 * q, 1.4); ctx.fill(); } // sparks lifting off the burning edge
+    }
+  };
+  // THE TRUMP (Thelbane -> the Rim): a Trump card of the place ahead comes up out of the dark and he is drawn into it;
+  // the picture on the card becomes the place, and the gilded frame flies out past him
+  function trumpPicture(x, y, w, h, t) { // the Rim of the Abyss, as a Trump painter would set it down
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#0A040E'); g.addColorStop(.5, '#4A1428'); g.addColorStop(.75, '#A0402E'); g.addColorStop(.76, '#1A0E16'); g.addColorStop(1, '#0C080E'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    const sx = x + w / 2, sy = y + h * .36;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.globalCompositeOperation = 'lighter';
+    for (let arm = 0; arm < 5; arm++) { ctx.strokeStyle = 'rgba(230,110,80,.35)'; ctx.lineWidth = w * .03; ctx.beginPath(); for (let k = 0; k <= 1; k += .03) { const a = arm / 5 * TAU + k * 4 + t * .2, d = w * (.08 + k * .7); ctx.lineTo(sx + Math.cos(a) * d, sy + Math.sin(a) * d * .6); } ctx.stroke(); }
+    softDab(sx, sy, w * .3, '255,190,120', .5); ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#08040A'; circle(sx, sy, w * .09); ctx.fill(); ctx.strokeStyle = '#FFF0D0'; ctx.lineWidth = w * .008; circle(sx, sy, w * .092); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,170,80,.8)'; ctx.lineWidth = w * .006; ell(sx, y + h * .86, w * .38, h * .04); ctx.stroke(); ell(sx, y + h * .86, w * .2, h * .02); ctx.stroke();
+    for (const d of [-1, 1]) { ctx.fillStyle = '#1A1220'; const bx = sx + d * w * .36; poly([bx - w * .07, y + h * .78, bx - w * .04, y + h * .5, bx, y + h * .45, bx + w * .04, y + h * .5, bx + w * .07, y + h * .78]); ctx.fill(); } // the two Lords
+    ctx.restore();
+  }
+  function trumpFrame(x, y, w, h, a) {
+    const b = w * .07; ctx.save(); ctx.globalAlpha = a;
+    ctx.beginPath(); ctx.rect(x - b, y - b, w + b * 2, h + b * 2); ctx.rect(x, y, w, h); const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#F4D88A'); g.addColorStop(.5, '#B8862E'); g.addColorStop(1, '#E8C26A'); ctx.fillStyle = g; ctx.fill('evenodd');
+    ctx.strokeStyle = '#3A2410'; ctx.lineWidth = Math.max(1, b * .1); ctx.strokeRect(x - b, y - b, w + b * 2, h + b * 2); ctx.strokeRect(x, y, w, h); ctx.strokeRect(x - b * .5, y - b * .5, w + b, h + b);
+    ctx.fillStyle = '#8A1E30'; for (const [cx, cy] of [[x - b * .5, y - b * .5], [x + w + b * .5, y - b * .5], [x - b * .5, y + h + b * .5], [x + w + b * .5, y + h + b * .5]]) { ctx.beginPath(); ctx.moveTo(cx, cy - b * .4); ctx.lineTo(cx + b * .4, cy); ctx.lineTo(cx, cy + b * .4); ctx.lineTo(cx - b * .4, cy); ctx.fill(); }
+    ctx.restore();
+  }
+  TRANS_FX.w4trump = (T, p, c, inP, t) => {
+    const X1 = VW, Y0 = Y_OFF, H = VH - Y0, cx = X1 / 2, cy = Y0 + H / 2;
+    if (inP) {
+      ctx.fillStyle = `rgba(8,4,12,${Math.min(.85, c * 1.4)})`; ctx.fillRect(0, Y0, X1, H); // the world goes dark around the card
+      const k = ease(c), h = lerp(70, X1 / .62 * 1.08, Math.pow(k, 2.2)), w = h * .62, rot = (1 - k) * -.25;
+      ctx.save(); ctx.translate(cx, cy + (1 - k) * 20); ctx.rotate(rot);
+      ctx.fillStyle = 'rgba(255,220,150,.25)'; ctx.fillRect(-w / 2 - w * .12, -h / 2 - w * .12, w * 1.24, h + w * .24); // its glow
+      trumpPicture(-w / 2, -h / 2, w, h, t); trumpFrame(-w / 2, -h / 2, w, h, 1);
+      ctx.restore();
+    } else {
+      const k = 1 - c, h = X1 / .62 * 1.08 * (1 + k * 1.2), w = h * .62;
+      ctx.save(); ctx.translate(cx, cy); trumpFrame(-w / 2, -h / 2, w, h, c); ctx.restore();
+      ctx.fillStyle = `rgba(255,236,190,${c * .25})`; ctx.fillRect(0, Y0, X1, H);
+    }
+  };
   };
   window.w4Late = late;
 })();
