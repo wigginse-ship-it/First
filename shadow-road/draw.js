@@ -43,7 +43,7 @@ function playerPose() {
   else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
   // at rest each weapon sits the way its wielder would carry it
   else if (P.w === 'sword') { pose.arm = .8; pose.grip = -.08; } // a low guard, the point lowered toward the ground ahead
-  else if (P.w === 'hammer') { pose.arm = .85; pose.grip = -3.35; } // shouldered, head behind
+  else if (P.w === 'hammer') { pose.arm = 1.95; pose.grip = .28; pose.backArm = .9; } // dragged behind him, its head resting on the ground
   else if (P.w === 'staff') { // a fighting guard: the staff held low and level across the body, point toward the enemy,
     // swaying with his breath, and every few seconds he twirls it once through his fingers
     const now = performance.now() / 1000, c = now % 4.2, twirl = P.state === 'idle' && c < .55 ? ease(c / .55) * TAU : 0;
