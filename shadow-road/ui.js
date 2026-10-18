@@ -230,6 +230,12 @@ if (window.ResizeObserver) new ResizeObserver(layout).observe(app);
 // ---------- main loop ----------
 let last = performance.now();
 function frame(now) {
+  requestAnimationFrame(frame); // ask for the next frame first, so nothing that goes wrong below can stop the game
+  try { step(now); } catch (e) { // a drawing failure falls back to the plain renderer rather than freezing
+    console.error(e); if (typeof PAINT_Q !== 'undefined' && PAINT_Q > 0) { PAINT_Q = 0; perfLock = true; } if (inkG && ctx === inkG) ctx = mainCtx;
+  }
+}
+function step(now) {
   const rawDt = Math.min(.25, (now - last) / 1000); // real seconds, even if the frame rate drops
   let dt = Math.min(1 / 30, rawDt); last = now;
   const t = now / 1000;
@@ -251,7 +257,6 @@ function frame(now) {
   }
   ctx.setTransform(K, 0, 0, K, 0, -Y_OFF * K);
   if (stage && P) { drawScene(t); if (live) paintPerf(rawDt); }
-  requestAnimationFrame(frame);
 }
 
 // ---------- boot ----------

@@ -496,6 +496,7 @@ function buildBackground(themeId, seed) {
   ctx = old;
   paintLayer(fc, { ink: '#3A2A30', line: .3, lw: .9, brush: .8, hatch: 0, seed: 3 });
   paintLayer(mc, { ink: '#1A100C', line: .85, lw: 1.1, brush: 1, hatch: .2, seed: 7 });
+  releaseScratch(); retire(bgFar); retire(bgMid); // give the old world's layers and the working canvases back right away
   bgFar = fc; bgMid = mc;
   if (!grain) { // canvas-and-brush texture laid over the whole picture
     grain = document.createElement('canvas'); grain.width = grain.height = 256;

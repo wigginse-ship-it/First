@@ -15,6 +15,17 @@ function tileNoise(seed, per) {
   };
 }
 function texCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; }
+// Safari caps the total memory all canvases may use, and frees a dropped canvas only when it gets around to it.
+// So big working canvases are borrowed from a small pool, and anything retired is shrunk to nothing at once.
+const POOL = [];
+function scratch(i, w, h) {
+  let p = POOL[i]; if (!p) p = POOL[i] = texCanvas(w, h);
+  const [c, g] = p;
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } else { g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, w, h); }
+  return p;
+}
+function releaseScratch() { for (const p of POOL) if (p) { p[0].width = 1; p[0].height = 1; } }
+function retire(c) { if (c) { c.width = 1; c.height = 1; } }
 // draw something on a tile so it wraps seamlessly across the edges
 function wrapDraw(w, h, fn) { for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) fn(ox, oy); }
 
@@ -76,8 +87,8 @@ function texPat(g, name) { // patterns belong to a context, so cache one per con
 // ink: contour color, line: contour strength, lw: contour width, brush: how much brushwork shows, hatch: modelling strokes low down
 function paintLayer(canvas, o) {
   const w = canvas.width, h = canvas.height, g = canvas.getContext('2d');
-  { const [tc, tg] = texCanvas(w, h), [cc, cg] = texCanvas(w, h); cg.drawImage(canvas, 0, 0); wobbleInto(cc, g, tc, tg, K, o.seed || 0, .7 * K); } // painted by hand, so no edge is ruled
-  const [sc, s] = texCanvas(w, h);
+  { const [tc, tg] = scratch(0, w, h), [cc, cg] = scratch(1, w, h); cg.drawImage(canvas, 0, 0); wobbleInto(cc, g, tc, tg, K, o.seed || 0, .7 * K); } // painted by hand, so no edge is ruled
+  const [sc, s] = scratch(2, w, h);
   s.drawImage(canvas, 0, 0); s.globalCompositeOperation = 'source-in'; s.fillStyle = o.ink; s.fillRect(0, 0, w, h);
   g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = 'source-atop';
@@ -120,7 +131,7 @@ const IB = { x: 0, y: 0, w: 0, h: 0 }; // the screen box the figures occupy; all
 // boxes: [x0, y0, x1, y1] in world units around everything about to be painted
 function inkBegin(boxes) {
   mainCtx = ctx; if (PAINT_Q === 0) return;
-  if (!inkC || inkC.width !== cv.width || inkC.height !== cv.height) { [inkC, inkG] = texCanvas(cv.width, cv.height); [silC, silG] = texCanvas(cv.width, cv.height); }
+  if (!inkC || inkC.width !== cv.width || inkC.height !== cv.height) { retire(inkC); retire(silC); retire(rimC); rimC = null; [inkC, inkG] = texCanvas(cv.width, cv.height); [silC, silG] = texCanvas(cv.width, cv.height); }
   const m = ctx.getTransform(); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const b of boxes) { x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]); }
   const pad = 8 * K;
@@ -158,7 +169,7 @@ function inkEnd() {
   silG.globalCompositeOperation = 'source-in'; silG.fillStyle = '#1A100C'; silG.fillRect(x, y, w, h);
   // light catching every figure's upper-right edges, and shadow gathering along the lower-left: gives each one volume
   if (!rimC || rimC.width !== inkC.width || rimC.height !== inkC.height) [rimC, rimG] = texCanvas(inkC.width, inkC.height);
-  for (const [dx, dy, col, al] of [[-1.4, 1.4, '#FFF0D2', .55], [1.6, -1.6, '#1A1020', .4]]) {
+  for (const [dx, dy, col, al] of [[-1.4, 1.4, '#FFF0D2', .55]]) {
     rimG.setTransform(1, 0, 0, 1, 0, 0); rimG.globalCompositeOperation = 'copy'; blit(rimG, silC, 0, 0);
     rimG.globalCompositeOperation = 'destination-out'; blit(rimG, silC, dx * K, dy * K);
     rimG.globalCompositeOperation = 'source-in'; rimG.fillStyle = col; rimG.fillRect(x, y, w, h);
@@ -177,7 +188,7 @@ function buildFrame() {
   const key = cv.width + 'x' + cv.height; if (key === frameKey) return; frameKey = key;
   const w = cv.width, h = cv.height, m = Math.min(w, h);
   // one translucent sheet laid over the picture: a warm varnish tone, its cracks, edges darkened by age, and the frame
-  const [c, g] = texCanvas(w, h);
+  retire(frameC); const [c, g] = texCanvas(w, h);
   g.fillStyle = 'rgba(150,100,40,.1)'; g.fillRect(0, 0, w, h);
   g.save(); const cs = Math.max(.6, K / 4.5); g.scale(cs, cs); g.fillStyle = texPat(g, 'crack'); g.fillRect(0, 0, w / cs, h / cs); g.restore();
   const vg = g.createRadialGradient(w / 2, h * .5, m * .5, w / 2, h * .5, w * .62);
