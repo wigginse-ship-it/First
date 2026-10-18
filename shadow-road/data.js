@@ -29,7 +29,8 @@ const WEAPONS = {
       AA:   { dur: .3,  h: [.2, .6], x0: 0, x1: 40, dmg: 8, kb: 60, kick: 1 },
       AAA:  { dur: .4,  h: [.2, .65], x0: 0, x1: 42, dmg: 12, kb: 120, arc: [-2.4, 1.4], spike: 1, power: 1 },
       D:    { dur: .44, h: [.18, .68], x0: 0, x1: 42, dmg: 12, kb: 300, kick: 1, lunge: 440, power: 1 }, // a stepping front kick driven in off the run
-      R:    { dur: .5,  h: [.22, .62], x0: 0, x1: 40, dmg: 14, kb: 80, launch: 380, kick: 1, lunge: 300, hop: 220, power: 1 }, // springs out of the roll into a flying kick
+      R:    { name: 'Slipping Cross', dur: .4, h: [.28, .62], x0: 0, x1: 46, dmg: 14, kb: 280, lunge: 330, power: 1 }, // out of the dodge he stays low and drives in behind a long rear-hand punch
+      RH:   { name: 'Dropkick', dur: .5, h: [.22, .62], x0: 0, x1: 40, dmg: 16, kb: 80, launch: 380, kick: 1, lunge: 300, hop: 220, power: 1 }, // springs out of the dodge into a flying two-footed kick
     } },
   hammer: { name: 'Hammer', reach: 46, look: 'hammer', desc: 'Slow and crushing. Every heavy shakes the ground.',
     tree: {

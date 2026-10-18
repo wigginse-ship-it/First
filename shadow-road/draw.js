@@ -27,7 +27,7 @@ function attackStance(pose, m, k) {
   pose.sink = mix('sink') * light; pose.lean = (pose.lean || 0) * .4 + mix('lean') * light; pose.backArm = mix('back');
   pose.walk = 0;
 }
-const BOXING = { L: 'jab', LL: 'cross', LLL: 'hook', A: 'jab' };
+const BOXING = { L: 'jab', LL: 'cross', LLL: 'hook', A: 'jab', R: 'slip' };
 function playerPose() {
   const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : save.wl[P.w] };
   if (P.state === 'atk' || P.state === 'air') {
@@ -53,7 +53,7 @@ function playerPose() {
       if (spinK) { pose.arm = -.25; pose.elbow = .2; pose.backArm = 3.5; pose.lean = -.15; } // arms flung wide like rotor blades
       else { pose.lean = lerp(.1, -.3, out); pose.arm = .9; pose.elbow = 1.6; pose.backArm = lerp(1, 2.6, out); } // guard kept, leaning away from the kick
     } else if (m.kick && P.w === 'fists') { // the driving thrust kick and the flying dropkick
-      const fly = P.z > 4 || m.key === 'R' || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
+      const fly = P.z > 4 || m.key === 'RH' || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
       pose.kickK = k; pose.kickH = m.h; pose.kickStyle = fly ? 'drop' : 'lunge'; pose.flow = 12;
       if (fly) { // tucked, then laid out flat with both feet driven forward, the body twisting open toward us
         pose.rot = -1.2 * out; pose.lean = lerp(.35, -.1, out); pose.yaw = lerp(-.2, .45, out);
@@ -89,6 +89,12 @@ function playerPose() {
       } else if (kind === 'cross') { // the rear hand, thrown with the hips: the back heel turns and the chest comes round to us
         pose.backArm = lerp(1.3 + .2 * load, -.06 - pose.lean, e); pose.backElbow = lerp(2, .05, e); pose.backReach = .35 * e; pose.yaw = .55 * e - .1 * load;
         pose.legs = { f: 9, b: -9 - 2 * e, fk: 2 + 4 * e, bk: 1 }; pose.sink = 2 + e; pose.lean += .06 * e;
+      } else if (kind === 'slip') { // out of the dodge: still low from it, he springs in behind a long rear-hand punch, the back leg straight
+        const g = k < h0 ? load : 1; pose.lean = lerp(.35, .55, e) * g + .2 * (1 - g); pose.sink = 6 - 2 * e;
+        pose.backArm = lerp(1.5, -.1 - pose.lean, e); pose.backElbow = lerp(2.1, .05, e); pose.backReach = .45 * e; pose.yaw = .2 + .4 * e;
+        pose.arm = .95; pose.elbow = 2; // the lead hand tucked up by the chin
+        pose.legs = { f: 12 + 5 * e, b: -14 - 5 * e, fk: 8, bk: 0 };
+        if (e > .5) pose.flow = 14;
       } else { // the hook: elbow up and bent, the whole body turning through it from the back foot
         const sw = k < h0 ? 0 : clamp((k - h0) / (h1 - h0), 0, 1);
         pose.arm = lerp(.9, .15 - pose.lean, Math.min(1, e * 1.4)); pose.elbow = lerp(1.9, .15, e); pose.yaw = lerp(-.35, .2, ease(sw)) * (k < h0 ? load : 1);

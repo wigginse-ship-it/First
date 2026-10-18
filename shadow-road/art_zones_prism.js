@@ -339,9 +339,9 @@
     ctx.fillStyle = '#1E1634'; circle(0, 0, R); ctx.fill(); // the stone disc behind the glass
     const pane = (pts, h, l) => { poly(pts); const pg = ctx.createRadialGradient(0, 0, 4, 0, 0, R); pg.addColorStop(0, hsla(h, 70, l + 22)); pg.addColorStop(1, hsla(h, 60, l)); ctx.fillStyle = pg; ctx.fill(); };
     // the outer ring of twenty-four lancets, then twelve petals, then the oculus
-    for (let i = 0; i < 24; i++) { const a0 = i / 24 * TAU, a1 = (i + 1) / 24 * TAU, r0 = R * .7, r1 = R * .93; pane([[Math.cos(a0 + .02) * r0, Math.sin(a0 + .02) * r0], [Math.cos(a0 + .03) * r1, Math.sin(a0 + .03) * r1], [Math.cos((a0 + a1) / 2) * (r1 + 2), Math.sin((a0 + a1) / 2) * (r1 + 2)], [Math.cos(a1 - .03) * r1, Math.sin(a1 - .03) * r1], [Math.cos(a1 - .02) * r0, Math.sin(a1 - .02) * r0]], hues[i % 6], 34); }
+    for (let i = 0; i < 24; i++) { const a0 = i / 24 * TAU, a1 = (i + 1) / 24 * TAU, r0 = R * .7, r1 = R * .93; pane([[Math.cos(a0 + .02) * r0, Math.sin(a0 + .02) * r0], [Math.cos(a0 + .03) * r1, Math.sin(a0 + .03) * r1], [Math.cos((a0 + a1) / 2) * (r1 + 2), Math.sin((a0 + a1) / 2) * (r1 + 2)], [Math.cos(a1 - .03) * r1, Math.sin(a1 - .03) * r1], [Math.cos(a1 - .02) * r0, Math.sin(a1 - .02) * r0]], hues[i % 6], 28); }
     for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, px = Math.cos(a) * R * .45, py = Math.sin(a) * R * .45; ctx.save(); ctx.translate(px, py); ctx.rotate(a);
-      ell(0, 0, R * .2, R * .11); const pg = ctx.createRadialGradient(-R * .05, 0, 1, 0, 0, R * .2); pg.addColorStop(0, hsla(hues[(i + 2) % 6], 75, 72)); pg.addColorStop(1, hsla(hues[(i + 2) % 6], 60, 38)); ctx.fillStyle = pg; ctx.fill(); ctx.restore(); }
+      ell(0, 0, R * .2, R * .11); const pg = ctx.createRadialGradient(-R * .05, 0, 1, 0, 0, R * .2); pg.addColorStop(0, hsla(hues[(i + 2) % 6], 62, 64)); pg.addColorStop(1, hsla(hues[(i + 2) % 6], 50, 32)); ctx.fillStyle = pg; ctx.fill(); ctx.restore(); }
     const og = ctx.createRadialGradient(0, 0, 0, 0, 0, R * .22); og.addColorStop(0, '#FFF4E0'); og.addColorStop(.5, '#F4C88A'); og.addColorStop(1, '#B85A8A'); ctx.fillStyle = og; circle(0, 0, R * .22); ctx.fill();
     // the tracery: stone mullions, rings and cusps, lit from the top
     ctx.lineCap = 'round';
@@ -449,7 +449,7 @@
       }
     });
     // the arena seal: a great ring inlaid in the glass, with the wyrm's sigil
-    const sx = 640, sy = T + 62, R = 170;
+    const sx = 640, sy = T + 62, R = 170; // the middle of the arena once the camera locks for the fight
     awGlow('#B8A0FF', 6, () => {
       ctx.strokeStyle = 'rgba(190,170,255,.4)'; ctx.lineWidth = 1.2; ell(sx, sy, R, R * .2); ctx.stroke(); ctx.lineWidth = .8; ell(sx, sy, R * .86, R * .17); ctx.stroke();
       ctx.beginPath(); for (let k = 0; k < 36; k++) { const a = k / 36 * TAU, c = Math.cos(a), s = Math.sin(a); ctx.moveTo(sx + c * R * .87, sy + s * R * .172); ctx.lineTo(sx + c * R * .985, sy + s * R * .197); } ctx.stroke();
@@ -506,7 +506,7 @@
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * .02, w = .05, L = 260; ctx.fillStyle = 'rgba(240,200,255,.045)'; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a - w) * L, wy + Math.sin(a - w) * L); ctx.lineTo(wx + Math.cos(a + w) * L, wy + Math.sin(a + w) * L); ctx.fill(); }
       ctx.restore();
-      if (roseC) { ctx.globalAlpha = .92; ctx.drawImage(roseC, wx - 90, wy - 90, 180, 180); ctx.globalAlpha = 1; }
+      if (roseC) { ctx.globalAlpha = .82; ctx.drawImage(roseC, wx - 90, wy - 90, 180, 180); ctx.globalAlpha = 1; }
       const W = VW + 120;
       for (let i = 0; i < 6; i++) { // shards, slowly turning as they drift
         const x = ((i * 173 + t * (3 + i % 3 * 1.5) - camX * .1) % W + W) % W - 60, y = 66 + (i * 47) % 120 + Math.sin(t * .25 + i) * 5, s = 3 + (i % 3) * 1.6, a = t * .08 * (i % 2 ? 1 : -1) + i;

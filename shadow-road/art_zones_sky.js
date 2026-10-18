@@ -14,6 +14,8 @@ function zskStrip(y0, fn, ink) {
   return c;
 }
 function zskBlit(c, y0, o) { const x = -(((o % AW_W) + AW_W) % AW_W), h = FLOOR_TOP - y0; ctx.drawImage(c, x, y0, AW_W, h); ctx.drawImage(c, x + AW_W, y0, AW_W, h); }
+// (full-width bands run one unit past the tile: the layer canvases are a fraction of a pixel wider than 1280, and this keeps a hairline from showing at the seam)
+function zskHaze(col, y0, y1, a) { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(1, `rgba(${col},${a})`); ctx.fillStyle = g; ctx.fillRect(0, y0, AW_W + 1, y1 - y0); }
 const zskHsh = (x) => { const s = Math.sin(x * 12.9898) * 43758.5453; return s - Math.floor(s); };
 
 // ======================================================================================================
@@ -164,7 +166,7 @@ function zskDeckFar(rnd, th, f) {
     zskStrip(172, () => {
       awCloudBank(196, rnd, { shadow: '#B48C9E', body: '#D0A4AA', lit: '#F2C6A8', rim: '#FFE0C4' }, 15, 7, 15);
       awCloudBank(206, rnd, { shadow: '#B08498', body: '#CC9CA4', lit: '#F4C4A2', rim: '#FFE2C2' }, 18, 8, 17);
-      hazeBand(ctx, th.haze, 176, FLOOR_TOP, .4);
+      zskHaze(th.haze, 176, FLOOR_TOP, .4);
     }, '#7A5A70'),
     zskStrip(184, () => {
       awCloudBank(212, rnd, { shadow: '#9A6E88', body: '#C48E9C', lit: '#F6BE9A', rim: '#FFE4C4' }, 24, 11, 24);
@@ -182,9 +184,9 @@ function zskDeckFar(rnd, th, f) {
     for (let k = 0; k < 10; k++) { const v = .4 + r() * .6; dab(x + AW_SUN * (4 + r() * w * .3) * (1 - v * .5), base - v * h - 6, 3 + r() * 4, '#FFE2C8', .8); }
   });
   ctx.save(); ctx.globalCompositeOperation = 'destination-out'; // their feet sink into the moving sea
-  { const g = ctx.createLinearGradient(0, 178, 0, 200); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)'); ctx.fillStyle = g; ctx.fillRect(0, 178, AW_W, FLOOR_TOP - 178); }
+  { const g = ctx.createLinearGradient(0, 178, 0, 200); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)'); ctx.fillStyle = g; ctx.fillRect(0, 178, AW_W + 1, FLOOR_TOP - 178); }
   ctx.restore();
-  hazeBand(f, th.haze, 90, 186, .3);
+  zskHaze(th.haze, 90, 186, .3);
   // the skyport left astern: a small island of towers, very hazy
   const ip = { rock: '#A88A9E', lit: '#E6B8A8', band: 'rgba(90,60,90,.25)', root: '#8A7088', grass: '#A8A49A', grassLit: '#F0D0B0', tree0: '#9A9696', tree1: '#AAA6A0', tree2: '#C8C0A8', stone: '#B4A0AE', roof: '#9A7E96' };
   const ix = 980 + rnd() * 60, iy = 150;
@@ -198,7 +200,7 @@ function zskDeckFar(rnd, th, f) {
   zskGalleon(rnd() * 200 + 1120, 128, .3, -1, Object.assign({}, sp, { envTop: '#E4CCCC', env: '#C6AABA', envBot: '#AA92AA', hull: '#A88E92', hullLit: '#D8B0A0', hullDark: '#968098', glow: null }));
   ctx.strokeStyle = 'rgba(80,56,76,.7)'; ctx.lineWidth = .9; ctx.lineCap = 'round'; // gulls riding the wind
   for (let i = 0; i < 9; i++) { const x = rnd() * AW_W, y = 100 + rnd() * 60, s = 2 + rnd() * 2.5; awWrap(x, 8, (x) => { ctx.beginPath(); ctx.moveTo(x - s, y - s * .3); ctx.quadraticCurveTo(x - s * .4, y - s * .7, x, y); ctx.quadraticCurveTo(x + s * .4, y - s * .7, x + s, y - s * .4); ctx.stroke(); }); }
-  hazeBand(f, th.haze, 120, 190, .18);
+  zskHaze(th.haze, 120, 190, .18);
 }
 function zskDeckMid(rnd) {
   AW_SUN = 1;
@@ -222,9 +224,10 @@ function zskDeckFloor(rnd, th) {
   });
   ctx.lineCap = 'round';
   for (const [col, w] of [[ropeDark, 2.2], [rope, 1.2]]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); for (let x = 0; x < AW_W; x += 64) { ctx.moveTo(x, T - 37); ctx.quadraticCurveTo(x + 32, T - 26, x + 64, T - 37); } ctx.stroke(); }
-  ctx.fillStyle = brassDark; ctx.fillRect(0, T - 44, AW_W, 3); ctx.fillStyle = brass; ctx.fillRect(0, T - 44, AW_W, 2); ctx.fillStyle = brassLit; ctx.fillRect(0, T - 44, AW_W, .7);
+  ctx.fillStyle = brassDark; ctx.fillRect(0, T - 44, AW_W + 1, 3); ctx.fillStyle = brass; ctx.fillRect(0, T - 44, AW_W + 1, 2); ctx.fillStyle = brassLit; ctx.fillRect(0, T - 44, AW_W + 1, .7);
   // the bulwark: three strakes of planking on timberheads, a cap rail, scuppers, belaying pins and hanging coils
   const B = T - 26;
+  ctx.fillStyle = '#24150C'; ctx.fillRect(0, B, AW_W + 1, 26);
   for (let row = 0; row < 3; row++) for (const [x0, w] of awRow(rnd, 60, 140)) awWR(x0, w, rnd, (x, r) => {
     const y = B + 2 + row * 7.6, col = awMix(['#7A5638', '#6E4C32', '#84603E', '#73513A'][Math.floor(r() * 4)], '#3A2418', row * .12);
     ctx.fillStyle = col; ctx.fillRect(x, y, w - .8, 7); ctx.fillStyle = 'rgba(255,214,170,.22)'; ctx.fillRect(x, y, w - .8, .9); ctx.fillStyle = 'rgba(30,16,10,.45)'; ctx.fillRect(x, y + 6, w - .8, 1);
@@ -234,7 +237,7 @@ function zskDeckFloor(rnd, th) {
     ctx.fillStyle = '#3E2818'; ctx.fillRect(x - 3, B, 6, 26); ctx.fillStyle = '#B07E52'; ctx.fillRect(x + 1.6, B, 1.4, 26); ctx.fillStyle = '#5A3C26'; ctx.fillRect(x - 3, B, 1.2, 26);
     awRivet(x, B + 7, .9, brassLit); awRivet(x, B + 18, .9, brassLit);
   }
-  ctx.fillStyle = '#2E1C12'; ctx.fillRect(0, B - 2, AW_W, 4.4); ctx.fillStyle = '#9A6E46'; ctx.fillRect(0, B - 2, AW_W, 1.4); ctx.fillStyle = brass; ctx.fillRect(0, B + 2, AW_W, 1.2); // cap rail
+  ctx.fillStyle = '#2E1C12'; ctx.fillRect(0, B - 2, AW_W + 1, 4.4); ctx.fillStyle = '#9A6E46'; ctx.fillRect(0, B - 2, AW_W + 1, 1.4); ctx.fillStyle = brass; ctx.fillRect(0, B + 2, AW_W + 1, 1.2); // cap rail
   for (let x = 96; x < AW_W; x += 128) { ctx.fillStyle = '#1A0E0A'; ell(x, T - 3, 4, 1.6); ctx.fill(); }
   for (let i = 0; i < 3; i++) awWR(150 + i * 427 + rnd() * 60, 30, rnd, (x, r) => { // a pin rail with ropes made fast and hanging in coils
     ctx.fillStyle = '#4A2E1C'; ctx.fillRect(x - 16, B + 6, 32, 3); ctx.fillStyle = '#B07E52'; ctx.fillRect(x - 16, B + 6, 32, .8);
@@ -243,16 +246,16 @@ function zskDeckFloor(rnd, th) {
       for (const [col, w] of [[ropeDark, 2.2], [rope, 1.1]]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); for (let j = 0; j < 4; j++) { ctx.moveTo(px - 2.6 + j * .4, B + 5); ctx.quadraticCurveTo(px - 4 + j, B + 7 + cl + j * .6, px + 2 - j * .3, B + 5); } ctx.stroke(); } }
   });
   // the waterway along the foot of the bulwark, edged in brass
-  ctx.fillStyle = '#24160E'; ctx.fillRect(0, T - 2, AW_W, 6); ctx.fillStyle = brass; ctx.fillRect(0, T + 3, AW_W, 1.6); ctx.fillStyle = brassLit; ctx.fillRect(0, T + 3, AW_W, .6);
+  ctx.fillStyle = '#24160E'; ctx.fillRect(0, T - 2, AW_W + 1, 6); ctx.fillStyle = brass; ctx.fillRect(0, T + 3, AW_W + 1, 1.6); ctx.fillStyle = brassLit; ctx.fillRect(0, T + 3, AW_W + 1, .6);
   for (let x = 4; x < AW_W; x += 9) awRivet(x, T + 3.8, .55, '#FFE4A8');
   // the deck: narrow weathered planks laid fore and aft, black pitch in the seams, treenails at the butts
   let y = T + 4.6, h = 5.4, row = 0;
   const brassRows = new Set([5, 11]);
   while (y < VH) {
-    ctx.fillStyle = '#120A06'; ctx.fillRect(0, y, AW_W, h);
+    ctx.fillStyle = '#120A06'; ctx.fillRect(0, y, AW_W + 1, h);
     const k = (y - T) / (VH - T);
     if (brassRows.has(row)) { // a brass strake let into the deck, riveted down
-      ctx.fillStyle = brassDark; ctx.fillRect(0, y, AW_W, 3.2); ctx.fillStyle = brass; ctx.fillRect(0, y + .3, AW_W, 2.2); ctx.fillStyle = brassLit; ctx.fillRect(0, y + .3, AW_W, .7);
+      ctx.fillStyle = brassDark; ctx.fillRect(0, y, AW_W + 1, 3.2); ctx.fillStyle = brass; ctx.fillRect(0, y + .3, AW_W + 1, 2.2); ctx.fillStyle = brassLit; ctx.fillRect(0, y + .3, AW_W + 1, .7);
       for (let x = 5; x < AW_W; x += 10) awRivet(x, y + 1.6, .6, '#FFE4A8');
       y += 3.4; row++; continue;
     }
@@ -271,12 +274,12 @@ function zskDeckFloor(rnd, th) {
     y += h; h += .85; row++;
   }
   // long shadows of the rigging, thrown toward us by the sun behind the ship's side, and the bulwark's own shade
-  { const g = ctx.createLinearGradient(0, T + 3, 0, T + 22); g.addColorStop(0, 'rgba(30,12,10,.45)'); g.addColorStop(1, 'rgba(30,12,10,0)'); ctx.fillStyle = g; ctx.fillRect(0, T + 3, AW_W, 19); }
+  { const g = ctx.createLinearGradient(0, T + 3, 0, T + 22); g.addColorStop(0, 'rgba(30,12,10,.45)'); g.addColorStop(1, 'rgba(30,12,10,0)'); ctx.fillStyle = g; ctx.fillRect(0, T + 3, AW_W + 1, 19); }
   ctx.lineCap = 'butt';
   for (let i = 0; i < 7; i++) { const x = rnd() * AW_W, n = 1 + Math.floor(rnd() * 3), sl = -.55 - rnd() * .25; awWrap(x, 90, (x) => {
     ctx.strokeStyle = 'rgba(30,12,10,.12)'; ctx.lineWidth = 1.4; ctx.beginPath(); for (let j = 0; j < n; j++) { ctx.moveTo(x + j * 7, T + 4); ctx.lineTo(x + j * 7 + (VH - T) * sl * (1 + j * .08), VH); } ctx.stroke(); }); }
   ctx.save(); ctx.globalCompositeOperation = 'soft-light'; // the low sun glances off the deck: warm sheen far, darker near
-  { const g = ctx.createLinearGradient(0, T, 0, VH); g.addColorStop(0, 'rgba(255,180,110,.4)'); g.addColorStop(.45, 'rgba(255,180,110,.05)'); g.addColorStop(1, 'rgba(30,14,24,.5)'); ctx.fillStyle = g; ctx.fillRect(0, T, AW_W, VH - T); }
+  { const g = ctx.createLinearGradient(0, T, 0, VH); g.addColorStop(0, 'rgba(255,180,110,.4)'); g.addColorStop(.45, 'rgba(255,180,110,.05)'); g.addColorStop(1, 'rgba(30,14,24,.5)'); ctx.fillStyle = g; ctx.fillRect(0, T, AW_W + 1, VH - T); }
   ctx.restore();
   ctx.strokeStyle = 'rgba(255,226,190,.13)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 0; i < 120; i++) { const x = rnd() * AW_W, yy = T + 34 + rnd() * 60; ctx.moveTo(x, yy); ctx.lineTo(x + 3 + rnd() * 7, yy + (rnd() - .5) * .6); } ctx.stroke(); // scuffs where the crew walk
   // a capstan near the bulwark
@@ -316,8 +319,8 @@ function zskDeckFloor(rnd, th) {
     ctx.strokeStyle = ropeDark; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x + R, yy); ctx.quadraticCurveTo(x + R + 8, yy + 4, x + R + 14 + r() * 6, yy + 2); ctx.stroke(); ctx.strokeStyle = rope; ctx.lineWidth = 1.2; ctx.stroke();
   });
   for (let i = 0; i < 8; i++) { const x = rnd() * AW_W, yy = T + 10 + rnd() * 90; awWrap(x, 4, (x) => { ctx.strokeStyle = brassDark; ctx.lineWidth = 1.4; ell(x, yy, 2.4, 1); ctx.stroke(); ctx.strokeStyle = brassLit; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(x, yy - .2, 2.4, 1, 0, Math.PI, TAU); ctx.stroke(); }); }
-  ctx.fillStyle = 'rgba(200,150,80,.55)'; ctx.fillRect(0, T + 100, AW_W, 1.3);
-  const sh = ctx.createLinearGradient(0, VH - 32, 0, VH); sh.addColorStop(0, 'rgba(30,16,18,0)'); sh.addColorStop(1, 'rgba(30,16,18,.45)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 32, AW_W, 32);
+  ctx.fillStyle = 'rgba(200,150,80,.55)'; ctx.fillRect(0, T + 100, AW_W + 1, 1.3);
+  const sh = ctx.createLinearGradient(0, VH - 32, 0, VH); sh.addColorStop(0, 'rgba(30,16,18,0)'); sh.addColorStop(1, 'rgba(30,16,18,.45)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 32, AW_W + 1, 32);
 }
 
 // ======================================================================================================
@@ -416,7 +419,7 @@ function zskFoundryFar(rnd, th, f) {
     ctx.fillStyle = '#FFB060'; ctx.fillRect(x - w * .3, top - 3.6, w * .6, 1.4);
   });
   awWR(1000 + rnd() * 100, 60, rnd, (x) => awGear(x, 128, 44, 18, .3, { base: '#7A3E36', lit: '#C8704E', dark: '#4A2428', edge: '#E8946A', hub: '#5A2E30', hubLit: '#A05444' }));
-  hazeBand(f, th.haze, 130, FLOOR_TOP, .4);
+  zskHaze(th.haze, 130, FLOOR_TOP, .4);
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; // the glow of the melt rising behind the ramparts
   for (let i = 0; i < 5; i++) { const x = i * 256 + rnd() * 100; awWrap(x, 160, (x) => awSoft(x, 200, 160, 50, '255,110,40', .25)); }
   ctx.restore();
@@ -425,8 +428,8 @@ function zskFoundryFar(rnd, th, f) {
   for (let x = 0; x <= AW_W; x += 16) { const y = 196 + wy(x * 2) * .4; ctx.lineTo(x, y); ctx.lineTo(x + 4, y); ctx.lineTo(x + 8, y - 9); ctx.lineTo(x + 12, y); ctx.lineTo(x + 16, y); }
   ctx.lineTo(AW_W, FLOOR_TOP); ctx.closePath(); ctx.fill();
   for (let i = 0; i < 26; i++) { const x = rnd() * AW_W, y = 206 + rnd() * 22; awWrap(x, 4, (x) => { ctx.fillStyle = '#FFB060'; ctx.fillRect(x, y, 1.6, 2.6); }); }
-  hazeBand(f, th.haze, 170, FLOOR_TOP, .35);
-  { const g = ctx.createLinearGradient(0, 40, 0, 130); g.addColorStop(0, 'rgba(34,14,18,.55)'); g.addColorStop(1, 'rgba(34,14,18,0)'); ctx.fillStyle = g; ctx.fillRect(0, 40, AW_W, 90); } // smoke pooling under the roof
+  zskHaze(th.haze, 170, FLOOR_TOP, .35);
+  { const g = ctx.createLinearGradient(0, 40, 0, 130); g.addColorStop(0, 'rgba(34,14,18,.55)'); g.addColorStop(1, 'rgba(34,14,18,0)'); ctx.fillStyle = g; ctx.fillRect(0, 40, AW_W + 1, 90); } // smoke pooling under the roof
 }
 function zskFoundryMid(rnd) {
   AW_SUN = -1;
@@ -438,7 +441,7 @@ function zskFoundryMid(rnd) {
   const chainP = { dark: '#140C0C', lit: '#B07050' };
   const WT = 160; // the top of the furnace wall
   // the furnace wall: riveted plates warmed from below
-  { const g = ctx.createLinearGradient(0, WT, 0, FLOOR_TOP); g.addColorStop(0, '#30201F'); g.addColorStop(.6, '#4A2C26'); g.addColorStop(1, '#6E3A2A'); ctx.fillStyle = g; ctx.fillRect(0, WT, AW_W, FLOOR_TOP - WT); }
+  { const g = ctx.createLinearGradient(0, WT, 0, FLOOR_TOP); g.addColorStop(0, '#30201F'); g.addColorStop(.6, '#4A2C26'); g.addColorStop(1, '#6E3A2A'); ctx.fillStyle = g; ctx.fillRect(0, WT, AW_W + 1, FLOOR_TOP - WT); }
   let row = 0;
   for (let y = WT + 6; y < FLOOR_TOP; y += 22, row++) {
     for (const [x0, w] of awRow(rnd, 50, 90)) awWR(x0, w, rnd, (x, r) => {
@@ -448,11 +451,11 @@ function zskFoundryMid(rnd) {
       for (let ry = y + 4; ry < y + 21; ry += 5.5) awRivet(x + 3.4, ry, .7, '#C88262');
       if (r() < .4) { ctx.fillStyle = 'rgba(20,10,10,.35)'; ctx.fillRect(x + w * r(), y + 2, 2 + r() * 3, 14 + r() * 10); } // soot runs
     });
-    ctx.fillStyle = '#160E0E'; ctx.fillRect(0, y, AW_W, 1.6); ctx.fillStyle = 'rgba(230,130,80,.4)'; ctx.fillRect(0, y + 1.6, AW_W, .8);
+    ctx.fillStyle = '#160E0E'; ctx.fillRect(0, y, AW_W + 1, 1.6); ctx.fillStyle = 'rgba(230,130,80,.4)'; ctx.fillRect(0, y + 1.6, AW_W + 1, .8);
     for (let x = 3; x < AW_W; x += 6) awRivet(x, y + 4, .6, '#C88262');
   }
   // the crown along the top of the wall: a cornice, then a row of forged iron spikes, tall ones tipped with brass
-  ctx.fillStyle = '#1A1010'; ctx.fillRect(0, WT - 5, AW_W, 11); ctx.fillStyle = '#C27A5A'; ctx.fillRect(0, WT - 5, AW_W, 1); ctx.fillStyle = '#3E2A26'; ctx.fillRect(0, WT + 3, AW_W, 3);
+  ctx.fillStyle = '#1A1010'; ctx.fillRect(0, WT - 5, AW_W + 1, 11); ctx.fillStyle = '#C27A5A'; ctx.fillRect(0, WT - 5, AW_W + 1, 1); ctx.fillStyle = '#3E2A26'; ctx.fillRect(0, WT + 3, AW_W + 1, 3);
   for (let x = 0, k = 0; x < AW_W; x += 16, k++) {
     const tall = k % 4 === 0, mid = k % 2 === 0, sh = tall ? 30 : mid ? 18 : 11, sw = tall ? 4.4 : 3.4, cx = x + 8, b = WT - 5;
     ctx.fillStyle = '#140C0C'; awPath([cx - sw, b, cx - sw * .35, b - sh * .55, cx, b - sh, cx + sw * .35, b - sh * .55, cx + sw, b]); ctx.fill();
@@ -479,7 +482,7 @@ function zskFoundryMid(rnd) {
   for (const cx of cols) awWrap(cx, 20, (x) => zskGirder(x, 40, FLOOR_TOP, 24, iron));
   for (const cx of cols) awWrap(cx, 60, (x) => { ctx.strokeStyle = '#1E1414'; ctx.lineWidth = 5; ctx.lineCap = 'butt'; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(x + s * 12, 104); ctx.lineTo(x + s * 46, 66); } ctx.stroke(); ctx.strokeStyle = '#6A4434'; ctx.lineWidth = 2; ctx.stroke(); }); // knee braces
   awTruss(48, 22, { dark: '#1E1414', lit: '#C27A5A' });
-  { const g = ctx.createLinearGradient(0, 64, 0, 76); g.addColorStop(0, '#5A3E36'); g.addColorStop(1, '#1E1414'); ctx.fillStyle = g; ctx.fillRect(0, 66, AW_W, 10); ctx.fillStyle = '#D08A62'; ctx.fillRect(0, 66, AW_W, 1); for (let x = 4; x < AW_W; x += 8) awRivet(x, 71, .7, '#E0A070'); }
+  { const g = ctx.createLinearGradient(0, 64, 0, 76); g.addColorStop(0, '#5A3E36'); g.addColorStop(1, '#1E1414'); ctx.fillStyle = g; ctx.fillRect(0, 66, AW_W + 1, 10); ctx.fillStyle = '#D08A62'; ctx.fillRect(0, 66, AW_W + 1, 1); for (let x = 4; x < AW_W; x += 8) awRivet(x, 71, .7, '#E0A070'); }
   // chains from the beam: hooks, and crucibles of melt slung over the furnaces
   for (let i = 0; i < 7; i++) { const x = rnd() * AW_W, len = 40 + rnd() * 70; awWrap(x, 8, (x) => {
     zskChain(x, 76, x, 76 + len, chainP);
@@ -500,15 +503,15 @@ function zskFoundryMid(rnd) {
   });
   for (const [x, lean] of [[cols[1] - 60, 1], [cols[3] + 46, 1.4], [cols[2] + 40, .8]]) awWrap(x, 60, (x) => { ctx.fillStyle = '#140C0C'; ctx.fillRect(x - 3, 176, 6, 12); ctx.fillStyle = '#8A5E30'; ctx.fillRect(x - 4, 175, 8, 2); zskSteam(x, 174, 64, lean); });
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; // furnace light washing up the foot of the wall
-  { const g = ctx.createLinearGradient(0, 180, 0, FLOOR_TOP); g.addColorStop(0, 'rgba(255,110,40,0)'); g.addColorStop(1, 'rgba(255,110,40,.22)'); ctx.fillStyle = g; ctx.fillRect(0, 180, AW_W, FLOOR_TOP - 180); }
+  { const g = ctx.createLinearGradient(0, 180, 0, FLOOR_TOP); g.addColorStop(0, 'rgba(255,110,40,0)'); g.addColorStop(1, 'rgba(255,110,40,.22)'); ctx.fillStyle = g; ctx.fillRect(0, 180, AW_W + 1, FLOOR_TOP - 180); }
   ctx.restore();
 }
 
 function zskFoundryFloor(rnd, th) {
   const T = FLOOR_TOP; zskGrates = [];
-  { const g = ctx.createLinearGradient(0, T - 4, 0, VH); g.addColorStop(0, '#4A3230'); g.addColorStop(.4, '#2E2020'); g.addColorStop(1, '#140E0E'); ctx.fillStyle = g; ctx.fillRect(0, T - 14, AW_W, VH - T + 14); }
+  { const g = ctx.createLinearGradient(0, T - 4, 0, VH); g.addColorStop(0, '#4A3230'); g.addColorStop(.4, '#2E2020'); g.addColorStop(1, '#140E0E'); ctx.fillStyle = g; ctx.fillRect(0, T - 14, AW_W + 1, VH - T + 14); }
   // the kerb at the foot of the wall: riveted iron, bollards, ingots stacked against it
-  ctx.fillStyle = '#1E1414'; ctx.fillRect(0, T - 14, AW_W, 15); ctx.fillStyle = '#5A3C34'; ctx.fillRect(0, T - 14, AW_W, 4); ctx.fillStyle = '#D08A62'; ctx.fillRect(0, T - 14, AW_W, .9);
+  ctx.fillStyle = '#1E1414'; ctx.fillRect(0, T - 14, AW_W + 1, 15); ctx.fillStyle = '#5A3C34'; ctx.fillRect(0, T - 14, AW_W + 1, 4); ctx.fillStyle = '#D08A62'; ctx.fillRect(0, T - 14, AW_W + 1, .9);
   for (let x = 3; x < AW_W; x += 7) awRivet(x, T - 6, .7, '#C88262');
   for (let x = 80; x < AW_W; x += 160) { ctx.fillStyle = '#140C0C'; ctx.fillRect(x - 5, T - 24, 10, 12); ctx.fillStyle = '#4E3632'; ctx.fillRect(x - 5, T - 24, 3, 12); ctx.fillStyle = '#C8903E'; ell(x, T - 24, 6, 2); ctx.fill(); ctx.fillStyle = '#FFD08A'; ell(x - 1.5, T - 24.6, 2.6, .8); ctx.fill(); }
   for (let i = 0; i < 3; i++) awWR(200 + i * 427 + rnd() * 80, 24, rnd, (x, r) => {
@@ -517,17 +520,17 @@ function zskFoundryFloor(rnd, th) {
   });
   // the slag channel along the back: crusted banks, a molten core, dark floes drifting
   const C0 = T + 2, C1 = T + 12;
-  ctx.fillStyle = '#120A0A'; ctx.fillRect(0, C0, AW_W, C1 - C0);
-  { const g = ctx.createLinearGradient(0, C0 + 1, 0, C1 - 1); g.addColorStop(0, '#C0401A'); g.addColorStop(.45, '#FFC050'); g.addColorStop(.6, '#FFE890'); g.addColorStop(1, '#D05420'); ctx.fillStyle = g; ctx.fillRect(0, C0 + 1.6, AW_W, C1 - C0 - 3); }
+  ctx.fillStyle = '#120A0A'; ctx.fillRect(0, C0, AW_W + 1, C1 - C0);
+  { const g = ctx.createLinearGradient(0, C0 + 1, 0, C1 - 1); g.addColorStop(0, '#C0401A'); g.addColorStop(.45, '#FFC050'); g.addColorStop(.6, '#FFE890'); g.addColorStop(1, '#D05420'); ctx.fillStyle = g; ctx.fillRect(0, C0 + 1.6, AW_W + 1, C1 - C0 - 3); }
   for (let i = 0; i < 70; i++) { const x = rnd() * AW_W, w = 3 + rnd() * 9, yy = C0 + 2.5 + rnd() * 5; awWrap(x, w, (x) => { ctx.fillStyle = rnd() < .5 ? 'rgba(70,24,12,.8)' : 'rgba(110,36,14,.6)'; ell(x, yy, w, .8 + rnd() * .8); ctx.fill(); ctx.fillStyle = 'rgba(255,220,140,.6)'; ctx.fillRect(x - w * .6, yy - 1, w * 1.2, .4); }); }
   for (let x = 0; x < AW_W; x += 4) awWrap(x, 6, (x) => { dab(x, C0 + .8, 1.8 + rnd() * 1.4, '#241414', 1); dab(x + 2, C1 - .8, 1.8 + rnd() * 1.4, '#1E1212', 1); });
-  ctx.save(); ctx.globalCompositeOperation = 'lighter'; { const g = ctx.createLinearGradient(0, C1, 0, C1 + 30); g.addColorStop(0, 'rgba(255,120,40,.3)'); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.fillRect(0, C1, AW_W, 30);
-    const g2 = ctx.createLinearGradient(0, C0 - 26, 0, C0); g2.addColorStop(0, 'rgba(255,120,40,0)'); g2.addColorStop(1, 'rgba(255,120,40,.3)'); ctx.fillStyle = g2; ctx.fillRect(0, C0 - 26, AW_W, 26); }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; { const g = ctx.createLinearGradient(0, C1, 0, C1 + 30); g.addColorStop(0, 'rgba(255,120,40,.3)'); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.fillRect(0, C1, AW_W + 1, 30);
+    const g2 = ctx.createLinearGradient(0, C0 - 26, 0, C0); g2.addColorStop(0, 'rgba(255,120,40,0)'); g2.addColorStop(1, 'rgba(255,120,40,.3)'); ctx.fillStyle = g2; ctx.fillRect(0, C0 - 26, AW_W + 1, 26); }
   ctx.restore();
   // riveted deck plates, larger toward us, heat-tinted and scorched; the near ones fall into shadow
   let y = C1 + .5, h = 13, row = 0;
   while (y < VH) {
-    ctx.fillStyle = '#0E0808'; ctx.fillRect(0, y, AW_W, h);
+    ctx.fillStyle = '#0E0808'; ctx.fillRect(0, y, AW_W + 1, h);
     const warm = Math.max(0, 1 - row * .22);
     for (const [x0, w] of awRow(rnd, h * 3.4, h * 6)) awWR(x0, w, rnd, (x, r) => {
       const base = ['#4A3836', '#433230', '#503C38', '#3E302E', '#48383A'][Math.floor(r() * 5)], col = awMix(base, '#1A1212', row * .08);
@@ -551,7 +554,7 @@ function zskFoundryFloor(rnd, th) {
     });
     y += h; h += 4.4; row++;
     if (y < VH - 4) { // an iron strap riveted across the joint
-      const sh2 = 2.6 + row * .5; ctx.fillStyle = '#1A1010'; ctx.fillRect(0, y - .6, AW_W, sh2 + 1); ctx.fillStyle = '#4E3632'; ctx.fillRect(0, y, AW_W, sh2 - .4); ctx.fillStyle = `rgba(255,170,110,${.2 + .3 * warm})`; ctx.fillRect(0, y, AW_W, .6);
+      const sh2 = 2.6 + row * .5; ctx.fillStyle = '#1A1010'; ctx.fillRect(0, y - .6, AW_W + 1, sh2 + 1); ctx.fillStyle = '#4E3632'; ctx.fillRect(0, y, AW_W + 1, sh2 - .4); ctx.fillStyle = `rgba(255,170,110,${.2 + .3 * warm})`; ctx.fillRect(0, y, AW_W + 1, .6);
       for (let x = 3; x < AW_W; x += 5 + row) awRivet(x, y + sh2 * .45, .45 + row * .1, '#C08A70');
       y += sh2 + .4;
     }
@@ -570,7 +573,7 @@ function zskFoundryFloor(rnd, th) {
   }
   // lumps of cooled slag along the back
   for (let i = 0; i < 9; i++) awWR(rnd() * AW_W, 12, rnd, (x, r) => { const w = 4 + r() * 6, yy = T + 15 + r() * 6; awFillPts([x - w, yy, x - w * .6, yy - w * .6, x + w * .3, yy - w * .7, x + w, yy], '#1E1414'); awFillPts([x - w * .6, yy - w * .6, x + w * .3, yy - w * .7, x + w * .1, yy - w * .3], '#8A4A30', .8); dab(x, yy - 1, 1.2, '#FFA040', .9); });
-  const sh = ctx.createLinearGradient(0, VH - 40, 0, VH); sh.addColorStop(0, 'rgba(10,4,4,0)'); sh.addColorStop(1, 'rgba(10,4,4,.55)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 40, AW_W, 40);
+  const sh = ctx.createLinearGradient(0, VH - 40, 0, VH); sh.addColorStop(0, 'rgba(10,4,4,0)'); sh.addColorStop(1, 'rgba(10,4,4,.55)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 40, AW_W + 1, 40);
 }
 
 // ======================================================================================================
