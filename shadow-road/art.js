@@ -169,6 +169,42 @@ function drawWeapon(kind, pose) {
     }
     if (!pose.noHand) gripHand(hand); return;
   }
+  if (kind === 'sword' && tier <= 4) {
+    // the hero's great sword, a different blade at each level: 1 a plain iron greatsword, 2 a steel claymore with a
+    // downswept guard and a dark fuller, 3 a gilded zweihänder with a winged guard, a gem and parrying hooks,
+    // 4 a frost flamberge, its wavy blade lit with runes. (Level 5, the black shadow blade, is drawn below.)
+    const len = [64, 67, 70, 72][tier - 1], x0 = 20, tip = x0 + len + 6;
+    limb([6, 0, 17, 0], ['#5A3A2A', '#3A2A20', '#5A1E22', '#2A3444'][tier - 1], 4); // grip
+    ctx.fillStyle = C(['#8E96A8', '#A8B0C2', '#D8AA55', '#9FB4C8'][tier - 1]); circle(5, 0, tier >= 3 ? 3.6 : 2.8); ctx.fill(); outline(1); // pommel
+    const bc = ['#B8BEC8', '#DCE2EC', '#ECF0F8', '#CFE6F4'][tier - 1];
+    ctx.beginPath();
+    if (tier === 4) { // a flame-shaped edge, rippling along both sides
+      const n = 7; ctx.moveTo(x0, -5);
+      for (let k = 1; k <= n; k++) { const x = x0 + len * k / n, w = 5 - k * .25; ctx.quadraticCurveTo(x - len / n / 2, -w - 2.2, x, -w); }
+      ctx.lineTo(tip + 2, 0);
+      for (let k = n; k >= 1; k--) { const x = x0 + len * (k - 1) / n, w = 5 - (k - 1) * .25; ctx.quadraticCurveTo(x + len / n / 2, w + 2.2, x, w); }
+    } else { const w = tier === 3 ? 6 : 5; ctx.moveTo(x0, -w); ctx.lineTo(x0 + len, -3); ctx.lineTo(tip, 0); ctx.lineTo(x0 + len, 3); ctx.lineTo(x0, w); }
+    ctx.closePath();
+    const bg = ctx.createLinearGradient(0, -6, 0, 6); bg.addColorStop(0, C(shade(bc, .35))); bg.addColorStop(.5, C(bc)); bg.addColorStop(1, C(shade(bc, -.25)));
+    ctx.fillStyle = bg; ctx.fill(); outline(1.8);
+    ctx.fillStyle = C('#FFFFFF'); ctx.fillRect(x0 + 2, -3, len - 4, 1.2); // the edge catching light
+    if (tier >= 2) { ctx.fillStyle = C(tier === 4 ? '#7F9AB8' : shade(bc, -.4)); ctx.fillRect(x0 + 4, -.6, len * .72, 1.4); } // fuller
+    if (tier === 1) { rrect(16, -8, 4, 16, 1.5); ctx.fillStyle = C('#7E8494'); ctx.fill(); outline(1.4); }
+    else if (tier === 2) { // downswept quillons ending in knobs
+      ctx.strokeStyle = C('#A8B0C2'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(14, -12); ctx.quadraticCurveTo(19, -6, 19, 0); ctx.quadraticCurveTo(19, 6, 14, 12); ctx.stroke();
+      ctx.fillStyle = C('#E2E8F2'); circle(14, -12, 2.2); ctx.fill(); circle(14, 12, 2.2); ctx.fill();
+    } else if (tier === 3) {
+      ctx.fillStyle = C('#D8AA55'); ctx.beginPath(); ctx.moveTo(18, -4); ctx.lineTo(13, -14); ctx.lineTo(22, -5); ctx.lineTo(22, 5); ctx.lineTo(13, 14); ctx.lineTo(18, 4); ctx.closePath(); ctx.fill(); outline(1.2); // winged guard
+      poly([30, -6, 33, -10, 35, -6], '#D8AA55', 1); poly([30, 6, 33, 10, 35, 6], '#D8AA55', 1); // parrying hooks
+      glow('#E86A80', 8, () => { ctx.fillStyle = C('#C8304A'); circle(20, 0, 2.3); ctx.fill(); });
+    } else { // a curved guard of blue steel, and frost runes down the blade
+      ctx.strokeStyle = C('#7F9AB8'); ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(22, -13); ctx.quadraticCurveTo(15, -6, 19, 0); ctx.quadraticCurveTo(15, 6, 22, 13); ctx.stroke();
+      for (let x = 28; x < 14 + len; x += 9) glowRune(x, -.8, 4, 1.6, '#9FE8F0');
+      aura('rgba(159,232,240,.14)', () => rrect(16, -10, len + 14, 20, 9));
+    }
+    if (pose && pose.glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .55; ctx.fillStyle = pose.glow; rrect(16, -10, len + 14, 20, 8); ctx.fill(); ctx.restore(); }
+    return;
+  }
   if (kind === 'sword' || kind === 'blade' || kind === 'prism') {
     const hero = kind === 'sword', len = hero ? 64 + (tier >= 4 ? 8 : tier >= 2 ? 3 : 0) : 44;
     const bc = kind === 'prism' ? '#C9F6FF' : kind === 'blade' ? '#BFF5EF' : ['#C8CCD4', '#E2E8F2', '#E8F0FF', '#DDE6FF', '#2A2236'][tier - 1];
