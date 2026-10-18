@@ -351,7 +351,7 @@ function startStage(i) {
   setZoom(VIEW_NORMAL);
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
-  runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stag = null; brandT = 0;
+  runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stags = []; phoenixT = 0; brandT = 0;
   // each run, a random enemy in a random wave carries each weapon this world can give
   // weapons you don't own yet, in a random order: any of them can turn up in any world
   carriers = [];

@@ -25,7 +25,7 @@ const freshSave = () => ({
   owned: { fists: true, hammer: false, staff: false, sword: false, rapier: false },
   wl: { fists: 1, hammer: 1, staff: 1, sword: 1, rapier: 1 },
   armor: 1, weapon: 'fists', pity: {},
-  trumps: { stag: false, brand: false, mirror: false, phoenix: false, stillness: false }, trump: null,
+  trumps: { stag: false, brand: false, mirror: false, phoenix: false, stillness: false }, trump: null, tlv: {},
 });
 let save = freshSave();
 try {

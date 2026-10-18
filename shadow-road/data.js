@@ -220,5 +220,14 @@ const TRUMPS = {
   stillness: { name: 'The Still Hour', cost: 4, desc: 'Freeze every enemy for 5 seconds. Frozen enemies take double damage.' },
 };
 const TRUMP_ORDER = ['stag', 'brand', 'mirror', 'phoenix', 'stillness'];
+// each card can be inscribed twice more, at great cost, for a stronger effect
+const TRUMP_UP = {
+  stag:      ['A second stag charges down the next lane.', 'A herd of three, and the last wheels round and runs back.'],
+  brand:     ['20 seconds; fire burns hotter, frost freezes on the third hit, lightning leaps to three.', 'All three elements at once.'],
+  mirror:    ['14 seconds, and the reflection hits harder.', 'Two reflections, one on either side of you.'],
+  phoenix:   ['Heal 70%; a wider, fiercer blast.', 'Heal fully, and burn with a flame that scorches everything near you for 6 seconds.'],
+  stillness: ['7 seconds.', '9 seconds, and frozen enemies take triple damage.'],
+};
+const TL = (id) => save.tlv[id] || 1; // a card's inscribed level, 1-3
 const ELEMENTS = { fire: { name: 'Fire Brand', col: '#FF8A4A', rgb: '255,138,74' }, frost: { name: 'Frost Brand', col: '#9FE0FF', rgb: '159,224,255' }, storm: { name: 'Storm Brand', col: '#E8E0FF', rgb: '200,190,255' } };
 const TRUMP_CHARGE = 240; // damage you must deal to charge a card

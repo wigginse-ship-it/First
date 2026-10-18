@@ -108,6 +108,7 @@ const cyc = () => 1 + .5 * (save.cycle || 0);
 const WMAX = () => save.cycle > 0 ? 12 : 6; // past level 6 (new cycles only) each level is a plain damage bump
 const wCost = (lvl) => lvl < 6 ? { s: Math.round((45 * lvl + 12 * lvl * lvl) * cyc()), g: lvl >= 2 ? Math.round((lvl - 1) * 1.5 * cyc()) : 0 } : { s: Math.round((320 + 90 * (lvl - 6)) * cyc()), g: Math.round((5 + 2 * (lvl - 6)) * cyc()) };
 const aCost = (lvl) => ({ s: Math.round((50 * lvl + 10 * lvl * lvl) * cyc()), g: lvl >= 3 ? Math.round((lvl - 2) * 2 * cyc()) : 0 });
+const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
   mode = 'forge'; showOnly('forgeOv'); playMusic('title');
@@ -154,13 +155,18 @@ function renderForge(note) {
   for (const id of TRUMP_ORDER) {
     const tc = TRUMPS[id], has = save.trumps[id], on = save.trump === id;
     const d2 = document.createElement('div'); d2.className = 'card' + (on ? ' on' : '');
-    d2.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${has ? (on ? 'IN YOUR HAND' : 'INSCRIBED') : `COSTS ${tc.cost} ✦`}</div><div class="nm">${tc.name}</div><p>${tc.desc}</p>
-      <button class="buy pink" type="button" ${!has && save.sigils < tc.cost ? 'disabled' : ''}>${has ? (on ? 'Put it away' : 'Take it into battle') : `Inscribe · ${tc.cost} ✦`}</button>`;
+    const lv = TL(id), uc = tCost(lv), ucan = has && lv < 3 && save.shards >= uc.s && save.sigils >= uc.g, roman = ['', 'I', 'II', 'III'];
+    const ups = TRUMP_UP[id].map((u, i) => `<li class="${lv >= i + 2 ? 'got' : lv === i + 1 ? 'next' : ''}"><b>${roman[i + 2]}</b> ${u}</li>`).join('');
+    d2.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${has ? (on ? 'IN YOUR HAND' : 'INSCRIBED') + ' · ' + roman[lv] : `COSTS ${Math.round(tc.cost * cyc())} ✦`}</div><div class="nm">${tc.name}</div><p>${tc.desc}</p><ul>${ups}</ul>
+      <button class="buy pink" type="button" ${!has && save.sigils < Math.round(tc.cost * cyc()) ? 'disabled' : ''}>${has ? (on ? 'Put it away' : 'Take it into battle') : `Inscribe · ${Math.round(tc.cost * cyc())} ✦`}</button>
+      ${has && lv < 3 ? `<button class="buy up" type="button" ${ucan ? '' : 'disabled'}>Inscribe again → ${roman[lv + 1]} · ${costTxt(uc)}</button>` : ''}`;
     drawTrumpArt(d2.querySelector('canvas'), id);
     d2.querySelector('button').addEventListener('click', () => {
-      if (!has) { if (save.sigils < tc.cost) return; save.sigils -= tc.cost; save.trumps[id] = true; save.trump = id; sfx('trump'); persist(); renderForge(`${tc.name} inscribed and in your hand.`); return; }
+      if (!has) { const cost = Math.round(tc.cost * cyc()); if (save.sigils < cost) return; save.sigils -= cost; save.trumps[id] = true; save.trump = id; sfx('trump'); persist(); renderForge(`${tc.name} inscribed and in your hand.`); return; }
       save.trump = on ? null : id; persist(); sfx('buy'); renderForge(on ? `${tc.name} put away.` : `${tc.name} is in your hand.`);
     });
+    const ub = d2.querySelector('button.up');
+    if (ub) ub.addEventListener('click', () => { if (!ucan) return; save.shards -= uc.s; save.sigils -= uc.g; save.tlv[id] = lv + 1; persist(); sfx('trump'); renderForge(`${tc.name} inscribed again: level ${roman[lv + 1]}.`); });
     tw.appendChild(d2);
   }
   $('#forgeNote').textContent = note || '';

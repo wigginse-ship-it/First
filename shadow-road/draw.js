@@ -384,7 +384,7 @@ function drawScene(t) {
   for (const p of props) box(p.x, p.y, 0, 60, 100);
   for (const k of loot) box(k.x, k.y, k.z || 0, 40, 50);
   for (const p of projs) box(p.x, p.y, p.z || 0, 50, 50);
-  if (stag) box(stag.x, stag.y, 0, 90, 130);
+  for (const s of stags) box(s.x, s.y, 0, 90, 130);
   mechBoxes(box);
   inkBegin(boxes);
   corpses.forEach((c, i) => { c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; drawDeath(c, t); });
@@ -397,6 +397,7 @@ function drawScene(t) {
     if (g.dark) { TINT = '#2A1840'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .75); TINT = null; }
     else { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .6); }
   })]);
+  if (mirrorT > 0 && TL('mirror') >= 3) list.push([P.y - .06, () => onMain(() => { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(P.x + P.facing * 34, P.y - 6, P.z, -P.facing, playerPose(), .45); })]);
   if (mirrorT > 0) list.push([P.y - .05, () => onMain(() => { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(P.x - P.facing * 34, P.y - 6, P.z, P.facing, playerPose(), .55); })]);
   list.push([P.y + .1, () => {
     shadow(P.x, P.y, 13 * Math.max(.5, 1 - P.z / 220));
@@ -406,7 +407,7 @@ function drawScene(t) {
     hatchActor(P.x, P.y - P.z, 13, 50);
   }]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
-  if (stag) list.push([stag.y + .2, () => drawStag(stag, t)]);
+  for (const s of stags) list.push([s.y + .2, () => { ctx.save(); if (s.dir < 0) { ctx.translate(s.x * 2, 0); ctx.scale(-1, 1); } drawStag(s, t); ctx.restore(); }]);
   mechList(list, t);
   list.sort((a, b) => a[0] - b[0]).forEach(o => o[1]());
   inkEnd(t);

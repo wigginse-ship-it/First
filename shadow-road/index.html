@@ -94,51 +94,149 @@
   @keyframes glow { to { box-shadow: 0 0 8px var(--petal), 0 0 14px var(--gold); } }
   #app.nocontrols #controls, #app.port #controls { display: none; }
 
-  .ov { position: absolute; inset: 0; z-index: 5; overflow-y: auto; touch-action: pan-y;
-    background: radial-gradient(ellipse at 50% -10%, rgba(232,170,110,.42), transparent 60%), radial-gradient(ellipse at 0% 100%, rgba(90,110,170,.35), transparent 55%), linear-gradient(#3A2A4E, #15111F);
-    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px; }
-  .ov.glass { background: rgba(21,17,31,.82); }
-  /* menus are painted on the same paper as the game: the paper's tooth and dried watercolor blooms laid over the color */
-  .paper .ov { background-image: var(--wash), var(--paper), radial-gradient(ellipse at 50% -10%, rgba(232,170,110,.42), transparent 60%), radial-gradient(ellipse at 0% 100%, rgba(90,110,170,.35), transparent 55%), linear-gradient(#3A2A4E, #15111F);
-    background-blend-mode: normal, multiply, normal, normal, normal; background-size: 512px 256px, 256px 256px, auto, auto, auto; }
-  .paper .ov.glass { background: var(--paper) rgba(21,17,31,.82); background-blend-mode: multiply; background-size: 256px 256px; }
-  .paper .card { background-image: var(--wash), var(--paper), linear-gradient(170deg, var(--panel2), var(--ink) 80%); background-blend-mode: normal, multiply, normal; background-size: 512px 256px, 256px 256px, auto; }
-  .wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 14px; justify-items: center; text-align: center; }
+  /* ===== The menus are a card table. Every panel is a card from the same deck as the game's frame (frameOrnate in
+     paint.js): black lacquer raked with fine engraved lines, embossed gold-foil rules, a garnet boss in each corner.
+     Buttons are smaller gilded cards; forge items are a hand of cards; card backs are a garnet lattice.
+     menu_fx.js deals the cards in whenever an overlay appears, and flips the title card over from face down. ===== */
+  :root {
+    --foil: linear-gradient(125deg, #5E3F12 0%, #E2BE66 9%, #FFF2BE 14%, #C08F38 22%, #6A4A18 36%, #D6AE58 50%, #FFF0B4 56%, #B0812D 65%, #73521C 80%, #E8C878 92%, #6A4A18 100%);
+    --lacq: linear-gradient(150deg, #221A15, #0C0A08 55%, #19130E);
+    --engrave: repeating-linear-gradient(45deg, rgba(255,226,160,.045) 0 1px, transparent 1px 5px);
+    --rim: rgba(214,174,88,.8);
+    /* a garnet boss set in gold, one per corner of a card (positions are inside its border) */
+    --boss: radial-gradient(circle, #F4B0A8 0 .9px, #A8202E 1.7px, #4A0610 3.3px, #FFEBAE 3.8px, #C99A44 4.6px, #6A4A18 5.4px, rgba(0,0,0,.55) 6px, transparent 6.6px);
+    --back: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' fill='%233A0B15'/%3E%3Cpath d='M14 0L28 14L14 28L0 14Z' fill='none' stroke='%23C9A050' stroke-opacity='.5' stroke-width='.8'/%3E%3Cpath d='M14 9.5l1.4 3.1 3.1 1.4-3.1 1.4L14 18.5l-1.4-3.1-3.1-1.4 3.1-1.4z' fill='%23D6AE58' fill-opacity='.65'/%3E%3Cg fill='%23E8C878' fill-opacity='.8'%3E%3Ccircle r='1.5'/%3E%3Ccircle cx='28' r='1.5'/%3E%3Ccircle cy='28' r='1.5'/%3E%3Ccircle cx='28' cy='28' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+    --medal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='-50 -50 100 100'%3E%3Ccircle r='44' fill='%23160609' stroke='%23D6AE58' stroke-width='3'/%3E%3Ccircle r='38' fill='none' stroke='%23D6AE58' stroke-opacity='.6'/%3E%3Cpath d='M0-32L7-7 32 0 7 7 0 32-7 7-32 0-7-7z' fill='%23E2BE66'/%3E%3Cpath d='M0-18L4-4 18 0 4 4 0 18-4 4-18 0-4-4z' fill='%238A1A28' transform='rotate(45)'/%3E%3Ccircle r='4' fill='%23FFF0B4'/%3E%3C/svg%3E");
+    --damask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23E2BE66' stroke-opacity='.06' stroke-width='1.2'%3E%3Cpath d='M36 10c5 9 14 11 14 20s-9 11-14 6c-5 5-14 3-14-6s9-11 14-20z'/%3E%3Cpath d='M36 36v18M28 48c4 0 8 2 8 6 0-4 4-6 8-6'/%3E%3Cpath d='M0 0c6 4 6 10 0 14M72 0c-6 4-6 10 0 14M0 72c6-4 6-10 0-14M72 72c-6-4-6-10 0-14'/%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* the table: garnet-black velvet under a warm lamp, a faint woven damask in it */
+  .ov { position: absolute; inset: 0; z-index: 5; overflow-y: auto; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: #8A6A2E transparent;
+    background: var(--damask), radial-gradient(ellipse 75% 65% at 50% 38%, #3E2337 0%, #241321 52%, #0D070C 100%);
+    background-size: 72px 72px, auto;
+    padding-left: max(22px, env(safe-area-inset-left, 0px)); padding-right: max(22px, env(safe-area-inset-right, 0px)); padding-block: 22px; }
+  .ov.glass { background: var(--damask), radial-gradient(ellipse 80% 70% at 50% 45%, rgba(40,20,34,.78), rgba(10,6,10,.9)); background-size: 72px 72px, auto; }
+  .paper .ov { background-image: var(--damask), var(--paper), radial-gradient(ellipse 75% 65% at 50% 38%, #3E2337 0%, #241321 52%, #0D070C 100%);
+    background-blend-mode: normal, multiply, normal; background-size: 72px 72px, 256px 256px, auto; }
+  .paper .ov.glass { background-image: var(--damask), radial-gradient(ellipse 80% 70% at 50% 45%, rgba(40,20,34,.78), rgba(10,6,10,.9)); background-blend-mode: normal; background-size: 72px 72px, auto; }
+  /* while the table is out, the screen gets the same lacquer-and-gold edge as the game's own frame */
+  #app.mfx-table::after { content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; border: 7px solid #0D0A08;
+    outline: 1px solid rgba(214,174,88,.75); outline-offset: -4px;
+    box-shadow: inset 0 0 0 1.5px #C9A050, inset 0 0 0 3px rgba(0,0,0,.75), inset 0 0 0 4px rgba(214,174,88,.3), inset 0 0 36px rgba(0,0,0,.55);
+    background: var(--boss) 0 0 / 16px 16px no-repeat, var(--boss) 100% 0 / 16px 16px no-repeat, var(--boss) 0 100% / 16px 16px no-repeat, var(--boss) 100% 100% / 16px 16px no-repeat; background-origin: padding-box; }
+
+  .wrap { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; justify-items: center; text-align: center; }
   .center { align-content: center; min-height: 100%; }
-  .logo { font: 700 clamp(40px, 9vw, 80px) var(--title); line-height: 1.05; margin: 4px 0 0; color: var(--text); text-wrap: balance;
-    text-shadow: 0 3px 0 #3A2440, 0 0 30px rgba(216,170,85,.45); }
-  .logo em { font-style: normal; color: var(--gold); }
-  .kicker { font: 700 12px var(--label); letter-spacing: .24em; color: var(--gold); }
-  .lede { margin: 0; max-width: 54ch; line-height: 1.55; color: var(--soft); font-size: 16px; }
-  .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-  .cta { font: 700 15px var(--label); letter-spacing: .06em; padding: 12px 26px; border-radius: 6px; cursor: pointer; background: linear-gradient(#E6BE6E, #C2913E); color: #2A1A0A; border: 0; box-shadow: 0 3px 0 #7A5420, 0 6px 18px rgba(0,0,0,.35); }
-  .cta.alt { background: rgba(255,255,255,.08); color: var(--text); border: 2px solid var(--line); box-shadow: none; }
-  .cta:focus-visible, .pause:focus-visible, .btn:focus-visible, .buy:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
-  .howto { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; width: 100%; text-align: left; }
-  .howto div { background: rgba(21,17,31,.55); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 13px; line-height: 1.4; color: var(--soft); }
-  .howto b { display: block; font: 700 11px var(--label); letter-spacing: .1em; color: var(--gold); margin-bottom: 2px; }
+
+  /* ----- a card: lacquer face in a gold-foil edge, a double inner rule, bosses in the corners ----- */
+  .face, .card { position: relative; border: 2px solid transparent; border-radius: 12px; min-width: 0;
+    background: var(--engrave) padding-box, radial-gradient(ellipse 120% 55% at 50% 0%, rgba(130,64,52,.26), transparent 70%) padding-box, var(--lacq) padding-box, var(--foil) border-box;
+    box-shadow: inset 0 1px 0 rgba(255,240,190,.12), 0 1px 0 rgba(0,0,0,.7), 0 12px 26px -8px rgba(0,0,0,.75); }
+  .face::before, .card::before { content: ""; position: absolute; inset: 6px; border-radius: 7px; border: 1px solid var(--rim); outline: 1px solid rgba(214,174,88,.3); outline-offset: 2px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.55); pointer-events: none; }
+  .face::after, .card::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: var(--boss) 0 0 / 13px 13px no-repeat, var(--boss) 100% 0 / 13px 13px no-repeat, var(--boss) 0 100% / 13px 13px no-repeat, var(--boss) 100% 100% / 13px 13px no-repeat; }
+  /* the corner index: a numeral over its suit, like a trump's arcana mark */
+  .pip { position: absolute; top: 13px; left: 12px; z-index: 1; display: grid; justify-items: center; gap: 1px; line-height: 1; pointer-events: none;
+    font: 700 11px var(--label); letter-spacing: .02em; color: #EBCB7C; text-shadow: 0 1px 0 #000; }
+  .pip i { font-style: normal; font-size: 11px; color: #D24A5C; }
+  .pip.tr { left: auto; right: 12px; } .pip.br { top: auto; left: auto; right: 12px; bottom: 13px; transform: rotate(180deg); } .pip.bl { top: auto; bottom: 13px; transform: rotate(180deg); }
+  /* the back of a card */
+  .cardback { border: 2px solid transparent; border-radius: 12px;
+    background: var(--medal) center / min(46%, 120px) auto no-repeat padding-box, radial-gradient(ellipse at 50% 50%, rgba(255,200,120,.18), transparent 70%) padding-box, var(--back) center / 28px 28px padding-box, var(--foil) border-box;
+    box-shadow: inset 0 0 0 5px #160609, inset 0 0 0 6px rgba(214,174,88,.8), inset 0 0 0 8px #160609, inset 0 0 0 9px rgba(214,174,88,.45), 0 10px 24px -8px rgba(0,0,0,.8); }
+  .flipback { display: none; position: absolute; inset: -2px; z-index: 4; pointer-events: none; }
+
+  /* ----- type ----- */
+  .logo { font: 700 clamp(34px, min(8.4vw, 15vh), 80px) var(--title); line-height: 1.02; margin: 0; color: var(--text); text-wrap: balance;
+    text-shadow: 0 2px 0 #2A0E18, 0 3px 0 rgba(0,0,0,.6), 0 0 26px rgba(216,170,85,.35); }
+  .logo em { font-style: normal; color: #E2BE66; background: linear-gradient(#FFF2BE, #E8C878 35%, #B0812D 70%, #E2BE66); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    text-shadow: none; filter: drop-shadow(0 2px 0 #2A0E18) drop-shadow(0 0 14px rgba(216,170,85,.35)); }
+  .kicker { display: flex; align-items: center; justify-content: center; gap: 10px; font: 700 12px var(--label); letter-spacing: .24em; color: var(--gold); }
+  .kicker::before, .kicker::after { content: ""; width: clamp(18px, 5vw, 44px); height: 5px; flex: none;
+    background: radial-gradient(circle, #E2BE66 0 2px, transparent 2.5px) center / 5px 5px no-repeat, linear-gradient(90deg, transparent, #C9A050) center / 100% 1px no-repeat; }
+  .kicker::after { transform: scaleX(-1); }
+  .lede { margin: 0; max-width: 58ch; line-height: 1.55; color: var(--soft); font-size: 16px; text-wrap: pretty; }
   .small { font-size: 12.5px; color: var(--soft); margin: 0; }
-  .h2 { font: 700 clamp(26px, 5.5vw, 42px) var(--title); margin: 0; color: var(--text); text-shadow: 0 2px 0 #3A2440, 0 0 20px rgba(216,170,85,.4); }
-  .h3 { font: 700 19px var(--label); margin: 8px 0 0; color: var(--gold); }
-  .matbar { display: flex; gap: 18px; font: 700 15px var(--label); }
+  .h2 { font: 700 clamp(24px, min(5.2vw, 9vh), 42px) var(--title); margin: 0; color: var(--text); line-height: 1.1; text-wrap: balance; text-shadow: 0 2px 0 #2A0E18, 0 0 20px rgba(216,170,85,.35); }
+  /* section titles are engraved plaques laid on the table */
+  .h3 { display: inline-flex; align-items: center; gap: 10px; font: 700 15px var(--label); letter-spacing: .14em; text-transform: uppercase; margin: 10px 0 0; padding: 6px 18px; color: #EBCB7C;
+    border: 1.5px solid transparent; border-radius: 5px; background: var(--engrave) padding-box, var(--lacq) padding-box, var(--foil) border-box;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,.6), inset 0 0 0 3px rgba(214,174,88,.35), 0 6px 14px -6px rgba(0,0,0,.8); text-shadow: 0 1px 0 #000; }
+  .h3::before, .h3::after { content: "\2726"; font-size: 9px; color: #D24A5C; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .note { font-size: 13px; font-weight: 700; color: var(--mint); min-height: 18px; }
+  .note:empty { display: none; }
+  .matbar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; font: 700 14px var(--label); }
+  .matbar > span { padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,.4); border: 1px solid rgba(214,174,88,.4); box-shadow: inset 0 1px 0 rgba(255,240,190,.08); }
   .matbar .s { color: var(--mint); } .matbar .g { color: var(--petal); }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 12px; width: 100%; }
-  .card { background: linear-gradient(170deg, var(--panel2), var(--ink) 80%); border: 2px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 7px; justify-items: center; align-content: start; text-align: center; position: relative; min-width: 0; }
-  .card::before { content: ""; position: absolute; inset: 5px; border: 1px solid rgba(255,201,74,.3); border-radius: 10px; pointer-events: none; }
-  .card.locked { opacity: .6; }
-  .card.on { border-color: var(--gold); box-shadow: 0 0 18px rgba(216,170,85,.4); }
-  .card canvas { width: 96px; height: 96px; }
-  .card .nm { font: 700 17px var(--label); color: var(--text); }
-  .card .lv { font: 700 10px var(--label); letter-spacing: .14em; color: var(--gold); }
+
+  /* ----- buttons: little gilded cards; a secondary choice is a lacquered one ----- */
+  .cta { position: relative; min-height: 44px; font: 700 15px var(--label); letter-spacing: .08em; padding: 10px 26px; border-radius: 8px; cursor: pointer; border: 0; color: #2A1606;
+    background: radial-gradient(ellipse 70% 130% at 28% 0%, rgba(255,250,222,.5), transparent 60%), var(--foil);
+    box-shadow: inset 0 0 0 1px rgba(70,40,8,.8), inset 0 0 0 3px rgba(255,236,170,.35), inset 0 0 0 4px rgba(70,40,8,.4), 0 2px 0 #3E2608, 0 8px 18px -4px rgba(0,0,0,.75);
+    text-shadow: 0 1px 0 rgba(255,240,190,.45); transition: translate .12s ease-out, box-shadow .12s; }
+  .cta::before, .cta::after { content: "\25C6"; display: inline-block; font-size: 7px; vertical-align: 3px; margin: 0 10px 0 -6px; opacity: .6; }
+  .cta::after { margin: 0 -6px 0 10px; }
+  .cta:hover { translate: 0 -2px; } .cta:active { translate: 0 1px; }
+  .cta.alt { color: var(--text); text-shadow: 0 1px 0 #000; border: 1.5px solid transparent;
+    background: var(--engrave) padding-box, var(--lacq) padding-box, var(--foil) border-box;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,.65), inset 0 0 0 3px rgba(214,174,88,.38), 0 7px 16px -5px rgba(0,0,0,.8); }
+  .cta.alt::before, .cta.alt::after { color: #D24A5C; opacity: .9; }
+  .cta:focus-visible, .pause:focus-visible, .btn:focus-visible, .buy:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+
+  /* ----- title: a portrait trump beside the title card, the lessons as a spread of small cards ----- */
+  .hero-card { width: 100%; max-width: 920px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(14px, 2.6vw, 28px); align-items: center; padding: 16px clamp(18px, 3vw, 34px) 16px 16px;
+    /* the rest of the deck under it */
+    box-shadow: inset 0 1px 0 rgba(255,240,190,.12), 3px 3px 0 -1px #1A0C10, 3px 3px 0 0 #8A6A2E, 6px 6px 0 -1px #1A0C10, 6px 6px 0 0 #6A4A18, 0 18px 34px -8px rgba(0,0,0,.8); }
+  .hero-text { display: grid; gap: 10px; justify-items: center; }
+  .trump-portrait { width: clamp(108px, 17vw, 200px); aspect-ratio: 5 / 7; padding: 9px; border-radius: 10px; rotate: -2deg; margin-left: 2px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.7), 0 10px 22px -6px rgba(0,0,0,.85); }
+  .trump-portrait canvas { display: block; width: 100%; height: 100%; border-radius: 5px; background: #2A1D3C; }
+  .trump-portrait .plate { position: absolute; left: 50%; bottom: 13px; translate: -50% 0; white-space: nowrap; padding: 2px 8px; border-radius: 3px;
+    font: 700 clamp(7.5px, 1.05vw, 11px) var(--label); letter-spacing: .14em; color: #EBCB7C; background: #0E0A08; box-shadow: 0 0 0 1px #C9A050, 0 0 0 2px #0E0A08; }
+  .trump-portrait.noart { display: none; }
+  .hero-card:has(.noart) { grid-template-columns: 1fr; padding-left: clamp(18px, 3vw, 34px); }
+  .howto { counter-reset: tip; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; width: 100%; max-width: 920px; text-align: left; margin-top: 6px; }
+  .howto > div { counter-increment: tip; padding: 13px 14px 13px 36px; border-radius: 10px; font-size: 13px; line-height: 1.42; color: var(--soft); }
+  .howto > div > b:first-child { display: block; font: 700 11px var(--label); letter-spacing: .1em; color: var(--gold); margin-bottom: 3px; }
+  .howto > div > b:first-child::before { content: counter(tip, upper-roman); position: absolute; left: 9px; top: 14px; width: 22px; text-align: center; font: 700 10.5px var(--label); color: #EBCB7C; }
+  .howto > div > b:first-child::after { content: "\2726"; position: absolute; left: 9px; top: 28px; width: 22px; text-align: center; font-size: 10px; color: #D24A5C; }
+  .howto .t-kbd { grid-column: 1 / -1; } /* anything switched off stays off, whatever its own display style */
+
+  /* ----- forge: a nameplate card, then each set of cards is a hand laid out on the table ----- */
+  .plaque { display: grid; gap: 8px; justify-items: center; padding: 16px clamp(26px, 5vw, 56px) 14px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 12px; width: 100%; padding: 6px 2px 4px; }
+  .card { padding: 12px 11px 11px; display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; rotate: var(--tilt, 0deg);
+    transition: translate .18s ease-out, rotate .18s ease-out, box-shadow .18s; }
+  .cards > .card:hover { translate: 0 -6px; rotate: 0deg; z-index: 2; box-shadow: inset 0 1px 0 rgba(255,240,190,.14), 0 0 0 1px rgba(255,240,190,.25), 0 22px 30px -10px rgba(0,0,0,.85); }
+  .card.on { translate: 0 -4px; rotate: 0deg; box-shadow: inset 0 1px 0 rgba(255,240,190,.14), 0 0 0 1px #FFF0B4, 0 0 22px rgba(216,170,85,.55), 0 18px 28px -10px rgba(0,0,0,.85); }
+  .card.on::before { border-color: #FFE6A0; }
+  /* a weapon not found yet lies face down, its shape only a shadow */
+  .card.locked { background: radial-gradient(ellipse at 50% 30%, rgba(14,5,8,.35), rgba(14,5,8,.82) 75%) padding-box, var(--back) center / 28px 28px padding-box, var(--foil) border-box; }
+  .card.locked canvas { filter: brightness(0) opacity(.7); background: radial-gradient(ellipse at 50% 45%, rgba(214,174,88,.35), rgba(30,10,14,.9) 70%); }
+  .card.locked > :not(canvas):not(.pip) { opacity: .75; }
+  /* the picture window at the top of each card */
+  .card canvas { width: calc(100% - 46px); max-width: 124px; height: 96px; object-fit: contain; border-radius: 4px; margin: 2px 0 2px;
+    background: radial-gradient(ellipse at 50% 38%, #6E4A36, #2C1914 72%, #1A0E0B);
+    box-shadow: 0 0 0 1px #0A0705, 0 0 0 2.5px #C9A050, 0 0 0 3.5px #0A0705, inset 0 0 14px rgba(0,0,0,.55); }
+  #trumpCards .card canvas { background: radial-gradient(ellipse at 50% 40%, #3A2650, #140C1C 75%); height: 110px; }
+  .card .nm { font: 700 16px var(--label); color: var(--text); line-height: 1.15; }
+  .card .lv { font: 700 9.5px var(--label); letter-spacing: .14em; color: var(--gold); }
   .card p { margin: 0; font-size: 13px; line-height: 1.4; color: var(--soft); }
-  .card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12px; text-align: left; width: 100%; }
+  .card ul { margin: 2px 0 0; padding: 7px 0 0; list-style: none; display: grid; gap: 3px; font-size: 12px; text-align: left; width: 100%;
+    border-top: 1px solid transparent; border-image: linear-gradient(90deg, transparent, rgba(214,174,88,.55), transparent) 1; }
   .card li { color: var(--soft); opacity: .55; }
   .card li.got { opacity: 1; color: var(--mint); }
   .card li.next { opacity: 1; color: var(--gold); }
   .card li em { font-style: normal; opacity: .8; font-size: 11px; }
-  .buy { font: 700 12px var(--label); padding: 9px 12px; border-radius: 6px; border: 0; cursor: pointer; background: linear-gradient(#E6BE6E, #C2913E); color: #2A1A0A; width: 100%; margin-top: 4px; }
-  .buy.pink { background: linear-gradient(#D8889A, #A84A64); color: #FFF4F0; }
-  .buy:disabled { background: #2E2444; color: #7E7290; cursor: default; }
+  .buy { position: relative; min-height: 40px; font: 700 12px var(--label); letter-spacing: .03em; padding: 8px 10px; border-radius: 6px; border: 0; cursor: pointer; width: 100%; margin-top: 4px; align-self: end; color: #2A1606;
+    background: radial-gradient(ellipse 70% 130% at 28% 0%, rgba(255,250,222,.45), transparent 60%), var(--foil);
+    box-shadow: inset 0 0 0 1px rgba(70,40,8,.8), inset 0 0 0 2.5px rgba(255,236,170,.32), 0 2px 0 #3E2608, 0 6px 12px -4px rgba(0,0,0,.7); text-shadow: 0 1px 0 rgba(255,240,190,.4); }
+  .buy.pink { color: #FFF4F0; text-shadow: 0 1px 0 rgba(60,0,10,.6); background: radial-gradient(ellipse 70% 130% at 28% 0%, rgba(255,210,210,.35), transparent 60%), linear-gradient(#B8485E, #74182C 70%, #5A1020);
+    box-shadow: inset 0 0 0 1px #2A0508, inset 0 0 0 2.5px rgba(232,200,120,.75), inset 0 0 0 3.5px rgba(42,5,8,.6), 0 2px 0 #2A0508, 0 6px 12px -4px rgba(0,0,0,.7); }
+  .buy:disabled { background: var(--engrave), #17110E; color: #85786A; text-shadow: none; cursor: default; box-shadow: inset 0 0 0 1px rgba(214,174,88,.28), 0 1px 0 #000; }
+  .card > .buy { margin-top: auto; }
   .chips { display: inline-flex; flex-wrap: wrap; gap: 3px; align-items: center; vertical-align: middle; }
   .chips i { font-style: normal; color: var(--soft); font-size: 11px; }
   .chip { font: 700 9px var(--label); letter-spacing: .06em; padding: 2px 6px; border-radius: 9px; border: 1px solid; color: var(--text); }
@@ -148,18 +246,72 @@
   .chip.j { border-color: #8FB8D8; background: rgba(60,100,140,.45); }
   .chip.d { border-color: #9A86C8; background: rgba(80,60,130,.45); }
   .card li b, .moves b { color: var(--text); font-weight: 600; }
-  .movebox { width: 100%; max-width: 560px; text-align: left; }
+  .forge-foot { margin-top: 6px; }
+
+  /* ----- pause: a spread of two cards, the choices and the move list ----- */
+  .spread { display: grid; grid-template-columns: minmax(220px, 290px) minmax(0, 580px); gap: 18px; align-items: start; justify-content: center; justify-items: stretch; width: 100%; max-width: 900px; }
+  .menu-card { position: sticky; top: 0; display: grid; gap: 10px; padding: 20px 20px 16px; rotate: -1.2deg; }
+  .menu-card .stack { display: grid; gap: 8px; }
+  .menu-card .cta { width: 100%; padding-inline: 14px; }
+  .moves-card { display: grid; gap: 8px; padding: 16px 20px 18px; text-align: left; }
+  .moves-card .h3 { justify-self: center; margin: 0; }
+  .moves-card .keys { text-align: center; }
+  .movebox { width: 100%; text-align: left; }
   .moves { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; }
-  .moves li { opacity: .55; line-height: 1.4; } .moves li.got, .moves li.next { opacity: 1; }
+  .moves li { opacity: .55; line-height: 1.4; padding-left: 14px; position: relative; } .moves li.got, .moves li.next { opacity: 1; }
+  .moves li::before { content: "\25C6"; position: absolute; left: 0; top: 1px; font-size: 7px; color: #C9A050; }
+  .moves li.next::before { color: #D24A5C; }
   .moves li.next b { color: var(--gold); }
   .moves em { font-style: normal; color: var(--soft); font-size: 12.5px; }
-  .note { font-size: 13px; font-weight: 700; color: var(--mint); min-height: 18px; }
+
+  /* ----- game over and the win: one card turned up ----- */
+  .solo { width: 100%; max-width: 600px; display: grid; gap: 12px; justify-items: center; padding: 26px clamp(30px, 6vw, 56px) 24px; }
+  .solo .lede { font-size: 15px; }
+  .fallen { position: relative; }
+  .fallen::before { content: ""; position: absolute; inset: 6% 8%; rotate: 9deg; translate: 22px 6px; border-radius: 12px;
+    background: var(--medal) center / 90px auto no-repeat, var(--back) center / 28px 28px, #3A0B15; box-shadow: 0 0 0 2px #8A6A2E, 0 10px 24px -6px rgba(0,0,0,.8); }
+  .sunburst { position: relative; }
+  .sunburst::before { content: ""; position: absolute; left: 50%; top: 50%; width: min(150vw, 1400px); aspect-ratio: 1; translate: -50% -50%; pointer-events: none; z-index: -1;
+    background: radial-gradient(circle, rgba(255,214,140,.22), transparent 55%), repeating-conic-gradient(rgba(232,190,110,.09) 0 4deg, transparent 4deg 12deg);
+    -webkit-mask: radial-gradient(circle, #000 10%, transparent 62%); mask: radial-gradient(circle, #000 10%, transparent 62%); }
+  .sunburst > .solo { z-index: 1; }
+
   #rotateOv { display: none; z-index: 6; }
   #app.port.playing #rotateOv { display: block; }
   .phone { width: 46px; height: 78px; border: 3px solid var(--text); border-radius: 9px; margin: 0 auto; position: relative; animation: turn 2.4s ease-in-out infinite; }
   .phone::after { content: ""; position: absolute; left: 50%; bottom: 5px; width: 10px; height: 3px; margin-left: -5px; border-radius: 2px; background: var(--text); }
   @keyframes turn { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
-  @media (prefers-reduced-motion: reduce) { #go, .phone, .b-trump.ready, #combo.pop b { animation: none; } }
+
+  /* ----- dealing: cards slide in off the deck, the title card turns face up ----- */
+  @keyframes mfxDeal { from { transform: translate(var(--dx, -14px), -34px) rotate(var(--dr, -7deg)) scale(.94); opacity: 0; } 55% { opacity: 1; } to { transform: none; opacity: 1; } }
+  @keyframes mfxFlip { 0% { transform: perspective(1600px) translateY(24px) scale(.93); } 34% { transform: perspective(1600px) scale(.97) rotateY(0deg); }
+    67% { transform: perspective(1600px) scale(1) rotateY(90deg); } 67.01% { transform: perspective(1600px) scale(1) rotateY(-90deg); } 100% { transform: perspective(1600px) rotateY(0deg); } }
+  @keyframes mfxBack { 0%, 67% { opacity: 1; } 67.01%, 100% { opacity: 0; } }
+  @keyframes mfxFade { from { opacity: 0; } to { opacity: 1; } }
+  .ov.mfx-in { animation: mfxFade .2s ease-out both; }
+  .mfx-in .dealt, .mfx-in .cards > .card, .mfx-in .howto > div { animation: mfxDeal .34s cubic-bezier(.2,.85,.3,1) both; animation-delay: calc(var(--i, 0) * 40ms); }
+  .mfx-in #titleCard { animation: mfxFlip .44s ease-in-out both; }
+  .mfx-in .flipback { display: block; animation: mfxBack .44s both; }
+
+  /* ----- small screens ----- */
+  @media (max-width: 600px) { .hero-card { grid-template-columns: 1fr; padding-left: 18px; } .trump-portrait { display: none; } .spread { grid-template-columns: 1fr; } .menu-card { position: static; rotate: none; } }
+  @media (max-height: 440px) {
+    .ov { padding-block: 16px; }
+    .wrap { gap: 10px; }
+    .hero-card { padding-block: 12px; } .hero-text { gap: 7px; }
+    .lede { font-size: 14.5px; line-height: 1.45; }
+    .kicker { font-size: 10.5px; }
+    .cta { min-height: 42px; padding-block: 8px; font-size: 14px; }
+    .menu-card { padding: 16px 16px 12px; gap: 8px; } .menu-card .stack { gap: 6px; }
+    .plaque { padding-block: 12px 10px; gap: 6px; }
+    .solo { padding-block: 20px 18px; gap: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #go, .phone, .b-trump.ready, #combo.pop b { animation: none; }
+    .mfx-in *, .ov.mfx-in, .mfx-in #titleCard { animation: none !important; }
+    .mfx-in .flipback { display: none !important; }
+    .card, .cta { transition: none; }
+  }
 </style>
 
 <div id="app" class="land">
@@ -197,25 +349,31 @@
 
   <div class="ov" id="titleOv">
     <div class="wrap">
-      <div class="kicker">A STORYBOOK BEAT 'EM UP</div>
-      <h1 class="logo">Shadow <em>Road</em></h1>
-      <p class="lede">Cast out of the true city, the fallen Prince of Shadow walks the road home through its shadow worlds: blooming valleys, clockwork skies, prism storms. You set out with bare fists. Take weapons from those who carry them, break the guardians, and forge your arsenal between worlds.</p>
-      <div class="row">
-        <button class="cta" id="contBtn" type="button">Continue</button>
-        <button class="cta alt" id="newBtn" type="button">New journey</button>
+      <div class="face hero-card" id="titleCard">
+        <div class="cardback flipback" aria-hidden="true"></div>
+        <div class="face trump-portrait" aria-hidden="true"><canvas id="mfxPortrait" width="250" height="350"></canvas><span class="plate">THE PRINCE OF SHADOW</span></div>
+        <div class="hero-text">
+          <div class="kicker">A STORYBOOK BEAT 'EM UP</div>
+          <h1 class="logo">Shadow <em>Road</em></h1>
+          <p class="lede">Cast out of the true city, the fallen Prince of Shadow walks the road home through its shadow worlds: blooming valleys, clockwork skies, prism storms. You set out with bare fists. Take weapons from those who carry them, break the guardians, and forge your arsenal between worlds.</p>
+          <div class="row">
+            <button class="cta" id="contBtn" type="button">Continue</button>
+            <button class="cta alt" id="newBtn" type="button">New journey</button>
+          </div>
+          <p class="small" id="saveInfo"></p>
+        </div>
       </div>
-      <p class="small" id="saveInfo"></p>
       <div class="howto">
-        <div class="t-touch"><b>MOVE &amp; RUN</b>Joystick to walk. Flick it twice in a direction to run.</div>
-        <div class="t-kbd keys"><b>KEYBOARD</b><kbd>←→↑↓</kbd> or <kbd>WASD</kbd> move · tap a direction twice to run<br><kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge<br><kbd>Q</kbd> Swap weapon · <kbd>E</kbd> Trump card · <kbd>Esc</kbd> Pause · <kbd>Enter</kbd> Start</div>
-        <div><b>MIX YOUR COMBOS</b>Attack and Heavy chain together: try Attack, Attack, Heavy. Each weapon has its own combos.</div>
-        <div><b>LAUNCH &amp; JUGGLE</b>Hold Attack to launch an enemy, tap Jump to follow them up, then Attack up to three times in the air.</div>
-        <div><b>DASH ATTACKS</b>Attack or Heavy while running.</div>
-        <div><b>DODGE &amp; COUNTER</b>Dodge in any direction; nothing can hit you mid-dash. Tap Attack during it to strike back.</div>
-        <div><b>WEAPONS</b>Defeated enemies sometimes drop a new weapon. Tap Swap to change weapons.</div>
-        <div><b>ARMORED FOES</b>Enemies glowing gold shrug off light hits. Break their guard with Heavy attacks or launchers, then they're open. They often drop sigils.</div>
-        <div><b>CRITICAL HITS</b>Hit enemies from behind, or while they're staggered, knocked down or airborne, for a much better chance of a critical.</div>
-        <div><b>TRUMP CARDS</b>Buy them at the forge with sigils. Land hits to charge your card, then tap Trump to play it.</div>
+        <div class="face t-touch"><b>MOVE &amp; RUN</b>Joystick to walk. Flick it twice in a direction to run.</div>
+        <div class="face t-kbd keys"><b>KEYBOARD</b><kbd>←→↑↓</kbd> or <kbd>WASD</kbd> move · tap a direction twice to run<br><kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge<br><kbd>Q</kbd> Swap weapon · <kbd>E</kbd> Trump card · <kbd>Esc</kbd> Pause · <kbd>Enter</kbd> Start</div>
+        <div class="face"><b>MIX YOUR COMBOS</b>Attack and Heavy chain together: try Attack, Attack, Heavy. Each weapon has its own combos.</div>
+        <div class="face"><b>LAUNCH &amp; JUGGLE</b>Hold Attack to launch an enemy, tap Jump to follow them up, then Attack up to three times in the air.</div>
+        <div class="face"><b>DASH ATTACKS</b>Attack or Heavy while running.</div>
+        <div class="face"><b>DODGE &amp; COUNTER</b>Dodge in any direction; nothing can hit you mid-dash. Tap Attack during it to strike back.</div>
+        <div class="face"><b>WEAPONS</b>Defeated enemies sometimes drop a new weapon. Tap Swap to change weapons.</div>
+        <div class="face"><b>ARMORED FOES</b>Enemies glowing gold shrug off light hits. Break their guard with Heavy attacks or launchers, then they're open. They often drop sigils.</div>
+        <div class="face"><b>CRITICAL HITS</b>Hit enemies from behind, or while they're staggered, knocked down or airborne, for a much better chance of a critical.</div>
+        <div class="face"><b>TRUMP CARDS</b>Buy them at the forge with sigils. Land hits to charge your card, then tap Trump to play it.</div>
       </div>
       <p class="small t-touch">Best played with your phone held sideways.</p>
     </div>
@@ -223,17 +381,20 @@
 
   <div class="ov" id="forgeOv" hidden>
     <div class="wrap">
-      <div class="kicker" id="forgeKicker">BETWEEN WORLDS</div>
-      <h2 class="h2">The Crossroads Forge</h2>
-      <div class="matbar"><span class="s">&#9670; <span id="fShards">0</span> shards</span><span class="g">&#10022; <span id="fSigils">0</span> sigils</span></div>
-      <div class="note" id="forgeNote"></div>
+      <div class="face plaque dealt">
+        <span class="pip" aria-hidden="true">XI<i>&#9830;&#xFE0E;</i></span><span class="pip tr" aria-hidden="true">XI<i>&#9830;&#xFE0E;</i></span>
+        <div class="kicker" id="forgeKicker">BETWEEN WORLDS</div>
+        <h2 class="h2">The Crossroads Forge</h2>
+        <div class="matbar"><span class="s">&#9670; <span id="fShards">0</span> shards</span><span class="g">&#10022; <span id="fSigils">0</span> sigils</span></div>
+        <div class="note" id="forgeNote"></div>
+      </div>
       <h3 class="h3">Weapons</h3>
       <p class="small">Spend shards to level up a weapon: each level adds damage and teaches a new move.</p>
       <div class="cards" id="forgeCards"></div>
       <h3 class="h3">Trump Cards</h3>
       <p class="small">Spend sigils on a Trump card and take it into battle. Land hits to charge it, then tap Trump to play it.</p>
       <div class="cards" id="trumpCards"></div>
-      <div class="row">
+      <div class="row forge-foot">
         <button class="cta" id="walkBtn" type="button">Walk on</button>
         <button class="cta alt" id="forgeTitleBtn" type="button">Title screen</button>
       </div>
@@ -241,38 +402,54 @@
   </div>
 
   <div class="ov glass" id="pauseOv" hidden>
-    <div class="wrap center">
-      <h2 class="h2">Paused</h2>
-      <div class="row">
-        <button class="cta" id="resumeBtn" type="button">Resume</button>
-        <button class="cta alt" id="sfxBtn" type="button">Sound: on</button>
-        <button class="cta alt" id="musicBtn" type="button">Music: on</button>
-        <button class="cta alt" id="quitBtn" type="button">Quit to title</button>
+    <div class="wrap center spread">
+      <div class="face menu-card dealt">
+        <span class="pip" aria-hidden="true">XII<i>&#9824;&#xFE0E;</i></span><span class="pip tr" aria-hidden="true">XII<i>&#9824;&#xFE0E;</i></span>
+        <h2 class="h2">Paused</h2>
+        <div class="stack">
+          <button class="cta" id="resumeBtn" type="button">Resume</button>
+          <button class="cta alt" id="sfxBtn" type="button">Sound: on</button>
+          <button class="cta alt" id="musicBtn" type="button">Music: on</button>
+          <button class="cta alt" id="quitBtn" type="button">Quit to title</button>
+        </div>
+        <p class="small">Quitting restarts this world. You keep your shards, weapons and upgrades.</p>
       </div>
-      <p class="small">Quitting restarts this world. You keep your shards, weapons and upgrades.</p>
-      <p class="small t-kbd keys"><kbd>←→↑↓</kbd>/<kbd>WASD</kbd> move · <kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge · <kbd>Q</kbd> Swap · <kbd>E</kbd> Trump · <kbd>Esc</kbd> Resume</p>
-      <h3 class="h3" id="moveTitle">Moves</h3>
-      <div id="moveList" class="movebox"></div>
+      <div class="face moves-card dealt">
+        <h3 class="h3" id="moveTitle">Moves</h3>
+        <p class="small t-kbd keys"><kbd>←→↑↓</kbd>/<kbd>WASD</kbd> move · <kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge · <kbd>Q</kbd> Swap · <kbd>E</kbd> Trump · <kbd>Esc</kbd> Resume</p>
+        <div id="moveList" class="movebox"></div>
+      </div>
     </div>
   </div>
 
   <div class="ov glass" id="overOv" hidden>
     <div class="wrap center">
-      <h2 class="h2">Knocked off the Road</h2>
-      <p class="lede" id="overText"></p>
-      <div class="row">
-        <button class="cta" id="retryBtn" type="button">Try again</button>
-        <button class="cta alt" id="overForgeBtn" type="button">Visit the forge</button>
+      <div class="fallen">
+        <div class="face solo dealt">
+          <span class="pip" aria-hidden="true">XVI<i>&#9827;&#xFE0E;</i></span><span class="pip br" aria-hidden="true">XVI<i>&#9827;&#xFE0E;</i></span>
+          <div class="kicker">THE CARDS FELL AGAINST YOU</div>
+          <h2 class="h2">Knocked off the Road</h2>
+          <p class="lede" id="overText"></p>
+          <div class="row">
+            <button class="cta" id="retryBtn" type="button">Try again</button>
+            <button class="cta alt" id="overForgeBtn" type="button">Visit the forge</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="ov" id="winOv" hidden>
     <div class="wrap center">
-      <div class="kicker">THE ROAD IS WALKED</div>
-      <h2 class="h2">You reached the true city</h2>
-      <p class="lede" id="winText"></p>
-      <div class="row"><button class="cta" id="cycleBtn" type="button">Walk again, harder</button></div>
+      <div class="sunburst">
+        <div class="face solo dealt">
+          <span class="pip" aria-hidden="true">XXI<i>&#9829;&#xFE0E;</i></span><span class="pip br" aria-hidden="true">XXI<i>&#9829;&#xFE0E;</i></span>
+          <div class="kicker">THE ROAD IS WALKED</div>
+          <h2 class="h2">You reached the true city</h2>
+          <p class="lede" id="winText"></p>
+          <div class="row"><button class="cta" id="cycleBtn" type="button">Walk again, harder</button></div>
+        </div>
+      </div>
     </div>
   </div>
 

@@ -33,6 +33,7 @@ function t6SwingGlow(pose, x, w, h) { if (pose && pose.glow) { ctx.save(); ctx.g
 // ======================================================================================================
 function t6Hammer(pose) {
   const now = performance.now() / 1000, plain = t6Plain(), pulse = .5 + .5 * Math.sin(now * 1.1), L = 52, cx = 46;
+  const fit = !!pose.noHand; if (fit) { ctx.save(); ctx.translate(30, 0); ctx.scale(.78, .78); ctx.translate(-40, 0); } // the card portrait: the great head centred and inside its frame
   t6Halo(cx, 0, 40, '255,128,52', .2 + .06 * pulse); // the heat of the head
   // the haft: blackened iron-wood, bound with bronze, a molten seam showing between the bands
   limb([0, 0, L, 0], '#2A2026', 5);
@@ -95,6 +96,7 @@ function t6Hammer(pose) {
     }
   });
   t6SwingGlow(pose, 26, 56, 58);
+  if (fit) ctx.restore();
   if (!pose.noHand) gripHand(pose.glove || '#FFF1E0');
 }
 
@@ -103,14 +105,23 @@ function t6Hammer(pose) {
 // ======================================================================================================
 function t6Staff(pose) {
   const now = performance.now() / 1000, plain = t6Plain(), len = 62, back = -30, pulse = .5 + .5 * Math.sin(now * .9);
-  const sc = pose.noHand ? .94 : 1; if (sc !== 1) { ctx.save(); ctx.translate(15, 0); ctx.scale(sc, sc); ctx.translate(-15, 0); }
+  const sc = pose.noHand ? .86 : 1; if (sc !== 1) { ctx.save(); ctx.translate(15, 0); ctx.scale(sc, sc); ctx.translate(-22, 0); } // the card portrait: the moon kept inside its frame
   t6Halo(len + 12, 0, 26, '190,215,255', .22 + .08 * pulse); t6Halo(back - 10, 0, 16, '190,215,255', .14);
   // a silver-blue ribbon, swaying slowly
   const sway = Math.sin(now * 1.3) * 3;
-  { const bx = back + 4, ex = back - 8 + sway, ey = 19; // a pennon of silver-blue silk with a forked tail
-    ctx.beginPath(); ctx.moveTo(bx - 1.4, 1); ctx.quadraticCurveTo(bx - 7, 8, ex - 2.4, ey); ctx.lineTo(ex + .4, ey - 3); ctx.lineTo(ex + 2.6, ey + .6);
-    ctx.quadraticCurveTo(bx - 1.4, 9, bx + 2.4, 1); ctx.closePath(); ctx.fillStyle = t6VG(0, 20, '#8FB4E8', .4, -.3); ctx.fill(); outline(1);
-    if (t6Plain()) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(bx, 2); ctx.quadraticCurveTo(bx - 4, 9, ex + .3, ey - 2.6); ctx.stroke(); } }
+  { // a pennon of silver-blue silk with a forked tail, hanging from the far end
+    const bx = back + 4, by = 1.5, mx = back - 3, my = 10, ex = back - 7 + sway, ey = 21, N = 8, top = [], bot = [];
+    for (let i = 0; i <= N; i++) {
+      const k = i / N, x = (1 - k) * (1 - k) * bx + 2 * k * (1 - k) * mx + k * k * ex, y = (1 - k) * (1 - k) * by + 2 * k * (1 - k) * my + k * k * ey;
+      const dx = 2 * (1 - k) * (mx - bx) + 2 * k * (ex - mx), dy = 2 * (1 - k) * (my - by) + 2 * k * (ey - my), L = Math.hypot(dx, dy) || 1, hw = 2 + k * 1.4 + Math.sin(now * 1.1 + k * 3) * .3;
+      top.push([x - dy / L * hw, y + dx / L * hw]); bot.push([x + dy / L * hw, y - dx / L * hw]);
+    }
+    const last = top.length - 1, fx = (top[last][0] + bot[last][0]) / 2, fy = (top[last][1] + bot[last][1]) / 2;
+    ctx.beginPath(); top.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.lineTo(fx - (ex - mx) * .12, fy - (ey - my) * .16); // the fork
+    for (let i = last; i >= 0; i--) ctx.lineTo(bot[i][0], bot[i][1]); ctx.closePath();
+    ctx.fillStyle = t6VG(0, 22, '#8FB4E8', .4, -.3); ctx.fill(); outline(1);
+    if (t6Plain()) { ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = .7; ctx.beginPath(); top.slice(1, -1).forEach(([x, y], i) => { const b = bot[i + 1], X = x * .7 + b[0] * .3, Y = y * .7 + b[1] * .3; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.stroke();
+      ctx.fillStyle = '#E8F0FF'; const c = [(top[3][0] + bot[3][0]) / 2, (top[3][1] + bot[3][1]) / 2]; gbStar(c[0], c[1], 1.6, .9); } } // a silver star sewn on it
   // floating rings around the shaft: the far half behind it, the near half in front
   const rings = [[len - 10, 0], [len - 21, 1.7], [back + 12, 3.4]].map(([x, p]) => ({ x: x + Math.sin(now * .55 + p) * 2.4, rx: 1.6 + 1.2 * Math.abs(Math.sin(now * .4 + p)), ry: 6.6, p }));
   const ringHalf = (r, near) => { ctx.ellipse(r.x, 0, r.rx, r.ry, 0, near ? -Math.PI / 2 : Math.PI / 2, near ? Math.PI / 2 : Math.PI * 1.5); };
@@ -153,6 +164,7 @@ function t6Staff(pose) {
   if (plain) { const g = ctx.createRadialGradient(ox - 1.4, -1.4, 0, ox, 0, 4.6); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, '#D6E6FF'); g.addColorStop(1, '#7E98CC'); ctx.fillStyle = g; } else ctx.fillStyle = C('#D6E6FF');
   ctx.fill(); outline(1);
   t6Halo(ox, 0, 11, '210,230,255', .5 + .2 * pulse);
+  t6Add(() => { for (let i = 0; i < 3; i++) { const a = now * .5 + i / 3 * TAU; ctx.fillStyle = `rgba(225,238,255,${.55 + .3 * Math.sin(a)})`; circle(ox + Math.cos(a) * 3.2, Math.sin(a) * 8.6, .9 + .3 * Math.sin(a)); ctx.fill(); } }); // motes circling the moonstone
   // the near half of each ring, glowing with moonlight
   for (const r of rings) { t6Inked('#E4EEFF', 1.1, () => ringHalf(r, true)); t6Add(() => { ctx.strokeStyle = `rgba(170,210,255,${.35 + .2 * pulse})`; ctx.lineWidth = 2.6; ctx.beginPath(); ringHalf(r, true); ctx.stroke(); }); }
   t6Add(() => { ctx.fillStyle = 'rgba(240,246,255,.85)'; for (let i = 0; i < 3; i++) { const a = Math.max(0, Math.sin(now * .8 - i * 2.1)); gbStar(i === 1 ? X + 28 : X + 24, (i - 1) * 16, 1 + a * 2.2, .3 + a * .6); } }); // the crescent's tips and point catch the light
@@ -228,6 +240,12 @@ function t6Sword(pose) {
   // the eclipse: a black sun with its corona turning slowly about it, a bright bead of light at its rim
   const ex = 21, er = 5.4;
   t6Halo(ex, 0, 18, '255,214,140', .5 + .2 * pulse);
+  t6Add(() => { // long, faint sunbeams turning slowly about the eclipse
+    ctx.translate(ex, 0); ctx.rotate(-now * .08);
+    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU, L3 = i % 2 ? 20 : 30; ctx.rotate(TAU / 10);
+      const g = ctx.createLinearGradient(0, 0, L3, 0); g.addColorStop(0, 'rgba(255,220,150,.38)'); g.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(0, -1.6); ctx.lineTo(L3, 0); ctx.lineTo(0, 1.6); ctx.closePath(); ctx.fill(); }
+  });
   ctx.save(); ctx.translate(ex, 0); ctx.rotate(now * .2);
   ctx.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * TAU, r = i % 2 ? er + 1.4 : er + 4 + (i % 4 ? 0 : 1.6); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath();
   ctx.fillStyle = C('#FFE29A'); ctx.fill(); outline(.9); ctx.restore();

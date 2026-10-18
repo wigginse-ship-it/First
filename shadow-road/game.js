@@ -8,7 +8,7 @@ let stage = null, stageIdx = 0, P = null;
 let enemies = [], projs = [], parts = [], fx = [], nums = [], loot = [], props = [], ghosts = [], echoes = [], spawnQ = [];
 let camX = 0, lockX = null, waveIdx = 0, waveActive = false, bossSpawned = false, boss = null;
 let hitstop = 0, shakeMag = 0, shakeDir = 0, zoom = 0, slowmo = 0, clearT = 0, flashT = 0, hurtFlash = 0;
-let runShards = 0, runSigils = 0, comboN = 0, comboT = 0, trumpCharge = 0, mirrorT = 0, stillT = 0, stag = null;
+let runShards = 0, runSigils = 0, comboN = 0, comboT = 0, trumpCharge = 0, mirrorT = 0, stillT = 0, stags = [], phoenixT = 0;
 let brandT = 0, brandEl = 'fire', brandN = 0;
 
 function newPlayer() {
@@ -287,7 +287,7 @@ function critChance(e) {
   return Math.min(.75, c);
 }
 function strike(e, base, dir, m, echo) {
-  let raw = base * rand(.9, 1.1) * (stillT > 0 ? 2 : 1);
+  let raw = base * rand(.9, 1.1) * (stillT > 0 ? (TL('stillness') >= 3 ? 3 : 2) : 1);
   if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
   let dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' ? 1 : .78)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
@@ -314,8 +314,8 @@ function strike(e, base, dir, m, echo) {
     floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD BREAK!', '#FFD27A', 18); burst(e.x, e.y, e.z + e.hh * .6, ['#EED48A', '#FFFFFF', '#D8AA55'], 24, 'crystal', dir, true);
   }
   if (m === P.move && dir === P.facing && !m.around && !(m.lunge >= 300)) P.carry = Math.max(P.carry || 0, Math.min(Math.abs(e.vx) * (e.air ? 1.4 : .8), 340));
-  if (brandT > 0 && !m.trump && !m.el && !e.dead) applyElement(e, base, dir);
-  if (mirrorT > 0 && !echo) echoes.push({ e, dmg: base * .6, dir, m, t: .14 });
+  if (brandT > 0 && !m.trump && !m.el && !e.dead) { if (TL('brand') >= 3) { const keep = brandEl; for (const el of ['fire', 'frost', 'storm']) { brandEl = el; if (!e.dead) applyElement(e, base, dir); } brandEl = keep; } else applyElement(e, base, dir); }
+  if (mirrorT > 0 && !echo) { const ml = TL('mirror'); echoes.push({ e, dmg: base * (ml >= 2 ? .8 : .6), dir, m, t: .14 }); if (ml >= 3) echoes.push({ e, dmg: base * .6, dir, m, t: .26 }); }
 }
 const MAT_COL = { goo: ['#D88AAE', '#F0C8D8', '#FFF4E8'], fur: ['#B86A3E', '#E8C08A', '#FFF4E8'], spark: ['#F0D890', '#E0A0C0', '#FFF8E8'], rock: ['#9A8E80', '#7EA460', '#E8D08A'], metal: ['#F0D890', '#FFF8E8', '#9FD8E8'], crystal: ['#9FD8E0', '#D8A0C8', '#FFFFFF'], flesh: ['#8E2A40', '#C8607A', '#F0D8C8'] };
 const MAT_SFX = { goo: 'hit-goo', fur: 'hit-flesh', spark: 'hit-crystal', rock: 'hit-flesh', metal: 'hit-metal', crystal: 'hit-crystal', flesh: 'hit-flesh' };
@@ -469,43 +469,55 @@ function playTrump() {
   trumpCharge = 0; flashT = .2; sfx('trump'); zoom = .06;
   const card = TRUMPS[save.trump];
   banner(card.name, 'TRUMP PLAYED', 1.4);
-  if (save.trump === 'stag') stag = { x: camX - 60, y: P.y, hit: new Set(), t: 0 };
-  else if (save.trump === 'mirror') mirrorT = 10;
-  else if (save.trump === 'brand') { brandEl = ['fire', 'frost', 'storm'][brandN++ % 3]; brandT = 15; banner(ELEMENTS[brandEl].name, 'YOUR WEAPON IS BRANDED FOR 15 SECONDS', 1.6); burst(P.x, P.y, 50, [ELEMENTS[brandEl].col, '#FFFFFF'], 30, 'spark', 0, true); }
-  else if (save.trump === 'stillness') stillT = 5;
+  const lv = TL(save.trump);
+  if (save.trump === 'stag') { // a lane each; at III the last one turns round at the far side and runs back
+    const lanes = [P.y, clamp(P.y + (P.y > 290 ? -40 : 40), FLOOR_TOP + 8, FLOOR_BOT), clamp(P.y + (P.y > 290 ? 40 : -40), FLOOR_TOP + 8, FLOOR_BOT)];
+    for (let i = 0; i < lv; i++) stags.push({ x: camX - 60 - i * 70, y: lanes[i], hit: new Set(), t: 0, back: lv >= 3 && i === 2, dir: 1 });
+  }
+  else if (save.trump === 'mirror') mirrorT = lv >= 2 ? 14 : 10;
+  else if (save.trump === 'brand') { brandEl = ['fire', 'frost', 'storm'][brandN++ % 3]; brandT = lv >= 2 ? 20 : 15; banner(ELEMENTS[brandEl].name, 'YOUR WEAPON IS BRANDED FOR 15 SECONDS', 1.6); burst(P.x, P.y, 50, [ELEMENTS[brandEl].col, '#FFFFFF'], 30, 'spark', 0, true); }
+  else if (save.trump === 'stillness') stillT = [5, 7, 9][lv - 1];
   else if (save.trump === 'phoenix') {
-    P.hp = Math.min(maxHp(), P.hp + maxHp() * .5);
+    P.hp = Math.min(maxHp(), P.hp + maxHp() * [.5, .7, 1][lv - 1]); if (lv >= 3) phoenixT = 6;
+    const R = [150, 200, 240][lv - 1], D = [30, 50, 70][lv - 1];
     burst(P.x, P.y, 30, ['#EED48A', '#D8834A', '#D04A62', '#FFFFFF'], 50, 'spark', 0, true);
-    fx.push({ kind: 'ring', x: P.x, y: P.y, z: 20, t: .5, max: .5, r: 150, col: '#D8834A', flat: 1 });
-    for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 150) strike(e, 30, Math.sign(e.x - P.x) || 1, { dmg: 30, kb: 420, launch: 300, power: 2, trump: 1 }, true);
+    fx.push({ kind: 'ring', x: P.x, y: P.y, z: 20, t: .5, max: .5, r: R, col: '#D8834A', flat: 1 });
+    for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < R) strike(e, D, Math.sign(e.x - P.x) || 1, { dmg: D, kb: 420, launch: 300, power: 2, trump: 1 }, true);
   }
   refreshHud();
 }
 function updateTrumps(dt) {
   mirrorT = Math.max(0, mirrorT - dt); stillT = Math.max(0, stillT - dt); brandT = Math.max(0, brandT - dt);
+  if (phoenixT > 0) { // the phoenix's flame clings to him and scorches whoever comes close
+    phoenixT -= dt; P.burnTick = (P.burnTick || 0) - dt;
+    if (Math.random() < .8) parts.push({ x: P.x + rand(-14, 14), y: P.y, z: rand(5, 60), vx: rand(-20, 20), vy: 0, vz: rand(50, 110), life: .5, max: .5, col: pick(['#FF9A5A', '#FFD27A', '#D04A62']), size: rand(2, 4), shape: 'star', rot: 0, vr: 5 });
+    if (P.burnTick <= 0) { P.burnTick = .5; for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 70) strike(e, 8, Math.sign(e.x - P.x) || 1, { dmg: 8, kb: 60, power: 0, trump: 1, noStun: 1 }, true); }
+  }
   if (brandT > 0 && Math.random() < .7) { // the branded weapon sheds its element
     const el = ELEMENTS[brandEl];
     parts.push({ x: P.x + P.facing * rand(10, 40), y: P.y, z: rand(30, 60), vx: rand(-20, 20), vy: 0, vz: brandEl === 'frost' ? -10 : rand(40, 90), life: .5, max: .5, col: pick([el.col, '#FFFFFF']), size: rand(2, 3.5), shape: 'star', rot: 0, vr: 5 });
   }
   for (const ec of echoes) { ec.t -= dt; if (ec.t <= 0 && !ec.e.dead) strike(ec.e, ec.dmg, ec.dir, ec.m, true); }
   echoes = echoes.filter(ec => ec.t > 0);
-  if (stag) {
-    stag.t += dt; stag.x += 620 * dt;
-    if (Math.random() < .8) burst(stag.x - 20, stag.y, rand(10, 50), ['#BFF5FF', '#FFFFFF', '#EED48A'], 2, 'spark');
-    for (const e of enemies) if (!e.dead && !stag.hit.has(e) && Math.abs(e.x - stag.x) < 34 && Math.abs(e.y - stag.y) < 60) { stag.hit.add(e); strike(e, 45, 1, { dmg: 45, kb: 380, launch: 460, power: 2, trump: 1 }, true); }
-    if (stag.x > camX + VW + 80) stag = null;
+  for (const stag of stags) {
+    stag.t += dt; stag.x += 620 * stag.dir * dt;
+    if (Math.random() < .8) burst(stag.x - 20 * stag.dir, stag.y, rand(10, 50), ['#BFF5FF', '#FFFFFF', '#EED48A'], 2, 'spark');
+    for (const e of enemies) if (!e.dead && !stag.hit.has(e) && Math.abs(e.x - stag.x) < 34 && Math.abs(e.y - stag.y) < 60) { stag.hit.add(e); strike(e, 45, stag.dir, { dmg: 45, kb: 380, launch: 460, power: 2, trump: 1 }, true); }
+    if (stag.back && stag.dir > 0 && stag.x > camX + VW - 20) { stag.dir = -1; stag.hit = new Set(); stag.back = false; }
+    if (stag.x > camX + VW + 80 || stag.x < camX - 120) stag.gone = true;
   }
+  stags = stags.filter(s => !s.gone);
 }
 
 // ---------- elemental brand ----------
 function applyElement(e, base, dir) {
   const el = ELEMENTS[brandEl], cy = e.z + e.hh * .5;
-  if (brandEl === 'fire') { e.burn = 3.2; e.burnBase = Math.max(3, base * .18); }
+  if (brandEl === 'fire') { e.burn = 3.2; e.burnBase = Math.max(3, base * (TL('brand') >= 2 ? .25 : .18)); }
   else if (brandEl === 'frost') {
     e.chill = 3; e.frost = (e.frost || 0) + 1;
-    if (e.frost >= 4) { e.frost = 0; e.frozen = 1.8; e.state = e.state === 'dying' ? e.state : 'hurt'; e.t = 1.8; burst(e.x, e.y, cy, ['#9FE0FF', '#FFFFFF', '#6EA8D8'], 16, 'crystal', 0, true); floatText(e.x, e.y, e.z + e.hh + 18, 'FROZEN', el.col, 15); sfx('hit-crystal'); }
+    if (e.frost >= (TL('brand') >= 2 ? 3 : 4)) { e.frost = 0; e.frozen = 1.8; e.state = e.state === 'dying' ? e.state : 'hurt'; e.t = 1.8; burst(e.x, e.y, cy, ['#9FE0FF', '#FFFFFF', '#6EA8D8'], 16, 'crystal', 0, true); floatText(e.x, e.y, e.z + e.hh + 18, 'FROZEN', el.col, 15); sfx('hit-crystal'); }
   } else {
-    const near = enemies.filter(o => o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < 140).sort((p, q) => Math.abs(p.x - e.x) - Math.abs(q.x - e.x)).slice(0, 2);
+    const near = enemies.filter(o => o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < 140).sort((p, q) => Math.abs(p.x - e.x) - Math.abs(q.x - e.x)).slice(0, TL('brand') >= 2 ? 3 : 2);
     for (const o of near) {
       fx.push({ kind: 'bolt', x: e.x, y: e.y, z: cy, x2: o.x, y2: o.y, z2: o.z + o.hh * .5, t: .2, max: .2, col: el.col, seed: Math.random() * 99 });
       strike(o, base * .5, Math.sign(o.x - e.x) || dir, { dmg: base * .5, kb: 60, power: 0, el: 1 });
