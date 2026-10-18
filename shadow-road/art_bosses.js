@@ -101,7 +101,7 @@
     for (let j = 0; j < 12; j++) { const k = j * 2; plate([...P(k, .8), ...P(k + 1, .81), ...P(k + 2, .8), ...P(k + 2, 1), ...P(k + 1, 1), ...P(k, 1)], .88); }
     if (runeA > 0 && DET()) glow(runeCol, 8, () => { // old runes carved into the costal plates, softly alight
       ctx.globalAlpha = runeA; ctx.strokeStyle = runeCol; ctx.lineWidth = 1.3; ctx.beginPath();
-      for (const [x, y] of centers) { ctx.moveTo(x - 3.5, y + 1.5); ctx.lineTo(x, y - 3); ctx.lineTo(x + 3.5, y + 1.5); ctx.moveTo(x, y - 3); ctx.lineTo(x, y + 4); }
+      for (const [x, y] of centers) { ctx.moveTo(x + 2.6, y); ctx.arc(x, y, 2.6, 0, TAU); ctx.moveTo(x, y - 4.6); ctx.lineTo(x, y + 4.6); ctx.moveTo(x - 1.4, y - 4); ctx.lineTo(x, y - 5.6); ctx.lineTo(x + 1.4, y - 4); }
       ctx.stroke();
     });
     return { P, centers };
@@ -218,10 +218,12 @@
     seg(x, -30 + bob, kx, ky, 22, 17, col, 1.6);
     seg(kx, ky, fx, -6 - lift, 17, 16, col, 1);
     // big armored scales down the front of the leg
-    for (let i = 0; i < 4; i++) {
-      const u = (i + .5) / 4, sx = i < 2 ? lerp2(x, kx, u * 2) : lerp2(kx, fx, u * 2 - 1), sy = i < 2 ? lerp2(-30 + bob, ky, u * 2) : lerp2(ky, -6 - lift, u * 2 - 1);
-      ell(sx + 6, sy, 5, 4.2, .3); ctx.fillStyle = C(shade(col, .14)); ctx.fill(); outline(.9);
-      if (DET()) { ctx.fillStyle = shade(col, .38); ell(sx + 7.4, sy - 1.6, 2.2, 1.2, .3); ctx.fill(); }
+    for (let i = 0; i < 5; i++) {
+      const u = (i + .5) / 5, sx = u < .5 ? lerp2(x, kx, u * 2) : lerp2(kx, fx, u * 2 - 1), sy = u < .5 ? lerp2(-30 + bob, ky, u * 2) : lerp2(ky, -6 - lift, u * 2 - 1);
+      const scale = () => { ctx.beginPath(); ctx.moveTo(sx + 1, sy - 2); ctx.lineTo(sx + 9.4, sy - 2.6); ctx.quadraticCurveTo(sx + 9, sy + 2.6, sx + 5, sy + 3); ctx.quadraticCurveTo(sx + 1.4, sy + 2.4, sx + 1, sy - 2); ctx.closePath(); };
+      scale(); ctx.fillStyle = C(shade(col, .12)); ctx.fill();
+      clipIn(scale, () => { ctx.fillStyle = shade(col, -.2); ctx.fillRect(sx, sy + .8, 12, 4); ctx.fillStyle = shade(col, .4); ctx.fillRect(sx + 6.4, sy - 3, 3, 1.4); });
+      scale(); outline(.8);
     }
     if (DET()) { ctx.strokeStyle = shade(col, -.42); ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 3; i++) { const yy = ky - 2 + i * 4; ctx.moveTo(kx - 7, yy); ctx.quadraticCurveTo(kx - 3, yy + 2, kx + 1, yy); } ctx.stroke(); }
     // the broad foot and its blunt ivory nails
@@ -229,7 +231,7 @@
     for (let c = 0; c < 3; c++) horn(fx + 2 + c * 4, -5 - lift, fx + 6 + c * 4, -5 - lift, fx + 8 + c * 4, -lift, 4.4, 1.2, pal.rim, 0, 1);
   }
   function tuckedShell(e, a, pal, phase, rage, t, runeCol) { // the roll: legs and head drawn in, a spinning boulder of shell
-    const cx = 0, cy = -37, R = 37;
+    const cx = 0, cy = -37, R = 43;
     circle(cx, cy, R); ctx.fillStyle = C(pal.seam); ctx.fill();
     const sh = shellPlates(cx, cy, R, R, cx + 3, cy - 3, false, pal, .13, runeCol, rage ? .9 : .5);
     // the plastron's bone band across the ball, with holes where the legs and head were drawn in
@@ -560,14 +562,14 @@
   // ===================================================================================================
   function wyrmWing(rx, ry, ang, far, hueBase, t, phase, rage) {
     const P3 = phase === 3;
-    ctx.save(); ctx.translate(rx, ry); ctx.rotate(ang); if (far) ctx.scale(.82, .9);
+    ctx.save(); ctx.translate(rx, ry); ctx.rotate(ang); ctx.scale(1.12, 1.12); if (far) ctx.scale(.82, .9);
     const W = [-20, -44], T1 = [-60, -74], T2 = [-74, -44], T3 = [-62, -16], T4 = [-34, -2];
     const pane = (pts, ctl, k) => {
       ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.quadraticCurveTo(ctl[0], ctl[1], pts[4], pts[5]); ctx.closePath();
       const h = (hueBase + t * 40 + k * 46) % 360;
-      ctx.fillStyle = C(P3 ? (k % 2 ? 'rgba(58,42,74,.92)' : 'rgba(40,28,54,.92)') : `hsla(${h},${rage ? 75 : 55}%,${far ? 52 : 66}%,.82)`); ctx.fill();
+      ctx.fillStyle = C(P3 ? (k % 2 ? 'rgba(58,42,74,.92)' : 'rgba(40,28,54,.92)') : `hsla(${h},${rage ? 80 : 68}%,${far ? 44 : 58}%,.9)`); ctx.fill();
       if (DET()) { // each pane is two facets: one catching the light, one in shadow
-        ctx.save(); ctx.clip(); ctx.fillStyle = P3 ? 'rgba(232,192,106,.18)' : `hsla(${h},70%,${far ? 70 : 84}%,.55)`; ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(ctl[0], ctl[1]); ctx.closePath(); ctx.fill(); ctx.restore();
+        ctx.save(); ctx.clip(); ctx.fillStyle = P3 ? 'rgba(232,192,106,.18)' : `hsla(${h},75%,${far ? 64 : 76}%,.6)`; ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(ctl[0], ctl[1]); ctx.closePath(); ctx.fill(); ctx.restore();
       }
       outline(1.2);
     };
@@ -645,7 +647,7 @@
     wyrmWing(X[3] + 6, Y[3] - R[3] * .55, flap, false, hueBase, t, phase, rage);
     // ---- the head
     const open = atk ? .62 : windBreath ? .42 * wind : windDive ? .2 * wind : .06 + Math.sin(t * 2) * .03;
-    ctx.save(); ctx.translate(10, grounded ? -15 : -24); ctx.rotate((atk ? .1 : windBreath ? -.16 * wind : 0) + (diving ? .25 : 0) + Math.sin(t * 3) * .03);
+    ctx.save(); ctx.translate(10, grounded ? -17 : -24); ctx.scale(1.28, 1.28); ctx.rotate((atk ? .1 : windBreath ? -.16 * wind : 0) + (diving ? .25 : 0) + Math.sin(t * 3) * .03);
     const hb = P3 ? '#2E2038' : rage ? '#B85AA0' : '#9A72C8', hl = P3 ? '#4A3A5E' : shade(hb, .4), hd = P3 ? '#140E1C' : shade(hb, -.42), gold = P3 ? '#E8C06A' : '#E0B55A';
     horn(0, -12, -14, -22, -32, -30, 5.6, .6, shade(gold, -.25), 3, 1.1); // the far horn
     // the open mouth: a throat lit by the breath it is drawing
