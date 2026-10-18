@@ -122,10 +122,12 @@ function refreshArrows() {
   if (!arrowHudEl) {
     const host = document.querySelector('.hud-r'); if (!host) return;
     arrowHudEl = document.createElement('div'); arrowHudEl.id = 'arrowHud'; arrowHudEl.title = 'Arrows';
-    arrowHudEl.style.cssText = 'display:flex;gap:2px;align-items:center;font:700 12px Cinzel,Georgia,serif;color:#E8D8B0;text-shadow:0 1px 2px #000';
+    arrowHudEl.style.cssText = 'display:flex;gap:5px;align-items:center;padding:3px 9px 3px 6px;border:1px solid rgba(216,170,85,.75);border-radius:6px;background:linear-gradient(#1C1418,#0C0809);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6);font:700 13px Cinzel,Georgia,serif;color:#E8D8B0;text-shadow:0 1px 2px #000;pointer-events:none';
     host.insertBefore(arrowHudEl, host.firstChild);
   }
-  const n = save.arrows || 0; arrowHudEl.hidden = n <= 0;
-  arrowHudEl.innerHTML = '➶'.repeat(n);
+  // a little quiver with its arrows, and the count beside it; dim when empty
+  const n = save.arrows || 0; arrowHudEl.hidden = false; arrowHudEl.style.opacity = n ? '1' : '.5';
+  const shafts = [...Array(ARROW_MAX)].map((_, i) => `<line x1="${5 + i * 2.6}" y1="${i < n ? 2 : 9}" x2="${5 + i * 2.6}" y2="14" stroke="${i < n ? '#E8D8B0' : '#5A4A3A'}" stroke-width="1.2"/>${i < n ? `<path d="M${3.6 + i * 2.6} 3.6 L${5 + i * 2.6} 1 L${6.4 + i * 2.6} 3.6Z" fill="#C8CEDA"/>` : ''}`).join('');
+  arrowHudEl.innerHTML = `<svg width="20" height="22" viewBox="0 0 20 22" aria-hidden="true">${shafts}<path d="M3 11 h14 l-1.5 10 h-11 Z" fill="#6A4A2A" stroke="#D8AA55" stroke-width="1"/></svg><span>${n}/${ARROW_MAX}</span>`;
   const b = document.getElementById('shootBtn'); if (b) { b.hidden = false; b.textContent = 'BOW ' + n; b.style.filter = n ? '' : 'grayscale(1) brightness(.6)'; } // always there, so you know it exists; dim when the quiver is empty
 }
