@@ -6,7 +6,7 @@
 //               a causeway of bone-white stone inlaid with the gold of the Logrus. Here the Abyss breathes (rule 'w4breath')
 //   chaosBoss - The Rim of the Abyss: the last dais at the edge of everything, the Abyss turning overhead like a storm
 // Enemies: Knight of the Courts, Logrus Adept, Borel Duke of Chaos (human looks), Hound of Chaos, Watcher of the Abyss,
-// Eclipse Moth, Abyss Brute. Boss: the Ty'iga, Shifter of Shapes (wolf, Mask of a Thousand Faces, winged horror).
+// Eclipse Moth, Abyss Brute. Boss: the Ty'iga, Shifter of Shapes (wolf, Drake of the Courts, Mask of a Thousand Faces).
 // Passages: 'w4logrus' (the Logrus closes in like ink, then the dark burns away) and 'w4trump' (drawn through a Trump card).
 // Everything lives inside this closure so nothing collides with the other files.
 (() => {
@@ -855,9 +855,10 @@
   // ======================================================================================================
   // THE TY'IGA, SHIFTER OF SHAPES: a demon of the Abyss with no shape of its own. It wears three:
   //   phase 1  a great shadow-wolf, its edges always coming apart into smoke, six burning eyes
-  //   phase 2  a colossal Mask of a Thousand Faces: porcelain mended with gold, an aureole set round with the faces it
+  //   phase 2  the Drake of the Courts: a wyvern crossed with a herald's eagle, wings of membrane and ember-tipped pinions,
+  //            a long maned neck, a hooked beak of gilt horn, talons and a long barbed tail
+  //   phase 3  a colossal Mask of a Thousand Faces: porcelain mended with gold, an aureole set round with the faces it
   //            has taken, a mantle of darkness, two great hands drifting free; its expression shifts with its mood
-  //   phase 3  a winged horror, gaunt, its wings full of eyes, its head a crown of horns round a burning mouth
   // Between them it pours itself into a churning ball of smoke and comes out as the next.
   // ======================================================================================================
   const TY = { fur: '#1C1424', furDk: '#08050C', furLit: '#5A4476', smoke: '#1E1428', bone: '#DCD0B4', boneDk: '#8E806A', boneLit: '#FFF6E2', eye: '#FFD860', maw: '#2A060E' };
@@ -1074,58 +1075,132 @@
     if (!live) maskHand(48, -30 - bob, -1.25, .35, 1, false);
     ctx.restore();
   }
-  // ---------------------------------------------------------------- the winged horror
-  function tyHorror(e, a, t) {
-    const st = e.state, plan = e.plan, wind = a.wind || 0, act = st === 'w4act' ? e.w4a : null;
-    const swoop = act === 'swoop' && e.w4dash, swoopWind = (st === 'wind' && plan === 'w4swoop') ? wind : 0;
-    const spread = Math.max((st === 'wind' && plan === 'w4shadows') ? wind : act === 'shadows' ? 1 : 0, (st === 'wind' && plan === 'w4howl') ? wind : act === 'howl' ? 1 : 0, swoopWind * .6);
-    const maw = (st === 'wind' && plan === 'w4maw') ? wind : act === 'maw' ? 1 : 0, down = st === 'down';
-    const flap = down ? .9 : swoop ? 1.25 : Math.sin(t * 2.3) * .45 * (1 - spread * .6) - spread * .5;
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.28, 1.28);
-    if (swoop) { ctx.rotate(.35); }
-    const wing = (far) => { // a ragged membrane on four finger-bones, eyes opening along it
-      ctx.save(); ctx.translate(far ? -6 : -2, -54); ctx.rotate((far ? -.18 : 0) + flap * (far ? .85 : 1)); if (far) ctx.scale(.82, .86);
-      const F = [[-22, -50], [-50, -46], [-66, -24], [-62, 2]], E = [[-8, -2]].concat(F, [[-30, 8]]);
-      const mem = []; mem.push(0, 0); for (let i = 0; i < F.length; i++) { mem.push(F[i][0], F[i][1]); if (i < F.length - 1) { const nx = (F[i][0] + F[i + 1][0]) / 2, ny = (F[i][1] + F[i + 1][1]) / 2; mem.push(nx * .78, ny * .78); } } mem.push(-36, 6, -18, 6);
-      cel(PP(mem), far ? '#2A1424' : '#3E1A30', { d: 3, r: 1.2, w: 1.5, dark: '#1A0A16', lite: '#8A4A62', tex: () => {
-        ctx.strokeStyle = 'rgba(160,80,110,.4)'; ctx.lineWidth = .7; ctx.beginPath(); for (const f of F) { ctx.moveTo(-6, -2); ctx.quadraticCurveTo(f[0] * .5 + 4, f[1] * .5, f[0] * .8, f[1] * .8); } ctx.stroke(); // veins
-        ctx.fillStyle = '#0A0408'; for (const [x, y, r] of [[-40, -20, 3], [-52, -6, 2.2], [-28, -36, 2.4]]) { ell(x, y, r * 1.6, r); ctx.fill(); } // tears in the membrane
-      } });
-      for (const f of F) horn(0, 0, f[0] * .45, f[1] * .5 - 3, f[0], f[1], 3.4, .6, far ? '#9A8A72' : TY.bone, 1); // the finger bones
-      horn(0, 0, -4, -8, -2, -14, 3, .3, TY.bone, 1); // the thumb claw
-      if (!far) eyeRow([[-30, -22, .9], [-46, -30, .8], [-44, -10, .75], [-22, -10, .7]], wind > .4 || spread > .3, a.hurt);
-      ctx.restore();
-    };
-    wing(true);
-    // the long barbed tail and the dangling legs with their hooked talons
-    const tw = Math.sin(t * 1.4) * 4;
-    ctx.strokeStyle = C(OUT); ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-6, -22); ctx.bezierCurveTo(-16, -6, -34, -10 + tw, -48, 2 + tw); ctx.stroke(); ctx.strokeStyle = C('#2A1A2C'); ctx.lineWidth = 3; ctx.stroke();
-    horn(-48, 2 + tw, -54, 2 + tw, -58, -4 + tw, 5, .4, TY.bone, 1);
-    for (const [hx, off, far] of [[-2, 1, true], [4, 0, false]]) {
-      const s = Math.sin(t * 1.8 + off) * 2, col = far ? '#180E1A' : '#2A1A2C', kx = hx + 6 + s, ky = -14, fx = hx + 2 + s * 1.5, fy = swoop ? -6 : 0;
-      seg(hx, -24, kx, ky, 8, 5, col, 1); seg(kx, ky, fx, fy, 5, 3.4, col, 0);
-      for (let c = 0; c < 3; c++) horn(fx, fy, fx + 3 + c, fy + 2, fx + 2 + c * 2.4, fy + 6 - c * .4, 2.4, .3, far ? '#9A8A72' : TY.bone, .8);
-    }
-    // the body: gaunt, hunched, its ribs showing through the skin
-    const body = PB([-10, -22, -12, -40, -6, -56, 4, -62, 12, -54, 10, -38, 4, -24]);
-    cel(body, '#2E1E30', { d: 3.4, r: 1.4, w: 2, dark: '#120A14', lite: '#7A5A80', tex: () => {
-      ctx.strokeStyle = TY.boneDk; ctx.lineWidth = 1.1; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = -50 + i * 5.4; ctx.moveTo(-8, y + 2); ctx.quadraticCurveTo(0, y - 2, 9, y + 1); } ctx.stroke();
-      ctx.fillStyle = `rgba(${BRUISE},.3)`; ell(0, -40, 7, 10); ctx.fill();
+  // ---------------------------------------------------------------- the Drake of the Courts
+  // a beast out of a bestiary of Chaos, a wyvern crossed with a herald's eagle: wings of black membrane strung on
+  // finger-spars, their outer half a fan of great pinions dipped in ember; a long neck maned with burning plumes; a
+  // hooked beak of gilt horn with fangs in the jaw beneath; eagle-feathered thighs over scaled shanks and pale talons;
+  // a long tail ending in a barb like a heraldic dart
+  const DR = { hide: '#24143A', hideDk: '#0C0616', hideLit: '#6A4890', mem: '#2E1236', memDk: '#12060F', memLit: '#7E3C66', pin: '#1A0E28', pinLit: '#5A3A7A', ember: '#FF8A3C', gold: '#D8A040', goldDk: '#8A5A1C', goldLit: '#F8DC90', beak: '#E2BA62', claw: '#E8DCC0' };
+  // a tapered strip (neck, tail) as a path usable with cel
+  const stripPath = (s) => (ox, oy, cont) => { if (!cont) ctx.beginPath(); ctx.moveTo(s.L[0] + ox, s.L[1] + oy); for (let i = 2; i < s.L.length; i += 2) ctx.lineTo(s.L[i] + ox, s.L[i + 1] + oy); for (let i = s.R.length - 2; i >= 0; i -= 2) ctx.lineTo(s.R[i] + ox, s.R[i + 1] + oy); ctx.closePath(); };
+  // one great flight feather, from its quill root at the origin out along +x: a dark vane, a gilt quill down it, its end dipped in ember
+  function pinion(x, y, ang, L, w, far, tip = DR.ember) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    cel(PB([0, -w * .3, L * .45, -w, L * .9, -w * .7, L * 1.04, 0, L * .7, w * .55, L * .2, w * .5]), far ? '#120A1C' : DR.pin, { d: w * .3, r: w * .12, w: 1.1, dark: '#07040C', lite: far ? '#3A2650' : DR.pinLit, tex: () => {
+      ctx.fillStyle = far ? '#8A3A1C' : tip; ctx.fillRect(L * .74, -w * 1.2, L * .4, w * 2.4); // the ember tip
+      ctx.strokeStyle = 'rgba(0,0,0,.42)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 1; i < 5; i++) { const u = i / 5 * L; ctx.moveTo(u, 0); ctx.lineTo(u + L * .08, -w * .8); ctx.moveTo(u, 0); ctx.lineTo(u + L * .08, w * .5); } ctx.stroke(); // the barbs of the vane
     } });
-    cracks([[-4, -30, -2, -36, -5, -42], [4, -28, 6, -34]], .6);
-    // the arms, thin and too long, hanging forward with hooked claws
-    for (const [far, off] of [[true, 1.2], [false, 0]]) { const s = Math.sin(t * 1.5 + off) * .15, col = far ? '#180E1A' : '#2E1E30', sx = 8, sy = -52, ex = sx + 10, ey = sy + 14 + s * 10, wx = ex + 6 + spread * 6, wy = ey + 12 - spread * 10;
-      seg(sx, sy, ex, ey, 6, 4.4, col, 1); seg(ex, ey, wx, wy, 4.2, 3, col, 0); for (let c = 0; c < 3; c++) horn(wx, wy, wx + 3, wy + 1 + c, wx + 5 + c, wy + 4 + c * 1.6, 2, .3, far ? '#9A8A72' : TY.bone, .8); }
-    // the head: a crown of black horns round a mouth split down the middle that burns from inside
-    ctx.save(); ctx.translate(8, -64); ctx.rotate(swoop ? .3 : -spread * .25 + maw * .25);
-    const open = Math.max(maw, spread * .6, swoopWind * .4, a.atk ? .6 : 0, .12 + Math.sin(t * 1.1) * .05);
-    for (let i = 0; i < 7; i++) { const an = -2.8 + i * .52, L = 12 + (i % 2) * 7; horn(Math.cos(an) * 4, Math.sin(an) * 4 - 2, Math.cos(an) * L * .6 - 2, Math.sin(an) * L * .6 - 4, Math.cos(an) * L - 4, Math.sin(an) * L - 6, 4.4, .4, i % 2 ? '#1A1018' : '#2A1E2A', 1.1, '#060306'); }
-    cel(PB([-6, -6, 2, -9, 10, -4, 11, 4, 4, 9, -4, 6]), '#3A2838', { d: 2, r: 1, w: 1.6, lite: '#8A6A88' });
-    const mw = 1.6 + open * 3.2; ctx.beginPath(); ctx.moveTo(5, -8); ctx.quadraticCurveTo(5 + mw * 1.6, 0, 5, 8); ctx.quadraticCurveTo(5 - mw * 1.6, 0, 5, -8); ctx.closePath(); ctx.fillStyle = C(TY.maw); ctx.fill(); outline(1.1); // the mouth, split down the middle
-    ctx.fillStyle = C(TY.bone); for (const k of [-1, 0, 1]) { const y = k * 3.6, ex = mw * (1 - Math.abs(k) * .35) * 1.15; poly([5 - ex, y - 1, 5 - ex + 1.6 + open, y, 5 - ex, y + 1]); ctx.fill(); poly([5 + ex, y - 1, 5 + ex - 1.6 - open, y, 5 + ex, y + 1]); ctx.fill(); }
-    glowAt(5, 0, 10 + open * 10, maw > .3 ? '255,120,60' : SULF, .3 + open * .5);
+    if (L > 22) { ctx.strokeStyle = C(far ? '#6A5A48' : DR.gold); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(L * .5, -w * .15, L * .9, 0); ctx.stroke(); } // the quill, on the great feathers
     ctx.restore();
-    wing(false);
+  }
+  // a wing, from the shoulder at the origin, rising up and back. beat (-1 down .. 1 raised) is the stroke, seen side-on;
+  // fold (0..1) sweeps it back along the body for a dive
+  function drakeWing(far, beat, fold, hot) {
+    ctx.save(); ctx.rotate(-fold * .95); ctx.scale(1 - fold * .2, (.3 + .7 * beat) * (1 - fold * .35));
+    const E = [-16, -28], W = [-4, -60], F = [[-62, -46], [-72, -14], [-52, 10]]; // elbow, wrist, the tips of the finger-spars
+    // the primaries fan out from the wrist, up and back: the feathered half
+    for (let i = 6; i >= 0; i--) pinion(W[0] - 1, W[1] + 2 + i * 1.6, -1.85 - i * .19, 50 - Math.abs(i - 2) * 3.4, 6.6, far, hot && !far ? DR.goldLit : DR.ember);
+    // the membrane strung between the spars and back to the flank: the wyvern half, its trailing edge scalloped
+    const tips = [W, ...F, [-16, 8]], mem = (ox, oy, cont) => { if (!cont) ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(E[0] + ox, E[1] + oy); ctx.lineTo(W[0] + ox, W[1] + oy);
+      for (let i = 1; i < tips.length; i++) { const p = tips[i - 1], q = tips[i], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2; ctx.quadraticCurveTo(mx + (-18 - mx) * .32 + ox, my + (-24 - my) * .32 + oy, q[0] + ox, q[1] + oy); }
+      ctx.closePath(); };
+    cel(mem, far ? '#1C0A20' : DR.mem, { d: 3.2, r: 1.3, w: 1.6, dark: DR.memDk, lite: far ? '#4A2440' : DR.memLit, tex: () => {
+      ctx.strokeStyle = 'rgba(255,138,60,.32)'; ctx.lineWidth = .8; ctx.beginPath(); // veins of ember running out to the edge
+      for (let i = 0; i < 4; i++) { const p = tips[i], q = tips[i + 1], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2; ctx.moveTo(W[0] * .6 + E[0] * .4, W[1] * .6 + E[1] * .4); ctx.quadraticCurveTo(mx * .6 - 6, my * .6 - 12, mx + (-18 - mx) * .3, my + (-24 - my) * .3); } ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const f of F) { ctx.moveTo(W[0] - 2, W[1] + 3); ctx.lineTo(f[0] + 2, f[1] + 2); } ctx.stroke(); // the shadow under each spar
+    } });
+    // the arm and its finger-spars, with a hooked claw of gold at the wrist
+    seg(0, 0, E[0], E[1], 10, 7, far ? '#140A1E' : DR.hide, 1); seg(E[0], E[1], W[0], W[1], 7, 5, far ? '#140A1E' : DR.hide, .5);
+    for (const f of F) horn(W[0], W[1], (W[0] + f[0]) / 2 - 3, (W[1] + f[1]) / 2 - 4, f[0], f[1], 3.6, .8, far ? '#1E1228' : '#3A2452', 1, '#120A1A');
+    horn(W[0], W[1], W[0] + 3, W[1] - 6, W[0] + 9, W[1] - 7, 3.4, .3, far ? '#8A6A3A' : DR.gold, .9, DR.goldDk);
+    // the coverts along the arm, small feathers edged with gold
+    if (!far) for (let i = 0; i < 5; i++) { const u = .15 + i * .2, x = lerp(E[0], W[0], u), y = lerp(E[1], W[1], u); pinion(x + 2, y, -2.75 + i * .06, 15, 4.8, false, DR.gold); }
+    ctx.restore();
+  }
+  function tyDrake(e, a, t) {
+    const st = e.state, plan = e.plan, wind = a.wind || 0, act = st === 'w4act' ? e.w4a : null, down = st === 'down';
+    const W = (p) => (st === 'wind' && plan === p) ? wind : 0, pose = e.w4pose || {};
+    const swoop = act === 'swoop' && e.w4dash, swoopW = W('w4swoop'), flameW = W('w4flame'), flaming = act === 'flame', gustW = W('w4gust');
+    const howl = Math.max(W('w4howl'), act === 'howl' ? 1 : 0), maw = Math.max(W('w4maw'), act === 'maw' ? 1 : 0);
+    const hot = flameW > .3 || flaming || maw > .3 || howl > .3;
+    // the wings beat slowly and heavily at rest; it mantles them high to wind up, and the attacks drive the stroke themselves
+    let beat = pose.beat ?? (.5 + .45 * Math.sin(t * 1.15));
+    beat = lerp(beat, 1, Math.max(flameW, gustW, swoopW * .8, howl * .6, maw * .5));
+    if (down) beat = -.5;
+    const fold = swoop ? 1 : 0, rear = Math.max(flameW, howl * .8, gustW * .6), lunge = flaming ? 1 : maw;
+    const pitch = swoop ? .34 : flaming ? .16 : -.14 * Math.max(flameW, gustW) + (down ? .12 : 0);
+    const B = (down ? 16 : 0) + Math.sin(t * 1.15 - .9) * 1.6 * (1 - fold); // the body lifts a little on each downstroke
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.22, 1.22); ctx.translate(0, B);
+    if (pitch) { ctx.translate(0, -44); ctx.rotate(pitch); ctx.translate(0, 44); }
+    const SH = [2, -56]; // the shoulder
+    ctx.save(); ctx.translate(SH[0] - 9, SH[1] + 1); ctx.rotate(.24); drakeWing(true, beat, fold, hot); ctx.restore();
+    // the tail: long, swinging slowly, scaled in bands, a row of spines down it and a barb at the end
+    const sw = Math.sin(t * .8) * 5, tl = swoop ? -10 : down ? 14 : 0;
+    const tp = taper(-20, -40, -62, -22 + sw + tl, -106, -42 + sw * 1.7 + tl * .6, 15, 2.8, 12);
+    for (let i = 2; i < 11; i += 2) { const k = i * 2, x = tp.L[k], y = tp.L[k + 1], s = 1 - i / 13; horn(x, y + 1, x - 3, y - 6 * s, x - 7, y - 8 * s, 4.6 * s + 1, .3, '#1E1230', .9, '#0A0610'); }
+    cel(stripPath(tp), DR.hide, { d: 2.6, r: 1, w: 1.7, dark: DR.hideDk, lite: DR.hideLit, tex: () => {
+      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .8; ctx.beginPath(); for (let k = 2; k < tp.L.length - 2; k += 2) { ctx.moveTo(tp.L[k], tp.L[k + 1]); ctx.quadraticCurveTo(tp.M[k] + 2, tp.M[k + 1], tp.R[k], tp.R[k + 1]); } ctx.stroke(); // the bands of scale
+      ctx.strokeStyle = 'rgba(216,160,64,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tp.R[2], tp.R[3] - 1); for (let k = 4; k < tp.R.length - 4; k += 2) ctx.lineTo(tp.R[k], tp.R[k + 1] - 1); ctx.stroke(); // the gilt edge of the belly-scales
+    } });
+    { const n = tp.M.length, x = tp.M[n - 2], y = tp.M[n - 1], dx = x - tp.M[n - 4], dy = y - tp.M[n - 3], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, nx = -uy, ny = ux;
+      fillPoly([x - ux * 2, y - uy * 2, x + ux * 6 + nx * 7, y + uy * 6 + ny * 7, x + ux * 18, y + uy * 18, x + ux * 6 - nx * 7, y + uy * 6 - ny * 7], DR.gold, 1.2); // the barb, a heraldic dart of gold
+      detPoly([x + ux * 6, y + uy * 6, x + ux * 18, y + uy * 18, x + ux * 6 - nx * 7, y + uy * 6 - ny * 7], DR.goldDk, .8); }
+    // the legs, eagle-feathered at the thigh, scaled below; they hang at rest and are thrown forward for the strike
+    const leg = (far) => {
+      const hx = far ? -12 : -3, hy = -34, s = Math.sin(t * 1.0 + (far ? 1.4 : 0)) * 2, strike = swoop || swoopW > .5 ? 1 : 0, col = far ? '#140A1E' : DR.hide;
+      let K = [hx + 5 + s, -17], A = [hx + 2 + s * 1.5, -6];
+      if (strike) { K = [hx + 14, -24]; A = [hx + 30, -18]; }
+      if (down) { K = [hx + 9, -20]; A = [hx + 14, -10]; }
+      seg(K[0], K[1], A[0], A[1], 5.6, 4, col, 0); // the scaled shank
+      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .7; if (DET()) { ctx.beginPath(); for (let i = 1; i < 4; i++) { const x = lerp(K[0], A[0], i / 4), y = lerp(K[1], A[1], i / 4); ctx.moveTo(x - 2.4, y); ctx.lineTo(x + 2.4, y + .6); } ctx.stroke(); }
+      const cc = far ? '#9A8C72' : DR.claw; // the talons: three forward, one behind, hooked; they open for the strike
+      for (let c = 0; c < 3; c++) { const g = .5 + c * .42 - strike * .75, x1 = A[0] + Math.cos(g) * 6, y1 = A[1] + Math.sin(g) * 6; seg(A[0], A[1], x1, y1, 3.4, 2.6, col, 0); horn(x1, y1, x1 + Math.cos(g) * 3, y1 + Math.sin(g) * 3, x1 + Math.cos(g + 1) * 5, y1 + Math.sin(g + 1) * 5, 2.6, .3, cc, .8); }
+      horn(A[0] - 1, A[1], A[0] - 5, A[1] + 1, A[0] - 6, A[1] + 5 - strike * 3, 2.6, .3, cc, .8);
+      cel(furPath([hx - 10, hy - 6, hx + 9, hy - 6, K[0] + 6, K[1] - 3, K[0] + 2, K[1] + 3, K[0] - 6, K[1] + 1, hx - 12, hy + 8], 3.2, far ? 7 : 3), far ? '#120A1C' : DR.pin, { d: 2.4, r: 1, w: 1.4, dark: '#06030A', lite: DR.pinLit, tex: () => { // the feathered thigh
+        ctx.strokeStyle = 'rgba(216,160,64,.4)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 3; i++) { const y = hy + 2 + i * 5, x = lerp(hx, K[0], i / 3); ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x, y + 3, x + 6, y); } ctx.stroke(); } });
+    };
+    leg(true);
+    // the body: a deep keel of a breast, eagle-feathered and diapered with gold like a herald's eagle, the back scaled
+    const body = PB([22, -52, 23, -38, 12, -27, -4, -25, -20, -30, -30, -40, -24, -52, -8, -60, 10, -62]);
+    cel(body, DR.hide, { d: 4.6, r: 1.8, w: 2.1, dark: DR.hideDk, lite: DR.hideLit, under: () => {
+      const g = ctx.createRadialGradient(8, -42, 2, 8, -42, 30); g.addColorStop(0, `rgba(${BRUISE},.45)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-30, -72, 60, 50);
+    }, tex: () => {
+      for (let r = 0; r < 5; r++) for (let i = 0; i < 3; i++) { const x = 18 - i * 6 - r * 1.6, y = -52 + r * 5.4 + i * 1.4; // the breast-feathers, scalloped rows
+        ctx.fillStyle = r % 2 ? '#34204C' : '#2C1A42'; ctx.beginPath(); ctx.arc(x, y, 3.6, 0, Math.PI); ctx.fill(); ctx.strokeStyle = 'rgba(216,160,64,.62)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(x, y, 3.6, .2, Math.PI - .2); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 12; i++) { const x = -24 + (i * 23) % 26, y = -54 + (i * 11) % 20; ctx.moveTo(x - 3, y); ctx.quadraticCurveTo(x, y + 2.6, x + 3, y); } ctx.stroke(); // the scales of the back
+    } });
+    cracks([[-14, -32, -6, -29, 2, -30], [-22, -38, -18, -34]], .55); // the fire inside, showing through the belly
+    leg(false);
+    // the neck: long, curved like a swan's, maned with plumes of ember down the back of it
+    const H = [44 + lunge * 10 - rear * 6, -90 + lunge * 22 - rear * 8 + Math.sin(t * .7) * 1.4 + (down ? 22 : 0) + (swoop ? 20 : 0)];
+    if (swoop) H[0] += 12;
+    const nk = taper(14, -52, 40 - rear * 4 + (swoop ? 10 : 0), -60 + lunge * 6, H[0] - 4, H[1] + 5, 19, 9, 10);
+    for (let i = 10; i >= 2; i -= 2) { const k = i * 2; pinion(nk.R[k] + 1, nk.R[k + 1], 2.5 + i * .05 + Math.sin(t * .9 + i) * .05, 12 + i * .6, 4.4, false, DR.ember); }
+    cel(stripPath(nk), DR.hide, { d: 3, r: 1.3, w: 1.8, dark: DR.hideDk, lite: DR.hideLit, tex: () => {
+      ctx.strokeStyle = 'rgba(216,160,64,.55)'; ctx.lineWidth = .9; ctx.beginPath(); for (let k = 4; k < nk.L.length - 2; k += 4) { ctx.moveTo(nk.L[k], nk.L[k + 1]); ctx.lineTo(nk.M[k] * .5 + nk.L[k] * .5, nk.M[k + 1] * .5 + nk.L[k + 1] * .5 - 1); } ctx.stroke(); // the plates of the throat
+    } });
+    if (hot) glowAt(nk.L[10], nk.L[11], 16, EMBER, .25 + .35 * Math.max(flameW, flaming ? 1 : 0)); // the throat kindling
+    // the head: crested, with a hooked beak of gilt horn and fangs in the jaw below
+    const hr = .12 + lunge * .45 - rear * .35 - howl * .25 + (down ? .5 : 0) + (swoop ? .3 : 0), open = Math.max(maw * .9, howl * .8, flaming ? .85 : flameW * .3, a.atk ? .5 : 0, swoop ? .35 : 0, .05 + Math.sin(t * .9) * .03);
+    ctx.save(); ctx.translate(H[0], H[1]); ctx.rotate(hr);
+    for (let i = 0; i < 5; i++) pinion(-4, -3 + i * .8, -2.05 - i * .24 + Math.sin(t * .8 + i) * .03, 15 + (i === 1 ? 6 : i * 1.5), 3.2, false, DR.ember); // the crest, a fan of plumes
+    horn(-3, -6, -12, -12, -22, -10, 5, .4, '#1A1024', 1.1, '#08040C'); horn(0, -7, -8, -16, -16, -20, 4.4, .4, DR.gold, 1.1, DR.goldDk); // two horns swept back
+    ctx.save(); ctx.translate(2, 3); ctx.rotate(open * .7); // the lower jaw, fanged
+    cel(PB([-6, -1, 18, 0, 22, 2, 14, 6, -4, 5]), '#1A0E26', { d: 1.6, r: .7, w: 1.4, lite: DR.hideLit });
+    ctx.fillStyle = C(TY.bone); for (let x = 6; x <= 16; x += 3.4) { poly([x, 0, x + 1, -3.4 - (x > 14 ? 1.6 : 0), x + 2, 0]); ctx.fill(); outline(.5); }
+    if (open > .4) { ctx.strokeStyle = C(DR.ember); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(2, 1); ctx.quadraticCurveTo(14, -1, 22, 2 + open * 3); ctx.stroke(); fillPoly([22, 2 + open * 3 - 2.6, 27, 3 + open * 3, 22, 2 + open * 3 + 2.6, 23.4, 2 + open * 3], DR.ember, .6); } // the tongue, barbed like a dart
+    ctx.restore();
+    if (open > .15) { ctx.fillStyle = C(TY.maw); poly([-2, 2, 18, 0, 16, 4 + open * 14, 0, 7]); ctx.fill(); glowAt(8, 4 + open * 5, 14, EMBER, .25 + open * .45); }
+    cel(PB([-9, -5, 1, -10, 12, -9, 17, -3, 15, 4, 3, 6, -7, 4]), DR.hide, { d: 2.4, r: 1, w: 1.7, dark: DR.hideDk, lite: DR.hideLit });
+    horn(11, -7, 24, -9, 29, 4, 10, .5, DR.beak, 1.3, DR.goldDk); // the beak, hooked
+    ctx.fillStyle = C(TY.bone); for (const x of [9, 12.4]) { poly([x, 3, x + 1, 7, x + 2, 3]); ctx.fill(); outline(.5); } // fangs at the root of the beak
+    if (DET()) { ctx.strokeStyle = 'rgba(120,70,20,.7)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(12, -6); ctx.quadraticCurveTo(15, -1, 13, 3); ctx.stroke(); } // the cere
+    if (a.hurt) { ctx.strokeStyle = C('#FFE8A0'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(2, -3.4); ctx.lineTo(8, -4); ctx.stroke(); }
+    else emberEye(5, -3.6, 1.1, hot || wind > .4 ? '#FFF0A8' : TY.eye, SULF, hot);
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-1, -7.6); ctx.quadraticCurveTo(5, -9.4, 10, -6.4); ctx.stroke(); // the brow, drawn down over the eye
+    ctx.restore();
+    ctx.save(); ctx.translate(SH[0], SH[1]); drakeWing(false, beat, fold, hot); ctx.restore();
+    if (swoop) add(() => { ctx.strokeStyle = 'rgba(255,150,80,.35)'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = -70 + i * 11; ctx.moveTo(-40 - i * 4, y); ctx.lineTo(-90 - i * 8, y - 6); } ctx.stroke(); }); // the air torn behind it
     ctx.restore();
   }
   // ---------------------------------------------------------------- the change between shapes
@@ -1136,7 +1211,7 @@
     add(() => { const g = ctx.createRadialGradient(0, -40, 2, 0, -40, R * 1.4); g.addColorStop(0, `rgba(${BRUISE},.6)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-R * 1.5, -40 - R * 1.5, R * 3, R * 3); });
     eyeRow([[-8, -46, .9], [10, -38, 1], [2, -52, .7], [-12, -32, .6]], true, false);
   }
-  const FORMS = { 1: tyWolf, 2: tyMask, 3: tyHorror };
+  const FORMS = { 1: tyWolf, 2: tyDrake, 3: tyMask };
   CREATURES.tyiga = function (e, a) {
     a = a || {}; const t = a.t || 0, ph = Math.min(3, Math.max(1, e.phase || 1));
     const sh = e.w4shift || 0; // 1 -> 0 while it changes
@@ -1231,7 +1306,7 @@
   });
 
   // ---------------- the Ty'iga ----------------
-  Object.assign(BOSS_WIND, { w4rake: 1.1, w4howl: .95, w4clap: 1.05, w4faces: 1.0, w4swoop: 1.05, w4shadows: .85, w4maw: 1.1 });
+  Object.assign(BOSS_WIND, { w4rake: 1.1, w4howl: .95, w4clap: 1.05, w4faces: 1.0, w4swoop: 1.05, w4flame: 1.0, w4gust: .95, w4maw: 1.1 });
   const LANES = 4, laneH = (FLOOR_BOT - FLOOR_TOP - 8) / LANES, laneY = (i) => FLOOR_TOP + 8 + (i + .5) * laneH, laneOf = (y) => clamp(Math.floor((y - FLOOR_TOP - 8) / laneH), 0, LANES - 1);
   const tellCol = (k, a = 1) => `rgba(230,70,80,${(.14 + .3 * k) * a})`, tellLine = (k) => `rgba(255,130,110,${.5 + .4 * k})`;
   function clawMark(x, y, r, k, n) { // three gouges across an ellipse: where the wolf's claws will land
@@ -1281,7 +1356,7 @@
         if (Math.random() < .5) parts.push({ x: g.x - h.dir * 30, y: g.y + rand(-6, 6), z: rand(4, 30), vx: -h.dir * 40, vy: 0, vz: 20, life: .5, max: .5, col: 'rgba(150,110,220,.5)', size: rand(4, 7), shape: 'puff', rot: 0, vr: 0 }); }
       if (gone) h.t = -1; },
     ups(h, list, t) { for (const g of h.lanes) list.push([g.y, () => onMain(() => { // spectral copies of its old shapes, running
-      ctx.save(); ctx.translate(g.x, g.y - (g.form === 3 ? 30 : g.form === 2 ? 16 : 0)); ctx.scale(h.dir * .62, .62); ctx.globalAlpha = .55; ctx.globalCompositeOperation = 'lighter'; TINT = '#7A58C0';
+      ctx.save(); ctx.translate(g.x, g.y - (g.form === 2 ? 30 : g.form === 3 ? 16 : 0)); ctx.scale(h.dir * .62, .62); ctx.globalAlpha = .55; ctx.globalCompositeOperation = 'lighter'; TINT = '#7A58C0';
       FORMS[g.form]({ state: 'idle', phase: g.form, walk: 0 }, { walk: t * 14, t }, t); TINT = null; ctx.restore(); })]); },
     box(h, box) { for (const g of h.lanes) box(g.x, g.y, 0, 100, 140); },
   });
@@ -1396,7 +1471,7 @@
       list.push([h.y, () => miniFace(h.x, h.y - z - 18, 16, h.face, h.sp * .3 + (u > 0 ? u * h.sp * .6 : 0))]); },
     box(h, box) { box(h.x, h.y, 0, 40, 290); },
   });
-  // SWOOP (horror): it climbs, then dives across the whole arena along the dark track on the floor, lowest where you stand
+  // SWOOP (drake): it climbs, then dives, talons first, across the whole arena along the dark track on the floor, lowest where you stand
   const swoopT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, x0 = e.x, x1 = d > 0 ? rightWall() - 70 : leftWall() + 70; return { x0, y0: e.y, x1, px: clamp(P.x, Math.min(x0, x1) + 20, Math.max(x0, x1) - 20), py: yClamp(P.y), d }; });
   const swoopAt = (T, u) => { const uP = clamp((T.px - T.x0) / (T.x1 - T.x0), .1, .9), x = lerp(T.x0, T.x1, u), y = u < uP ? lerp(T.y0, T.py, sm(u / uP)) : T.py, q = (u - uP) / (u < uP ? uP : 1 - uP); return [x, y, 6 + 104 * q * q]; };
   TELL_FX.w4swoop = (e, t, k) => { const T = swoopT(e); ctx.save();
@@ -1414,29 +1489,91 @@
       return false;
     });
   };
-  // SHADOWS (horror): the shadows of its wings slide over the floor after you; when they stop, hands of darkness reach up out of them
-  const shadT = (e) => targets(e, () => ({ s: [0, 1, 2].map(i => ({ x: e.x + (i - 1) * 40, y: yClamp(e.y + (i - 1) * 30), ox: (i - 1) * 64, oy: (i - 1) * (i === 1 ? 0 : 22) })) }));
-  TELL_FX.w4shadows = (e, t, k) => { const T = shadT(e); ctx.save(); for (const s of T.s) wingShadow(s.x, s.y, 30, k, t); ctx.restore(); };
-  function wingShadow(x, y, r, k, t, frozen) {
-    ctx.fillStyle = `rgba(16,6,22,${.35 + .3 * k})`; ctx.beginPath(); ctx.moveTo(x - r, y);
-    for (let i = 0; i <= 8; i++) { const a = Math.PI + i / 8 * Math.PI, rr = r * (i % 2 ? .7 : 1); ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr * .34); }
-    ctx.quadraticCurveTo(x, y + r * .25, x - r, y); ctx.fill();
-    ctx.strokeStyle = frozen ? `rgba(255,120,110,${.6 + .3 * Math.sin(t * 20)})` : tellLine(k * .7); ctx.lineWidth = frozen ? 2.2 : 1.2; ell(x, y, r, r * .32); ctx.stroke();
-  }
-  PLAN_FX.w4shadows = (e) => {
-    const T = shadT(e); e.w4T = null; sfx('charge', 2);
-    for (const s of T.s) hazards.push({ kind: 'w4shadow', x: s.x, y: s.y, t: .95, max: .95, dmg: edmg(e), up: 0 });
-    act(e, 'shadows', (h, dt, e) => { if (h.el > .9) { recover(e, .9); return true; } return false; });
+  // EMBER BREATH (drake): it marks the lane you stand in and rears, its throat kindling; then it flies the length of the
+  // lane breathing fire down onto it, the flames racing ahead of it along the floor. Step out of the lane before it comes
+  const flameT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, l = laneOf(P.y), x1 = d > 0 ? rightWall() - 16 : leftWall() + 16; return { l, y: laneY(l), d, x0: clamp(e.x + d * 30, leftWall() + 16, rightWall() - 16), x1 }; });
+  const FLAME_HW = () => laneH * .62; // how far either side of the lane's middle the fire reaches
+  TELL_FX.w4flame = (e, t, k) => { const T = flameT(e), lo = Math.min(T.x0, T.x1), hi = Math.max(T.x0, T.x1), hw = FLAME_HW(); ctx.save();
+    ctx.fillStyle = tellCol(k, .9); rrect(lo, T.y - hw, hi - lo, hw * 2, hw * .8); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.lineWidth = 2; for (let i = 0; i < 12; i++) { const q = cl01(k * 1.5 - i * .07), x = T.x0 + T.d * (24 + i * (hi - lo - 40) / 11); if (q <= 0) break; // chevrons running the way the fire will run
+      ctx.strokeStyle = `rgba(255,170,90,${.2 + .7 * q})`; ctx.beginPath(); ctx.moveTo(x - T.d * 4, T.y - 6); ctx.lineTo(x + T.d * 3, T.y); ctx.lineTo(x - T.d * 4, T.y + 6); ctx.stroke(); }
+    ctx.restore(); };
+  PLAN_FX.w4flame = (e) => {
+    const T = flameT(e); e.w4T = null; sfx('charge', 2);
+    const cells = [], n = Math.max(2, Math.ceil(Math.abs(T.x1 - T.x0) / 16)); for (let i = 0; i <= n; i++) cells.push({ x: lerp(T.x0, T.x1, i / n), lit: -1 });
+    const fire = { kind: 'w4fire', y: T.y, d: T.d, cells, front: T.x0, feeding: 1, el: 0, t: 9, max: 9, dmg: edmg(e), hit: false };
+    hazards.push(fire);
+    const x0 = e.x, y0 = e.y, z0 = e.z, D = 1.15;
+    act(e, 'flame', (h, dt, e) => {
+      const u = cl01(h.el / D), k = sm(cl01(h.el / .25)); e.facing = T.d; e.w4pose = { beat: .62 + .1 * Math.sin(h.el * 5) };
+      fire.front = lerp(T.x0, T.x1, u); e.x = lerp(x0, fire.front - T.d * 104 * e.size, k); e.y = lerp(y0, T.y, k); e.z = lerp(z0, 70, k);
+      if (h.el - (h.sfxT ?? -1) > .3) { h.sfxT = h.el; sfx('whoosh'); }
+      if (u >= 1) { fire.feeding = 0; recover(e, 1.1); return true; } // spent, at the far end of the lane: your opening
+      return false;
+    }, { uy: T.y + 1 }).up = (h, t) => { // the gout of fire pouring from its jaws down onto the floor ahead of it
+      const e = h.e, s = e.size, mx = e.x + T.d * 84 * s, my = e.y - e.z - 66 * s, fx = fire.front, fy = T.y, q = cl01(h.el / .12);
+      const st = taper(mx, my, lerp(mx, fx, .55) + T.d * 6, lerp(my, fy, .4), lerp(mx, fx, q), lerp(my, fy, q), 5, 22, 9);
+      trace(st.L, st.R); ctx.fillStyle = C('#E8602A'); ctx.globalAlpha = .9; ctx.fill(); ctx.globalAlpha = 1; outline(1.2);
+      if (DET()) { const s2 = taper(mx, my, lerp(mx, fx, .55) + T.d * 6, lerp(my, fy, .4), lerp(mx, fx, q), lerp(my, fy, q), 2, 10, 9); trace(s2.L, s2.R); ctx.fillStyle = '#FFD27A'; ctx.fill(); }
+      glowAt(fx, fy - 8, 40, EMBER, .55); glowAt(mx, my, 18, SULF, .5);
+    };
   };
-  reg('w4shadow', {
-    update(h, dt) { if (h.t > .5) return; if (h.t <= 0) { if (!h.fired) { h.fired = true; sfx('crunch'); shakeMag = Math.max(shakeMag, 5); if (inEll(P.x, P.y, h.x, h.y, 34) && P.z < 36) hitP(h.dmg, h.x, true); } h.up = Math.min(1, -h.t / .1); if (h.t < -.38) h.t = -1; } },
-    draw(h, t) { if (h.t > 0) wingShadow(h.x, h.y, 30, 1, t, h.t < .5); },
-    ups(h, list, t) { if (h.up > 0) list.push([h.y + 1, () => { const f = h.t < -.24 ? 1 - (-h.t - .24) / .14 : 1;
-      for (let i = 0; i < 4; i++) { const ox = (i - 1.5) * 12, L = (40 + (i % 2) * 12) * h.up * f; if (L < 2) continue; // clawed hands of darkness
-        const s = horn(h.x + ox, h.y, h.x + ox * 1.3, h.y - L * .6, h.x + ox * 1.6, h.y - L, 9, 3, '#1E0E26', 1.3, '#0A040E');
-        for (let c = -1; c <= 1; c++) horn(h.x + ox * 1.6, h.y - L, h.x + ox * 1.6 + c * 4, h.y - L - 6, h.x + ox * 1.6 + c * 7, h.y - L - 9 + Math.abs(c) * 3, 2.6, .3, '#2A1636', .9); }
-      glowAt(h.x, h.y - 16, 30, BRUISE, .35 * f); }]); },
-    box(h, box) { box(h.x, h.y, 0, 50, 90); },
+  function flameTongue(x, y, hgt, i, t) { // one tongue of fire standing on the floor: slow to sway, inked, a hot core
+    if (hgt < 2) return; const sw = Math.sin(t * 2.2 + i * 1.7) * hgt * .12;
+    horn(x - 4, y, x + sw, y - hgt * .55, x + sw * 1.8, y - hgt, 11, .5, '#E8602A', 1, '#A83A1C');
+    if (DET()) { const s = taper(x - 1, y, x + sw * .6, y - hgt * .4, x + sw * 1.2, y - hgt * .62, 5, .4, 5); trace(s.L, s.R); ctx.fillStyle = '#FFD27A'; ctx.fill(); }
+  }
+  reg('w4fire', {
+    update(h, dt) { h.el += dt; let alive = h.feeding;
+      for (const c of h.cells) { if (c.lit < 0 && (c.x - h.front) * h.d <= 0 && h.feeding) { c.lit = h.el; if (Math.random() < .3) burst(c.x, h.y, 2, ['#FF8A3C', '#FFD27A'], 3, 'spark', h.d); } if (c.lit >= 0 && h.el - c.lit < .9) alive = 1; }
+      if (!h.hit && P.z < 30 && Math.abs(P.y - h.y) < FLAME_HW() + 4) for (const c of h.cells) if (c.lit >= 0 && h.el - c.lit < .4 && Math.abs(P.x - c.x) < 14) { h.hit = true; hitP(h.dmg, c.x - h.d * 10, true); break; }
+      if (!alive) h.t = -1; },
+    draw(h, t) { const hw = FLAME_HW(); ctx.save(); // the scorch it leaves on the floor
+      for (const c of h.cells) if (c.lit >= 0) { const a = h.el - c.lit; ctx.fillStyle = `rgba(30,10,8,${.45 * (1 - cl01((a - .6) / .3))})`; ell(c.x, h.y, 12, hw * .7); ctx.fill(); }
+      ctx.restore(); },
+    ups(h, list, t) { list.push([h.y, () => { for (let i = 0; i < h.cells.length; i++) { const c = h.cells[i]; if (c.lit < 0) continue; const a = h.el - c.lit, k = a < .12 ? a / .12 : 1 - cl01((a - .3) / .5);
+      flameTongue(c.x, h.y + (i % 2 ? 3 : -3), (22 + (i % 3) * 7) * k, i, t); } }]); },
+    box(h, box) { box((h.cells[0].x + h.cells[h.cells.length - 1].x) / 2, h.y, 0, Math.abs(h.cells[0].x - h.cells[h.cells.length - 1].x) / 2 + 30, 70); },
+  });
+  // GALE OF PINIONS (drake): it mantles its wings and a line of its great burning quills drops point-down into the floor
+  // behind you, one lane left open; then it beats down, twice, and the gale drives you back onto them. Run into the
+  // wind to hold your ground, slip back through the open lane, or jump the quills as you are blown over them
+  const gustT = (e) => targets(e, () => {
+    const d = Math.sign(P.x - e.x) || 1, room = d > 0 ? rightWall() - 30 - P.x : P.x - leftWall() - 30, me = laneOf(P.y);
+    return { d, x: P.x + d * clamp(room, 40, 130), gap: pick([0, 1, 2, 3].filter(l => l !== me)) };
+  });
+  const GUST = 160; // how hard the gale pushes: a walk is not enough to hold against it, a run is
+  TELL_FX.w4gust = (e, t, k) => { const T = gustT(e); ctx.save();
+    for (let l = 0; l < LANES; l++) { const y = laneY(l); if (l === T.gap) { ctx.strokeStyle = `rgba(230,220,200,${.3 + .4 * k})`; ctx.setLineDash([3, 4]); ctx.lineWidth = 1.4; ell(T.x, y, 14, laneH * .4); ctx.stroke(); ctx.setLineDash([]); continue; }
+      ctx.fillStyle = tellCol(k); ell(T.x, y, 13, laneH * .42); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.strokeStyle = `rgba(255,190,120,${.3 + .6 * k})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(T.x, y); ctx.lineTo(T.x, y - 10 - 26 * k); ctx.stroke(); } // where each quill will stand
+    const x0 = e.x + T.d * 20, x1 = T.x - T.d * 18; ctx.lineWidth = 2; // the wind's path: long strokes running from it toward the quills
+    for (let i = 0; i < 7; i++) { const y = FLOOR_TOP + 14 + i * (FLOOR_BOT - FLOOR_TOP - 24) / 6, q = cl01(k * 1.4 - (i % 3) * .12), xa = lerp(x0, x1, .1 + (i % 2) * .15), xb = lerp(xa, x1, q);
+      ctx.strokeStyle = `rgba(230,210,255,${.15 + .4 * q})`; ctx.beginPath(); ctx.moveTo(xa, y); ctx.lineTo(xb, y); ctx.lineTo(xb - T.d * 6, y - 4); ctx.stroke(); }
+    ctx.restore(); };
+  PLAN_FX.w4gust = (e) => {
+    const T = gustT(e); e.w4T = null; sfx('whoosh');
+    const q = { kind: 'w4quills', x: T.x, d: T.d, gap: T.gap, el: 0, t: 9, max: 9, dmg: edmg(e), hit: false, end: 1.9 };
+    hazards.push(q);
+    act(e, 'gust', (h, dt, e) => {
+      e.facing = T.d; const g = (h.el - .28) / 1.1;
+      e.w4pose = { beat: g < 0 ? 1 : g < 1 ? Math.cos(g * TAU * 2) : 1 }; // two great downstrokes
+      if (g >= 0 && g < 1 && P.state !== 'dead') { const f = .55 + .45 * Math.max(0, -Math.cos(g * TAU * 2)); if ((P.x - e.x) * T.d > -10) P.x = xClamp(P.x + T.d * GUST * f * dt);
+        if (Math.random() < .6) parts.push({ x: e.x + T.d * rand(30, 200), y: rand(FLOOR_TOP, FLOOR_BOT), z: rand(2, 40), vx: T.d * rand(320, 420), vy: 0, vz: 0, life: .4, max: .4, col: 'rgba(220,200,255,.5)', size: rand(2, 3), shape: 'streak', rot: 0, vr: 0 }); }
+      if (g >= 0 && !h.blown) { h.blown = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 5); }
+      if (g >= 1) { recover(e, 1.0); return true; } // spent: your opening
+      return false;
+    });
+  };
+  reg('w4quills', {
+    update(h, dt) { h.el += dt; const u = h.el / .26;
+      if (u >= 1 && !h.landed) { h.landed = 1; sfx('crunch'); for (let l = 0; l < LANES; l++) if (l !== h.gap) burst(h.x, laneY(l), 2, ['#FF8A3C', '#2A1A36', '#FFD27A'], 5, 'rock', 0); }
+      if (h.landed && !h.hit && h.el < h.end - .3 && P.z < 34 && laneOf(P.y) !== h.gap && Math.abs(P.x - h.x) < 15) { h.hit = true; hitP(h.dmg, h.x + h.d * 30, true); }
+      if (h.el > h.end) h.t = -1; },
+    draw(h, t) { if (!h.landed) for (let l = 0; l < LANES; l++) if (l !== h.gap) { ctx.fillStyle = `rgba(20,8,24,${.2 + .4 * cl01(h.el / .26)})`; ell(h.x, laneY(l), 9, 3); ctx.fill(); } },
+    ups(h, list, t) { const u = cl01(h.el / .26), z = 200 * (1 - u * u), f = 1 - cl01((h.el - h.end + .4) / .4); // the quills, falling, then standing in the floor, root down
+      for (let l = 0; l < LANES; l++) { if (l === h.gap) continue; const y = laneY(l); list.push([y, () => { ctx.save(); ctx.globalAlpha = f; ctx.translate(h.x, y - z); pinion(0, 0, -Math.PI / 2 - h.d * .12 + (l % 2 ? .06 : -.06), 42, 6.4, false, DR.ember); ctx.restore(); glowAt(h.x - h.d * 4, y - z - 36, 16, EMBER, .45 * f); }]); } },
+    box(h, box) { box(h.x, (FLOOR_TOP + FLOOR_BOT) / 2, 0, 40, 260); },
   });
   // THE HUNGRY DARK (close burst, every form): a ring of black fangs rises out of the floor round it and snaps shut
   const mawR = (e) => e.hw + 66;
@@ -1533,7 +1670,7 @@
   };
 
   // ---------------- THE RIM OF THE ABYSS: the Ty'iga's shapes ----------------
-  const FORM_BOX = { 1: [52, 68], 2: [42, 84], 3: [38, 96] };
+  const FORM_BOX = { 1: [52, 68], 2: [46, 78], 3: [42, 84] }; // the wolf, the drake, the Mask
   MECH_FX.w4rim = {
     start(m) { m.ph = 1; },
     update(m, dt) {
@@ -1541,14 +1678,13 @@
       if (e.phase !== m.ph) { e.w4from = m.ph; m.ph = e.phase; e.w4shift = 1; smokePuff(e.x, e.y, 30, 30); sfx('roar'); e.w4T = null; }
       if (e.w4shift > 0) e.w4shift = Math.max(0, e.w4shift - dt / 1.3);
       if (!e.dead) { const [w, h] = FORM_BOX[e.phase] || FORM_BOX[1]; e.hw = w * e.size; e.hh = h * e.size; }
-      const hl = e.phase === 2 && !e.dead && !(e.w4shift > 0); if (hl && !e.w4hl) e.w4H = null; e.w4hl = hl; // the Mask's hands live in the world
+      const hl = e.phase === 3 && !e.dead && !(e.w4shift > 0); if (hl && !e.w4hl) e.w4H = null; e.w4hl = hl; // the Mask's hands live in the world
       if (stillT > 0) return;
       m.clk = (m.clk || 0) + dt;
       if (e.w4hl) handsUpdate(e, dt, m.clk);
       e.w4halo = e.state === 'w4act' && e.w4a === 'faces' ? 0 : Math.min(1, (e.w4halo ?? 1) + dt * .4); // the fallen faces grow back
       if (e.state === 'wind' && e.plan === 'w4faces') e.w4mood = 1 - e.t / e.windMax > .42 ? facesT(e).first : 0; // its face shows which fall first
       else if (!(e.state === 'w4act' && e.w4a === 'faces')) e.w4mood = 0;
-      if (e.state === 'wind' && e.plan === 'w4shadows') { const T = shadT(e); for (const s of T.s) { const tx = xClamp(P.x + s.ox), ty = yClamp(P.y + s.oy), d = Math.hypot(tx - s.x, ty - s.y), sp = 210 * dt; if (d > 1) { s.x += (tx - s.x) / d * Math.min(d, sp); s.y += (ty - s.y) / d * Math.min(d, sp); } } }
       if (!e.dead && Math.random() < dt * 10) parts.push({ x: camX + rand(0, VW), y: rand(FLOOR_TOP, FLOOR_BOT), z: 0, vx: rand(-6, 6), vy: 0, vz: rand(30, 60), life: 2.2, max: 2.2, col: pick(['rgba(255,150,70,.8)', 'rgba(255,200,120,.7)', 'rgba(150,100,200,.6)']), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 1, w4: 1 }); // embers rising out of the Abyss
     },
     boxes(m, box) { hzBoxes(box); const e = boss && boss.def === BOSSES.tyiga ? boss : null; if (e && e.w4hl && e.w4H) for (const h of e.w4H) box(h.x, h.y, h.z, 60 * e.size, 60 * e.size); },
@@ -1560,7 +1696,7 @@
   const tintLoop = () => {
     requestAnimationFrame(tintLoop);
     if (typeof boss === 'undefined' || !boss || boss.def !== BOSSES.tyiga || boss.dead) return;
-    const g = cv.getContext('2d'); g.fillStyle = ['rgba(150,60,150,.32)', 'rgba(150,60,150,.32)', 'rgba(110,70,170,.34)', 'rgba(200,70,60,.34)'][boss.phase || 1];
+    const g = cv.getContext('2d'); g.fillStyle = ['rgba(150,60,150,.32)', 'rgba(150,60,150,.32)', 'rgba(200,70,60,.34)', 'rgba(110,70,170,.34)'][boss.phase || 1];
     for (const p of parts) if (!p.w4 && p.shape === 'star' && p.max === 1.6 && (p.col === '#D8A0E8' || p.col === '#9FD8E0' || p.col === '#FFF0C0')) { p.w4 = 1; p.col = pick(['#FF9A50', '#FFD08A', '#8A6AB0']); }
   };
   requestAnimationFrame(tintLoop);
