@@ -441,7 +441,7 @@ function zskFoundryMid(rnd) {
   const chainP = { dark: '#140C0C', lit: '#B07050' };
   const WT = 160; // the top of the furnace wall
   // the furnace wall: riveted plates warmed from below
-  { const g = ctx.createLinearGradient(0, WT, 0, FLOOR_TOP); g.addColorStop(0, '#30201F'); g.addColorStop(.6, '#4A2C26'); g.addColorStop(1, '#6E3A2A'); ctx.fillStyle = g; ctx.fillRect(0, WT, AW_W + 1, FLOOR_TOP - WT); }
+  { const g = ctx.createLinearGradient(0, WT, 0, FLOOR_TOP); g.addColorStop(0, '#281A1A'); g.addColorStop(.6, '#3E241F'); g.addColorStop(1, '#5E3024'); ctx.fillStyle = g; ctx.fillRect(0, WT, AW_W + 1, FLOOR_TOP - WT); }
   let row = 0;
   for (let y = WT + 6; y < FLOOR_TOP; y += 22, row++) {
     for (const [x0, w] of awRow(rnd, 50, 90)) awWR(x0, w, rnd, (x, r) => {
@@ -466,8 +466,8 @@ function zskFoundryMid(rnd) {
   const gears = [[575 + rnd() * 20, 128, 66], [1215 + rnd() * 20, 120, 72]];
   for (const [x, y, r] of gears) awWR(x, r * 1.6, rnd, (x, rr) => {
     const r2 = r * .48;
-    awGear(x - (r + r2) * .82, y + 58, r2, 12, rr() * TAU, ironGear);
-    awGear(x, y, r, Math.round(r * .5), rr() * TAU, rr() < .5 ? brass : ironGear);
+    awGear(x - (r + r2) * .82, y + 58, r2, 12, rr() * TAU, brass);
+    awGear(x, y, r, Math.round(r * .5), rr() * TAU, ironGear);
   });
   // steam pipes along the wall, with vents
   for (const py of [190]) {
