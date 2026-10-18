@@ -386,7 +386,7 @@
     const N = 18, L = [], R = [];
     for (let i = 0; i <= N; i++) { const k = i / N, bul = Math.max(0, Math.sin(k * Math.PI * (o.bulbs || 2.5) + (o.ph || 0))) * .55, sw = w * .5 * (1 - Math.pow(k, 2.4)) * (1 + bul) + .6; L.push([x - sw, base - k * h]); R.push([x + sw, base - k * h]); }
     const tip = [x, base - h - w * 2.2], pts = []; for (const p of L) pts.push(p[0], p[1]); pts.push(tip[0], tip[1]); for (let i = R.length - 1; i >= 0; i--) pts.push(R[i][0], R[i][1]);
-    poly(pts); const g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, P.dark); g.addColorStop(.45, P.base); g.addColorStop(.8, P.lit); g.addColorStop(1, P.base); ctx.fillStyle = g; ctx.fill();
+    poly(pts); const g = ctx.createLinearGradient(x - w * AW_SUN, 0, x + w * AW_SUN, 0); g.addColorStop(0, P.dark); g.addColorStop(.35, P.dark); g.addColorStop(.6, P.base); g.addColorStop(.85, P.lit); g.addColorStop(1, P.base); ctx.fillStyle = g; ctx.fill();
     ctx.save(); poly(pts); ctx.clip();
     for (let i = 1; i < N; i += 2) { const y = L[i][1]; ctx.fillStyle = P.band; ctx.globalAlpha = .7; ctx.fillRect(x - w * 2, y, w * 4, 1.1); ctx.globalAlpha = 1; } // gold bands
     for (let i = 0; i < 10; i++) dab(x + (rnd() - .5) * w, base - rnd() * h, 2 + rnd() * 3, rnd() < .5 ? P.dark : P.lit, .25);
@@ -447,7 +447,7 @@
         continue;
       }
       poly(p.pts); const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h); g.addColorStop(0, awMix('#D8C8AC', '#6A5464', (1 - l) * 1.6)); g.addColorStop(1, awMix('#9A8678', '#3A2838', (1 - l) * 1.6)); ctx.fillStyle = g; ctx.fill();
-      ctx.save(); poly(p.pts); ctx.clip(); for (let i = 0; i < 3; i++) dab(p.x + rnd() * p.w, p.y + rnd() * p.h, p.h * (.3 + rnd() * .4), rnd() < .5 ? '#FFF4E0' : '#7A6A72', .2); ctx.restore();
+      ctx.save(); poly(p.pts); ctx.clip(); for (let i = 0; i < 3; i++) dab(p.x + rnd() * p.w, p.y + rnd() * p.h, p.h * (.3 + rnd() * .4), rnd() < .5 ? '#FFF4E0' : '#7A6A72', .1); ctx.restore();
     }
     for (const p of plates) { ctx.strokeStyle = 'rgba(50,30,50,.75)'; ctx.lineWidth = 1 + p.row * .1; poly(p.pts); ctx.stroke(); ctx.strokeStyle = 'rgba(255,250,235,.45)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(p.pts[0], p.pts[1] + 1); ctx.lineTo(p.x + p.w - 1, p.pts[1] + 1); ctx.stroke(); }
     // the Logrus inlaid down the causeway in gold: lines that writhe and branch and never repeat
@@ -468,7 +468,7 @@
   THEMES.chaos2 = {
     name: 'the thelbane spires', sky: ['#160C2A', '#3E2056', '#9A5A70', '#E8B070'], sun: [0.3, 0.2, '255,220,160'], haze: '220,170,150',
     floorA: '#B8A48C', floorB: '#3A2C3A', path: '#C9A040', skyKind: 'none',
-    grade: { desat: .08, top: 'rgba(80,50,160,.4)', bot: 'rgba(240,170,80,.35)', vig: 'rgba(30,10,30,.55)' },
+    grade: { desat: .06, top: 'rgba(60,40,150,.5)', bot: 'rgba(190,110,80,.3)', vig: 'rgba(24,8,30,.66)' },
     liveSky(camX, t) { skyEclipse(THEMES.chaos2, camX); skyFrags(camX, t, Y_OFF + 30, Y_OFF + 90, .9); },
     liveFloor(camX, t) { liveSeams(spireSeams, camX, t, '255,210,110', .16, .14); },
   };
