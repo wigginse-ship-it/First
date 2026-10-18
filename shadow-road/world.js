@@ -31,12 +31,16 @@ function updateFx(dt) {
 
 // ---------- enemies ----------
 const scaleStat = (v, k) => v * (1 + k * save.cycle);
+// each world is harder than the last: enemies take more hits to bring down, hit a little harder and attack more often.
+// Your own damage doesn't change, so leveling your weapons is what keeps pace.
+const WORLD_DIFF = [{ hp: 1, boss: 1, dmg: 1, cd: 1 }, { hp: 1.4, boss: 1.2, dmg: 1.12, cd: .88 }, { hp: 1.85, boss: 1.4, dmg: 1.25, cd: .78 }];
+const worldDiff = () => WORLD_DIFF[Math.min(stageIdx || 0, WORLD_DIFF.length - 1)];
 function spawnEnemy(type, side, isBoss) {
   const def = isBoss ? BOSSES[type] : EDEF[type];
-  const hp = Math.round(scaleStat(def.hp, .5) * (!isBoss && def.ranged && !def.poise ? .65 : 1)); // shooters are fragile: close the gap and they drop fast (the armored tank isn't)
+  const wd = worldDiff(), hp = Math.round(scaleStat(def.hp, .5) * (isBoss ? wd.boss : wd.hp) * (!isBoss && def.ranged && !def.poise ? .65 : 1)); // shooters are fragile: close the gap and they drop fast (the armored tank isn't)
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
-    dmg: Math.round(scaleStat(def.dmg, .3) * (isBoss ? 1.6 : 1.35)), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
+    dmg: Math.round(scaleStat(def.dmg, .3) * (isBoss ? 1.6 : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
   if (isBoss) { e.phase = 1; e.baseDmg = e.dmg; e.size = 1.15; e.hw = def.hw * e.size; e.hh = def.hh * e.size; e.rageT = 0; e.staggers = 0; }
   enemies.push(e); return e;
@@ -204,7 +208,7 @@ function wind(e, t) {
   if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * [1, .88, .76][e.phase - 1] * (e.enraged ? .9 : 1); sfx('growl'); if (e.plan === 'slam' || e.plan === 'dive') e.ty = P.y, e.tx = P.x; }
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
 }
-function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]); }
+function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]) * worldDiff().cd; }
 function execute(e) {
   const p = e.plan;
   if (p === 'bite' || p === 'swing') { e.state = 'strike'; e.t = .2; sfx('swing'); e.vx = 0; }
