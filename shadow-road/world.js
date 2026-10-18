@@ -443,7 +443,7 @@ function updateWorld(dt) {
   if (clearT > 0) { clearT -= dt; if (clearT <= 0) stageClear(); }
 }
 function endCombo() {
-  if (comboN >= 10) { const b = Math.floor(comboN / 5); save.shards += b; runShards += b; floatText(P.x, P.y, 96, `${comboN} HITS · +${b} SHARDS`, '#7EC2B0', 14); }
+  if (comboN >= 10) { const b = Math.floor(comboN / 7); save.shards += b; runShards += b; floatText(P.x, P.y, 96, `${comboN} HITS · +${b} SHARDS`, '#7EC2B0', 14); }
   comboN = 0; refreshCombo();
 }
 

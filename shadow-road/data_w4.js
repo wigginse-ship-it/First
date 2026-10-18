@@ -3,17 +3,17 @@
 // THE COURTS OF CHAOS: the far end of the Black Road, where the road of fused glass runs out over the Abyss.
 //   chaos     - The Black Road (waves 1-2)
 //   chaos2    - The Thelbane Spires (wave 3: a shuffled roster and Borel, Duke of Chaos; the Abyss breathes)
-//   chaosBoss - The Rim of the Abyss: the Ty'iga, Shifter of Shapes (wolf, then serpent of smoke, then winged horror)
+//   chaosBoss - The Rim of the Abyss: the Ty'iga, Shifter of Shapes (wolf, then the Mask of a Thousand Faces, then winged horror)
 (() => {
   // the Ty'iga changes its whole body each phase, so how it moves and where it can be hit follow its current form
   const tyPhase = () => (typeof boss !== 'undefined' && boss && boss.def === BOSSES.tyiga ? boss.phase || 1 : 1);
   const FORM = {
     1: { move: 'ground', hover: 0, tail: 0, reachDown: 0 },     // the great shadow-wolf
-    2: { move: 'fly', hover: 30, tail: 120, reachDown: 30 },     // the serpent of smoke, coiling low over the floor
+    2: { move: 'fly', hover: 34, tail: 0, reachDown: 34 },       // the Mask of a Thousand Faces, hanging over the floor in its mantle
     3: { move: 'fly', hover: 60, tail: 0, reachDown: 56 },       // the winged horror, high over the arena
   };
   // how close it closes before it starts each attack (it hunts up close as a wolf, keeps its distance as the others)
-  const STANDOFF = { w4rake: 150, w4howl: 170, w4coil: 120, w4venom: 190, w4swoop: 230, w4shadows: 170, w4maw: 60 };
+  const STANDOFF = { w4rake: 150, w4howl: 170, w4clap: 170, w4faces: 190, w4swoop: 230, w4shadows: 170, w4maw: 60 };
 
   Object.assign(EDEF, {
     // humans of the Courts
@@ -35,7 +35,7 @@
     hp: 1150, spd: 64, hw: 50, hh: 66, dmg: 20, wind: .6, cd: [.6, 1.2], weight: .3, poise: 10, ranged: 1,
     // each form has its own attacks; the Howl of Many Shapes follows it from body to body, its pack growing with every shape it has worn
     p1: ['w4rake', 'w4howl', 'w4rake'],
-    p2: ['w4coil', 'w4venom', 'w4howl', 'w4coil'],
+    p2: ['w4clap', 'w4faces', 'w4howl', 'w4clap', 'w4faces'],
     p3: ['w4swoop', 'w4shadows', 'w4howl', 'w4swoop', 'w4shadows'],
   };
 
