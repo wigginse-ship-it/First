@@ -37,8 +37,23 @@ function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save));
 // ---------- sound (synthesized, starts on first touch) ----------
 let actx = null, noiseBuf = null, sfxOn = true;
 try { sfxOn = localStorage.getItem('shadowroad-sfx') !== '0'; } catch (e) {}
+// iPhones mute web audio when the ring/silent switch is on. Asking for 'playback' audio (like a music or video app)
+// lets the game be heard anyway; the Sound and Music buttons in the pause menu still turn it off.
+let silentFix = null;
+function unmuteOnSilent() {
+  try { if (navigator.audioSession) { navigator.audioSession.type = 'playback'; return; } } catch (e) {}
+  if (silentFix) return; // older iPhones: a silent, looping media element puts the page in the same playback mode
+  try {
+    const n = 2048, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => [...t].forEach((c, i) => b[o + i] = c.charCodeAt(0));
+    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
+    silentFix = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' }))); silentFix.loop = true; silentFix.setAttribute('playsinline', '');
+    silentFix.play().catch(() => { silentFix = null; });
+  } catch (e) { silentFix = null; }
+}
 function audioInit() {
-  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+  unmuteOnSilent();
+  if (actx) { if (actx.state !== 'running') actx.resume().catch(() => {}); return; }
   try {
     actx = new (window.AudioContext || window.webkitAudioContext)();
     noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.4, actx.sampleRate);
@@ -90,6 +105,11 @@ function sfx(k, power = 1) {
     }
   } catch (e) {}
 }
+
+// iOS only lets a tap that ends (not one that starts) switch audio on, and it can pause audio when you leave the app:
+// so any finished tap, click or key wakes the sound back up
+for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, () => { if (!actx || actx.state !== 'running') audioInit(); }, { passive: true, capture: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && actx && actx.state !== 'running') actx.resume().catch(() => {}); });
 
 // ---------- input ----------
 const input = { mx: 0, my: 0, run: false, light: false, heavy: false, jump: false, dodge: false, swap: false, trump: false };
