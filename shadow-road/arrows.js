@@ -23,17 +23,41 @@ function gainArrow() {
 function startShoot() {
   if (!(save.arrows > 0)) { floatText(P.x, P.y, 80, 'NO ARROWS', 'rgba(220,210,200,.85)', 12); return; }
   if (Math.abs(input.mx) > .3) P.facing = Math.sign(input.mx);
-  P.state = 'shoot'; P.t = 0; P.loosed = false; P.seq = ''; P.vx = 0; sfx('swing', .3);
+  P.state = 'shoot'; P.t = 0; P.charge = 0; P.drawing = true; P.aim = 0; P.full = false; P.seq = ''; P.vx = 0; sfx('swing', .3);
 }
-function updateShoot(dt) { // draw, loose, recover
-  P.t += dt;
-  if (!P.loosed && P.t >= .16) {
-    P.loosed = true; save.arrows--; persist(); refreshArrows();
-    const T = aTier(), lvl = Math.min(5, save.alv || 1);
-    projs.push({ owner: 'p', arrow: lvl, x: P.x + P.facing * 22, y: P.y, z: Math.max(30, P.z + 38), vx: P.facing * 820, dmg: Math.round(T.dmg * worldDiff().hp), life: 1.2, hit: new Set(), pierce: T.pierce, crit: T.crit, blast: T.blast });
-    sfx('shoot'); P.vx = -P.facing * 60;
+// hold the bow button to keep the arrow drawn: up and down aim it, and the longer it's held the harder it flies
+// (a full draw, about .7s, is the arrow's whole strength; a snap shot has 40% of it). Let go to loose.
+function updateShoot(dt) {
+  if (P.drawing) {
+    P.charge = Math.min(1, P.charge + dt / .7);
+    if (P.full) P.sinceFull += dt;
+    if (P.charge >= 1 && !P.full) { P.full = true; P.sinceFull = 0; sfx('charge', 2); burst(P.x + P.facing * 26, P.y, P.z + 40, ['#FFF0C0', '#FFFFFF'], 8, 'spark'); }
+    if (Math.abs(input.mx) > .4) P.facing = Math.sign(input.mx);
+    P.aim += (clamp(-input.my, -1, 1) * (input.my < 0 ? .6 : .35) - P.aim) * Math.min(1, dt * 8);
+    if (pressed.dodge) { P.drawing = false; startDodge(); return; } // let the string down and dodge: the arrow is kept
+    if (!input.shoot) loose();
+    return;
   }
-  if (P.t >= .36) P.state = P.z > 0 ? 'jump' : 'idle';
+  P.t += dt;
+  if (P.t >= .22) P.state = P.z > 0 ? 'jump' : 'idle';
+}
+function loose() {
+  P.drawing = false; P.t = 0; save.arrows--; persist(); refreshArrows();
+  const T = aTier(), lvl = Math.min(5, save.alv || 1), k = P.charge, sp = 520 + 320 * k;
+  const perfect = P.full && P.sinceFull < .12; // let go the instant the draw is full: a perfect release always crits
+  if (perfect) { floatText(P.x, P.y, 96, 'PERFECT', '#FFE08A', 15); flashT = .06; burst(P.x + P.facing * 28, P.y, P.z + 40, ['#FFE08A', '#FFFFFF'], 14, 'spark', P.facing, true); }
+  projs.push({ owner: 'p', arrow: lvl, x: P.x + P.facing * 22, y: P.y, z: Math.max(30, P.z + 40), vx: P.facing * sp * Math.cos(P.aim), vz: sp * Math.sin(P.aim),
+    dmg: Math.round(T.dmg * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1)), perfect, life: 1.3, hit: new Set(), pierce: k >= 1 ? T.pierce : 0, crit: T.crit + (k >= 1 ? .1 : 0), blast: k >= 1 ? T.blast : T.blast * .5, full: k >= 1 });
+  sfx('shoot'); P.vx = -P.facing * (40 + 60 * k);
+}
+// while drawn: a faint line along the shot, brightening to gold at full strength
+function drawAimLine() {
+  if (P.state !== 'shoot' || !P.drawing) return;
+  const x0 = P.x + P.facing * 24, z0 = Math.max(30, P.z + 40), c = Math.cos(P.aim), s = Math.sin(P.aim), full = P.charge >= 1;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.setLineDash([4, 6]); ctx.lineWidth = full ? 1.6 : 1;
+  const perfectNow = full && P.sinceFull < .12; // the window: the line flares white-gold for an instant
+  ctx.strokeStyle = perfectNow ? 'rgba(255,250,220,1)' : full ? 'rgba(255,220,140,.7)' : `rgba(240,230,210,${.15 + .35 * P.charge})`; if (perfectNow) ctx.lineWidth = 2.6;
+  ctx.beginPath(); ctx.moveTo(x0, P.y - z0); ctx.lineTo(x0 + P.facing * c * 150, P.y - z0 - s * 150); ctx.stroke(); ctx.restore();
 }
 // an arrow in flight strikes the first foe in its path (returns true when it is spent)
 function arrowHit(p) {
@@ -46,7 +70,7 @@ function arrowHit(p) {
   }
   if (!best) return false;
   p.hit.add(best);
-  strike(best, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 120, power: 2, arrow: 1, crit: Math.random() < .15 + p.crit });
+  strike(best, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .15 + p.crit });
   burst(best.x, best.y, p.z, ['#FFFFFF', '#E8D8B0'], 8, 'spark', Math.sign(p.vx));
   if (p.blast) { // rune and starfall arrows burst where they land
     fx.push({ kind: 'ring', x: best.x, y: best.y, z: 4, t: .35, max: .35, r: p.blast * 1.4, col: p.arrow >= 5 ? '#E8E0FF' : '#9FE8F0', flat: 1 });
@@ -72,9 +96,10 @@ function drawArrowShape(lvl, len = 30) {
   ctx.closePath(); ctx.fill(); outline(.7);
 }
 function drawArrowProj(p) {
+  const ang = Math.atan2(p.vz || 0, Math.abs(p.vx));
   const x = p.x, y = p.y - p.z;
-  ctx.save(); shadow(p.x, p.y, 4); ctx.translate(x, y); ctx.scale(Math.sign(p.vx), 1);
-  if (p.arrow >= 3) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(-70, 0, 0, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, p.arrow >= 5 ? 'rgba(220,210,255,.6)' : 'rgba(230,240,255,.4)'); ctx.fillStyle = g; ctx.fillRect(-70, -1.5, 70, 3); ctx.restore(); } // its streak of light
+  ctx.save(); shadow(p.x, p.y, 4); ctx.translate(x, y); ctx.scale(Math.sign(p.vx), 1); ctx.rotate(-ang);
+  if (p.arrow >= 3 || p.full) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(-70, 0, 0, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, p.arrow >= 5 ? 'rgba(220,210,255,.6)' : 'rgba(230,240,255,.4)'); ctx.fillStyle = g; ctx.fillRect(-70, -1.5, 70, 3); ctx.restore(); } // its streak of light
   drawArrowShape(p.arrow); ctx.restore();
 }
 function drawArrowLoot(k, t) { // an arrow stuck in the ground, gleaming

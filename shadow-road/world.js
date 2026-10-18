@@ -418,12 +418,12 @@ function updateWorld(dt) {
       if (p.otime > 0 && !o.dead) { p.otime -= dt; p.ang += 4 * dt; p.rad = Math.min(84, p.rad + 90 * dt); p.x = o.x + Math.cos(p.ang) * p.rad; p.y = clamp(o.y + Math.sin(p.ang) * p.rad * .35, FLOOR_TOP + 4, FLOOR_BOT); p.z = o.z + 20; }
       else { p.orbit = null; p.vx = Math.cos(p.ang) * 230; p.vy = Math.sin(p.ang) * 70; }
     }
-    p.x += p.vx * dt; p.y = clamp(p.y + (p.vy || 0) * dt, FLOOR_TOP + 4, FLOOR_BOT); p.life -= dt;
+    p.x += p.vx * dt; p.y = clamp(p.y + (p.vy || 0) * dt, FLOOR_TOP + 4, FLOOR_BOT); p.life -= dt; if (p.vz) p.z += p.vz * dt;
     if (p.owner === 'e') {
       if (p.ground && Math.random() < .7) dust(p.x, p.y, 1);
       if (Math.abs(p.x - P.x) < (p.ground ? 16 : 12) && Math.abs(p.y - P.y) < (p.ground ? 16 : 12) && P.z < (p.ground ? 14 : 40) && P.state !== 'dead') { playerDamage(p.dmg, p.x - p.vx, false); p.life = 0; }
     } else {
-      if (p.arrow) { if (arrowHit(p)) p.life = 0; continue; }
+      if (p.arrow) { if (p.z < 2) { p.life = 0; dust(p.x, p.y, 2); continue; } if (arrowHit(p)) p.life = 0; continue; } // an arrow aimed low ends in the ground
       for (const e of enemies) if (!e.dead && !p.hit.has(e) && Math.abs(p.x - e.x) < 24 && Math.abs(p.y - e.y) < 26) { p.hit.add(e); strike(e, p.dmg, Math.sign(p.vx), p.quake ? { dmg: p.dmg, kb: 120, launch: 380, power: 2, smash: 1 } : { dmg: p.dmg, kb: 300, launch: 300, power: 2 }); }
       if (p.quake) { if (Math.random() < .8) dust(p.x, p.y, 1); }
       else if (Math.random() < .9) parts.push({ x: p.x, y: p.y + rand(-10, 10), z: rand(0, 40), vx: 0, vy: 0, vz: 40, life: .4, max: .4, col: '#D08AB0', size: 3, shape: 'star', rot: 0, vr: 4 });

@@ -126,8 +126,8 @@ function playerPose() {
     else { pose.crouch = 1; pose.walk = 1.4; pose.lean = .2; pose.arm = .3; pose.backArm = 2; } // the stride into Shadow
   }
   else if (P.state === 'shoot') { // a short bow, drawn to the cheek and loosed, standing side-on
-    const dr = P.t < .16 ? ease(P.t / .16) : 0;
-    pose.weapon = 'shortbow'; pose.draw = dr; pose.arm = -.04; pose.elbow = .05; pose.backArm = Math.PI - .05; pose.backElbow = Math.PI - .2 - .5 * dr; pose.backReach = -.1 * dr; pose.yaw = -.25; pose.lean = -.05;
+    const dr = P.drawing ? .25 + .75 * ease(P.charge) : 0, aim = P.aim || 0;
+    pose.weapon = 'shortbow'; pose.draw = dr; pose.arm = -.04 - aim; pose.elbow = .05; pose.backArm = Math.PI - .05 - aim; pose.backElbow = Math.PI - .2 - .5 * dr; pose.backReach = -.1 * dr; pose.yaw = -.25; pose.lean = -.05;
     if (P.z <= 2) { pose.legs = { f: 9, b: -10, fk: 2, bk: 3 }; pose.sink = 2; }
   }
   else if (P.state === 'parry') { // the blade comes up across the body, the weight back, ready to answer
@@ -414,7 +414,7 @@ function drawScene(t) {
     drawPlayerAt(P.x, P.y, P.z, P.facing, Object.assign(playerPose(), { live: 1 }), blink);
     hatchActor(P.x, P.y - P.z, 13, 50);
   }]);
-  list.push([P.y + .15, () => onMain(() => drawPowerAura(t))]);
+  list.push([P.y + .15, () => onMain(() => { drawPowerAura(t); drawAimLine(); })]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
   for (const s of stags) list.push([s.y + .2, () => { ctx.save(); if (s.dir < 0) { ctx.translate(s.x * 2, 0); ctx.scale(-1, 1); } drawStag(s, t); ctx.restore(); }]);
   mechList(list, t); secretList(list, t);
