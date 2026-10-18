@@ -36,6 +36,12 @@ const scaleStat = (v, k) => v * (1 + k * save.cycle);
 const WORLD_DIFF = [{ hp: 1, boss: 1, dmg: 1, cd: 1 }, { hp: 1.4, boss: 1.2, dmg: 1.12, cd: .88 }, { hp: 1.85, boss: 1.4, dmg: 1.25, cd: .78 }, { hp: 2.35, boss: 1.65, dmg: 1.4, cd: .7 }];
 const worldDiff = () => WORLD_DIFF[Math.min(stageIdx || 0, WORLD_DIFF.length - 1)];
 // worlds 2 and 3 field armored elites: a gold guard soaks up light hits until a heavy, launcher or slam breaks it
+// a champion: a bigger, tougher, armored version of a wave's own foe, announced by name, and it pays well
+function makeChampion(e) {
+  if (!e.elite) makeElite(e);
+  e.champ = true; e.hp = e.maxHp = Math.round(e.maxHp * 2.4); e.guard = e.guardMax = e.guardMax + (stageIdx ? 2 : 1); e.hw *= 1.3; e.hh *= 1.3; e.dmg = Math.round(e.dmg * 1.25);
+  floatText(e.x, e.y, e.hh + 30, 'CHAMPION ' + e.def.name.toUpperCase(), '#EED48A', 15); sfx('growl');
+}
 function makeElite(e) {
   e.elite = true; e.guardMax = e.guard = stageIdx >= 2 ? 4 : 3;
   e.hp = e.maxHp = Math.round(e.hp * 1.5); e.dmg = Math.round(e.dmg * 1.15);
@@ -377,7 +383,13 @@ function updateWorld(dt) {
     waveActive = true; lockX = clamp(camX, 0, stage.len - VW); $('#go').hidden = true;
     const wave = stage.waves[waveIdx];
     wave.forEach((t, j) => spawnQ.push({ type: t, side: j % 2 ? -1 : 1, at: j * .8, drop: null }));
-    if (stage.w0 + waveIdx === 2) boostDrop();
+    if (stage.w0 + waveIdx === 2) { // the third wave brings strangers: a couple of foes from other worlds, and a champion
+      boostDrop();
+      const pool = Object.keys(EDEF).filter(k => !wave.includes(k) && !EDEF[k].noRandom);
+      for (let j = 0; j < 2; j++) spawnQ.push({ type: pick(pool), side: j % 2 ? 1 : -1, at: 1.2 + j * 1.4, drop: null });
+      spawnQ.push({ type: pick(wave.map(t => t.replace('*', '')).filter(t => EDEF[t] && EDEF[t].move !== 'fly')), side: 1, at: 3.4, drop: null, champ: true });
+      spawnQ.sort((a, b) => a.at - b.at);
+    }
     for (const d of carriers) if (d.wave === stage.w0 + waveIdx && !save.owned[d.weapon]) spawnQ[d.slot].drop = d.weapon; // nothing marks the carrier
   }
   if (!stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length && P.x > stage.len - 90) startZoneTrans(); // on to the next place
@@ -389,14 +401,14 @@ function updateWorld(dt) {
     boss.plan = 'roar'; playMusic(TRACKS['boss_' + boss.def.draw] ? 'boss_' + boss.def.draw : 'boss'); // each boss has its own theme
   }
   for (const s of spawnQ) s.at -= dt;
-  while (spawnQ.length && spawnQ[0].at <= 0) { const s = spawnQ.shift(); const e = spawnEnemy(s.type, s.side); if (s.drop) e.dropWeapon = s.drop; }
+  while (spawnQ.length && spawnQ[0].at <= 0) { const s = spawnQ.shift(); if (s.type.endsWith('!')) { s.type = s.type.slice(0, -1); s.champ = true; } const e = spawnEnemy(s.type, s.side, false, s.champ); if (s.drop) e.dropWeapon = s.drop; if (s.champ) makeChampion(e); }
   if (waveActive && !bossSpawned && !spawnQ.length && !enemies.some(e => !e.dead)) { waveActive = false; lockX = null; waveIdx++; $('#go').hidden = false; }
   const target = clamp(P.x - VW * .4, 0, stage.len - VW);
   if (lockX !== null) camX += (lockX - camX) * Math.min(1, dt * 5);
   else camX = Math.max(camX, camX + (target - camX) * Math.min(1, dt * 5));
   camX = clamp(camX, 0, Math.max(0, stage.len - VW));
 
-  updateMech(dt); updateShrink(P, dt); updateBossRoom(dt);
+  updateMech(dt); updateShrink(P, dt); updateBossRoom(dt); updateSecret(dt);
   for (const e of enemies) { updateShrink(e, dt); updateEnemy(e, dt); }
   enemies = enemies.filter(e => !e.remove);
   if (stillT <= 0) for (const p of projs) {

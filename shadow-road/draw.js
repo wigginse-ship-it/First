@@ -191,7 +191,7 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
 }
 function drawEnemy(e, t) {
   if (e.state === 'dying' && e.death && e.death !== 'pop') { drawDeath(e, t); return; }
-  const scale = (e.boss ? e.size : 1) * (e.shrink || 1);
+  const scale = (e.boss ? e.size : e.champ ? 1.3 : 1) * (e.shrink || 1);
   const a = { walk: e.dead ? 0 : e.walk, t: e.dead ? e.deadAt : t, wind: e.state === 'wind' ? 1 - e.t / e.windMax : 0, atk: ['strike', 'dash', 'pounce'].includes(e.state), hurt: ['hurt', 'down', 'dying'].includes(e.state) };
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') { a.pose = humanEnemyPose(e); if (e.state === 'down' || (e.state === 'dying' && !e.air)) a.pose.down = 1; }
   shadow(e.x, e.y, e.hw * 1.1 * Math.max(.4, 1 - e.z / 200));
@@ -251,7 +251,7 @@ function drawDeath(e, t) {
   const draw = () => CREATURES[e.def.draw](e, a);
   shadow(e.x, e.y, e.hw * 1.1);
   ctx.save(); ctx.globalAlpha = e.fade !== undefined ? e.fade : 1;
-  ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); if (e.boss) ctx.scale(e.size, e.size);
+  ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); if (e.boss) ctx.scale(e.size, e.size); else if (e.champ) ctx.scale(1.3, 1.3);
   FLASH = el < .08;
   if (e.death === 'lie') { // knocked flat and left where it landed
     FLASH = false;
@@ -387,7 +387,7 @@ function drawScene(t) {
   for (const k of loot) box(k.x, k.y, k.z || 0, 40, 50);
   for (const p of projs) box(p.x, p.y, p.z || 0, 50, 50);
   for (const s of stags) box(s.x, s.y, 0, 90, 130);
-  mechBoxes(box);
+  mechBoxes(box); secretBoxes(box);
   inkBegin(boxes);
   corpses.forEach((c, i) => { c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; drawDeath(c, t); });
   const list = [];
@@ -411,7 +411,7 @@ function drawScene(t) {
   list.push([P.y + .15, () => onMain(() => drawPowerAura(t))]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
   for (const s of stags) list.push([s.y + .2, () => { ctx.save(); if (s.dir < 0) { ctx.translate(s.x * 2, 0); ctx.scale(-1, 1); } drawStag(s, t); ctx.restore(); }]);
-  mechList(list, t);
+  mechList(list, t); secretList(list, t);
   list.sort((a, b) => a[0] - b[0]).forEach(o => o[1]());
   inkEnd(t);
   for (const p of parts) if (!p.rest) drawPart(p);
@@ -518,9 +518,18 @@ function drawProj(p, t) {
     return;
   }
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  if (p.wave) {
-    const g = ctx.createLinearGradient(x, y - 60, x, y); g.addColorStop(0, 'rgba(255,111,181,0)'); g.addColorStop(1, 'rgba(255,111,181,.9)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 12, y); ctx.quadraticCurveTo(x + Math.sign(p.vx) * 18, y - 40, x - 4, y - 64); ctx.quadraticCurveTo(x + Math.sign(p.vx) * 4, y - 30, x + 10, y); ctx.fill();
+  if (p.wave) { // a crescent of shadow running down the street: dark at its heart, violet light along its edge, echoes trailing behind
+    const d = Math.sign(p.vx) || 1, a = Math.min(1, p.life * 2), tt = performance.now() / 1000;
+    const cres = (ox, s) => { ctx.beginPath(); ctx.moveTo(x + ox - d * 10 * s, y); ctx.quadraticCurveTo(x + ox + d * 26 * s, y - 40 * s, x + ox + d * 6 * s, y - 82 * s); ctx.quadraticCurveTo(x + ox + d * 8 * s, y - 38 * s, x + ox - d * 22 * s, y); ctx.closePath(); };
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fg = ctx.createRadialGradient(x, y, 2, x, y, 46); fg.addColorStop(0, 'rgba(184,156,255,.45)'); fg.addColorStop(1, 'rgba(184,156,255,0)'); ctx.fillStyle = fg; ell(x, y, 46, 12); ctx.fill(); ctx.restore(); // light on the floor
+    for (let i = 3; i >= 1; i--) { ctx.globalAlpha = a * (.18 * (4 - i)); cres(-d * 16 * i, 1 - i * .12); ctx.fillStyle = '#4A2E7A'; ctx.fill(); } // echoes
+    ctx.globalAlpha = a; cres(0, 1);
+    const g = ctx.createLinearGradient(x - d * 20, 0, x + d * 20, 0); g.addColorStop(0, 'rgba(20,10,40,.95)'); g.addColorStop(.7, '#3A2266'); g.addColorStop(1, '#B89CFF');
+    ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#1A0E2A'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(230,220,255,.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - d * 8, y - 2); ctx.quadraticCurveTo(x + d * 24, y - 40, x + d * 6, y - 80); ctx.stroke(); ctx.restore(); // the bright cutting edge
+    for (let i = 0; i < 4; i++) { const k = (tt * 1.6 + i / 4) % 1; ctx.globalAlpha = a * (1 - k) * .7; ctx.fillStyle = '#7A5AB8'; ell(x - d * (6 + i * 5), y - 20 - k * 60, 3 + k * 4, 2 + k * 3); ctx.fill(); } // wisps of shadow rising off it
+    ctx.restore();
   } else {
     shadow(p.x, p.y, 6);
     const g = ctx.createRadialGradient(x, y, 1, x, y, 12); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.4, p.col); g.addColorStop(1, 'rgba(0,0,0,0)');

@@ -10,7 +10,7 @@ const ZONES = [
     { theme: 'skyBoss', len: 1000, waves: [], boss: 1, title: 'The Foundry Crown', sub: 'THE FURNACES ARE LIT' } ] },
   { trans: ['shatter', 'invert'], zones: [
     { theme: 'prism', len: 2300, waves: [0, 1], pods: [650, 1500] },
-    { theme: 'prism2', len: 1700, waves: [2], pods: [1200], mech: 'echo', title: 'The Inverted Gallery', sub: 'TIME RUNS TWICE HERE · YOUR ECHO FIGHTS BESIDE YOU' },
+    { theme: 'prism2', len: 1900, waves: [2, 3], pods: [1200], mech: 'echo', title: 'The Inverted Gallery', sub: 'TIME RUNS TWICE HERE · YOUR ECHO FIGHTS BESIDE YOU' },
     { theme: 'prismBoss', len: 1000, waves: [], boss: 1, title: "The Wyrm's Nest", sub: 'THE STARS ARE WATCHING' } ] },
 ];
 // other files can add passages (TRANS_FX[kind](T, p, c, inP, t) draws one) and approach rules (MECH_FX[kind] = { start(m), update(m, dt), boxes(m, box), list(m, list, t) })
@@ -18,10 +18,10 @@ const TRANS_FX = {}, MECH_FX = {};
 let zoneIdx = 0, zoneTrans = null, baseStage = null, mech = null, snapC = null, runFoundW = false, retryZone = 0;
 const zoneTheme = (z) => (THEMES[ZONES[stageIdx].zones[z].theme] ? ZONES[stageIdx].zones[z].theme : baseStage.theme); // falls back while art is missing
 
-function enterZone(z) {
-  const Z = ZONES[stageIdx].zones[z]; zoneIdx = z;
-  stage = Object.assign({}, baseStage, { theme: zoneTheme(z), len: Z.len, waves: Z.waves.map(k => baseStage.waves[k]), w0: Z.waves.length ? Z.waves[0] : baseStage.waves.length,
-    pods: Z.pods || [], bossRoom: !!Z.boss, mech: Z.mech || null });
+function enterZone(z, Zs) { // Zs: a place outside the usual three (a hidden Trump room), entered from place z
+  const Z = Zs || ZONES[stageIdx].zones[z]; zoneIdx = z;
+  stage = Object.assign({}, baseStage, { theme: Zs ? Zs.theme : zoneTheme(z), len: Z.len, waves: Zs ? Zs.rawWaves : Z.waves.map(k => baseStage.waves[k]), w0: Zs ? 99 : Z.waves.length ? Z.waves[0] : baseStage.waves.length,
+    pods: Z.pods || [], bossRoom: !!Z.boss, mech: Z.mech || null, secret: !!Zs });
   for (const k of loot) { // whatever was left lying in the last place comes along
     if (k.kind === 'shard') { save.shards += k.val; runShards += k.val; }
     else if (k.kind === 'sigil') { save.sigils += k.val; runSigils += k.val; }
@@ -34,7 +34,7 @@ function enterZone(z) {
   bgKey = ''; buildBackground(stage.theme, stageIdx * 97 + 13 + z * 7);
   mech = stage.mech ? { kind: stage.mech, t: 0 } : null; mechStart();
   if (z > 0) retryZone = z;
-  if (z > 0 && typeof TRACKS !== 'undefined' && TRACKS[stage.theme]) playMusic(stage.theme); // every place has its own music
+  if ((z > 0 || Zs) && typeof TRACKS !== 'undefined' && TRACKS[stage.theme]) playMusic(stage.theme); // every place has its own music
   refreshHud(true);
 }
 // the third wave gives you one more chance at a weapon if this stage hasn't given you one yet
@@ -61,13 +61,13 @@ function updateZoneTrans(dt) {
       if (!snapC) snapC = document.createElement('canvas');
       snapC.width = cv.width; snapC.height = cv.height; snapC.getContext('2d').drawImage(cv, 0, 0);
     }
-    enterZone(zoneIdx + 1); P.x = 40; P.inv = 9;
+    if (T.secret) enterSecret(); else enterZone(zoneIdx + 1); P.x = 40; P.inv = 9;
     if (T.kind === 'roots') { for (let i = 0; i < 14; i++) parts.push({ x: P.x + rand(-30, 30), y: P.y, z: 1, vx: rand(-90, 90), vy: rand(-10, 10), vz: rand(80, 200), life: .8, max: .8, col: 'rgba(170,200,190,.75)', size: rand(2, 4), shape: 'blob' }); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .5, max: .5, r: 60, col: '#BFE0D0', flat: 1 }); sfx('slam'); }
     if (T.kind === 'invert') { flashT = .15; }
   }
   if (T.t >= T.dur) {
     zoneTrans = null; P.inv = .6; P.state = 'idle';
-    const Z = ZONES[stageIdx].zones[zoneIdx]; banner(Z.title, Z.sub, 2.6);
+    const Z = stage.secret ? SECRET_ROOM : ZONES[stageIdx].zones[zoneIdx]; banner(Z.title, Z.sub, 2.6);
   }
 }
 const hash1 = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };

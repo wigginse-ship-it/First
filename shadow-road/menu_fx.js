@@ -98,7 +98,7 @@
       drawHumanoid(HERO, { weapon: 'sword', arm: .5, Y: .55, breath: 0 });
       g.restore();
       ctx = old;
-      if (typeof paintCard === 'function') paintCard(cvp, s);
+      if (typeof paintCard === 'function') paintCard(cvp, s * .6);
     } catch (e) {
       if (old) ctx = old;
       if (box) box.classList.add('noart');

@@ -420,6 +420,7 @@ function dropLoot(e) {
   const [a, b] = e.def.shards || [30, 40];
   // richer pickings deeper in: each world drops more, and an armored elite drops a lot more
   maybeDropPower(e);
+  if (e.champ) { loot.push(makeLoot('sigil', e.x, e.y, 1)); loot.push(makeLoot('heal', e.x, e.y, 30)); } // a champion always pays
   const n = Math.round(rand(a, b) * (pw('fortune') ? 2 : 1) * (1 + .2 * save.cycle) * [.55, .9, 1.3, 1.7][Math.min(stageIdx, 3)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
   if (e.boss) for (let i = 0; i < 3 + Math.min(stageIdx, 2); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
@@ -470,6 +471,7 @@ function playerDamage(dmg, fromX, big) {
 // ---------- trump cards ----------
 function playTrump() {
   if (!save.trump || trumpCharge < TRUMP_CHARGE) return;
+  if (trySecret()) return; // played at a Trump gate, the card opens a way instead
   trumpCharge = 0; flashT = .2; sfx('trump'); zoom = .06;
   const card = TRUMPS[save.trump];
   banner(card.name, 'TRUMP PLAYED', 1.4);

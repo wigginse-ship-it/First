@@ -117,7 +117,7 @@
   }
 
   /* the table: garnet-black velvet under a warm lamp, a faint woven damask in it */
-  .ov { position: absolute; inset: 0; z-index: 5; overflow-y: auto; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: #8A6A2E transparent;
+  .ov { position: absolute; inset: 0; z-index: 5; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: #8A6A2E transparent;
     background: var(--damask), radial-gradient(ellipse 75% 65% at 50% 38%, #3E2337 0%, #241321 52%, #0D070C 100%);
     background-size: 72px 72px, auto;
     padding-left: max(22px, env(safe-area-inset-left, 0px)); padding-right: max(22px, env(safe-area-inset-right, 0px)); padding-block: 22px; }
@@ -131,7 +131,7 @@
     box-shadow: inset 0 0 0 1.5px #C9A050, inset 0 0 0 3px rgba(0,0,0,.75), inset 0 0 0 4px rgba(214,174,88,.3), inset 0 0 36px rgba(0,0,0,.55);
     background: var(--boss) 0 0 / 16px 16px no-repeat, var(--boss) 100% 0 / 16px 16px no-repeat, var(--boss) 0 100% / 16px 16px no-repeat, var(--boss) 100% 100% / 16px 16px no-repeat; background-origin: padding-box; }
 
-  .wrap { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; justify-items: center; text-align: center; }
+  .wrap { max-width: 920px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; justify-items: center; text-align: center; }
   .center { align-content: center; min-height: 100%; }
 
   /* ----- a card: lacquer face in a gold-foil edge, a double inner rule, bosses in the corners ----- */
@@ -204,10 +204,10 @@
   .trump-portrait.noart { display: none; }
   .hero-card:has(.noart) { grid-template-columns: 1fr; padding-left: clamp(18px, 3vw, 34px); }
   .howto { counter-reset: tip; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; width: 100%; max-width: 920px; text-align: left; margin-top: 6px; }
-  .howto > div { counter-increment: tip; padding: 13px 14px 13px 36px; border-radius: 10px; font-size: 13px; line-height: 1.42; color: var(--soft); }
+  .howto > div { counter-increment: tip; padding: 13px 14px 13px 42px; border-radius: 10px; font-size: 13px; line-height: 1.42; color: var(--soft); }
   .howto > div > b:first-child { display: block; font: 700 11px var(--label); letter-spacing: .1em; color: var(--gold); margin-bottom: 3px; }
-  .howto > div > b:first-child::before { content: counter(tip, upper-roman); position: absolute; left: 9px; top: 14px; width: 22px; text-align: center; font: 700 10.5px var(--label); color: #EBCB7C; }
-  .howto > div > b:first-child::after { content: "\2726"; position: absolute; left: 9px; top: 28px; width: 22px; text-align: center; font-size: 10px; color: #D24A5C; }
+  .howto > div > b:first-child::before { content: counter(tip, upper-roman); position: absolute; left: 9px; top: 14px; width: 28px; text-align: center; font: 700 10px var(--label); letter-spacing: -.02em; color: #EBCB7C; }
+  .howto > div > b:first-child::after { content: "\2726"; position: absolute; left: 9px; top: 28px; width: 28px; text-align: center; font-size: 10px; color: #D24A5C; }
   .howto .t-kbd { grid-column: 1 / -1; } /* anything switched off stays off, whatever its own display style */
 
   /* ----- forge: a nameplate card, then each set of cards is a hand laid out on the table ----- */
@@ -220,7 +220,7 @@
   .card.on::before { border-color: #FFE6A0; }
   /* a weapon not found yet lies face down, its shape only a shadow */
   .card.locked { background: radial-gradient(ellipse at 50% 30%, rgba(14,5,8,.35), rgba(14,5,8,.82) 75%) padding-box, var(--back) center / 28px 28px padding-box, var(--foil) border-box; }
-  .card.locked canvas { filter: brightness(0) opacity(.7); background: radial-gradient(ellipse at 50% 45%, rgba(214,174,88,.35), rgba(30,10,14,.9) 70%); }
+  .card.locked canvas { filter: brightness(0) opacity(.8); background: radial-gradient(ellipse at 50% 45%, rgba(232,190,110,.75), rgba(120,60,40,.6) 45%, rgba(30,10,14,.95) 75%); }
   .card.locked > :not(canvas):not(.pip) { opacity: .75; }
   /* the picture window at the top of each card */
   .card canvas { width: calc(100% - 46px); max-width: 124px; height: 96px; object-fit: contain; border-radius: 4px; margin: 2px 0 2px;
@@ -273,12 +273,13 @@
   /* ----- game over and the win: one card turned up ----- */
   .solo { width: 100%; max-width: 600px; display: grid; gap: 12px; justify-items: center; padding: 26px clamp(30px, 6vw, 56px) 24px; }
   .solo .lede { font-size: 15px; }
+  .fallen, .sunburst { width: 100%; max-width: 600px; display: grid; justify-items: center; }
   .fallen { position: relative; }
   .fallen::before { content: ""; position: absolute; inset: 6% 8%; rotate: 9deg; translate: 22px 6px; border-radius: 12px;
     background: var(--medal) center / 90px auto no-repeat, var(--back) center / 28px 28px, #3A0B15; box-shadow: 0 0 0 2px #8A6A2E, 0 10px 24px -6px rgba(0,0,0,.8); }
   .sunburst { position: relative; }
   .sunburst::before { content: ""; position: absolute; left: 50%; top: 50%; width: min(150vw, 1400px); aspect-ratio: 1; translate: -50% -50%; pointer-events: none; z-index: -1;
-    background: radial-gradient(circle, rgba(255,214,140,.22), transparent 55%), repeating-conic-gradient(rgba(232,190,110,.09) 0 4deg, transparent 4deg 12deg);
+    background: radial-gradient(circle, rgba(255,214,140,.22), transparent 55%), repeating-conic-gradient(rgba(232,190,110,.07) 0 4deg, transparent 4deg 12deg);
     -webkit-mask: radial-gradient(circle, #000 10%, transparent 62%); mask: radial-gradient(circle, #000 10%, transparent 62%); }
   .sunburst > .solo { z-index: 1; }
 
@@ -492,6 +493,7 @@
 <script src="data_w4.js"></script>
 <script src="powerups.js"></script>
 <script src="boss_fx.js"></script>
+<script src="secrets.js"></script>
 <script src="draw.js"></script>
 <script src="ui.js"></script>
 <script src="menu_fx.js"></script>
