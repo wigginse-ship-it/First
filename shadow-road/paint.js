@@ -101,7 +101,7 @@ function wobbleInto(src, dst, tmp, tg, px, o, amp) { // src -> tmp (rows shift s
 }
 
 // ---------- the figure layer ----------
-let inkC = null, inkG = null, silC = null, silG = null, mainCtx = null;
+let inkC = null, inkG = null, silC = null, silG = null, rimC = null, rimG = null, mainCtx = null;
 // paint quality steps down by itself if the phone can't keep up: 1 = painted figures, 0 = figures drawn straight onto the page
 let PAINT_Q = 1, perfN = 0, perfT = 0, perfSkip = 60, perfPrev = 0, perfLock = false;
 function paintPerf(rawDt) {
@@ -156,6 +156,14 @@ function inkEnd() {
   const { x, y, w, h } = IB; if (w < 2 || h < 2) return;
   silG.setTransform(1, 0, 0, 1, 0, 0); silG.globalCompositeOperation = 'copy'; blit(silG, inkC, 0, 0);
   silG.globalCompositeOperation = 'source-in'; silG.fillStyle = '#1A100C'; silG.fillRect(x, y, w, h);
+  // light catching every figure's upper-right edges, and shadow gathering along the lower-left: gives each one volume
+  if (!rimC || rimC.width !== inkC.width || rimC.height !== inkC.height) [rimC, rimG] = texCanvas(inkC.width, inkC.height);
+  for (const [dx, dy, col, al] of [[-1.4, 1.4, '#FFF0D2', .55], [1.6, -1.6, '#1A1020', .4]]) {
+    rimG.setTransform(1, 0, 0, 1, 0, 0); rimG.globalCompositeOperation = 'copy'; blit(rimG, silC, 0, 0);
+    rimG.globalCompositeOperation = 'destination-out'; blit(rimG, silC, dx * K, dy * K);
+    rimG.globalCompositeOperation = 'source-in'; rimG.fillStyle = col; rimG.fillRect(x, y, w, h);
+    inkG.save(); inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.globalCompositeOperation = 'source-atop'; inkG.globalAlpha = al; blit(inkG, rimC, 0, 0); inkG.restore();
+  }
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   // a firm, steady contour all the way round, the way figures were outlined before the paint went on
   ctx.globalAlpha = .95; for (const [dx, dy] of CONTOUR) blit(ctx, silC, dx * K, dy * K);

@@ -2,7 +2,7 @@
 // ---------- shared constants & helpers ----------
 let VW = 640; // widens on long phones so they see more street
 const VH = 360, FLOOR_TOP = 238, FLOOR_BOT = 346;
-const VIEW_H = 296, Y_OFF = VH - VIEW_H; // the camera crops the top of the sky so fighters read bigger
+const VIEW_H = 256, Y_OFF = VH - VIEW_H; // the camera crops the top of the sky so fighters read bigger
 const GRAV = 1000, TAU = Math.PI * 2;
 const $ = (s) => document.querySelector(s);
 const rand = (a, b) => a + Math.random() * (b - a);

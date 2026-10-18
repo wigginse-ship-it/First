@@ -46,7 +46,7 @@ function playerPose() {
   else if (P.w === 'hammer') { pose.arm = .85; pose.grip = -3.35; } // shouldered, head behind
   else if (P.w === 'staff') { pose.arm = .95; pose.grip = -2.48; } // planted upright at his side
   else { pose.arm = -.55; pose.backArm = .05; } // fists raised, ready
-  if (['idle', 'walk'].includes(P.state)) pose.breath = Math.sin(performance.now() / 420);
+  if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
   return pose;
 }
 function humanEnemyPose(e) {
