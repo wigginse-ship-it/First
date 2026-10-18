@@ -205,6 +205,8 @@ function drawWeapon(kind, pose) {
     if (pose && pose.glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .55; ctx.fillStyle = pose.glow; rrect(16, -10, len + 14, 20, 8); ctx.fill(); ctx.restore(); }
     return;
   }
+  // enemies' weapons can be redrawn in their own file (art_world.js) without touching the hero's
+  if (kind !== 'sword' && typeof ENEMY_WEAPONS !== 'undefined' && ENEMY_WEAPONS[kind]) { ENEMY_WEAPONS[kind](pose || {}); return; }
   if (kind === 'sword' || kind === 'blade' || kind === 'prism') {
     const hero = kind === 'sword', len = hero ? 64 + (tier >= 4 ? 8 : tier >= 2 ? 3 : 0) : 44;
     const bc = kind === 'prism' ? '#C9F6FF' : kind === 'blade' ? '#BFF5EF' : ['#C8CCD4', '#E2E8F2', '#E8F0FF', '#DDE6FF', '#2A2236'][tier - 1];
