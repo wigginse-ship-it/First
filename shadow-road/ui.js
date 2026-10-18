@@ -85,9 +85,9 @@ const BASICS = [
   { key: 'L', name: 'Combo', desc: 'Tap Attack again and again to chain the full combo.', seq: ['A', 'A', 'A'] },
   { key: 'X', name: 'Launcher', desc: 'Hold Attack to throw an enemy into the air. Tap Jump right after to leap up after them.' },
   { key: 'A', name: 'Air combo', desc: 'Up to three Attacks in the air. Air hits keep enemies floating and hit harder; the third drives them into the ground.', seq: ['JUMP', '+A', 'A', 'A'] },
-  { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge. Mix it into combos below.', seq: ['H'] },
+  { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge. Mix it into the combos below.', seq: ['H'] },
   { key: 'D', name: 'Dash attack', desc: 'Flick the joystick twice to run, then attack.' },
-  { key: 'R', name: 'Dodge counter', desc: 'Tap Attack during a roll to spring out of it.' },
+  { key: 'R', name: 'Dodge counter', desc: 'Tap Attack during a dodge to strike out of it.' },
 ];
 function moveListHtml(id) {
   const lvl = save.wl[id], tree = WEAPONS[id].tree;
@@ -117,7 +117,7 @@ function renderForge(note) {
     const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
-      <p>${bare ? w.desc + ' Bare hands never level up: find weapons to grow stronger.' : owned ? w.desc + ' All its combos are yours from the start; each level teaches a new move.' : 'Not found yet. Any enemy in any world might be carrying it, and each world without a find makes the next one likelier.'}</p><ul>${moves}</ul>
+      <p>${bare ? w.desc + ' Fists never level up.' : owned ? w.desc : 'Not found yet. Defeat enemies to find it.'}</p><ul>${moves}</ul>
       ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
