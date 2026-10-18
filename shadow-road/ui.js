@@ -230,7 +230,7 @@ function layout() {
   cv.width = Math.round(gw * dpr); cv.height = Math.round(gh * dpr);
   Object.assign(cv.style, { width: gw + 'px', height: gh + 'px', left: (cw - gw) / 2 + 'px', top: (ch - gh) / 2 + 'px' });
   Object.assign($('#hud').style, { left: (cw - gw) / 2 + 'px', top: (ch - gh) / 2 + 'px', width: gw + 'px', height: gh + 'px' });
-  $('#hud').style.setProperty('--fi', Math.round(Math.min(gw, gh) * .028 * 1.35) + 'px'); // the gilded frame's width (see buildFrame)
+  $('#hud').style.setProperty('--fi', Math.round(Math.min(gw, gh) * FRAME_B * 1.35) + 'px'); // the gilded frame's width (see buildFrame)
   if (stage) { bgKey = ''; buildBackground(stage.theme, stageIdx * 97 + 13); camX = clamp(camX, 0, Math.max(0, stage.len - VW)); }
 }
 window.addEventListener('resize', layout);

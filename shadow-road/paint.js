@@ -183,6 +183,84 @@ function inkEnd() {
 }
 
 // ---------- the finished panel: brushed sky, crackled varnish and a gilded frame ----------
+// The frame is dressed like a deluxe playing card: a black lacquered border engraved with fine lines, rules of
+// polished gold foil pressed into it (each one embossed: a shadow below, a glint along its top), notched inner
+// corners, gold scrollwork filling each corner and a small ornament at the middle of every side.
+const FRAME_B = .038; // the frame's unit; the border is FRAME_B * 1.35 of the short side (ui.js keeps the HUD inside it)
+function frameOrnate(g, w, h, b) {
+  const W = b * 1.35, cut = b * .75; // the border's width; the radius of the notch at each inner corner
+  const foil = g.createLinearGradient(0, 0, w * .6, h * 1.2); // foil catches the light in bands
+  [[0, '#5E3F12'], [.08, '#E2BE66'], [.13, '#FFF2BE'], [.2, '#C08F38'], [.34, '#6A4A18'], [.5, '#D6AE58'], [.56, '#FFF0B4'], [.64, '#B0812D'], [.8, '#73521C'], [.92, '#E8C878'], [1, '#6A4A18']].forEach(([o, c]) => foil.addColorStop(o, c));
+  const band = () => { g.beginPath(); g.rect(0, 0, w, h); g.rect(W, W, w - W * 2, h - W * 2); };
+  // lacquer, with a soft sheen toward the light
+  const lq = g.createLinearGradient(0, 0, w, h); lq.addColorStop(0, '#1C1712'); lq.addColorStop(.5, '#0B0907'); lq.addColorStop(1, '#16110C');
+  band(); g.fillStyle = lq; g.fill('evenodd');
+  // engraving: fine lines raking across the black, like the card's pressed linework
+  g.save(); band(); g.clip('evenodd'); g.strokeStyle = 'rgba(255,226,160,.07)'; g.lineWidth = Math.max(.6, b * .03);
+  g.beginPath(); for (let x = -h; x < w; x += Math.max(2.5, b * .11)) { g.moveTo(x, 0); g.lineTo(x + h, h); } g.stroke(); g.restore();
+  // embossed gold: drawn three times, a shadow, the foil itself, and a thin glint
+  const gild = (path, lw, fill) => {
+    g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+    g.translate(lw * .45, lw * .55); path(); if (fill) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fill(); } else { g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = lw; g.stroke(); }
+    g.translate(-lw * .45, -lw * .55); path(); if (fill) { g.fillStyle = foil; g.fill(); } else { g.strokeStyle = foil; g.lineWidth = lw; g.stroke(); }
+    g.translate(-lw * .22, -lw * .28); path(); g.strokeStyle = 'rgba(255,250,222,.55)'; g.lineWidth = Math.max(.5, lw * .28); g.stroke();
+    g.restore();
+  };
+  const notched = (o, r) => () => { // a rectangle inset by o whose corners are bitten by quarter circles of radius r
+    g.beginPath(); g.moveTo(o + r, o); g.lineTo(w - o - r, o); g.arc(w - o, o, r, Math.PI, Math.PI / 2, true);
+    g.lineTo(w - o, h - o - r); g.arc(w - o, h - o, r, -Math.PI / 2, -Math.PI, true);
+    g.lineTo(o + r, h - o); g.arc(o, h - o, r, 0, -Math.PI / 2, true);
+    g.lineTo(o, o + r); g.arc(o, o, r, Math.PI / 2, 0, true); g.closePath();
+  };
+  gild(() => { g.beginPath(); g.rect(b * .16, b * .16, w - b * .32, h - b * .32); }, Math.max(1.6, b * .2)); // the outer rule, doubled
+  gild(() => { g.beginPath(); g.rect(b * .4, b * .4, w - b * .8, h - b * .8); }, Math.max(.8, b * .06));
+  gild(notched(b * 1.08, cut), Math.max(1.2, b * .13)); // the inner rule, notched at the corners, with a hairline inside it
+  gild(notched(b * 1.26, cut * 1.15), Math.max(.6, b * .04));
+  g.fillStyle = foil; // a beaded line between them
+  const bead = (x, y) => { g.beginPath(); g.arc(x, y, b * .055, 0, TAU); g.fill(); }; // kept clear of the corner and middle ornaments
+  for (let x = b * 4.2; x < w - b * 4.2; x += b * .32) if (Math.abs(x - w / 2) > b * 1.5) { bead(x, b * .66); bead(x, h - b * .66); }
+  for (let y = b * 4.2; y < h - b * 4.2; y += b * .32) if (Math.abs(y - h / 2) > b * 1.5) { bead(b * .66, y); bead(w - b * .66, y); }
+  // the picture's own edge: a dark hairline so the painting sits down inside the frame
+  g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = Math.max(1, b * .07); g.strokeRect(W, W, w - W * 2, h - W * 2);
+  // a C-scroll: a curl that winds in on itself, the stroke thinning as it goes
+  const scroll = (x, y, r, a0, turn, lw) => gild(() => {
+    g.beginPath(); const n = 26;
+    for (let i = 0; i <= n; i++) { const t = i / n, a = a0 + turn * t * Math.PI * 1.6, rr = r * (1 - t * .72); const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr; i ? g.lineTo(px, py) : g.moveTo(px, py); }
+  }, lw);
+  const leaf = (x, y, len, ang, lw) => gild(() => { // a pointed acanthus leaf
+    g.beginPath(); g.save(); g.translate(x, y); g.rotate(ang);
+    g.moveTo(0, 0); g.quadraticCurveTo(len * .5, -len * .32, len, 0); g.quadraticCurveTo(len * .5, len * .32, 0, 0); g.restore();
+  }, lw, true);
+  const corner = (sx, sy) => { // each corner is one design, mirrored into place
+    g.save(); g.translate(sx < 0 ? w : 0, sy < 0 ? h : 0); g.scale(sx, sy);
+    const lw = Math.max(1.2, b * .12), c = b * 1.08;
+    // a gold boss in the notch, set with a garnet
+    gild(() => { g.beginPath(); g.arc(c, c, b * .62, 0, TAU); }, 0, true); gild(() => { g.beginPath(); g.arc(c, c, b * .62, 0, TAU); }, lw * .6);
+    const gr = g.createRadialGradient(c - b * .12, c - b * .14, b * .02, c, c, b * .4); gr.addColorStop(0, '#E0606A'); gr.addColorStop(.5, '#7A1420'); gr.addColorStop(1, '#2A0508');
+    g.fillStyle = gr; g.beginPath(); g.arc(c, c, b * .4, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(255,230,225,.85)'; g.beginPath(); g.arc(c - b * .13, c - b * .15, b * .08, 0, TAU); g.fill();
+    // scrolls running out along both sides of the corner, and leaves springing between them
+    for (const flip of [0, 1]) {
+      g.save(); if (flip) { g.transform(0, 1, 1, 0, 0, 0); } // the same ornament reflected across the diagonal
+      scroll(c + b * 1.25, b * .66, b * .42, Math.PI, 1, lw);
+      scroll(c + b * 2.15, b * .66, b * .3, 0, -1, lw * .85);
+      leaf(c + b * .5, b * .66, b * .9, -.08, lw * .6);
+      gild(() => { g.beginPath(); g.moveTo(c + b * .45, b * .66); g.quadraticCurveTo(c + b * 1.7, b * .2, c + b * 2.7, b * .66); }, lw * .7);
+      g.restore();
+    }
+    leaf(c + b * .2, c + b * .2, b * 1.1, Math.PI / 4, lw * .6); // pointing in, toward the picture
+    g.restore();
+  };
+  corner(1, 1); corner(-1, 1); corner(1, -1); corner(-1, -1);
+  const midOrn = (x, y, rot) => { // a small lozenge with a curl to either side, set into the middle of each side
+    g.save(); g.translate(x, y); g.rotate(rot); g.scale(1.35, 1.35); const lw = Math.max(1, b * .09);
+    gild(() => { g.beginPath(); g.moveTo(0, -b * .42); g.lineTo(b * .3, 0); g.lineTo(0, b * .42); g.lineTo(-b * .3, 0); g.closePath(); }, lw, true);
+    g.fillStyle = '#5A0E12'; g.beginPath(); g.moveTo(0, -b * .2); g.lineTo(b * .14, 0); g.lineTo(0, b * .2); g.lineTo(-b * .14, 0); g.closePath(); g.fill();
+    for (const d of [-1, 1]) { g.save(); g.scale(d, 1); scroll(b * .9, 0, b * .3, Math.PI, 1, lw * .85); leaf(b * .35, 0, b * .9, 0, lw * .5); g.restore(); }
+    g.restore();
+  };
+  midOrn(w / 2, b * .66, 0); midOrn(w / 2, h - b * .66, 0); midOrn(b * .66, h / 2, Math.PI / 2); midOrn(w - b * .66, h / 2, Math.PI / 2);
+}
 let frameC = null, frameKey = '';
 function buildFrame() {
   const key = cv.width + 'x' + cv.height; if (key === frameKey) return; frameKey = key;
@@ -193,23 +271,7 @@ function buildFrame() {
   g.save(); const cs = Math.max(.6, K / 4.5); g.scale(cs, cs); g.fillStyle = texPat(g, 'crack'); g.fillRect(0, 0, w / cs, h / cs); g.restore();
   const vg = g.createRadialGradient(w / 2, h * .5, m * .5, w / 2, h * .5, w * .62);
   vg.addColorStop(0, 'rgba(90,60,30,0)'); vg.addColorStop(1, 'rgba(90,55,25,.4)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);
-  // gilded frame: a dark outer edge, a band of gold leaf with punched dots, and a thin vermilion fillet inside
-  const b = Math.round(m * .028), gold = g.createLinearGradient(0, 0, w, h);
-  gold.addColorStop(0, '#7A5A22'); gold.addColorStop(.25, '#D8B460'); gold.addColorStop(.5, '#9C7A34'); gold.addColorStop(.75, '#E6C878'); gold.addColorStop(1, '#7A5A22');
-  const ring = (o, i) => { g.beginPath(); g.rect(o, o, w - o * 2, h - o * 2); g.rect(i, i, w - i * 2, h - i * 2); };
-  ring(0, b * 1.25); g.fillStyle = '#24160C'; g.fill('evenodd');
-  ring(b * .35, b * 1.25); g.fillStyle = gold; g.fill('evenodd');
-  g.save(); ring(b * .35, b * 1.25); g.clip('evenodd'); g.globalAlpha = .55; g.fillStyle = texPat(g, 'brush'); g.fillRect(0, 0, w, h); g.restore();
-  g.fillStyle = 'rgba(70,45,15,.75)'; // punchwork along the gold
-  const dot = (x, y) => { g.beginPath(); g.arc(x, y, b * .09, 0, TAU); g.fill(); };
-  for (let x = b; x < w - b; x += b * .55) { dot(x, b * .8); dot(x, h - b * .8); }
-  for (let y = b * 1.35; y < h - b; y += b * .55) { dot(b * .8, y); dot(w - b * .8, y); }
-  g.strokeStyle = '#A8321E'; g.lineWidth = Math.max(1, b * .12); g.strokeRect(b * 1.3, b * 1.3, w - b * 2.6, h - b * 2.6);
-  g.strokeStyle = '#24160C'; g.lineWidth = Math.max(1, b * .08); g.strokeRect(b * 1.22, b * 1.22, w - b * 2.44, h - b * 2.44);
-  for (const [x, y] of [[b * .8, b * .8], [w - b * .8, b * .8], [b * .8, h - b * .8], [w - b * .8, h - b * .8]]) { // a lozenge at each corner
-    g.fillStyle = '#A8321E'; g.beginPath(); g.moveTo(x, y - b * .55); g.lineTo(x + b * .55, y); g.lineTo(x, y + b * .55); g.lineTo(x - b * .55, y); g.closePath(); g.fill();
-    g.fillStyle = '#E6C878'; g.beginPath(); g.arc(x, y, b * .16, 0, TAU); g.fill();
-  }
+  frameOrnate(g, w, h, Math.round(m * FRAME_B));
   frameC = c;
 }
 function skyWash(camX) { // the sky is laid in with long, nearly level strokes that drift slowly with the view
