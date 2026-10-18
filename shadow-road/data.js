@@ -58,7 +58,7 @@ const WEAPONS = {
     tree: {
       L:    { dur: .26, h: [.3, .6], x0: 8, x1: 72, dmg: 7, kb: 50, arc: [.25, -.05], lunge: 50 },
       LL:   { name: 'Reverse End', dur: .32, h: [.3, .66], x0: 0, x1: 66, dmg: 6, kb: 80, arc: [.5, .5], twirl: .5, ends: 1, lunge: 40, depth: 26 }, // the staff turns in his hands and the far end comes round: it catches both sides
-      LLL:  { name: 'Twin Twirl', dur: .42, h: [.12, .82], x0: 0, x1: 66, dmg: 3, kb: 60, arc: [.2, .2], twirl: 2, ends: 1, multi: .1, lunge: 40 }, // spun like a baton, each end cracking in turn
+      LLL:  { name: 'Twin Twirl', dur: .42, h: [.12, .82], x0: 0, x1: 66, dmg: 4, kb: 60, arc: [.2, .2], twirl: 2, ends: 1, multi: .1, lunge: 40 }, // spun like a baton, each end cracking in turn
       LLLL: { name: 'Spinning Finish', dur: .55, h: [.2, .8], x0: 0, x1: 72, dmg: 11, kb: 260, arc: [-P_, P_], around: 1, spin: 1, twirl: 1, power: 1 },
       H:    { name: 'Sweep', dur: .55, h: [.3, .75], x0: 0, x1: 70, dmg: 11, kb: 90, launch: 320, arc: [-P_, 1.5 * P_], around: 1, twirl: 1, depth: 24, power: 1 },
       LH:   { name: 'Rising Spiral', dur: .62, h: [.15, .8], x0: 0, x1: 66, dmg: 5, kb: 60, launch: 440, arc: [-P_, 3 * P_], around: 1, multi: .12, hop: 380, spin: 1, twirl: 2, power: 1 },
@@ -147,7 +147,7 @@ const STYLES = {
 for (const id in STYLES) for (const k in STYLES[id]) if (WEAPONS[id].tree[k]) WEAPONS[id].tree[k].style = STYLES[id][k];
 for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) WEAPONS[id].tree[k].key = k;
 // the everyday combos hit a little softer and the learned moves a good deal harder, so the moves you earn are worth using
-for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) { const m = WEAPONS[id].tree[k]; if (k === 'RIP') continue; m.dmg = m.lvl ? Math.round(m.dmg * 1.3) : Math.max(1, Math.round(m.dmg * (id === 'fists' ? .92 : .85))); }
+for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) { const m = WEAPONS[id].tree[k]; if (k === 'RIP') continue; m.dmg = m.lvl ? Math.round(m.dmg * 1.3) : Math.max(1, Math.round(m.dmg * (id === 'fists' ? .92 : id === 'staff' ? 1.08 : .85))); }
 function unlockList(id) {
   const w = WEAPONS[id], list = [];
   for (const k in w.tree) if (w.tree[k].lvl) list.push(w.tree[k]);
