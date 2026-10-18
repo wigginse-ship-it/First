@@ -652,4 +652,219 @@
     }
     ctx.restore();
   };
+
+  // ======================================================================================================
+  // THE TY'IGA, SHIFTER OF SHAPES: a demon of the Abyss with no shape of its own. It wears three:
+  //   phase 1  a great shadow-wolf, its edges always coming apart into smoke, six burning eyes
+  //   phase 2  a serpent of smoke coiling low over the floor, a skull of bone for a head
+  //   phase 3  a winged horror, gaunt, its wings full of eyes, its head a crown of horns round a burning mouth
+  // Between them it pours itself into a churning ball of smoke and comes out as the next.
+  // ======================================================================================================
+  const TY = { fur: '#1C1424', furDk: '#08050C', furLit: '#5A4476', smoke: '#1E1428', bone: '#DCD0B4', boneDk: '#8E806A', boneLit: '#FFF6E2', eye: '#FFD860', maw: '#2A060E' };
+  // a spiky silhouette of fur through points: every edge gets a tuft pushed outward
+  function furPath(pts, amp, seed = 0) {
+    return (ox, oy, cont) => {
+      if (!cont) ctx.beginPath(); const n = pts.length / 2;
+      for (let i = 0; i <= n; i++) {
+        const a = i % n, b = (i + 1) % n, x0 = pts[a * 2] + ox, y0 = pts[a * 2 + 1] + oy, x1 = pts[b * 2] + ox, y1 = pts[b * 2 + 1] + oy;
+        if (i === 0) { ctx.moveTo(x0, y0); continue; }
+        const px = pts[((i - 1) % n) * 2] + ox, py = pts[((i - 1) % n) * 2 + 1] + oy, mx = (px + x0) / 2, my = (py + y0) / 2, dx = x0 - px, dy = y0 - py, L = Math.hypot(dx, dy) || 1, s = amp * (.6 + hsh(i + seed) * .8);
+        ctx.quadraticCurveTo(mx + dy / L * s * .3, my - dx / L * s * .3, mx + dy / L * s - dx / L * s * .4, my - dx / L * s - dy / L * s * .4); // the tuft's tip, swept back
+        ctx.quadraticCurveTo(mx + dy / L * s * .1, my - dx / L * s * .1, x0, y0);
+      }
+      ctx.closePath();
+    };
+  }
+  function eyeRow(list, wind, hurt) { // a row of burning eyes
+    for (const [x, y, s] of list) {
+      ctx.fillStyle = C('#0A0408'); ell(x, y, 2.6 * s, 1.5 * s, -.25); ctx.fill();
+      if (hurt) { ctx.strokeStyle = C('#FFE8A0'); ctx.lineWidth = .8 * s; ctx.beginPath(); ctx.moveTo(x - 2 * s, y); ctx.lineTo(x + 2 * s, y - .4 * s); ctx.stroke(); continue; }
+      ctx.fillStyle = C(wind ? '#FFF2B0' : TY.eye); ctx.beginPath(); ctx.moveTo(x - 2.2 * s, y + .5 * s); ctx.quadraticCurveTo(x, y - 1.6 * s, x + 2.3 * s, y - .6 * s); ctx.quadraticCurveTo(x, y + .9 * s, x - 2.2 * s, y + .5 * s); ctx.fill();
+      if (DET()) { ctx.fillStyle = '#1A0606'; ell(x + .3 * s, y - .2 * s, .3 * s, .8 * s); ctx.fill(); glowAt(x, y, 6 * s, SULF, wind ? .75 : .4); }
+    }
+  }
+  // smoke coming off its edges: lobes that rise and thin as they go (anchored to its body, drifting slowly)
+  function wisps(list, t, col = TY.smoke) {
+    for (let i = 0; i < list.length; i += 3) {
+      const x = list[i], y = list[i + 1], r = list[i + 2], k = ((t * .35 + hsh(i) ) % 1);
+      for (let j = 0; j < 3; j++) { const q = (k + j / 3) % 1; smokeLobe(x - q * 10 + Math.sin(t + i + j) * 2, y - q * 16, r * (1 - q * .7), col, (1 - q) * .75); }
+    }
+  }
+  // ---------------------------------------------------------------- the shadow-wolf
+  function tyWolf(e, a, t) {
+    const st = e.state, plan = e.plan, wind = a.wind || 0, ph = a.walk || 0, moving = ph ? 1 : 0;
+    const act = st === 'w4act' ? e.w4a : null, crouch = (st === 'wind' && plan === 'w4rake') ? wind : act === 'rake' ? .6 : 0;
+    const howl = (st === 'wind' && plan === 'w4howl') ? wind : act === 'howl' ? 1 : 0, maw = (st === 'wind' && plan === 'w4maw') ? wind : act === 'maw' ? 1 : 0;
+    const dash = act === 'rake' && e.w4dash, down = st === 'down' || a.hurt && st !== 'hurt';
+    const B = -40 + crouch * 9 + (down ? 8 : 0) + Math.sin(t * 1.8) * .8, S = Math.sin(ph) * moving;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (dash) ctx.scale(1.14, .9);
+    // smoke streaming off the back and the tail
+    wisps([-44, B - 10, 7, -30, B - 20, 6, -12, B - 24, 6, 6, B - 26, 5, -56, B - 2, 6], t);
+    // the tail: a plume of smoke and fur
+    const tw = Math.sin(t * 1.6) * 4;
+    cel(furPath([-42, B - 6, -58, B - 14 + tw, -72, B - 10 + tw * 1.4, -78, B - 2 + tw, -66, B + 2 + tw * .6, -52, B + 4], 4, 3), TY.fur, { d: 3, r: 1.2, w: 1.6, dark: TY.furDk, lite: TY.furLit });
+    const leg = (hx, front, off, far) => { // great legs: shoulder/hip -> elbow/knee -> wrist/hock -> paw with bone claws
+      const s = Math.sin(ph + off) * moving, lift = Math.max(0, Math.cos(ph + off)) * 5 * moving, col = far ? '#100A16' : TY.fur;
+      let k, w, p;
+      if (dash) { k = front ? [hx + 12, B + 14] : [hx - 10, B + 16]; w = front ? [hx + 26, B + 26] : [hx - 26, B + 24]; p = front ? [hx + 34, B + 30] : [hx - 36, B + 30]; }
+      else if (front) { k = [hx + 2 + s * 4, B + 22 - crouch * 4]; w = [hx + 4 + s * 9 + crouch * 6, -9 - lift]; p = [hx + 9 + s * 10 + crouch * 8, -1.5 - lift]; }
+      else { k = [hx + 8 + s * 5, B + 20]; w = [hx - 6 + s * 8, -12 - lift + crouch * 3]; p = [hx - 1 + s * 10, -1.5 - lift]; }
+      seg(hx, B + 4, k[0], k[1], 22, 12, col, 3); seg(k[0], k[1], w[0], w[1], 11, 8, col, 1); seg(w[0], w[1], p[0], p[1], 8, 7, col, 0);
+      fillPoly([p[0] - 5, p[1] - 3, p[0] + 6, p[1] - 3.5, p[0] + 8, p[1] + 1.5, p[0] - 5, p[1] + 1.5], far ? '#06040A' : '#140C1A', 1.1);
+      if (!far) for (let c = 0; c < 3; c++) horn(p[0] + 5 + c * .6, p[1] - 2 + c * 1.2, p[0] + 9, p[1] - 1 + c * 1.2, p[0] + 11 + c * .4, p[1] + 1.4 + c * .3, 2.2, .3, TY.bone, .8);
+    };
+    leg(-30, false, Math.PI, true); leg(16, true, 0, true);
+    // the body: a hump of shoulder, a deep chest, the haunches; its fur a mass of dark tufts
+    const body = furPath([40, B - 12, 34, B + 8, 22, B + 18, 4, B + 16, -14, B + 12, -34, B + 16, -48, B + 8, -50, B - 6, -38, B - 16, -20, B - 20, 0, B - 24, 18, B - 28, 32, B - 24], 5, 7);
+    cel(body, TY.fur, { d: 5, r: 2, w: 2.2, dark: TY.furDk, lite: TY.furLit, under: () => {
+      const g = ctx.createRadialGradient(6, B - 2, 2, 6, B - 2, 40); g.addColorStop(0, `rgba(${BRUISE},.4)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-40, B - 40, 90, 70); // the shape inside the shape, glowing through
+    }, tex: () => { // brushed fur, swept back
+      ctx.strokeStyle = 'rgba(110,90,140,.45)'; ctx.lineWidth = .8; ctx.beginPath();
+      for (let i = 0; i < 26; i++) { const x = -44 + (i * 37) % 84, y = B - 18 + (i * 13) % 32; ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 3, y + 1, x - 7, y + 3); } ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); for (let i = 0; i < 14; i++) { const x = -40 + (i * 53) % 76, y = B + 2 + (i * 7) % 12; ctx.moveTo(x, y); ctx.lineTo(x - 6, y + 4); } ctx.stroke();
+    } });
+    leg(-30, false, 0, false); leg(16, true, Math.PI, false);
+    // the mane: a ruff of smoke and fur standing up behind the head
+    cel(furPath([22, B - 26, 14, B - 40, 22, B - 46, 34, B - 44, 42, B - 34, 40, B - 20, 30, B - 14], 5, 11), '#241A30', { d: 3, r: 1.4, w: 1.8, dark: TY.furDk, lite: '#7A60A0' });
+    // the head: a broad skull, a long muzzle, a jaw of bone-white fangs; it lifts to howl, gapes to devour
+    const hr = -howl * .75 + crouch * .25 + maw * .2 + (dash ? .12 : 0), open = Math.max(howl * .65, maw * .9, a.atk ? .5 : 0, dash ? .35 : 0, .05 + Math.sin(t * 1.4) * .03);
+    ctx.save(); ctx.translate(38, B - 26); ctx.rotate(hr);
+    // the lower jaw
+    ctx.save(); ctx.translate(2, 6); ctx.rotate(open * .8);
+    cel(furPath([-4, -2, 26, 0, 30, 4, 18, 9, -2, 8], 2.4, 5), '#1A1220', { d: 2, r: .8, w: 1.5, lite: TY.furLit });
+    ctx.fillStyle = C(TY.bone); for (let x = 6; x <= 26; x += 5) { poly([x, 0, x + 1.4, -5 - (x === 26 ? 2 : 0), x + 2.8, 0]); ctx.fill(); outline(.6); }
+    ctx.restore();
+    if (open > .2) { ctx.fillStyle = C(TY.maw); poly([0, 4, 30, 2, 26, 6 + open * 24, 2, 12]); ctx.fill(); glowAt(14, 8 + open * 6, 18, EMBER, .3 + open * .4); }
+    // the skull and muzzle
+    const skull = furPath([-10, -14, 4, -18, 16, -14, 30, -8, 34, -2, 32, 3, 18, 5, 2, 7, -12, 4], 2.6, 9);
+    cel(skull, '#221830', { d: 3, r: 1.2, w: 1.8, dark: TY.furDk, lite: '#7A60A0', tex: () => { ctx.strokeStyle = 'rgba(130,110,160,.5)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(10, -14); ctx.quadraticCurveTo(20, -10, 30, -5); ctx.stroke(); } });
+    ctx.fillStyle = C(TY.bone); for (let x = 8; x <= 30; x += 4.4) { poly([x, 3, x + 1.2, 9 + (x > 26 ? 3 : 0), x + 2.4, 3]); ctx.fill(); outline(.6); } // the upper fangs
+    ctx.fillStyle = C('#0A0408'); ell(33, -2.4, 1.4, 1); ctx.fill(); // nose
+    eyeRow([[16, -9, 1.15], [9, -11, .95], [3, -12.5, .8]], wind > .4 || howl > .3 || maw > .3, a.hurt);
+    // ears, laid back, ragged
+    horn(-2, -14, -8, -24, -16, -30, 8, .6, '#1A1222', 1.3, '#08050C'); horn(4, -16, 0, -26, -6, -33, 8, .6, '#241A30', 1.3, '#0A060E');
+    ctx.restore();
+    if (dash && DET()) add(() => { ctx.strokeStyle = 'rgba(160,120,210,.35)'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = B - 20 + i * 9; ctx.moveTo(-60 - i * 6, y); ctx.lineTo(-100 - i * 10, y + 2); } ctx.stroke(); }); // speed, smeared into shadow
+    ctx.restore();
+  }
+  // ---------------------------------------------------------------- the serpent of smoke
+  function tySerpent(e, a, t) {
+    const st = e.state, plan = e.plan, wind = a.wind || 0, act = st === 'w4act' ? e.w4a : null;
+    const coil = (st === 'wind' && plan === 'w4coil') ? wind : act === 'coil' ? 1 : 0, spit = (st === 'wind' && plan === 'w4venom') ? wind : act === 'venom' ? 1 : 0;
+    const howl = (st === 'wind' && plan === 'w4howl') ? wind : act === 'howl' ? 1 : 0, maw = (st === 'wind' && plan === 'w4maw') ? wind : act === 'maw' ? 1 : 0;
+    const rear = Math.max(coil * .8, howl, spit * .5, maw * .3), N = 16, X = [], Y = [], R = [];
+    for (let i = 0; i <= N; i++) { // the spine: 0 is the neck, the rest trails behind, waving
+      const k = i / N, amp = (10 + k * 8) * (1 - coil * .5), r = 15 - k * 10 + Math.sin(i * 1.7) * .6;
+      let y = -26 + Math.sin(t * 1.8 - i * .62) * amp * Math.min(1, i / 3) + k * 10;
+      y -= rear * 26 * Math.max(0, 1 - i / 5);
+      X.push(-4 - i * 8.6 * (1 - coil * .25)); Y.push(y); R.push(r);
+    }
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // the tail ends in a long fraying plume of smoke
+    wisps([X[N] - 6, Y[N], 6, X[N - 3], Y[N - 3] - 8, 5, X[8], Y[8] - 10, 5, X[4], Y[4] - 12, 5], t);
+    for (let i = N; i >= 0; i--) { // the body, tail first: rings of smoke with a bone vertebra along the top, fire between them
+      const ia = Math.max(0, i - 1), ib = Math.min(N, i + 1), th = Math.atan2(Y[ia] - Y[ib], X[ia] - X[ib]), r = R[i];
+      ctx.save(); ctx.translate(X[i], Y[i]); ctx.rotate(th);
+      cel(PB([-r * .9, -r * .2, -r * .5, -r, r * .6, -r * .95, r * 1.05, -r * .1, r * .6, r * .9, -r * .5, r * .85]), i % 2 ? '#22182C' : '#1A1224', { d: r * .22, r: r * .08, w: 1.5, dark: TY.furDk, lite: '#6A5490', tex: () => {
+        ctx.fillStyle = `rgba(${BRUISE},.25)`; ell(0, r * .1, r * .55, r * .4); ctx.fill();
+        ctx.strokeStyle = 'rgba(150,120,190,.4)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(-r * .2, 0, r * .7, -1.2, .6); ctx.stroke();
+      } });
+      if (i % 2 === 0 && i < N - 1) horn(-r * .2, -r * .85, -r * .5, -r * 1.3, -r * 1.1, -r * 1.55 - 2, r * .5, .4, TY.bone, 1); // spines of bone
+      if (i > 0 && i % 3 === 1) add(() => { ctx.fillStyle = 'rgba(255,140,60,.5)'; ell(r * .9, 0, r * .18, r * .55); ctx.fill(); }); // ember light between rings
+      ctx.restore();
+    }
+    // the head: a serpent's skull of bone, a frill of horns, four eyes, a mouth full of needles
+    const open = Math.max(spit * .8, howl * .7, maw * .95, a.atk ? .5 : 0, .08), hy = Y[0] - 4, hr = -rear * .35 + spit * .15;
+    ctx.save(); ctx.translate(6, hy); ctx.rotate(hr);
+    for (let i = 0; i < 5; i++) horn(-6, -2 + i * 2.2, -14 - i, -10 + i * 4, -24 - i * 2, -16 + i * 7, 4.6, .4, i % 2 ? '#B8A88A' : TY.bone, 1); // the frill
+    ctx.save(); ctx.translate(-2, 4); ctx.rotate(open * .7);
+    fillPoly([-4, -1, 30, 1, 32, 4, 12, 8, -4, 6], '#A49478', 1.2); ctx.fillStyle = C('#F6EEDA'); for (let x = 4; x <= 28; x += 3.4) { poly([x, 1, x + .9, -3.6, x + 1.8, 1]); ctx.fill(); }
+    ctx.restore();
+    if (open > .15) { ctx.fillStyle = C(TY.maw); poly([-2, 3, 30, 2, 26, 4 + open * 22, 0, 10]); ctx.fill(); glowAt(12, 6 + open * 6, 16, spit > .2 ? '255,170,70' : EMBER, .35 + open * .45); }
+    const skull = PB([-8, -8, 4, -11, 20, -8, 34, -2, 34, 3, 14, 4, -6, 6]);
+    cel(skull, TY.bone, { d: 2.6, r: 1, w: 1.7, dark: TY.boneDk, lite: TY.boneLit, tex: () => {
+      ctx.strokeStyle = '#7A6C56'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(2, -10); ctx.lineTo(6, -4); ctx.lineTo(4, 2); ctx.moveTo(18, -8); ctx.quadraticCurveTo(24, -4, 32, -1); ctx.stroke();
+      ctx.fillStyle = 'rgba(60,40,30,.25)'; ell(16, 2, 14, 2.5); ctx.fill();
+    } });
+    ctx.fillStyle = C('#F6EEDA'); for (let x = 8; x <= 32; x += 3.6) { poly([x, 3, x + .9, 7.4, x + 1.8, 3]); ctx.fill(); }
+    eyeRow([[16, -5, .95], [10, -6.5, .8], [22, -3.6, .7], [5, -7.6, .65]], wind > .4 || rear > .4, a.hurt);
+    ctx.restore();
+    ctx.restore();
+  }
+  // ---------------------------------------------------------------- the winged horror
+  function tyHorror(e, a, t) {
+    const st = e.state, plan = e.plan, wind = a.wind || 0, act = st === 'w4act' ? e.w4a : null;
+    const swoop = act === 'swoop' && e.w4dash, swoopWind = (st === 'wind' && plan === 'w4swoop') ? wind : 0;
+    const spread = Math.max((st === 'wind' && plan === 'w4shadows') ? wind : act === 'shadows' ? 1 : 0, (st === 'wind' && plan === 'w4howl') ? wind : act === 'howl' ? 1 : 0, swoopWind * .6);
+    const maw = (st === 'wind' && plan === 'w4maw') ? wind : act === 'maw' ? 1 : 0, down = st === 'down';
+    const flap = down ? .9 : swoop ? 1.25 : Math.sin(t * 2.3) * .45 * (1 - spread * .6) - spread * .5;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (swoop) { ctx.rotate(.35); }
+    const wing = (far) => { // a ragged membrane on four finger-bones, eyes opening along it
+      ctx.save(); ctx.translate(far ? -6 : -2, -54); ctx.rotate((far ? -.18 : 0) + flap * (far ? .85 : 1)); if (far) ctx.scale(.82, .86);
+      const F = [[-22, -50], [-50, -46], [-66, -24], [-62, 2]], E = [[-8, -2]].concat(F, [[-30, 8]]);
+      const mem = []; mem.push(0, 0); for (let i = 0; i < F.length; i++) { mem.push(F[i][0], F[i][1]); if (i < F.length - 1) { const nx = (F[i][0] + F[i + 1][0]) / 2, ny = (F[i][1] + F[i + 1][1]) / 2; mem.push(nx * .78, ny * .78); } } mem.push(-36, 6, -18, 6);
+      cel(PP(mem), far ? '#2A1424' : '#3E1A30', { d: 3, r: 1.2, w: 1.5, dark: '#1A0A16', lite: '#8A4A62', tex: () => {
+        ctx.strokeStyle = 'rgba(160,80,110,.4)'; ctx.lineWidth = .7; ctx.beginPath(); for (const f of F) { ctx.moveTo(-6, -2); ctx.quadraticCurveTo(f[0] * .5 + 4, f[1] * .5, f[0] * .8, f[1] * .8); } ctx.stroke(); // veins
+        ctx.fillStyle = '#0A0408'; for (const [x, y, r] of [[-40, -20, 3], [-52, -6, 2.2], [-28, -36, 2.4]]) { ell(x, y, r * 1.6, r); ctx.fill(); } // tears in the membrane
+      } });
+      for (const f of F) horn(0, 0, f[0] * .45, f[1] * .5 - 3, f[0], f[1], 3.4, .6, far ? '#9A8A72' : TY.bone, 1); // the finger bones
+      horn(0, 0, -4, -8, -2, -14, 3, .3, TY.bone, 1); // the thumb claw
+      if (!far) eyeRow([[-30, -22, .9], [-46, -30, .8], [-44, -10, .75], [-22, -10, .7]], wind > .4 || spread > .3, a.hurt);
+      ctx.restore();
+    };
+    wing(true);
+    // the long barbed tail and the dangling legs with their hooked talons
+    const tw = Math.sin(t * 1.4) * 4;
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-6, -22); ctx.bezierCurveTo(-16, -6, -34, -10 + tw, -48, 2 + tw); ctx.stroke(); ctx.strokeStyle = C('#2A1A2C'); ctx.lineWidth = 3; ctx.stroke();
+    horn(-48, 2 + tw, -54, 2 + tw, -58, -4 + tw, 5, .4, TY.bone, 1);
+    for (const [hx, off, far] of [[-2, 1, true], [4, 0, false]]) {
+      const s = Math.sin(t * 1.8 + off) * 2, col = far ? '#180E1A' : '#2A1A2C', kx = hx + 6 + s, ky = -14, fx = hx + 2 + s * 1.5, fy = swoop ? -6 : 0;
+      seg(hx, -24, kx, ky, 8, 5, col, 1); seg(kx, ky, fx, fy, 5, 3.4, col, 0);
+      for (let c = 0; c < 3; c++) horn(fx, fy, fx + 3 + c, fy + 2, fx + 2 + c * 2.4, fy + 6 - c * .4, 2.4, .3, far ? '#9A8A72' : TY.bone, .8);
+    }
+    // the body: gaunt, hunched, its ribs showing through the skin
+    const body = PB([-10, -22, -12, -40, -6, -56, 4, -62, 12, -54, 10, -38, 4, -24]);
+    cel(body, '#2E1E30', { d: 3.4, r: 1.4, w: 2, dark: '#120A14', lite: '#7A5A80', tex: () => {
+      ctx.strokeStyle = TY.boneDk; ctx.lineWidth = 1.1; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = -50 + i * 5.4; ctx.moveTo(-8, y + 2); ctx.quadraticCurveTo(0, y - 2, 9, y + 1); } ctx.stroke();
+      ctx.fillStyle = `rgba(${BRUISE},.3)`; ell(0, -40, 7, 10); ctx.fill();
+    } });
+    cracks([[-4, -30, -2, -36, -5, -42], [4, -28, 6, -34]], .6);
+    // the arms, thin and too long, hanging forward with hooked claws
+    for (const [far, off] of [[true, 1.2], [false, 0]]) { const s = Math.sin(t * 1.5 + off) * .15, col = far ? '#180E1A' : '#2E1E30', sx = 8, sy = -52, ex = sx + 10, ey = sy + 14 + s * 10, wx = ex + 6 + spread * 6, wy = ey + 12 - spread * 10;
+      seg(sx, sy, ex, ey, 6, 4.4, col, 1); seg(ex, ey, wx, wy, 4.2, 3, col, 0); for (let c = 0; c < 3; c++) horn(wx, wy, wx + 3, wy + 1 + c, wx + 5 + c, wy + 4 + c * 1.6, 2, .3, far ? '#9A8A72' : TY.bone, .8); }
+    // the head: a crown of black horns round a mouth split down the middle that burns from inside
+    ctx.save(); ctx.translate(8, -64); ctx.rotate(swoop ? .3 : -spread * .25 + maw * .25);
+    const open = Math.max(maw, spread * .6, swoopWind * .4, a.atk ? .6 : 0, .12 + Math.sin(t * 1.1) * .05);
+    for (let i = 0; i < 7; i++) { const an = -2.8 + i * .52, L = 12 + (i % 2) * 7; horn(Math.cos(an) * 4, Math.sin(an) * 4 - 2, Math.cos(an) * L * .6 - 2, Math.sin(an) * L * .6 - 4, Math.cos(an) * L - 4, Math.sin(an) * L - 6, 4.4, .4, i % 2 ? '#1A1018' : '#2A1E2A', 1.1, '#060306'); }
+    cel(PB([-6, -6, 2, -9, 10, -4, 11, 4, 4, 9, -4, 6]), '#3A2838', { d: 2, r: 1, w: 1.6, lite: '#8A6A88' });
+    ctx.fillStyle = C(TY.maw); ell(5, 0, 2 + open * 2.4, 6.5 * (.4 + open * .6)); ctx.fill(); outline(1); // the split mouth
+    ctx.fillStyle = C(TY.bone); for (let k = -2; k <= 2; k++) { poly([5 - 2 - open * 2.2, k * 2.2, 5 - .5, k * 2.2 + .6, 5 - 2 - open * 2.2, k * 2.2 + 1.2]); ctx.fill(); poly([5 + 2 + open * 2.2, k * 2.2, 5 + .5, k * 2.2 + .6, 5 + 2 + open * 2.2, k * 2.2 + 1.2]); ctx.fill(); }
+    glowAt(5, 0, 10 + open * 10, maw > .3 ? '255,120,60' : SULF, .3 + open * .5);
+    ctx.restore();
+    wing(false);
+    ctx.restore();
+  }
+  // ---------------------------------------------------------------- the change between shapes
+  function tyChurn(k, t) { // a ball of churning smoke, eyes opening and closing in it
+    const R = 34 * (1 - Math.abs(k - .5) * 1.2);
+    for (let i = 0; i < 10; i++) { const an = i / 10 * TAU + t * 1.2 * (i % 2 ? 1 : -1), d = R * .55; smokeLobe(Math.cos(an) * d, -40 + Math.sin(an) * d * .8, R * .55, i % 2 ? '#22182E' : '#160E1E', .9); }
+    smokeLobe(0, -40, R * .7, '#1A1024', 1);
+    add(() => { const g = ctx.createRadialGradient(0, -40, 2, 0, -40, R * 1.4); g.addColorStop(0, `rgba(${BRUISE},.6)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-R * 1.5, -40 - R * 1.5, R * 3, R * 3); });
+    eyeRow([[-8, -46, .9], [10, -38, 1], [2, -52, .7], [-12, -32, .6]], true, false);
+  }
+  const FORMS = { 1: tyWolf, 2: tySerpent, 3: tyHorror };
+  CREATURES.tyiga = function (e, a) {
+    a = a || {}; const t = a.t || 0, ph = Math.min(3, Math.max(1, e.phase || 1));
+    const sh = e.w4shift || 0; // 1 -> 0 while it changes
+    if (sh > 0 && !e.dead) {
+      const k = 1 - sh, from = e.w4from || Math.max(1, ph - 1);
+      if (k < .5) { const s = 1 - k * 2; ctx.save(); ctx.translate(0, -40); ctx.scale(s, s); ctx.translate(0, 40); FORMS[from](e, a, t); ctx.restore(); }
+      else { const s = (k - .5) * 2; ctx.save(); ctx.translate(0, -40); ctx.scale(s, s); ctx.translate(0, 40); FORMS[ph](e, a, t); ctx.restore(); }
+      tyChurn(k, t);
+      return;
+    }
+    FORMS[ph](e, a, t);
+  };
 })();
