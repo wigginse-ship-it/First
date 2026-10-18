@@ -132,13 +132,13 @@ function dirTap(dir) {
 const joy = $('#joy'), knob = $('#knob');
 let joyId = null, joyC = null, joyMx = 0, joyMy = 0, prevNx = 0;
 joy.addEventListener('pointerdown', (e) => {
-  e.preventDefault(); audioInit(); joyId = e.pointerId;
+  e.preventDefault(); audioInit(); joyId = e.pointerId; joy.classList.add('held');
   try { joy.setPointerCapture(e.pointerId); } catch (_) {}
   const r = joy.getBoundingClientRect(); joyC = { x: r.left + r.width / 2, y: r.top + r.height / 2, R: r.width * 0.36 };
   moveJoy(e);
 });
 joy.addEventListener('pointermove', (e) => { if (e.pointerId === joyId) moveJoy(e); });
-function endJoy(e) { if (e.pointerId !== joyId) return; joyId = null; joyMx = joyMy = 0; prevNx = 0; knob.style.transform = ''; }
+function endJoy(e) { if (e.pointerId !== joyId) return; joyId = null; joy.classList.remove('held'); joyMx = joyMy = 0; prevNx = 0; knob.style.transform = ''; }
 joy.addEventListener('pointerup', endJoy); joy.addEventListener('pointercancel', endJoy); joy.addEventListener('lostpointercapture', endJoy);
 function moveJoy(e) {
   let dx = e.clientX - joyC.x, dy = e.clientY - joyC.y; const d = Math.hypot(dx, dy), R = joyC.R;
