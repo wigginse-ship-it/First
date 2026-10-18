@@ -391,25 +391,25 @@
     for (let i = 0; i < 3; i++) ribs.push(60 + i * 427 + rnd() * 40);
     nestRibs = ribs.slice();
     for (const x of ribs) awWR(x, 300, rnd, (x, r) => {
-      zRib(x - 10, 82, x + 200, 70, x + 236, T + 6, 26, 9, BONE, r, 5);
+      zRib(x - 10, 72, x + 200, 62, x + 236, T + 6, 26, 9, BONE, r, 5);
       // crystals and shed scales piled where the rib enters the ground
       awCluster(x + 226, T + 2, 30 + r() * 14, 200 + r() * 40, r, 54); awCluster(x + 256, T + 3, 16 + r() * 8, 290, r, 50);
       for (let k = 0; k < 5; k++) zScale(x + 200 + r() * 70, T - 1 - r() * 4, 5 + r() * 3, (r() - .5) * 2, 180 + r() * 160, 1, .6);
       // icicles of crystal hanging from the rib's underside
-      for (let k = 0; k < 4; k++) { const t = .15 + k * .12 + r() * .05, u = 1 - t, px = u * u * (x - 10) + 2 * u * t * (x + 200) + t * t * (x + 236), py = u * u * 82 + 2 * u * t * 70 + t * t * (T + 6); awCrystal(px - 4, py + 8, 10 + r() * 14, 5 + r() * 3, Math.PI + (r() - .5) * .3, 190 + r() * 120, 50, 56); }
+      for (let k = 0; k < 4; k++) { const t = .15 + k * .12 + r() * .05, u = 1 - t, px = u * u * (x - 10) + 2 * u * t * (x + 200) + t * t * (x + 236), py = u * u * 72 + 2 * u * t * 62 + t * t * (T + 6); awCrystal(px - 4, py + 8, 10 + r() * 14, 5 + r() * 3, Math.PI + (r() - .5) * .3, 190 + r() * 120, 50, 56); }
     });
     // the spine, overhead: a chain of vertebrae, each with its spur, lit from the window below it
     const sp = awWave(57, [[2, 3], [5, 1.5]]);
     for (let x0 = 0; x0 < AW_W; x0 += 32) awWrap(x0 + 16, 26, (cx) => {
-      const x = cx - 16, y = 78 + sp(cx);
+      const x = cx - 16, y = 66 + sp(cx);
       // the spur, swept back, and the wings of bone to either side
       ctx.fillStyle = BONE.dark; awPath([cx - 7, y - 6, cx - 4, y - 22, cx + 6, y - 40, cx + 10, y - 38, cx + 7, y - 6]); ctx.fill();
-      ctx.fillStyle = BONE.base; awPath([cx - 3, y - 20, cx + 6, y - 38, cx + 8, y - 37, cx + 5, y - 6, cx + 1, y - 6]); ctx.fill();
+      ctx.fillStyle = '#4A3E70'; awPath([cx - 3, y - 20, cx + 6, y - 38, cx + 8, y - 37, cx + 5, y - 6, cx + 1, y - 6]); ctx.fill();
       ctx.fillStyle = BONE.dark; awPath([x + 4, y - 2, x - 4, y + 9, x + 2, y + 10, x + 10, y + 3]); ctx.fill(); awPath([x + 28, y - 2, x + 38, y + 8, x + 32, y + 10, x + 22, y + 3]); ctx.fill();
       // the body: waisted, darker above, catching the window's light along its lower rim
       const body = () => { ctx.beginPath(); ctx.moveTo(x + 2, y - 9); ctx.lineTo(x + 30, y - 9); ctx.quadraticCurveTo(x + 25, y, x + 30, y + 10); ctx.lineTo(x + 2, y + 10); ctx.quadraticCurveTo(x + 7, y, x + 2, y - 9); ctx.closePath(); };
-      body(); const vg = ctx.createLinearGradient(0, y - 9, 0, y + 10); vg.addColorStop(0, BONE.dark); vg.addColorStop(.5, BONE.base); vg.addColorStop(.88, awMix(BONE.base, BONE.lit, .5)); vg.addColorStop(1, BONE.lit); ctx.fillStyle = vg; ctx.fill();
-      ctx.save(); body(); ctx.clip(); dab(cx + 3, y - 2, 6, BONE.dark, .25); dab(cx - 5, y + 4, 4, BONE.lit, .2); ctx.restore();
+      body(); const vg = ctx.createLinearGradient(0, y - 9, 0, y + 10); vg.addColorStop(0, '#1E1638'); vg.addColorStop(.55, BONE.dark); vg.addColorStop(.85, BONE.base); vg.addColorStop(1, BONE.lit); ctx.fillStyle = vg; ctx.fill();
+      ctx.save(); body(); ctx.clip(); dab(cx + 3, y - 3, 6, '#1E1638', .3); dab(cx - 5, y + 6, 4, BONE.lit, .25); ctx.restore();
       ctx.fillStyle = '#1A1230'; ell(x + 32, y + .5, 2.4, 8.5); ctx.fill(); // the disc between one bone and the next
       add(() => { ctx.fillStyle = 'rgba(160,230,240,.3)'; ctx.fillRect(x + 6, y + 8, 20, 1); });
     });
@@ -436,7 +436,7 @@
       // the starfield, mirrored
       for (let i = 0; i < 170; i++) { const x = rnd() * AW_W, yy = T + 4 + rnd() * (VH - T - 8); ctx.fillStyle = `rgba(230,225,255,${.12 + rnd() * .3})`; circle(x, yy, .3 + rnd() * .7); ctx.fill(); }
       // the glow of the nave's light lying along the back of the floor, and pale streaks under the ribs
-      const wg = ctx.createLinearGradient(0, T, 0, T + 55); wg.addColorStop(0, 'rgba(150,110,200,.28)'); wg.addColorStop(1, 'rgba(150,110,200,0)'); ctx.fillStyle = wg; ctx.fillRect(0, T, AW_W, 55);
+      const wg = ctx.createLinearGradient(0, T, 0, T + 55); wg.addColorStop(0, 'rgba(150,110,200,.2)'); wg.addColorStop(1, 'rgba(150,110,200,0)'); ctx.fillStyle = wg; ctx.fillRect(0, T, AW_W, 55);
       for (let i = 0; i < 10; i++) { const x = rnd() * AW_W, w = 6 + rnd() * 16, L = 40 + rnd() * 60; awWrap(x, w, (x) => { const g = ctx.createLinearGradient(0, T, 0, T + L); g.addColorStop(0, 'rgba(210,190,250,.14)'); g.addColorStop(1, 'rgba(210,190,250,0)'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, T, w, L); }); }
       // constellations: a few bright stars joined by fine lines
       for (let i = 0; i < 9; i++) {
@@ -498,7 +498,7 @@
   THEMES.prismBoss = {
     name: "the wyrm's nest", sky: ['#04030C', '#100A26', '#261544', '#4E2458'], sun: [0.5, 0.21, '230,180,255'], haze: '110,80,160',
     floorA: '#1A1634', floorB: '#05040C', path: '#9FE8F0', skyKind: 'none',
-    grade: { desat: .1, top: 'rgba(40,40,170,.5)', bot: 'rgba(170,80,170,.38)', vig: 'rgba(4,2,14,.7)' },
+    grade: { desat: .1, top: 'rgba(40,40,170,.5)', bot: 'rgba(80,36,110,.45)', vig: 'rgba(4,2,14,.7)' },
     liveSky(camX, t) { // the nebula turns, the rose window burns, a few shards drift across the dark
       const th = THEMES.prismBoss, wx = VW * .5 + Math.sin(camX * .0007) * 26, wy = 122;
       roseX = wx; th.sun[0] = (wx + camX * .02) / VW; th.sun[1] = (wy - Y_OFF) / VIEW_H; // keep the sky's glow behind the window
@@ -522,7 +522,7 @@
       ctx.strokeStyle = rg; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath();
       for (const rx of nestRibs) for (const k of [0, AW_W, -AW_W]) { // the ribs, mirrored in the glass, sliding with them
         const x = mx + rx + k; if (x + 240 < -10 || x - 10 > VW + 10) continue;
-        ctx.moveTo(x + 236, R(T + 2)); ctx.quadraticCurveTo(x + 200, R(70), x - 10, R(82));
+        ctx.moveTo(x + 236, R(T + 2)); ctx.quadraticCurveTo(x + 200, R(62), x - 10, R(72));
       }
       ctx.stroke();
       const a = .1 + .025 * Math.sin(t * .4);
