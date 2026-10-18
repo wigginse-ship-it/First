@@ -112,8 +112,17 @@ function updatePlayer(dt) {
       P.t -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
       if (pressed.light) P.dq = 'L'; if (pressed.heavy) P.dq = unlocked(w.tree.RH) ? 'H' : 'L'; // attack out of a roll
       if (P.dq && P.t < .2) { const k = P.dq; P.dq = false; P.inv = Math.max(P.inv, .15); begin(k === 'H' ? w.tree.RH : w.tree.R); break; }
-      P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .04; addGhost(); }
-      if (P.t <= 0) P.state = 'idle';
+      P.ghostT -= dt;
+      if (P.ghostT <= 0) { // the forward lunge drags a dark trail of afterimages; the backstep leaves a couple of pale ones
+        if (P.dk === 'fwd') { P.ghostT = .022; addGhost(true); if (Math.random() < .6) fx.push({ kind: 'speed', x: P.x, y: P.y, z: rand(10, 50), dir: P.facing, t: .22, max: .22 }); }
+        else if (P.dk === 'back') { P.ghostT = .07; addGhost(); }
+        else P.ghostT = 1;
+      }
+      if (P.t <= 0) {
+        P.state = 'idle';
+        if (P.dk === 'side') { for (let i = 0; i < 12; i++) parts.push({ x: P.x + rand(-10, 10), y: P.y + rand(-4, 4), z: rand(4, 50), vx: rand(-60, 60), vy: 0, vz: rand(10, 60), life: .45, max: .45, col: pick(['rgba(42,24,64,.8)', 'rgba(90,60,140,.7)']), size: rand(4, 7), shape: 'puff', rot: 0, vr: 0 }); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .25, max: .25, r: 26, col: '#8A6ACF', flat: 1 }); }
+        if (P.dk === 'back') dust(P.x, P.y, 5);
+      }
       break;
     case 'hurt':
       P.t -= dt; P.x += P.vx * dt; P.vx *= Math.pow(.01, dt);
@@ -189,7 +198,13 @@ function startDodge() {
   // the dash depends on its direction: a low lunge forward, a hopping backstep that keeps you facing the enemy,
   // or a quick sidestep up or down the street
   P.dk = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'side' : Math.sign(dx) === P.facing ? 'fwd' : 'back';
-  if (P.dk === 'back' && P.z <= 0) P.vz = 170;
+  if (P.dk === 'back' && P.z <= 0) P.vz = 230;
+  // each dash has its own look: the forward lunge tears ahead trailing shadow, the backstep kicks off in a spray of dust,
+  // and the sidestep is a step through Shadow: he leaves a dark double behind and vanishes for an instant
+  const sm = (n, x, y) => { for (let i = 0; i < n; i++) parts.push({ x: x + rand(-10, 10), y: y + rand(-4, 4), z: rand(4, 50), vx: rand(-50, 50), vy: 0, vz: rand(10, 60), life: .5, max: .5, col: pick(['rgba(42,24,64,.8)', 'rgba(90,60,140,.7)', 'rgba(20,12,30,.85)']), size: rand(4, 8), shape: 'puff', rot: 0, vr: 0 }); };
+  if (P.dk === 'fwd') { dust(P.x - P.facing * 6, P.y, 6); fx.push({ kind: 'speed', x: P.x, y: P.y, z: 30, dir: P.facing, t: .3, max: .3 }); }
+  else if (P.dk === 'back') { for (let i = 0; i < 8; i++) parts.push({ x: P.x + P.facing * rand(0, 14), y: P.y + rand(-3, 3), z: 1, vx: P.facing * rand(60, 180), vy: rand(-10, 10), vz: rand(30, 110), life: .45, max: .45, col: 'rgba(230,215,190,.75)', size: rand(3, 6), shape: 'puff', rot: 0, vr: 0 }); }
+  else { ghosts.push({ x: P.x, y: P.y, z: P.z, facing: P.facing, pose: playerPose(), a: .9, dark: 1 }); sm(14, P.x, P.y); }
   sfx('whoosh');
 }
 function swapWeapon() {
@@ -199,7 +214,7 @@ function swapWeapon() {
   refreshHud(true); floatText(P.x, P.y, 80, WEAPONS[P.w].name.toUpperCase(), '#D8AA55', 14);
   burst(P.x, P.y, 40, '#D8AA55', 10, 'spark');
 }
-function addGhost() { if (ghosts.length < 14) ghosts.push({ x: P.x, y: P.y, z: P.z, facing: P.facing, pose: playerPose(), a: .4 }); }
+function addGhost(dark) { if (ghosts.length < 18) ghosts.push({ x: P.x, y: P.y, z: P.z, facing: P.facing, pose: playerPose(), a: dark ? .55 : .4, dark }); }
 
 // ---------- hitting things ----------
 function zOverlap(az, ah, bz, bh) { return az < bz + bh && bz < az + ah; }

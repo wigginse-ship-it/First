@@ -35,15 +35,18 @@ function playerPose() {
   else if (P.state === 'jump') { pose.crouch = 1; pose.arm = .2; pose.rot = P.vz < 0 ? 0 : 0; pose.flow = 4; }
   else if (P.state === 'dodge') {
     const k = 1 - P.t / .34;
-    if (P.dk === 'fwd') { pose.crouch = 1; pose.run = 1; pose.walk = 1.3; pose.lean = .55; pose.arm = 2.5; pose.backArm = 2.8; pose.flow = 12; } // a low lunge, arms swept back
-    else if (P.dk === 'back') { pose.walk = -1.2; pose.lean = -.32; pose.arm = -.25; pose.backArm = .5; pose.flow = -4; pose.crouch = k > .75 ? 1 : 0; } // a backstep, guard up
-    else { pose.crouch = 1; pose.walk = Math.sin(k * Math.PI) * 1.1; pose.lean = .12; pose.arm = .5; pose.backArm = 1.6; } // a quick sidestep
+    if (P.dk === 'fwd') { pose.crouch = 1; pose.run = 1; pose.walk = 1.5; pose.lean = .85; pose.arm = 2.7; pose.backArm = 3; pose.flow = 16; pose.stretch = 1.18; } // flat out, body almost level, arms flung back
+    else if (P.dk === 'back') { pose.crouch = 1; pose.kick = k < .55 ? 1 : 0; pose.walk = -1.4; pose.lean = -.6 + k * .4; pose.arm = -.6; pose.backArm = -.2; pose.flow = -8; } // pushing off, one leg kicked out, guard up
+    else { pose.crouch = 1; pose.walk = 1.4; pose.lean = .2; pose.arm = .3; pose.backArm = 2; } // the stride into Shadow
   }
   else if (P.state === 'hurt') { pose.arm = -1; pose.lean = -.3; }
   else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
-  else if (P.w === 'sword') pose.arm = .55;
-  else if (P.w === 'hammer') pose.arm = .8;
-  else if (P.w === 'staff') pose.arm = .9;
+  // at rest each weapon sits the way its wielder would carry it
+  else if (P.w === 'sword') { pose.arm = .8; pose.grip = -.08; } // a low guard, the point lowered toward the ground ahead
+  else if (P.w === 'hammer') { pose.arm = .85; pose.grip = -3.35; } // shouldered, head behind
+  else if (P.w === 'staff') { pose.arm = .95; pose.grip = -2.48; } // planted upright at his side
+  else { pose.arm = -.55; pose.backArm = .05; } // fists raised, ready
+  if (['idle', 'walk'].includes(P.state)) pose.breath = Math.sin(performance.now() / 420);
   return pose;
 }
 function humanEnemyPose(e) {
@@ -59,6 +62,8 @@ function humanEnemyPose(e) {
 function drawPlayerAt(x, y, z, facing, pose, alpha) {
   ctx.save(); ctx.globalAlpha = alpha;
   ctx.translate(x, y - z); ctx.scale(facing, 1);
+  if (pose.stretch) ctx.scale(pose.stretch, 1 / pose.stretch); // smeared out by speed
+  if (pose.breath) ctx.translate(0, pose.breath * .5); // breathing at rest
   drawHumanoid(heroLook(), pose);
   ctx.restore();
 }
@@ -148,8 +153,12 @@ function drawDeath(e, t) {
     ctx.translate(0, -e.hh * .5); ctx.rotate(wob); ctx.translate(0, e.hh * .5);
     ctx.transform(1, 0, -.28 * c * dl, 1, 0, 0);
     ctx.scale(1 + .16 * c, 1 - .36 * c);
-    draw();
+    // bent at the middle where the staff caught it: the upper body folds over at a sharp angle
+    const ky = -e.hh * .48, kink = -dl * .75 * c;
+    ctx.save(); ctx.beginPath(); ctx.rect(-400, ky, 800, 400); ctx.clip(); draw(); ctx.restore();
+    ctx.save(); ctx.translate(0, ky); ctx.rotate(kink); ctx.translate(0, -ky); ctx.beginPath(); ctx.rect(-400, ky - 400, 800, 400 + 2); ctx.clip(); draw(); ctx.restore();
     FLASH = false;
+    ctx.strokeStyle = 'rgba(30,20,35,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-e.hw * .7, ky); ctx.lineTo(e.hw * .7, ky); ctx.stroke(); // the crease
     for (const d of e.dents) { // dents and bends where the staff landed
       const x = d.x * e.hw, y = -d.y * e.hh;
       ctx.strokeStyle = 'rgba(30,20,35,.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, d.r, .3, Math.PI - .3); ctx.stroke();
@@ -227,12 +236,16 @@ function drawScene(t) {
   for (const k of loot) list.push([k.y, () => drawLoot(k, t)]);
   for (const e of enemies) list.push([e.y, () => drawEnemy(e, t)]);
   // afterimages are light, not ink, so they are painted straight onto the page
-  for (const g of ghosts) list.push([g.y - .1, () => onMain(() => { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .6); })]);
+  for (const g of ghosts) list.push([g.y - .1, () => onMain(() => { // light afterimages glow; shadow ones are dark doubles of him
+    if (g.dark) { TINT = '#2A1840'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .75); TINT = null; }
+    else { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .6); }
+  })]);
   if (mirrorT > 0) list.push([P.y - .05, () => onMain(() => { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(P.x - P.facing * 34, P.y - 6, P.z, P.facing, playerPose(), .55); })]);
   list.push([P.y + .1, () => {
     shadow(P.x, P.y, 13 * Math.max(.5, 1 - P.z / 220));
     if (P.inv > 0 && !['dodge', 'down', 'dead'].includes(P.state) && Math.floor(t * 18) % 2) return;
-    drawPlayerAt(P.x, P.y, P.z, P.facing, playerPose(), 1);
+    const blink = P.state === 'dodge' && P.dk === 'side' ? Math.max(.1, Math.abs(1 - P.t / .34 - .5) * 2) : 1; // stepping through Shadow, he is barely there mid-step
+    drawPlayerAt(P.x, P.y, P.z, P.facing, playerPose(), blink);
     hatchActor(P.x, P.y - P.z, 13, 50);
   }]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
@@ -300,6 +313,19 @@ function drawFx(f) {
     ctx.strokeStyle = f.col; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(f.x, f.y - f.z);
     for (let i = 1; i < 8; i++) { const q = i / 8; ctx.lineTo(lerp(f.x, f.x2, q) + (r() - .5) * 18, lerp(f.y - f.z, f.y2 - f.z2, q) + (r() - .5) * 18); }
     ctx.lineTo(f.x2, f.y2 - f.z2); ctx.stroke(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.stroke();
+  } else if (f.kind === 'speed') { // speed lines streaming off a dash
+    ctx.strokeStyle = 'rgba(220,210,255,.9)'; ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const y = f.y - f.z + (i - 1.5) * 9, l = 30 + i % 2 * 18, x0 = f.x - f.dir * (14 + i * 7 + (1 - k) * 30); ctx.lineWidth = 1.5 + (i % 2); ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 - f.dir * l * k, y); ctx.stroke(); }
+  } else if (f.kind === 'nova') { // a boss's close-range burst, in its own style
+    const r = f.r * (1.25 - k * .5);
+    ctx.strokeStyle = f.col; ctx.lineWidth = 3 + k * 6; ell(f.x, f.y, r, r / 2.2); ctx.stroke();
+    ctx.fillStyle = f.col;
+    for (let i = 0; i < 14; i++) {
+      const a = i / 14 * TAU + f.seed, px = f.x + Math.cos(a) * r * .9, py = f.y + Math.sin(a) * r * .9 / 2.2, h = (f.style === 'bramble' ? 34 : f.style === 'coil' ? 26 : 20) * k;
+      if (f.style === 'bramble') { ctx.beginPath(); ctx.moveTo(px - 5, py); ctx.lineTo(px + Math.cos(a) * 6, py - h); ctx.lineTo(px + 5, py); ctx.closePath(); ctx.fill(); } // thorns erupting
+      else if (f.style === 'vent') { circle(px, py - h * .6, 6 + (1 - k) * 12); ctx.fill(); } // gouts of steam
+      else { ctx.beginPath(); ctx.moveTo(px, py - h); ctx.lineTo(px + 5, py - h * .5); ctx.lineTo(px, py); ctx.lineTo(px - 5, py - h * .5); ctx.closePath(); ctx.fill(); } // crystal shards
+    }
   } else if (f.kind === 'ring') {
     const r = f.r * (1.2 - k);
     ctx.strokeStyle = f.col; ctx.lineWidth = 2 + k * 5;
@@ -338,8 +364,19 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
   const s = canvas.width / 64 * (scale || 1);
   g.setTransform(s, 0, 0, s, 0, 0);
-  ctx.translate(30, 63); ctx.scale(.7, .7);
-  drawHumanoid(heroLook(), { arm: id === 'sword' ? -1 : id === 'staff' ? -.6 : id === 'hammer' ? -1.2 : .2, weapon: id, walk: 0, tier: id === 'fists' ? 1 : save.wl[id] });
+  // the weapon on its own, laid diagonally across the card
+  const tier = id === 'fists' ? 1 : save.wl[id];
+  if (id === 'armor') { ctx.translate(30, 63); ctx.scale(.7, .7); drawHumanoid(heroLook(), { arm: -.55, backArm: .05, weapon: 'fists', walk: 0, tier: 1 }); } // armor is shown on the prince himself
+  else if (id === 'fists') { // a gauntleted fist, knuckles forward
+    ctx.translate(32, 33); ctx.rotate(-.25);
+    ctx.fillStyle = C('#3A3A46'); rrect(-15, 2, 14, 15, 3); ctx.fill(); outline(1.2); // the cuff
+    ctx.fillStyle = C('#B8BECC'); ctx.fillRect(-15, 6, 14, 2);
+    ctx.fillStyle = C('#2A2830'); rrect(-6, -12, 22, 20, 6); ctx.fill(); outline(1.4); // the fist
+    ctx.strokeStyle = C('#14101A'); ctx.lineWidth = 1.2; ctx.beginPath(); for (const y of [-6.5, -1.5, 3.5]) { ctx.moveTo(8, y); ctx.lineTo(15, y); } ctx.stroke(); // fingers
+    ctx.fillStyle = C('#8E96A8'); for (const y of [-9.5, -4.5, .5, 5]) { rrect(13, y, 4, 3.6, 1.2); ctx.fill(); } // steel knuckles
+    ctx.fillStyle = C('#2A2830'); rrect(-4, -15, 11, 7, 3); ctx.fill(); outline(1.2); // the thumb
+  }
+  else { const mid = { hammer: 30, staff: 15, sword: 40 }[id] || 30, sc = { hammer: .95, staff: .62, sword: .72 }[id] || .8; ctx.translate(32, 32); ctx.rotate(-.8); ctx.scale(sc, sc); ctx.translate(-mid, 0); drawWeapon(id, { tier, noHand: 1 }); }
   ctx = old;
   paintCard(canvas, s * .7);
 }
@@ -429,6 +466,8 @@ function drawTell(e, t) {
     ell(e.tx, e.ty, 70, 22); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(e.tx - 14, e.ty); ctx.lineTo(e.tx + 14, e.ty); ctx.moveTo(e.tx, e.ty - 6); ctx.lineTo(e.tx, e.ty + 6); ctx.stroke();
   } else if (p === 'magnet') {
     ctx.strokeStyle = `rgba(159,216,232,${.4 + .5 * k})`; for (let i = 0; i < 3; i++) { ell(e.x, e.y - e.hh * .5, 50 + i * 30 - (t * 60 % 30), (50 + i * 30 - (t * 60 % 30)) * .6); ctx.stroke(); }
+  } else if (p === e.def.close) { // the close-range burst: get out of the ring or dodge through it
+    const R = e.hw + 70; ell(e.x, e.y, R * (.4 + .6 * k), R * (.4 + .6 * k) / 2.2); ctx.fill(); ell(e.x, e.y, R, R / 2.2); ctx.stroke();
   } else if (p === 'groundwave') {
     const x1 = f > 0 ? camX + VW : camX; ctx.fillRect(Math.min(e.x, x1), e.y - 10, Math.abs(x1 - e.x), 20);
   }

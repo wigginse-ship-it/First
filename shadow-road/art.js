@@ -2,7 +2,8 @@
 // ---------- palette & drawing helpers ----------
 const OUT = '#2A1B2C';          // warm dark ink used for every outline
 let FLASH = false;              // when true, every color helper returns white (hit flash)
-const C = (c) => FLASH ? '#FFFFFF' : c;
+let TINT = null;                // when set, every color helper returns this one color (shadow afterimages)
+const C = (c) => FLASH ? '#FFFFFF' : TINT || c;
 function outline(w = 1.6) { ctx.lineWidth = w; ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); }
@@ -83,7 +84,7 @@ function drawWeapon(kind, pose) {
     ctx.fillStyle = C(tier >= 5 ? '#B89CFF' : tier >= 3 ? '#C8607A' : '#8FB8D8'); circle(45 + big, 0, 2.6 + (tier >= 3 ? 1 : 0)); ctx.fill();
     if (tier >= 4) { glowRune(40 + big, -9 - big, 1.4, 6, tier >= 5 ? '#B89CFF' : '#9FE8F0'); glowRune(49 + big, 3, 1.4, 6, tier >= 5 ? '#B89CFF' : '#9FE8F0'); }
     if (tier >= 5 && !FLASH) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(184,156,255,.25)'; rrect(32, -18, 30, 36, 10); ctx.fill(); ctx.restore(); }
-    circle(17, 0, 4); ctx.fillStyle = C(hand); ctx.fill(); return;
+    if (!pose.noHand) { circle(17, 0, 4); ctx.fillStyle = C(hand); ctx.fill(); } return;
   }
   if (kind === 'staff') {
     const len = 58 + (tier >= 4 ? 6 : 0), cap = ['#C9A86A', '#A8B0C2', '#D8AA55', '#D8AA55', '#B89CFF'][tier - 1];
@@ -92,7 +93,7 @@ function drawWeapon(kind, pose) {
     ctx.fillStyle = C(cap); rrect(-32, -3, 7, 6, 2); ctx.fill(); rrect(len - 4, -3, 7, 6, 2); ctx.fill();
     if (tier >= 4) for (const x of [-30, len - 2]) { ctx.save(); if (!FLASH) { ctx.shadowColor = tier >= 5 ? '#B89CFF' : '#9FE8F0'; ctx.shadowBlur = 10; } ctx.fillStyle = C(tier >= 5 ? '#D8C8FF' : '#BFF5FF'); ctx.beginPath(); ctx.moveTo(x - 1, -6); ctx.lineTo(x + 3, 0); ctx.lineTo(x - 1, 6); ctx.lineTo(x - 5, 0); ctx.closePath(); ctx.fill(); ctx.restore(); }
     ctx.strokeStyle = C(tier >= 5 ? '#8A6ACF' : '#C8607A'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.quadraticCurveTo(-34, 8, -38 + Math.sin(performance.now() / 120) * 3, 14); ctx.stroke(); // ribbon
-    circle(17, 0, 4); ctx.fillStyle = C(hand); ctx.fill(); return;
+    if (!pose.noHand) { circle(17, 0, 4); ctx.fillStyle = C(hand); ctx.fill(); } return;
   }
   if (kind === 'sword' || kind === 'blade' || kind === 'prism') {
     const hero = kind === 'sword', len = hero ? 64 + (tier >= 4 ? 8 : tier >= 2 ? 3 : 0) : 44;
@@ -243,6 +244,7 @@ function drawHumanoid(look, pose) {
   pose.glove = look.glove;
   if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); }
   ctx.translate(reach - 15, 0);
+  if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   drawWeapon(pose.weapon || look.weapon, pose);
   ctx.restore();
   if (look.pauldron) { ctx.beginPath(); ctx.ellipse(1, -45 + cr, 8, 6, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); ctx.fillStyle = C(look.pauldron); ctx.fill(); outline(1.4); ctx.fillStyle = C(look.trim); ctx.fillRect(-4, -47 + cr, 9, 1.5); }

@@ -134,7 +134,7 @@ function renderForge(note) {
   d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">LV ${a}/5</div><div class="nm">Rose Mail</div>
     <p>Max health ${maxHp()}${amax ? '' : ` → ${maxHp() + 30}`}. Health refills at the start of every world.</p>
     <button class="buy" type="button" ${acan ? '' : 'disabled'}>${amax ? 'Fully forged' : `Reinforce · ${costTxt(ac)}`}</button>`;
-  drawIcon(d.querySelector('canvas'), 'fists', .78);
+  drawIcon(d.querySelector('canvas'), 'armor', .78);
   d.querySelector('button').addEventListener('click', () => {
     if (!acan) return;
     save.shards -= ac.s; save.sigils -= ac.g; save.armor++; persist(); sfx('buy');

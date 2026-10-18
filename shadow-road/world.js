@@ -114,6 +114,8 @@ function updateEnemy(e, dt) {
       const inL = camX + 26 + e.hw, inR = camX + VW - 26 - e.hw;
       if (e.x < inL || e.x > inR) { approach(e, clamp(e.x, inL + 30, inR - 30), P.y, dt, 1.5); return; }
       if (p === 'roar') { wind(e, .45); return; }
+      // crowded at close range, a boss doesn't back off to line up its attack: it lashes out all around itself
+      if (e.boss && e.cd <= 0 && P.state !== 'dead' && Math.abs(dxp) < e.hw + 46 && Math.abs(dyp) < 34) { e.plan = e.def.close; wind(e, .6); return; }
       const melee = p === 'bite' || p === 'swing' || p === 'pounce';
       const busy = attackers() >= 2 && !e.boss;
       let tx, ready;
@@ -195,7 +197,7 @@ function approach(e, tx, ty, dt, k) {
   e.y = clamp(e.y, FLOOR_TOP + 8, FLOOR_BOT);
 }
 // bosses take longer to wind up, so every big attack can be read and dodged
-const BOSS_WIND = { quake: .9, mines: .7, magnet: .8, dive: .95, orbit: .7, prismwall: .6, bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
+const BOSS_WIND = { bramble: .6, vent: .65, coil: .55, quake: .9, mines: .7, magnet: .8, dive: .95, orbit: .7, prismwall: .6, bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
 function wind(e, t) {
   if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * [1, .88, .76][e.phase - 1] * (e.enraged ? .9 : 1); sfx('growl'); if (e.plan === 'slam' || e.plan === 'dive') e.ty = P.y, e.tx = P.x; }
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
@@ -224,6 +226,13 @@ function execute(e) {
   else if (p === 'beam') { if (e.phase === 3) hazards.push({ kind: 'beam', y: clamp(P.y + (P.y > 290 ? -46 : 46), FLOOR_TOP + 8, FLOOR_BOT), t: 1.25, max: 1.25, dmg: Math.round(edmg(e) * 1.4), col: '255,170,120', hit: false }); hazards.push({ kind: 'beam', y: P.y, t: 1.25, max: 1.25, dmg: Math.round(edmg(e) * 1.4), col: e.def.mat === 'metal' ? '255,120,140' : '200,170,255', hit: false }); sfx('charge', 2); recover(e, 1.4); }
   else if (p === 'groundwave') { for (const d of e.phase >= 2 ? [-1, 1] : [e.facing]) projs.push({ owner: 'e', ground: 1, x: e.x + d * e.hw, y: e.y, z: 0, vx: d * 260, dmg: edmg(e), life: 3, col: '#EED48A' }); shakeMag = 8; sfx('slam'); recover(e, .7); }
   else if (p === 'breath') { [-44, -22, 0, 22, 44].forEach((o, i) => setTimeout(() => !e.dead && bolt(e, clamp(e.y + o, FLOOR_TOP + 6, FLOOR_BOT)), i * 60)); recover(e, 1); }
+  else if (p === e.def.close) {
+    const R = e.hw + 70, col = { bramble: '#7EA460', vent: '#FFE2C0', coil: '#C8A0FF' }[p];
+    if (Math.hypot(P.x - e.x, (P.y - e.y) * 2.2) < R && P.z < 70) { playerDamage(Math.round(edmg(e) * 1.1), e.x, true); if (p === 'vent' && P.state === 'hurt') P.vx = Math.sign(P.x - e.x || 1) * 360; } // the steam blows you clear
+    fx.push({ kind: 'nova', style: p, x: e.x, y: e.y, z: 0, r: R, t: .5, max: .5, col, seed: Math.random() * 6 });
+    burst(e.x, e.y, 20, [col, '#FFFFFF'], 22, p === 'bramble' ? 'rock' : p === 'vent' ? 'spark' : 'crystal', 0, true);
+    shakeMag = 10; sfx(p === 'vent' ? 'whoosh' : 'slam'); recover(e, .7);
+  }
   else if (p === 'roar') {
     banner(e.def.name, e.roarWhy === 'rage' ? 'ENRAGED' : e.roarWhy === 'phase' ? (e.phase === 3 ? 'FINAL PHASE · ENRAGED' : 'PHASE TWO · ENRAGED') : e.def.title, 1.8); e.roarWhy = null; sfx('roar'); shakeMag = 14; zoom = .06; flashT = .12;
     fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.hh * .6, t: .7, max: .7, r: 240, col: '#FFFFFF' });
