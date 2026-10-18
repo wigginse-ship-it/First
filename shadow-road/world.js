@@ -317,6 +317,7 @@ function startStage(i) {
   P = newPlayer();
   enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; corpses = [];
   props = stage.pods.map(x => ({ kind: 'pod', x, y: FLOOR_TOP + 46 + (x % 3) * 18, hp: 1, theme: stage.theme }));
+  setZoom(VIEW_NORMAL);
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
   runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stag = null; brandT = 0;
@@ -347,6 +348,7 @@ function updateWorld(dt) {
     for (const d of carriers) if (d.wave === waveIdx && !save.owned[d.weapon]) spawnQ[d.slot].drop = d.weapon; // nothing marks the carrier
   }
   if (!bossSpawned && waveIdx >= stage.waves.length && P.x > stage.len - VW * .75) {
+    setZoom(VIEW_BOSS); // pull the camera back so the whole arena and the boss fit
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;
     boss = spawnEnemy(stage.boss, 1, true);
     $('#bossname').textContent = boss.def.name; $('#bossbar').hidden = false;

@@ -33,8 +33,9 @@
   #cv { position: absolute; display: block; }
 
   .hud { position: absolute; pointer-events: none; }
-  .hud-l { position: absolute; top: 8px; left: max(10px, env(safe-area-inset-left, 0px)); display: flex; gap: 10px; align-items: flex-start; }
-  .hud-r { position: absolute; top: 8px; right: max(10px, env(safe-area-inset-right, 0px)); display: flex; gap: 10px; align-items: center; }
+  /* --fi is the width of the gilded frame (set in layout), so the HUD sits just inside it */
+  .hud-l { position: absolute; top: calc(var(--fi, 14px) + 4px); left: max(calc(var(--fi, 14px) + 6px), env(safe-area-inset-left, 0px)); display: flex; gap: 10px; align-items: flex-start; }
+  .hud-r { position: absolute; top: calc(var(--fi, 14px) + 4px); right: max(calc(var(--fi, 14px) + 6px), env(safe-area-inset-right, 0px)); display: flex; gap: 10px; align-items: center; }
   .wcard { width: 40px; height: 54px; border-radius: 5px; background: linear-gradient(160deg, var(--panel2), var(--ink)); border: 1.5px solid var(--gold); box-shadow: 0 0 10px rgba(216,170,85,.35); display: grid; place-items: center; position: relative; }
   .wcard canvas { width: 36px; height: 36px; }
   .wcard b { position: absolute; bottom: 1px; font-size: 9px; color: var(--gold); }
@@ -48,7 +49,7 @@
   .mats { font-size: 14px; font-weight: 700; display: flex; gap: 10px; text-shadow: 0 2px 0 rgba(0,0,0,.5); font-variant-numeric: tabular-nums; }
   .mats .s { color: var(--mint); } .mats .g { color: var(--petal); }
   .pause { pointer-events: auto; width: 38px; height: 38px; border-radius: 50%; background: rgba(21,17,31,.6); border: 1.5px solid rgba(216,170,85,.8); color: var(--text); font: 700 13px var(--label); cursor: pointer; }
-  #bossbar { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: min(34%, 360px); display: grid; gap: 3px; justify-items: center; pointer-events: none; }
+  #bossbar { position: absolute; bottom: calc(var(--fi, 14px) + 6px); left: 50%; transform: translateX(-50%); width: min(34%, 360px); display: grid; gap: 3px; justify-items: center; pointer-events: none; }
   #bossbar span { font: 700 14px var(--label); color: var(--text); text-shadow: 0 2px 0 rgba(0,0,0,.6), 0 0 12px rgba(255,111,181,.8); white-space: nowrap; }
   #bossbar .bar { width: 100%; height: 14px; border-color: var(--gold); position: relative; }
   #bossbar .bar::before, #bossbar .bar::after { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(21,17,31,.85); z-index: 1; }
