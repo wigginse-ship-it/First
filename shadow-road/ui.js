@@ -111,7 +111,7 @@ const aCost = (lvl) => ({ s: Math.round((50 * lvl + 10 * lvl * lvl) * cyc()), g:
 const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
-  mode = 'forge'; showOnly('forgeOv'); playMusic('title');
+  mode = 'forge'; showOnly('forgeOv'); playMusic('forge');
   $('#forgeKicker').textContent = kicker || 'BETWEEN WORLDS';
   renderForge();
   $('#forgeOv').scrollTop = 0;
