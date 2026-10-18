@@ -51,3 +51,5 @@
     { theme: 'chaos2', len: 1700, waves: [2], pods: [1180], mech: 'w4breath', title: 'The Thelbane Spires', sub: 'THE ABYSS BREATHES · WHAT RISES MUST FALL' },
     { theme: 'chaosBoss', len: 1000, waves: [], boss: 1, mech: 'w4rim', title: 'The Rim of the Abyss', sub: 'SOMETHING OF MANY SHAPES IS WAITING' } ] });
 })();
+// the attacks, the approach rule and the passages (art_w4.js) register now that world.js and zones.js have loaded
+if (typeof window.w4Late === 'function') window.w4Late();

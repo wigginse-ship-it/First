@@ -288,15 +288,16 @@
     y = y0;
     rows.forEach((h, ri) => {
       const top = rowLines[ri], bot = rowLines[ri + 1];
-      for (const [x0, w] of awRow(rnd, h * o.min, h * o.max)) {
-        const lean = (rnd() - .5) * h * .9; // the joint between this plate and the next runs at a slant
+      const row = awRow(rnd, h * o.min, h * o.max), leans = row.map(() => (rnd() - .5) * h * .9); // each joint runs at a slant, shared by the plates either side
+      row.forEach(([x0, w], j) => {
+        const lL = leans[(j + row.length - 1) % row.length], lR = leans[j];
         for (const ox of x0 + w > AW_W ? [0, -AW_W] : [0]) {
           const xa = x0 + ox, xb = x0 + w + ox, pts = [];
-          for (let x = xa; x <= xb; x += 7) pts.push(x, yAt(top, x)); pts.push(xb, yAt(top, xb), xb + lean, yAt(bot, xb + lean));
-          for (let x = xb + lean; x >= xa + lean; x -= 7) pts.push(x, yAt(bot, x)); pts.push(xa + lean, yAt(bot, xa + lean));
-          plates.push({ pts, x: xa, w, y, h, row: ri, lean, k: rnd(), k2: rnd() });
+          for (let x = xa; x < xb; x += 7) pts.push(x, yAt(top, x)); pts.push(xb, yAt(top, xb), xb + lR, yAt(bot, xb + lR));
+          for (let x = xb + lR - 7; x > xa + lL; x -= 7) pts.push(x, yAt(bot, x)); pts.push(xa + lL, yAt(bot, xa + lL));
+          plates.push({ pts, x: xa, w, y, h, row: ri, lean: lR, k: rnd(), k2: rnd() });
         }
-      }
+      });
       y += h;
     });
     return plates;
@@ -375,6 +376,105 @@
   AW_FAR.chaos = roadFar; AW_MID.chaos = roadMid; AW_FLOOR.chaos = roadFloor;
 
   // ======================================================================================================
+  // THE THELBANE SPIRES: needle towers of bone-white stone, floating, hanging, joined by bridges to nowhere
+  // ======================================================================================================
+  const BONE = { base: '#C8B89A', lit: '#FFF0D0', dark: '#6A5A64', band: '#C9A040', win: '#FFD860' };
+  // a great Thelbane spire: a shaft swelling into balconied bulbs, gold-banded, a needle at the top; it may float on a root
+  // of rock, or hang upside down from an island
+  function spire(x, base, h, w, P, rnd, o = {}) {
+    ctx.save(); if (o.flip) { ctx.translate(0, 2 * base); ctx.scale(1, -1); }
+    const N = 18, L = [], R = [];
+    for (let i = 0; i <= N; i++) { const k = i / N, bul = Math.max(0, Math.sin(k * Math.PI * (o.bulbs || 2.5) + (o.ph || 0))) * .55, sw = w * .5 * (1 - Math.pow(k, 2.4)) * (1 + bul) + .6; L.push([x - sw, base - k * h]); R.push([x + sw, base - k * h]); }
+    const tip = [x, base - h - w * 2.2], pts = []; for (const p of L) pts.push(p[0], p[1]); pts.push(tip[0], tip[1]); for (let i = R.length - 1; i >= 0; i--) pts.push(R[i][0], R[i][1]);
+    poly(pts); const g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, P.dark); g.addColorStop(.45, P.base); g.addColorStop(.8, P.lit); g.addColorStop(1, P.base); ctx.fillStyle = g; ctx.fill();
+    ctx.save(); poly(pts); ctx.clip();
+    for (let i = 1; i < N; i += 2) { const y = L[i][1]; ctx.fillStyle = P.band; ctx.globalAlpha = .7; ctx.fillRect(x - w * 2, y, w * 4, 1.1); ctx.globalAlpha = 1; } // gold bands
+    for (let i = 0; i < 10; i++) dab(x + (rnd() - .5) * w, base - rnd() * h, 2 + rnd() * 3, rnd() < .5 ? P.dark : P.lit, .25);
+    ctx.restore();
+    if (P.win) for (let i = 0; i < 3 + h / 26; i++) { const k = .1 + rnd() * .8, y = base - k * h; awGlow(P.win, 4, () => { ctx.fillStyle = P.win; rrect(x + (rnd() - .3) * w * .5, y, 1.6, 3, .8); ctx.fill(); }); }
+    ctx.restore();
+  }
+  function bridge(x0, y0, x1, y1, sag, col, lit) { // a thin arched bridge, the far end broken off into nothing
+    ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2, Math.min(y0, y1) - sag, x1, y1); ctx.stroke();
+    ctx.strokeStyle = lit; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(x0, y0 - 1.2); ctx.quadraticCurveTo((x0 + x1) / 2, Math.min(y0, y1) - sag - 1.2, x1, y1 - 1.2); ctx.stroke();
+    for (let k = 1; k < 8; k++) { const u = k / 8, x = (1 - u) * (1 - u) * x0 + 2 * u * (1 - u) * (x0 + x1) / 2 + u * u * x1, y = (1 - u) * (1 - u) * y0 + 2 * u * (1 - u) * (Math.min(y0, y1) - sag) + u * u * y1; ctx.fillStyle = col; ctx.fillRect(x - .5, y, 1, 4); }
+  }
+  function stairs(x, y, n, s, P, dir = 1) { // a flight of floating steps
+    for (let i = 0; i < n; i++) { const sx = x + i * s * 1.3 * dir, sy = y - i * s; ctx.fillStyle = P.dark; ctx.fillRect(sx, sy, s * 1.4, s * 1.1); ctx.fillStyle = P.base; ctx.fillRect(sx, sy, s * 1.4, s * .5); ctx.fillStyle = P.lit; ctx.fillRect(sx, sy, s * 1.4, .8); }
+  }
+  function spiresFar(rnd, th, f) {
+    AW_SUN = -1;
+    buildSky(17, 77, '200,150,120', ['tower', 'meadow', 'stairs', 'house', 'prism'], '255,236,190');
+    // high veils of sulfur cloud
+    for (let i = 0; i < 26; i++) { const x = rnd() * AW_W, y = 110 + rnd() * 60, r = 40 + rnd() * 60; awWrap(x, r, (x) => awSoft(x, y, r, r * .18, i % 2 ? '240,200,140' : '200,140,170', .3)); }
+    // the far city: rank on rank of needles in the haze, some floating, some hanging upside down from islands
+    const far = { base: '#9A7A98', lit: '#E8C8B8', dark: '#6A5480', band: 'rgba(230,190,110,.6)', win: null };
+    for (let i = 0; i < 16; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => spire(x, 214 - r() * 30, 40 + r() * 70, 4 + r() * 5, far, r, { bulbs: 1.5 + r() * 2, ph: r() * 3 }));
+    hazeBand(f, th.haze, 150, T, .35);
+    const mid = { base: '#9A7A8E', lit: '#F4D8B8', dark: '#4E3A62', band: 'rgba(220,170,80,.8)', win: '#FFE08A' };
+    for (let i = 0; i < 7; i++) awWR(i * 183 + rnd() * 60, 50, rnd, (x, r) => {
+      const fl = r() < .35, y = fl ? 92 + r() * 40 : 226;
+      if (fl) { isle(x, y, 22 + r() * 14, 14 + r() * 10, { dark: '#5A4660', base: '#8A7088', lit: '#E0C0B0', top: '#B89AA0' }, r); spire(x + (r() - .5) * 10, y + 4, 40 + r() * 40, 7 + r() * 4, mid, r, { flip: 1, bulbs: 2, ph: r() * 3 }); }
+      else spire(x, y, 90 + r() * 70, 8 + r() * 6, mid, r, { bulbs: 2 + r() * 2, ph: r() * 3 });
+    });
+    for (let i = 0; i < 5; i++) { const x = rnd() * AW_W; awWrap(x, 90, (x) => bridge(x, 150 + rnd() * 40, x + 60 + rnd() * 40, 140 + rnd() * 50, 12 + rnd() * 10, '#8A7088', '#F0D8C0')); }
+    for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => stairs(x, 120 + r() * 60, 4 + Math.floor(r() * 4), 2.4, { dark: '#6A5276', base: '#A88A98', lit: '#F4DCC8' }, r() < .5 ? 1 : -1));
+    hazeBand(f, th.haze, 190, T, .4);
+  }
+  function spiresMid(rnd) {
+    AW_SUN = -1;
+    // the near towers: great bone spires with gold bands and burning windows; between them floating stair-flights and chains
+    const near = { base: '#B49C8C', lit: '#FFEACC', dark: '#3E2C48', band: '#C9A040', win: '#FFD860' };
+    const xs = []; for (let i = 0; i < 4; i++) xs.push(90 + i * 320 + rnd() * 90);
+    for (const x of xs) awWR(x, 60, rnd, (x, r) => {
+      spire(x, T + 6, 150 + r() * 50, 22 + r() * 8, near, r, { bulbs: 2.2 + r(), ph: r() * 2 });
+      for (let k = 0; k < 2; k++) { const by = T - 50 - k * 50 - r() * 20; ctx.fillStyle = '#5E4A62'; rrect(x - 30, by, 60, 4, 2); ctx.fill(); ctx.fillStyle = '#E8D8BC'; ctx.fillRect(x - 30, by, 60, 1.2); for (let b = -26; b <= 26; b += 6) { ctx.fillStyle = '#B8A48C'; ctx.fillRect(x + b, by - 7, 2, 7); } ctx.fillStyle = '#C9A040'; ctx.fillRect(x - 30, by - 8, 60, 1.4); } // balconies
+    });
+    for (let i = 0; i < 4; i++) { const a = xs[i], b = i === 3 ? xs[0] + AW_W : xs[i + 1]; for (const ox of [0, -AW_W]) chain(a + 20 + ox, T - 120 - rnd() * 20, b - 20 + ox, T - 110 - rnd() * 20, 26, '#3A2A3A', '#B89A88'); }
+    for (let i = 0; i < 5; i++) awWR(rnd() * AW_W, 40, rnd, (x, r) => stairs(x, T - 70 - r() * 70, 4 + Math.floor(r() * 3), 4.2, { dark: '#5E4A62', base: '#C8B49C', lit: '#FFF2D8' }, r() < .5 ? 1 : -1));
+    for (let i = 0; i < 4; i++) awWR(rnd() * AW_W, 40, rnd, (x, r) => { const y = T - 140 - r() * 50; isle(x, y, 16 + r() * 10, 12 + r() * 8, { dark: '#3A2A3E', base: '#7A6276', lit: '#E8C8B0', top: '#B8A08C' }, r); });
+  }
+  function spiresFloor(rnd, th) {
+    spireSeams = [];
+    { const g = ctx.createLinearGradient(0, T - 3, 0, VH); g.addColorStop(0, '#B8A48C'); g.addColorStop(.3, '#8A7672'); g.addColorStop(1, '#3A2C3A'); ctx.fillStyle = g; ctx.fillRect(0, T - 3, AW_W, VH - T + 3); }
+    // the causeway: flagstones of bone-white stone in courses, a few missing so the Abyss shows through
+    const plates = crackNet(rnd, T + 4, [9, 11, 13, 16, 19, 23, 27], { min: 2.2, max: 4.6 });
+    for (const p of plates) {
+      const l = 1 - p.row * .085, hole = p.k < .045 && p.row > 0 && p.row < 6;
+      if (hole) { // a missing stone: the Abyss far below, a few stars in it
+        poly(p.pts); const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h); g.addColorStop(0, '#05020A'); g.addColorStop(1, '#2A1238'); ctx.fillStyle = g; ctx.fill();
+        ctx.save(); poly(p.pts); ctx.clip(); for (let i = 0; i < 6; i++) { ctx.fillStyle = 'rgba(255,230,255,.7)'; circle(p.x + rnd() * p.w, p.y + rnd() * p.h, .5); ctx.fill(); } ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(p.x - 10, p.y, p.w + 20, p.h * .35); ctx.restore();
+        continue;
+      }
+      poly(p.pts); const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h); g.addColorStop(0, awMix('#D8C8AC', '#6A5464', (1 - l) * 1.6)); g.addColorStop(1, awMix('#9A8678', '#3A2838', (1 - l) * 1.6)); ctx.fillStyle = g; ctx.fill();
+      ctx.save(); poly(p.pts); ctx.clip(); for (let i = 0; i < 3; i++) dab(p.x + rnd() * p.w, p.y + rnd() * p.h, p.h * (.3 + rnd() * .4), rnd() < .5 ? '#FFF4E0' : '#7A6A72', .2); ctx.restore();
+    }
+    for (const p of plates) { ctx.strokeStyle = 'rgba(50,30,50,.75)'; ctx.lineWidth = 1 + p.row * .1; poly(p.pts); ctx.stroke(); ctx.strokeStyle = 'rgba(255,250,235,.45)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(p.pts[0], p.pts[1] + 1); ctx.lineTo(p.x + p.w - 1, p.pts[1] + 1); ctx.stroke(); }
+    // the Logrus inlaid down the causeway in gold: lines that writhe and branch and never repeat
+    for (let i = 0; i < 14; i++) { let x = i * 91 + rnd() * 40, y = T + 26 + rnd() * 60, a = rnd() * TAU; const pts = [[x, y]];
+      for (let s = 0; s < 10; s++) { a += (rnd() - .5) * 1.4; x += Math.cos(a) * 9; y = clamp(y + Math.sin(a) * 3, T + 22, T + 90); pts.push([x, y]); }
+      if (pts[0][0] < AW_W - 140) spireSeams.push({ pts, ph: rnd() * TAU });
+      awGlow('rgba(240,200,90,.8)', 4, () => { ctx.strokeStyle = 'rgba(214,166,60,.85)'; ctx.lineWidth = .9; ctx.beginPath(); pts.forEach((p, k) => k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); }); }
+    // the balustrade along the back of the causeway: bone balusters under a gold-lit rail
+    const by = T + 3; ctx.fillStyle = '#5E4A62'; ctx.fillRect(0, by - 2, AW_W, 5);
+    for (let x = 3; x < AW_W; x += 7) { const g = ctx.createLinearGradient(x - 2, 0, x + 2, 0); g.addColorStop(0, '#7A6476'); g.addColorStop(.6, '#E8DCC4'); g.addColorStop(1, '#B8A48C'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 1.6, by - 2); ctx.quadraticCurveTo(x - 3, by - 9, x - 1.2, by - 15); ctx.lineTo(x + 1.2, by - 15); ctx.quadraticCurveTo(x + 3, by - 9, x + 1.6, by - 2); ctx.fill(); }
+    for (let x = 0; x <= AW_W; x += 84) awWrap(x, 8, (x) => { ctx.fillStyle = '#C8B49C'; ctx.fillRect(x - 4, by - 22, 8, 22); ctx.fillStyle = '#FFF2D8'; ctx.fillRect(x - 4, by - 22, 2, 22); ctx.fillStyle = '#C9A040'; poly([x - 5, by - 22, x, by - 30, x + 5, by - 22]); ctx.fill(); });
+    ctx.fillStyle = '#D8C8AC'; ctx.fillRect(0, by - 18, AW_W, 3); ctx.fillStyle = '#FFF4DC'; ctx.fillRect(0, by - 18, AW_W, .9); ctx.fillStyle = '#C9A040'; ctx.fillRect(0, by - 15.4, AW_W, .8);
+    // the near edge of the causeway, carved, over nothing
+    const ey = 350; ctx.fillStyle = '#2A1A2A'; ctx.fillRect(0, ey, AW_W, VH - ey); ctx.fillStyle = '#C8B49C'; ctx.fillRect(0, ey - 1, AW_W, 2.4);
+    for (let x = 0; x < AW_W; x += 16) { ctx.fillStyle = '#8A7680'; ctx.beginPath(); ctx.arc(x + 8, ey + 1.4, 6, 0, Math.PI); ctx.fill(); }
+    const sh = ctx.createLinearGradient(0, VH - 44, 0, VH - 10); sh.addColorStop(0, 'rgba(30,14,30,0)'); sh.addColorStop(1, 'rgba(30,14,30,.4)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 44, AW_W, 34);
+  }
+  THEMES.chaos2 = {
+    name: 'the thelbane spires', sky: ['#160C2A', '#3E2056', '#9A5A70', '#E8B070'], sun: [0.3, 0.2, '255,220,160'], haze: '220,170,150',
+    floorA: '#B8A48C', floorB: '#3A2C3A', path: '#C9A040', skyKind: 'none',
+    grade: { desat: .08, top: 'rgba(80,50,160,.4)', bot: 'rgba(240,170,80,.35)', vig: 'rgba(30,10,30,.55)' },
+    liveSky(camX, t) { skyEclipse(THEMES.chaos2, camX); skyFrags(camX, t, Y_OFF + 30, Y_OFF + 90, .9); },
+    liveFloor(camX, t) { liveSeams(spireSeams, camX, t, '255,210,110', .16, .14); },
+  };
+  AW_FAR.chaos2 = spiresFar; AW_MID.chaos2 = spiresMid; AW_FLOOR.chaos2 = spiresFloor;
+
+  // ======================================================================================================
   // THE HUMANS OF THE COURTS: their looks for drawHumanoid, and their weapons
   // ======================================================================================================
   Object.assign(HUMANS, {
@@ -446,6 +546,7 @@
     const v = e.w4vis ?? 1; if (v <= .02) return;
     ctx.save(); if (v < 1) ctx.globalAlpha *= v;
     if (e.def.w4scale) { const s = e.def.w4scale; ctx.scale(s, s); }
+    if (e.w4pose && a) a = Object.assign({}, a, { pose: Object.assign({}, a.pose, e.w4pose) });
     humanDraw(e, a); ctx.restore();
   };
   // the breakable pods of this world: geodes of black glass, cracked open on a heart of fire
@@ -661,16 +762,18 @@
   // Between them it pours itself into a churning ball of smoke and comes out as the next.
   // ======================================================================================================
   const TY = { fur: '#1C1424', furDk: '#08050C', furLit: '#5A4476', smoke: '#1E1428', bone: '#DCD0B4', boneDk: '#8E806A', boneLit: '#FFF6E2', eye: '#FFD860', maw: '#2A060E' };
-  // a spiky silhouette of fur through points: every edge gets a tuft pushed outward
-  function furPath(pts, amp, seed = 0) {
+  // a spiky silhouette of fur through points: every edge gets a pointed tuft swept back along it
+  function furPath(pts, amp, seed = 0, every = 1) {
     return (ox, oy, cont) => {
       if (!cont) ctx.beginPath(); const n = pts.length / 2;
-      for (let i = 0; i <= n; i++) {
-        const a = i % n, b = (i + 1) % n, x0 = pts[a * 2] + ox, y0 = pts[a * 2 + 1] + oy, x1 = pts[b * 2] + ox, y1 = pts[b * 2 + 1] + oy;
-        if (i === 0) { ctx.moveTo(x0, y0); continue; }
-        const px = pts[((i - 1) % n) * 2] + ox, py = pts[((i - 1) % n) * 2 + 1] + oy, mx = (px + x0) / 2, my = (py + y0) / 2, dx = x0 - px, dy = y0 - py, L = Math.hypot(dx, dy) || 1, s = amp * (.6 + hsh(i + seed) * .8);
-        ctx.quadraticCurveTo(mx + dy / L * s * .3, my - dx / L * s * .3, mx + dy / L * s - dx / L * s * .4, my - dx / L * s - dy / L * s * .4); // the tuft's tip, swept back
-        ctx.quadraticCurveTo(mx + dy / L * s * .1, my - dx / L * s * .1, x0, y0);
+      ctx.moveTo(pts[0] + ox, pts[1] + oy);
+      for (let i = 1; i <= n; i++) {
+        const a = (i - 1) % n, b = i % n, x0 = pts[a * 2] + ox, y0 = pts[a * 2 + 1] + oy, x1 = pts[b * 2] + ox, y1 = pts[b * 2 + 1] + oy, dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1;
+        const s = amp * (.55 + hsh(i * 3.1 + seed) * .9) * (i % every === 0 ? 1 : 0);
+        if (s < .3) { ctx.lineTo(x1, y1); continue; }
+        const nx = dy / L, ny = -dx / L, k = .45 + hsh(i + seed) * .2, bx = x0 + dx * k, by = y0 + dy * k;
+        ctx.quadraticCurveTo(x0 + dx * .3 + nx * s * .25, y0 + dy * .3 + ny * s * .25, bx + nx * s - dx / L * s * .5, by + ny * s - dy / L * s * .5); // out to the tuft's point, swept back
+        ctx.quadraticCurveTo(bx + dx * .1, by + dy * .1, x1, y1);
       }
       ctx.closePath();
     };
@@ -683,69 +786,76 @@
       if (DET()) { ctx.fillStyle = '#1A0606'; ell(x + .3 * s, y - .2 * s, .3 * s, .8 * s); ctx.fill(); glowAt(x, y, 6 * s, SULF, wind ? .75 : .4); }
     }
   }
-  // smoke coming off its edges: lobes that rise and thin as they go (anchored to its body, drifting slowly)
-  function wisps(list, t, col = TY.smoke) {
-    for (let i = 0; i < list.length; i += 3) {
-      const x = list[i], y = list[i + 1], r = list[i + 2], k = ((t * .35 + hsh(i) ) % 1);
-      for (let j = 0; j < 3; j++) { const q = (k + j / 3) % 1; smokeLobe(x - q * 10 + Math.sin(t + i + j) * 2, y - q * 16, r * (1 - q * .7), col, (1 - q) * .75); }
-    }
+  // a tongue of smoke licking up off its body: a tapering, curling stroke that thins as it rises
+  function smokeTongue(x, y, len, w, lean, t, i, col = '#1E1428') {
+    const sw = Math.sin(t * 1.3 + i * 2.1) * len * .18, s = taper(x, y, x + lean * .5 + sw, y - len * .55, x + lean + sw * 1.6, y - len, w, .5, 6);
+    trace(s.L, s.R); ctx.fillStyle = C(col); ctx.globalAlpha = .9; ctx.fill(); ctx.globalAlpha = 1;
+    if (DET()) { ctx.strokeStyle = 'rgba(140,110,180,.45)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(s.R[2], s.R[3]); for (let k = 4; k < s.R.length - 2; k += 2) ctx.lineTo(s.R[k], s.R[k + 1]); ctx.stroke(); }
   }
+  function wisps(list, t) { for (let i = 0; i < list.length; i += 4) smokeTongue(list[i], list[i + 1], list[i + 2], list[i + 3], -list[i + 2] * .6, t, i); }
   // ---------------------------------------------------------------- the shadow-wolf
   function tyWolf(e, a, t) {
     const st = e.state, plan = e.plan, wind = a.wind || 0, ph = a.walk || 0, moving = ph ? 1 : 0;
-    const act = st === 'w4act' ? e.w4a : null, crouch = (st === 'wind' && plan === 'w4rake') ? wind : act === 'rake' ? .6 : 0;
+    const act = st === 'w4act' ? e.w4a : null, crouch = (st === 'wind' && plan === 'w4rake') ? wind : act === 'rake' && !e.w4dash ? .7 : 0;
     const howl = (st === 'wind' && plan === 'w4howl') ? wind : act === 'howl' ? 1 : 0, maw = (st === 'wind' && plan === 'w4maw') ? wind : act === 'maw' ? 1 : 0;
-    const dash = act === 'rake' && e.w4dash, down = st === 'down' || a.hurt && st !== 'hurt';
-    const B = -40 + crouch * 9 + (down ? 8 : 0) + Math.sin(t * 1.8) * .8, S = Math.sin(ph) * moving;
+    const dash = act === 'rake' && e.w4dash, down = st === 'down';
+    const B = -46 + crouch * 10 + (down ? 12 : 0) + Math.sin(t * 1.8) * .8 + Math.abs(Math.sin(ph)) * 2 * moving;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    if (dash) ctx.scale(1.14, .9);
-    // smoke streaming off the back and the tail
-    wisps([-44, B - 10, 7, -30, B - 20, 6, -12, B - 24, 6, 6, B - 26, 5, -56, B - 2, 6], t);
-    // the tail: a plume of smoke and fur
+    if (dash) ctx.scale(1.12, .92);
+    // the haunches and back come apart into tongues of smoke
+    wisps([-46, B - 2, 22, 6, -36, B - 12, 26, 7, -22, B - 16, 20, 6, -8, B - 20, 16, 5, -54, B + 8, 18, 6], t);
+    // the tail: a long plume of fur that frays into smoke
     const tw = Math.sin(t * 1.6) * 4;
-    cel(furPath([-42, B - 6, -58, B - 14 + tw, -72, B - 10 + tw * 1.4, -78, B - 2 + tw, -66, B + 2 + tw * .6, -52, B + 4], 4, 3), TY.fur, { d: 3, r: 1.2, w: 1.6, dark: TY.furDk, lite: TY.furLit });
-    const leg = (hx, front, off, far) => { // great legs: shoulder/hip -> elbow/knee -> wrist/hock -> paw with bone claws
-      const s = Math.sin(ph + off) * moving, lift = Math.max(0, Math.cos(ph + off)) * 5 * moving, col = far ? '#100A16' : TY.fur;
+    wisps([-74, B - 4 + tw * 1.3, 14, 5, -66, B - 8 + tw, 12, 4], t);
+    cel(furPath([-44, B - 6, -58, B - 12 + tw * .6, -72, B - 8 + tw * 1.2, -80, B + 2 + tw * 1.4, -70, B + 4 + tw, -56, B + 4 + tw * .4, -46, B + 6], 5, 3), TY.fur, { d: 3, r: 1.4, w: 1.6, dark: TY.furDk, lite: TY.furLit });
+    const leg = (front, off, far) => { // long sinewy legs: the fore straight as columns, the hind bent at the hock; bone claws
+      const s = Math.sin(ph + off) * moving, lift = Math.max(0, Math.cos(ph + off)) * 6 * moving, col = far ? '#0E0914' : TY.fur;
+      const hx = front ? 18 : -34, hy = B + (front ? 6 : 2);
       let k, w, p;
-      if (dash) { k = front ? [hx + 12, B + 14] : [hx - 10, B + 16]; w = front ? [hx + 26, B + 26] : [hx - 26, B + 24]; p = front ? [hx + 34, B + 30] : [hx - 36, B + 30]; }
-      else if (front) { k = [hx + 2 + s * 4, B + 22 - crouch * 4]; w = [hx + 4 + s * 9 + crouch * 6, -9 - lift]; p = [hx + 9 + s * 10 + crouch * 8, -1.5 - lift]; }
-      else { k = [hx + 8 + s * 5, B + 20]; w = [hx - 6 + s * 8, -12 - lift + crouch * 3]; p = [hx - 1 + s * 10, -1.5 - lift]; }
-      seg(hx, B + 4, k[0], k[1], 22, 12, col, 3); seg(k[0], k[1], w[0], w[1], 11, 8, col, 1); seg(w[0], w[1], p[0], p[1], 8, 7, col, 0);
-      fillPoly([p[0] - 5, p[1] - 3, p[0] + 6, p[1] - 3.5, p[0] + 8, p[1] + 1.5, p[0] - 5, p[1] + 1.5], far ? '#06040A' : '#140C1A', 1.1);
-      if (!far) for (let c = 0; c < 3; c++) horn(p[0] + 5 + c * .6, p[1] - 2 + c * 1.2, p[0] + 9, p[1] - 1 + c * 1.2, p[0] + 11 + c * .4, p[1] + 1.4 + c * .3, 2.2, .3, TY.bone, .8);
+      if (dash) { k = front ? [hx + 14, hy + 16] : [hx - 12, hy + 18]; w = front ? [hx + 30, hy + 26] : [hx - 28, hy + 30]; p = front ? [hx + 40, hy + 30] : [hx - 40, hy + 34]; }
+      else if (front) { k = [hx - 2 + s * 5 + crouch * 4, hy + 20 - crouch * 4]; w = [hx + s * 10 + crouch * 10, -10 - lift]; p = [hx + 5 + s * 11 + crouch * 12, -1.5 - lift]; }
+      else { k = [hx + 10 + s * 5, hy + 20 - crouch * 3]; w = [hx - 6 + s * 9, -14 - lift + crouch * 5]; p = [hx - 1 + s * 11, -1.5 - lift]; }
+      if (down) { k = [hx + (front ? 10 : -10), hy + 14]; w = [hx + (front ? 24 : -24), -4]; p = [hx + (front ? 32 : -30), -1]; }
+      seg(hx, hy, k[0], k[1], front ? 20 : 26, 11, col, 4); seg(k[0], k[1], w[0], w[1], 10, 7, col, 1); seg(w[0], w[1], p[0], p[1], 7.4, 7, col, 0);
+      cel(PB([p[0] - 6, p[1] - 2, p[0], p[1] - 5, p[0] + 7, p[1] - 3, p[0] + 9, p[1] + 1.4, p[0] - 6, p[1] + 1.4]), far ? '#08060C' : '#160E1C', { d: 1.4, r: .7, w: 1.2, lite: TY.furLit });
+      for (let c = 0; c < 3; c++) horn(p[0] + 6 + c * .4, p[1] - 3 + c * 1.6, p[0] + 10, p[1] - 2 + c * 1.5, p[0] + 12.5 + c * .3, p[1] + 1.3 + c * .2, 2.4, .3, far ? '#9A8C72' : TY.bone, .8);
     };
-    leg(-30, false, Math.PI, true); leg(16, true, 0, true);
-    // the body: a hump of shoulder, a deep chest, the haunches; its fur a mass of dark tufts
-    const body = furPath([40, B - 12, 34, B + 8, 22, B + 18, 4, B + 16, -14, B + 12, -34, B + 16, -48, B + 8, -50, B - 6, -38, B - 16, -20, B - 20, 0, B - 24, 18, B - 28, 32, B - 24], 5, 7);
-    cel(body, TY.fur, { d: 5, r: 2, w: 2.2, dark: TY.furDk, lite: TY.furLit, under: () => {
-      const g = ctx.createRadialGradient(6, B - 2, 2, 6, B - 2, 40); g.addColorStop(0, `rgba(${BRUISE},.4)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-40, B - 40, 90, 70); // the shape inside the shape, glowing through
-    }, tex: () => { // brushed fur, swept back
-      ctx.strokeStyle = 'rgba(110,90,140,.45)'; ctx.lineWidth = .8; ctx.beginPath();
-      for (let i = 0; i < 26; i++) { const x = -44 + (i * 37) % 84, y = B - 18 + (i * 13) % 32; ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 3, y + 1, x - 7, y + 3); } ctx.stroke();
-      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); for (let i = 0; i < 14; i++) { const x = -40 + (i * 53) % 76, y = B + 2 + (i * 7) % 12; ctx.moveTo(x, y); ctx.lineTo(x - 6, y + 4); } ctx.stroke();
+    leg(false, Math.PI, true); leg(true, 0, true);
+    // the body: massive forequarters, a back sloping down to lean haunches; a mass of dark fur, the shape inside glowing through
+    const body = furPath([28, B - 26, 40, B - 8, 36, B + 6, 24, B + 16, 10, B + 14, -6, B + 8, -20, B + 10, -36, B + 14, -48, B + 8, -52, B - 4, -44, B - 12, -28, B - 16, -10, B - 22, 6, B - 30, 18, B - 34], 6, 7);
+    cel(body, TY.fur, { d: 6, r: 2.2, w: 2.2, dark: TY.furDk, lite: TY.furLit, under: () => {
+      const g = ctx.createRadialGradient(10, B - 4, 2, 10, B - 4, 44); g.addColorStop(0, `rgba(${BRUISE},.5)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-50, B - 50, 100, 80);
+    }, tex: () => { // fur brushed in long strokes, swept back from the head
+      ctx.lineWidth = .9; ctx.strokeStyle = 'rgba(130,104,170,.5)'; ctx.beginPath();
+      for (let i = 0; i < 30; i++) { const x = -46 + (i * 37) % 86, y = B - 26 + (i * 13) % 36; ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 4, y + 1, x - 9, y + 4); } ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); for (let i = 0; i < 16; i++) { const x = -44 + (i * 53) % 80, y = B + (i * 7) % 14; ctx.moveTo(x, y); ctx.lineTo(x - 7, y + 5); } ctx.stroke();
     } });
-    leg(-30, false, 0, false); leg(16, true, Math.PI, false);
-    // the mane: a ruff of smoke and fur standing up behind the head
-    cel(furPath([22, B - 26, 14, B - 40, 22, B - 46, 34, B - 44, 42, B - 34, 40, B - 20, 30, B - 14], 5, 11), '#241A30', { d: 3, r: 1.4, w: 1.8, dark: TY.furDk, lite: '#7A60A0' });
-    // the head: a broad skull, a long muzzle, a jaw of bone-white fangs; it lifts to howl, gapes to devour
-    const hr = -howl * .75 + crouch * .25 + maw * .2 + (dash ? .12 : 0), open = Math.max(howl * .65, maw * .9, a.atk ? .5 : 0, dash ? .35 : 0, .05 + Math.sin(t * 1.4) * .03);
-    ctx.save(); ctx.translate(38, B - 26); ctx.rotate(hr);
+    leg(false, 0, false); leg(true, Math.PI, false);
+    // the ruff: a great collar of fur and smoke standing up behind the head
+    cel(furPath([16, B - 30, 14, B - 46, 24, B - 54, 36, B - 50, 44, B - 38, 42, B - 22, 30, B - 14, 20, B - 18], 6, 11), '#261C34', { d: 3.4, r: 1.6, w: 1.8, dark: TY.furDk, lite: '#8A6CB4' });
+    // the head: a long skull and muzzle held low; it lifts to howl and gapes to devour
+    const hr = -howl * .8 + crouch * .3 + maw * .25 + (dash ? .15 : 0) + (down ? .4 : 0), open = Math.max(howl * .7, maw * .95, a.atk ? .5 : 0, dash ? .4 : 0, .06 + Math.sin(t * 1.4) * .03);
+    ctx.save(); ctx.translate(40, B - 30); ctx.rotate(hr); ctx.scale(1.15, 1.15);
+    // the ears, laid back and ragged
+    horn(-2, -12, -6, -24, -14, -32, 9, .6, '#140E1C', 1.3, '#08050C');
     // the lower jaw
-    ctx.save(); ctx.translate(2, 6); ctx.rotate(open * .8);
-    cel(furPath([-4, -2, 26, 0, 30, 4, 18, 9, -2, 8], 2.4, 5), '#1A1220', { d: 2, r: .8, w: 1.5, lite: TY.furLit });
-    ctx.fillStyle = C(TY.bone); for (let x = 6; x <= 26; x += 5) { poly([x, 0, x + 1.4, -5 - (x === 26 ? 2 : 0), x + 2.8, 0]); ctx.fill(); outline(.6); }
+    ctx.save(); ctx.translate(0, 5); ctx.rotate(open * .75);
+    cel(furPath([-6, -2, 30, 0, 36, 3, 22, 9, -4, 8], 2.4, 5), '#1A1220', { d: 2, r: .8, w: 1.5, lite: TY.furLit });
+    ctx.fillStyle = C(TY.bone); for (let x = 8; x <= 32; x += 5) { poly([x, 0, x + 1.4, -5.4 - (x >= 28 ? 2.4 : 0), x + 2.8, 0]); ctx.fill(); outline(.6); }
     ctx.restore();
-    if (open > .2) { ctx.fillStyle = C(TY.maw); poly([0, 4, 30, 2, 26, 6 + open * 24, 2, 12]); ctx.fill(); glowAt(14, 8 + open * 6, 18, EMBER, .3 + open * .4); }
-    // the skull and muzzle
-    const skull = furPath([-10, -14, 4, -18, 16, -14, 30, -8, 34, -2, 32, 3, 18, 5, 2, 7, -12, 4], 2.6, 9);
-    cel(skull, '#221830', { d: 3, r: 1.2, w: 1.8, dark: TY.furDk, lite: '#7A60A0', tex: () => { ctx.strokeStyle = 'rgba(130,110,160,.5)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(10, -14); ctx.quadraticCurveTo(20, -10, 30, -5); ctx.stroke(); } });
-    ctx.fillStyle = C(TY.bone); for (let x = 8; x <= 30; x += 4.4) { poly([x, 3, x + 1.2, 9 + (x > 26 ? 3 : 0), x + 2.4, 3]); ctx.fill(); outline(.6); } // the upper fangs
-    ctx.fillStyle = C('#0A0408'); ell(33, -2.4, 1.4, 1); ctx.fill(); // nose
-    eyeRow([[16, -9, 1.15], [9, -11, .95], [3, -12.5, .8]], wind > .4 || howl > .3 || maw > .3, a.hurt);
-    // ears, laid back, ragged
-    horn(-2, -14, -8, -24, -16, -30, 8, .6, '#1A1222', 1.3, '#08050C'); horn(4, -16, 0, -26, -6, -33, 8, .6, '#241A30', 1.3, '#0A060E');
+    if (open > .2) { ctx.fillStyle = C(TY.maw); poly([-2, 4, 34, 2, 30, 6 + open * 26, 0, 12]); ctx.fill(); glowAt(14, 8 + open * 7, 20, EMBER, .3 + open * .45); }
+    const skull = furPath([-12, -12, 2, -16, 16, -13, 30, -7, 38, -3, 38, 3, 20, 5, 2, 8, -14, 5], 2.4, 9, 2);
+    cel(skull, '#241A32', { d: 3.2, r: 1.4, w: 1.8, dark: TY.furDk, lite: '#8C70B8', tex: () => {
+      ctx.strokeStyle = 'rgba(140,120,180,.55)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(8, -13); ctx.quadraticCurveTo(22, -9, 36, -3); ctx.stroke(); // the line of the muzzle
+      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.moveTo(24, 2); ctx.quadraticCurveTo(16, -1, 6, 2); ctx.stroke(); // the lip
+    } });
+    ctx.fillStyle = C(TY.bone); for (let x = 10; x <= 34; x += 4.6) { poly([x, 3, x + 1.2, 9.4 + (x > 30 ? 3.4 : 0), x + 2.4, 3]); ctx.fill(); outline(.6); } // the upper fangs
+    ctx.fillStyle = C('#0A0408'); ell(37.6, -2.6, 1.6, 1.1); ctx.fill(); // the nose
+    eyeRow([[17, -8.6, 1.2], [10, -10.6, 1], [3.6, -12, .82]], wind > .4 || howl > .3 || maw > .3, a.hurt);
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(1, -15); ctx.lineTo(21, -11); ctx.stroke(); // the brow, drawn down over the eyes
+    horn(4, -14, 2, -26, -6, -34, 9, .6, '#261C34', 1.3, '#0A060E'); // the near ear
     ctx.restore();
-    if (dash && DET()) add(() => { ctx.strokeStyle = 'rgba(160,120,210,.35)'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = B - 20 + i * 9; ctx.moveTo(-60 - i * 6, y); ctx.lineTo(-100 - i * 10, y + 2); } ctx.stroke(); }); // speed, smeared into shadow
+    if (dash && DET()) add(() => { ctx.strokeStyle = 'rgba(170,130,220,.4)'; ctx.lineWidth = 2.2; ctx.beginPath(); for (let i = 0; i < 6; i++) { const y = B - 24 + i * 9; ctx.moveTo(-62 - i * 5, y); ctx.lineTo(-108 - i * 9, y + 2); } ctx.stroke(); }); // speed, smeared into shadow
     ctx.restore();
   }
   // ---------------------------------------------------------------- the serpent of smoke
@@ -762,7 +872,7 @@
     }
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     // the tail ends in a long fraying plume of smoke
-    wisps([X[N] - 6, Y[N], 6, X[N - 3], Y[N - 3] - 8, 5, X[8], Y[8] - 10, 5, X[4], Y[4] - 12, 5], t);
+    wisps([X[N] - 4, Y[N], 16, 5, X[N - 3], Y[N - 3] - 4, 14, 4, X[10], Y[10] - 6, 12, 4, X[6], Y[6] - 8, 12, 4], t);
     for (let i = N; i >= 0; i--) { // the body, tail first: rings of smoke with a bone vertebra along the top, fire between them
       const ia = Math.max(0, i - 1), ib = Math.min(N, i + 1), th = Math.atan2(Y[ia] - Y[ib], X[ia] - X[ib]), r = R[i];
       ctx.save(); ctx.translate(X[i], Y[i]); ctx.rotate(th);
@@ -799,7 +909,7 @@
     const spread = Math.max((st === 'wind' && plan === 'w4shadows') ? wind : act === 'shadows' ? 1 : 0, (st === 'wind' && plan === 'w4howl') ? wind : act === 'howl' ? 1 : 0, swoopWind * .6);
     const maw = (st === 'wind' && plan === 'w4maw') ? wind : act === 'maw' ? 1 : 0, down = st === 'down';
     const flap = down ? .9 : swoop ? 1.25 : Math.sin(t * 2.3) * .45 * (1 - spread * .6) - spread * .5;
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.4, 1.4);
     if (swoop) { ctx.rotate(.35); }
     const wing = (far) => { // a ragged membrane on four finger-bones, eyes opening along it
       ctx.save(); ctx.translate(far ? -6 : -2, -54); ctx.rotate((far ? -.18 : 0) + flap * (far ? .85 : 1)); if (far) ctx.scale(.82, .86);
@@ -867,4 +977,349 @@
     }
     FORMS[ph](e, a, t);
   };
+
+  // the attacks, rules and passages plug into world.js and zones.js, which load after this file: data_w4.js calls this once they exist
+  const late = () => {
+
+  // ======================================================================================================
+  // ATTACKS: plans for the Courts' fighters and the Ty'iga, their tells, and the hazards they leave
+  // ======================================================================================================
+  const HZ = {}; // this world's hazards: { update(h, dt), draw(h, t) on the floor, ups(h, list, t) upright, box(h, box) }
+  const reg = (kind, o) => { HZ[kind] = o; HAZARD_FX[kind] = { update: o.update || (() => {}), draw: o.draw || (() => {}) }; };
+  const inEll = (x, y, cx, cy, r) => Math.hypot(x - cx, (y - cy) * 2.2) < r;
+  const yClamp = (y) => clamp(y, FLOOR_TOP + 10, FLOOR_BOT - 2);
+  const xClamp = (x) => clamp(x, leftWall() + 24, rightWall() - 24);
+  const hitP = (dmg, fromX, big) => { if (P.state !== 'dead') playerDamage(dmg, fromX, big); };
+  // an attack that takes time: the enemy is held in the 'w4act' state while a controller hazard drives it each frame
+  function act(e, name, step, o = {}) {
+    e.state = 'w4act'; e.w4a = name; e.struck = false; e.walk = 0;
+    const h = Object.assign({ kind: 'w4ctl', e, name, el: 0, step, t: 99, max: 99, y: e.y }, o); hazards.push(h); return h;
+  }
+  function endAct(h) { const e = h.e; h.t = -1; e.w4dash = 0; e.w4pose = null; if (e.w4vis !== undefined && e.w4vis < 1) e.w4vis = 1; }
+  reg('w4ctl', {
+    update(h, dt) { const e = h.e; if (h.done) { h.t = -1; return; } if (e.dead || e.state !== 'w4act' || e.w4a !== h.name) { endAct(h); h.done = 1; return; } h.el += dt; if (h.step(h, dt, e)) { endAct(h); h.done = 1; } },
+    draw(h, t) { if (h.draw) h.draw(h, t); },
+    ups(h, list, t) { if (h.up) list.push([h.uy ?? h.e.y, () => h.up(h, t)]); },
+  });
+  const smokePuff = (x, y, z, n = 14) => { for (let i = 0; i < n; i++) parts.push({ x: x + rand(-10, 10), y: y + rand(-4, 4), z: z + rand(0, 50), vx: rand(-50, 50), vy: rand(-6, 6), vz: rand(10, 70), life: .6, max: .6, col: pick(['rgba(30,18,40,.85)', 'rgba(70,40,90,.7)', 'rgba(20,10,26,.8)']), size: rand(5, 9), shape: 'puff', rot: 0, vr: 0 }); };
+  // a lasting tell for the player when a target is fixed
+  function targets(e, make) { // targets fixed when the wind-up starts, kept until the attack is done
+    const T0 = e.w4T;
+    if (!T0 || T0.plan !== e.plan || (e.state === 'wind' && e.t > T0.lastT + 1e-6)) { e.w4T = Object.assign({ plan: e.plan, lastT: e.t }, make(e)); }
+    if (e.state === 'wind') e.w4T.lastT = e.t;
+    return e.w4T;
+  }
+
+  // ---------------- the Knight's step through Shadow: gone in a puff of dark, and at your back an instant later ----------------
+  PLAN_FX.w4blink = (e) => {
+    sfx('whoosh'); smokePuff(e.x, e.y, 10);
+    let tx = P.x - P.facing * 48; if (tx < leftWall() + 20 || tx > rightWall() - 20) tx = P.x + P.facing * 48;
+    const h = act(e, 'blink', (h, dt, e) => {
+      if (h.el < .24) { e.w4vis = 1 - h.el / .24; return false; }
+      if (!h.moved) { h.moved = true; e.x = xClamp(h.tx); e.y = h.ty; e.facing = Math.sign(P.x - e.x) || 1; smokePuff(e.x, e.y, 10); sfx('swing'); }
+      e.w4vis = Math.min(1, (h.el - .24) / .2); e.facing = Math.sign(P.x - e.x) || e.facing;
+      if (h.el > .5) { e.w4vis = 1; e.state = 'strike'; e.t = .2; e.struck = false; sfx('swing'); return true; }
+      return false;
+    }, { tx, ty: yClamp(P.y) });
+    h.draw = (h, t) => { if (h.moved) return; const k = h.el / .24; ctx.save(); ctx.strokeStyle = `rgba(190,140,255,${.4 + .4 * k})`; ctx.lineWidth = 2; ell(h.tx, h.ty, 16 + 8 * k, 5 + 2.6 * k); ctx.stroke(); ctx.fillStyle = `rgba(40,20,60,${.3 * k})`; ell(h.tx, h.ty, 16 + 8 * k, 5 + 2.6 * k); ctx.fill(); ctx.restore(); };
+  };
+  // ---------------- Borel's flurry: three cuts, each a step closer ----------------
+  PLAN_FX.w4flurry = (e) => {
+    act(e, 'flurry', (h, dt, e) => {
+      const n = Math.floor(h.el / .3), k = (h.el % .3) / .3;
+      if (n >= 3) { recover(e, .8); return true; }
+      e.x += e.facing * 110 * dt * (k < .5 ? 1 : 0);
+      e.w4pose = k < .35 ? { arm: -2.2 + n * .3, lean: -.2 } : { arm: 1.1, trail: 64, trailFrom: -2.2, trailCol: 'rgba(255,170,90,.9)', lean: .45 };
+      if (k >= .35 && h.hitN !== n) { h.hitN = n; sfx('swing'); const fwd = (P.x - e.x) * e.facing; if (fwd > -10 && fwd < e.def.reach + e.hw && Math.abs(P.y - e.y) < 20 && P.z < 40) hitP(Math.round(edmg(e) * .7), e.x, n === 2); }
+      return false;
+    });
+  };
+  // ---------------- the Adept's grasp: the Logrus opens under you and something reaches up out of it ----------------
+  PLAN_FX.w4grasp = (e) => {
+    sfx('charge', 1);
+    hazards.push({ kind: 'w4grasp', x: P.x, y: yClamp(P.y), r: 30, t: 1.05, max: 1.05, dmg: edmg(e), up: 0 });
+    act(e, 'cast', (h, dt, e) => { e.w4pose = { arm: -2.4, backArm: -2, lean: -.15 }; if (h.el > .5) { recover(e, .9); return true; } return false; });
+  };
+  reg('w4grasp', {
+    update(h, dt) { if (h.t <= 0) { if (!h.fired) { h.fired = true; sfx('crunch'); shakeMag = Math.max(shakeMag, 4); if (inEll(P.x, P.y, h.x, h.y, h.r + 6) && P.z < 30) hitP(h.dmg, h.x, true); } h.up = Math.min(1, -h.t / .12); if (h.t < -.36) h.t = -1; } },
+    draw(h, t) { // the sign of the Logrus burning open on the floor
+      const k = 1 - Math.max(0, h.t) / h.max, r = h.r * (h.t > 0 ? .5 + .5 * k : 1);
+      ctx.save(); ctx.fillStyle = `rgba(20,8,30,${.35 + .3 * k})`; ell(h.x, h.y, r, r * .32); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(230,170,90,${.35 + .5 * k})`; ctx.lineWidth = 1.4; ctx.beginPath();
+      for (let i = 0; i < 5; i++) { const a0 = i / 5 * TAU + t * .6; ctx.moveTo(h.x + Math.cos(a0) * r, h.y + Math.sin(a0) * r * .32); for (let s = 1; s <= 6; s++) { const a = a0 + s * .3, rr = r * (1 - s * .12); ctx.lineTo(h.x + Math.cos(a) * rr, h.y + Math.sin(a) * rr * .32); } }
+      ctx.stroke(); ctx.lineWidth = 2; ell(h.x, h.y, r, r * .32); ctx.stroke(); ctx.restore();
+    },
+    ups(h, list, t) { if (h.up > 0) list.push([h.y + 1, () => { // dark tendrils lashing up out of it
+      const u = h.up, f = h.t < -.2 ? 1 - (-h.t - .2) / .16 : 1;
+      for (let i = 0; i < 5; i++) { const ox = (i - 2) * 9, L = (36 + (i % 2) * 14) * u * f, sw = Math.sin(i * 2.3) * 8; if (L < 2) continue;
+        horn(h.x + ox, h.y + (i % 2) * 3, h.x + ox + sw, h.y - L * .6, h.x + ox + sw * 1.6 - 4, h.y - L, 7, .4, i % 2 ? '#2A1238' : '#3A1A4A', 1.3, '#140820'); }
+      glowAt(h.x, h.y - 10, 30, SULF, .3 * f);
+    }]); },
+    box(h, box) { box(h.x, h.y, 0, 50, 80); },
+  });
+
+  // ---------------- the Ty'iga ----------------
+  Object.assign(BOSS_WIND, { w4rake: 1.1, w4howl: .95, w4coil: 1.0, w4venom: .85, w4swoop: 1.05, w4shadows: .85, w4maw: 1.1 });
+  const LANES = 4, laneH = (FLOOR_BOT - FLOOR_TOP - 8) / LANES, laneY = (i) => FLOOR_TOP + 8 + (i + .5) * laneH, laneOf = (y) => clamp(Math.floor((y - FLOOR_TOP - 8) / laneH), 0, LANES - 1);
+  const tellCol = (k, a = 1) => `rgba(230,70,80,${(.14 + .3 * k) * a})`, tellLine = (k) => `rgba(255,130,110,${.5 + .4 * k})`;
+  function clawMark(x, y, r, k, n) { // three gouges across an ellipse: where the wolf's claws will land
+    ctx.fillStyle = tellCol(k); ell(x, y, r, r * .3); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(x, y, r, r * .3); ctx.stroke();
+    ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); for (let i = -1; i <= 1; i++) { ctx.moveTo(x - r * .5 + i * 6, y - 5 + i * 2.5); ctx.lineTo(x + r * .5 + i * 6, y + 3 + i * 2.5); } ctx.stroke();
+    ctx.fillStyle = `rgba(255,230,210,${.6 + .3 * k})`; ctx.font = '700 9px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(String(n), x, y - r * .3 - 3);
+  }
+  // RAKE (wolf): three marks on the floor, and it blurs from one to the next, raking each
+  const rakeT = (e) => targets(e, () => {
+    const d = Math.sign(P.x - e.x) || 1, side = P.y > (FLOOR_TOP + FLOOR_BOT) / 2 ? -1 : 1;
+    return { pts: [[xClamp(P.x), yClamp(P.y)], [xClamp(P.x - d * 95), yClamp(P.y + side * 44)], [xClamp(P.x + d * 70), yClamp(P.y - side * 10)]] };
+  });
+  TELL_FX.w4rake = (e, t, k) => { const T = rakeT(e); ctx.save();
+    ctx.setLineDash([6, 6]); ctx.strokeStyle = tellLine(k * .6); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(e.x, e.y); for (const p of T.pts) ctx.lineTo(p[0], p[1]); ctx.stroke(); ctx.setLineDash([]);
+    T.pts.forEach((p, i) => clawMark(p[0], p[1], 36, cl01(k * 1.4 - i * .2), i + 1)); ctx.restore(); };
+  PLAN_FX.w4rake = (e) => {
+    const T = rakeT(e), pts = T.pts.slice(); e.w4T = null;
+    act(e, 'rake', (h, dt, e) => {
+      const i = Math.floor(h.el / .38), k = (h.el % .38) / .38;
+      if (i >= 3) { e.w4dash = 0; recover(e, 1.05); return true; } // spent: your opening
+      if (h.i !== i) { h.i = i; h.x0 = e.x; h.y0 = e.y; h.hit = false; sfx('whoosh'); }
+      const [tx, ty] = pts[i];
+      if (k < .42) { const q = sm(k / .42); e.w4dash = 1; e.x = lerp(h.x0, tx, q); e.y = lerp(h.y0, ty, q); e.facing = Math.sign(tx - h.x0) || e.facing; if (Math.random() < .6) dust(e.x - e.facing * 30, e.y, 1); }
+      else { e.w4dash = 0; if (!h.hit) { h.hit = true; shakeMag = Math.max(shakeMag, 6); sfx('slam'); burst(tx, ty, 6, ['#2A1A36', '#FF9A50', '#FFFFFF'], 12, 'rock', 0); if (inEll(P.x, P.y, tx, ty, 40) && P.z < 30) hitP(edmg(e), e.x, true); h.marks.push({ x: tx, y: ty, t: 1.2 }); } }
+      return false;
+    }, { marks: [], i: -1 }).draw = (h) => { for (const m of h.marks) { ctx.save(); ctx.strokeStyle = 'rgba(255,140,70,.6)'; ctx.lineWidth = 2; ctx.beginPath(); for (let j = -1; j <= 1; j++) { ctx.moveTo(m.x - 18 + j * 6, m.y - 4 + j * 2.5); ctx.lineTo(m.x + 18 + j * 6, m.y + 3 + j * 2.5); } ctx.stroke(); ctx.restore(); } };
+  };
+  // HOWL OF MANY SHAPES: the shapes it has worn run across the arena in lanes. One lane is always clear, or jump them
+  const howlT = (e) => targets(e, () => {
+    const n = e.phase >= 2 ? 3 : 2, me = laneOf(P.y), all = [0, 1, 2, 3], safe = pick(all.filter(l => l !== me)), lanes = all.filter(l => l !== safe).sort(() => Math.random() - .5).slice(0, n);
+    if (!lanes.includes(me)) lanes[0] = me; // the lane you stand in is always one of them
+    return { lanes, dir: Math.random() < .5 ? 1 : -1 };
+  });
+  TELL_FX.w4howl = (e, t, k) => { const T = howlT(e); ctx.save();
+    for (const l of T.lanes) { const y = laneY(l); ctx.fillStyle = tellCol(k, .8); ctx.fillRect(camX, y - laneH * .42, VW, laneH * .84);
+      ctx.fillStyle = `rgba(255,180,160,${.3 + .5 * k})`; for (let i = 0; i < 9; i++) { const x = (T.dir > 0 ? camX + 20 : camX + VW - 20) + T.dir * i * 70 * Math.min(1, k * 1.6); ell(x, y + (i % 2 ? 4 : -4), 4, 2.2); ctx.fill(); ell(x + T.dir * 6, y + (i % 2 ? 4 : -4) - 3, 1.6, 1.2); ctx.fill(); } } // paw prints running down the lane
+    ctx.restore(); };
+  PLAN_FX.w4howl = (e) => {
+    const T = howlT(e); e.w4T = null; sfx('roar'); shakeMag = 8;
+    const shapes = e.phase; hazards.push({ kind: 'w4pack', lanes: T.lanes.map((l, i) => ({ y: laneY(l), x: T.dir > 0 ? camX - 60 - i * 40 : camX + VW + 60 + i * 40, form: 1 + (i % shapes), hit: false })), dir: T.dir, sp: 300 + e.phase * 40, dmg: edmg(e), t: 6, max: 6, y: FLOOR_TOP });
+    act(e, 'howl', (h, dt, e) => { if (h.el > .8) { recover(e, .7); return true; } return false; });
+  };
+  reg('w4pack', {
+    update(h, dt) { let gone = true;
+      for (const g of h.lanes) { g.x += h.dir * h.sp * dt; if (h.dir > 0 ? g.x < camX + VW + 80 : g.x > camX - 80) gone = false;
+        if (!g.hit && Math.abs(P.x - g.x) < 24 && Math.abs(P.y - g.y) < laneH * .55 && P.z < 26) { g.hit = true; hitP(h.dmg, g.x - h.dir * 10, true); }
+        if (Math.random() < .5) parts.push({ x: g.x - h.dir * 30, y: g.y + rand(-6, 6), z: rand(4, 30), vx: -h.dir * 40, vy: 0, vz: 20, life: .5, max: .5, col: 'rgba(150,110,220,.5)', size: rand(4, 7), shape: 'puff', rot: 0, vr: 0 }); }
+      if (gone) h.t = -1; },
+    ups(h, list, t) { for (const g of h.lanes) list.push([g.y, () => onMain(() => { // spectral copies of its old shapes, running
+      ctx.save(); ctx.translate(g.x, g.y - (g.form === 3 ? 30 : g.form === 2 ? 12 : 0)); ctx.scale(h.dir * .62, .62); ctx.globalAlpha = .55; ctx.globalCompositeOperation = 'lighter'; TINT = '#7A58C0';
+      FORMS[g.form]({ state: 'idle', phase: g.form, walk: 0 }, { walk: t * 14, t }, t); TINT = null; ctx.restore(); })]); },
+    box(h, box) { for (const g of h.lanes) box(g.x, g.y, 0, 100, 140); },
+  });
+  // COIL (serpent): a wall of its smoke rings you round, then closes. Be outside it when it does
+  const coilT = (e) => targets(e, () => ({ x: xClamp(P.x), y: yClamp(P.y), r: 70 }));
+  TELL_FX.w4coil = (e, t, k) => { const T = coilT(e); ctx.save(); ctx.fillStyle = tellCol(k, .7); ell(T.x, T.y, T.r, T.r * .32); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2.4; ell(T.x, T.y, T.r, T.r * .32); ctx.stroke();
+    ctx.lineWidth = 1.4; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * .5, x = T.x + Math.cos(a) * T.r, y = T.y + Math.sin(a) * T.r * .32; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(a) * 12, y - Math.sin(a) * 4); ctx.stroke(); } ctx.restore(); }; // arrows pointing in: it will close
+  PLAN_FX.w4coil = (e) => {
+    const T = coilT(e); e.w4T = null; sfx('whoosh');
+    hazards.push({ kind: 'w4coil', x: T.x, y: T.y, R: T.r, r: T.r, t: .9, max: .9, dmg: Math.round(edmg(e) * 1.2), hit: false });
+    act(e, 'coil', (h, dt, e) => { if (h.el > .7) { recover(e, .9); return true; } return false; });
+  };
+  reg('w4coil', {
+    update(h, dt) {
+      const close = cl01((h.max - h.t) / .5), prev = h.r; h.r = h.R * (1 - sm(close)) + 2;
+      const d = Math.hypot(P.x - h.x, (P.y - h.y) * 3.1);
+      if (!h.hit && d < prev + 4 && d >= h.r - 10 && P.z < 40 && close < 1) { h.hit = true; hitP(h.dmg, h.x, true); }
+      if (close >= 1 && !h.done) { h.done = true; shakeMag = Math.max(shakeMag, 6); sfx('slam'); smokePuff(h.x, h.y, 4, 20); }
+    },
+    ups(h, list, t) { const n = 16; // the smoke wall as tongues round the ellipse, the far half behind you, the near half in front
+      for (const front of [0, 1]) list.push([h.y + (front ? h.r * .3 : -h.r * .3), () => { const f = Math.min(1, h.t / .2);
+        for (let i = 0; i < n; i++) { const a = i / n * TAU + t * 2; if ((Math.sin(a) > 0) !== !!front) continue; const x = h.x + Math.cos(a) * h.r, y = h.y + Math.sin(a) * h.r * .32;
+          smokeTongue(x, y, (24 + (i % 3) * 8) * f, 9, Math.cos(a) * -6, t, i, i % 2 ? '#22162E' : '#160E1E'); }
+        if (front) glowAt(h.x, h.y - 10, h.r, BRUISE, .25 * f); }]); },
+    box(h, box) { box(h.x, h.y, 0, h.R + 30, 80); },
+  });
+  // VENOM (serpent): globs of burning venom lobbed where you stand; they leave pools that burn for a while
+  const venT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1; return { pts: [[xClamp(P.x), yClamp(P.y)], [xClamp(P.x + d * 70), yClamp(P.y + 30)], [xClamp(P.x - d * 60), yClamp(P.y - 34)]] }; });
+  TELL_FX.w4venom = (e, t, k) => { const T = venT(e); ctx.save(); T.pts.forEach((p, i) => { const q = cl01(k * 1.3 - i * .15); ctx.fillStyle = `rgba(255,150,60,${.12 + .3 * q})`; ell(p[0], p[1], 28, 9); ctx.fill(); ctx.strokeStyle = `rgba(255,190,110,${.4 + .5 * q})`; ctx.lineWidth = 1.6; ell(p[0], p[1], 28 * (.4 + .6 * q), 9 * (.4 + .6 * q)); ctx.stroke(); ell(p[0], p[1], 28, 9); ctx.stroke(); }); ctx.restore(); };
+  PLAN_FX.w4venom = (e) => {
+    const T = venT(e); e.w4T = null; sfx('shoot');
+    T.pts.forEach((p, i) => hazards.push({ kind: 'w4venom', x0: e.x + e.facing * 30, y0: e.y, z0: e.z + 30, x: p[0], y: p[1], fly: .5 + i * .12, fmax: .5 + i * .12, t: 4.2 + i * .12, max: 4.2, dmg: edmg(e), tick: 0 }));
+    act(e, 'venom', (h, dt, e) => { if (h.el > .55) { recover(e, .8); return true; } return false; });
+  };
+  reg('w4venom', {
+    update(h, dt) {
+      if (h.fly > 0) { h.fly -= dt; if (h.fly <= 0) { sfx('hit-goo'); shakeMag = Math.max(shakeMag, 3); burst(h.x, h.y, 4, ['#FF9A40', '#FFE080', '#5A1A10'], 12, 'goo', 0); if (inEll(P.x, P.y, h.x, h.y, 34) && P.z < 26) hitP(h.dmg, h.x, false); } return; }
+      h.tick -= dt; if (h.tick <= 0 && inEll(P.x, P.y, h.x, h.y, 30) && P.z < 4) { h.tick = .6; hitP(Math.round(h.dmg * .35), h.x, false); }
+      if (Math.random() < .08) parts.push({ x: h.x + rand(-20, 20), y: h.y + rand(-4, 4), z: 2, vx: 0, vy: 0, vz: rand(30, 60), life: .6, max: .6, col: 'rgba(255,170,80,.8)', size: 1.6, shape: 'star', rot: 0, vr: 3 });
+    },
+    draw(h, t) { if (h.fly > 0) return; const f = Math.min(1, h.t / .6), sp = Math.min(1, (h.max - h.t) / .15); // a burning pool
+      ctx.save(); ctx.fillStyle = `rgba(60,14,10,${.75 * f})`; ell(h.x, h.y, 30 * sp, 9 * sp); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(h.x, h.y, 2, h.x, h.y, 30); g.addColorStop(0, `rgba(255,190,90,${.55 * f})`); g.addColorStop(1, 'rgba(255,90,40,0)'); ctx.fillStyle = g; ctx.save(); ctx.translate(h.x, h.y); ctx.scale(1, .3); ctx.translate(-h.x, -h.y); ctx.fillRect(h.x - 30, h.y - 30, 60, 60); ctx.restore();
+      ctx.strokeStyle = `rgba(255,200,120,${.5 * f})`; ctx.lineWidth = 1; for (let i = 0; i < 3; i++) { const a = t * .7 + i * 2.1; ell(h.x + Math.cos(a) * 12, h.y + Math.sin(a) * 3, 3 + i, 1.2 + i * .3); ctx.stroke(); } ctx.restore(); },
+    ups(h, list, t) { if (h.fly > 0) list.push([h.y, () => { const k = 1 - h.fly / h.fmax, x = lerp(h.x0, h.x, k), y = lerp(h.y0, h.y, k), z = lerp(h.z0, 0, k) + Math.sin(k * Math.PI) * 70;
+      shadow(x, y, 6); glowAt(x, y - z, 12, '255,160,70', .6); ctx.fillStyle = C('#FF9A40'); circle(x, y - z, 4.4); ctx.fill(); outline(1.2); ctx.fillStyle = '#FFF0B0'; circle(x - 1, y - z - 1.2, 1.5); ctx.fill(); }]); },
+    box(h, box) { box(h.x, h.y, 0, 120, 160); },
+  });
+  // SWOOP (horror): it climbs, then dives across the whole arena along the dark track on the floor, lowest where you stand
+  const swoopT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, x0 = e.x, x1 = d > 0 ? rightWall() - 30 : leftWall() + 30; return { x0, y0: e.y, x1, px: clamp(P.x, Math.min(x0, x1) + 20, Math.max(x0, x1) - 20), py: yClamp(P.y), d }; });
+  const swoopAt = (T, u) => { const uP = clamp((T.px - T.x0) / (T.x1 - T.x0), .1, .9), x = lerp(T.x0, T.x1, u), y = u < uP ? lerp(T.y0, T.py, sm(u / uP)) : T.py, q = (u - uP) / (u < uP ? uP : 1 - uP); return [x, y, 6 + 104 * q * q]; };
+  TELL_FX.w4swoop = (e, t, k) => { const T = swoopT(e); ctx.save();
+    for (let i = 0; i <= 30; i++) { const u = i / 30, [x, y, z] = swoopAt(T, u), danger = z < 50, w = 14 + (1 - z / 110) * 14; if (u > k * 1.3) break;
+      ctx.fillStyle = danger ? tellCol(k) : `rgba(40,20,50,${.18 + .2 * k})`; ell(x, y, w, w * .3); ctx.fill(); }
+    ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; for (let i = 1; i < 6; i++) { const [x, y] = swoopAt(T, i / 6); ctx.beginPath(); ctx.moveTo(x - T.d * 8, y - 6); ctx.lineTo(x, y); ctx.lineTo(x - T.d * 8, y + 6); ctx.stroke(); }
+    ctx.restore(); };
+  PLAN_FX.w4swoop = (e) => {
+    const T = swoopT(e); e.w4T = null; sfx('whoosh');
+    act(e, 'swoop', (h, dt, e) => {
+      const u = h.el / .95; if (u >= 1) { e.w4dash = 0; recover(e, 1.15); return true; }
+      const [x, y, z] = swoopAt(T, u); e.x = x; e.y = y; e.z = z; e.facing = T.d; e.w4dash = 1;
+      if (!h.hit && Math.abs(P.x - x) < e.hw * .8 && Math.abs(P.y - y) < 22 && P.z < z + 40 && z < 60) { h.hit = true; hitP(Math.round(edmg(e) * 1.2), x - T.d * 10, true); }
+      if (z < 40 && Math.random() < .8) dust(x, y, 1);
+      return false;
+    });
+  };
+  // SHADOWS (horror): the shadows of its wings slide over the floor after you; when they stop, hands of darkness reach up out of them
+  const shadT = (e) => targets(e, () => ({ s: [0, 1, 2].map(i => ({ x: e.x + (i - 1) * 40, y: yClamp(e.y + (i - 1) * 30), ox: (i - 1) * 64, oy: (i - 1) * (i === 1 ? 0 : 22) })) }));
+  TELL_FX.w4shadows = (e, t, k) => { const T = shadT(e); ctx.save(); for (const s of T.s) wingShadow(s.x, s.y, 30, k, t); ctx.restore(); };
+  function wingShadow(x, y, r, k, t, frozen) {
+    ctx.fillStyle = `rgba(16,6,22,${.35 + .3 * k})`; ctx.beginPath(); ctx.moveTo(x - r, y);
+    for (let i = 0; i <= 8; i++) { const a = Math.PI + i / 8 * Math.PI, rr = r * (i % 2 ? .7 : 1); ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr * .34); }
+    ctx.quadraticCurveTo(x, y + r * .25, x - r, y); ctx.fill();
+    ctx.strokeStyle = frozen ? `rgba(255,120,110,${.6 + .3 * Math.sin(t * 20)})` : tellLine(k * .7); ctx.lineWidth = frozen ? 2.2 : 1.2; ell(x, y, r, r * .32); ctx.stroke();
+  }
+  PLAN_FX.w4shadows = (e) => {
+    const T = shadT(e); e.w4T = null; sfx('charge', 2);
+    for (const s of T.s) hazards.push({ kind: 'w4shadow', x: s.x, y: s.y, t: .95, max: .95, dmg: edmg(e), up: 0 });
+    act(e, 'shadows', (h, dt, e) => { if (h.el > .9) { recover(e, .9); return true; } return false; });
+  };
+  reg('w4shadow', {
+    update(h, dt) { if (h.t > .5) return; if (h.t <= 0) { if (!h.fired) { h.fired = true; sfx('crunch'); shakeMag = Math.max(shakeMag, 5); if (inEll(P.x, P.y, h.x, h.y, 34) && P.z < 36) hitP(h.dmg, h.x, true); } h.up = Math.min(1, -h.t / .1); if (h.t < -.38) h.t = -1; } },
+    draw(h, t) { if (h.t > 0) wingShadow(h.x, h.y, 30, 1, t, h.t < .5); },
+    ups(h, list, t) { if (h.up > 0) list.push([h.y + 1, () => { const f = h.t < -.24 ? 1 - (-h.t - .24) / .14 : 1;
+      for (let i = 0; i < 4; i++) { const ox = (i - 1.5) * 12, L = (40 + (i % 2) * 12) * h.up * f; if (L < 2) continue; // clawed hands of darkness
+        const s = horn(h.x + ox, h.y, h.x + ox * 1.3, h.y - L * .6, h.x + ox * 1.6, h.y - L, 9, 3, '#1E0E26', 1.3, '#0A040E');
+        for (let c = -1; c <= 1; c++) horn(h.x + ox * 1.6, h.y - L, h.x + ox * 1.6 + c * 4, h.y - L - 6, h.x + ox * 1.6 + c * 7, h.y - L - 9 + Math.abs(c) * 3, 2.6, .3, '#2A1636', .9); }
+      glowAt(h.x, h.y - 16, 30, BRUISE, .35 * f); }]); },
+    box(h, box) { box(h.x, h.y, 0, 50, 90); },
+  });
+  // THE HUNGRY DARK (close burst, every form): a ring of black fangs rises out of the floor round it and snaps shut
+  const mawR = (e) => e.hw + 66;
+  TELL_FX.w4maw = (e, t, k) => { const R = mawR(e); ctx.save(); ctx.fillStyle = tellCol(k); ell(e.x, e.y, R * (.4 + .6 * k), R * (.4 + .6 * k) / 3.1); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(e.x, e.y, R, R / 3.1); ctx.stroke();
+    ctx.fillStyle = `rgba(230,220,200,${.4 + .5 * k})`; for (let i = 0; i < 18; i++) { const a = i / 18 * TAU, x = e.x + Math.cos(a) * R, y = e.y + Math.sin(a) * R / 3.1, h = 4 + 10 * k; poly([x - 3, y, x, y - h, x + 3, y]); ctx.fill(); } ctx.restore(); };
+  PLAN_FX.w4maw = (e) => {
+    const R = mawR(e); sfx('slam'); shakeMag = 10;
+    if (Math.hypot(P.x - e.x, (P.y - e.y) * 3.1) < R && P.z < 70) hitP(Math.round(edmg(e) * 1.15), e.x, true);
+    hazards.push({ kind: 'w4fangs', x: e.x, y: e.y, R, t: .5, max: .5 }); burst(e.x, e.y, 20, ['#1A0E22', '#E8DCC0', '#FF9A50'], 20, 'rock', 0, true);
+    act(e, 'maw', (h, dt, e) => { if (h.el > .4) { recover(e, 1.15); return true; } return false; }); // spent for a moment afterward: your opening
+  };
+  reg('w4fangs', {
+    ups(h, list, t) { const n = 18, k = 1 - h.t / h.max, up = k < .3 ? k / .3 : 1 - (k - .3) / .7;
+      for (const front of [0, 1]) list.push([h.y + (front ? 8 : -8), () => { for (let i = 0; i < n; i++) { const a = i / n * TAU; if ((Math.sin(a) > 0) !== !!front) continue;
+        const r = h.R * (1 - .25 * Math.min(1, k / .3)), x = h.x + Math.cos(a) * r, y = h.y + Math.sin(a) * r / 3.1, L = 30 * up;
+        if (L > 1) horn(x - Math.cos(a) * 3, y, x - Math.cos(a) * 8, y - L * .7, x - Math.cos(a) * 16, y - L, 8, .5, '#E4D8BC', 1.1, '#8E806A'); } }]); },
+    box(h, box) { box(h.x, h.y, 0, h.R + 20, 70); },
+  });
+
+  // ======================================================================================================
+  // THE RULES OF THE PLACES
+  // ======================================================================================================
+  // every area of this world paints its upright attack effects in depth with the figures
+  function hzBoxes(box) { for (const h of hazards) if (HZ[h.kind] && HZ[h.kind].box) HZ[h.kind].box(h, box); }
+  function hzList(list, t) { for (const h of hazards) if (HZ[h.kind] && HZ[h.kind].ups && h.t > -.4) HZ[h.kind].ups(h, list, t); }
+  MECH_FX.w4road = { start() {}, update() {}, boxes(m, box) { hzBoxes(box); }, list(m, list, t) { hzList(list, t); } };
+
+  // ---------------- THE THELBANE SPIRES: the Abyss breathes ----------------
+  // Every few seconds the Abyss draws a breath. While it INHALES, the weight goes out of everything: the light enemies are
+  // lifted helpless off their feet to be juggled at leisure, and your own jumps go high. Then it EXHALES and everything
+  // still in the air is slammed down: enemies take damage from the fall, and if you are up there too you come down like
+  // a hammer, with a shockwave that hits everyone around where you land. The heavy ones (brutes, Borel) never leave the ground.
+  const ROSTER = ['chknight', 'chadept', 'chhound', 'cheye', 'chmoth', 'chbrute', 'chknight', 'chhound', 'chadept', 'cheye'];
+  function chaosRoster() { // a different third wave every time: six drawn from the Courts, one of them armored, and Borel among them
+    const pool = ROSTER.slice().sort(() => Math.random() - .5).slice(0, 6), el = pool.findIndex(k => k !== 'cheye' && k !== 'chmoth');
+    if (el >= 0) pool[el] += '*';
+    pool.splice(2, 0, 'chborel'); return pool;
+  }
+  const heavy = (e) => e.boss || e.def.move === 'fly' || (e.def.poise || 0) >= 3 || e.dead;
+  MECH_FX.w4breath = {
+    start(m) {
+      if (stage.waves[0]) stage.waves[0] = chaosRoster();
+      m.phase = 'calm'; m.t = 4; m.k = 0; m.debris = []; m.pslam = false;
+    },
+    update(m, dt) {
+      for (const e of enemies) if (e.type === 'chborel' && !e.w4intro && !e.dead) { e.w4intro = 1; banner(e.def.name, 'MASTER OF SWORDS', 2.2); }
+      if (stillT > 0) return;
+      m.t -= dt;
+      if (m.t <= 0) {
+        if (m.phase === 'calm') { m.phase = 'warn'; m.t = 1.3; floatText(P.x, P.y, 110, 'THE ABYSS INHALES', '#D8B8FF', 16); sfx('charge', 1);
+          m.debris = [...Array(26)].map((_, i) => ({ x: camX + rand(10, VW - 10), y: rand(FLOOR_TOP + 6, FLOOR_BOT), z: 0, vz: 0, s: rand(1.6, 4), r: rand(0, 6), kind: i % 3 })); }
+        else if (m.phase === 'warn') { m.phase = 'rise'; m.t = 2.6; shakeMag = Math.max(shakeMag, 4);
+          for (const e of enemies) if (!heavy(e)) { e.state = 'hurt'; e.t = .5; e.plan = null; e.air = true; e.vz = rand(150, 210); e.vx = rand(-30, 30); e.spin = rand(-1.5, 1.5); e.w4float = 1; e.w4peak = 0; } }
+        else if (m.phase === 'rise') { m.phase = 'calm'; m.t = rand(5.5, 7); floatText(P.x, P.y, 110, '...AND EXHALES', '#FFC890', 16); shakeMag = 10; sfx('slam'); flashT = Math.max(flashT, .06);
+          for (const e of enemies) if (e.w4float && !e.dead && e.z > 4) { e.vz = -700; e.air = true; }
+          if (P.z > 18 && P.state !== 'dead') { P.vz = -760; m.pslam = true; }
+          for (const d of m.debris) d.vz = -600; }
+      }
+      m.k += ((m.phase === 'rise' ? 1 : 0) - m.k) * Math.min(1, dt * 3);
+      if (m.phase === 'rise') { // the weight goes out of the world
+        if (P.z > 0 || P.vz > 0) P.vz += GRAV * dt * .66;
+        for (const e of enemies) if (e.w4float && !e.dead && e.air) { e.vz += GRAV * dt * .9; if (e.z > 120) e.vz = Math.min(e.vz, 0); e.w4peak = Math.max(e.w4peak, e.z); if (e.state === 'hurt') e.t = Math.max(e.t, .2); }
+      }
+      for (const e of enemies) if (e.w4float && (e.z <= 0 || e.dead) && m.phase !== 'rise') { // the landing
+        if (!e.dead && e.w4peak > 12) { const dmg = Math.round(10 + e.w4peak * .14); strike(e, dmg, Math.sign(e.x - P.x) || 1, { dmg, kb: 40, power: 2, trump: 1 }); burst(e.x, e.y, 4, ['#2A1A36', '#D8C8B0'], 10, 'rock', 0); }
+        e.w4float = 0;
+      }
+      if (m.pslam && P.z <= 0) { // the prince comes down like a hammer
+        m.pslam = false; shakeMag = 12; sfx('slam'); hitstop = Math.max(hitstop, .08);
+        fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .45, max: .45, r: 120, col: '#E8C8FF', flat: 1 }); burst(P.x, P.y, 4, ['#E8C8FF', '#FFFFFF', '#8A6ACF'], 22, 'rock', 0, true);
+        for (const e of enemies) if (!e.dead && !e.boss && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 100 + e.hw && e.z < 40) strike(e, 16 * wMult(P.w), Math.sign(e.x - P.x) || P.facing, { dmg: 16, kb: 260, launch: 340, power: 2, trump: 1 });
+      }
+      for (const d of m.debris) { // pebbles and shards of glass lift off the floor, and come down hard
+        if (m.phase === 'warn') d.z = Math.abs(Math.sin(m.t * 30 + d.r)) * 2;
+        else if (m.phase === 'rise') { d.z += (30 + d.s * 14 - d.z) * dt * .8; d.r += dt * .6; }
+        else { d.vz -= GRAV * dt; d.z = Math.max(0, d.z + d.vz * dt); }
+      }
+      if (m.phase === 'calm' && m.debris.length && m.debris.every(d => d.z <= 0)) m.debris = [];
+    },
+    boxes(m, box) { hzBoxes(box); if (m.debris.length) box(camX + VW / 2, FLOOR_BOT, 0, VW / 2 + 20, 200); },
+    list(m, list, t) {
+      hzList(list, t);
+      for (const d of m.debris) list.push([d.y, () => { const y = d.y - d.z; shadow(d.x, d.y, d.s * (1 - Math.min(.7, d.z / 120)));
+        ctx.save(); ctx.translate(d.x, y); ctx.rotate(d.r);
+        if (d.kind === 0) fillPoly([-d.s, d.s * .4, -d.s * .3, -d.s, d.s, -d.s * .2, d.s * .5, d.s * .8], '#1E1428', .8);
+        else if (d.kind === 1) fillPoly([-d.s * .5, d.s, 0, -d.s * 1.6, d.s * .5, d.s], '#4A3A62', .8);
+        else fillPoly([-d.s, 0, 0, -d.s * .8, d.s, 0, 0, d.s * .8], '#D8CCB4', .8);
+        ctx.restore(); }]);
+      if (m.k > .02) list.push([FLOOR_TOP - 1, () => onMain(() => { // the inhaled air: a violet haze streaming upward
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = m.k * .5;
+        for (let i = 0; i < 7; i++) { const x = camX + ((i * 97 + 30) % VW), y = FLOOR_BOT - ((t * 50 + i * 41) % 150); const g = ctx.createLinearGradient(0, y - 40, 0, y + 40); g.addColorStop(0, 'rgba(170,120,230,0)'); g.addColorStop(.5, 'rgba(170,120,230,.25)'); g.addColorStop(1, 'rgba(170,120,230,0)'); ctx.fillStyle = g; ctx.fillRect(x - 3, y - 40, 6, 80); }
+        ctx.restore(); })]);
+    },
+  };
+
+  // ---------------- THE RIM OF THE ABYSS: the Ty'iga's shapes ----------------
+  const FORM_BOX = { 1: [52, 68], 2: [40, 52], 3: [40, 104] };
+  MECH_FX.w4rim = {
+    start(m) { m.ph = 1; },
+    update(m, dt) {
+      const e = boss && boss.def === BOSSES.tyiga ? boss : null; if (!e) return;
+      if (e.phase !== m.ph) { e.w4from = m.ph; m.ph = e.phase; e.w4shift = 1; smokePuff(e.x, e.y, 30, 30); sfx('roar'); e.w4T = null; }
+      if (e.w4shift > 0) e.w4shift = Math.max(0, e.w4shift - dt / 1.3);
+      if (!e.dead) { const [w, h] = FORM_BOX[e.phase] || FORM_BOX[1]; e.hw = w * e.size; e.hh = h * e.size; }
+      if (stillT > 0) return;
+      if (e.state === 'wind' && e.plan === 'w4shadows') { const T = shadT(e); for (const s of T.s) { const tx = xClamp(P.x + s.ox), ty = yClamp(P.y + s.oy), d = Math.hypot(tx - s.x, ty - s.y), sp = 210 * dt; if (d > 1) { s.x += (tx - s.x) / d * Math.min(d, sp); s.y += (ty - s.y) / d * Math.min(d, sp); } } }
+      if (!e.dead && Math.random() < dt * 10) parts.push({ x: camX + rand(0, VW), y: rand(FLOOR_TOP, FLOOR_BOT), z: 0, vx: rand(-6, 6), vy: 0, vz: rand(30, 60), life: 2.2, max: 2.2, col: pick(['rgba(255,150,70,.8)', 'rgba(255,200,120,.7)', 'rgba(150,100,200,.6)']), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 1, w4: 1 }); // embers rising out of the Abyss
+    },
+    boxes(m, box) { hzBoxes(box); },
+    list(m, list, t) { hzList(list, t); },
+  };
+  // the arena's weather and its light: the shared code gives an unknown boss a generic sparkle and an unset tint, so this
+  // recolors the sparkle as ash and embers, and leaves the canvas holding this boss's own tint color between frames
+  let lastTint = 0;
+  const tintLoop = () => {
+    requestAnimationFrame(tintLoop);
+    if (typeof boss === 'undefined' || !boss || boss.def !== BOSSES.tyiga || boss.dead) return;
+    const g = cv.getContext('2d'); g.fillStyle = ['rgba(150,60,150,.32)', 'rgba(150,60,150,.32)', 'rgba(110,70,170,.34)', 'rgba(200,70,60,.34)'][boss.phase || 1];
+    for (const p of parts) if (!p.w4 && p.shape === 'star' && p.max === 1.6 && (p.col === '#D8A0E8' || p.col === '#9FD8E0' || p.col === '#FFF0C0')) { p.w4 = 1; p.col = pick(['#FF9A50', '#FFD08A', '#8A6AB0']); }
+  };
+  requestAnimationFrame(tintLoop);
+  };
+  window.w4Late = late;
 })();

@@ -3,7 +3,7 @@
 // The Brass Colossus: its vents blast jets of steam out along the floor to either side, hurling you away.
 // The Kaleidoscope Wyrm: it draws you in with a pull of light, then bursts into a ring of crystal shards.
 PLAN_FX.bramble = (e) => {
-  for (let i = 0; i < 3; i++) hazards.push({ kind: 'thornring', x: e.x, y: e.y, r: 20, R: 70 + i * 50, delay: i * .28, t: 1.6, max: 1.6, dmg: Math.round(edmg(e) * .9), hit: false });
+  for (let i = 0; i < 3; i++) hazards.push({ kind: 'thornring', x: e.x, y: e.y, r: 20, R: 70 + i * 50, delay: i * .2, t: .45, max: .45, dmg: Math.round(edmg(e) * .9), hit: false });
   sfx('slam'); shakeMag = 8; recover(e, 1.2);
 };
 PLAN_FX.vent = (e) => {
@@ -36,7 +36,7 @@ HAZARD_FX.thornring = {
   },
   draw(h, t) {
     if (h.delay > 0) return;
-    const fade = Math.min(1, h.t / .4);
+    const fade = Math.min(1, h.t / .2); // the thorns sink back fast, so the way in is open
     for (let i = 0; i < 22; i++) { // a ring of thorns standing up out of the ground
       const a = i / 22 * TAU + h.R, px = h.x + Math.cos(a) * h.r, py = h.y + Math.sin(a) * h.r / 2.2, hgt = (16 + (i % 3) * 6) * fade;
       ctx.fillStyle = C(i % 2 ? '#5E7A3A' : '#7EA460'); ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.quadraticCurveTo(px + Math.cos(a) * 2, py - hgt * .6, px + Math.cos(a) * 5, py - hgt); ctx.lineTo(px + 4, py); ctx.closePath(); ctx.fill(); outline(1);
