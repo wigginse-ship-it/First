@@ -65,7 +65,13 @@ function playerPose() {
       }
     } else if (m.kick) { pose.kick = 1; pose.arm = -.5; }
     if (m.flurry && pose.ext !== undefined) pose.ext = Math.abs(Math.sin(kk * Math.PI * 7)); // a storm of thrusts, in and out
-    if (m.spin && !m.kick) pose.spin = -TAU * m.spin * ease(clamp(k / .85, 0, 1)); // a pirouette: the body turns right round
+    if (m.spin && !m.kick) pose.spin = -TAU * m.spin * ease(clamp(k / (m.spinEnd || .85), 0, 1)); // a pirouette, turning through his back first
+    if (m.twirl) { pose.grip = (pose.grip || 0) + TAU * m.twirl * ease(clamp(kk, 0, 1)); pose.trail = 0; } // the staff spun in the hand like a baton, both ends sweeping
+    if (m.dodgeLunge && P.z <= 2) { // out of the dodge: still low, a long lunge behind the strike, the back leg straight
+      const e2 = k < m.h[0] ? ease(k / m.h[0]) * .3 : k < m.h[1] ? .3 + .7 * Math.min(1, (k - m.h[0]) / ((m.h[1] - m.h[0]) * .4)) : Math.max(0, 1 - (k - m.h[1]) / (1 - m.h[1]));
+      pose.lean = .3 + .3 * e2; pose.sink = 6 - 2 * e2; pose.legs = { f: 12 + 5 * e2, b: -14 - 5 * e2, fk: 8, bk: 0 }; pose.yaw = .2 * e2; pose.backArm = lerp(1.4, 2.6, e2); pose.flow = 14 * e2;
+      pose.arm = (m.arc ? m.arc[0] : 0) - pose.lean * .9; pose.ext = e2;
+    }
     if (m.weave) { pose.arm = lerp(-1.2, .9, Math.abs(Math.sin(kk * Math.PI * 2.5))); }
     if (m.crouch || m.dive) pose.crouch = 1;
     if (m.rot) pose.rot = m.rot * ease(k / .75);
@@ -75,7 +81,7 @@ function playerPose() {
     }
     if (!m.style && pose.kickK === undefined) pose.lean = m.power ? .2 : .1;
     pose.flow = Math.abs(P.vx) * .02;
-    if (P.z <= 2 && !m.kick && !m.rot && !m.around) attackStance(pose, m, k); // the body moves with the weapon
+    if (P.z <= 2 && !m.kick && !m.rot && !m.around && !m.dodgeLunge) attackStance(pose, m, k); // the body moves with the weapon
     if (m.style === 'thrust' && !(P.w === 'fists' && BOXING[m.key])) pose.arm = arc[0] - (pose.lean || 0) * .9; // a thrust stays level with the target, however far he leans in
     if (P.w === 'fists' && BOXING[m.key]) { // boxing: punches go straight out at the enemy, hand to hand, the body turning behind each one
       const kind = BOXING[m.key], h0 = m.h[0], h1 = m.h[1];
@@ -128,13 +134,13 @@ function playerPose() {
   else if (P.state === 'hurt') { pose.arm = -1; pose.lean = -.3; }
   else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
   // at rest each weapon sits the way its wielder would carry it
-  else if (P.w === 'rapier') { pose.arm = .35; pose.elbow = .5; pose.grip = -.1; pose.backArm = 3.6; pose.backElbow = -.88; pose.legs = { f: 8, b: -9, fk: 3, bk: 4 }; pose.sink = 2; pose.lean = .04; } // en garde: point toward the enemy, the free hand raised behind
+  else if (P.w === 'rapier') { pose.arm = .35; pose.elbow = .5; pose.grip = -.1; pose.backArm = 3.6; pose.backElbow = -.88; pose.lean = .04; if (P.state === 'idle') { pose.legs = { f: 8, b: -9, fk: 3, bk: 4 }; pose.sink = 2; } } // en garde (walking, the legs stride as usual) // en garde: point toward the enemy, the free hand raised behind
   else if (P.w === 'sword') { pose.arm = .8; pose.grip = -.08; } // a low guard, the point lowered toward the ground ahead
   else if (P.w === 'hammer') { pose.arm = 1.95; pose.grip = .28; pose.backArm = .9; } // dragged behind him, its head resting on the ground
   else if (P.w === 'staff') { // a fighting guard: the staff held low and level across the body, point toward the enemy,
     // swaying with his breath, and every few seconds he twirls it once through his fingers
     const now = performance.now() / 1000, c = now % 4.2, twirl = P.state === 'idle' && c < .55 ? ease(c / .55) * TAU : 0;
-    pose.arm = .5 + Math.sin(now * 1.6) * .05; pose.grip = -.02 + Math.sin(now * 1.6 + 1) * .07 + twirl; pose.backArm = -.35; pose.lean = .08;
+    pose.arm = .5 + Math.sin(now * 1.6) * .05; pose.grip = -.02 + Math.sin(now * 1.6 + 1) * .07 + twirl; pose.backArm = 1.4; pose.backElbow = .35; pose.openHand = 1; pose.lean = .08; // the free hand hangs easy at his side
   }
   else { // hands low at his sides but loaded: elbows bent, fists forward at the waist, swaying with his breath
     const b = Math.sin(performance.now() / 420) * .03;
@@ -304,12 +310,19 @@ function drawDeath(e, t) {
     if (el < .9) { // points of light where the blade went in, then a silver cross cut flares over them
       const a = el < .2 ? el / .2 : Math.max(0, 1 - (el - .2) / .7);
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#F4F0FF';
-      for (const w of e.wounds || []) gbStar(w.x * e.hw, -w.y * e.hh, 3 + a * 5, a);
+      for (const w of e.wounds || []) gbStar(w.x * e.hw, -w.y * e.hh, 2 + a * 3, a * .7); // a glint as the point goes in
       if (el > .3 && el < .6) { const q = (el - .3) / .3; ctx.strokeStyle = `rgba(232,236,255,${1 - q})`; ctx.lineWidth = 2.4; ctx.beginPath(); const r = e.hw * 1.2; ctx.moveTo(-r, -e.hh * .75); ctx.lineTo(r, -e.hh * .25); ctx.moveTo(r, -e.hh * .75); ctx.lineTo(-r, -e.hh * .25); ctx.stroke(); }
       ctx.restore();
     }
-    if (el > .9) { ctx.save(); ctx.translate(0, -e.hh * .55); ctx.rotate(-fall); ctx.scale(1.3, 1.3); // and a silver rose left lying on them: the Prince of Shadow was here
-      ctx.strokeStyle = C('#5E6E5A'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(-5, 4); ctx.stroke(); gbRose(0, 0, 3.2, '#D8DCE8', '#8E96A8'); ctx.restore(); }
+    if (el > .25) { // the wounds stay: small dark punctures sunk into them, rimmed in their own color
+      const base = MAT_COL[e.def.mat][0], a2 = Math.min(1, (el - .25) / .2);
+      ctx.save(); ctx.globalAlpha *= a2;
+      for (const w of e.wounds || []) { const x = w.x * e.hw, y = -w.y * e.hh;
+        ctx.fillStyle = shade(base, -.35); ell(x, y, 2.6, 2, .4); ctx.fill(); // the bruised rim
+        ctx.fillStyle = shade(base, -.75); ell(x + .2, y + .2, 1.6, 1.2, .4); ctx.fill(); // the hole itself
+        ctx.fillStyle = 'rgba(255,255,255,.35)'; ell(x - .9, y - .8, .7, .4, .4); ctx.fill(); } // a wet catch of light on the lip
+      ctx.restore();
+    }
   } else { // splat
     const c = Math.min(1, el / .07), settle = Math.sin(el * 32) * .05 * Math.exp(-el * 6);
     FLASH = false;

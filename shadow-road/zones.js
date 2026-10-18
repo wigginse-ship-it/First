@@ -34,6 +34,7 @@ function enterZone(z) {
   bgKey = ''; buildBackground(stage.theme, stageIdx * 97 + 13 + z * 7);
   mech = stage.mech ? { kind: stage.mech, t: 0 } : null; mechStart();
   if (z > 0) retryZone = z;
+  if (z > 0 && typeof TRACKS !== 'undefined' && TRACKS[stage.theme]) playMusic(stage.theme); // every place has its own music
   refreshHud(true);
 }
 // the third wave gives you one more chance at a weapon if this stage hasn't given you one yet

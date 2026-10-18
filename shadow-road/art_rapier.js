@@ -25,7 +25,7 @@ function drawGrayblade(pose) {
   // the grip and pommel
   limb([5, 0, 17, 0], ['#5A3A2A', '#2E2A30', '#2A2430', '#22202C', '#18161E'][tier - 1], 3.6);
   if (tier >= 2) { ctx.strokeStyle = C(metal); ctx.lineWidth = .7; ctx.beginPath(); for (let x = 7; x < 16; x += 1.6) { ctx.moveTo(x, -1.8); ctx.lineTo(x + 1, 1.8); } ctx.stroke(); } // wire-wrapped grip
-  if (tier >= 3) gbRose(4, 0, 3.4, metal, tier >= 5 ? '#4FAE6A' : shade(metal, -.3)); // a rose for a pommel
+  if (tier >= 3) { ctx.save(); ctx.translate(3.6, 0); ctx.rotate(Math.PI / 2); silverRose(0, 0, .95, false, metal); ctx.restore(); } // a rosebud for a pommel // a rose for a pommel
   else { ctx.fillStyle = C(metal); circle(4.6, 0, 2.8); ctx.fill(); outline(1); }
   // the blade: long and narrow, tapering to a needle point
   const blade = () => { ctx.beginPath(); ctx.moveTo(x0, -w); ctx.lineTo(x0 + len * .82, -w * .7); ctx.lineTo(tip, 0); ctx.lineTo(x0 + len * .82, w * .7); ctx.lineTo(x0, w); ctx.closePath(); };

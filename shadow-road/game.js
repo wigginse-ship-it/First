@@ -251,6 +251,7 @@ function inReach(m, tx, ty, tz, hw, hh) {
   if (!zOverlap(P.z - 6, 70, tz, hh)) return false;
   if (m.around) return Math.abs(tx - P.x) <= m.x1 + hw;
   const dx = (tx - P.x) * P.facing;
+  if (m.ends && dx < 0) return dx >= -m.x1 * .8 - hw; // the staff's other end catches whoever is behind
   return dx >= m.x0 - hw && dx <= m.x1 + hw;
 }
 function doHits() {
@@ -265,7 +266,7 @@ function doHits() {
     if (!inReach(m, bx, e.y, e.z - down, e.hw, e.hh + down)) continue;
     P.hits.set(e, now);
     if (m.launcher) { P.chaseT = .9; P.chaseX = e.x; }
-    const dir = m.around ? (Math.sign(e.x - P.x) || P.facing) : P.facing;
+    const dir = m.around || m.ends ? (Math.sign(e.x - P.x) || P.facing) : P.facing;
     if (m.delayed) { // the Shadow Flèche: he is past them before the cut shows; a heartbeat later it lands
       echoes.push({ e, dmg: m.dmg * wMult(P.w), dir, m: Object.assign({}, m, { delayed: 0 }), t: .38 });
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .5, ang: rand(-.5, .5), t: .45, max: .45, size: 40 + e.hw, col: '#C8D0FF' });
@@ -382,8 +383,8 @@ function killEnemy(e, dir, m) {
     e.air = false; e.spin = 0; e.rotA = 0; e.vz = 0; e.dmax = e.t = e.death === 'splat' ? 2.4 : 2;
     e.vx = dir * (e.death === 'crumple' ? 170 : e.death === 'slice' ? 40 : 0) * (e.boss ? .3 : 1);
     if (e.death === 'pierce') { // run through: they stiffen, points of light open where the blade went in, then they fold and fall, and a silver rose is left on them
-      e.dmax = e.t = 1.6; e.vx = 0; e.wounds = [0, 1, 2].map(() => ({ x: rand(-.4, .5), y: rand(.35, .75) }));
-      for (let i = 0; i < 14; i++) parts.push({ x: e.x, y: e.y + rand(-4, 4), z: e.z + e.hh * .55, vx: rand(-80, 80), vy: rand(-10, 10), vz: rand(30, 160), life: rand(1.4, 2.4), max: 2.4, col: pick(['#E8ECF4', '#C8CEDA', '#FFFFFF']), size: rand(2.4, 3.6), shape: 'tuft', rot: rand(0, 6), vr: rand(-5, 5) });
+      e.dmax = e.t = 1.6; e.vx = 0; e.wounds = [0, 1, 2].slice(0, 2 + (Math.random() < .5 ? 1 : 0)).map(() => ({ x: rand(-.35, .45), y: rand(.4, .72) }));
+      for (let i = 0; i < 8; i++) parts.push({ x: e.x + dir * 6, y: e.y + rand(-4, 4), z: e.z + e.hh * .55, vx: dir * rand(40, 140), vy: rand(-10, 10), vz: rand(20, 110), life: rand(.6, 1), max: 1, col: pick(cols), size: rand(1.6, 2.6), shape: 'blob' }); // a few flecks out the far side
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .55, ang: 0, t: .3, max: .3, size: 30 + e.hw, col: '#E8ECFF' }); sfx('slice');
     }
     dropLoot(e);

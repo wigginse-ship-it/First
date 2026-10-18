@@ -162,18 +162,32 @@ function drawHand(g, open) {
   if (open) {
     const fin = (y0, len, curl) => { const f = () => { ctx.beginPath(); ctx.moveTo(18.4, y0); ctx.quadraticCurveTo(18.4 + len * .7, y0 + curl * .3, 18.4 + len, y0 + curl); }; ctx.lineCap = 'round';
       f(); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = 3.1; ctx.stroke(); f(); ctx.strokeStyle = C(g); ctx.lineWidth = 1.7; ctx.stroke(); };
-    for (const [y, l, c] of [[2.6, 4.2, 2.2], [.9, 5.4, 2.4], [-.9, 5.8, 2.2], [-2.6, 5.2, 1.8]]) fin(y, l, c); // little finger to index
-    rrect(12.6, -3.8, 7.4, 7.6, 2.4); ctx.fillStyle = C(g); ctx.fill(); outline(1.1); // the palm and back of the hand
+    for (const [y, l, c] of [[2.2, 3.6, 1.8], [.75, 4.6, 2], [-.75, 4.9, 1.8], [-2.2, 4.4, 1.5]]) fin(y, l, c); // little finger to index
+    rrect(12.8, -3.2, 6.4, 6.4, 2.2); ctx.fillStyle = C(g); ctx.fill(); outline(1.1); // the palm and back of the hand
     if (!FLASH && !TINT) { ctx.fillStyle = shade(g, -.25); ctx.fillRect(13.2, 1.2, 6.2, 2.2); }
     const th = () => { ctx.beginPath(); ctx.moveTo(15, -3.4); ctx.quadraticCurveTo(18, -5.6, 20.6, -4.6); }; ctx.lineCap = 'round';
     th(); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = 3.4; ctx.stroke(); th(); ctx.strokeStyle = C(g); ctx.lineWidth = 2; ctx.stroke(); // the thumb
     return;
   }
-  rrect(12.4, -5.4, 11.2, 10.8, 3.4); ctx.fillStyle = C(g); ctx.fill(); outline(1.2);
-  if (!FLASH && !TINT) { ctx.fillStyle = shade(g, -.3); ctx.fillRect(13, 1.6, 9.8, 3); ctx.strokeStyle = shade(g, .4); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(22.6, -4.2); ctx.lineTo(22.6, 3.6); ctx.stroke(); }
-  ctx.strokeStyle = C(shade(g, -.55)); ctx.lineWidth = .7; ctx.beginPath();
-  for (const y of [-2.6, 0, 2.6]) { ctx.moveTo(19.4, y); ctx.lineTo(23.4, y); } // the folded fingers
-  ctx.moveTo(19.2, -5); ctx.lineTo(19.2, 5); ctx.moveTo(15.6, -3); ctx.quadraticCurveTo(18, -3.6, 19.6, -1.6); ctx.stroke(); // the knuckle line, the thumb across
+  rrect(12.8, -4.5, 9.4, 9, 3); ctx.fillStyle = C(g); ctx.fill(); outline(1.1);
+  if (!FLASH && !TINT) { ctx.fillStyle = shade(g, -.3); ctx.fillRect(13.3, 1.3, 8.4, 2.6); ctx.strokeStyle = shade(g, .4); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(21.4, -3.5); ctx.lineTo(21.4, 3); ctx.stroke(); }
+  ctx.strokeStyle = C(shade(g, -.55)); ctx.lineWidth = .6; ctx.beginPath();
+  for (const y of [-2.2, 0, 2.2]) { ctx.moveTo(18.6, y); ctx.lineTo(22, y); } // the folded fingers
+  ctx.moveTo(18.4, -4.2); ctx.lineTo(18.4, 4.2); ctx.moveTo(15.4, -2.6); ctx.quadraticCurveTo(17.4, -3.1, 18.8, -1.4); ctx.stroke(); // the knuckle line, the thumb across
+}
+// his silver rose: a rosebud seen from the side, petals cupped around a curled heart, on a short stem with a leaf
+function silverRose(x, y, s, stem, base = '#A4AAB8') {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  const dk = shade(base, -.38), lt = shade(base, .32);
+  if (stem) {
+    ctx.strokeStyle = C('#4E5A48'); ctx.lineWidth = .9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 2.6); ctx.quadraticCurveTo(-.6, 5, -1.6, 6.6); ctx.stroke();
+    ctx.fillStyle = C('#5E6E54'); ctx.beginPath(); ctx.moveTo(-.8, 4.6); ctx.quadraticCurveTo(-3.6, 3.6, -3.8, 5.6); ctx.quadraticCurveTo(-2.2, 5.8, -.8, 4.6); ctx.fill();
+  }
+  ctx.fillStyle = C(dk); ctx.beginPath(); ctx.moveTo(-2.8, -.4); ctx.quadraticCurveTo(-3.2, 2.6, 0, 2.8); ctx.quadraticCurveTo(3.2, 2.6, 2.8, -.4); ctx.quadraticCurveTo(0, 1, -2.8, -.4); ctx.fill(); // the cup
+  ctx.fillStyle = C(base); ctx.beginPath(); ctx.moveTo(-2.6, -.6); ctx.quadraticCurveTo(-2.4, -3, 0, -3.1); ctx.quadraticCurveTo(2.4, -3, 2.6, -.6); ctx.quadraticCurveTo(0, 1.4, -2.6, -.6); ctx.fill(); outline(.6); // the bud
+  ctx.fillStyle = C(lt); ctx.beginPath(); ctx.moveTo(-2.4, -.5); ctx.quadraticCurveTo(-1.6, 1.8, .6, 2.2); ctx.quadraticCurveTo(-1, .4, -.8, -1.2); ctx.closePath(); ctx.fill(); // the outer petal folding over, catching light
+  ctx.strokeStyle = C(dk); ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(-1.2, -1.6); ctx.quadraticCurveTo(0, -2.6, 1.2, -1.4); ctx.quadraticCurveTo(.4, -.4, -.4, -1.2); ctx.stroke(); // the curl of the heart
+  ctx.restore();
 }
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
 function gripHand(col) { // a gloved hand closed around a haft
@@ -536,10 +550,7 @@ function drawHumanoid(look, pose) {
     ctx.fillStyle = C(look.trim); ctx.fillRect(-8, HIP - 2.5, 16, 3.6); // belt
     ctx.fillStyle = C('#C9A86A'); ctx.fillRect(1.4, HIP - 3, 3.6, 4.6); ctx.fillStyle = C(shade(look.trim, -.5)); ctx.fillRect(2.4, HIP - 2, 1.6, 2.6); // buckle
     if (look.rose) { // his silver rose, pinned at the breast
-      const rx = -4.6, ry = SHO + 6; ctx.save(); ctx.translate(rx, ry); ctx.scale(1.4, 1.4); ctx.translate(-rx, -ry);
-      ctx.strokeStyle = C('#5E6E5A'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(rx, ry + 1.5); ctx.lineTo(rx - 1.5, ry + 5); ctx.stroke();
-      for (let i = 0; i < 5; i++) { const a = i / 5 * TAU - .3; ctx.fillStyle = C(i % 2 ? '#C8CEDA' : '#E8ECF4'); ell(rx + Math.cos(a) * 1.3, ry + Math.sin(a) * 1.3, 1.5, 1.1, a); ctx.fill(); }
-      ctx.fillStyle = C('#8E96A8'); circle(rx, ry, .8); ctx.fill(); ctx.restore();
+      silverRose(-4.6, SHO + 5.6, 1.15, true);
     }
     if (look.chain) { ctx.strokeStyle = C(look.trim); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-8, HIP + 1); ctx.quadraticCurveTo(-2, HIP + 6, 6, HIP + 2); ctx.stroke(); }
     }
