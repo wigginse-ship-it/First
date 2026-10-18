@@ -156,19 +156,32 @@ function drawCorwinHeadTurn(look, hy, Y) {
   }
 }
 
+// a hand in hand space (the wrist at x=13, the fingers toward +x): a clenched fist, knuckles forward, or a relaxed
+// open hand with the fingers loosely curled and the thumb along the top
+function drawHand(g, open) {
+  if (open) {
+    const fin = (y0, len, curl) => { const f = () => { ctx.beginPath(); ctx.moveTo(18.4, y0); ctx.quadraticCurveTo(18.4 + len * .7, y0 + curl * .3, 18.4 + len, y0 + curl); }; ctx.lineCap = 'round';
+      f(); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = 3.1; ctx.stroke(); f(); ctx.strokeStyle = C(g); ctx.lineWidth = 1.7; ctx.stroke(); };
+    for (const [y, l, c] of [[2.6, 4.2, 2.2], [.9, 5.4, 2.4], [-.9, 5.8, 2.2], [-2.6, 5.2, 1.8]]) fin(y, l, c); // little finger to index
+    rrect(12.6, -3.8, 7.4, 7.6, 2.4); ctx.fillStyle = C(g); ctx.fill(); outline(1.1); // the palm and back of the hand
+    if (!FLASH && !TINT) { ctx.fillStyle = shade(g, -.25); ctx.fillRect(13.2, 1.2, 6.2, 2.2); }
+    const th = () => { ctx.beginPath(); ctx.moveTo(15, -3.4); ctx.quadraticCurveTo(18, -5.6, 20.6, -4.6); }; ctx.lineCap = 'round';
+    th(); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = 3.4; ctx.stroke(); th(); ctx.strokeStyle = C(g); ctx.lineWidth = 2; ctx.stroke(); // the thumb
+    return;
+  }
+  rrect(12.4, -5.4, 11.2, 10.8, 3.4); ctx.fillStyle = C(g); ctx.fill(); outline(1.2);
+  if (!FLASH && !TINT) { ctx.fillStyle = shade(g, -.3); ctx.fillRect(13, 1.6, 9.8, 3); ctx.strokeStyle = shade(g, .4); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(22.6, -4.2); ctx.lineTo(22.6, 3.6); ctx.stroke(); }
+  ctx.strokeStyle = C(shade(g, -.55)); ctx.lineWidth = .7; ctx.beginPath();
+  for (const y of [-2.6, 0, 2.6]) { ctx.moveTo(19.4, y); ctx.lineTo(23.4, y); } // the folded fingers
+  ctx.moveTo(19.2, -5); ctx.lineTo(19.2, 5); ctx.moveTo(15.6, -3); ctx.quadraticCurveTo(18, -3.6, 19.6, -1.6); ctx.stroke(); // the knuckle line, the thumb across
+}
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
 function gripHand(col) { // a gloved hand closed around a haft
   rrect(13.6, -3.8, 7, 7.6, 2.4); ctx.fillStyle = C(col); ctx.fill(); outline(1.1);
   ctx.strokeStyle = C(shade(col, -.55)); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(15.8, -3.4); ctx.lineTo(15.8, 3.4); ctx.moveTo(18, -3.4); ctx.lineTo(18, 3.4); ctx.stroke();
 }
 function drawWeapon(kind, pose) {
-  if (kind === 'fists' || !kind) { // a clenched, gloved fist with the knuckles forward
-    const g = (pose && pose.glove) || '#FFF1E0';
-    rrect(13, -4.6, 9.4, 9.2, 3); ctx.fillStyle = C(g); ctx.fill(); outline(1.2);
-    if (!FLASH && !TINT) { ctx.fillStyle = shade(g, -.3); ctx.fillRect(13.6, 1.4, 8, 2.6); ctx.strokeStyle = shade(g, .4); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(21.4, -3.6); ctx.lineTo(21.4, 3); ctx.stroke(); }
-    ctx.strokeStyle = C(shade(g, -.55)); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(18.4, -4.2); ctx.lineTo(18.4, 4.2); ctx.moveTo(16, -2.4); ctx.lineTo(18.4, -2.4); ctx.stroke(); // fingers folded over, the thumb
-    return;
-  }
+  if (kind === 'fists' || !kind) { drawHand((pose && pose.glove) || '#FFF1E0', pose && pose.openHand); return; }
   if (kind === 'grayblade' || kind === 'rapier') { drawGrayblade(pose || {}); return; } // the prince's own sword (art_rapier.js)
   // the hero's weapons change as they level: 1 iron and wood, 2 steel and leather, 3 gold and a gem, 4 runes that glow, 5 shadow-steel with a violet aura
   const tier = (pose && pose.tier) || 1, hand = (pose && pose.glove) || '#FFF1E0';
@@ -348,19 +361,20 @@ function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1) {
   const out = kickOut(pose.kickK, pose.kickH[0], pose.kickH[1]), chamber = pose.kickK < pose.kickH[0];
   const L = (a, b, t) => a + (b - a) * t, legs = look.legs;
   const bootAt = (x, y, ang, col) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.translate(-1, 9); boot(0, col); ctx.restore(); };
-  const limb = (h, kn, ft, col) => { seg(h[0], h[1], kn[0], kn[1], 8.4, 6.4, col, .8); seg(kn[0], kn[1], ft[0], ft[1], 6.4, 4.8, col, .6); };
+  const lw = pose.kickStyle === 'drop' ? 1.25 : 1, limb = (h, kn, ft, col) => { seg(h[0], h[1], kn[0], kn[1], 8.4 * lw, 6.6 * lw, col, .9); seg(kn[0], kn[1], ft[0], ft[1], 6.6 * lw, 5 * lw, col, .8); };
   // turned, each leg is foreshortened along his facing and set out to its own side; the nearer one is drawn last
-  ctx.save(); ctx.scale(Math.max(.4, CS), 1);
-  const side = (lz, f) => { ctx.save(); ctx.translate(-lz * Y / Math.max(.4, CS), 0); f(); ctx.restore(); };
+  const SX = pose.kickStyle === 'drop' ? 1 : Math.max(.4, CS); // the dropkick's legs point straight along the body: turning doesn't shorten them
+  ctx.save(); ctx.scale(SX, 1);
+  const side = (lz, f) => { ctx.save(); ctx.translate(-lz * Y / SX, 0); f(); ctx.restore(); };
   const kickFar = Y < -.2; // his back to us: the kicking leg reaches away on the far side of his body
   let support, kicker;
   if (pose.kickStyle === 'drop') {
     // both legs tuck to the chest, then shoot out straight and together; the body is laid out by pose.rot.
     // Piked at the hips so the legs and the body make a clear V, the far leg a touch higher
     const t = chamber ? 0 : out;
-    const far = [[-1 + hx, HIP], [L(9, 9, t), L(HIP + 4, HIP + 13, t)], [L(1, 18, t), L(HIP + 12, HIP + 25, t)]];
-    const near = [[3 + hx, HIP], [L(12, 13, t), L(HIP + 2, HIP + 14, t)], [L(5, 22, t), L(HIP + 11, HIP + 27, t)]];
-    const fa = L(-.5, -.45, t);
+    const far = [[-1 + hx, HIP], [L(9, 4, t), L(HIP + 4, HIP + 16, t)], [L(1, 6, t), L(HIP + 12, HIP + 32, t)]];
+    const near = [[3 + hx, HIP], [L(12, 6, t), L(HIP + 2, HIP + 16, t)], [L(5, 8, t), L(HIP + 11, HIP + 32, t)]]; // legs locked straight out, soles leading
+    const fa = L(-.5, 0, t);
     support = () => side(-4, () => { limb(...far, shade(legs, -.15)); bootAt(far[2][0], far[2][1] - 9, fa, shade(look.boots, -.1)); });
     kicker = () => side(4, () => { limb(...near, legs); bootAt(near[2][0], near[2][1] - 9, fa, look.boots); });
   } else if (pose.kickStyle === 'round') {
@@ -439,9 +453,9 @@ function drawHumanoid(look, pose) {
   const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = PX(-3, -9.5), bsy = SHO + 1.5;
   const bb = pose.backElbow !== undefined ? -pose.backElbow : .25; // how far the forearm folds up from the upper arm
   const bl = 1 + (pose.backReach || 0); // a thrown rear hand reaches further, the shoulder driven through
-  const bex = bsx + Math.cos(ba) * 8 * bl * ASX, bey = bsy + Math.sin(ba) * 8 * bl, bwx = bex + Math.cos(ba + bb) * 7.5 * bl * ASX, bwy = bey + Math.sin(ba + bb) * 7.5 * bl;
-  seg(bsx, bsy, bex, bey, 7, 5.6, shade(sleeve, -.18), 1); seg(bex, bey, bwx, bwy, 5.6, 4.2, shade(sleeve, -.18), .5);
-  ctx.fillStyle = C(shade(look.glove || skin, -.18)); circle(bwx + Math.cos(ba + bb) * 1.5 * ASX, bwy + Math.sin(ba + bb) * 1.5, 2.8); ctx.fill(); outline(1);
+  const bex = bsx + Math.cos(ba) * 10 * bl * ASX, bey = bsy + Math.sin(ba) * 10 * bl, bwx = bex + Math.cos(ba + bb) * 9 * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * bl;
+  seg(bsx, bsy, bex, bey, 8, 6.4, shade(sleeve, -.18), 1.3); seg(bex, bey, bwx, bwy, 6.4, 4.8, shade(sleeve, -.18), .8);
+  ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(Math.atan2(Math.sin(ba + bb), Math.cos(ba + bb) * ASX)); ctx.translate(-13, 0); drawHand(shade(look.glove || skin, -.18), pose.openHand); ctx.restore(); // the far hand
   ctx.restore();
   // legs: thighs and calves with a swell, pants tucked into boots
   const legs = look.legs;
@@ -570,15 +584,16 @@ function drawHumanoid(look, pose) {
   const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw;
   if (pose.trail) drawTrail(0, SHO + 2, pose);
   if (pose.flat) drawFlatTrail(1, SHO + 2, pose.flat);
-  ctx.save(); ctx.translate(PX(1, 9.5), SHO + 2); ctx.scale(ASX, 1); ctx.rotate(arm);
+  ctx.save(); ctx.translate(PX(1, 9.5), SHO + 2);
+  { const ca = Math.cos(arm) * ASX, sa = Math.sin(arm); ctx.rotate(Math.atan2(sa, ca)); ctx.scale(Math.hypot(ca, sa), 1); } // turned, the arm only shortens along its length: it never gets thinner
   if (pose.sweep !== undefined) ctx.scale(Math.sign(pose.sweep || 1) * Math.max(.14, Math.abs(pose.sweep)), 1); // a horizontal swing: the weapon comes around the body
-  const reach = 15 + (pose.ext || 0) * 12; // a thrust drives the arm out
-  const ex = reach * .5, ey = 1.6 - (pose.ext || 0) * 1.2;
+  const reach = 19 + (pose.ext || 0) * 12; // a thrust drives the arm out
+  const ex = reach * .53, ey = 1.6 - (pose.ext || 0) * 1.2;
   if (pose.elbow) { // a bent elbow: the upper arm hangs, the forearm comes forward from it
-    const eb = -pose.elbow, hx = 8 + Math.cos(eb) * 8, hy = Math.sin(eb) * 8;
-    seg(0, 0, 8, 0, 7.6, 5.8, sleeve, 1.2); seg(8, 0, hx, hy, 6, 4.4, sleeve, .7);
+    const eb = -pose.elbow, hx = 10 + Math.cos(eb) * 9, hy = Math.sin(eb) * 9;
+    seg(0, 0, 10, 0, 8.6, 6.6, sleeve, 1.4); seg(10, 0, hx, hy, 6.6, 5, sleeve, .9);
     ctx.translate(hx, hy); ctx.rotate(eb); ctx.translate(-15, 0);
-  } else { seg(0, 0, ex, ey, 7.6, 5.8, sleeve, 1.2); seg(ex, ey, reach, 0, 6, 4.4, sleeve, .7); }
+  } else { seg(0, 0, ex, ey, 8.6, 6.6, sleeve, 1.4); seg(ex, ey, reach, 0, 6.6, 5, sleeve, .9); }
   pose.glove = look.glove;
   if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); }
   if (!pose.elbow) ctx.translate(reach - 15, 0);

@@ -56,8 +56,9 @@ function playerPose() {
       const fly = P.z > 4 || m.key === 'RH' || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
       pose.kickK = k; pose.kickH = m.h; pose.kickStyle = fly ? 'drop' : 'lunge'; pose.flow = 12;
       if (fly) { // tucked, then laid out flat with both feet driven forward, the body twisting open toward us
-        pose.rot = -1.2 * out; pose.lean = lerp(.35, -.1, out); pose.yaw = lerp(-.2, .45, out);
-        pose.arm = lerp(1, 3.6, out); pose.elbow = lerp(1.2, .3, out); pose.backArm = lerp(-.4, 3.4, out);
+        // like a wrestler's: he turns onto his side in the air, chest toward us, so at impact the two straight legs are stacked one above the other
+        pose.rot = -1.5 * out; pose.lean = lerp(.35, 0, out); pose.yaw = lerp(0, -.92, out); // his back to us
+        pose.arm = lerp(1, 3.9, out); pose.elbow = lerp(1.2, .2, out); pose.backArm = lerp(-.4, 2.2, out); pose.backElbow = lerp(2, .3, out);
       } else { // coiled forward over the chambered knee, then the hips turn over and the torso arches back behind the heel
         pose.sink = 4 * out; pose.lean = lerp(.3, -.5, out); pose.yaw = lerp(0, -.5, out);
         pose.arm = lerp(.9, 1.1, out); pose.elbow = lerp(1.7, 1.9, out); pose.backArm = lerp(.9, 2.4, out); // fists kept up in front of the chest
@@ -137,7 +138,7 @@ function playerPose() {
   }
   else { // hands low at his sides but loaded: elbows bent, fists forward at the waist, swaying with his breath
     const b = Math.sin(performance.now() / 420) * .03;
-    pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; // arms hanging loose at his sides, just off the body
+    pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; pose.openHand = 1; // arms hanging loose at his sides, just off the body
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
   if (P.shrink < 1) pose.shrink = P.shrink;
