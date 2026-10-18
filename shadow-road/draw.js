@@ -44,7 +44,11 @@ function playerPose() {
   // at rest each weapon sits the way its wielder would carry it
   else if (P.w === 'sword') { pose.arm = .8; pose.grip = -.08; } // a low guard, the point lowered toward the ground ahead
   else if (P.w === 'hammer') { pose.arm = .85; pose.grip = -3.35; } // shouldered, head behind
-  else if (P.w === 'staff') { pose.arm = .95; pose.grip = -2.48; } // planted upright at his side
+  else if (P.w === 'staff') { // a fighting guard: the staff held low and level across the body, point toward the enemy,
+    // swaying with his breath, and every few seconds he twirls it once through his fingers
+    const now = performance.now() / 1000, c = now % 4.2, twirl = P.state === 'idle' && c < .55 ? ease(c / .55) * TAU : 0;
+    pose.arm = .5 + Math.sin(now * 1.6) * .05; pose.grip = -.02 + Math.sin(now * 1.6 + 1) * .07 + twirl; pose.backArm = -.35; pose.lean = .08;
+  }
   else { pose.arm = -.55; pose.backArm = .05; } // fists raised, ready
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
   return pose;
