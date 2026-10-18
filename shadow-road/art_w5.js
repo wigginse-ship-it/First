@@ -137,15 +137,18 @@
   }
   // THE STAIR OF MOONLIGHT: the treads of light that climb out of the cloud to the moon (as in the books: it exists only
   // while the moon is up). Laid in once, then hung beside the moon in the live sky
-  function buildStair(R) {
-    retire(stairC); const W = 520, H = 300, [c, g] = makeLayer(W, H), old = ctx; ctx = g;
-    const P0 = [20, 290], P1 = [250, 250], P2 = [W - R * .55, 40 + R * .5]; // from the cloud sea up to the moon's lower limb
+  // it comes down out of the moon's lower limb and lands behind the balustrade, where the landing is
+  let stairO = [0, 0];
+  function buildStair(R, th) {
+    retire(stairC); const mx = VW * th.sun[0], my = Y_OFF + VIEW_H * th.sun[1], ox = mx - 400, oy = my - 10, W = 420, H = Math.max(60, T + 24 - oy), [c, g] = makeLayer(W, H), old = ctx; ctx = g;
+    stairO = [ox - mx, oy - my];
+    const P0 = [mx - 330 - ox, T + 14 - oy], P1 = [mx - 150 - ox, T - 34 - oy], P2 = [mx - R * .3 - ox, my + R * .72 - oy]; // from the landing up to the moon
     const at = (u) => { const iu = 1 - u; return [iu * iu * P0[0] + 2 * iu * u * P1[0] + u * u * P2[0], iu * iu * P0[1] + 2 * iu * u * P1[1] + u * u * P2[1]]; };
-    addB(() => { ctx.lineCap = 'round'; for (const [w, a] of [[26, .05], [12, .08], [4, .14]]) { ctx.strokeStyle = `rgba(200,215,250,${a})`; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(...P0); ctx.quadraticCurveTo(...P1, ...P2); ctx.stroke(); } });
-    for (let i = 0; i < 46; i++) { const u = i / 46, [x, y] = at(u), w = lerp(46, 6, Math.pow(u, .7)), h = lerp(5, 1, u), rise = lerp(7, 1.4, u);
-      ctx.fillStyle = `rgba(150,170,220,${.25 * (1 - u * .5)})`; ctx.fillRect(x - w / 2, y, w, rise); // the riser, in shadow
-      ctx.fillStyle = `rgba(232,240,255,${.7 - u * .35})`; ctx.fillRect(x - w / 2, y - h * .3, w, h * .55); // the tread, lit
-      ctx.fillStyle = `rgba(255,255,255,${.6 - u * .3})`; ctx.fillRect(x - w / 2, y - h * .3, w, Math.max(.4, h * .16)); }
+    addB(() => { ctx.lineCap = 'round'; for (const [w, a] of [[30, .05], [14, .08], [5, .14]]) { ctx.strokeStyle = `rgba(200,215,250,${a})`; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(...P0); ctx.quadraticCurveTo(...P1, ...P2); ctx.stroke(); } });
+    for (let i = 0; i < 42; i++) { const u = i / 42, [x, y] = at(u), w = lerp(54, 8, Math.pow(u, .6)), h = lerp(5, 1.2, u), rise = lerp(7, 1.6, u);
+      ctx.fillStyle = `rgba(150,170,220,${.3 * (1 - u * .4)})`; ctx.fillRect(x - w / 2, y, w, rise); // the riser, in shadow
+      ctx.fillStyle = `rgba(232,240,255,${.75 - u * .3})`; ctx.fillRect(x - w / 2, y - h * .3, w, h * .55); // the tread, lit
+      ctx.fillStyle = `rgba(255,255,255,${.65 - u * .3})`; ctx.fillRect(x - w / 2, y - h * .3, w, Math.max(.4, h * .16)); }
     ctx = old; stairC = c;
   }
   // stars painted into the far layer: fixed, so they never twinkle; a few larger ones pressed in silver leaf with four points
@@ -227,7 +230,7 @@
   let stairSeams = [], streetSeams = [], throneSeams = [];
   function moonFar(rnd, th, f) {
     AW_SUN = 1;
-    buildMoon(62, 7); buildClouds(31); buildStair(62);
+    buildMoon(62, 7); buildClouds(31); buildStair(62, th);
     starField(rnd, 260, 170, 7);
     // the real Amber far below, on Kolvir: a dark peak through the cloud, a few warm lights (the only warm thing in this world)
     for (const x0 of [380, 1040]) awWrap(x0, 90, (x) => {
@@ -317,15 +320,20 @@
     const sh = ctx.createLinearGradient(0, VH - 40, 0, VH - 11); sh.addColorStop(0, 'rgba(6,8,20,0)'); sh.addColorStop(1, 'rgba(6,8,20,.4)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 40, AW_W, 29);
   }
   THEMES.moon = {
-    name: 'the stair of moonlight', sky: ['#04060E', '#0C1430', '#1E2C5A', '#4A5C8E'], sun: [0.74, 0.2, MOONRGB], haze: '110,130,190',
+    name: 'the stair of moonlight', sky: ['#04060E', '#0C1430', '#1E2C5A', '#4A5C8E'], sun: [0.74, 0.16, MOONRGB], haze: '110,130,190',
     floorA: '#5A6C9E', floorB: '#141C38', path: '#C8D2E2', skyKind: 'none',
     grade: { desat: .12, top: 'rgba(40,60,150,.5)', bot: 'rgba(150,170,220,.32)', vig: 'rgba(2,4,14,.66)' },
     liveSky(camX, t) {
-      const m = skyMoon(THEMES.moon, camX);
-      if (m && stairC) ctx.drawImage(stairC, m[0] - 520 + moonR * .2, m[1] - 40 - moonR * .5, 520, 300); // the stair climbs to the moon
+      skyMoon(THEMES.moon, camX);
       skyClouds(camX, t, Y_OFF + 10, Y_OFF + 70, .85);
     },
-    liveFloor(camX, t) { liveSeams(stairSeams, camX, t, '235,242,255', .12, .1); liveMotes(camX, t, 110, T - 30, T + 90, PALE); },
+    liveFloor(camX, t) {
+      if (stairC) { // the stair comes down out of the moon to the landing: light laid over the far cloud, stopping at the balustrade
+        const th = THEMES.moon, mx = VW * th.sun[0] - camX * .02, my = Y_OFF + VIEW_H * th.sun[1];
+        ctx.save(); ctx.beginPath(); ctx.rect(0, Y_OFF, VW, T - 18 - Y_OFF); ctx.clip(); ctx.globalAlpha = .9; ctx.drawImage(stairC, mx + stairO[0], my + stairO[1], stairC.width / K, stairC.height / K); ctx.restore();
+      }
+      liveSeams(stairSeams, camX, t, '235,242,255', .12, .1); liveMotes(camX, t, 110, T - 30, T + 90, PALE);
+    },
   };
   AW_FAR.moon = moonFar; AW_MID.moon = moonMid; AW_FLOOR.moon = moonFloor;
 
@@ -386,7 +394,7 @@
     ctx.strokeStyle = '#7A88AA'; ctx.lineWidth = .8; ctx.stroke();
     if (rnd() < .5) { const bx = x + w * (rnd() < .5 ? .2 : .8), by = top + 20; ctx.fillStyle = '#10162C'; ctx.fillRect(bx - 10, by + 14, 20, 2); for (let k = -9; k <= 9; k += 3) ctx.fillRect(bx + k, by + 8, .9, 6); ctx.fillRect(bx - 10, by + 7, 20, 1.2); } // a balcony
     // the top of the house is not quite there: it thins into the night
-    ctx.save(); ctx.globalCompositeOperation = 'destination-out'; const fg = ctx.createLinearGradient(0, top - rh - 2, 0, top + h * .45); fg.addColorStop(0, 'rgba(0,0,0,.92)'); fg.addColorStop(.5, 'rgba(0,0,0,.45)'); fg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = fg; ctx.fillRect(x - 6, top - rh - 6, w + 12, h * .45 + rh + 8); ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'destination-out'; const fg = ctx.createLinearGradient(0, top - rh - 2, 0, top + h * .6); fg.addColorStop(0, 'rgba(0,0,0,.96)'); fg.addColorStop(.45, 'rgba(0,0,0,.6)'); fg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = fg; ctx.fillRect(x - 6, top - rh - 6, w + 12, h * .6 + rh + 8); ctx.restore();
     addB(() => { for (let i = 0; i < 4; i++) softDab(x + rnd() * w, top - rh * .4 + rnd() * 20, 20 + rnd() * 16, '160,180,230', .1); }); // and mist where it ends
   }
   // a banner of the ghost court hung from a bracket: pale silk with the unicorn of Amber in silver leaf
@@ -401,7 +409,7 @@
     AW_SUN = -1;
     // the houses stand shoulder to shoulder along the back of the street, with narrow wynds between them
     let x = 0; const kinds = ['gable', 'gable', 'step', 'tower', 'gable'];
-    while (x < AW_W - 40) { const w = 64 + rnd() * 70, h = 90 + rnd() * 70, k = kinds[Math.floor(rnd() * kinds.length)]; awWR(x, w + 10, rnd, (xx, r) => ghostHouse(xx, k === 'tower' ? w * .6 : w, k === 'tower' ? h + 50 : h, r, k)); x += w + 6 + rnd() * 18; }
+    while (x < AW_W - 40) { const w = 50 + rnd() * 56, h = 56 + rnd() * 56, k = kinds[Math.floor(rnd() * kinds.length)]; awWR(x, w + 10, rnd, (xx, r) => ghostHouse(xx, k === 'tower' ? w * .6 : w, k === 'tower' ? h + 34 : h, r, k)); x += w + 14 + rnd() * 40; }
     for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => unicornBanner(x, T - 70 - r() * 30, 30 + r() * 16, r));
     for (let i = 0; i < 7; i++) awWR(rnd() * AW_W, 10, rnd, (x, r) => coldLamp(x, T + 6, 50 + r() * 10, r));
   }
@@ -415,7 +423,8 @@
       ctx.save(); poly(p.pts); ctx.clip(); dab(p.x + p.w * .55, p.y + p.h * .3, p.h * .45, '#E8EEF8', .16); ctx.restore(); }
     for (const p of plates) { ctx.strokeStyle = 'rgba(10,14,32,.75)'; ctx.lineWidth = 1 + p.row * .08; poly(p.pts); ctx.stroke(); }
     // the gutters: channels of silver leaf running the length of the street
-    for (const gy of [T + 30, T + 92]) { const wv = awWave(gy, [[3, 1.2], [7, .6]]); leafLine(() => { ctx.moveTo(0, gy + wv(0)); for (let x = 6; x <= AW_W; x += 6) ctx.lineTo(x, gy + wv(x)); }, 1.4, .85);
+    for (const gy of [T + 30, T + 92]) { const wv = awWave(gy, [[3, 1.2], [7, .6]]), gl = () => { ctx.moveTo(0, gy + wv(0)); for (let x = 6; x <= AW_W; x += 6) ctx.lineTo(x, gy + wv(x)); };
+      ctx.strokeStyle = 'rgba(8,12,30,.55)'; ctx.lineWidth = 4; ctx.beginPath(); gl(); ctx.stroke(); leafLine(gl, .9, .5);
       const pts = []; for (let x = 0; x <= AW_W; x += 20) pts.push([x, gy + wv(x) - .3]); for (let i = 0; i + 6 < pts.length; i += 9) streetSeams.push({ pts: pts.slice(i, i + 6), ph: i * .7 }); }
     // puddles holding the moon
     for (let i = 0; i < 7; i++) { const x = 60 + i * 180 + rnd() * 60, y = T + 40 + rnd() * 50, w = 18 + rnd() * 26;
