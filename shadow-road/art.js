@@ -55,17 +55,26 @@ function drawCorwinHead(look, hy) {
   ctx.fillStyle = C(ink); ctx.beginPath(); ctx.moveTo(3.4, hy - 3.6); ctx.lineTo(7.8, hy - 3.2); ctx.lineTo(7.6, hy - 2.1); ctx.lineTo(3.8, hy - 2.5); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(8.5, hy - 3.1); ctx.lineTo(9.8, hy - 3.5); ctx.lineTo(9.7, hy - 2.5); ctx.lineTo(8.5, hy - 2.1); ctx.closePath(); ctx.fill();
   ctx.fillStyle = C(shade(sk, -.5)); ctx.fillRect(6.6, hy + 4.4, 2.4, .8); // a set mouth
-  // black hair: swept-back bulk falling to the collar, a sideburn, and a few heavy locks over the brow
+  // stubble shadowing the jaw, chin and upper lip, and a hint of a cleft in the square chin
+  if (!FLASH) {
+    ctx.fillStyle = 'rgba(40,30,38,.26)'; ctx.beginPath();
+    ctx.moveTo(.4, hy + 3); ctx.quadraticCurveTo(3, hy + 4.6, 6.4, hy + 3.8); ctx.lineTo(9.6, hy + 3.4); ctx.lineTo(9.6, hy + 6.6);
+    ctx.quadraticCurveTo(9.4, hy + 8.4, 7.6, hy + 8.4); ctx.quadraticCurveTo(5, hy + 9.6, 1.4, hy + 7.8); ctx.lineTo(-1.6, hy + 5.6); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(60,35,35,.5)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(9.1, hy + 6.8); ctx.lineTo(9.3, hy + 7.9); ctx.stroke();
+  }
+  // dark hair with real volume: swept up off the brow and back, short at the nape, with heavy sideburns
   ctx.fillStyle = C(look.hair); ctx.beginPath();
-  ctx.moveTo(10, hy - 5);
-  ctx.quadraticCurveTo(9.4, hy - 11.4, 2, hy - 12.4); ctx.quadraticCurveTo(-6.6, hy - 12.6, -9.6, hy - 5);
-  ctx.quadraticCurveTo(-11.2, hy + 3, -9.2, hy + 11); ctx.lineTo(-6.8, hy + 8.6); ctx.lineTo(-5.6, hy + 11.6); ctx.lineTo(-3.6, hy + 5.6);
-  ctx.quadraticCurveTo(-4, hy + 1, -3, hy - 1.6); ctx.lineTo(-.6, hy - 1.4); ctx.lineTo(-.2, hy + 3.4); ctx.lineTo(1.8, hy - 4.4);
-  ctx.lineTo(4.4, hy - 4.8); ctx.lineTo(5.4, hy - 2.8); ctx.lineTo(6.6, hy - 5.4); ctx.lineTo(8.4, hy - 3.8); ctx.closePath();
+  ctx.moveTo(9.4, hy - 5.6);
+  ctx.quadraticCurveTo(10.6, hy - 8.6, 9.6, hy - 10.4); ctx.lineTo(7.6, hy - 9.6); ctx.quadraticCurveTo(7.8, hy - 12, 5.4, hy - 13); ctx.lineTo(4.4, hy - 11.8); ctx.quadraticCurveTo(2, hy - 13.8, -1, hy - 13.2); // loose, tousled locks swept up and back
+  ctx.quadraticCurveTo(-8.6, hy - 12.4, -9.8, hy - 4.6); ctx.quadraticCurveTo(-10.4, hy + 1.4, -7.8, hy + 5.4); // over the crown, down the back
+  ctx.lineTo(-5.8, hy + 3.6); ctx.lineTo(-4.6, hy + 5.8); ctx.lineTo(-3.2, hy + 2.6); // short, choppy at the nape
+  ctx.quadraticCurveTo(-3.6, hy, -2.8, hy - 1.6); ctx.lineTo(-.4, hy - 1.6); ctx.lineTo(-.2, hy + 4.4); ctx.lineTo(1.6, hy + 4); ctx.lineTo(1.6, hy - 4); // a thick sideburn
+  ctx.quadraticCurveTo(4, hy - 6.2, 6.4, hy - 5.8); ctx.quadraticCurveTo(8, hy - 5.4, 9.4, hy - 5.6); ctx.closePath(); // the hairline, swept clear of the brow
   ctx.fill(); outline(1.1);
-  ctx.fillStyle = C('#454A62'); ctx.beginPath(); // one band of cool light along the top of the hair
-  ctx.moveTo(7.4, hy - 9); ctx.quadraticCurveTo(1, hy - 12, -6.4, hy - 8.4); ctx.quadraticCurveTo(0, hy - 10.4, 6.6, hy - 7.6); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-8.8, hy - 1); ctx.quadraticCurveTo(-9.6, hy + 4, -8.4, hy + 8.4); ctx.quadraticCurveTo(-8.4, hy + 3, -7.6, hy - .6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C('#454A62'); ctx.beginPath(); // light catching the swept-back waves
+  ctx.moveTo(6, hy - 12); ctx.quadraticCurveTo(1, hy - 13.4, -5, hy - 10.8); ctx.quadraticCurveTo(1, hy - 12, 5.6, hy - 11); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(6.6, hy - 8); ctx.quadraticCurveTo(2, hy - 10, -3, hy - 8.6); ctx.quadraticCurveTo(2, hy - 9.2, 6, hy - 7.2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = C('#0A080E'); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(7.4, hy - 6.4); ctx.quadraticCurveTo(4, hy - 9.4, -2, hy - 10.4); ctx.moveTo(-6, hy - 9); ctx.quadraticCurveTo(-8.6, hy - 4, -7, hy + 2); ctx.stroke(); // strands
 }
 
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
