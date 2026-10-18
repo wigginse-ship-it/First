@@ -102,25 +102,71 @@ function drawWeapon(kind, pose) {
   // the hero's weapons change as they level: 1 iron and wood, 2 steel and leather, 3 gold and a gem, 4 runes that glow, 5 shadow-steel with a violet aura
   const tier = (pose && pose.tier) || 1, hand = (pose && pose.glove) || '#FFF1E0';
   const glowRune = (x, y, w, h, col) => { ctx.save(); if (!FLASH) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillStyle = C(col); ctx.fillRect(x, y, w, h); ctx.restore(); };
+  const glow = (col, blur, fn) => { ctx.save(); if (!FLASH && !TINT) { ctx.shadowColor = col; ctx.shadowBlur = blur; } fn(); ctx.restore(); };
+  const aura = (col, fn) => { if (FLASH || TINT) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = col; fn(); ctx.fill(); ctx.restore(); };
+  const poly = (pts, col, w = 1.4) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let k = 2; k < pts.length; k += 2) ctx.lineTo(pts[k], pts[k + 1]); ctx.closePath(); ctx.fillStyle = typeof col === 'string' ? C(col) : col; ctx.fill(); outline(w); };
+  const vgrad = (y0, y1, col) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, C(shade(col, .35))); g.addColorStop(.5, C(col)); g.addColorStop(1, C(shade(col, -.3))); return g; };
   if (kind === 'hammer') {
-    const big = tier >= 4 ? 3 : 0, head = ['#7E8494', '#A8B0C2', '#B8BCC8', '#9AA4BC', '#2E2A3E'][tier - 1];
-    limb([4, 0, 44 + big, 0], tier >= 5 ? '#241E2E' : tier >= 2 ? '#6A4A30' : '#9A6234', 4);
-    if (tier >= 2) { ctx.fillStyle = C('#3A2A20'); for (let x = 8; x < 30; x += 5) ctx.fillRect(x, -2.4, 2, 4.8); } // leather wraps
-    const hg = ctx.createLinearGradient(0, -12 - big, 0, 12 + big); hg.addColorStop(0, C(shade(head, .3))); hg.addColorStop(1, C(shade(head, -.3)));
-    rrect(36 + big * .5, -12 - big, 18 + big, 24 + big * 2, 4); ctx.fillStyle = hg; ctx.fill(); outline();
-    if (tier >= 3) { ctx.fillStyle = C('#D8AA55'); ctx.fillRect(37 + big * .5, -12 - big, 2.5, 24 + big * 2); ctx.fillRect(51 + big * 1.5, -12 - big, 2.5, 24 + big * 2); }
-    ctx.fillStyle = C(tier >= 5 ? '#B89CFF' : tier >= 3 ? '#C8607A' : '#8FB8D8'); circle(45 + big, 0, 2.6 + (tier >= 3 ? 1 : 0)); ctx.fill();
-    if (tier >= 4) { glowRune(40 + big, -9 - big, 1.4, 6, tier >= 5 ? '#B89CFF' : '#9FE8F0'); glowRune(49 + big, 3, 1.4, 6, tier >= 5 ? '#B89CFF' : '#9FE8F0'); }
-    if (tier >= 5 && !FLASH) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(184,156,255,.25)'; rrect(32, -18, 30, 36, 10); ctx.fill(); ctx.restore(); }
+    // each level is a different hammer: 1 an iron maul, 2 a steel war hammer with a beak, 3 a gilded, flanged maul with a ruby,
+    // 4 a stormforged anvil-head with a spike and cyan runes, 5 the Shadow Breaker, black crystal crowned with spikes in a violet haze
+    const L = tier >= 4 ? 48 : 44;
+    const haft = ['#9A6234', '#6A4A30', '#4A2A1E', '#2A3444', '#1A1622'][tier - 1];
+    limb([4, 0, L, 0], haft, 4);
+    if (tier >= 2) { ctx.fillStyle = C(['', '#3A2A20', '#D8AA55', '#9FE8F0', '#8A6ACF'][tier - 1]); for (let x = 8; x < 30; x += 5) ctx.fillRect(x, -2.4, 1.8, 4.8); } // wraps and bands up the haft
+    if (tier >= 3) { ctx.fillStyle = C(tier >= 5 ? '#8A6ACF' : tier >= 4 ? '#7F9AB8' : '#D8AA55'); circle(3, 0, 3.4); ctx.fill(); outline(1); } // pommel
+    if (tier === 1) { rrect(36, -12, 18, 24, 4); ctx.fillStyle = vgrad(-12, 12, '#7E8494'); ctx.fill(); outline(); ctx.fillStyle = C('#5A606E'); ctx.fillRect(38, -12, 14, 2); }
+    else if (tier === 2) {
+      poly([38, 12, 52, 12, 45, 23], '#8E96A8', 1.3); // the beak behind
+      rrect(36, -12, 18, 24, 3); ctx.fillStyle = vgrad(-12, 12, '#AAB2C2'); ctx.fill(); outline();
+      ctx.fillStyle = C('#E8ECF4'); ctx.fillRect(37, -12, 16, 2.2); // bright striking face
+      ctx.fillStyle = C('#5A606E'); circle(45, 0, 2.2); ctx.fill();
+    } else if (tier === 3) {
+      poly([35, -10, 38, -15, 52, -15, 55, -10, 55, 10, 52, 15, 38, 15, 35, 10], vgrad(-15, 15, '#B8BCC8'), 1.6); // flanged, eight-sided head
+      ctx.fillStyle = C('#D8AA55'); ctx.fillRect(36, -15, 3, 30); ctx.fillRect(51, -15, 3, 30); ctx.fillRect(38, -2, 14, 4);
+      glow('#E86A80', 8, () => { ctx.fillStyle = C('#C8304A'); ctx.beginPath(); ctx.moveTo(45, -5); ctx.lineTo(49, 0); ctx.lineTo(45, 5); ctx.lineTo(41, 0); ctx.closePath(); ctx.fill(); }); // ruby
+    } else if (tier === 4) {
+      poly([41, 14, 49, 14, 45, 28], '#9FB4C8', 1.3); // a spike behind
+      poly([33, -18, 57, -18, 54, -12, 52, -6, 52, 6, 54, 12, 57, 18, 33, 18, 36, 12, 38, 6, 38, -6, 36, -12], vgrad(-18, 18, '#7F9AB8'), 1.7); // anvil head, flared faces
+      ctx.fillStyle = C('#C8D8E8'); ctx.fillRect(34, -18, 22, 2.4); ctx.fillRect(34, 15.6, 22, 2.4);
+      for (const y of [-11, -4, 3, 10]) glow('#9FE8F0', 9, () => { ctx.fillStyle = C('#BFF5FF'); ctx.fillRect(43, y - 1.5, 4, 2.4); }); // runes
+      aura('rgba(159,232,240,.16)', () => rrect(30, -22, 30, 44, 10));
+    } else {
+      poly([38, 16, 42, 30, 45, 18, 48, 34, 52, 16], '#2E2A3E', 1.3); // crystal spikes behind
+      poly([40, -16, 42, -30, 45, -18, 48, -26, 50, -16], '#2E2A3E', 1.3); // and above
+      poly([32, -16, 58, -16, 60, -8, 56, 0, 60, 8, 58, 16, 32, 16, 30, 8, 34, 0, 30, -8], vgrad(-16, 16, '#2E2A3E'), 1.8); // obsidian head
+      ctx.strokeStyle = C('#B89CFF'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(33, -12); ctx.lineTo(44, -2); ctx.lineTo(39, 8); ctx.moveTo(57, -10); ctx.lineTo(48, 2); ctx.lineTo(55, 12); ctx.stroke(); // violet cracks
+      glow('#B89CFF', 12, () => { ctx.fillStyle = C('#D8C8FF'); circle(45, 0, 3.6); ctx.fill(); });
+      aura('rgba(184,156,255,.22)', () => rrect(26, -32, 38, 66, 14));
+    }
     if (!pose.noHand) gripHand(hand); return;
   }
   if (kind === 'staff') {
-    const len = 58 + (tier >= 4 ? 6 : 0), cap = ['#C9A86A', '#A8B0C2', '#D8AA55', '#D8AA55', '#B89CFF'][tier - 1];
-    limb([-28, 0, len, 0], ['#B56B2E', '#8A5A3A', '#2E2440', '#2E2440', '#1C1626'][tier - 1], 3.5);
-    if (tier >= 2) { ctx.fillStyle = C(tier >= 3 ? '#D8AA55' : '#5A3A28'); for (const x of [-8, 6, 26, 40]) ctx.fillRect(x, -2.3, 2, 4.6); } // bands
-    ctx.fillStyle = C(cap); rrect(-32, -3, 7, 6, 2); ctx.fill(); rrect(len - 4, -3, 7, 6, 2); ctx.fill();
-    if (tier >= 4) for (const x of [-30, len - 2]) { ctx.save(); if (!FLASH) { ctx.shadowColor = tier >= 5 ? '#B89CFF' : '#9FE8F0'; ctx.shadowBlur = 10; } ctx.fillStyle = C(tier >= 5 ? '#D8C8FF' : '#BFF5FF'); ctx.beginPath(); ctx.moveTo(x - 1, -6); ctx.lineTo(x + 3, 0); ctx.lineTo(x - 1, 6); ctx.lineTo(x - 5, 0); ctx.closePath(); ctx.fill(); ctx.restore(); }
-    ctx.strokeStyle = C(tier >= 5 ? '#8A6ACF' : '#C8607A'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.quadraticCurveTo(-34, 8, -38 + Math.sin(performance.now() / 120) * 3, 14); ctx.stroke(); // ribbon
+    // 1 a plain ash staff, 2 ironbound with steel points, 3 crimson lacquer with gold bands and a tassel,
+    // 4 the Moonspear: pale silver with a crescent blade, 5 the Shadow Pole: black, with violet crystal blades at both ends
+    const len = tier >= 4 ? 62 : 58, back = -28;
+    const shaft = ['#B56B2E', '#6A4A30', '#9A2A30', '#A8BCD0', '#1C1626'][tier - 1];
+    const rib = ['#C8607A', '#C8607A', '#E8343A', '#9FE8F0', '#8A6ACF'][tier - 1];
+    ctx.strokeStyle = C(rib); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(back + 2, 0); ctx.quadraticCurveTo(back - 6, 8, back - 10 + Math.sin(performance.now() / 120) * 3, 14); ctx.stroke(); // ribbon
+    if (tier === 3) { ctx.fillStyle = C('#E8343A'); ctx.beginPath(); ctx.moveTo(back - 9, 13); ctx.lineTo(back - 14, 22); ctx.lineTo(back - 6, 21); ctx.closePath(); ctx.fill(); } // tassel
+    limb([back, 0, len, 0], shaft, 3.6);
+    if (tier === 1) { ctx.fillStyle = C('#C9A86A'); rrect(back - 4, -3, 7, 6, 2); ctx.fill(); rrect(len - 4, -3, 7, 6, 2); ctx.fill(); }
+    else if (tier === 2) {
+      ctx.fillStyle = C('#5A606E'); for (const x of [-8, 6, 26, 40]) ctx.fillRect(x, -2.4, 2.4, 4.8); // iron bands
+      poly([len - 3, -3, len + 9, 0, len - 3, 3], '#C8CCD4', 1.1); poly([back + 3, -3, back - 9, 0, back + 3, 3], '#C8CCD4', 1.1); // steel points
+    } else if (tier === 3) {
+      ctx.fillStyle = C('#D8AA55'); for (const x of [-12, 0, 12, 28, 42]) ctx.fillRect(x, -2.6, 2.6, 5.2);
+      for (const x of [back - 3, len - 2]) { ctx.fillStyle = C('#D8AA55'); circle(x, 0, 4.4); ctx.fill(); outline(1.1); ctx.fillStyle = C('#E8343A'); circle(x, 0, 1.6); ctx.fill(); } // gilded knobs set with garnets
+    } else if (tier === 4) {
+      ctx.beginPath(); ctx.moveTo(len - 4, -2); ctx.quadraticCurveTo(len + 14, -16, len + 20, -2); ctx.quadraticCurveTo(len + 12, -8, len + 2, 0); ctx.quadraticCurveTo(len + 12, 8, len + 20, 2); ctx.quadraticCurveTo(len + 14, 16, len - 4, 2); ctx.closePath(); // a crescent blade
+      ctx.fillStyle = vgrad(-14, 14, '#E2EEF8'); ctx.fill(); outline(1.3);
+      ctx.fillStyle = C('#7F9AB8'); rrect(back - 4, -3, 7, 6, 2); ctx.fill();
+      for (const x of [-6, 14, 34]) glow('#9FE8F0', 8, () => { ctx.fillStyle = C('#BFF5FF'); ctx.fillRect(x, -2.6, 2, 5.2); });
+      aura('rgba(159,232,240,.12)', () => rrect(back - 6, -6, len - back + 28, 12, 6));
+    } else {
+      for (const [x, d] of [[len - 2, 1], [back + 2, -1]]) glow('#B89CFF', 12, () => poly([x, -3.4, x + d * 6, -6, x + d * 22, 0, x + d * 6, 6, x, 3.4], '#4A3A7A', 1.2)); // crystal blades
+      ctx.fillStyle = C('#B89CFF'); for (const x of [-10, 8, 26, 44]) ctx.fillRect(x, -2.4, 1.6, 4.8);
+      aura('rgba(184,156,255,.2)', () => rrect(back - 26, -8, len - back + 52, 16, 8));
+    }
     if (!pose.noHand) gripHand(hand); return;
   }
   if (kind === 'sword' || kind === 'blade' || kind === 'prism') {
