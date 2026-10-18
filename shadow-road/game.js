@@ -32,7 +32,7 @@ function begin(m) {
   P.state = m.dive || (P.z > 0 && !m.hop) ? 'air' : 'atk'; P.move = m; P.t = 0; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false;
   if (Math.abs(input.mx) > 0.3 && !m.dive) P.facing = Math.sign(input.mx);
   P.vx = (m.lunge || 0) * P.facing;
-  if (m.hop) P.vz = m.hop;
+  P.hopQ = 0; if (m.hop) { if (m.prep) P.hopQ = m.hop; else P.vz = m.hop; } // a loaded move leaves the ground only once the knees have bent
   if (m.dive) { P.vz = Math.min(P.vz, -120); P.jvx = P.facing * 240; }
   else if (P.state === 'air') { P.vz = Math.max(P.vz, 110); P.jvx *= .3; P.airN = (P.airN || 0) + 1; }
   if (m.launcher) { P.holdUsed = true; P.chaseQ = false; }
@@ -41,7 +41,7 @@ function begin(m) {
     const dx = (e.x - P.x) * P.facing;
     if (dx > -10 && dx < (m.x1 || 60) + 50 && Math.abs(e.y - P.y) < 30 && Math.random() < .28) { e.state = 'evade'; e.t = .38; e.vx = Math.sign(e.x - P.x || 1) * 330; e.sqx = .8; e.sqy = 1.15; dust(e.x, e.y, 4); }
   }
-  sfx(m.power === 2 || m.rot ? 'whoosh' : 'swing');
+  sfx(m.power === 2 || m.rot || m.spin ? 'whoosh' : 'swing');
 }
 
 // ---------- player ----------
@@ -163,8 +163,9 @@ function onLand() {
 }
 function runMove(dt) {
   const m = P.move; P.t += dt; const k = P.t / m.dur;
+  if (P.hopQ && k >= m.h[0] * .8) { P.vz = P.hopQ; P.hopQ = 0; dust(P.x, P.y, 5); }
   P.x += P.vx * dt; P.vx *= Math.pow(m.lunge > 300 ? .05 : .004, dt);
-  if (m.lunge > 250 || m.rot) { P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .035; addGhost(); } }
+  if (m.lunge > 250 || m.rot || m.spin) { P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .035; addGhost(); } }
   const airborne = P.z > 0;
   if ((k >= m.h[0] && k <= m.h[1]) || (airborne && k >= m.h[0] && (m.bounce || m.shock))) doHits();
   if (m.shock && !m.hop && !P.shocked && k >= m.h[0]) shockwave(P.x + P.facing * (m.x1 * .7), P.y, m.shock, m);

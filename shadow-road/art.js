@@ -86,6 +86,73 @@ function drawCorwinHead(look, hy) {
   ctx.moveTo(7.4, hy - 8.4); ctx.quadraticCurveTo(2, hy - 10.2, -4.6, hy - 8); ctx.moveTo(4.6, hy - 7.2); ctx.quadraticCurveTo(-1, hy - 8.4, -5.6, hy - 4.4); ctx.stroke();
 }
 
+// The same head turned away from profile, for his 3/4, front and back views. The head is treated as a solid: every
+// feature sits at an angle around it (0 = straight ahead, + toward the near side) and is projected for the body's
+// turn Y (sin of the turn: +1 facing the viewer, -1 facing away). Features on the hidden side drop out.
+function drawCorwinHeadTurn(look, hy, Y) {
+  const sk = look.skin, mid = shade(sk, -.16), dark = shade(sk, -.34), ink = '#141016';
+  const CS = Math.sqrt(Math.max(0, 1 - Y * Y)), th = Math.atan2(Y, CS), cx = 1.4;
+  const P = (phi, r) => cx + r * Math.cos(phi + th), D = (phi) => Math.sin(phi + th);
+  ctx.fillStyle = C(shade(sk, -.4)); ctx.fillRect(cx - 2.8, hy + 5, 5.6, 7); // neck
+  const skull = () => { ell(cx, hy - 1.6, 7.3, 8.4); };
+  const jaw = () => { // cheeks down to the jaw's corners and the chin, wherever they face the viewer
+    ctx.beginPath(); const pts = [[-1.35, 7.2, 1.6], [-1.02, 6.8, 6.8], [-.42, 5.4, 9.2], [0, 5.6, 10], [.42, 5.4, 9.2], [1.02, 6.8, 6.8], [1.35, 7.2, 1.6]];
+    pts.forEach(([phi, r, dy], i) => { const x = P(phi, r), y = hy + dy; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath();
+  };
+  // outline the two shapes, then fill them again so only their joined edge keeps its line
+  for (const f of [skull, jaw]) { f(); ctx.lineWidth = 2.1; ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.stroke(); }
+  for (const f of [skull, jaw]) { f(); ctx.fillStyle = C(sk); ctx.fill(); }
+  if (!FLASH && !TINT) { // light from the upper right: the far side of the head turns into shadow
+    ctx.save(); skull(); ctx.clip(); const g = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g.addColorStop(0, 'rgba(70,40,40,.32)'); g.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 9, hy - 12, 18, 24); ctx.restore();
+    ctx.save(); jaw(); ctx.clip(); const g2 = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g2.addColorStop(0, 'rgba(70,40,40,.32)'); g2.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g2; ctx.fillRect(cx - 9, hy - 2, 18, 14);
+    ctx.fillStyle = 'rgba(40,28,34,.17)'; ctx.fillRect(cx - 9, hy + 4.2, 18, 8); ctx.restore(); // stubble along the jaw
+  }
+  if (Y > -.25) { // the face
+    for (const sd of [-1, 1]) { // the cheekbones' hollows
+      const phi = sd * .8, d = D(phi); if (d < .15) continue;
+      ctx.fillStyle = C(mid); ctx.beginPath(); ctx.moveTo(P(phi, 6.9), hy + 2.2); ctx.lineTo(P(sd * .45, 6.4), hy + 3); ctx.lineTo(P(phi, 6.6), hy + 4.2); ctx.closePath(); ctx.fill();
+    }
+    for (const sd of [-1, 1]) { // deep-set eyes under heavy brows, green irises looking where he faces
+      const phi = sd * .42, d = D(phi); if (d < .12) continue;
+      const ex = P(phi, 6.6), ew = 1.5 * Math.pow(d, .7);
+      ctx.fillStyle = C(dark); ell(ex, hy - 1.1, ew + .5, 1.5); ctx.fill(); // the socket's shadow
+      ctx.fillStyle = C('#EDE6DC'); ell(ex, hy - .5, ew, .75); ctx.fill();
+      const ix = ex + .45 * CS * Math.sign(Math.cos(th) || 1); ctx.fillStyle = C(look.eye); ell(ix, hy - .55, .8 * Math.max(.5, d), .72); ctx.fill();
+      ctx.fillStyle = C(ink); ell(ix, hy - .55, .38 * Math.max(.5, d), .4); ctx.fill();
+      ctx.fillStyle = C('#FFFFFF'); ctx.fillRect(ix - .45, hy - 1, .35, .35);
+      ctx.fillStyle = C(ink); ctx.fillRect(ex - ew, hy - 1.45, ew * 2, .7); // the upper lid
+      const bi = P(sd * .16, 7), bo = P(sd * .8, 6.9); // the brow, drawn down toward the nose
+      ctx.beginPath(); ctx.moveTo(bi, hy - 2.5); ctx.lineTo(bo, hy - 3.9); ctx.lineTo(bo, hy - 3); ctx.lineTo(bi, hy - 1.7); ctx.closePath(); ctx.fill();
+    }
+    const nb = P(0, 7.2), nt = P(0, 8.9); // a long straight nose; its shadow falls on the side away from the light
+    ctx.fillStyle = C(dark); ctx.beginPath(); ctx.moveTo(nb, hy - 1.6); ctx.lineTo(nt, hy + 3); ctx.lineTo(nt - 1.8, hy + 3.4); ctx.lineTo(nb - .7, hy); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = C(shade(sk, .12)); ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(nb + .3, hy - 1.4); ctx.lineTo(nt + .2, hy + 2.6); ctx.stroke();
+    ctx.fillStyle = C(shade(sk, -.5)); for (const sd of [-1, 1]) if (D(sd * .2) > .2) { ell(P(sd * .2, 8.1), hy + 3.3, .45, .3); ctx.fill(); } // nostrils
+    const m0 = D(-.34) > 0 ? P(-.34, 6.6) : P(-Math.PI / 2 - th, 6.6), m1 = D(.34) > 0 ? P(.34, 6.6) : P(Math.PI / 2 - th, 6.6); // a set mouth
+    ctx.strokeStyle = C(shade(sk, -.55)); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(m0, hy + 5.4); ctx.lineTo(m1, hy + 5.2); ctx.stroke();
+    ctx.fillStyle = C(shade(sk, .12)); ctx.fillRect(Math.min(m0, m1) + Math.abs(m1 - m0) * .25, hy + 5.8, Math.abs(m1 - m0) * .5, .45);
+  }
+  // hair: close-cut and swept back, with some lift over the brow; it covers the crown and the back of the head
+  // and stops at a high hairline over the face
+  const hairShape = () => ell(cx - .5 * CS, hy - 2.4, 8.1, 9);
+  ctx.save(); hairShape(); ctx.clip(); ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, Y > -.25 ? 17.6 : 19.4); ctx.clip(); // down to the ears, lower at the nape
+  ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, 30);
+  if (Y > -.25) { const fv = clamp((Y + .25) / .55, 0, 1); const fx0 = cx + 4.4 * CS, frx = (3.4 + 2.4 * Math.max(0, Y)) * (.6 + .4 * fv); ctx.moveTo(fx0 + frx, hy + 3.4); ctx.ellipse(fx0, hy + 3.4, frx, 8.4, 0, 0, TAU); } // the face, cut out of the hair
+  ctx.fillStyle = C(look.hair); ctx.fill('evenodd');
+  ctx.restore();
+  if (!FLASH && !TINT) {
+    ctx.fillStyle = C('#4A4E66'); ctx.beginPath(); // light catching the wave
+    ctx.moveTo(cx + 5.6, hy - 9.6); ctx.quadraticCurveTo(cx, hy - 11.8, cx - 5.6, hy - 9.4); ctx.quadraticCurveTo(cx, hy - 10.8, cx + 5, hy - 8.8); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = C('#0A080E'); ctx.lineWidth = .6; ctx.beginPath(); // combed lines, sweeping back
+    for (const o of [-3, 0, 3]) { ctx.moveTo(cx + o * .8 + 3 * CS, hy - 9.6); ctx.quadraticCurveTo(cx + o, hy - 8, cx + o * 1.25 - 3 * CS, Y < -.25 ? hy + 2 : hy - 6); }
+    ctx.stroke();
+  }
+  for (const sd of [-1, 1]) { // ears, at the sides of the head
+    const phi = sd * 1.62, d = D(phi); if (d < -.3) continue;
+    ctx.fillStyle = C(shade(sk, -.3)); ell(P(phi, 7), hy + 1.4, .6 + .6 * Math.abs(Math.cos(phi + th)), 1.9); ctx.fill(); outline(.6);
+  }
+}
+
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
 function gripHand(col) { // a gloved hand closed around a haft
   rrect(13.6, -3.8, 7, 7.6, 2.4); ctx.fillStyle = C(col); ctx.fill(); outline(1.1);
@@ -273,48 +340,66 @@ function boot(x, col) {
 function kickOut(k, h0, h1) { // 0 chambered .. 1 full extension, with a snap out and a slower recovery
   return k < h0 ? ease(k / h0) * .25 : k <= h1 ? .25 + .75 * Math.min(1, (k - h0) / Math.max(.04, (h1 - h0) * .3)) : Math.max(0, 1 - ease((k - h1) / Math.max(.05, 1 - h1)));
 }
-function drawKickLegs(look, pose, HIP, hx) {
+function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1) {
   const out = kickOut(pose.kickK, pose.kickH[0], pose.kickH[1]), chamber = pose.kickK < pose.kickH[0];
   const L = (a, b, t) => a + (b - a) * t, legs = look.legs;
   const bootAt = (x, y, ang, col) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.translate(-1, 9); boot(0, col); ctx.restore(); };
-  const limb = (h, kn, ft, col, a) => { seg(h[0], h[1], kn[0], kn[1], 8.4, 6.4, col, .8); seg(kn[0], kn[1], ft[0], ft[1], 6.4, 4.8, col, .6); };
+  const limb = (h, kn, ft, col) => { seg(h[0], h[1], kn[0], kn[1], 8.4, 6.4, col, .8); seg(kn[0], kn[1], ft[0], ft[1], 6.4, 4.8, col, .6); };
+  // turned, each leg is foreshortened along his facing and set out to its own side; the nearer one is drawn last
+  ctx.save(); ctx.scale(Math.max(.4, CS), 1);
+  const side = (lz, f) => { ctx.save(); ctx.translate(-lz * Y / Math.max(.4, CS), 0); f(); ctx.restore(); };
+  const kickFar = Y < -.2; // his back to us: the kicking leg reaches away on the far side of his body
+  let support, kicker;
   if (pose.kickStyle === 'drop') {
-    // both legs tuck to the chest, then shoot out straight and together; the body is laid out by pose.rot
+    // both legs tuck to the chest, then shoot out straight and together; the body is laid out by pose.rot.
+    // Piked at the hips so the legs and the body make a clear V, the far leg a touch higher
     const t = chamber ? 0 : out;
-    // piked at the hips so the legs and the body make a clear V, the far leg a touch higher
     const far = [[-1 + hx, HIP], [L(9, 9, t), L(HIP + 4, HIP + 13, t)], [L(1, 18, t), L(HIP + 12, HIP + 25, t)]];
     const near = [[3 + hx, HIP], [L(12, 13, t), L(HIP + 2, HIP + 14, t)], [L(5, 22, t), L(HIP + 11, HIP + 27, t)]];
     const fa = L(-.5, -.45, t);
-    limb(...far, shade(legs, -.15)); bootAt(far[2][0], far[2][1] - 9, fa, shade(look.boots, -.1));
-    limb(...near, legs); bootAt(near[2][0], near[2][1] - 9, fa, look.boots);
+    support = () => side(-4, () => { limb(...far, shade(legs, -.15)); bootAt(far[2][0], far[2][1] - 9, fa, shade(look.boots, -.1)); });
+    kicker = () => side(4, () => { limb(...near, legs); bootAt(near[2][0], near[2][1] - 9, fa, look.boots); });
+  } else if (pose.kickStyle === 'round') {
+    // a roundhouse: the standing leg straight under him (tucked up when he is airborne), the kicking leg swung out level at the hip
+    const air = pose.kickAir;
+    support = () => side(-4, () => {
+      if (air) { limb([-2 + hx, HIP], [8, HIP + 9], [-1, HIP + 17], shade(legs, -.15)); bootAt(-2, HIP + 21, -.5, shade(look.boots, -.1)); }
+      else { limb([-2 + hx, HIP], [-1, -15], [-3, -8], shade(legs, -.15)); ctx.save(); ctx.translate(-3.4, 0); boot(0, shade(look.boots, -.1)); ctx.restore(); }
+    });
+    const kn = [L(12, 16, out), L(HIP + 2, HIP - 2, out)], ft = [L(6, 33, out), L(HIP + 12, HIP - 5, out)];
+    kicker = () => side(4, () => { limb([2 + hx, HIP], kn, ft, kickFar ? shade(legs, -.15) : legs); bootAt(ft[0], ft[1], L(.4, -Math.PI / 2 + .5, out), look.boots); });
   } else {
-    // the standing leg: bent deep and turned out, heel up, pushing the hips into the kick
+    // a driving thrust kick: the standing leg bent deep and turned out, heel up, pushing the hips in; the kicking
+    // leg's knee pulled up high to the chest, then the heel driven straight out, leg locked, at chest height
     const sx = L(-4, -11, out), skx = L(2, 4, out), sky = L(-15, -12, out);
-    limb([-2 + hx, HIP], [skx, sky], [sx + .4, -8], shade(legs, -.15));
-    ctx.save(); ctx.translate(sx, 0); ctx.rotate(-.22 * out); boot(0, shade(look.boots, -.1)); ctx.restore();
-    // the kicking leg: knee pulled up high to the chest, then the heel driven straight out, leg locked, at chest height
+    support = () => side(-4, () => { limb([-2 + hx, HIP], [skx, sky], [sx + .4, -8], kickFar ? legs : shade(legs, -.15)); ctx.save(); ctx.translate(sx, 0); ctx.rotate(-.22 * out); boot(0, kickFar ? look.boots : shade(look.boots, -.1)); ctx.restore(); });
     const kn = [L(13, 17, out), L(HIP - 7, HIP - 5, out)], ft = [L(12, 35, out), L(HIP + 6, HIP - 9, out)];
-    limb([2 + hx, HIP], kn, ft, legs);
-    bootAt(ft[0], ft[1], L(.2, -Math.PI / 2 - .12, out), look.boots);
+    kicker = () => side(4, () => { limb([2 + hx, HIP], kn, ft, kickFar ? shade(legs, -.15) : legs); bootAt(ft[0], ft[1], L(.2, -Math.PI / 2 - .12, out), kickFar ? shade(look.boots, -.1) : look.boots); });
   }
+  if (kickFar) { kicker(); support(); } else { support(); kicker(); }
+  ctx.restore();
 }
 // Figures are built heroic: long legs, a broad V of shoulders over a narrow waist, and a head about a sixth of their height.
 // Feet at y=0, hips at -30, shoulders at -49, head at -61. +x is the facing direction.
 function drawHumanoid(look, pose) {
   const walk = pose.walk || 0, sw = Math.sin(walk);
+  // the prince can turn: Y is how far he has turned from profile toward the viewer (+1, chest to us) or away (-1, his back)
+  const Y = look.corwin ? clamp(pose.Y ?? pose.yaw ?? 0, -1, 1) : 0, CS = Math.sqrt(1 - Y * Y), BACK = Y < -.35;
+  const PX = (fx, lz) => fx * CS - lz * Y; // where a point lands as he turns: fx along his facing, lz out to his near side
+  const ASX = Math.max(.32, CS); // arms swinging fore and aft foreshorten as he turns
   ctx.save();
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
   if (pose.down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
   // a walking or running body carries its weight: the hips dip as each foot lands and rise as the legs pass,
   // and each arm swings against its own leg
   const gait = walk && !pose.legs && !pose.kick && pose.kickK === undefined && !pose.down && !pose.crouch;
-  const bob = gait ? Math.abs(sw) * (pose.run ? 3.4 : 1.6) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
+  const bob = gait ? (pose.run ? (1 - Math.abs(sw)) * 3 : Math.abs(sw) * 1.6) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
   const br = pose.breath ? (pose.breath + 1) * .45 : 0; // breathing settles the body over planted feet
   const cr = (pose.crouch ? 8 : (pose.sink || 0)) + bob + br, HIP = -30 + cr, SHO = -49 + cr, NECK = -53 + cr; // sink: how far the hips drop into a stance
   const skin = look.skin || '#C9A07E', sleeve = look.sleeve || look.body;
   // the whole upper body bends at the waist; as it tips forward the hips slide back to keep his weight over his feet,
   // and as it arches back they push forward
-  const LEAN = (pose.lean || 0) + (gait ? Math.sin(walk * 2) * .025 : 0), HX = clamp(-LEAN * 6, -5, 5);
+  const LEAN = ((pose.lean || 0) + (gait ? Math.sin(walk * 2) * .025 : 0)) * (.25 + .75 * CS), HX = clamp(-LEAN * 6, -5, 5) * CS; // seen from the front, a bend is mostly toward or away from us
   const upper = () => { ctx.translate(HX, HIP); ctx.rotate(LEAN); ctx.translate(0, -HIP); };
   ctx.save(); upper();
   // cape flows behind
@@ -332,8 +417,9 @@ function drawHumanoid(look, pose) {
     ctx.restore();
   }
   ctx.restore();
-  // long coat tails swing from the waist
-  if (look.coat) {
+  // long coat tails swing from the waist; turned, they hang behind him, and over his legs when his back is to us
+  const drawCoat = () => { if (!look.coat) return;
+    ctx.save(); if (Y) { const k = Math.max(.55, CS); ctx.translate(5 * (1 - k), 0); ctx.scale(k, 1); }
     const flow = (pose.flow || 0) + Math.abs(sw) * 5;
     for (const [dx, k] of [[-2, 1], [3, .7]]) {
       ctx.beginPath(); ctx.moveTo(dx - 7, HIP - 2); ctx.quadraticCurveTo(dx - 13 - flow * k, HIP + 12, dx - 15 - flow * 1.5 * k, -5 + Math.sin(walk + dx) * 2);
@@ -341,17 +427,19 @@ function drawHumanoid(look, pose) {
       ctx.fillStyle = C(k === 1 ? look.coat : look.coat2 || look.coat); ctx.fill(); outline(1.4);
       if (!FLASH && !TINT) { ctx.strokeStyle = shade(k === 1 ? look.coat : look.coat2 || look.coat, -.35); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(dx - 6, HIP + 2); ctx.quadraticCurveTo(dx - 10 - flow * k * .6, HIP + 14, dx - 10 - flow * k, -8); ctx.stroke(); } // a fold
     }
-  }
+    ctx.restore();
+  };
+  if (!BACK) drawCoat();
   // back arm, a shade darker for being further away
   ctx.save(); upper();
-  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = -3, bsy = SHO + 1.5;
-  const bex = bsx + Math.cos(ba) * 8, bey = bsy + Math.sin(ba) * 8, bwx = bex + Math.cos(ba + .25) * 7.5, bwy = bey + Math.sin(ba + .25) * 7.5;
+  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = PX(-3, -9.5), bsy = SHO + 1.5;
+  const bex = bsx + Math.cos(ba) * 8 * ASX, bey = bsy + Math.sin(ba) * 8, bwx = bex + Math.cos(ba + .25) * 7.5 * ASX, bwy = bey + Math.sin(ba + .25) * 7.5;
   seg(bsx, bsy, bex, bey, 7, 5.6, shade(sleeve, -.18), 1); seg(bex, bey, bwx, bwy, 5.6, 4.2, shade(sleeve, -.18), .5);
-  ctx.fillStyle = C(shade(look.glove || skin, -.18)); circle(bwx + Math.cos(ba) * 1.5, bwy + Math.sin(ba) * 1.5, 2.8); ctx.fill(); outline(1);
+  ctx.fillStyle = C(shade(look.glove || skin, -.18)); circle(bwx + Math.cos(ba) * 1.5 * ASX, bwy + Math.sin(ba) * 1.5, 2.8); ctx.fill(); outline(1);
   ctx.restore();
   // legs: thighs and calves with a swell, pants tucked into boots
   const legs = look.legs;
-  if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX);
+  if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX, Y, CS);
   else if (pose.kick) {
     seg(-2, HIP, -5, HIP + 15, 8, 6, shade(legs, -.15), .6); seg(-5, HIP + 15, -4, -8, 6, 4.6, shade(legs, -.15), .8); boot(-4, shade(look.boots, -.1));
     seg(2, HIP, 17, HIP - 2, 8.4, 6.4, legs, .8); seg(17, HIP - 2, 30, HIP - 4, 6.4, 4.8, legs, .6);
@@ -368,14 +456,20 @@ function drawHumanoid(look, pose) {
     const ky = -15 + cr * .45;
     // in a stride the foot swinging forward peels off the ground, heel first, the knee leading it through
     const lh = gait ? (pose.run ? 11 : 3.5) : 0, l1 = Math.max(0, Math.cos(walk)) * lh, l2 = Math.max(0, -Math.cos(walk)) * lh;
-    const leg = (x, f, k, col, bc, lift) => {
-      const kx = x + f * .5 + k + lift * .5 + HX * .5, kyy = ky - lift * .35;
-      seg(x + HX, HIP, kx, kyy, 8.4, 6.2, col, .9); seg(kx, kyy, x + f - .6 - lift * .4, -8 - lift, 6.2, 4.6, col, 1);
-      if (lift) { ctx.save(); ctx.translate(x + f - lift * .4, -lift); ctx.rotate(lift * .03); boot(0, bc); ctx.restore(); } else boot(x + f, bc);
+    const bsc = .5 + .5 * CS; // a boot seen from the front is narrower
+    const leg = (x, lz, f, k, col, bc, lift) => {
+      const hx0 = PX(x, lz * .8) + HX, kx = PX(x + f * .5 + k + lift * .5, lz * .9) + HX * .5, kyy = ky - lift * (pose.run ? .55 : .35), fx = PX(x + f - lift * .4, lz);
+      seg(hx0, HIP, kx, kyy, 8.4, 6.2, col, .9); seg(kx, kyy, fx - .6 * CS, -8 - lift, 6.2, 4.6, col, 1);
+      ctx.save(); ctx.translate(fx, -lift); if (lift) ctx.rotate(lift * .03); ctx.scale(bsc, 1); boot(0, bc); ctx.restore();
     };
-    leg(-3, f1, k1, shade(legs, -.15), shade(look.boots, -.12), l1); // the far leg
-    leg(3, f2, k2, legs, look.boots, l2);
+    // nearer leg drawn last: in profile that is the near side, turned it is whichever foot is closer to us
+    const dFar = (-3 + f1) * Y - 5.5 * CS, dNear = (3 + f2) * Y + 5.5 * CS, nearFirst = dNear < dFar;
+    const L1 = () => leg(-3, -5.5, f1, k1, nearFirst ? legs : shade(legs, -.15), nearFirst ? look.boots : shade(look.boots, -.12), l1);
+    const L2 = () => leg(3, 5.5, f2, k2, nearFirst ? shade(legs, -.15) : legs, nearFirst ? shade(look.boots, -.12) : look.boots, l2);
+    if (nearFirst) { L2(); L1(); } else { L1(); L2(); }
   }
+  if (BACK) drawCoat();
+  if (BACK) { ctx.save(); upper(); frontArm(); ctx.restore(); } // his back is to us: the weapon arm is on the far side of him
   // torso (leans around the hips): a broad V of shoulders over a narrow waist
   ctx.save(); upper();
   if (look.robot) {
@@ -402,6 +496,12 @@ function drawHumanoid(look, pose) {
       ctx.restore();
     }
     torso(); outline();
+    if (BACK) { // from behind: a high collar, the seam down his spine, the coat pulled across his shoulder blades
+      ctx.fillStyle = C(shade(look.body, -.35)); ctx.beginPath(); ctx.moveTo(-5, ty - .8); ctx.quadraticCurveTo(0, ty + 2.6, 5, ty - .8); ctx.lineTo(4, ty - 2.4); ctx.lineTo(-4, ty - 2.4); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = C(shade(look.body, -.5)); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(0, ty + 2); ctx.lineTo(0, HIP - 2);
+      ctx.moveTo(-8, ty + 5); ctx.quadraticCurveTo(-4, ty + 9, -1.4, ty + 6); ctx.moveTo(8, ty + 5); ctx.quadraticCurveTo(4, ty + 9, 1.4, ty + 6); ctx.stroke();
+      ctx.fillStyle = C(look.trim); ctx.fillRect(-8, HIP - 2.5, 16, 3.6); // belt
+    } else {
     ctx.fillStyle = C(skin); ctx.beginPath(); ctx.moveTo(-3, ty - .6); ctx.lineTo(0, ty + 4); ctx.lineTo(3.4, ty - .6); ctx.closePath(); ctx.fill(); // the open throat
     ctx.fillStyle = C(shade(look.body, .18)); // lapels
     ctx.beginPath(); ctx.moveTo(-6.4, ty + .6); ctx.lineTo(-.4, ty + 9); ctx.lineTo(-3, ty - .4); ctx.closePath(); ctx.fill();
@@ -422,6 +522,7 @@ function drawHumanoid(look, pose) {
       ctx.fillStyle = C('#8E96A8'); circle(rx, ry, .8); ctx.fill(); ctx.restore();
     }
     if (look.chain) { ctx.strokeStyle = C(look.trim); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-8, HIP + 1); ctx.quadraticCurveTo(-2, HIP + 6, 6, HIP + 2); ctx.stroke(); }
+    }
   }
   // head
   const hy = -61 + cr;
@@ -431,7 +532,7 @@ function drawHumanoid(look, pose) {
     ctx.fillStyle = C(look.visor); ctx.fillRect(1, hy - 3, 8, 3.5);
     if (look.plume) { ctx.fillStyle = C(look.plume); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.quadraticCurveTo(-14, hy - 18, -20, hy - 8); ctx.quadraticCurveTo(-12, hy - 10, -6, hy - 4); ctx.fill(); }
   } else if (look.corwin) {
-    ctx.save(); headScale(); drawCorwinHead(look, hy); ctx.restore();
+    ctx.save(); headScale(); if (Math.abs(Y) < .3) drawCorwinHead(look, hy); else drawCorwinHeadTurn(look, hy, Y); ctx.restore();
   } else {
     ctx.save(); headScale();
     ctx.fillStyle = C(shade(skin, -.22)); ctx.fillRect(-1.5, hy + 5, 5, 6); // neck
@@ -457,11 +558,13 @@ function drawHumanoid(look, pose) {
     ctx.restore();
   }
   ctx.restore();
+  if (!BACK) frontArm();
   // front arm + weapon: shoulder, a bent elbow, forearm, hand
+  function frontArm() {
   const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw;
   if (pose.trail) drawTrail(0, SHO + 2, pose);
   if (pose.flat) drawFlatTrail(1, SHO + 2, pose.flat);
-  ctx.save(); ctx.translate(1, SHO + 2); ctx.rotate(arm);
+  ctx.save(); ctx.translate(PX(1, 9.5), SHO + 2); ctx.scale(ASX, 1); ctx.rotate(arm);
   if (pose.sweep !== undefined) ctx.scale(Math.sign(pose.sweep || 1) * Math.max(.14, Math.abs(pose.sweep)), 1); // a horizontal swing: the weapon comes around the body
   const reach = 15 + (pose.ext || 0) * 12; // a thrust drives the arm out
   const ex = reach * .5, ey = 1.6 - (pose.ext || 0) * 1.2;
@@ -476,10 +579,11 @@ function drawHumanoid(look, pose) {
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   drawWeapon(pose.weapon || look.weapon, pose);
   ctx.restore();
-  if (look.pauldron) {
+  if (look.pauldron) { ctx.save(); ctx.translate(PX(1, 9.5) - 1, 0);
     ctx.beginPath(); ctx.ellipse(1, SHO + 1, 8.6, 6.4, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); ctx.fillStyle = C(look.pauldron); ctx.fill();
     if (!FLASH && !TINT) { ctx.fillStyle = shade(look.pauldron, .35); ell(4, SHO - 2.4, 3, 1.2, -.3); ctx.fill(); }
     ctx.beginPath(); ctx.ellipse(1, SHO + 1, 8.6, 6.4, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); outline(1.4); ctx.fillStyle = C(look.trim); ctx.fillRect(-4, SHO - 1, 9, 1.5);
+  ctx.restore(); }
   }
   ctx.restore();
   ctx.restore();

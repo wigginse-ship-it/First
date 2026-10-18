@@ -44,14 +44,21 @@ function playerPose() {
       if (k >= m.h[0] && k <= m.h[1] + .12) pose.flat = { r: w.reach + 22, k: kk, rev, col: tcol, w: P.w === 'sword' || P.w === 'hammer' ? 8 : 5 };
       pose.lean = .1;
     }
-    if (m.kick && P.w === 'fists' && !m.around && m.name !== 'Roundhouse') { // the driving thrust kick and the flying dropkick
+    if (m.kick && P.w === 'fists' && (m.key === 'LLLL' || m.key === 'LLH')) { // spinning kicks: the whole body turns, through his back
+      const spinK = m.key === 'LLH';
+      pose.kickK = k; pose.kickStyle = 'round'; pose.flow = 12; pose.kickAir = P.z > 2;
+      pose.kickH = spinK ? [.08, .92] : m.h; const out = kickOut(k, pose.kickH[0], pose.kickH[1]);
+      pose.spin = spinK ? -TAU * 2 * clamp((k - .06) / .8, 0, 1) : -TAU * ease(clamp((k - .02) / .72, 0, 1));
+      if (spinK) { pose.arm = -.25; pose.elbow = .2; pose.backArm = 3.5; pose.lean = -.15; } // arms flung wide like rotor blades
+      else { pose.lean = lerp(.1, -.3, out); pose.arm = .9; pose.elbow = 1.6; pose.backArm = lerp(1, 2.6, out); } // guard kept, leaning away from the kick
+    } else if (m.kick && P.w === 'fists') { // the driving thrust kick and the flying dropkick
       const fly = P.z > 4 || m.key === 'R' || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
       pose.kickK = k; pose.kickH = m.h; pose.kickStyle = fly ? 'drop' : 'lunge'; pose.flow = 12;
-      if (fly) { // tucked, then laid out flat with both feet driven forward and the arms flung back behind his head
-        pose.rot = -1.2 * out; pose.lean = lerp(.35, -.1, out);
+      if (fly) { // tucked, then laid out flat with both feet driven forward, the body twisting open toward us
+        pose.rot = -1.2 * out; pose.lean = lerp(.35, -.1, out); pose.yaw = lerp(-.2, .45, out);
         pose.arm = lerp(1, 3.6, out); pose.elbow = lerp(1.2, .3, out); pose.backArm = lerp(-.4, 3.4, out);
-      } else { // coiled forward over the chambered knee, then the whole torso arches back to throw the hips behind the heel
-        pose.sink = 4 * out; pose.lean = lerp(.3, -.5, out);
+      } else { // coiled forward over the chambered knee, then the hips turn over and the torso arches back behind the heel
+        pose.sink = 4 * out; pose.lean = lerp(.3, -.5, out); pose.yaw = lerp(0, -.5, out);
         pose.arm = lerp(.9, 1.1, out); pose.elbow = lerp(1.7, 1.9, out); pose.backArm = lerp(.9, 2.4, out); // fists kept up in front of the chest
       }
     } else if (m.kick) { pose.kick = 1; pose.arm = -.5; }
@@ -64,6 +71,11 @@ function playerPose() {
     if (!m.style && pose.kickK === undefined) pose.lean = m.power ? .2 : .1;
     pose.flow = Math.abs(P.vx) * .02;
     if (P.z <= 2 && !m.kick && !m.rot && !m.around) attackStance(pose, m, k); // the body moves with the weapon
+    if (m.prep && (P.z <= 6 || k < m.h[0])) { // an uppercut is loaded from the legs: sink into the knees, then drive up through them
+      const h0 = m.h[0];
+      if (k < h0) { const q = ease(Math.min(1, k / (h0 * .85))); pose.sink = 9 * q; pose.legs = { f: 8, b: -9, fk: 3 + 6 * q, bk: 2 + 7 * q }; pose.lean = .32 * q; pose.backArm = lerp(1.2, .5, q); pose.yaw = -.15 * q; }
+      else { const q = ease(Math.min(1, (k - h0) / ((m.h[1] - h0) * .6))); pose.sink = lerp(9, -2, q); pose.legs = { f: lerp(8, 3, q), b: lerp(-9, -6, q), fk: lerp(9, 0, q), bk: lerp(9, 1, q) }; pose.lean = lerp(.32, -.2, q); pose.backArm = lerp(.5, 2.3, q); pose.yaw = lerp(-.15, .2, q); }
+    }
   } else if (P.state === 'charge') {
     pose.arm = -2.2; pose.crouch = 1; pose.walk = 0;
     pose.glow = ['', '#D8AA55', '#FFE9A0', '#C8607A'][P.clvl] || '';
@@ -91,6 +103,18 @@ function playerPose() {
     pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; // arms hanging loose at his sides, just off the body
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
+  // turning: walking toward or away from us he shows his chest or his back, and a change of direction is a quick
+  // turn through the front (through the back when heading away) instead of a flip
+  const now = performance.now(), loco = ['idle', 'walk', 'run'].includes(P.state);
+  if (P.lastF === undefined) P.lastF = P.facing;
+  if (P.facing !== P.lastF) { P.lastF = P.facing; P.turnAt = loco ? now : 0; P.turnDir = input.my < -.25 ? -1 : 1; }
+  let tY = 0;
+  if (P.state === 'walk' || P.state === 'run') { const ax = Math.abs(input.mx), ay = Math.abs(input.my); if (ay > .2) tY = Math.sign(input.my) * ay / (ax + ay) * .95; }
+  const dtv = Math.min(.05, (now - (P.yawAt || now)) / 1000); P.yawAt = now;
+  P.yawV = (P.yawV || 0) + (tY - (P.yawV || 0)) * Math.min(1, dtv * 9);
+  if (pose.yaw === undefined) pose.yaw = P.yawV;
+  const tt = (now - (P.turnAt || 0)) / 170;
+  if (loco && tt < 1 && !pose.spin) pose.spin = P.turnDir * Math.PI * (1 - ease(tt));
   return pose;
 }
 function humanEnemyPose(e) {
@@ -106,6 +130,9 @@ function humanEnemyPose(e) {
   return pose;
 }
 function drawPlayerAt(x, y, z, facing, pose, alpha) {
+  // his turn (yaw) plus any spin in progress: past a quarter turn he is seen facing the other way
+  const ang = Math.asin(clamp(pose.yaw || 0, -1, 1)) + (pose.spin || 0), c = Math.cos(ang);
+  pose.Y = Math.sin(ang); if (c < 0) facing = -facing;
   ctx.save(); ctx.globalAlpha = alpha;
   ctx.translate(x, y - z); ctx.scale(facing, 1);
   if (pose.stretch) ctx.scale(pose.stretch, 1 / pose.stretch); // smeared out by speed
