@@ -734,12 +734,14 @@ function awPrismMid(rnd) {
   for (let i = 0; i < 14; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => awCluster(x, FLOOR_TOP + 2, 12 + r() * 16, [190, 280, 320, 170][i % 4], r, 46));
 }
 
+// painters for each locale, by theme id; the zone art files add their own locales to these
+const AW_FAR = { bloom: awBloomFar, sky: awSkyFar, prism: awPrismFar }, AW_MID = { bloom: awBloomMid, sky: awSkyMid, prism: awPrismMid };
 function buildBackground(themeId, seed) {
   const key = themeId + K + seed; if (key === bgKey) return; bgKey = key;
   const rnd = mulberry(seed), th = THEMES[themeId];
   const [fc, f] = makeLayer(1280, FLOOR_TOP), [mc, m] = makeLayer(1280, FLOOR_TOP);
   const old = ctx;
-  const far = { bloom: awBloomFar, sky: awSkyFar, prism: awPrismFar }[themeId] || awBloomFar, mid = { bloom: awBloomMid, sky: awSkyMid, prism: awPrismMid }[themeId] || awBloomMid;
+  const far = AW_FAR[themeId] || awBloomFar, mid = AW_MID[themeId] || awBloomMid;
   ctx = f; far(rnd, th, f);
   ctx = m; mid(rnd);
   ctx = old;
@@ -885,11 +887,12 @@ function awFloorPrism(rnd, th) {
   for (let i = 0; i < 16; i++) awWR(rnd() * AW_W, 24, rnd, (x, r) => awCluster(x, T + 1, 10 + r() * 16, [190, 280, 320, 170][i % 4], r, 50));
   const sh = ctx.createLinearGradient(0, VH - 34, 0, VH); sh.addColorStop(0, 'rgba(6,4,14,0)'); sh.addColorStop(1, 'rgba(6,4,14,.45)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 34, AW_W, 34);
 }
+const AW_FLOOR = { bloom: awFloorBloom, sky: awFloorSky, prism: awFloorPrism };
 function awBuildFloor(themeId, th, seed) {
   retire(awFloorC); awFloorC = null;
   const [c, g] = makeLayer(AW_W, VH - AW_FT0), old = ctx; ctx = g; ctx.translate(0, -AW_FT0);
   const rnd = mulberry(seed * 31 + 5);
-  ({ bloom: awFloorBloom, sky: awFloorSky, prism: awFloorPrism }[themeId] || awFloorBloom)(rnd, th);
+  (AW_FLOOR[themeId] || awFloorBloom)(rnd, th);
   ctx = old; awFloorC = c; awFloorKey = themeId;
 }
 // every frame: the painted floor strip scrolls with the world (anchored to world x, so nothing swims), plus a few live touches
@@ -913,5 +916,6 @@ function drawFloorLayer(themeId, th, camX, t) {
     for (let x = off(70); x < VW + 70; x += 70) { const w = Math.floor((x + camX) / 70 + .5), a = Math.max(0, Math.sin(t * 2.4 + w * 2.1)); if (a < .2) continue;
       const px = x + hsh(w) * 60, py = FLOOR_TOP + 10 + hsh(w + 3) * 100, s = 1 + a * 2.2; ctx.fillStyle = `rgba(255,240,255,${a * .8})`; awPath([px, py - s, px + .4, py - .4, px + s, py, px + .4, py + .4, px, py + s, px - .4, py + .4, px - s, py, px - .4, py - .4]); ctx.fill(); }
   }
+  if (th.liveFloor) th.liveFloor(camX, t); // a locale's own live touches (cheap: drawn every frame)
   ctx.restore();
 }

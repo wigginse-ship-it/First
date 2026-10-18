@@ -40,9 +40,11 @@ function showOnly(id) {
   app.classList.toggle('playing', id === null);
   $('#hud').hidden = id === 'titleOv' || id === 'forgeOv' || id === 'winOv';
 }
-function play(i) {
+function play(i, zone = 0) {
   save.started = true; persist(); clearInput();
-  startStage(i); mode = 'play'; showOnly(null); playMusic(STAGES[i].theme);
+  startStage(i); retryZone = 0;
+  if (zone > 0) { enterZone(zone); const Z = ZONES[i].zones[zone]; banner(Z.title, Z.sub, 2.4); } // a retry starts where you fell
+  mode = 'play'; showOnly(null); playMusic(STAGES[i].theme);
 }
 function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
 function resume() { mode = 'play'; clearInput(); showOnly(null); }
@@ -201,7 +203,7 @@ $('#resumeBtn').addEventListener('click', resume);
 $('#sfxBtn').addEventListener('click', () => { sfxOn = !sfxOn; try { localStorage.setItem('shadowroad-sfx', sfxOn ? '1' : '0'); } catch (e) {} $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); });
 $('#quitBtn').addEventListener('click', () => { persist(); mode = 'title'; refreshTitle(); showOnly('titleOv'); playMusic('title'); });
 $('#musicBtn').addEventListener('click', () => { setMusic(!musicOn); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); });
-$('#retryBtn').addEventListener('click', () => play(save.stage));
+$('#retryBtn').addEventListener('click', () => play(save.stage, retryZone));
 $('#overForgeBtn').addEventListener('click', () => openForge('REGROUP AND REFORGE'));
 $('#cycleBtn').addEventListener('click', () => { save.cycle++; save.stage = 0; persist(); openForge('CYCLE ' + (save.cycle + 1) + ' BEGINS'); });
 onKeyMenu = (e) => {
@@ -255,6 +257,7 @@ function step(now) {
     if (input.light) P.holdL = (P.holdL || 0) + rawDt; else { P.holdL = 0; P.holdUsed = false; } // real time, so hit freezes don't stall a held button
     if (slowmo > 0) { slowmo -= dt; dt *= .3; }
     if (hitstop > 0) hitstop -= dt;
+    else if (zoneTrans) updateZoneTrans(dt);
     else { updatePlayer(dt); updateWorld(dt); }
     updateFx(hitstop > 0 ? dt * .25 : dt);
     shakeMag = Math.max(0, shakeMag - dt * 30); zoom = Math.max(0, zoom - dt * .25);

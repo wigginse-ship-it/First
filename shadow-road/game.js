@@ -29,7 +29,7 @@ function nextMove(key) {
 function begin(m) {
   if (m === 'charge') { P.state = 'charge'; P.ct = 0; P.clvl = 0; P.seq = 'H'; return; }
   if (!m) { P.state = 'idle'; return; }
-  P.state = m.dive || (P.z > 0 && !m.hop) ? 'air' : 'atk'; P.move = m; P.t = 0; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false;
+  P.state = m.dive || (P.z > 0 && !m.hop) ? 'air' : 'atk'; P.move = m; P.t = 0; P.moveId = (P.moveId || 0) + 1; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false;
   if (Math.abs(input.mx) > 0.3 && !m.dive) P.facing = Math.sign(input.mx);
   P.vx = (m.lunge || 0) * P.facing;
   P.hopQ = 0; if (m.hop) { if (m.prep) P.hopQ = m.hop; else P.vz = m.hop; } // a loaded move leaves the ground only once the knees have bent
@@ -54,7 +54,7 @@ function updatePlayer(dt) {
     P.z += P.vz * dt;
     if (P.z <= 0) { P.z = 0; P.vz = 0; onLand(); }
   }
-  const mx = input.mx, my = input.my, sp = W_SPEED[P.w] || 1;
+  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1); // tiny, he scurries
   switch (P.state) {
     case 'idle': case 'walk': case 'run': {
       if (pressed.swap) swapWeapon();
@@ -198,7 +198,7 @@ function chaseJump() { // leap up after a launched enemy
 }
 function startDodge() {
   let dx = input.mx, dy = input.my;
-  if (!dx && !dy) dx = P.facing;
+  if (!dx && !dy) dx = -P.facing; // dodging in place is the backstep: a hop away that keeps him facing the threat
   const d = Math.hypot(dx, dy) || 1;
   P.state = 'dodge'; P.t = .34; P.dq = false; P.dvx = dx / d * 300; P.dvy = dy / d * 150; P.inv = Math.max(P.inv, .36); P.seq = '';
   // the dash depends on its direction: a low lunge forward, a hopping backstep that keeps you facing the enemy,
@@ -280,6 +280,8 @@ function strike(e, base, dir, m, echo) {
     if (heavy) { e.guard -= m.power === 2 || m.trump ? 2 : 1; if (e.guard <= 0) { e.guard = 0; broke = true; } else { floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD ' + '◆'.repeat(e.guard), '#EED48A', 11); sfx('hit-metal', .6); } }
     else { dmg = Math.max(1, Math.round(dmg * .25)); m = Object.assign({}, m, { kb: (m.kb || 0) * .15, launch: 0, noStun: 1 }); sfx('hit-metal', .2); } // light hits glance off the guard
   }
+  if (e.shrink < .8) { dmg = Math.round(dmg * 1.4); m = Object.assign({}, m, { kb: (m.kb || 0) * 2.4 + 120, launch: (m.launch || 0) * 1.5 + 140 }); } // a shrunken foe is punted
+  if (P.shrink < .8) dmg = Math.max(1, Math.round(dmg * .75)); // and a shrunken prince hits softer
   hurtEnemy(e, dmg, dir, m, crit);
   if (broke && !e.dead) { // the guard shatters and leaves it reeling
     e.state = 'down'; e.t = 1.3; e.vx = dir * 60; e.plan = null; hitstop = Math.max(hitstop, .14); shakeMag = Math.max(shakeMag, 7); sfx('break');

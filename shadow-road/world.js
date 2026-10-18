@@ -331,6 +331,7 @@ function updateLoot(dt) {
   loot = loot.filter(k => !k.got);
 }
 function gainWeapon(id) {
+  runFoundW = true;
   save.owned[id] = true; save.weapon = id; P.w = id; P.seq = ''; persist();
   sfx('weapon'); flashT = .15; zoom = .05; slowmo = .4;
   burst(P.x, P.y, 50, ['#EED48A', '#FFFFFF', '#D08AB0'], 30, 'spark', 0, true);
@@ -340,10 +341,9 @@ function gainWeapon(id) {
 
 // ---------- the stage ----------
 function startStage(i) {
-  stageIdx = i; stage = STAGES[i];
+  stageIdx = i; stage = baseStage = STAGES[i]; runFoundW = false; zoneTrans = null;
   P = newPlayer();
   enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; corpses = [];
-  props = stage.pods.map(x => ({ kind: 'pod', x, y: FLOOR_TOP + 46 + (x % 3) * 18, hp: 1, theme: stage.theme }));
   setZoom(VIEW_NORMAL);
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
@@ -361,7 +361,7 @@ function startStage(i) {
     } else if (n === 0) { save.pity.any = Math.min(.5, (save.pity.any || 0) + .2); }
   });
   persist();
-  buildBackground(stage.theme, i * 97 + 13);
+  enterZone(0);
   $('#bossbar').hidden = true; $('#go').hidden = true;
   refreshHud(true); refreshCombo();
   banner(stage.name, stage.sub + (save.cycle ? ' · CYCLE ' + (save.cycle + 1) : ''), 2.4);
@@ -372,9 +372,11 @@ function updateWorld(dt) {
     waveActive = true; lockX = clamp(camX, 0, stage.len - VW); $('#go').hidden = true;
     const wave = stage.waves[waveIdx];
     wave.forEach((t, j) => spawnQ.push({ type: t, side: j % 2 ? -1 : 1, at: j * .8, drop: null }));
-    for (const d of carriers) if (d.wave === waveIdx && !save.owned[d.weapon]) spawnQ[d.slot].drop = d.weapon; // nothing marks the carrier
+    if (stage.w0 + waveIdx === 2) boostDrop();
+    for (const d of carriers) if (d.wave === stage.w0 + waveIdx && !save.owned[d.weapon]) spawnQ[d.slot].drop = d.weapon; // nothing marks the carrier
   }
-  if (!bossSpawned && waveIdx >= stage.waves.length && P.x > stage.len - VW * .75) {
+  if (!stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length && P.x > stage.len - 90) startZoneTrans(); // on to the next place
+  if (stage.bossRoom && !bossSpawned && P.x > stage.len - VW * .75) {
     setZoom(VIEW_BOSS); // pull the camera back so the whole arena and the boss fit
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;
     boss = spawnEnemy(stage.boss, 1, true);
@@ -389,7 +391,8 @@ function updateWorld(dt) {
   else camX = Math.max(camX, camX + (target - camX) * Math.min(1, dt * 5));
   camX = clamp(camX, 0, Math.max(0, stage.len - VW));
 
-  for (const e of enemies) updateEnemy(e, dt);
+  updateMech(dt); updateShrink(P, dt);
+  for (const e of enemies) { updateShrink(e, dt); updateEnemy(e, dt); }
   enemies = enemies.filter(e => !e.remove);
   if (stillT <= 0) for (const p of projs) {
     if (p.orbit) {

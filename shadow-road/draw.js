@@ -123,6 +123,7 @@ function playerPose() {
     pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; // arms hanging loose at his sides, just off the body
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
+  if (P.shrink < 1) pose.shrink = P.shrink;
   // turning: walking toward or away from us he shows his chest or his back, and a change of direction is a quick
   // turn through the front (through the back when heading away) instead of a flip
   const now = performance.now(), loco = ['idle', 'walk', 'run'].includes(P.state);
@@ -160,12 +161,13 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
   ctx.save(); ctx.globalAlpha = alpha;
   ctx.translate(x, y - z); ctx.scale(facing, 1);
   if (pose.stretch) ctx.scale(pose.stretch, 1 / pose.stretch); // smeared out by speed
+  if (pose.shrink && pose.shrink < 1) ctx.scale(pose.shrink, pose.shrink); // shrunk by the spores
   drawHumanoid(heroLook(), pose);
   ctx.restore();
 }
 function drawEnemy(e, t) {
   if (e.state === 'dying' && e.death && e.death !== 'pop') { drawDeath(e, t); return; }
-  const scale = e.boss ? e.size : 1;
+  const scale = (e.boss ? e.size : 1) * (e.shrink || 1);
   const a = { walk: e.dead ? 0 : e.walk, t: e.dead ? e.deadAt : t, wind: e.state === 'wind' ? 1 - e.t / e.windMax : 0, atk: ['strike', 'dash', 'pounce'].includes(e.state), hurt: ['hurt', 'down', 'dying'].includes(e.state) };
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') { a.pose = humanEnemyPose(e); if (e.state === 'down' || (e.state === 'dying' && !e.air)) a.pose.down = 1; }
   shadow(e.x, e.y, e.hw * 1.1 * Math.max(.4, 1 - e.z / 200));
@@ -320,6 +322,7 @@ function drawScene(t) {
   ctx.save();
   if (shakeMag > 0) ctx.translate(rand(-1, 1) * shakeMag + shakeDir * shakeMag * .4, rand(-1, 1) * shakeMag * .6);
   if (zoom > 0) { const px = P.x - camX, py = P.y - 40; ctx.translate(px, py); ctx.scale(1 + zoom, 1 + zoom); ctx.translate(-px, -py); }
+  zoneViewTurn();
   drawWorld(stage.theme, camX, t);
   ctx.translate(-camX, 0);
   // resting debris lies flat on the floor under everything
@@ -335,6 +338,7 @@ function drawScene(t) {
   for (const k of loot) box(k.x, k.y, k.z || 0, 40, 50);
   for (const p of projs) box(p.x, p.y, p.z || 0, 50, 50);
   if (stag) box(stag.x, stag.y, 0, 90, 130);
+  mechBoxes(box);
   inkBegin(boxes);
   corpses.forEach((c, i) => { c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; drawDeath(c, t); });
   const list = [];
@@ -356,6 +360,7 @@ function drawScene(t) {
   }]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
   if (stag) list.push([stag.y + .2, () => drawStag(stag, t)]);
+  mechList(list, t);
   list.sort((a, b) => a[0] - b[0]).forEach(o => o[1]());
   inkEnd(t);
   for (const p of parts) if (!p.rest) drawPart(p);
@@ -383,6 +388,7 @@ function drawScene(t) {
     ctx.fillStyle = g; ctx.fillRect(0, Y_OFF, VW, VIEW_H);
   }
   if (slowmo > 0) { ctx.fillStyle = `rgba(255,220,140,${Math.min(.12, slowmo * .1)})`; ctx.fillRect(0, Y_OFF, VW, VIEW_H); }
+  if (zoneTrans) drawZoneTrans(t);
   paperFrame();
 }
 function drawPart(p) {

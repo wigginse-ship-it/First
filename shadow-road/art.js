@@ -768,8 +768,12 @@ function drawWorld(themeId, camX, t) {
   const sx = VW * th.sun[0] - camX * .02, sy = Y_OFF + VIEW_H * th.sun[1];
   const sg = ctx.createRadialGradient(sx, sy, 4, sx, sy, 160); sg.addColorStop(0, `rgba(${th.sun[2]},.95)`); sg.addColorStop(.15, `rgba(${th.sun[2]},.5)`); sg.addColorStop(1, `rgba(${th.sun[2]},0)`);
   ctx.fillStyle = sg; ctx.fillRect(sx - 160, sy - 160, 320, 320);
+  if (typeof WORLD_TILT !== 'undefined' && WORLD_TILT) { ctx.save(); ctx.translate(VW / 2, FLOOR_TOP); ctx.rotate(WORLD_TILT); ctx.scale(1.3, 1.3); ctx.translate(-VW / 2, -FLOOR_TOP); } // the deck banks: the world beyond the rail tilts
   skyWash(camX);
-  if (themeId === 'prism') {
+  const skyKind = th.skyKind || (themeId === 'prism' ? 'ribbons' : 'clouds'); // a locale may also paint its own live sky
+  if (th.liveSky) th.liveSky(camX, t);
+  else if (skyKind === 'none') {}
+  else if (skyKind === 'ribbons') {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 3; i++) { ctx.strokeStyle = `hsla(${170 + i * 60 + Math.sin(t * .3) * 20},60%,60%,.12)`; ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(-20, 80 + i * 24); for (let x = 0; x <= VW + 40; x += 40) ctx.lineTo(x, 80 + i * 24 + Math.sin(x * .01 + t * .5 + i) * 16); ctx.stroke(); }
     ctx.restore();
@@ -787,6 +791,7 @@ function drawWorld(themeId, camX, t) {
   const wash = ctx.createRadialGradient(sx, sy, 10, sx, sy, VW * .7); wash.addColorStop(0, `rgba(${th.sun[2]},.22)`); wash.addColorStop(1, `rgba(${th.sun[2]},0)`);
   ctx.fillStyle = wash; ctx.fillRect(0, Y_OFF, VW, FLOOR_TOP - Y_OFF);
   ctx.restore();
+  if (typeof WORLD_TILT !== 'undefined' && WORLD_TILT) ctx.restore();
   drawFloor(themeId, th, camX, t);
 }
 function drawFloor(themeId, th, camX, t) {
