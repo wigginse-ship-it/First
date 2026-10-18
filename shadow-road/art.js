@@ -24,57 +24,66 @@ function shadow(x, y, rx) { // cast on the floor, so it is painted under the ink
   if (inkG && ctx === inkG) onMain(f); else f();
 }
 
-// the hero's face, drawn the way good sprite art handles a face at this size: a three-quarter view,
-// two flat tones of skin with a hard shadow edge, dark brows over simple eyes, the nose only a shadow,
-// and the hair as a few big chunky locks with one band of light on them
+// the hero's face, drawn in more detail than anyone else, in a comic-cover style: a three-quarter view with flat
+// planes of light and shadow. A long face with high cheekbones and a strong, angular jaw; heavy brows drawn down
+// over deep-set green eyes; a long straight nose; stubble; and dark, wavy hair with volume, swept back over the ears.
 function drawCorwinHead(look, hy) {
-  const sk = look.skin, shadowSk = shade(sk, -.3), ink = '#141016';
-  ctx.fillStyle = C(shade(sk, -.38)); ctx.fillRect(-1.6, hy + 5, 5.6, 6.5); // neck, in the jaw's shadow
+  const sk = look.skin, mid = shade(sk, -.16), dark = shade(sk, -.34), ink = '#141016';
+  ctx.fillStyle = C(shade(sk, -.4)); ctx.fillRect(-.6, hy + 5, 5, 7); // neck, in the jaw's shadow
   const head = () => {
-    ctx.beginPath(); ctx.moveTo(-6, hy - 7);
-    ctx.quadraticCurveTo(0, hy - 10.4, 5.4, hy - 9.2); ctx.quadraticCurveTo(9.2, hy - 7.6, 9.2, hy - 3); // crown and brow
-    ctx.lineTo(9.6, hy + 2.4); ctx.quadraticCurveTo(9.4, hy + 6.6, 7.6, hy + 8.2); // cheek down to a square chin
-    ctx.quadraticCurveTo(5, hy + 9.4, 1.4, hy + 7.6); ctx.lineTo(-4.4, hy + 3.6); // jaw back to the ear
-    ctx.quadraticCurveTo(-8.4, hy + 1, -6, hy - 7); ctx.closePath();
+    ctx.beginPath(); ctx.moveTo(-5.6, hy - 8);
+    ctx.quadraticCurveTo(.4, hy - 11.2, 5.6, hy - 9.6); ctx.quadraticCurveTo(9, hy - 8, 9.2, hy - 3.8); // crown and brow
+    ctx.lineTo(9.7, hy - 2.2); ctx.lineTo(9.3, hy - 1); ctx.lineTo(10.6, hy + 2.8); ctx.lineTo(9.5, hy + 3.4); // brow ridge, a long straight nose
+    ctx.lineTo(9.6, hy + 4.6); ctx.lineTo(9.2, hy + 5.6); ctx.lineTo(9.9, hy + 7.4); ctx.lineTo(9.3, hy + 9.4); // lips and a prominent chin
+    ctx.lineTo(6.6, hy + 10.2); ctx.lineTo(1.6, hy + 7.8); // the strong angle of the jaw
+    ctx.lineTo(-2.8, hy + 3); ctx.quadraticCurveTo(-7, hy - 1, -5.6, hy - 8); ctx.closePath();
   };
   head(); ctx.fillStyle = C(sk); ctx.fill();
-  ctx.save(); head(); ctx.clip(); // the hard-edged shadow side, turned away from the light
-  ctx.fillStyle = C(shadowSk); ctx.beginPath(); ctx.moveTo(-10, hy - 12); ctx.lineTo(1, hy - 12); ctx.quadraticCurveTo(-.4, hy + 1, 2.4, hy + 6.2); ctx.quadraticCurveTo(6, hy + 7.6, 9.4, hy + 6.6); ctx.lineTo(9.4, hy + 12); ctx.lineTo(-10, hy + 12); ctx.closePath(); ctx.fill();
-  ctx.fillRect(3, hy - 2.6, 7, 1.1); // the brow throws a shadow across the eyes
-  ctx.beginPath(); ctx.moveTo(8.7, hy - .6); ctx.lineTo(9.8, hy + 2.6); ctx.lineTo(8, hy + 2.6); ctx.closePath(); ctx.fill(); // the nose, told by its shadow
+  ctx.save(); head(); ctx.clip();
+  ctx.fillStyle = C(mid); // the side of the head, turned from the light
+  ctx.beginPath(); ctx.moveTo(-10, hy - 12); ctx.lineTo(1.8, hy - 12); ctx.quadraticCurveTo(.6, hy - 2, 1.6, hy + 3); ctx.lineTo(2.8, hy + 7.4); ctx.lineTo(-10, hy + 12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C(dark);
+  ctx.beginPath(); ctx.moveTo(2.2, hy + 2); ctx.lineTo(6.8, hy + 2.8); ctx.lineTo(3.4, hy + 4.4); ctx.closePath(); ctx.fill(); // hollow under the cheekbone
+  ctx.beginPath(); ctx.moveTo(1, hy + 7.4); ctx.lineTo(6.6, hy + 10.4); ctx.lineTo(9.6, hy + 9.2); ctx.lineTo(9.6, hy + 12); ctx.lineTo(0, hy + 12); ctx.closePath(); ctx.fill(); // under the jaw
+  ctx.beginPath(); ctx.moveTo(3.6, hy - 2.8); ctx.lineTo(9.6, hy - 2.6); ctx.lineTo(8.6, hy - 1.4); ctx.lineTo(6.2, hy - 1.7); ctx.lineTo(4.2, hy - 1.2); ctx.closePath(); ctx.fill(); // deep-set eyes in the brow's shadow
+  ctx.beginPath(); ctx.moveTo(8.4, hy - 1.2); ctx.lineTo(9.2, hy + 2.8); ctx.lineTo(8, hy + 3.2); ctx.closePath(); ctx.fill(); // the side of the nose
+  ctx.fillStyle = 'rgba(40,28,34,.17)'; // stubble over the jaw, chin and upper lip
+  ctx.beginPath(); ctx.moveTo(1.4, hy + 4); ctx.quadraticCurveTo(5, hy + 4.8, 7.6, hy + 3.8); ctx.lineTo(10, hy + 3.6); ctx.lineTo(10, hy + 10); ctx.lineTo(1.4, hy + 8.4); ctx.lineTo(-1.4, hy + 5.4); ctx.closePath(); ctx.fill();
   ctx.restore();
-  head(); outline(1.1);
-  ctx.fillStyle = C(shade(sk, -.42)); ell(-2.4, hy + 1.8, 1.4, 2.1); ctx.fill(); // ear
-  // eyes: whites with the green irises pushed to the front corners, so he looks ahead where he's facing
-  ctx.fillStyle = C('#EDE6DC'); ctx.beginPath(); ctx.moveTo(4.4, hy - 1.2); ctx.lineTo(7.3, hy - 1.4); ctx.lineTo(7, hy + .3); ctx.lineTo(4.8, hy + .2); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(8.5, hy - 1.3); ctx.lineTo(9.6, hy - 1.4); ctx.lineTo(9.5, hy + .2); ctx.lineTo(8.6, hy + .2); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = C(look.eye); ctx.fillRect(5.9, hy - 1.3, 1.3, 1.5); ctx.fillRect(9, hy - 1.3, .6, 1.4);
-  ctx.fillStyle = C(ink); ctx.fillRect(6.4, hy - 1, .8, .9); ctx.fillRect(9.2, hy - 1, .4, .8); // pupils, at the front of each iris
-  ctx.fillRect(4.2, hy - 1.6, 3.2, .7); ctx.fillRect(8.4, hy - 1.6, 1.3, .6); // upper lash lines
-  // brows: heavy and level, drawing down toward the nose
-  ctx.fillStyle = C(ink); ctx.beginPath(); ctx.moveTo(3.4, hy - 3.6); ctx.lineTo(7.8, hy - 3.2); ctx.lineTo(7.6, hy - 2.1); ctx.lineTo(3.8, hy - 2.5); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(8.5, hy - 3.1); ctx.lineTo(9.8, hy - 3.5); ctx.lineTo(9.7, hy - 2.5); ctx.lineTo(8.5, hy - 2.1); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = C(shade(sk, -.5)); ctx.fillRect(6.6, hy + 4.4, 2.4, .8); // a set mouth
-  // stubble shadowing the jaw, chin and upper lip, and a hint of a cleft in the square chin
-  if (!FLASH) {
-    ctx.fillStyle = 'rgba(40,30,38,.26)'; ctx.beginPath();
-    ctx.moveTo(.4, hy + 3); ctx.quadraticCurveTo(3, hy + 4.6, 6.4, hy + 3.8); ctx.lineTo(9.6, hy + 3.4); ctx.lineTo(9.6, hy + 6.6);
-    ctx.quadraticCurveTo(9.4, hy + 8.4, 7.6, hy + 8.4); ctx.quadraticCurveTo(5, hy + 9.6, 1.4, hy + 7.8); ctx.lineTo(-1.6, hy + 5.6); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(60,35,35,.5)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(9.1, hy + 6.8); ctx.lineTo(9.3, hy + 7.9); ctx.stroke();
-  }
-  // dark hair with real volume: swept up off the brow and back, short at the nape, with heavy sideburns
+  head(); outline(1.05);
+  ctx.strokeStyle = C(shade(sk, -.5)); ctx.lineWidth = .55; ctx.beginPath();
+  ctx.moveTo(8.6, hy + 3.4); ctx.quadraticCurveTo(7.6, hy + 4.6, 7.8, hy + 6.2); // the crease from nose to mouth
+  ctx.moveTo(9.3, hy + 8); ctx.lineTo(9.6, hy + 9); // a hint of a cleft in the chin
+  ctx.stroke();
+  ctx.fillStyle = C(dark); ctx.beginPath(); ctx.moveTo(9.4, hy + 3.1); ctx.lineTo(10.2, hy + 3); ctx.lineTo(9.6, hy + 3.5); ctx.fill(); // nostril
+  ctx.fillStyle = C(shade(sk, -.42)); ell(-2.2, hy + 1.6, 1.4, 2.2); ctx.fill(); // ear
+  // eyes: whites, green irises toward the front, a heavy upper lid
+  ctx.fillStyle = C('#EDE6DC'); ctx.beginPath(); ctx.moveTo(4.4, hy - 1); ctx.lineTo(7.4, hy - 1.3); ctx.lineTo(7.1, hy + .3); ctx.lineTo(4.9, hy + .2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(8.6, hy - 1.2); ctx.lineTo(9.6, hy - 1.3); ctx.lineTo(9.5, hy + .2); ctx.lineTo(8.7, hy + .2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C(look.eye); ctx.fillRect(5.9, hy - 1.2, 1.4, 1.5); ctx.fillRect(9, hy - 1.2, .6, 1.4);
+  ctx.fillStyle = C(ink); ctx.fillRect(6.5, hy - .9, .75, .9); ctx.fillRect(9.2, hy - .9, .4, .8); // pupils
+  ctx.fillStyle = C('#FFFFFF'); ctx.fillRect(6.1, hy - 1.1, .4, .4); // a glint
+  ctx.fillStyle = C(ink); ctx.fillRect(4.2, hy - 1.6, 3.4, .75); ctx.fillRect(8.4, hy - 1.6, 1.3, .65); // upper lids
+  // heavy brows drawn down toward the nose, with a crease between them
+  ctx.beginPath(); ctx.moveTo(3.4, hy - 3.9); ctx.lineTo(6, hy - 4.1); ctx.lineTo(8.4, hy - 3); ctx.lineTo(8.1, hy - 2.2); ctx.lineTo(5.8, hy - 3); ctx.lineTo(3.8, hy - 2.8); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(8.9, hy - 2.7); ctx.lineTo(9.9, hy - 3.6); ctx.lineTo(9.9, hy - 2.7); ctx.lineTo(9.1, hy - 2.1); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = C(shade(sk, -.45)); ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(8.7, hy - 3.6); ctx.lineTo(8.8, hy - 2.6); ctx.stroke();
+  ctx.fillStyle = C(shade(sk, -.55)); ctx.beginPath(); ctx.moveTo(7.6, hy + 5); ctx.lineTo(9.5, hy + 4.7); ctx.lineTo(9.4, hy + 5.3); ctx.lineTo(7.8, hy + 5.4); ctx.closePath(); ctx.fill(); // a set mouth
+  ctx.fillStyle = C(shade(sk, .12)); ctx.fillRect(8.2, hy + 5.7, 1.1, .5); // light on the lower lip
+  // dark hair, cut close: swept back off the brow with a slight wave, lying flat to the skull and tapered at the nape
   ctx.fillStyle = C(look.hair); ctx.beginPath();
-  ctx.moveTo(9.4, hy - 5.6);
-  ctx.quadraticCurveTo(10.6, hy - 8.6, 9.6, hy - 10.4); ctx.lineTo(7.6, hy - 9.6); ctx.quadraticCurveTo(7.8, hy - 12, 5.4, hy - 13); ctx.lineTo(4.4, hy - 11.8); ctx.quadraticCurveTo(2, hy - 13.8, -1, hy - 13.2); // loose, tousled locks swept up and back
-  ctx.quadraticCurveTo(-8.6, hy - 12.4, -9.8, hy - 4.6); ctx.quadraticCurveTo(-10.4, hy + 1.4, -7.8, hy + 5.4); // over the crown, down the back
-  ctx.lineTo(-5.8, hy + 3.6); ctx.lineTo(-4.6, hy + 5.8); ctx.lineTo(-3.2, hy + 2.6); // short, choppy at the nape
-  ctx.quadraticCurveTo(-3.6, hy, -2.8, hy - 1.6); ctx.lineTo(-.4, hy - 1.6); ctx.lineTo(-.2, hy + 4.4); ctx.lineTo(1.6, hy + 4); ctx.lineTo(1.6, hy - 4); // a thick sideburn
-  ctx.quadraticCurveTo(4, hy - 6.2, 6.4, hy - 5.8); ctx.quadraticCurveTo(8, hy - 5.4, 9.4, hy - 5.6); ctx.closePath(); // the hairline, swept clear of the brow
-  ctx.fill(); outline(1.1);
-  ctx.fillStyle = C('#454A62'); ctx.beginPath(); // light catching the swept-back waves
-  ctx.moveTo(6, hy - 12); ctx.quadraticCurveTo(1, hy - 13.4, -5, hy - 10.8); ctx.quadraticCurveTo(1, hy - 12, 5.6, hy - 11); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(6.6, hy - 8); ctx.quadraticCurveTo(2, hy - 10, -3, hy - 8.6); ctx.quadraticCurveTo(2, hy - 9.2, 6, hy - 7.2); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = C('#0A080E'); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(7.4, hy - 6.4); ctx.quadraticCurveTo(4, hy - 9.4, -2, hy - 10.4); ctx.moveTo(-6, hy - 9); ctx.quadraticCurveTo(-8.6, hy - 4, -7, hy + 2); ctx.stroke(); // strands
+  ctx.moveTo(9.4, hy - 6.4);
+  ctx.quadraticCurveTo(10.4, hy - 9, 8.6, hy - 10.4); ctx.quadraticCurveTo(5.6, hy - 12.6, .6, hy - 12.2); // a slight wave lifting off the brow
+  ctx.quadraticCurveTo(-5, hy - 11.8, -6.8, hy - 7); ctx.quadraticCurveTo(-8, hy - 2.4, -6.6, hy + 2.6); // close over the crown and down the back
+  ctx.lineTo(-5.6, hy + 4.4); ctx.lineTo(-4.8, hy + 3); ctx.lineTo(-4, hy + 4.2); ctx.lineTo(-3.4, hy + 2.2); // tapered at the nape
+  ctx.quadraticCurveTo(-3.6, hy + .4, -3, hy - .6); ctx.quadraticCurveTo(-1.8, hy - 1.4, -.8, hy - .8); // above the ear
+  ctx.lineTo(-.2, hy + 3.4); ctx.lineTo(.6, hy + 3); ctx.lineTo(.8, hy - 4.4); // sideburn
+  ctx.quadraticCurveTo(2.6, hy - 7.6, 5.6, hy - 7.8); ctx.quadraticCurveTo(7.8, hy - 7.6, 9.4, hy - 6.4); ctx.closePath(); // a high hairline
+  ctx.fill(); outline(1.05);
+  ctx.fillStyle = C('#4A4E66'); // light catching the wave
+  ctx.beginPath(); ctx.moveTo(8, hy - 10); ctx.quadraticCurveTo(3, hy - 12, -3.6, hy - 10.6); ctx.quadraticCurveTo(2.4, hy - 11.2, 7.2, hy - 9.2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = C('#0A080E'); ctx.lineWidth = .6; ctx.beginPath(); // combed lines
+  ctx.moveTo(7.4, hy - 8.4); ctx.quadraticCurveTo(2, hy - 10.2, -4.6, hy - 8); ctx.moveTo(4.6, hy - 7.2); ctx.quadraticCurveTo(-1, hy - 8.4, -5.6, hy - 4.4); ctx.stroke();
 }
 
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
@@ -145,7 +154,7 @@ function drawHumanoid(look, pose) {
     ctx.lineTo(-4, -14 + cr); ctx.closePath(); ctx.fillStyle = C(look.cape); ctx.fill(); outline(1.8);
   }
   // the hero's head is drawn a little larger than life, so his face reads at a glance
-  const hs = look.corwin ? 1.28 : 1, headScale = () => { ctx.translate(1, -51 + cr); ctx.scale(hs, hs); ctx.translate(-1, 51 - cr); };
+  const hs = look.corwin ? 1.14 : 1, headScale = () => { ctx.translate(1, -51 + cr); ctx.scale(hs, hs); ctx.translate(-1, 51 - cr); };
   // long hair streams behind the head
   if (look.longHair) {
     ctx.save(); headScale();
