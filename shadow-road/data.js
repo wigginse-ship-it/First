@@ -80,8 +80,8 @@ const WEAPONS = {
     } },
   sword: { name: 'Great Sword', reach: 64, look: 'sword', charge: true, desc: 'Huge damage. Hold Heavy to charge, release to strike.',
     tree: {
-      L:    { dur: .5,  h: [.4, .62], x0: 0, x1: 84, dmg: 18, kb: 200, arc: [-1.9, 1.1], lunge: 50, depth: 20, power: 1 },
-      LL:   { name: 'Horizontal Cleave', dur: .55, h: [.35, .65], x0: 0, x1: 90, dmg: 22, kb: 300, arc: [.25, .25], lunge: 60, depth: 28, power: 1 },
+      L:    { dur: .5,  h: [.4, .62], x0: 0, x1: 84, dmg: 18, kb: 200, arc: [-1.9, 1.1], lunge: 120, depth: 20, power: 1 }, // each swing carries him a step in
+      LL:   { name: 'Horizontal Cleave', dur: .55, h: [.35, .65], x0: 0, x1: 90, dmg: 22, kb: 300, arc: [.25, .25], lunge: 130, depth: 28, power: 1 },
       LLL:  { name: 'Piercing Thrust', dur: .5, h: [.35, .6], x0: 0, x1: 112, dmg: 24, kb: 340, arc: [.05, .05], lunge: 120, power: 1, wall: 1 },
       LLLL: { name: 'Wheel Cleave', dur: .62, h: [.25, .7], x0: 0, x1: 86, dmg: 26, kb: 320, arc: [-P_, P_], around: 1, hop: 160, spin: 1, power: 2 },
       LH:   { name: 'Rising Slash', dur: .55, h: [.2, .55], x0: 0, x1: 80, dmg: 22, kb: 80, launch: 500, arc: [1.6, -2.3], hop: 320, lunge: 170, power: 1 },
@@ -146,6 +146,8 @@ const STYLES = {
 };
 for (const id in STYLES) for (const k in STYLES[id]) if (WEAPONS[id].tree[k]) WEAPONS[id].tree[k].style = STYLES[id][k];
 for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) WEAPONS[id].tree[k].key = k;
+// the everyday combos hit a little softer and the learned moves a good deal harder, so the moves you earn are worth using
+for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) { const m = WEAPONS[id].tree[k]; if (k === 'RIP') continue; m.dmg = m.lvl ? Math.round(m.dmg * 1.3) : Math.max(1, Math.round(m.dmg * (id === 'fists' ? .92 : .85))); }
 function unlockList(id) {
   const w = WEAPONS[id], list = [];
   for (const k in w.tree) if (w.tree[k].lvl) list.push(w.tree[k]);

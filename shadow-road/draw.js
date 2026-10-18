@@ -73,6 +73,7 @@ function playerPose() {
       pose.arm = (m.arc ? m.arc[0] : 0) - pose.lean * .9; pose.ext = e2;
     }
     if (m.weave) { pose.arm = lerp(-1.2, .9, Math.abs(Math.sin(kk * Math.PI * 2.5))); }
+    if (P.specialT > 0 && !pose.glow) pose.glow = `rgba(238,212,138,${(.45 * P.specialT / .4).toFixed(2)})`; // the glint of a learned move
     if (m.crouch || m.dive) pose.crouch = 1;
     if (m.rot) pose.rot = m.rot * ease(k / .75);
     if (!m.style && k >= m.h[0] && k <= m.h[1] + .12 && !m.kick && Math.abs(arc[1] - arc[0]) > .1) {

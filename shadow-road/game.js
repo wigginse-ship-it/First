@@ -42,6 +42,10 @@ function begin(m) {
     if (dx > -10 && dx < (m.x1 || 60) + 50 && Math.abs(e.y - P.y) < 30 && Math.random() < .28) { e.state = 'evade'; e.t = .38; e.vx = Math.sign(e.x - P.x || 1) * 330; e.sqx = .8; e.sqy = 1.15; dust(e.x, e.y, 4); }
   }
   sfx(m.power === 2 || m.rot || m.spin ? 'whoosh' : 'swing');
+  if (m.lvl) { // a learned move: a soft chime and a gold glint along the weapon, so you know it came out
+    P.specialT = .4; sfx('charge', 3);
+    fx.push({ kind: 'ring', x: P.x + P.facing * 14, y: P.y, z: 40, t: .3, max: .3, r: 22, col: '#EED48A' });
+  }
 }
 
 // ---------- player ----------
@@ -169,7 +173,7 @@ function onLand() {
   else if (P.state === 'hurt' && P.knocked) { P.state = 'down'; P.t = .6; shakeMag = Math.max(shakeMag, 3); }
 }
 function runMove(dt) {
-  const m = P.move; P.t += dt * (pw('haste') ? 1.2 : 1); const k = P.t / m.dur;
+  const m = P.move; P.specialT = Math.max(0, (P.specialT || 0) - dt); P.t += dt * (pw('haste') ? 1.2 : 1); const k = P.t / m.dur;
   if (P.hopQ && k >= m.h[0] * .8) { P.vz = P.hopQ; P.hopQ = 0; dust(P.x, P.y, 5); }
   P.x += P.vx * dt; P.vx *= Math.pow(m.lunge > 300 ? .05 : .004, dt);
   if (m.lunge > 250 || m.rot || m.spin) { P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .035; addGhost(); } }
@@ -424,7 +428,7 @@ function dropLoot(e) {
   // richer pickings deeper in: each world drops more, and an armored elite drops a lot more
   maybeDropPower(e); maybeDropArrow(e);
   if (e.champ) { loot.push(makeLoot('sigil', e.x, e.y, 1)); loot.push(makeLoot('heal', e.x, e.y, 30)); } // a champion always pays
-  const n = Math.round(rand(a, b) * (pw('fortune') ? 2 : 1) * (1 + .2 * save.cycle) * [.55, .9, 1.3, 1.7][Math.min(stageIdx, 3)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
+  const n = Math.round(rand(a, b) * (pw('fortune') ? 2 : 1) * (1 + .2 * save.cycle) * [.47, .77, 1.1, 1.45][Math.min(stageIdx, 3)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
   if (e.boss) for (let i = 0; i < 3 + Math.min(stageIdx, 2); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
   else if (Math.random() < (e.def.sigil || 0) * [1, 1.4, 1.8, 2.1][Math.min(stageIdx, 3)] + (e.elite ? .65 : 0) + .04 * Math.min(stageIdx, 3)) loot.push(makeLoot('sigil', e.x, e.y, 1)); // elites usually carry a sigil, the ink for Trump cards

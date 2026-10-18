@@ -271,7 +271,7 @@ function buildFrame() {
   g.save(); const cs = Math.max(.6, K / 4.5); g.scale(cs, cs); g.fillStyle = texPat(g, 'crack'); g.fillRect(0, 0, w / cs, h / cs); g.restore();
   const vg = g.createRadialGradient(w / 2, h * .5, m * .5, w / 2, h * .5, w * .62);
   vg.addColorStop(0, 'rgba(90,60,30,0)'); vg.addColorStop(1, 'rgba(90,55,25,.4)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);
-  frameOrnate(g, w, h, Math.round(m * FRAME_B));
+  // (no border round the play area any more: the whole picture is the stage)
   frameC = c;
 }
 function skyWash(camX) { // the sky is laid in with long, nearly level strokes that drift slowly with the view

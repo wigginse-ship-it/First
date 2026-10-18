@@ -107,8 +107,9 @@ function moveListHtml(id) {
 // prices climb steeply, and each new cycle of the road makes everything dearer again
 const cyc = () => 1 + .5 * (save.cycle || 0);
 const WMAX = () => save.cycle > 0 ? 12 : 6; // past level 6 (new cycles only) each level is a plain damage bump
-const wCost = (lvl) => lvl < 6 ? { s: Math.round((45 * lvl + 12 * lvl * lvl) * cyc()), g: lvl >= 2 ? Math.round((lvl - 1) * 1.5 * cyc()) : 0 } : { s: Math.round((320 + 90 * (lvl - 6)) * cyc()), g: Math.round((5 + 2 * (lvl - 6)) * cyc()) };
-const aCost = (lvl) => ({ s: Math.round((50 * lvl + 10 * lvl * lvl) * cyc()), g: lvl >= 3 ? Math.round((lvl - 2) * 2 * cyc()) : 0 });
+// tuned so a world pays for one or two upgrades, no more
+const wCost = (lvl) => lvl < 6 ? { s: Math.round([0, 90, 190, 330, 520, 760][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7][lvl] * cyc()) } : { s: Math.round((900 + 120 * (lvl - 6)) * cyc()), g: Math.round((8 + 2 * (lvl - 6)) * cyc()) };
+const aCost = (lvl) => ({ s: Math.round([0, 100, 220, 380, 600, 900][lvl] * cyc()), g: Math.round([0, 0, 1, 2, 3, 4][lvl] * cyc()) });
 const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
@@ -256,7 +257,7 @@ function layout() {
   cv.width = Math.round(gw * dpr); cv.height = Math.round(gh * dpr);
   Object.assign(cv.style, { width: gw + 'px', height: gh + 'px', left: (cw - gw) / 2 + 'px', top: (ch - gh) / 2 + 'px' });
   Object.assign($('#hud').style, { left: (cw - gw) / 2 + 'px', top: (ch - gh) / 2 + 'px', width: gw + 'px', height: gh + 'px' });
-  $('#hud').style.setProperty('--fi', Math.round(Math.min(gw, gh) * FRAME_B * 1.35) + 'px'); // the gilded frame's width (see buildFrame)
+  $('#hud').style.setProperty('--fi', '6px'); // the HUD's inset from the edge (there is no frame now)
   if (stage) { bgKey = ''; buildBackground(stage.theme, stageIdx * 97 + 13); camX = clamp(camX, 0, Math.max(0, stage.len - VW)); }
 }
 window.addEventListener('resize', layout);
