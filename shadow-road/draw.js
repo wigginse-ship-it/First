@@ -528,6 +528,7 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
 }
 
 function drawHazard(h, t) {
+  if (HAZARD_FX[h.kind]) { HAZARD_FX[h.kind].draw(h, t); return; }
   const k = 1 - Math.max(0, h.t) / h.max;
   if (h.kind === 'ring') { // a shockwave ring rolling across the floor
     if (h.delay > 0) return;
@@ -595,6 +596,7 @@ function drawTell(e, t) {
   const k = 1 - e.t / e.windMax, a = .12 + .3 * k + .1 * Math.sin(t * 20), p = e.plan, f = e.facing;
   ctx.save();
   ctx.fillStyle = `rgba(230,70,70,${a})`; ctx.strokeStyle = `rgba(255,120,110,${.5 + .4 * k})`; ctx.lineWidth = 2;
+  if (TELL_FX[p]) { TELL_FX[p](e, t, k); ctx.restore(); return; }
   if (p === 'bite' || p === 'swing') {
     const len = e.def.reach + e.hw, x0 = f > 0 ? e.x : e.x - len;
     rrect(x0, e.y - 20, len, 40, 18); ctx.fill(); ctx.stroke();

@@ -13,6 +13,8 @@ const ZONES = [
     { theme: 'prism2', len: 1700, waves: [2], pods: [1200], mech: 'echo', title: 'The Inverted Gallery', sub: 'TIME RUNS TWICE HERE · YOUR ECHO FIGHTS BESIDE YOU' },
     { theme: 'prismBoss', len: 1000, waves: [], boss: 1, title: "The Wyrm's Nest", sub: 'THE STARS ARE WATCHING' } ] },
 ];
+// other files can add passages (TRANS_FX[kind](T, p, c, inP, t) draws one) and approach rules (MECH_FX[kind] = { start(m), update(m, dt), boxes(m, box), list(m, list, t) })
+const TRANS_FX = {}, MECH_FX = {};
 let zoneIdx = 0, zoneTrans = null, baseStage = null, mech = null, snapC = null, runFoundW = false, retryZone = 0;
 const zoneTheme = (z) => (THEMES[ZONES[stageIdx].zones[z].theme] ? ZONES[stageIdx].zones[z].theme : baseStage.theme); // falls back while art is missing
 
@@ -72,7 +74,8 @@ function drawZoneTrans(t) {
   const T = zoneTrans, p = T.t / T.dur, inP = p < .5, c = inP ? ease(p * 2) : 1 - ease((p - .5) * 2);
   const X0 = 0, X1 = VW, Y0 = Y_OFF, Y1 = VH, H = Y1 - Y0;
   ctx.save();
-  if (T.kind === 'canopy') { // the forest closes over the road: a wall of leaves sweeps in, then parts onto the hollow
+  if (TRANS_FX[T.kind]) TRANS_FX[T.kind](T, p, c, inP, t);
+  else if (T.kind === 'canopy') { // the forest closes over the road: a wall of leaves sweeps in, then parts onto the hollow
     const L = inP ? X1 * (1.1 - 1.2 * c) : -60, R = inP ? X1 + 60 : X1 * (1.1 - 1.2 * (1 - c));
     const edge = (x0, y, s) => x0 + Math.sin(y * .05 + s) * 16 + Math.sin(y * .13 + s * 2) * 7;
     ctx.beginPath(); ctx.moveTo(edge(L, Y0, 1), Y0);
@@ -165,6 +168,7 @@ let WORLD_TILT = 0; // how far the airship deck has banked; the sky and the dist
 function mechStart() {
   WORLD_TILT = 0;
   if (!mech) return;
+  if (MECH_FX[mech.kind]) { MECH_FX[mech.kind].start(mech); return; }
   if (mech.kind === 'spores') { mech.shrooms = [560, 800, 1040, 1300, 1520].map((x, i) => ({ x, y: FLOOR_TOP + 22 + (i % 3) * 34, cd: 2 + i * .8, puff: 0, flash: 0 })); mech.clouds = []; }
   if (mech.kind === 'tilt') { mech.phase = 'calm'; mech.t = 4; mech.dir = 1; mech.a = 0; mech.crates = []; }
   if (mech.kind === 'echo') { mech.rec = []; mech.clock = 0; mech.hit = new Map(); mech.cur = null; }
@@ -177,6 +181,7 @@ function puff(s) { // a toadstool lets go a cloud of glittering spores
 }
 function updateMech(dt) {
   if (!mech) return;
+  if (MECH_FX[mech.kind]) { MECH_FX[mech.kind].update(mech, dt); return; }
   if (mech.kind === 'spores') {
     const k = P.state === 'atk' && P.move ? P.t / P.move.dur : -1;
     for (const s of mech.shrooms) {
@@ -253,12 +258,14 @@ function updateShrink(o, dt) {
 }
 function mechBoxes(box) {
   if (!mech) return;
+  if (MECH_FX[mech.kind]) { MECH_FX[mech.kind].boxes(mech, box); return; }
   if (mech.kind === 'spores') for (const s of mech.shrooms) box(s.x, s.y, 0, 50, 80);
   if (mech.kind === 'tilt') for (const c of mech.crates) box(c.x, c.y, 0, 40, 50);
   if (mech.kind === 'echo' && mech.cur) box(mech.cur.x, mech.cur.y, mech.cur.z, 160, 170);
 }
 function mechList(list, t) {
   if (!mech) return;
+  if (MECH_FX[mech.kind]) { MECH_FX[mech.kind].list(mech, list, t); return; }
   if (mech.kind === 'spores') {
     for (const s of mech.shrooms) list.push([s.y, () => drawShroom(s, t)]);
     for (const c of mech.clouds) list.push([c.y + 30, () => onMain(() => { // the spore cloud: soft violet, glittering

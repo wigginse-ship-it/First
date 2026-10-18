@@ -63,7 +63,7 @@ function stageClear() {
   save.stage += 1; persist();
   if (save.stage >= STAGES.length) {
     mode = 'win';
-    $('#winText').textContent = 'All three shadows are behind you. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and Trump cards come with you.';
+    $('#winText').textContent = 'Every shadow is behind you. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and Trump cards come with you.';
     showOnly('winOv'); playMusic('title');
   } else openForge(`WORLD CLEARED: +${runShards} SHARDS, +${runSigils} SIGILS`);
 }

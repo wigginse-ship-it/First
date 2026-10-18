@@ -33,7 +33,7 @@ function updateFx(dt) {
 const scaleStat = (v, k) => v * (1 + k * save.cycle);
 // each world is harder than the last: enemies take more hits to bring down, hit a little harder and attack more often.
 // Your own damage doesn't change, so leveling your weapons is what keeps pace.
-const WORLD_DIFF = [{ hp: 1, boss: 1, dmg: 1, cd: 1 }, { hp: 1.4, boss: 1.2, dmg: 1.12, cd: .88 }, { hp: 1.85, boss: 1.4, dmg: 1.25, cd: .78 }];
+const WORLD_DIFF = [{ hp: 1, boss: 1, dmg: 1, cd: 1 }, { hp: 1.4, boss: 1.2, dmg: 1.12, cd: .88 }, { hp: 1.85, boss: 1.4, dmg: 1.25, cd: .78 }, { hp: 2.35, boss: 1.65, dmg: 1.4, cd: .7 }];
 const worldDiff = () => WORLD_DIFF[Math.min(stageIdx || 0, WORLD_DIFF.length - 1)];
 // worlds 2 and 3 field armored elites: a gold guard soaks up light hits until a heavy, launcher or slam breaks it
 function makeElite(e) {
@@ -49,7 +49,7 @@ function spawnEnemy(type, side, isBoss) {
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
     dmg: Math.round(scaleStat(def.dmg, .3) * (isBoss ? 1.6 : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
-  if (!isBoss && (forceElite || (stageIdx >= 1 && def.move !== 'fly' && Math.random() < [0, .15, .22][Math.min(stageIdx, 2)]))) makeElite(e);
+  if (!isBoss && (forceElite || (stageIdx >= 1 && def.move !== 'fly' && Math.random() < [0, .15, .22, .3][Math.min(stageIdx, 3)]))) makeElite(e);
   if (isBoss) { e.phase = 1; e.baseDmg = e.dmg; e.size = 1.15; e.hw = def.hw * e.size; e.hh = def.hh * e.size; e.rageT = 0; e.staggers = 0; }
   enemies.push(e); return e;
 }
@@ -232,8 +232,12 @@ function wind(e, t) {
   if (!e.paired) recruitPartner(e); e.paired = false;
 }
 function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]) * worldDiff().cd; }
+// extension points: other files can add attack plans (PLAN_FX[plan](e)), their tells (TELL_FX[plan](e, t, k)) and hazard kinds
+// (HAZARD_FX[kind] = { update(h, dt), draw(h, t) }) without touching this file
+const PLAN_FX = {}, TELL_FX = {}, HAZARD_FX = {};
 function execute(e) {
   const p = e.plan;
+  if (PLAN_FX[p]) { PLAN_FX[p](e); return; }
   if (p === 'bite' || p === 'swing') { e.state = 'strike'; e.t = .2; sfx('swing'); e.vx = 0; }
   else if (p === 'pounce') { e.state = 'pounce'; e.vz = 300; e.vx = clamp((P.x - e.x) / .6, -340, 340); e.struck = false; e.sq = 1.3; sfx('jump'); }
   else if (p === 'shoot') { bolt(e, e.y); recover(e, .5); }
@@ -381,7 +385,7 @@ function updateWorld(dt) {
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;
     boss = spawnEnemy(stage.boss, 1, true);
     $('#bossname').textContent = boss.def.name; $('#bossbar').hidden = false;
-    boss.plan = 'roar'; playMusic('boss');
+    boss.plan = 'roar'; playMusic(TRACKS['boss_' + boss.def.draw] ? 'boss_' + boss.def.draw : 'boss'); // each boss has its own theme
   }
   for (const s of spawnQ) s.at -= dt;
   while (spawnQ.length && spawnQ[0].at <= 0) { const s = spawnQ.shift(); const e = spawnEnemy(s.type, s.side); if (s.drop) e.dropWeapon = s.drop; }
@@ -432,6 +436,7 @@ function updateHazards(dt) {
   if (stillT > 0) return;
   for (const h of hazards) {
     h.t -= dt;
+    if (HAZARD_FX[h.kind]) { HAZARD_FX[h.kind].update(h, dt); continue; }
     if (h.kind === 'ring') {
       if (h.delay > 0) { h.delay -= dt; continue; }
       h.r += h.speed * dt;

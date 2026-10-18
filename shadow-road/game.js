@@ -416,10 +416,10 @@ function popEnemy(e) { // the body hits the ground in a burst of debris and drop
 function dropLoot(e) {
   const [a, b] = e.def.shards || [30, 40];
   // richer pickings deeper in: each world drops more, and an armored elite drops a lot more
-  const n = Math.round(rand(a, b) * (1 + .3 * save.cycle) * [1, 1.5, 2.1][Math.min(stageIdx, 2)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
+  const n = Math.round(rand(a, b) * (1 + .2 * save.cycle) * [.55, .9, 1.3, 1.7][Math.min(stageIdx, 3)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
   if (e.boss) for (let i = 0; i < 3 + Math.min(stageIdx, 2); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
-  else if (Math.random() < (e.def.sigil || 0) * [1, 1.4, 1.8][Math.min(stageIdx, 2)] + (e.elite ? .65 : 0) + .04 * Math.min(stageIdx, 2)) loot.push(makeLoot('sigil', e.x, e.y, 1)); // elites usually carry a sigil, the ink for Trump cards
+  else if (Math.random() < (e.def.sigil || 0) * [1, 1.4, 1.8, 2.1][Math.min(stageIdx, 3)] + (e.elite ? .65 : 0) + .04 * Math.min(stageIdx, 3)) loot.push(makeLoot('sigil', e.x, e.y, 1)); // elites usually carry a sigil, the ink for Trump cards
   if (Math.random() < (e.boss ? 1 : .15)) loot.push(makeLoot('heal', e.x, e.y, e.boss ? 50 : 25));
   if (e.dropWeapon && !save.owned[e.dropWeapon]) loot.push(makeLoot('weapon', e.x, e.y, 0, e.dropWeapon));
 }
