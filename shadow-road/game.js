@@ -186,7 +186,10 @@ function startDodge() {
   if (!dx && !dy) dx = P.facing;
   const d = Math.hypot(dx, dy) || 1;
   P.state = 'dodge'; P.t = .34; P.dq = false; P.dvx = dx / d * 300; P.dvy = dy / d * 150; P.inv = Math.max(P.inv, .36); P.seq = '';
-  if (dx) P.facing = Math.sign(dx);
+  // the dash depends on its direction: a low lunge forward, a hopping backstep that keeps you facing the enemy,
+  // or a quick sidestep up or down the street
+  P.dk = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'side' : Math.sign(dx) === P.facing ? 'fwd' : 'back';
+  if (P.dk === 'back' && P.z <= 0) P.vz = 170;
   sfx('whoosh');
 }
 function swapWeapon() {
@@ -240,7 +243,7 @@ function strike(e, base, dir, m, echo) {
   let raw = base * rand(.9, 1.1) * (stillT > 0 ? 2 : 1);
   if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
-  const dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' ? 1 : .85)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
+  const dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' ? 1 : .78)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
   hurtEnemy(e, dmg, dir, m, crit);
   if (m === P.move && dir === P.facing && !m.around && !(m.lunge >= 300)) P.carry = Math.max(P.carry || 0, Math.min(Math.abs(e.vx) * (e.air ? 1.4 : .8), 340));
   if (brandT > 0 && !m.trump && !m.el && !e.dead) applyElement(e, base, dir);

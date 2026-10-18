@@ -33,7 +33,12 @@ function playerPose() {
     if (P.clvl && Math.sin(performance.now() / 45) > 0) pose.glow = '#FFFFFF';
   } else if (P.state === 'run') { pose.run = 1; pose.lean = .28; pose.flow = 8; pose.arm = 1.9; pose.backArm = 2.2; }
   else if (P.state === 'jump') { pose.crouch = 1; pose.arm = .2; pose.rot = P.vz < 0 ? 0 : 0; pose.flow = 4; }
-  else if (P.state === 'dodge') { pose.crouch = 1; pose.arm = 1.4; pose.rot = -TAU * (1 - P.t / .34) * P.facing * P.facing; }
+  else if (P.state === 'dodge') {
+    const k = 1 - P.t / .34;
+    if (P.dk === 'fwd') { pose.crouch = 1; pose.run = 1; pose.walk = 1.3; pose.lean = .55; pose.arm = 2.5; pose.backArm = 2.8; pose.flow = 12; } // a low lunge, arms swept back
+    else if (P.dk === 'back') { pose.walk = -1.2; pose.lean = -.32; pose.arm = -.25; pose.backArm = .5; pose.flow = -4; pose.crouch = k > .75 ? 1 : 0; } // a backstep, guard up
+    else { pose.crouch = 1; pose.walk = Math.sin(k * Math.PI) * 1.1; pose.lean = .12; pose.arm = .5; pose.backArm = 1.6; } // a quick sidestep
+  }
   else if (P.state === 'hurt') { pose.arm = -1; pose.lean = -.3; }
   else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
   else if (P.w === 'sword') pose.arm = .55;
