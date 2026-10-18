@@ -266,6 +266,34 @@ function boot(x, col) {
   ctx.fillStyle = C(shade(col, .25)); ctx.fillRect(x - 3.6, -9, 6, 1.6); // cuff
   if (!FLASH && !TINT) { ctx.fillStyle = 'rgba(255,245,230,.35)'; ell(x + 4.4, -2.6, 1.6, .7, -.3); ctx.fill(); } // shine
 }
+// Kicks are animated from the move's progress: the knee chambers up, the leg snaps out, then folds back.
+// 'lunge' is a stepping front kick on the ground, the standing leg driving the body forward behind it;
+// 'fly' is a flying kick, the lead leg spearing forward and down while the other tucks beneath.
+function drawKickLegs(look, pose, HIP) {
+  const k = pose.kickK, h0 = pose.kickH[0], h1 = pose.kickH[1];
+  const out = k < h0 ? ease(k / h0) * .35 : k <= h1 ? .35 + .65 * Math.min(1, (k - h0) / Math.max(.05, (h1 - h0) * .45)) : Math.max(0, 1 - (k - h1) / Math.max(.05, 1 - h1)); // 0 chambered .. 1 full extension
+  const L = (a, b, t) => a + (b - a) * t, legs = look.legs;
+  const bootAt = (x, y, ang, col) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.translate(-1, 9); boot(0, col); ctx.restore(); };
+  if (pose.kickStyle === 'fly') {
+    // the trailing leg folds under him, knee forward, heel back
+    const tk = [L(6, 4, out), HIP + 11], tf = [L(-1, -7, out), HIP + 20];
+    seg(-2, HIP, tk[0], tk[1], 8, 6, shade(legs, -.15), .8); seg(tk[0], tk[1], tf[0], tf[1], 6, 4.6, shade(legs, -.15), .8);
+    bootAt(tf[0] - 1, tf[1] + 4, -.4, shade(look.boots, -.1));
+    // the lead leg: chambered high, then driven out on a downward line, the heel leading
+    const kn = [L(10, 15, out), L(HIP - 2, HIP + 3, out)], ft = [L(8, 29, out), L(HIP + 10, HIP + 9, out)];
+    seg(2, HIP, kn[0], kn[1], 8.4, 6.4, legs, .8); seg(kn[0], kn[1], ft[0], ft[1], 6.4, 4.8, legs, .6);
+    bootAt(ft[0], ft[1], L(-.3, -Math.PI / 2 + .25, out), look.boots);
+  } else {
+    // the standing leg drives off the ground behind him, knee bent and heel up as he lunges in
+    const sx = L(-6, -12, out), skx = L(-2, -3, out);
+    seg(-2, HIP, skx, -15, 8, 6, shade(legs, -.15), .8); seg(skx, -15, sx + .4, -8, 6, 4.6, shade(legs, -.15), .9);
+    ctx.save(); ctx.translate(sx, 0); ctx.rotate(-.18 * out); boot(0, shade(look.boots, -.1)); ctx.restore();
+    // the kicking leg: knee up to the chest, then a straight push out at hip height, sole first
+    const kn = [L(12, 15, out), L(HIP - 1, HIP + 1, out)], ft = [L(10, 31, out), L(HIP + 13, HIP + 2, out)];
+    seg(2, HIP, kn[0], kn[1], 8.4, 6.4, legs, .8); seg(kn[0], kn[1], ft[0], ft[1], 6.4, 4.8, legs, .6);
+    bootAt(ft[0], ft[1], L(0, -Math.PI / 2, out), look.boots);
+  }
+}
 // Figures are built heroic: long legs, a broad V of shoulders over a narrow waist, and a head about a sixth of their height.
 // Feet at y=0, hips at -30, shoulders at -49, head at -61. +x is the facing direction.
 function drawHumanoid(look, pose) {
@@ -273,7 +301,11 @@ function drawHumanoid(look, pose) {
   ctx.save();
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
   if (pose.down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
-  const cr = pose.crouch ? 8 : (pose.sink || 0), HIP = -30 + cr, SHO = -49 + cr, NECK = -53 + cr; // sink: how far the hips drop into a stance
+  // a walking or running body carries its weight: the hips dip as each foot lands and rise as the legs pass,
+  // and each arm swings against its own leg
+  const gait = walk && !pose.legs && !pose.kick && pose.kickK === undefined && !pose.down && !pose.crouch;
+  const bob = gait ? Math.abs(sw) * (pose.run ? 3.4 : 1.6) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
+  const cr = (pose.crouch ? 8 : (pose.sink || 0)) + bob, HIP = -30 + cr, SHO = -49 + cr, NECK = -53 + cr; // sink: how far the hips drop into a stance
   const skin = look.skin || '#C9A07E', sleeve = look.sleeve || look.body;
   // cape flows behind
   if (look.cape) {
@@ -300,32 +332,39 @@ function drawHumanoid(look, pose) {
     }
   }
   // back arm, a shade darker for being further away
-  const ba = pose.backArm ?? (1.25 - sw * .4), bsx = -3, bsy = SHO + 1.5;
+  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = -3, bsy = SHO + 1.5;
   const bex = bsx + Math.cos(ba) * 8, bey = bsy + Math.sin(ba) * 8, bwx = bex + Math.cos(ba + .25) * 7.5, bwy = bey + Math.sin(ba + .25) * 7.5;
   seg(bsx, bsy, bex, bey, 7, 5.6, shade(sleeve, -.18), 1); seg(bex, bey, bwx, bwy, 5.6, 4.2, shade(sleeve, -.18), .5);
   ctx.fillStyle = C(shade(look.glove || skin, -.18)); circle(bwx + Math.cos(ba) * 1.5, bwy + Math.sin(ba) * 1.5, 2.8); ctx.fill(); outline(1);
   // legs: thighs and calves with a swell, pants tucked into boots
   const legs = look.legs;
-  if (pose.kick) {
+  if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP);
+  else if (pose.kick) {
     seg(-2, HIP, -5, HIP + 15, 8, 6, shade(legs, -.15), .6); seg(-5, HIP + 15, -4, -8, 6, 4.6, shade(legs, -.15), .8); boot(-4, shade(look.boots, -.1));
     seg(2, HIP, 17, HIP - 2, 8.4, 6.4, legs, .8); seg(17, HIP - 2, 30, HIP - 4, 6.4, 4.8, legs, .6);
     ctx.save(); ctx.translate(30, HIP - 4); ctx.rotate(-Math.PI / 2); ctx.translate(-1, 9); boot(0, look.boots); ctx.restore();
   } else if (pose.down) {
     seg(-2, HIP, -4, -13, 8, 6, legs, .6); seg(-4, -13, -6, -6, 6, 4.6, legs, .6); seg(2, HIP, 6, -13, 8, 6, legs, .6); seg(6, -13, 8, -6, 6, 4.6, legs, .6);
   } else {
-    const run = pose.run ? 1.6 : 1, st = pose.stance && !walk; // a fighting stance at rest: feet apart, knees loose
+    const run = pose.run ? 1.95 : 1.15, st = pose.stance && !walk; // a fighting stance at rest: feet apart, knees loose
     let f1 = st ? -7 : sw * 10 * run, f2 = st ? 7 : -sw * 10 * run;
-    let k1 = cr ? 9 : st ? 2 : Math.max(0, sw) * 6, k2 = cr ? 9 : st ? 3 : Math.max(0, -sw) * 6;
+    let k1 = gait ? 1.5 : cr ? 9 : st ? 2 : Math.max(0, sw) * 6, k2 = gait ? 1.5 : cr ? 9 : st ? 3 : Math.max(0, -sw) * 6; // in a stride the knees stay long; the bend comes from the lifting leg
     if (pose.legs) { // an attack stance: where each foot plants and how far each knee bends
       const L = pose.legs; f1 = L.b; f2 = L.f; k1 = L.bk; k2 = L.fk;
     }
     const ky = -15 + cr * .45;
-    const leg = (x, f, k, col, bc) => { seg(x, HIP, x + f * .5 + k, ky, 8.4, 6.2, col, .9); seg(x + f * .5 + k, ky, x + f - .6, -8, 6.2, 4.6, col, 1); boot(x + f, bc); };
-    leg(-3, f1, k1, shade(legs, -.15), shade(look.boots, -.12)); // the far leg
-    leg(3, f2, k2, legs, look.boots);
+    // in a stride the foot swinging forward peels off the ground, heel first, the knee leading it through
+    const lh = gait ? (pose.run ? 11 : 3.5) : 0, l1 = Math.max(0, Math.cos(walk)) * lh, l2 = Math.max(0, -Math.cos(walk)) * lh;
+    const leg = (x, f, k, col, bc, lift) => {
+      const kx = x + f * .5 + k + lift * .5, kyy = ky - lift * .35;
+      seg(x, HIP, kx, kyy, 8.4, 6.2, col, .9); seg(kx, kyy, x + f - .6 - lift * .4, -8 - lift, 6.2, 4.6, col, 1);
+      if (lift) { ctx.save(); ctx.translate(x + f - lift * .4, -lift); ctx.rotate(lift * .03); boot(0, bc); ctx.restore(); } else boot(x + f, bc);
+    };
+    leg(-3, f1, k1, shade(legs, -.15), shade(look.boots, -.12), l1); // the far leg
+    leg(3, f2, k2, legs, look.boots, l2);
   }
   // torso (leans around the hips): a broad V of shoulders over a narrow waist
-  ctx.save(); ctx.translate(0, HIP); ctx.rotate(pose.lean || 0); ctx.translate(0, -HIP);
+  ctx.save(); ctx.translate(0, HIP); ctx.rotate((pose.lean || 0) + (gait ? Math.sin(walk * 2) * .025 : 0)); ctx.translate(0, -HIP);
   if (look.robot) {
     rrect(-12, SHO - 2, 24, 30, 6); ctx.fillStyle = C(look.body); ctx.fill(); outline();
     if (!FLASH && !TINT) { ctx.fillStyle = shade(look.body, -.25); ctx.fillRect(-11, SHO - 1, 6, 27); ctx.fillStyle = shade(look.body, .3); ctx.fillRect(7, SHO, 1.4, 24); } // plated sides
@@ -404,17 +443,21 @@ function drawHumanoid(look, pose) {
     ctx.restore();
   }
   // front arm + weapon: shoulder, a bent elbow, forearm, hand
-  const arm = pose.arm ?? (1.1 + sw * .35);
+  const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw;
   if (pose.trail) drawTrail(0, SHO + 2, pose);
   if (pose.flat) drawFlatTrail(1, SHO + 2, pose.flat);
   ctx.save(); ctx.translate(1, SHO + 2); ctx.rotate(arm);
   if (pose.sweep !== undefined) ctx.scale(Math.sign(pose.sweep || 1) * Math.max(.14, Math.abs(pose.sweep)), 1); // a horizontal swing: the weapon comes around the body
   const reach = 15 + (pose.ext || 0) * 12; // a thrust drives the arm out
   const ex = reach * .5, ey = 1.6 - (pose.ext || 0) * 1.2;
-  seg(0, 0, ex, ey, 7.6, 5.8, sleeve, 1.2); seg(ex, ey, reach, 0, 6, 4.4, sleeve, .7);
+  if (pose.elbow) { // a bent elbow: the upper arm hangs, the forearm comes forward from it
+    const eb = -pose.elbow, hx = 8 + Math.cos(eb) * 8, hy = Math.sin(eb) * 8;
+    seg(0, 0, 8, 0, 7.6, 5.8, sleeve, 1.2); seg(8, 0, hx, hy, 6, 4.4, sleeve, .7);
+    ctx.translate(hx, hy); ctx.rotate(eb); ctx.translate(-15, 0);
+  } else { seg(0, 0, ex, ey, 7.6, 5.8, sleeve, 1.2); seg(ex, ey, reach, 0, 6, 4.4, sleeve, .7); }
   pose.glove = look.glove;
   if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); }
-  ctx.translate(reach - 15, 0);
+  if (!pose.elbow) ctx.translate(reach - 15, 0);
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   drawWeapon(pose.weapon || look.weapon, pose);
   ctx.restore();

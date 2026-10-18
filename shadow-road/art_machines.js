@@ -370,7 +370,7 @@
     for (const [x, h] of [[-8, 11], [-5, 8]]) plate(() => { ctx.moveTo(x - 1.8, SHO + 5); ctx.lineTo(x - 4.6, SHO - h); ctx.lineTo(x - 1, SHO - h - .6); ctx.lineTo(x + 1.6, SHO + 4); ctx.closePath(); }, dkS, { sd: .8, hd: .5, ow: 1 });
     if (DET() && !pose.down) for (let i = 0; i < 2; i++) { const p = (t * 1.1 + i * .5) % 1; ctx.fillStyle = `rgba(236,232,226,${.45 * (1 - p)})`; circle(-13 - p * 6, SHO - 13 - p * 12, 1.6 + p * 3.4); ctx.fill(); }
     // ---- back arm: piston-jointed, a shade darker
-    const ba = pose.backArm ?? (1.25 - sw * .4), bsx = -3, bsy = SHO + 1.5;
+    const ba = pose.backArm ?? (1.25 + sw * .4), bsx = -3, bsy = SHO + 1.5;
     const bex = bsx + Math.cos(ba) * 8, bey = bsy + Math.sin(ba) * 8, bwx = bex + Math.cos(ba + .25) * 7.5, bwy = bey + Math.sin(ba + .25) * 7.5;
     seg(bsx, bsy, bex, bey, 6.6, 5.4, shade(L.plate, -.32), .8); seg(bex, bey, bwx, bwy, 5.2, 4.4, shade(L.steel, -.3), .4);
     joint(bex, bey, 2.4, L);
@@ -469,7 +469,7 @@
     plate(() => { ctx.moveTo(-.4, hy - 6.6); ctx.lineTo(10, hy - 6.4); ctx.lineTo(11.4, hy - 4); ctx.lineTo(.4, hy - 4.4); ctx.closePath(); }, L.dark, { sd: .7, hd: .5, ow: 1 });
     if (L.moss) mossClump(-1.4, hy - 9.6, 3.4, L);
     // ---- front arm + weapon: plated upper arm, a ball elbow, a forearm with its piston, a steel gauntlet
-    const arm = pose.arm ?? (1.1 + sw * .35);
+    const arm = pose.arm ?? (1.1 - sw * .35);
     if (pose.trail) drawTrail(0, SHO + 2, pose);
     if (pose.flat) drawFlatTrail(1, SHO + 2, pose.flat);
     ctx.save(); ctx.translate(1, SHO + 2); ctx.rotate(arm);

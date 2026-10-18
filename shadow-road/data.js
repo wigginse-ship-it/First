@@ -28,8 +28,8 @@ const WEAPONS = {
       A:    { dur: .28, h: [.2, .6], x0: 0, x1: 38, dmg: 7, kb: 60, arc: [.9, -.2] },
       AA:   { dur: .3,  h: [.2, .6], x0: 0, x1: 40, dmg: 8, kb: 60, kick: 1 },
       AAA:  { dur: .4,  h: [.2, .65], x0: 0, x1: 42, dmg: 12, kb: 120, arc: [-2.4, 1.4], spike: 1, power: 1 },
-      D:    { dur: .44, h: [.1, .7], x0: 0, x1: 40, dmg: 12, kb: 300, kick: 1, lunge: 420, hop: 190, power: 1 },
-      R:    { dur: .5,  h: [.2, .6], x0: 0, x1: 36, dmg: 14, kb: 80, launch: 380, kick: 1, lunge: 220, hop: 240, rot: -TAU * .5, power: 1 },
+      D:    { dur: .44, h: [.18, .68], x0: 0, x1: 42, dmg: 12, kb: 300, kick: 1, lunge: 440, power: 1 }, // a stepping front kick driven in off the run
+      R:    { dur: .5,  h: [.22, .62], x0: 0, x1: 40, dmg: 14, kb: 80, launch: 380, kick: 1, lunge: 300, hop: 220, power: 1 }, // springs out of the roll into a flying kick
     } },
   hammer: { name: 'Hammer', reach: 46, look: 'hammer', desc: 'Slow and crushing. Every heavy shakes the ground.',
     tree: {

@@ -67,14 +67,14 @@ function updatePlayer(dt) {
       if (pressed.heavy) { begin(running ? (unlocked(w.tree.DH) ? w.tree.DH : w.tree.D) : nextMove('H')); break; }
       P.seq = '';
       if (running) {
-        P.state = 'run'; P.facing = Math.sign(mx); P.x += P.facing * RUN * sp * dt; P.y += my * SPY * sp * .6 * dt; P.walk += dt * 20 * sp;
+        P.state = 'run'; P.facing = Math.sign(mx); P.x += P.facing * RUN * sp * dt; P.y += my * SPY * sp * .6 * dt; P.walk += dt * 13 * sp; // long, loping strides: fewer steps for the same ground
         P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .05; addGhost(); }
         if (Math.random() < dt * 14) dust(P.x - P.facing * 8, P.y, 1);
       } else {
         const moving = mx !== 0 || my !== 0;
         P.x += mx * SPX * sp * dt; P.y += my * SPY * sp * dt;
         if (Math.abs(mx) > 0.1) P.facing = Math.sign(mx);
-        P.state = moving ? 'walk' : 'idle'; P.walk = moving ? P.walk + dt * 13 : 0;
+        P.state = moving ? 'walk' : 'idle'; P.walk = moving ? P.walk + dt * 11 : 0;
       }
       break;
     }

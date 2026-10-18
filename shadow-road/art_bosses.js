@@ -445,7 +445,7 @@
     cape(); outline(1.4);
     if (P3 && !e.dead) add(() => { ctx.strokeStyle = `rgba(255,140,60,${.6 + .3 * Math.sin(t * 9)})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-22 - flow * 1.4, -5 + wv); ctx.lineTo(-19 - flow * 1.3, -9 + wv); ctx.lineTo(-17 - flow * 1.15, -3 + wv * .8); ctx.lineTo(-14 - flow, -8 + wv * .6); ctx.lineTo(-11 - flow * .8, -1 + wv * .5); ctx.stroke(); });
     // the far arm, in shadow: upper arm, elbow joint, a heavy gauntlet and fist
-    const ba = pose.backArm ?? (1.25 - sw * .4), bsx = -4, bsy = SHO + 1.5;
+    const ba = pose.backArm ?? (1.25 + sw * .4), bsx = -4, bsy = SHO + 1.5;
     const bex = bsx + Math.cos(ba) * 9, bey = bsy + Math.sin(ba) * 9, bwx = bex + Math.cos(ba + .25) * 9, bwy = bey + Math.sin(ba + .25) * 9;
     seg(bsx, bsy, bex, bey, 9, 7.4, shade(CB.sleeve, -.25), 1);
     seg(bex, bey, bwx, bwy, 8.4, 9.6, shade(brass, -.3), .6);
@@ -528,7 +528,7 @@
     // the head
     colossusHead(hy, wind, phase, rage, t, flow * .5, down);
     // the cannon arm
-    const arm = pose.arm ?? (1.1 + sw * .35);
+    const arm = pose.arm ?? (1.1 - sw * .35);
     if (pose.trail && typeof drawTrail === 'function') drawTrail(0, SHO + 2, pose);
     ctx.save(); ctx.translate(1, SHO + 2); ctx.rotate(arm);
     colossusCannon(wind, pulling, rage, phase, t, planWind);

@@ -44,7 +44,12 @@ function playerPose() {
       if (k >= m.h[0] && k <= m.h[1] + .12) pose.flat = { r: w.reach + 22, k: kk, rev, col: tcol, w: P.w === 'sword' || P.w === 'hammer' ? 8 : 5 };
       pose.lean = .1;
     }
-    if (m.kick) { pose.kick = 1; pose.arm = -.5; }
+    if (m.kick && P.w === 'fists' && !m.around && m.name !== 'Roundhouse') { // the lunging front kick and the flying kick
+      const fly = P.z > 4 || m.key === 'R' || m.key === 'AA', h = m.h, out = k < h[0] ? 0 : k <= h[1] ? 1 : 1 - (k - h[1]) / (1 - h[1]);
+      pose.kickK = k; pose.kickH = h; pose.kickStyle = fly ? 'fly' : 'lunge';
+      if (fly) { pose.lean = -.22 * out - .05; pose.arm = lerp(-.9, -.4, out); pose.backArm = lerp(1.6, 2.7, out); pose.flow = 10; } // leaning back over the strike, arms flung for balance
+      else { pose.sink = 3 * out; pose.lean = lerp(.12, -.12, out); pose.arm = lerp(.9, .1, out); pose.elbow = lerp(1.3, 1, out); pose.backArm = lerp(1.2, 2.5, out); pose.flow = 8; } // guard kept tight, the back arm swung behind
+    } else if (m.kick) { pose.kick = 1; pose.arm = -.5; }
     if (m.crouch || m.dive) pose.crouch = 1;
     if (m.rot) pose.rot = m.rot * ease(k / .75);
     if (!m.style && k >= m.h[0] && k <= m.h[1] + .12 && !m.kick && Math.abs(arc[1] - arc[0]) > .1) {
@@ -58,7 +63,7 @@ function playerPose() {
     pose.arm = -2.2; pose.crouch = 1; pose.walk = 0;
     pose.glow = ['', '#D8AA55', '#FFE9A0', '#C8607A'][P.clvl] || '';
     if (P.clvl && Math.sin(performance.now() / 45) > 0) pose.glow = '#FFFFFF';
-  } else if (P.state === 'run') { pose.run = 1; pose.lean = .28; pose.flow = 8; pose.arm = 1.9; pose.backArm = 2.2; }
+  } else if (P.state === 'run') { pose.run = 1; pose.lean = .28; pose.flow = 8; if (P.w === 'fists') { pose.arm = 1.35; pose.elbow = 1.45; pose.backArm = 1.5; } else { pose.arm = 1.9; pose.backArm = 2.2; } } // bare-handed he pumps his arms; armed, the weapon trails
   else if (P.state === 'jump') { pose.crouch = 1; pose.arm = .2; pose.rot = P.vz < 0 ? 0 : 0; pose.flow = 4; }
   else if (P.state === 'dodge') {
     const k = 1 - P.t / .34;
@@ -76,7 +81,10 @@ function playerPose() {
     const now = performance.now() / 1000, c = now % 4.2, twirl = P.state === 'idle' && c < .55 ? ease(c / .55) * TAU : 0;
     pose.arm = .5 + Math.sin(now * 1.6) * .05; pose.grip = -.02 + Math.sin(now * 1.6 + 1) * .07 + twirl; pose.backArm = -.35; pose.lean = .08;
   }
-  else { pose.arm = -.55; pose.backArm = .05; } // fists raised, ready
+  else { // hands low at his sides but loaded: elbows bent, fists forward at the waist, swaying with his breath
+    const b = Math.sin(performance.now() / 420) * .04;
+    pose.arm = 1.45 + b; pose.elbow = 1.15 + b; pose.backArm = 1.15 - b;
+  }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
   return pose;
 }
