@@ -250,7 +250,7 @@ function step(now) {
     updateFx(hitstop > 0 ? dt * .25 : dt);
     shakeMag = Math.max(0, shakeMag - dt * 30); zoom = Math.max(0, zoom - dt * .25);
     flashT = Math.max(0, flashT - dt); hurtFlash = Math.max(0, hurtFlash - dt);
-    for (const k in pressed) pressed[k] = false;
+    if (hitstop <= 0) for (const k in pressed) pressed[k] = false; // a press during a hit freeze is kept until the action resumes
     hudTick();
   } else if (mode === 'title' && P) { // the title screen keeps a gentle scene moving behind it
     P.walk += dt * 8; updateFx(dt);
