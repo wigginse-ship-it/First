@@ -44,7 +44,8 @@ function t6Hammer(pose) {
   ctx.fillStyle = C('#FF9A4A'); circle(-1.4, 0, 1.5); ctx.fill(); t6Halo(-1.4, 0, 6, '255,150,70', .45);
   // a crowning spike along the haft, forged of the same black iron
   t6Shape([60, -7, 79, -1, 81, 0, 79, 1, 60, 7], t6VG(-7, 7, '#4A4250'), 1.3);
-  if (plain) { ctx.fillStyle = 'rgba(255,230,210,.45)'; t6Path([62, -5, 78, -.8, 62, -3]); ctx.fill(); }
+  if (plain) { ctx.fillStyle = 'rgba(255,230,210,.45)'; t6Path([62, -5, 78, -.8, 62, -3]); ctx.fill(); t6Add(() => { ctx.strokeStyle = `rgba(255,140,60,${.5 + .3 * pulse})`; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(63, 1.6); ctx.lineTo(70, 1.2); ctx.lineTo(73, .2); ctx.stroke(); }); }
+  rrect(60, -8.5, 4.4, 17, 1.6); ctx.fillStyle = t6VG(-8.5, 8.5, '#C8963E', .45, -.4); ctx.fill(); outline(1.1); // a bronze collar
   // the head: a heavy anvil block, its striking faces flared and capped with bronze
   const head = [28, -21, 31, -26, 61, -26, 64, -21, 61.5, -10, 63, 0, 61.5, 10, 64, 21, 61, 26, 31, 26, 28, 21, 30.5, 10, 29, 0, 30.5, -10];
   const hg = ctx.createLinearGradient(30, -26, 62, 26); hg.addColorStop(0, C('#5A5060')); hg.addColorStop(.45, C('#342C36')); hg.addColorStop(1, C('#1A161E'));
@@ -60,17 +61,20 @@ function t6Hammer(pose) {
     ctx.restore();
   }
   t6Path(head); outline(1.9);
-  const cracks = [[cx - 6, -3, 39, -9, 33, -12, 30, -18], [cx + 6, -3, 54, -9, 58, -8, 62, -12], [cx - 5, 4, 38, 9, 34, 7, 30, 12], [cx + 5, 5, 53, 11, 57, 10, 61, 15], [cx, -7, 47, -13, 44, -18], [cx, 7, 45, 13, 48, 18]];
+  const cracks = [[cx - 6, -3, 40.5, -6.5, 38, -10.5, 34.5, -11.5, 31.5, -16], [cx + 6, -3, 52, -7.5, 55.5, -7, 57.5, -10.5, 61.5, -12], [cx - 5.5, 3.5, 40, 7.5, 36.5, 8, 33, 11.5, 29.5, 12.5], [cx + 5.5, 4, 52.5, 9.5, 55, 9, 57.5, 13, 61.5, 15.5],
+    [cx - 1, -7.5, 47.5, -11, 45, -14, 46.5, -19.5], [cx + 1, 7.5, 44.5, 11.5, 47.5, 14.5, 45.5, 19.5], [38, -10.5, 37, -15.5], [55.5, 9, 59, 7.5], [36.5, 8, 35, 4.5]];
   const crackPath = () => { ctx.beginPath(); for (const c of cracks) { ctx.moveTo(c[0], c[1]); for (let k = 2; k < c.length; k += 2) ctx.lineTo(c[k], c[k + 1]); } };
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   crackPath(); ctx.strokeStyle = FLASH ? '#FFFFFF' : '#140C10'; ctx.lineWidth = 2.6; ctx.stroke();
+  t6Add(() => { crackPath(); ctx.strokeStyle = `rgba(255,110,40,${.25 + .15 * pulse})`; ctx.lineWidth = 4.5; ctx.stroke(); });
   crackPath(); ctx.strokeStyle = C('#E8642A'); ctx.lineWidth = 1.5; ctx.stroke();
   t6Add(() => { crackPath(); ctx.strokeStyle = `rgba(255,214,130,${.55 + .35 * pulse})`; ctx.lineWidth = .7; ctx.stroke(); });
   // bronze caps on both striking faces, carved with runes that glow like the core
   for (const s of [-1, 1]) {
     const y = s < 0 ? -27 : 20.5; rrect(30, y, 32, 6.5, 2); ctx.fillStyle = t6VG(y, y + 6.5, '#C8963E', .45, -.4); ctx.fill(); outline(1.3);
     ctx.fillStyle = C('#FFE8B0'); ctx.fillRect(32, s < 0 ? y + .4 : y + .6, 28, 1);
-    const rune = () => { ctx.beginPath(); for (let i = 0; i < 4; i++) { const rx = 35 + i * 7, ry = y + 3.3; if (i % 2) { ctx.moveTo(rx, ry - 1.8); ctx.lineTo(rx + 2, ry + 1.6); ctx.lineTo(rx + 4, ry - 1.8); } else { ctx.moveTo(rx, ry + 1.8); ctx.lineTo(rx + 2, ry - 1.8); ctx.lineTo(rx + 4, ry + 1.8); ctx.moveTo(rx + 2, ry - 1.8); ctx.lineTo(rx + 2, ry + 1.8); } } };
+    const glyphs = [[0, -1.8, 0, 1.8, 0, -1.8, 2.6, 0], [0, 1.8, 1.4, -1.8, 2.8, 1.8, .6, 0, 2.2, 0], [0, -1.8, 2.6, 1.8, 2.6, -1.8, 0, 1.8], [1.3, -1.8, 1.3, 1.8, 1.3, -.4, 0, -1.6, 1.3, -.4, 2.6, -1.6]];
+    const rune = () => { ctx.beginPath(); glyphs.forEach((gl, i) => { const rx = 35.5 + i * 7.2 + (s < 0 ? 0 : 0), ry = y + 3.3; for (let k = 0; k < gl.length; k += 2) { const f = (k === 0 || (gl.length === 12 && k === 6)) ? 'moveTo' : 'lineTo'; ctx[f](rx + gl[k], ry + gl[k + 1] * s); } }); };
     ctx.lineCap = 'round'; rune(); ctx.strokeStyle = C('#5A2A14'); ctx.lineWidth = 1.4; ctx.stroke();
     t6Add(() => { rune(); ctx.strokeStyle = `rgba(255,170,80,${.6 + .3 * pulse})`; ctx.lineWidth = .8; ctx.stroke(); });
   }
@@ -103,8 +107,10 @@ function t6Staff(pose) {
   t6Halo(len + 12, 0, 26, '190,215,255', .22 + .08 * pulse); t6Halo(back - 10, 0, 16, '190,215,255', .14);
   // a silver-blue ribbon, swaying slowly
   const sway = Math.sin(now * 1.3) * 3;
-  t6Inked('#9FC4F0', 1.6, () => { ctx.moveTo(back + 3, 0); ctx.quadraticCurveTo(back - 4, 9, back - 9 + sway, 17); });
-  t6Inked('#E8F0FF', 1.1, () => { ctx.moveTo(back + 4, 0); ctx.quadraticCurveTo(back, 7, back - 3 + sway * .6, 13); });
+  { const bx = back + 4, ex = back - 8 + sway, ey = 19; // a pennon of silver-blue silk with a forked tail
+    ctx.beginPath(); ctx.moveTo(bx - 1.4, 1); ctx.quadraticCurveTo(bx - 7, 8, ex - 2.4, ey); ctx.lineTo(ex + .4, ey - 3); ctx.lineTo(ex + 2.6, ey + .6);
+    ctx.quadraticCurveTo(bx - 1.4, 9, bx + 2.4, 1); ctx.closePath(); ctx.fillStyle = t6VG(0, 20, '#8FB4E8', .4, -.3); ctx.fill(); outline(1);
+    if (t6Plain()) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(bx, 2); ctx.quadraticCurveTo(bx - 4, 9, ex + .3, ey - 2.6); ctx.stroke(); } }
   // floating rings around the shaft: the far half behind it, the near half in front
   const rings = [[len - 10, 0], [len - 21, 1.7], [back + 12, 3.4]].map(([x, p]) => ({ x: x + Math.sin(now * .55 + p) * 2.4, rx: 1.6 + 1.2 * Math.abs(Math.sin(now * .4 + p)), ry: 6.6, p }));
   const ringHalf = (r, near) => { ctx.ellipse(r.x, 0, r.rx, r.ry, 0, near ? -Math.PI / 2 : Math.PI / 2, near ? Math.PI / 2 : Math.PI * 1.5); };
@@ -134,13 +140,14 @@ function t6Staff(pose) {
   rrect(back - 1, -3.4, 4, 6.8, 1.4); ctx.fillStyle = t6VG(-3.4, 3.4, '#C8D0E0', .5, -.35); ctx.fill(); outline(.9);
   // the near end: a crescent moon cradling a moonstone, a silver point through its heart
   const X = len;
-  t6Shape([X + 2, -2.4, X + 25, 0, X + 2, 2.4], t6VG(-2.4, 2.4, '#E8EEF8', .5, -.3), 1.1);
+  t6Shape([X + 2, -2.8, X + 19, -2.2, X + 28, 0, X + 19, 2.2, X + 2, 2.8], t6VG(-2.8, 2.8, '#E8EEF8', .5, -.3), 1.1);
   ctx.beginPath(); ctx.moveTo(X - 2, -3); ctx.bezierCurveTo(X + 4, -16, X + 16, -21, X + 24, -16); ctx.bezierCurveTo(X + 15, -16, X + 8, -11, X + 7, 0);
   ctx.bezierCurveTo(X + 8, 11, X + 15, 16, X + 24, 16); ctx.bezierCurveTo(X + 16, 21, X + 4, 16, X - 2, 3); ctx.closePath();
   const mg = ctx.createLinearGradient(X, -20, X + 12, 20); mg.addColorStop(0, C('#FFFFFF')); mg.addColorStop(.5, C('#DCE6F6')); mg.addColorStop(1, C('#94A6C8'));
   ctx.fillStyle = mg; ctx.fill(); outline(1.3);
   if (plain) { ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(X + 2, -5); ctx.bezierCurveTo(X + 6, -14, X + 14, -18, X + 21, -16.6); ctx.stroke();
     ctx.strokeStyle = 'rgba(90,110,160,.6)'; ctx.beginPath(); ctx.moveTo(X + 4, 6); ctx.bezierCurveTo(X + 7, 12, X + 13, 15.4, X + 20, 16); ctx.stroke(); }
+  if (plain) { ctx.strokeStyle = 'rgba(110,130,180,.75)'; ctx.lineWidth = .5; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(X + 3, s * 6); ctx.quadraticCurveTo(X + 6, s * 11, X + 9, s * 10); ctx.quadraticCurveTo(X + 11, s * 9, X + 10, s * 12); ctx.quadraticCurveTo(X + 13, s * 16, X + 17, s * 16.5); } ctx.stroke(); } // filigree on the moon
   rrect(X - 3, -3.6, 4.4, 7.2, 1.5); ctx.fillStyle = t6VG(-3.6, 3.6, '#C8D0E0', .5, -.35); ctx.fill(); outline(.9);
   const ox = X + 14; circle(ox, 0, 4.6);
   if (plain) { const g = ctx.createRadialGradient(ox - 1.4, -1.4, 0, ox, 0, 4.6); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, '#D6E6FF'); g.addColorStop(1, '#7E98CC'); ctx.fillStyle = g; } else ctx.fillStyle = C('#D6E6FF');
@@ -148,7 +155,7 @@ function t6Staff(pose) {
   t6Halo(ox, 0, 11, '210,230,255', .5 + .2 * pulse);
   // the near half of each ring, glowing with moonlight
   for (const r of rings) { t6Inked('#E4EEFF', 1.1, () => ringHalf(r, true)); t6Add(() => { ctx.strokeStyle = `rgba(170,210,255,${.35 + .2 * pulse})`; ctx.lineWidth = 2.6; ctx.beginPath(); ringHalf(r, true); ctx.stroke(); }); }
-  t6Add(() => { ctx.fillStyle = 'rgba(240,246,255,.85)'; for (let i = 0; i < 3; i++) { const a = Math.max(0, Math.sin(now * .8 - i * 2.1)); gbStar(X + 24, (i - 1) * 16, 1 + a * 2.2, .3 + a * .6); } }); // the crescent's tips and point catch the light
+  t6Add(() => { ctx.fillStyle = 'rgba(240,246,255,.85)'; for (let i = 0; i < 3; i++) { const a = Math.max(0, Math.sin(now * .8 - i * 2.1)); gbStar(i === 1 ? X + 28 : X + 24, (i - 1) * 16, 1 + a * 2.2, .3 + a * .6); } }); // the crescent's tips and point catch the light
   t6SwingGlow(pose, back - 20, len - back + 46, 18);
   if (sc !== 1) ctx.restore();
   if (!pose.noHand) gripHand(pose.glove || '#FFF1E0');
@@ -195,10 +202,12 @@ function t6Sword(pose) {
     t6Add(() => { // the sunfire, a meander of gold light with a brighter swell travelling slowly toward the point
       const p = c0 + ((now * .18) % 1.3) * (c1 - c0);
       const g = ctx.createLinearGradient(c0, 0, c1, 0); const st = (x, a) => g.addColorStop(clamp((x - c0) / (c1 - c0), 0, 1), `rgba(255,210,120,${a})`);
-      st(c0, .5); st(p - 14, .5); st(p, 1); st(p + 14, .5); st(c1, .5);
-      ctx.strokeStyle = g; ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.beginPath();
-      for (let x = c0 + 1; x <= c1; x += 1.2) { const y = (Math.sin(x * .45) * .7 + Math.sin(x * 1.3) * .25) * cw(x) * .8; x === c0 + 1 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-      ctx.stroke();
+      st(c0, .7); st(p - 14, .7); st(p, 1); st(p + 14, .7); st(c1, .7);
+      const fire = () => { ctx.beginPath(); for (let x = c0 + 1; x <= c1; x += .8) { const y = (Math.sin(x * .45) * .7 + Math.sin(x * 1.1) * .2) * cw(x) * .8; x === c0 + 1 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } };
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      fire(); ctx.strokeStyle = 'rgba(255,150,60,.35)'; ctx.lineWidth = 2.6; ctx.stroke();
+      fire(); ctx.strokeStyle = g; ctx.lineWidth = 1.2; ctx.stroke();
+      fire(); ctx.strokeStyle = 'rgba(255,250,225,.75)'; ctx.lineWidth = .45; ctx.stroke();
     });
   }
   // motes of light running slowly up both edges toward the point
@@ -206,10 +215,13 @@ function t6Sword(pose) {
   t6Add(() => { ctx.fillStyle = '#FFFBEA'; gbStar(tip - 1, 0, 3.4 + .8 * pulse, .9); });
   // the guard: fanned rays of gold like a sun's crown, swept back over the hand
   for (const s of [-1, 1]) {
-    for (let k = 2; k >= 0; k--) {
-      const ang = .18 + k * .3, L2 = 23 - k * 4.5, bx = 21, by = s * 4;
-      const tx = bx - Math.sin(ang) * L2, ty = by + s * Math.cos(ang) * L2, nx = Math.cos(ang) * 2.4, ny = s * Math.sin(ang) * 2.4;
-      t6Shape([bx - nx * .2, by - 2 * s, bx + nx, by + ny, tx, ty, bx - nx, by - ny], t6VG(-22, 22, k === 0 ? '#F2C860' : '#D8A848', .4, -.3), 1.1);
+    for (const [ang, L2, hw, col] of [[.78, 13, 2.2, '#C8963E'], [.42, 18, 2.6, '#D8A848'], [.1, 25, 3, '#F2C860']]) { // rays leaning back over the hand
+      const bx = 21, by = s * 4, dx = -Math.sin(ang), dy = s * Math.cos(ang), px = -dy, py = dx;
+      const tx = bx + dx * L2, ty = by + dy * L2;
+      ctx.beginPath(); ctx.moveTo(bx + px * hw, by + py * hw); ctx.quadraticCurveTo(bx + dx * L2 * .55 + px * hw * .9, by + dy * L2 * .55 + py * hw * .9, tx, ty);
+      ctx.quadraticCurveTo(bx + dx * L2 * .55 - px * hw * .6, by + dy * L2 * .55 - py * hw * .6, bx - px * hw, by - py * hw); ctx.closePath();
+      const rg = ctx.createLinearGradient(bx + px * hw, by + py * hw, bx - px * hw, by - py * hw); rg.addColorStop(0, C(shade(col, .5))); rg.addColorStop(1, C(shade(col, -.3)));
+      ctx.fillStyle = rg; ctx.fill(); outline(1.1);
     }
   }
   rrect(17.5, -7.5, 7, 15, 2.4); ctx.fillStyle = t6VG(-7.5, 7.5, '#E8B850', .45, -.4); ctx.fill(); outline(1.3);
@@ -243,11 +255,13 @@ function t6Rapier(pose) {
   blade();
   const bg = ctx.createLinearGradient(0, -w, 0, w); bg.addColorStop(0, C('#E4E8FA')); bg.addColorStop(.32, C('#8890B0')); bg.addColorStop(.62, C('#3E4258')); bg.addColorStop(1, C('#5A6080'));
   ctx.fillStyle = bg; ctx.fill(); outline(1.5);
-  ctx.fillStyle = C('#F4F6FF'); ctx.fillRect(x0 + 2, -w * .78, len * .82, .8); // the edge catching the light
-  if (plain) { ctx.fillStyle = 'rgba(200,210,255,.55)'; ctx.fillRect(x0 + 8, w * .5, len * .74, .5); }
+  ctx.save(); blade(); ctx.clip();
+  ctx.fillStyle = C('#F4F6FF'); ctx.fillRect(x0 + 1, -w * 1.15, len + 4, w * .42); // the edge catching the light
+  if (plain) { ctx.fillStyle = 'rgba(200,210,255,.55)'; ctx.fillRect(x0 + 1, w * .62, len + 4, .45); }
+  ctx.restore();
   // the Pattern of Amber down the blade: etched dark, then lit, with a swell of light travelling slowly to the point
   const p0 = x0 + 7, p1 = x0 + len * .9, amp = w * .5;
-  const pat = () => { ctx.beginPath(); for (let x = p0; x <= p1; x += 1) { const k = (x - p0) / (p1 - p0), y = (Math.sin(x * .62) * (1 - k * .55) + Math.sin(x * 1.9) * .3) * amp; x === p0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } };
+  const pat = () => { ctx.beginPath(); for (let x = p0; x <= p1; x += .6) { const k = (x - p0) / (p1 - p0), y = (Math.sin(x * .5) * (1 - k * .5) + Math.sin(x * 1.15 + 1) * .28) * amp; x === p0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } };
   if (plain) {
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; pat(); ctx.strokeStyle = '#1C1E2C'; ctx.lineWidth = 1.3; ctx.stroke();
     t6Add(() => {
@@ -269,9 +283,11 @@ function t6Rapier(pose) {
   for (const [x, y, a] of [[11, -10.4, -.5], [5.6, -8.6, -1.2]]) { ctx.save(); ctx.translate(x, y); ctx.rotate(a); ell(0, -1.6, 1, 2); ctx.fillStyle = C('#9ACDA8'); ctx.fill(); outline(.5); ctx.restore(); } // silver-green leaves on the vine
   t6Inked('#D8DCE8', 1.7, () => { ctx.moveTo(19, -1); ctx.quadraticCurveTo(22.5, -9, 28, -11.5); ctx.moveTo(19, 1); ctx.quadraticCurveTo(15, 9.5, 9.5, 11.5); });
   for (const [x, y] of [[28.4, -11.6], [9.2, 11.6]]) { ctx.fillStyle = C('#4FAE6A'); ell(x, y, 1.7, 1.7); ctx.fill(); outline(.6); ctx.fillStyle = C('#ECEFF8'); ell(x + (y < 0 ? .7 : -.7), y, 1.5, 1.2); ctx.fill(); outline(.6); } // rosebuds
-  for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * .48; ctx.fillStyle = C(['#C4CAD8', '#ECEFF8', '#D8DCE8'][i % 3]); ell(18.4 + Math.cos(a) * 1.2, Math.sin(a) * 6.2, 5, 2.9, a); ctx.fill(); outline(.8); } // the outer petals
-  if (plain) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = .5; ctx.beginPath(); for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * .48; ctx.moveTo(18.4 + Math.cos(a) * 3, Math.sin(a) * 3.4); ctx.lineTo(18.4 + Math.cos(a) * 5.5, Math.sin(a) * 8.4); } ctx.stroke(); }
-  for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * .62 + .3; ctx.fillStyle = C(i % 2 ? '#F4F6FC' : '#CDD2E0'); ell(19 + Math.cos(a) * .8, Math.sin(a) * 3.6, 3.2, 2, a); ctx.fill(); outline(.7); } // the inner petals
+  // the rose seen three-quarters on: an oval of outer petals, a turned ring of inner ones
+  const RX = 19, RS = .62; // squash across the blade, so the rose reads as a cup turned toward the hand
+  for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + .2; ctx.save(); ctx.translate(RX + Math.cos(a) * 5.6 * RS, Math.sin(a) * 5.6); ctx.rotate(Math.atan2(Math.sin(a), Math.cos(a) * RS)); ell(0, 0, 3.6, 3.1 * (.7 + .3 * Math.abs(Math.sin(a)))); ctx.fillStyle = t6VG(-3, 3, ['#C4CAD8', '#E6EAF4', '#D2D7E4'][i % 3], .4, -.3); ctx.fill(); outline(.8);
+    if (plain) { ctx.strokeStyle = 'rgba(90,96,120,.6)'; ctx.lineWidth = .45; ctx.beginPath(); ctx.arc(-1.4, 0, 2.2, -1, 1); ctx.stroke(); } ctx.restore(); } // the outer petals, each curled at its lip
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .7; ctx.save(); ctx.translate(RX + Math.cos(a) * 3.3 * RS, Math.sin(a) * 3.3); ctx.rotate(Math.atan2(Math.sin(a), Math.cos(a) * RS)); ell(0, 0, 2.5, 2.2); ctx.fillStyle = C(i % 2 ? '#F4F6FC' : '#CDD2E0'); ctx.fill(); outline(.7); ctx.restore(); } // the inner petals
   // the green stone at its heart, the color of his eyes
   circle(19, 0, 2.9); ctx.fillStyle = C('#E4E8F2'); ctx.fill(); outline(.7);
   circle(19, 0, 2.2);

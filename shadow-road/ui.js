@@ -103,8 +103,11 @@ function moveListHtml(id) {
 }
 
 // ---------- the forge ----------
-const wCost = (lvl) => ({ s: 30 * lvl, g: lvl >= 2 ? lvl - 1 : 0 });
-const aCost = (lvl) => ({ s: 35 * lvl, g: lvl >= 3 ? lvl - 2 : 0 });
+// prices climb steeply, and each new cycle of the road makes everything dearer again
+const cyc = () => 1 + .5 * (save.cycle || 0);
+const WMAX = () => save.cycle > 0 ? 12 : 6; // past level 6 (new cycles only) each level is a plain damage bump
+const wCost = (lvl) => lvl < 6 ? { s: Math.round((45 * lvl + 12 * lvl * lvl) * cyc()), g: lvl >= 2 ? Math.round((lvl - 1) * 1.5 * cyc()) : 0 } : { s: Math.round((320 + 90 * (lvl - 6)) * cyc()), g: Math.round((5 + 2 * (lvl - 6)) * cyc()) };
+const aCost = (lvl) => ({ s: Math.round((50 * lvl + 10 * lvl * lvl) * cyc()), g: lvl >= 3 ? Math.round((lvl - 2) * 2 * cyc()) : 0 });
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
   mode = 'forge'; showOnly('forgeOv'); playMusic('title');
@@ -116,21 +119,21 @@ function renderForge(note) {
   $('#fShards').textContent = save.shards; $('#fSigils').textContent = save.sigils;
   const wrap = $('#forgeCards'); wrap.innerHTML = '';
   for (const id of WEAPON_ORDER) {
-    const w = WEAPONS[id], owned = save.owned[id], lvl = save.wl[id], max = lvl >= 5, c = wCost(lvl);
+    const w = WEAPONS[id], owned = save.owned[id], lvl = save.wl[id], max = lvl >= WMAX(), c = wCost(lvl);
     const bare = id === 'fists'; // fists never level up
     const can = owned && !bare && !max && save.shards >= c.s && save.sigils >= c.g;
     const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
-    d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/5 · DAMAGE ×${wMult(id).toFixed(1)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
+    d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/${WMAX()} · DAMAGE ×${wMult(id).toFixed(2)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
       <p>${bare ? w.desc + ' Fists never level up.' : owned ? w.desc : 'Not found yet. Defeat enemies to find it.'}</p><ul>${moves}</ul>
-      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? 'Every move learned' : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
+      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX() > 6 ? 'Fully tempered' : 'Every move learned') : lvl >= 6 ? `Temper: +6% damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
     if (b) b.addEventListener('click', () => {
       if (!can) return;
       save.shards -= c.s; save.sigils -= c.g; save.wl[id]++; persist(); sfx('buy');
       const learned = unlockList(id).find(m => m.lvl === save.wl[id]);
-      renderForge(`${w.name} is now level ${save.wl[id]}: damage ×${wMult(id).toFixed(1)}.${learned ? ` New move: ${learned.name}. ${learned.how}.` : ''}`);
+      renderForge(`${w.name} is now level ${save.wl[id]}: damage ×${wMult(id).toFixed(2)}.${learned ? ` New move: ${learned.name}. ${learned.how}.` : ''}`);
     });
     wrap.appendChild(d);
   }

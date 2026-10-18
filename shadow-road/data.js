@@ -52,6 +52,7 @@ const WEAPONS = {
       RH:   { lvl: 4, name: 'Pivot Quake', how: 'Heavy out of a dodge', desc: 'Come out of the dodge spinning and slam the hammer down; the quake hits everyone around you.', smash: 1, dur: .7, h: [.5, .7], x0: 0, x1: 70, dmg: 30, kb: 260, launch: 320, arc: [-P_, 1.5], around: 1, rot: -TAU, shock: 120, power: 2 },
       HC:   { lvl: 2, name: 'Titan Slam', how: 'Hold Heavy, then let go', desc: 'Wind up, leap and flip, and bring the hammer down hard enough to launch everyone near you.', smash: 1, dur: .85, h: [.65, .8], x0: 0, x1: 76, dmg: 40, kb: 220, launch: 420, arc: [-2.8, 1.5], hop: 300, rot: -TAU, around: 1, shock: 170, power: 2 },
       DH:   { lvl: 5, name: 'Rampage', how: 'Heavy while running', desc: 'Charge through the crowd spinning the hammer, hitting everything in your path.', dur: .8, h: [.1, .9], x0: 0, x1: 62, dmg: 10, kb: 260, arc: [-P_, 3 * P_], around: 1, multi: .1, lunge: 520, power: 1 },
+      HHHH: { lvl: 6, name: 'Starfall Maul', how: 'A fourth Heavy', desc: 'Leap after the third blow and bring the hammer down like a falling star: the ground splits and the quake runs on down the street.', dur: .9, h: [.6, .78], x0: 0, x1: 76, dmg: 50, kb: 220, launch: 360, arc: [-2.9, 1.5], hop: 340, lunge: 160, smash: 1, shock: 140, wave: 1, waveKind: 'quake', bounce: 1, power: 2 },
     } },
   staff: { name: 'Bowstaff', reach: 54, look: 'staff', desc: 'Long reach, spins that hit all around, and big acrobatics.',
     tree: {
@@ -75,6 +76,7 @@ const WEAPONS = {
       M:    { lvl: 2, name: 'Lunging Thrust', how: 'Attack while walking', desc: 'Throw your whole body behind a long thrust that skewers the front of the crowd.', dur: .42, h: [.15, .6], x0: 8, x1: 84, dmg: 16, kb: 320, arc: [.2, -.05], lunge: 440, power: 1, wall: 1 },
       AX:   { lvl: 4, name: 'Helicopter', how: 'Hold Attack in the air', desc: 'Spin the staff overhead like a rotor and hover, shredding everything around you before you drop.', hover: 1, dur: 1.0, h: [.05, .9], x0: 0, x1: 76, dmg: 5, kb: 90, arc: [-P_, 5 * P_], around: 1, multi: .09, power: 1 },
       DH:   { lvl: 5, name: 'Comet Pole', how: 'Heavy while running', desc: 'Vault high off a sprint and come down with a ground-splitting strike.', dur: .75, h: [.55, .8], x0: 0, x1: 72, dmg: 28, kb: 200, launch: 300, arc: [-2.4, 1.4], hop: 380, lunge: 360, rot: TAU, bounce: 1, shock: 90, power: 2 },
+      HHHH: { lvl: 6, name: 'Cyclone', how: 'A fourth Heavy', desc: 'Rise in a whirlwind with the staff spinning end over end; both ends tear through everyone around you.', dur: .95, h: [.08, .88], x0: 0, x1: 80, dmg: 4, kb: 120, launch: 260, arc: [-P_, 7 * P_], around: 1, ends: 1, twirl: 6, spin: 2, multi: .06, hop: 220, power: 2 },
     } },
   sword: { name: 'Great Sword', reach: 64, look: 'sword', charge: true, desc: 'Huge damage. Hold Heavy to charge, release to strike.',
     tree: {
@@ -95,6 +97,7 @@ const WEAPONS = {
       RH:   { lvl: 3, name: 'Riposte', how: 'Heavy out of a dodge', desc: 'Dodge past the attack and answer with a precise cut that always lands as a critical hit.', crit: 1, dur: .5, h: [.3, .6], x0: 0, x1: 90, dmg: 30, kb: 300, arc: [1.2, -1.8], lunge: 260, power: 2 },
       AH:   { lvl: 4, name: 'Plunging Blade', how: 'Heavy in the air', desc: 'Point the blade down and drop; whatever is underneath is pinned to the ground.', dur: .55, h: [.15, .97], x0: 0, x1: 70, dmg: 24, kb: 160, arc: [-2, 1.5], dive: 1, shock: 60, bounce: 1, power: 2 },
       DH:   { lvl: 5, name: 'Phantom Rush', how: 'Heavy while running', desc: 'Blur through the crowd in a flurry of afterimage cuts.', dur: .6, h: [.1, .85], x0: 0, x1: 90, dmg: 9, kb: 140, arc: [-1.2, 1.2], multi: .08, lunge: 620, power: 1 },
+      HHHH: { lvl: 6, name: 'Eclipse Rend', how: 'A fourth Heavy', desc: 'Turn once on your heel and bring the great blade down with everything you have: a wall of darkness runs down the street.', dur: 1, h: [.58, .74], x0: 0, x1: 104, dmg: 62, kb: 260, launch: 340, arc: [-3, 1.5], spin: 1, spinEnd: .45, lunge: 140, shock: 120, wave: 1, power: 2 },
     },
     charged: [
       { dur: .5,  h: [.35, .6], x0: 0, x1: 84, dmg: 18, kb: 200, arc: [-2, 1.2], depth: 20, power: 1 },
@@ -129,6 +132,7 @@ const WEAPONS = {
       RH:   { lvl: 3, name: 'Blade Dance', how: 'Heavy out of a dodge', desc: 'Pirouette twice through the crowd, the blade a silver ring around you.', dur: .7, h: [.1, .9], x0: 0, x1: 74, dmg: 6, kb: 135, arc: [-P_, 3 * P_], around: 1, multi: .08, spin: 2, lunge: 154, power: 1 },
       AH:   { lvl: 4, name: 'Falling Star', how: 'Heavy in the air', desc: 'Dive point-first like a falling star; where you land, it bursts into light.', dur: .5, h: [.1, .97], x0: 0, x1: 62, dmg: 16, kb: 150, arc: [.95, .95], dive: 1, shock: 72, bounce: 1, power: 2 },
       DH:   { lvl: 5, name: 'Shadow Flèche', how: 'Heavy while running', desc: 'Step through Shadow past everything in your way; a heartbeat later, every one of them is cut.', dur: .5, h: [.1, .55], x0: -40, x1: 64, dmg: 19, kb: 195, arc: [.02, .02], lunge: 602, power: 2, delayed: 1 },
+      HHHH: { lvl: 6, name: 'The Pattern Walked', how: 'A fourth Heavy', desc: 'Trace the Pattern with the point: a blur of thrusts as you advance, every one leaving its mark, all of them landing at once.', dur: .8, h: [.1, .7], x0: 0, x1: 92, dmg: 9, kb: 120, arc: [.03, .03], multi: .08, flurry: 1, delayed: 1, lunge: 220, power: 2 },
     } },
 };
 const WEAPON_ORDER = ['fists', 'hammer', 'staff', 'sword', 'rapier'];
@@ -138,7 +142,7 @@ const STYLES = {
   hammer: { L: 'sweep', LL: 'sweepR', D: 'sweep', A: 'sweep', AA: 'sweepR', DH: 'sweep', R: 'thrust' },
   staff: { L: 'thrust', HH: 'sweep', HHH: 'thrust', M: 'thrust', AA: 'sweep', R: 'thrust' },
   sword: { LL: 'sweep', HH: 'sweep', LLL: 'thrust', D: 'thrust', A: 'sweep', AA: 'thrust', RH: 'sweep', DH: 'sweep', R: 'thrust' },
-  rapier: { LLL: 'thrust', H: 'thrust', HH: 'thrust', HHH: 'thrust', LLH: 'thrust', D: 'thrust', R: 'thrust', RIP: 'thrust', AA: 'thrust', DH: 'thrust' },
+  rapier: { HHHH: 'thrust', LLL: 'thrust', H: 'thrust', HH: 'thrust', HHH: 'thrust', LLH: 'thrust', D: 'thrust', R: 'thrust', RIP: 'thrust', AA: 'thrust', DH: 'thrust' },
 };
 for (const id in STYLES) for (const k in STYLES[id]) if (WEAPONS[id].tree[k]) WEAPONS[id].tree[k].style = STYLES[id][k];
 for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) WEAPONS[id].tree[k].key = k;
@@ -148,7 +152,7 @@ function unlockList(id) {
   if (w.extra) list.push(...w.extra);
   return list.sort((a, b) => a.lvl - b.lvl);
 }
-const wMult = (id) => 1 + 0.2 * (save.wl[id] - 1); // every weapon level adds 20% damage on top of its new move
+const wMult = (id) => 1 + 0.2 * (Math.min(6, save.wl[id]) - 1) + .06 * Math.max(0, save.wl[id] - 6); // each level to 6 adds 20% and a new move; tempering past 6 adds 6%
 const maxHp = () => 120 + 30 * (save.armor - 1);
 
 // ---------- enemies ----------

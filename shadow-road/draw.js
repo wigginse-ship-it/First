@@ -29,7 +29,7 @@ function attackStance(pose, m, k) {
 }
 const BOXING = { L: 'jab', LL: 'cross', LLL: 'hook', A: 'jab', R: 'slip' };
 function playerPose() {
-  const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : save.wl[P.w] };
+  const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : Math.min(6, save.wl[P.w]) };
   if (P.state === 'atk' || P.state === 'air') {
     const m = P.move, k = P.t / m.dur, arc = m.arc || [1, 1];
     const kk = k < m.h[0] ? 0 : k > m.h[1] ? 1 : (k - m.h[0]) / (m.h[1] - m.h[0]);
@@ -424,6 +424,12 @@ function drawScene(t) {
   ctx.globalAlpha = 1;
   ctx.restore();
   gradeFrame(stage.theme);
+  if (save.cycle > 0) { // a new cycle of the road: the same worlds, but under night, moonlit and colder, darker with each cycle
+    const k = Math.min(1, .75 + .12 * save.cycle);
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = `rgba(78,84,150,${.55 * k})`; ctx.fillRect(0, Y_OFF, VW, VIEW_H);
+    ctx.globalCompositeOperation = 'screen'; const mg = ctx.createRadialGradient(VW * .78, Y_OFF + 30, 4, VW * .78, Y_OFF + 30, VW * .6);
+    mg.addColorStop(0, `rgba(170,190,255,${.22 * k})`); mg.addColorStop(1, 'rgba(170,190,255,0)'); ctx.fillStyle = mg; ctx.fillRect(0, Y_OFF, VW, VIEW_H); ctx.restore();
+  }
   if (boss && !boss.dead) { // the boss arena is lit in the boss's own color
     ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = { mossback: 'rgba(120,170,80,.35)', colossus: 'rgba(230,120,60,.35)', wyrm: 'rgba(150,90,220,.4)' }[boss.def.draw]; ctx.fillRect(0, Y_OFF, VW, VIEW_H); ctx.restore();
   }
@@ -524,7 +530,7 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   const s = canvas.width / 64 * (scale || 1);
   g.setTransform(s, 0, 0, s, 0, 0);
   // the weapon on its own, laid diagonally across the card
-  const tier = id === 'fists' ? 1 : save.wl[id];
+  const tier = id === 'fists' ? 1 : Math.min(6, save.wl[id]);
   if (id === 'armor') { ctx.translate(30, 63); ctx.scale(.7, .7); drawHumanoid(heroLook(), { arm: -.55, backArm: .05, weapon: 'fists', walk: 0, tier: 1 }); } // armor is shown on the prince himself
   else if (id === 'fists') { // a gauntleted fist, knuckles forward
     ctx.translate(32, 33); ctx.rotate(-.25);
