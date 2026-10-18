@@ -35,13 +35,21 @@ const scaleStat = (v, k) => v * (1 + k * save.cycle);
 // Your own damage doesn't change, so leveling your weapons is what keeps pace.
 const WORLD_DIFF = [{ hp: 1, boss: 1, dmg: 1, cd: 1 }, { hp: 1.4, boss: 1.2, dmg: 1.12, cd: .88 }, { hp: 1.85, boss: 1.4, dmg: 1.25, cd: .78 }];
 const worldDiff = () => WORLD_DIFF[Math.min(stageIdx || 0, WORLD_DIFF.length - 1)];
+// worlds 2 and 3 field armored elites: a gold guard soaks up light hits until a heavy, launcher or slam breaks it
+function makeElite(e) {
+  e.elite = true; e.guardMax = e.guard = stageIdx >= 2 ? 4 : 3;
+  e.hp = e.maxHp = Math.round(e.hp * 1.5); e.dmg = Math.round(e.dmg * 1.15);
+}
 function spawnEnemy(type, side, isBoss) {
+  let forceElite = false;
+  if (!isBoss && type.endsWith('*')) { type = type.slice(0, -1); forceElite = stageIdx >= 1; }
   const def = isBoss ? BOSSES[type] : EDEF[type];
   const wd = worldDiff(), hp = Math.round(scaleStat(def.hp, .5) * (isBoss ? wd.boss : wd.hp) * (!isBoss && def.ranged && !def.poise ? .65 : 1)); // shooters are fragile: close the gap and they drop fast (the armored tank isn't)
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
     dmg: Math.round(scaleStat(def.dmg, .3) * (isBoss ? 1.6 : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
+  if (!isBoss && (forceElite || (stageIdx >= 1 && def.move !== 'fly' && Math.random() < [0, .15, .22][Math.min(stageIdx, 2)]))) makeElite(e);
   if (isBoss) { e.phase = 1; e.baseDmg = e.dmg; e.size = 1.15; e.hw = def.hw * e.size; e.hh = def.hh * e.size; e.rageT = 0; e.staggers = 0; }
   enemies.push(e); return e;
 }
@@ -173,6 +181,10 @@ function updateEnemy(e, dt) {
       return;
     }
     case 'recover': e.t -= dt; if (e.t <= 0) { e.state = 'idle'; e.plan = null; } return;
+    case 'evade': // a quick hop back out of reach of a big attack
+      e.t -= dt; e.x += e.vx * dt; e.vx *= Math.pow(.03, dt); if (Math.random() < .4) dust(e.x, e.y, 1);
+      if (e.t <= 0) { e.state = 'idle'; e.cd = Math.min(e.cd, .25); } return; // and it comes straight back at you
+    case 'block': e.t -= dt; e.facing = Math.sign(P.x - e.x) || e.facing; if (e.t <= 0) { e.state = 'idle'; e.cd = Math.min(e.cd, .2); } return;
   }
 }
 function enemyLand(e) {
@@ -204,9 +216,20 @@ function approach(e, tx, ty, dt, k) {
 }
 // bosses take longer to wind up, so every big attack can be read and dodged
 const BOSS_WIND = { bramble: 1.1, vent: 1.15, coil: 1.05, quake: .9, mines: .7, magnet: .8, dive: .95, orbit: .7, prismwall: .6, bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
+// in the third world, enemies cover for each other: when one winds up, a nearby ally may attack with it
+function recruitPartner(e) {
+  if (e.boss || stageIdx < 2 || Math.random() > .35) return;
+  const mates = enemies.filter(o => o !== e && !o.dead && !o.boss && o.state === 'idle' && Math.abs(o.x - e.x) < 240 && o.cd < 1.2);
+  if (!mates.length) return;
+  const o = pick(mates), plans = o.def.plans;
+  o.plan = plans.includes('pounce') ? 'pounce' : plans.includes('charge') ? 'charge' : plans.includes('shoot') ? 'shoot' : plans[0];
+  o.facing = Math.sign(P.x - o.x) || o.facing; o.paired = true;
+  wind(o, o.def.wind);
+}
 function wind(e, t) {
   if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * [1, .88, .76][e.phase - 1] * (e.enraged ? .9 : 1); sfx('growl'); if (e.plan === 'slam' || e.plan === 'dive') e.ty = P.y, e.tx = P.x; }
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
+  if (!e.paired) recruitPartner(e); e.paired = false;
 }
 function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]) * worldDiff().cd; }
 function execute(e) {

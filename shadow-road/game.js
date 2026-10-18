@@ -36,6 +36,11 @@ function begin(m) {
   if (m.dive) { P.vz = Math.min(P.vz, -120); P.jvx = P.facing * 240; }
   else if (P.state === 'air') { P.vz = Math.max(P.vz, 110); P.jvx *= .3; P.airN = (P.airN || 0) + 1; }
   if (m.launcher) { P.holdUsed = true; P.chaseQ = false; }
+  if (stageIdx >= 2 && (m.power === 2 || m.smash)) for (const e of enemies) { // third-world enemies see a big swing coming and hop clear of it
+    if (e.dead || e.boss || e.air || !['idle', 'recover'].includes(e.state)) continue;
+    const dx = (e.x - P.x) * P.facing;
+    if (dx > -10 && dx < (m.x1 || 60) + 50 && Math.abs(e.y - P.y) < 30 && Math.random() < .28) { e.state = 'evade'; e.t = .38; e.vx = Math.sign(e.x - P.x || 1) * 330; e.sqx = .8; e.sqy = 1.15; dust(e.x, e.y, 4); }
+  }
   sfx(m.power === 2 || m.rot ? 'whoosh' : 'swing');
 }
 
@@ -258,8 +263,27 @@ function strike(e, base, dir, m, echo) {
   let raw = base * rand(.9, 1.1) * (stillT > 0 ? 2 : 1);
   if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
-  const dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' ? 1 : .78)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
+  let dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' ? 1 : .78)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
+  // what counts as a heavy blow: it breaks blocks and guards
+  const heavy = m.trump || m.power === 2 || m.launch || m.smash || m.shock || (m.key && m.key.includes('H')) || m.key === 'X';
+  if (!e.boss && !m.trump && !m.el && !heavy && e.state === 'block' && Math.sign(P.x - e.x) === e.facing) { // a raised guard turns a light hit aside
+    e.t = Math.max(e.t, .25); floatText(e.x, e.y, e.z + e.hh + 10, 'BLOCKED', '#C8CCD8', 13); sfx('hit-metal', .3);
+    burst(e.x - dir * e.hw * .6, e.y, e.z + e.hh * .6, ['#FFFFFF', '#C8CCD8'], 6, 'spark', -dir); P.vx = -dir * 140; hitstop = Math.max(hitstop, .05); return;
+  }
+  if (!e.boss && stageIdx >= 2 && !heavy && !m.trump && !m.el && ['idle', 'recover'].includes(e.state) && (e.def.draw === 'human' || e.def.draw === 'knight') && Math.sign(P.x - e.x) === e.facing && Math.random() < .25) {
+    e.state = 'block'; e.t = .55; e.plan = null; floatText(e.x, e.y, e.z + e.hh + 10, 'BLOCKED', '#C8CCD8', 13); sfx('hit-metal', .3); // third-world fighters raise a guard
+    burst(e.x - dir * e.hw * .6, e.y, e.z + e.hh * .6, ['#FFFFFF', '#C8CCD8'], 6, 'spark', -dir); P.vx = -dir * 140; hitstop = Math.max(hitstop, .05); return;
+  }
+  let broke = false;
+  if (e.elite && e.guard > 0 && !m.el) {
+    if (heavy) { e.guard -= m.power === 2 || m.trump ? 2 : 1; if (e.guard <= 0) { e.guard = 0; broke = true; } else { floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD ' + '◆'.repeat(e.guard), '#EED48A', 11); sfx('hit-metal', .6); } }
+    else { dmg = Math.max(1, Math.round(dmg * .25)); m = Object.assign({}, m, { kb: (m.kb || 0) * .15, launch: 0, noStun: 1 }); sfx('hit-metal', .2); } // light hits glance off the guard
+  }
   hurtEnemy(e, dmg, dir, m, crit);
+  if (broke && !e.dead) { // the guard shatters and leaves it reeling
+    e.state = 'down'; e.t = 1.3; e.vx = dir * 60; e.plan = null; hitstop = Math.max(hitstop, .14); shakeMag = Math.max(shakeMag, 7); sfx('break');
+    floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD BREAK!', '#FFD27A', 18); burst(e.x, e.y, e.z + e.hh * .6, ['#EED48A', '#FFFFFF', '#D8AA55'], 24, 'crystal', dir, true);
+  }
   if (m === P.move && dir === P.facing && !m.around && !(m.lunge >= 300)) P.carry = Math.max(P.carry || 0, Math.min(Math.abs(e.vx) * (e.air ? 1.4 : .8), 340));
   if (brandT > 0 && !m.trump && !m.el && !e.dead) applyElement(e, base, dir);
   if (mirrorT > 0 && !echo) echoes.push({ e, dmg: base * .6, dir, m, t: .14 });
@@ -286,6 +310,7 @@ function hurtEnemy(e, dmg, dir, m, crit) {
   if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg);
   if (e.hp <= 0) { killEnemy(e, dir, m); return; }
   e.cd = Math.max(e.cd, .4);
+  if (m.noStun) { e.vx = dir * 25; e.flinch = .08; return; } // an armored elite doesn't even stagger
   if (e.boss && !e.enraged) { e.rageBuild = (e.rageBuild || 0) + dmg; if (e.rageBuild > e.maxHp * .14) { e.rageBuild = 0; e.rageQ = true; } } // punish it hard and it flies into a rage
   if (e.boss && (e.state === 'down' || e.stagger)) return; // a staggered boss stays down while you punish it
   if (e.poiseMax && !e.air) {
@@ -357,10 +382,11 @@ function popEnemy(e) { // the body hits the ground in a burst of debris and drop
 }
 function dropLoot(e) {
   const [a, b] = e.def.shards || [30, 40];
-  const n = Math.round(rand(a, b) * (1 + .3 * save.cycle)), pieces = Math.min(n, 8);
+  // richer pickings deeper in: each world drops more, and an armored elite drops a lot more
+  const n = Math.round(rand(a, b) * (1 + .3 * save.cycle) * [1, 1.5, 2.1][Math.min(stageIdx, 2)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
-  if (e.boss) for (let i = 0; i < 3; i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
-  else if (e.def.sigil && Math.random() < e.def.sigil) loot.push(makeLoot('sigil', e.x, e.y, 1));
+  if (e.boss) for (let i = 0; i < 3 + Math.min(stageIdx, 2); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
+  else if (Math.random() < (e.def.sigil || 0) * [1, 1.4, 1.8][Math.min(stageIdx, 2)] + (e.elite ? .65 : 0) + .04 * Math.min(stageIdx, 2)) loot.push(makeLoot('sigil', e.x, e.y, 1)); // elites usually carry a sigil, the ink for Trump cards
   if (Math.random() < (e.boss ? 1 : .12)) loot.push(makeLoot('heal', e.x, e.y, e.boss ? 50 : 25));
   if (e.dropWeapon && !save.owned[e.dropWeapon]) loot.push(makeLoot('weapon', e.x, e.y, 0, e.dropWeapon));
 }

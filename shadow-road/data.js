@@ -170,11 +170,11 @@ const STAGES = [
     drop: [.5, .1], boss: 'mossback' }, // odds of a first and a second weapon in this world; any weapon you lack can be the one
   { name: 'The Clockwork Skyport', sub: 'THE SECOND SHADOW', theme: 'sky', len: 2700,
     pods: [700, 1900],
-    waves: [['corsair', 'skyray', 'spider'], ['knight', 'corsair', 'gunner', 'cloudram', 'skyray', 'drone'], ['tank', 'gunner', 'corsair', 'cloudram', 'skyray', 'spider']],
+    waves: [['corsair', 'skyray', 'spider'], ['knight*', 'gunner', 'knight', 'gunner', 'cloudram', 'skyray'], ['tank', 'corsair*', 'gunner', 'cloudram', 'skyray', 'cloudram', 'drone']], // later waves pair guards with gunners behind them, and fliers with chargers
     drop: [.65, .25], boss: 'colossus' },
   { name: 'The Prism Rim', sub: 'THE THIRD SHADOW', theme: 'prism', len: 2800,
     pods: [650, 1500, 2100], drop: [.8, .4],
-    waves: [['cultist', 'imp', 'sdrone'], ['witch', 'cultist', 'jelly', 'imp', 'sdrone', 'sdrone'], ['cgolem', 'cultist', 'witch', 'shardling', 'jelly', 'sdrone']],
+    waves: [['cultist', 'imp', 'sdrone'], ['shardling*', 'witch', 'shardling', 'witch', 'imp', 'sdrone'], ['cgolem*', 'cultist', 'witch', 'cultist*', 'jelly', 'imp', 'sdrone']],
     boss: 'wyrm' },
 ];
 

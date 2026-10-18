@@ -60,6 +60,8 @@ function humanEnemyPose(e) {
   else if (e.state === 'dash') { pose.arm = .1; pose.lean = .4; pose.run = 1; }
   else if (e.state === 'leap') { pose.arm = -2.6; pose.crouch = 1; }
   else if (e.state === 'hurt') { pose.arm = -1; pose.lean = -.35; }
+  else if (e.state === 'block') { pose.arm = -.85; pose.backArm = -.7; pose.lean = -.12; pose.crouch = 1; } // guard up, braced
+  else if (e.state === 'evade') { pose.arm = -.4; pose.lean = -.4; pose.crouch = 1; }
   else if (e.def.ranged) pose.arm = .1;
   return pose;
 }
@@ -84,6 +86,16 @@ function drawEnemy(e, t) {
     ctx.fillStyle = gg; circle(e.x, cy, e.hh * 1.3); ctx.fill(); ctx.restore();
     if (Math.random() < .5) parts.push({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: e.z + rand(0, e.hh), vx: rand(-20, 20), vy: 0, vz: rand(60, 120), life: .8, max: .8, col: pick(['#FF9A5A', '#FFD27A', '#E86A80']), size: rand(2, 3.5), shape: 'star', rot: 0, vr: 6 });
   }
+  if (e.elite && !e.dead) onMain(() => { // an armored elite: a gold guard shimmering around it, and pips showing how much guard is left
+    const cy = e.y - e.z - e.hh * .5;
+    if (e.guard > 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(e.x, cy, e.hh * .2, e.x, cy, e.hh * .85); g.addColorStop(0, 'rgba(255,210,120,0)'); g.addColorStop(.75, `rgba(255,200,100,${.16 + .06 * Math.sin(t * 5)})`); g.addColorStop(1, 'rgba(255,200,100,0)');
+      ctx.fillStyle = g; ell(e.x, cy, e.hw + 14, e.hh * .7); ctx.fill(); ctx.restore();
+    }
+    for (let i = 0; i < e.guardMax; i++) { const px = e.x + (i - (e.guardMax - 1) / 2) * 8, py = e.y - e.z - e.hh - 18;
+      ctx.fillStyle = i < e.guard ? '#EED48A' : 'rgba(40,30,30,.6)'; ctx.beginPath(); ctx.moveTo(px, py - 3.5); ctx.lineTo(px + 3, py); ctx.lineTo(px, py + 3.5); ctx.lineTo(px - 3, py); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#2A1B2C'; ctx.lineWidth = 1; ctx.stroke(); }
+  });
   const jx = e.jit > 0 ? rand(-3, 3) : 0;
   ctx.save();
   ctx.translate(e.x + jx, e.y - e.z);
