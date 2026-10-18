@@ -207,7 +207,7 @@ const STAGES = [
     drop: [.65, .25], boss: 'colossus' },
   { name: 'The Prism Rim', sub: 'THE THIRD SHADOW', theme: 'prism', len: 2800,
     pods: [650, 1500, 2100], drop: [.8, .4],
-    waves: [['cultist', 'imp', 'sdrone'], ['shardling*', 'witch', 'shardling', 'witch', 'imp', 'sdrone'], ['cgolem*', 'cultist', 'witch', 'cultist*', 'jelly', 'imp', 'sdrone', 'imp', 'shardling'],
+    waves: [['cultist', 'imp', 'sdrone'], ['shardling*', 'witch', 'shardling', 'witch', 'imp', 'sdrone'], ['imp', 'cultist', 'shardling', 'sdrone', 'witch*', 'imp', 'jelly'], ['cgolem*', 'cultist', 'witch', 'cultist*', 'jelly', 'imp', 'sdrone', 'imp', 'shardling'],
       ['imp', 'imp', 'cultist*', 'witch', 'jelly', 'sdrone', 'shardling*', 'imp', 'cultist', 'witch', 'cgolem', 'imp', 'sdrone']], // the Gallery's second wave: pure chaos
     boss: 'wyrm' },
 ];

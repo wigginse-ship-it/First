@@ -102,5 +102,5 @@ function refreshArrows() {
   }
   const n = save.arrows || 0; arrowHudEl.hidden = n <= 0;
   arrowHudEl.innerHTML = '➶'.repeat(n);
-  const b = document.getElementById('shootBtn'); if (b) { b.hidden = n <= 0; b.textContent = 'BOW ' + n; }
+  const b = document.getElementById('shootBtn'); if (b) { b.hidden = false; b.textContent = 'BOW ' + n; b.style.filter = n ? '' : 'grayscale(1) brightness(.6)'; } // always there, so you know it exists; dim when the quiver is empty
 }

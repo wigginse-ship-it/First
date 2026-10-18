@@ -9,8 +9,8 @@ const ZONES = [
     { theme: 'sky2', len: 1700, waves: [2], pods: [1200], mech: 'tilt', title: 'The Gearworks Deck', sub: 'THE SHIP BANKS · KNOCK THEM OVERBOARD' },
     { theme: 'skyBoss', len: 1000, waves: [], boss: 1, title: 'The Foundry Crown', sub: 'THE FURNACES ARE LIT' } ] },
   { trans: ['shatter', 'invert'], zones: [
-    { theme: 'prism', len: 2300, waves: [0, 1], pods: [650, 1500] },
-    { theme: 'prism2', len: 1900, waves: [2, 3], pods: [1200], mech: 'echo', title: 'The Inverted Gallery', sub: 'TIME RUNS TWICE HERE · YOUR ECHO FIGHTS BESIDE YOU' },
+    { theme: 'prism', len: 2500, waves: [0, 1, 2], pods: [650, 1500, 2100] },
+    { theme: 'prism2', len: 1900, waves: [3, 4], pods: [1200], mech: 'echo', title: 'The Inverted Gallery', sub: 'TIME RUNS TWICE HERE · YOUR ECHO FIGHTS BESIDE YOU' },
     { theme: 'prismBoss', len: 1000, waves: [], boss: 1, title: "The Wyrm's Nest", sub: 'THE STARS ARE WATCHING' } ] },
 ];
 // other files can add passages (TRANS_FX[kind](T, p, c, inP, t) draws one) and approach rules (MECH_FX[kind] = { start(m), update(m, dt), boxes(m, box), list(m, list, t) })
@@ -39,9 +39,10 @@ function enterZone(z, Zs) { // Zs: a place outside the usual three (a hidden Tru
 }
 // the third wave gives you one more chance at a weapon if this stage hasn't given you one yet
 function boostDrop() {
-  if (runFoundW || carriers.some(c => c.wave === 2 && !save.owned[c.weapon])) return;
+  const wi = stage.w0 + waveIdx; // the approach's first wave
+  if (runFoundW || carriers.some(c => c.wave === wi && !save.owned[c.weapon])) return;
   const pool = WEAPON_ORDER.filter(id => id !== 'fists' && !save.owned[id]);
-  if (pool.length && Math.random() < .3) carriers.push({ weapon: pick(pool), wave: 2, slot: Math.floor(Math.random() * baseStage.waves[2].length) });
+  if (pool.length && Math.random() < .3) carriers.push({ weapon: pick(pool), wave: wi, slot: Math.floor(Math.random() * baseStage.waves[wi].length) });
 }
 
 // ---------- moving between places: every world has its own two passages ----------
