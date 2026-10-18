@@ -119,15 +119,14 @@ function drawShortBow(pose) {
 // the quiver count on the HUD, and the BOW button on touch screens
 let arrowHudEl = null;
 function refreshArrows() {
-  if (!arrowHudEl) {
-    const host = document.querySelector('.hud-r'); if (!host) return;
+  if (!arrowHudEl) { // a row of arrows under the health and Trump bars
+    const bars = document.querySelector('.hud-l .bars'); if (!bars) return;
     arrowHudEl = document.createElement('div'); arrowHudEl.id = 'arrowHud'; arrowHudEl.title = 'Arrows';
-    arrowHudEl.style.cssText = 'display:flex;gap:5px;align-items:center;padding:3px 9px 3px 6px;border:1px solid rgba(216,170,85,.75);border-radius:6px;background:linear-gradient(#1C1418,#0C0809);box-shadow:inset 0 0 0 1px rgba(0,0,0,.6);font:700 13px Cinzel,Georgia,serif;color:#E8D8B0;text-shadow:0 1px 2px #000;pointer-events:none';
-    host.insertBefore(arrowHudEl, host.firstChild);
+    arrowHudEl.style.cssText = 'display:flex;gap:3px;align-items:center;height:12px;margin:3px 0 1px;pointer-events:none;filter:drop-shadow(0 1px 1px #000)';
+    bars.insertBefore(arrowHudEl, document.getElementById('wname'));
   }
-  // a little quiver with its arrows, and the count beside it; dim when empty
-  const n = save.arrows || 0; arrowHudEl.hidden = false; arrowHudEl.style.opacity = n ? '1' : '.5';
-  const shafts = [...Array(ARROW_MAX)].map((_, i) => `<line x1="${5 + i * 2.6}" y1="${i < n ? 2 : 9}" x2="${5 + i * 2.6}" y2="14" stroke="${i < n ? '#E8D8B0' : '#5A4A3A'}" stroke-width="1.2"/>${i < n ? `<path d="M${3.6 + i * 2.6} 3.6 L${5 + i * 2.6} 1 L${6.4 + i * 2.6} 3.6Z" fill="#C8CEDA"/>` : ''}`).join('');
-  arrowHudEl.innerHTML = `<svg width="20" height="22" viewBox="0 0 20 22" aria-hidden="true">${shafts}<path d="M3 11 h14 l-1.5 10 h-11 Z" fill="#6A4A2A" stroke="#D8AA55" stroke-width="1"/></svg><span>${n}/${ARROW_MAX}</span>`;
+  const n = save.arrows || 0; arrowHudEl.hidden = n <= 0;
+  const icon = '<svg width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="3" y1="5" x2="17" y2="5" stroke="#E8D8B0" stroke-width="1.6"/><path d="M15 1.6 L21 5 L15 8.4 Z" fill="#C8CEDA" stroke="#2A1B2C" stroke-width=".6"/><path d="M1 1.6 L5 5 L1 8.4 M3.4 1.6 L7.4 5 L3.4 8.4" fill="none" stroke="#D8AA55" stroke-width="1.1"/></svg>';
+  arrowHudEl.innerHTML = icon.repeat(n);
   const b = document.getElementById('shootBtn'); if (b) { b.hidden = false; b.textContent = 'BOW ' + n; b.style.filter = n ? '' : 'grayscale(1) brightness(.6)'; } // always there, so you know it exists; dim when the quiver is empty
 }
