@@ -1130,7 +1130,7 @@
     const fold = swoop ? 1 : 0, rear = Math.max(flameW, howl * .8, gustW * .6), lunge = flaming ? 1 : maw;
     const pitch = swoop ? .34 : flaming ? .16 : -.14 * Math.max(flameW, gustW) + (down ? .12 : 0);
     const B = (down ? 16 : 0) + Math.sin(t * 1.15 - .9) * 1.6 * (1 - fold); // the body lifts a little on each downstroke
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.22, 1.22); ctx.translate(0, B);
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.translate(0, B);
     if (pitch) { ctx.translate(0, -44); ctx.rotate(pitch); ctx.translate(0, 44); }
     const SH = [2, -56]; // the shoulder
     ctx.save(); ctx.translate(SH[0] - 9, SH[1] + 1); ctx.rotate(.24); drakeWing(true, beat, fold, hot); ctx.restore();
@@ -1506,12 +1506,12 @@
     const x0 = e.x, y0 = e.y, z0 = e.z, D = 1.15;
     act(e, 'flame', (h, dt, e) => {
       const u = cl01(h.el / D), k = sm(cl01(h.el / .25)); e.facing = T.d; e.w4pose = { beat: .62 + .1 * Math.sin(h.el * 5) };
-      fire.front = lerp(T.x0, T.x1, u); e.x = lerp(x0, fire.front - T.d * 104 * e.size, k); e.y = lerp(y0, T.y, k); e.z = lerp(z0, 70, k);
+      fire.front = lerp(T.x0, T.x1, u); e.x = lerp(x0, fire.front - T.d * 92 * e.size, k); e.y = lerp(y0, T.y, k); e.z = lerp(z0, 70, k);
       if (h.el - (h.sfxT ?? -1) > .3) { h.sfxT = h.el; sfx('whoosh'); }
       if (u >= 1) { fire.feeding = 0; recover(e, 1.1); return true; } // spent, at the far end of the lane: your opening
       return false;
     }, { uy: T.y + 1 }).up = (h, t) => { // the gout of fire pouring from its jaws down onto the floor ahead of it
-      const e = h.e, s = e.size, mx = e.x + T.d * 84 * s, my = e.y - e.z - 66 * s, fx = fire.front, fy = T.y, q = cl01(h.el / .12);
+      const e = h.e, s = e.size, mx = e.x + T.d * 70 * s, my = e.y - e.z - 55 * s, fx = fire.front, fy = T.y, q = cl01(h.el / .12);
       const st = taper(mx, my, lerp(mx, fx, .55) + T.d * 6, lerp(my, fy, .4), lerp(mx, fx, q), lerp(my, fy, q), 5, 22, 9);
       trace(st.L, st.R); ctx.fillStyle = C('#E8602A'); ctx.globalAlpha = .9; ctx.fill(); ctx.globalAlpha = 1; outline(1.2);
       if (DET()) { const s2 = taper(mx, my, lerp(mx, fx, .55) + T.d * 6, lerp(my, fy, .4), lerp(mx, fx, q), lerp(my, fy, q), 2, 10, 9); trace(s2.L, s2.R); ctx.fillStyle = '#FFD27A'; ctx.fill(); }
@@ -1520,7 +1520,7 @@
   };
   function flameTongue(x, y, hgt, i, t) { // one tongue of fire standing on the floor: slow to sway, inked, a hot core
     if (hgt < 2) return; const sw = Math.sin(t * 2.2 + i * 1.7) * hgt * .12;
-    horn(x - 4, y, x + sw, y - hgt * .55, x + sw * 1.8, y - hgt, 11, .5, '#E8602A', 1, '#A83A1C');
+    horn(x - 3, y, x + sw - 2, y - hgt * .5, x + sw * 1.8, y - hgt, 16, .5, '#E8602A', 1, '#A83A1C');
     if (DET()) { const s = taper(x - 1, y, x + sw * .6, y - hgt * .4, x + sw * 1.2, y - hgt * .62, 5, .4, 5); trace(s.L, s.R); ctx.fillStyle = '#FFD27A'; ctx.fill(); }
   }
   reg('w4fire', {
@@ -1572,7 +1572,9 @@
       if (h.el > h.end) h.t = -1; },
     draw(h, t) { if (!h.landed) for (let l = 0; l < LANES; l++) if (l !== h.gap) { ctx.fillStyle = `rgba(20,8,24,${.2 + .4 * cl01(h.el / .26)})`; ell(h.x, laneY(l), 9, 3); ctx.fill(); } },
     ups(h, list, t) { const u = cl01(h.el / .26), z = 200 * (1 - u * u), f = 1 - cl01((h.el - h.end + .4) / .4); // the quills, falling, then standing in the floor, root down
-      for (let l = 0; l < LANES; l++) { if (l === h.gap) continue; const y = laneY(l); list.push([y, () => { ctx.save(); ctx.globalAlpha = f; ctx.translate(h.x, y - z); pinion(0, 0, -Math.PI / 2 - h.d * .12 + (l % 2 ? .06 : -.06), 42, 6.4, false, DR.ember); ctx.restore(); glowAt(h.x - h.d * 4, y - z - 36, 16, EMBER, .45 * f); }]); } },
+      for (let l = 0; l < LANES; l++) { if (l === h.gap) continue; const y = laneY(l); list.push([y, () => { ctx.save(); ctx.globalAlpha = f;
+        for (const [ox, lean, L] of [[-7 + (l % 2) * 3, -.22, 34], [6 - (l % 2) * 3, .2, 30]]) { ctx.save(); ctx.translate(h.x + ox, y - z); pinion(0, 0, -Math.PI / 2 + lean - h.d * .06, L, 7.4, false, DR.ember); ctx.restore(); }
+        ctx.restore(); glowAt(h.x, y - z - 30, 14, EMBER, .4 * f); }]); } },
     box(h, box) { box(h.x, (FLOOR_TOP + FLOOR_BOT) / 2, 0, 40, 260); },
   });
   // THE HUNGRY DARK (close burst, every form): a ring of black fangs rises out of the floor round it and snaps shut
@@ -1670,7 +1672,7 @@
   };
 
   // ---------------- THE RIM OF THE ABYSS: the Ty'iga's shapes ----------------
-  const FORM_BOX = { 1: [52, 68], 2: [46, 78], 3: [42, 84] }; // the wolf, the drake, the Mask
+  const FORM_BOX = { 1: [52, 68], 2: [44, 72], 3: [42, 84] }; // the wolf, the drake, the Mask
   MECH_FX.w4rim = {
     start(m) { m.ph = 1; },
     update(m, dt) {
