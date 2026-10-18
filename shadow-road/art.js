@@ -134,17 +134,20 @@ function drawCorwinHeadTurn(look, hy, Y) {
   }
   // hair: close-cut and swept back, with some lift over the brow; it covers the crown and the back of the head
   // and stops at a high hairline over the face
-  const hairShape = () => ell(cx - .5 * CS, hy - 2.4, 8.1, 9);
+  const hairShape = () => ell(cx - .4, hy - 3, 8.1, 8.6); // the hair's outline is fixed to the skull: it turns with him, it does not reshape
   ctx.save(); hairShape(); ctx.clip(); ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, Y > -.25 ? 17.6 : 19.4); ctx.clip(); // down to the ears, lower at the nape
   ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, 30);
-  if (Y > -.25) { const fv = clamp((Y + .25) / .55, 0, 1); const fx0 = cx + 4.4 * CS, frx = (3.4 + 2.4 * Math.max(0, Y)) * (.6 + .4 * fv); ctx.moveTo(fx0 + frx, hy + 3.4); ctx.ellipse(fx0, hy + 3.4, frx, 8.4, 0, 0, TAU); } // the face, cut out of the hair
+  if (Y > -.25) { const fv = clamp((Y + .25) / .55, 0, 1); const fx0 = cx + 4 * CS, frx = (3.9 + 2.1 * Math.max(0, Y)) * (.6 + .4 * fv); ctx.moveTo(fx0 + frx, hy + 2.2); ctx.ellipse(fx0, hy + 2.2, frx, 9.9, 0, 0, TAU); } // a high hairline, as in profile // the face, cut out of the hair
   ctx.fillStyle = C(look.hair); ctx.fill('evenodd');
   ctx.restore();
   if (!FLASH && !TINT) {
     ctx.fillStyle = C('#4A4E66'); ctx.beginPath(); // light catching the wave
     ctx.moveTo(cx + 5.6, hy - 9.6); ctx.quadraticCurveTo(cx, hy - 11.8, cx - 5.6, hy - 9.4); ctx.quadraticCurveTo(cx, hy - 10.8, cx + 5, hy - 8.8); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = C('#0A080E'); ctx.lineWidth = .6; ctx.beginPath(); // combed lines, sweeping back
-    for (const o of [-3, 0, 3]) { ctx.moveTo(cx + o * .8 + 3 * CS, hy - 9.6); ctx.quadraticCurveTo(cx + o, hy - 8, cx + o * 1.25 - 3 * CS, Y < -.25 ? hy + 2 : hy - 6); }
+    for (const o of [-3, 0, 3]) { // swept back: from the hairline over the crown, or down the back of the head to the nape
+      if (Y > -.25) { ctx.moveTo(cx + o + 2.5 * CS, hy - 7.6); ctx.quadraticCurveTo(cx + o * .9, hy - 10.6, cx + o * .6 - 3 * CS, hy - 11); }
+      else { ctx.moveTo(cx + o * .6, hy - 10.6); ctx.quadraticCurveTo(cx + o * 1.1, hy - 4, cx + o * .9, hy + 3); }
+    }
     ctx.stroke();
   }
   for (const sd of [-1, 1]) { // ears, at the sides of the head
@@ -433,9 +436,11 @@ function drawHumanoid(look, pose) {
   // back arm, a shade darker for being further away
   ctx.save(); upper();
   const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = PX(-3, -9.5), bsy = SHO + 1.5;
-  const bex = bsx + Math.cos(ba) * 8 * ASX, bey = bsy + Math.sin(ba) * 8, bwx = bex + Math.cos(ba + .25) * 7.5 * ASX, bwy = bey + Math.sin(ba + .25) * 7.5;
+  const bb = pose.backElbow !== undefined ? -pose.backElbow : .25; // how far the forearm folds up from the upper arm
+  const bl = 1 + (pose.backReach || 0); // a thrown rear hand reaches further, the shoulder driven through
+  const bex = bsx + Math.cos(ba) * 8 * bl * ASX, bey = bsy + Math.sin(ba) * 8 * bl, bwx = bex + Math.cos(ba + bb) * 7.5 * bl * ASX, bwy = bey + Math.sin(ba + bb) * 7.5 * bl;
   seg(bsx, bsy, bex, bey, 7, 5.6, shade(sleeve, -.18), 1); seg(bex, bey, bwx, bwy, 5.6, 4.2, shade(sleeve, -.18), .5);
-  ctx.fillStyle = C(shade(look.glove || skin, -.18)); circle(bwx + Math.cos(ba) * 1.5 * ASX, bwy + Math.sin(ba) * 1.5, 2.8); ctx.fill(); outline(1);
+  ctx.fillStyle = C(shade(look.glove || skin, -.18)); circle(bwx + Math.cos(ba + bb) * 1.5 * ASX, bwy + Math.sin(ba + bb) * 1.5, 2.8); ctx.fill(); outline(1);
   ctx.restore();
   // legs: thighs and calves with a swell, pants tucked into boots
   const legs = look.legs;
@@ -532,7 +537,7 @@ function drawHumanoid(look, pose) {
     ctx.fillStyle = C(look.visor); ctx.fillRect(1, hy - 3, 8, 3.5);
     if (look.plume) { ctx.fillStyle = C(look.plume); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.quadraticCurveTo(-14, hy - 18, -20, hy - 8); ctx.quadraticCurveTo(-12, hy - 10, -6, hy - 4); ctx.fill(); }
   } else if (look.corwin) {
-    ctx.save(); headScale(); if (Math.abs(Y) < .3) drawCorwinHead(look, hy); else drawCorwinHeadTurn(look, hy, Y); ctx.restore();
+    ctx.save(); headScale(); if (!(pose.headTurn ?? Math.abs(Y) >= .3)) drawCorwinHead(look, hy); else drawCorwinHeadTurn(look, hy, Y); ctx.restore();
   } else {
     ctx.save(); headScale();
     ctx.fillStyle = C(shade(skin, -.22)); ctx.fillRect(-1.5, hy + 5, 5, 6); // neck

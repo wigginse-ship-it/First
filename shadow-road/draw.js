@@ -27,6 +27,7 @@ function attackStance(pose, m, k) {
   pose.sink = mix('sink') * light; pose.lean = (pose.lean || 0) * .4 + mix('lean') * light; pose.backArm = mix('back');
   pose.walk = 0;
 }
+const BOXING = { L: 'jab', LL: 'cross', LLL: 'hook', A: 'jab' };
 function playerPose() {
   const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : save.wl[P.w] };
   if (P.state === 'atk' || P.state === 'air') {
@@ -71,6 +72,25 @@ function playerPose() {
     if (!m.style && pose.kickK === undefined) pose.lean = m.power ? .2 : .1;
     pose.flow = Math.abs(P.vx) * .02;
     if (P.z <= 2 && !m.kick && !m.rot && !m.around) attackStance(pose, m, k); // the body moves with the weapon
+    if (P.w === 'fists' && BOXING[m.key]) { // boxing: punches go straight out at the enemy, hand to hand, the body turning behind each one
+      const kind = BOXING[m.key], h0 = m.h[0], h1 = m.h[1];
+      const e = k < h0 ? 0 : k < h1 ? Math.min(1, (k - h0) / ((h1 - h0) * .4)) : Math.max(0, 1 - (k - h1) / (1 - h1) * 1.3); // snap out, hold, pull back
+      const load = k < h0 ? ease(k / h0) : 0; // a small draw back before it goes
+      pose.trail = 0; pose.ext = 0; pose.streak = null; delete pose.sweep; pose.lean = .06 + .16 * e - .05 * load;
+      pose.arm = 1; pose.elbow = 1.9; pose.backArm = 1.3; pose.backElbow = 2; // both fists up by the chin
+      if (kind === 'jab') { // the lead hand snaps out; a short step in on the front foot
+        pose.arm = lerp(1, -.06 - pose.lean, e); pose.elbow = lerp(1.9, .05, e); pose.yaw = -.12 * e;
+        pose.legs = { f: 8 + 4 * e, b: -8, fk: 2 + 3 * e, bk: 3 }; pose.sink = 2;
+        if (e > .5) pose.streak = { len: 14, a: .55 * (k < h1 ? 1 : e), col: 'rgba(255,255,255,.8)' };
+      } else if (kind === 'cross') { // the rear hand, thrown with the hips: the back heel turns and the chest comes round to us
+        pose.backArm = lerp(1.3 + .2 * load, -.06 - pose.lean, e); pose.backElbow = lerp(2, .05, e); pose.backReach = .35 * e; pose.yaw = .55 * e - .1 * load;
+        pose.legs = { f: 9, b: -9 - 2 * e, fk: 2 + 4 * e, bk: 1 }; pose.sink = 2 + e; pose.lean += .06 * e;
+      } else { // the hook: elbow up and bent, the whole body turning through it from the back foot
+        const sw = k < h0 ? 0 : clamp((k - h0) / (h1 - h0), 0, 1);
+        pose.arm = lerp(.9, .15 - pose.lean, Math.min(1, e * 1.4)); pose.elbow = lerp(1.9, .15, e); pose.yaw = lerp(-.35, .2, ease(sw)) * (k < h0 ? load : 1);
+        pose.legs = { f: 9, b: -9, fk: 4 + 2 * e, bk: 3 }; pose.sink = 3; pose.lean = .1 + .12 * e;
+      }
+    }
     if (m.prep && (P.z <= 6 || k < m.h[0])) { // an uppercut is loaded from the legs: sink into the knees, then drive up through them
       const h0 = m.h[0];
       if (k < h0) { const q = ease(Math.min(1, k / (h0 * .85))); pose.sink = 9 * q; pose.legs = { f: 8, b: -9, fk: 3 + 6 * q, bk: 2 + 7 * q }; pose.lean = .32 * q; pose.backArm = lerp(1.2, .5, q); pose.yaw = -.15 * q; }
@@ -129,10 +149,14 @@ function humanEnemyPose(e) {
   else if (e.def.ranged) pose.arm = .1;
   return pose;
 }
+let headTurned = false;
 function drawPlayerAt(x, y, z, facing, pose, alpha) {
   // his turn (yaw) plus any spin in progress: past a quarter turn he is seen facing the other way
   const ang = Math.asin(clamp(pose.yaw || 0, -1, 1)) + (pose.spin || 0), c = Math.cos(ang);
   pose.Y = Math.sin(ang); if (c < 0) facing = -facing;
+  // the head swaps between its profile drawing and its turned drawing with a deadband, so it never flickers
+  // back and forth while he walks at a slant
+  if (pose.live) { const a = Math.abs(pose.Y); headTurned = headTurned ? a > .3 : a > .55; pose.headTurn = headTurned; }
   ctx.save(); ctx.globalAlpha = alpha;
   ctx.translate(x, y - z); ctx.scale(facing, 1);
   if (pose.stretch) ctx.scale(pose.stretch, 1 / pose.stretch); // smeared out by speed
@@ -327,7 +351,7 @@ function drawScene(t) {
     shadow(P.x, P.y, 13 * Math.max(.5, 1 - P.z / 220));
     if (P.inv > 0 && !['dodge', 'down', 'dead'].includes(P.state) && Math.floor(t * 18) % 2) return;
     const blink = P.state === 'dodge' && P.dk === 'side' ? Math.max(.1, Math.abs(1 - P.t / .34 - .5) * 2) : 1; // stepping through Shadow, he is barely there mid-step
-    drawPlayerAt(P.x, P.y, P.z, P.facing, playerPose(), blink);
+    drawPlayerAt(P.x, P.y, P.z, P.facing, Object.assign(playerPose(), { live: 1 }), blink);
     hatchActor(P.x, P.y - P.z, 13, 50);
   }]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
