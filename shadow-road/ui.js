@@ -67,6 +67,8 @@ function stageClear() {
 }
 
 // ---------- explaining moves: inputs shown as button chips ----------
+// on a keyboard the chips name the keys instead of the buttons
+const KEY_CHIP = { A: 'J', H: 'K', HOLDA: 'HOLD J', HOLD: 'HOLD K', HOLD3: 'HOLD K TO 3RD FLASH', RUN: 'RUN', WALK: 'WALK', JUMP: 'SPACE', DODGE: 'L' };
 const CHIP = { A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLDA: ['HOLD ATTACK', 'a'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], RUN: ['RUN', 'r'], WALK: ['WALK', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
 const KEY_INPUTS = { RH: ['DODGE', '+H'], J2: ['JUMP', 'JUMP'], AX: ['JUMP', '+HOLDA'], X: ['HOLDA'], M: ['WALK', '+A'], AH: ['JUMP', '+H'], HC: ['HOLD'], D: ['RUN', '+A'], DH: ['RUN', '+H'], A: ['JUMP', '+A'], R: ['DODGE', '+A'] };
 function inputsFor(id, m) {
@@ -78,7 +80,8 @@ function inputsFor(id, m) {
 function chips(id, m) {
   return '<span class="chips">' + inputsFor(id, m).map((tk, i) => {
     const plus = tk[0] === '+', c = CHIP[plus ? tk.slice(1) : tk];
-    return (i ? `<i>${plus ? '+' : '›'}</i>` : '') + `<span class="chip ${c[1]}">${c[0]}</span>`;
+    const name = plus ? tk.slice(1) : tk;
+    return (i ? `<i>${plus ? '+' : '›'}</i>` : '') + `<span class="chip ${c[1]}">${KBD ? KEY_CHIP[name] : c[0]}</span>`;
   }).join('') + '</span>';
 }
 const BASICS = [
@@ -86,7 +89,7 @@ const BASICS = [
   { key: 'X', name: 'Launcher', desc: 'Hold Attack to throw an enemy into the air. Tap Jump right after to leap up after them.' },
   { key: 'A', name: 'Air combo', desc: 'Up to three Attacks in the air. Air hits keep enemies floating and hit harder; the third drives them into the ground.', seq: ['JUMP', '+A', 'A', 'A'] },
   { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge. Mix it into the combos below.', seq: ['H'] },
-  { key: 'D', name: 'Dash attack', desc: 'Flick the joystick twice to run, then attack.' },
+  { key: 'D', name: 'Dash attack', desc: 'Run (flick the joystick twice, or tap a direction key twice), then attack.' },
   { key: 'R', name: 'Dodge counter', desc: 'Tap Attack during a dodge to strike out of it.' },
 ];
 function moveListHtml(id) {
@@ -202,6 +205,10 @@ $('#retryBtn').addEventListener('click', () => play(save.stage));
 $('#overForgeBtn').addEventListener('click', () => openForge('REGROUP AND REFORGE'));
 $('#cycleBtn').addEventListener('click', () => { save.cycle++; save.stage = 0; persist(); openForge('CYCLE ' + (save.cycle + 1) + ' BEGINS'); });
 onKeyMenu = (e) => {
+  if (e.code === 'Enter' || e.code === 'NumpadEnter') { // Enter takes the main choice on any menu
+    const btn = { title: $('#contBtn').hidden ? $('#newBtn') : $('#contBtn'), forge: $('#walkBtn'), pause: $('#resumeBtn'), over: document.querySelector('#overOv .cta'), win: document.querySelector('#winOv .cta') }[mode];
+    if (btn && document.activeElement?.tagName !== 'BUTTON') { btn.click(); return true; }
+  }
   if (mode === 'pause' && e.code === 'Escape') { resume(); return true; }
   if (mode === 'play' && (e.code === 'Escape' || e.code === 'KeyP')) { pauseGame(); return true; }
   return mode !== 'play';
@@ -209,10 +216,11 @@ onKeyMenu = (e) => {
 
 // ---------- layout: the world is 360 units tall; wider screens see more of the street ----------
 let ox = 0, oy = 0;
+function onInputModeChange() { if (mode === 'pause') $('#moveList').innerHTML = moveListHtml(P.w); layout(); }
 function layout() {
   const r = app.getBoundingClientRect(), cw = r.width, ch = r.height;
   if (!cw || !ch) return;
-  const land = cw / ch > 1.15;
+  const land = cw / ch > 1.15 || KBD; // a desktop window is never asked to rotate
   app.classList.toggle('land', land); app.classList.toggle('port', !land);
   if (!land) { joyId = null; joyMx = joyMy = 0; knob.style.transform = ''; clearInput(); }
   VW = clamp(Math.round(cw / ch * VIEW_H), 480, 680);

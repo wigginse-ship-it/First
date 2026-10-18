@@ -114,6 +114,19 @@ function sfx(k, power = 1) {
 for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, () => { if (!actx || actx.state !== 'running') audioInit(); }, { passive: true, capture: true });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && actx && actx.state !== 'running') actx.resume().catch(() => {}); });
 
+// ---------- phone or desktop ----------
+// A mouse-and-keyboard computer gets keyboard controls (no on-screen buttons, key names in the menus); a touchscreen
+// gets the joystick and buttons. It starts from what the device says it has and follows whatever you actually use.
+let KBD = false;
+function setKbd(on) {
+  if (KBD === on) return; KBD = on;
+  document.documentElement.classList.toggle('kbd', on);
+  if (typeof onInputModeChange === 'function') onInputModeChange();
+}
+try { setKbd(matchMedia('(hover: hover) and (pointer: fine)').matches); } catch (e) {} // a mouse means a computer, even one with a touchscreen
+window.addEventListener('keydown', () => setKbd(true), true);
+window.addEventListener('touchstart', () => setKbd(false), { passive: true, capture: true });
+
 // ---------- input ----------
 const input = { mx: 0, my: 0, run: false, light: false, heavy: false, jump: false, dodge: false, swap: false, trump: false };
 const pressed = {};

@@ -32,7 +32,11 @@
   #app { position: relative; width: 100%; height: 100%; min-height: 300px; overflow: hidden; touch-action: none; background: var(--ink); }
   #cv { position: absolute; display: block; }
 
-  [hidden] { display: none !important; } /* anything switched off stays off, whatever its own display style */
+  [hidden] { display: none !important; }
+  /* phone or desktop: touch-only and keyboard-only pieces */
+  .kbd .t-touch, .kbd #controls, .kbd #rotateOv, html:not(.kbd) .t-kbd { display: none !important; }
+  .keys { line-height: 1.9; } kbd { font: 700 11px var(--label); padding: 1px 6px; border: 1px solid rgba(216,170,85,.6); border-bottom-width: 2px; border-radius: 4px; background: rgba(255,255,255,.06); color: var(--text); }
+  .howto .t-kbd { grid-column: 1 / -1; } /* anything switched off stays off, whatever its own display style */
   .hud { position: absolute; pointer-events: none; }
   /* --fi is the width of the gilded frame (set in layout), so the HUD sits just inside it */
   .hud-l { position: absolute; top: calc(var(--fi, 14px) + 4px); left: max(calc(var(--fi, 14px) + 6px), env(safe-area-inset-left, 0px)); display: flex; gap: 10px; align-items: flex-start; }
@@ -202,7 +206,8 @@
       </div>
       <p class="small" id="saveInfo"></p>
       <div class="howto">
-        <div><b>MOVE &amp; RUN</b>Joystick to walk. Flick it twice in a direction to run.</div>
+        <div class="t-touch"><b>MOVE &amp; RUN</b>Joystick to walk. Flick it twice in a direction to run.</div>
+        <div class="t-kbd keys"><b>KEYBOARD</b><kbd>←→↑↓</kbd> or <kbd>WASD</kbd> move · tap a direction twice to run<br><kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge<br><kbd>Q</kbd> Swap weapon · <kbd>E</kbd> Trump card · <kbd>Esc</kbd> Pause · <kbd>Enter</kbd> Start</div>
         <div><b>MIX YOUR COMBOS</b>Attack and Heavy chain together: try Attack, Attack, Heavy. Each weapon has its own combos.</div>
         <div><b>LAUNCH &amp; JUGGLE</b>Hold Attack to launch an enemy, tap Jump to follow them up, then Attack up to three times in the air.</div>
         <div><b>DASH ATTACKS</b>Attack or Heavy while running.</div>
@@ -212,7 +217,7 @@
         <div><b>CRITICAL HITS</b>Hit enemies from behind, or while they're staggered, knocked down or airborne, for a much better chance of a critical.</div>
         <div><b>TRUMP CARDS</b>Buy them at the forge with sigils. Land hits to charge your card, then tap Trump to play it.</div>
       </div>
-      <p class="small">Best played with your phone held sideways.</p>
+      <p class="small t-touch">Best played with your phone held sideways.</p>
     </div>
   </div>
 
@@ -245,6 +250,7 @@
         <button class="cta alt" id="quitBtn" type="button">Quit to title</button>
       </div>
       <p class="small">Quitting restarts this world. You keep your shards, weapons and upgrades.</p>
+      <p class="small t-kbd keys"><kbd>←→↑↓</kbd>/<kbd>WASD</kbd> move · <kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge · <kbd>Q</kbd> Swap · <kbd>E</kbd> Trump · <kbd>Esc</kbd> Resume</p>
       <h3 class="h3" id="moveTitle">Moves</h3>
       <div id="moveList" class="movebox"></div>
     </div>
