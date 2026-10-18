@@ -636,3 +636,271 @@ function awMonolith(x, base, w, h, rnd, glyph) {
     ctx.stroke();
   });
 }
+
+// place something that uses its own random stream, drawn again across the seam with the same numbers
+function awWR(x, w, rnd, fn) { const s = Math.floor(rnd() * 1e9); awWrap(x, w, (x) => fn(x, mulberry(s))); }
+
+// ---------- the three worlds ----------
+function awBloomFar(rnd, th, f) {
+  AW_SUN = 1;
+  awRange(rnd, { n: 6, base: 178, hMin: 42, hMax: 96, col: '#9A90BC', lit: '#F2C2A8', litA: .55, snow: 112, snowLit: '#FFF2E2', snowShade: '#CCC2E4', gully: 'rgba(80,60,120,.22)', shade: 'rgba(150,120,170,.35)', jag: 7 });
+  hazeBand(f, th.haze, 110, FLOOR_TOP, .5);
+  const ip = { rock: '#7E7298', lit: '#DCA8A0', band: 'rgba(60,40,80,.3)', root: '#4A3E58', grass: '#729C82', grassLit: '#E0DCA0', tree0: '#4E7A6A', tree1: '#6E9A80', tree2: '#B8C890', stone: '#A096B0', roof: '#6A4E6A' };
+  for (let i = 0; i < 5; i++) awIsland(110 + i * 256 + rnd() * 50, 96 + rnd() * 44, 50 + rnd() * 44, rnd, ip, { trees: 1 + Math.floor(rnd() * 3), tower: i === 1 || i === 4, fall: i % 2 === 0 });
+  for (let i = 0; i < 7; i++) { const x = rnd() * AW_W, y = 80 + rnd() * 80, s = 3 + rnd() * 5; awWrap(x, 10, (x) => { awFillPts([x - s, y, x + s, y, x + s * .2, y + s * 1.6], '#7E7298'); awFillPts([x + s * .1, y, x + s, y, x + s * .2, y + s * 1.6], '#DCA8A0', .7); ctx.fillStyle = '#729C82'; ctx.fillRect(x - s, y - 1.2, s * 2, 1.6); }); } // little drifting rocks
+  const hy = awHills(194, [[3, 8], [7, 4], [13, 2]], 41, '#8090A4', '#ECC6A6', .45);
+  for (let x = 0; x < AW_W; x += 3.2) if (Math.sin(x * .021) + Math.sin(x * .047) > -.4) dab(x, hy(x) - 1.5 - rnd() * 2, 2.4 + rnd() * 2.2, rnd() < .35 ? '#9AA4B4' : '#72829A', .95); // a tree line along the crest
+  const cx = 860 + rnd() * 80; awWrap(cx, 40, (x) => awCastle(x, hy(cx) + 2, .62, { wall: '#7E86A2', lit: '#E8C8B4', roof: '#6A6492', roofLit: '#C8A0AE', win: '#FFE2A8', flag: '#C8607A' }));
+  hazeBand(f, th.haze, 168, FLOOR_TOP, .5);
+}
+function awBloomMid(rnd) {
+  AW_SUN = 1;
+  awHills(206, [[2, 9], [5, 5], [11, 2]], 77, '#4E6656', '#A8B070', .5);
+  for (let i = 0; i < 6; i++) awWR(i * 213 + 100 + rnd() * 60, 70, rnd, (x, r) => paintTree(x, FLOOR_TOP - 14, 84 + r() * 30, r, ['#3E5E58', '#56786A', '#A8B888'], null)); // a far row of trees
+  for (let i = 0; i < 3; i++) { const ax = 214 + i * 427 + rnd() * 40; awWR(ax, 70, rnd, (x, r) => awArch(x, FLOOR_TOP, r, { broken: [0, 1, -1][i] })); }
+  for (const tx of [20, 420, 860, 1150]) awWR(tx + rnd() * 50, 100, rnd, (x, r) => paintTree(x, FLOOR_TOP + 2, 135 + r() * 55, r, ['#2F5446', '#3D6A52', '#C9C57E'], r() < .6 ? '#F6CDB0' : null));
+  const g = ['#1E3A2C', '#2F5446', '#4A7A52', '#B8C878'];
+  for (let x = 0; x < AW_W; x += 46) awWR(x + rnd() * 20, 30, rnd, (x, r) => { awBush(x, FLOOR_TOP + 3, 26 + r() * 30, 10 + r() * 10, r, g); if (r() < .5) awFern(x + 18, FLOOR_TOP + 2, 12 + r() * 6, '#2F5446', '#8AA860'); });
+}
+function awSkyFar(rnd, th, f) {
+  AW_SUN = -1;
+  awCloudBank(196, rnd, { shadow: '#9C88A8', body: '#C4A4B0', lit: '#F4CDB0', rim: '#FFE4CC' }, 40, 16, 34);
+  hazeBand(f, th.haze, 120, FLOOR_TOP, .3);
+  const pa = { wall: '#9088AC', lit: '#E8BCA8', dark: '#6E6890', roof: '#7A90A0', roofLit: '#D8C0B0', win: '#FFE6C0', winDark: '#6A6488', flag: '#C88A9A', glow: null };
+  for (let i = 0; i < 9; i++) awTower(i * 142 + rnd() * 60, 205, 12 + rnd() * 10, 70 + rnd() * 70, rnd, pa);
+  hazeBand(f, th.haze, 90, FLOOR_TOP, .35);
+  const pb = { wall: '#6E6A8E', lit: '#E2A890', dark: '#4A4668', roof: '#4E7A80', roofLit: '#C8B49A', win: '#FFE0A8', winDark: '#3E3A58', flag: '#B8445A', glow: '#FFC98A', face: '#FFF0C8' };
+  for (let i = 0; i < 7; i++) awTower(60 + i * 183 + rnd() * 50, FLOOR_TOP, 18 + rnd() * 14, 96 + rnd() * 66, rnd, pb, i === 3 ? 'clock' : null);
+  const sp = { fin: '#5A4E70', rig: '#3A3048', envTop: '#B89AB0', env: '#7E6A90', envBot: '#4A3E5E', envLit: '#F4C8A8', seam: 'rgba(40,30,60,.45)', hull: '#4A3A40', trim: '#C9A060', win: '#FFE2B0', glow: '#FFC98A', prop: '#D8C8D8' };
+  for (let i = 0; i < 3; i++) awAirship(200 + i * 427 + rnd() * 80, 92 + rnd() * 50, .62 + rnd() * .3, rnd() < .5 ? -1 : 1, sp);
+  awAirship(rnd() * AW_W, 70 + rnd() * 20, .3, 1, Object.assign({}, sp, { env: '#9A88A8', envBot: '#7A6A90', envTop: '#C8B0C0', hull: '#7A6A80' }));
+  awCloudBank(226, rnd, { shadow: '#B094A8', body: '#D8B0B0', lit: '#F8D6B8', rim: '#FFEAD6' }, 46, 12, 24);
+  hazeBand(f, th.haze, 200, FLOOR_TOP, .3);
+}
+function awSkyMid(rnd) {
+  AW_SUN = -1;
+  const iron = { base: '#4A4458', lit: '#B8908A', dark: '#2E2A3A' }, brass = { base: '#8A6A3E', lit: '#E8C08A', dark: '#4E3A22', edge: '#FFE0A8', hub: '#4E7A74', hubLit: '#9FD0C0' };
+  awTruss(176, 14, iron);
+  const cols = [];
+  for (let i = 0; i < 6; i++) cols.push([70 + i * 213 + rnd() * 50, FLOOR_TOP - 78 - rnd() * 42, 22 + rnd() * 15]);
+  for (let i = 0; i < cols.length; i++) { // pipes from column to column, with flanges, a valve wheel and a breath of steam
+    const a = cols[i], b = cols[(i + 1) % cols.length], bx = i === cols.length - 1 ? b[0] + AW_W : b[0], py = FLOOR_TOP - 24 - rnd() * 22;
+    for (const ox of [0, -AW_W]) {
+      ctx.lineCap = 'butt'; ctx.strokeStyle = iron.dark; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(a[0] + ox, py); ctx.lineTo(bx + ox, py); ctx.stroke();
+      ctx.strokeStyle = '#7E6E7E'; ctx.lineWidth = 3.4; ctx.stroke(); ctx.strokeStyle = '#D8B0A0'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(a[0] + ox, py - 1.4); ctx.lineTo(bx + ox, py - 1.4); ctx.stroke();
+      for (let x = a[0] + 30; x < bx - 20; x += 44) { ctx.fillStyle = brass.base; ctx.fillRect(x + ox, py - 4.4, 3, 8.8); ctx.fillStyle = brass.lit; ctx.fillRect(x + ox, py - 4.4, 1, 8.8); }
+      const vx = (a[0] + bx) / 2 + ox; ctx.strokeStyle = '#B8445A'; ctx.lineWidth = 1.4; circle(vx, py - 9, 4.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(vx - 4, py - 9); ctx.lineTo(vx + 4, py - 9); ctx.moveTo(vx, py - 13); ctx.lineTo(vx, py - 5); ctx.stroke();
+      ctx.fillStyle = iron.dark; ctx.fillRect(vx - 1, py - 5, 2, 3);
+    }
+  }
+  for (const [x, y, r] of cols) awWR(x, r * 1.9, rnd, (x, rr) => {
+    awPillar(x, y, FLOOR_TOP, 12, iron);
+    for (const s of [-1, 1]) { ctx.strokeStyle = iron.dark; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x + s * 6, y + r * .9); ctx.lineTo(x + s * r * .8, FLOOR_TOP - 4); ctx.stroke(); } // splayed struts
+    if (rr() < .6) { const r2 = r * (.45 + rr() * .15), a = -.5 - rr() * .6, d = r + r2 + r * .12, gx = x + Math.cos(a) * d * (rr() < .5 ? 1 : -1), gy = y + Math.sin(a) * d;
+      ctx.strokeStyle = iron.dark; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(gx, gy); ctx.stroke(); awGear(gx, gy, r2, 10, rr() * TAU, brass); }
+    awGear(x, y, r, Math.round(r * .55), rr() * TAU, brass);
+  });
+  for (let i = 0; i < 6; i++) awWR(cols[i][0] + 100 + rnd() * 20, 12, rnd, (x) => { // street lamps
+    ctx.fillStyle = iron.dark; ctx.fillRect(x - 1.2, FLOOR_TOP - 54, 2.4, 54); ctx.fillRect(x - 3.5, FLOOR_TOP - 6, 7, 6);
+    ctx.beginPath(); ctx.moveTo(x, FLOOR_TOP - 54); ctx.quadraticCurveTo(x + 2, FLOOR_TOP - 62, x + 8, FLOOR_TOP - 60); ctx.lineWidth = 1.6; ctx.strokeStyle = iron.dark; ctx.stroke();
+    awGlow('#FFC98A', 12, () => { ctx.fillStyle = '#FFE6B8'; circle(x + 8, FLOOR_TOP - 56, 3); ctx.fill(); });
+    ctx.fillStyle = brass.base; ctx.fillRect(x + 5, FLOOR_TOP - 61, 6, 2);
+  });
+}
+function awPrismFar(rnd, th, f) {
+  AW_SUN = 1;
+  for (let i = 0; i < 170; i++) { ctx.fillStyle = `rgba(255,245,255,${.25 + rnd() * .65})`; circle(rnd() * AW_W, rnd() * 175, rnd() * 1.1 + .3); ctx.fill(); }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 12; i++) { const x = rnd() * AW_W, y = rnd() * 160, s = 2.5 + rnd() * 3.5; awWrap(x, 8, (x) => { ctx.fillStyle = 'rgba(255,240,255,.85)'; awPath([x, y - s, x + .6, y - .6, x + s, y, x + .6, y + .6, x, y + s, x - .6, y + .6, x - s, y, x - .6, y - .6]); ctx.fill(); }); }
+  for (let i = 0; i < 10; i++) { const x = rnd() * AW_W, y = 50 + rnd() * 100, r = 70 + rnd() * 80; awWrap(x, r, (x) => awSoft(x, y, r, r * .55, ['110,80,190', '170,70,150', '60,110,180'][i % 3], .32)); }
+  ctx.restore();
+  for (let i = 0; i < 14; i++) { // drifting crystals, glowing from inside
+    const x = rnd() * AW_W, y = 60 + rnd() * 110, s = 7 + rnd() * 13, hue = [190, 280, 330, 45][i % 4], a = (rnd() - .5) * .8;
+    awWrap(x, s * 2, (x) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; softDab(x, y, s * 2.2, '200,170,255', .25); ctx.restore(); awCrystal(x, y, s, s * .55, a, hue, 50, 58); awCrystal(x, y, s * .55, s * .55, a + Math.PI, hue, 50, 48); });
+  }
+  awRange(rnd, { n: 9, base: 206, hMin: 34, hMax: 96, col: '#2E2452', lit: '#7A68B8', litA: .5, jag: 10, steps: 3, gully: 'rgba(170,230,255,.18)', shade: 'rgba(120,60,140,.35)' });
+  hazeBand(f, th.haze, 150, FLOOR_TOP, .4);
+  awRange(rnd, { n: 15, base: 230, hMin: 8, hMax: 44, col: '#241C44', lit: '#5E4E98', litA: .55, jag: 6, steps: 2, vDepth: .3 });
+  for (let i = 0; i < 8; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => awCluster(x, 222, 18 + r() * 22, [190, 280, 320, 170][i % 4], r, 40));
+  hazeBand(f, th.haze, 200, FLOOR_TOP, .3);
+}
+function awPrismMid(rnd) {
+  AW_SUN = 1;
+  awRange(rnd, { n: 11, base: 240, hMin: 4, hMax: 24, col: '#1E1834', lit: '#4A3E78', litA: .6, jag: 5, steps: 2, vDepth: .5 });
+  for (let i = 0; i < 3; i++) awWR(150 + i * 427 + rnd() * 60, 30, rnd, (x, r) => awMonolith(x, FLOOR_TOP, 18 + r() * 8, 70 + r() * 40, r, ['#7FF5F0', '#F0A0E0', '#B8A0FF'][i]));
+  for (let i = 0; i < 8; i++) { const sz = 50 + rnd() * 75; awWR(i * 160 + rnd() * 90, sz, rnd, (x, r) => awCluster(x, FLOOR_TOP, sz, [190, 280, 320, 170][i % 4], r, 52)); }
+  for (let i = 0; i < 14; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => awCluster(x, FLOOR_TOP + 2, 12 + r() * 16, [190, 280, 320, 170][i % 4], r, 46));
+}
+
+function buildBackground(themeId, seed) {
+  const key = themeId + K + seed; if (key === bgKey) return; bgKey = key;
+  const rnd = mulberry(seed), th = THEMES[themeId];
+  const [fc, f] = makeLayer(1280, FLOOR_TOP), [mc, m] = makeLayer(1280, FLOOR_TOP);
+  const old = ctx;
+  const far = { bloom: awBloomFar, sky: awSkyFar, prism: awPrismFar }[themeId] || awBloomFar, mid = { bloom: awBloomMid, sky: awSkyMid, prism: awPrismMid }[themeId] || awBloomMid;
+  ctx = f; far(rnd, th, f);
+  ctx = m; mid(rnd);
+  ctx = old;
+  paintLayer(fc, { ink: '#3A2A30', line: .3, lw: .9, brush: .8, hatch: 0, seed: 3 });
+  paintLayer(mc, { ink: '#1A100C', line: .85, lw: 1.1, brush: 1, hatch: .2, seed: 7 });
+  releaseScratch(); retire(bgFar); retire(bgMid); // give the old world's layers and the working canvases back right away
+  bgFar = fc; bgMid = mc;
+  awBuildFloor(themeId, th, seed);
+  if (!grain) { // canvas-and-brush texture laid over the whole picture
+    grain = document.createElement('canvas'); grain.width = grain.height = 256;
+    const g = grain.getContext('2d'), r2 = mulberry(7);
+    g.fillStyle = '#808080'; g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 900; i++) { const v = Math.floor(100 + r2() * 56); g.fillStyle = `rgba(${v},${v},${v},.35)`; g.beginPath(); g.ellipse(r2() * 256, r2() * 256, 2 + r2() * 9, 1 + r2() * 3, r2() * 3, 0, TAU); g.fill(); }
+  }
+}
+
+// ---------- the floor: painted once per world into a 1280-wide strip that tiles, then scrolled with the world ----------
+function awRow(rnd, min, max) { // piece widths that add up to exactly one tile, so every row repeats seamlessly
+  const ws = []; let s = 0; while (s < AW_W - max) { const w = min + rnd() * (max - min); ws.push(w); s += w; }
+  ws.push(AW_W - s); const out = []; let x = 0; for (const w of ws) { out.push([x, w]); x += w; } return out;
+}
+function awBlades(rnd, n, y0, y1, len, cols, wdt = 1) { // painted grass: one path per tone, blades leaning a little with the breeze
+  ctx.lineCap = 'round';
+  for (const col of cols) {
+    ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath();
+    for (let i = 0; i < n / cols.length; i++) {
+      const x = rnd() * AW_W, y = y0 + rnd() * (y1 - y0), l = len * (.5 + rnd() * .7) * (.7 + (y - FLOOR_TOP) / 200), lean = (rnd() - .35) * l * .5;
+      for (const ox of x < 8 ? [0, AW_W] : x > AW_W - 8 ? [0, -AW_W] : [0]) { ctx.moveTo(x + ox, y); ctx.quadraticCurveTo(x + ox + lean * .2, y - l * .6, x + ox + lean, y - l); }
+    }
+    ctx.stroke();
+  }
+}
+function awFloorBloom(rnd, th) {
+  const T = FLOOR_TOP, fg = ctx.createLinearGradient(0, T - 4, 0, VH);
+  fg.addColorStop(0, '#7E9452'); fg.addColorStop(.3, '#6A7E48'); fg.addColorStop(1, '#34482C'); ctx.fillStyle = fg; ctx.fillRect(0, T - 4, AW_W, VH - T + 4);
+  for (let i = 0; i < 260; i++) { const x = rnd() * AW_W, y = T + rnd() * (VH - T); awWrap(x, 12, (x) => dab(x, y, 4 + rnd() * 8, rnd() < .5 ? '#88A05A' : '#4E6A3C', .35)); } // mottled turf
+  // the road: packed earth with ragged edges, then cobbles laid in rows that widen toward us
+  const P0 = T + 28, P1 = T + 98;
+  ctx.fillStyle = '#8E7458'; ctx.fillRect(0, P0 + 4, AW_W, P1 - P0 - 8);
+  for (let x = 0; x < AW_W; x += 5) { for (const [y, s] of [[P0 + 4, -1], [P1 - 4, 1]]) awWrap(x, 8, (x) => dab(x, y + s * rnd() * 3, 3 + rnd() * 4, '#8E7458', 1)); }
+  let y = P0 + 3, row = 0;
+  for (const h of [6, 7, 8, 9, 10, 11, 12]) {
+    const edge = row === 0 || row === 6, wear = 1 - Math.abs(row - 3) / 3;
+    for (const [x, w] of awRow(rnd, h * 1.5, h * 2.6)) {
+      if (rnd() < (edge ? .32 : .05)) { if (rnd() < .5) dab(x + w / 2, y + h * .6, h * .3, '#5E7A3E', .8); continue; } // a lost stone
+      const sx = x + .9, sy = y + .7, sw = w - 1.8, sh = h - 1.4, rr = Math.min(sw, sh) * .42;
+      const base = ['#B3A086', '#A08C70', '#BCA98C', '#97836A', '#AE9878'][Math.floor(rnd() * 5)], col = awMix(base, '#D8C8A8', wear * .25);
+      ctx.fillStyle = 'rgba(52,38,26,.75)'; rrect(sx - .9, sy + 1, sw, sh, rr); ctx.fill();
+      ctx.fillStyle = col; rrect(sx, sy, sw, sh, rr); ctx.fill();
+      ctx.fillStyle = awMix(col, '#FFF0D8', .45); ctx.globalAlpha = .6; rrect(sx + sw * .3, sy + .5, sw * .64, sh * .42, rr * .6); ctx.fill(); ctx.globalAlpha = 1;
+      if (rnd() < .5) { ctx.fillStyle = '#FFF6E4'; ctx.globalAlpha = .55; ell(sx + sw * .72, sy + sh * .3, sw * .1, sh * .1); ctx.fill(); ctx.globalAlpha = 1; }
+      if (rnd() < .18) dab(sx + sw * .22, sy + sh * .75, sh * .35, '#6E8A4A', .55); // moss
+      if (rnd() < .15) { ctx.strokeStyle = 'rgba(60,40,30,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(sx + sw * .3, sy + 1); ctx.lineTo(sx + sw * .45, sy + sh * .5); ctx.lineTo(sx + sw * .4, sy + sh - 1); ctx.stroke(); }
+    }
+    y += h; row++;
+  }
+  awBlades(rnd, 520, P0 - 2, P0 + 8, 7, ['#5E7A3E', '#7E9A4E', '#A8BC6A']); awBlades(rnd, 380, P1 - 8, P1 + 2, 8, ['#4E6A36', '#6E8A44', '#9AB060']); // grass creeping over the road edges
+  awBlades(rnd, 1300, T, P0, 7, ['#4E6A36', '#6A8A44', '#8EA85A', '#B8C878']); awBlades(rnd, 900, P1, VH, 11, ['#2E4226', '#3E5630', '#56723E', '#7E9A50'], 1.3);
+  for (let i = 0; i < 70; i++) { const x = rnd() * AW_W, yy = rnd() < .5 ? T + 4 + rnd() * 22 : P1 + 4 + rnd() * 20, c = ['#F2B8C8', '#FFF2E0', '#F6D870', '#C8A8F0'][Math.floor(rnd() * 4)]; awWrap(x, 4, (x) => { dab(x, yy, 1.6, c, 1); dab(x + .5, yy - .5, .6, '#FFFFFF', .8); }); }
+  // the verge: hedges of leaves, ferns and mossy stones along the back of the meadow
+  const g = ['#1E3A2C', '#2F5446', '#4A7A52', '#C9C57E'];
+  for (let x = 0; x < AW_W; x += 34) awWR(x + rnd() * 14, 34, rnd, (x, r) => { awBush(x, T + 3, 30 + r() * 26, 12 + r() * 14, r, g); if (r() < .4) dab(x + 6, T - 8 - r() * 8, 2.2, r() < .5 ? '#F6D6B8' : '#F2B8C8', 1); });
+  for (let i = 0; i < 14; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => awFern(x, T + 6, 10 + r() * 8, '#2F5446', '#9AB060'));
+  for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 14, rnd, (x, r) => { const w = 7 + r() * 7; ctx.fillStyle = '#6E6878'; ell(x, T + 6, w, w * .6); ctx.fill(); ctx.fillStyle = '#D8B8A0'; ctx.globalAlpha = .6; ell(x + w * .3, T + 4, w * .5, w * .3); ctx.fill(); ctx.globalAlpha = 1; dab(x - w * .3, T + 3, w * .4, '#5E7A3E', .9); });
+  const sh = ctx.createLinearGradient(0, VH - 30, 0, VH); sh.addColorStop(0, 'rgba(20,24,30,0)'); sh.addColorStop(1, 'rgba(20,24,30,.35)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 30, AW_W, 30);
+}
+function awFloorSky(rnd, th) {
+  const T = FLOOR_TOP, brass = '#B88A48', iron = '#3E3440';
+  // the railing at the edge of the deck
+  for (let x = 0; x < AW_W; x += 80) awWrap(x, 12, (x) => { if ((x / 80) % 2 === 0 || x > AW_W) return; ctx.fillStyle = iron; ctx.fillRect(x - 1.2, T - 62, 2.4, 30); ctx.beginPath(); ctx.moveTo(x, T - 62); ctx.quadraticCurveTo(x + 2, T - 70, x + 8, T - 68); ctx.lineWidth = 1.6; ctx.strokeStyle = iron; ctx.stroke(); ctx.fillStyle = brass; ctx.fillRect(x + 5, T - 69, 6, 2); softDab(x + 8, T - 64, 18, '255,200,140', .35); awGlow('#FFC98A', 10, () => { ctx.fillStyle = '#FFE6B8'; circle(x + 8, T - 64, 3); ctx.fill(); }); });
+  for (let x = 4; x < AW_W; x += 8) { ctx.fillStyle = iron; ctx.fillRect(x - .9, T - 28, 1.8, 20); ell(x, T - 18, 1.8, 3); ctx.fill(); ctx.fillStyle = '#9A8A9A'; ctx.fillRect(x + .2, T - 27, .6, 18); }
+  for (let x = 0; x <= AW_W; x += 80) awWrap(x, 8, (x) => { ctx.fillStyle = iron; ctx.fillRect(x - 3, T - 34, 6, 30); ctx.fillStyle = '#8A7A8A'; ctx.fillRect(x - 3, T - 34, 1.4, 30); ctx.fillStyle = brass; circle(x, T - 36, 3.4); ctx.fill(); ctx.fillStyle = '#F0D090'; circle(x - 1, T - 37, 1.2); ctx.fill(); });
+  for (const [y, h] of [[T - 31, 3.4], [T - 10, 2.6]]) { ctx.fillStyle = brass; ctx.fillRect(0, y, AW_W, h); ctx.fillStyle = '#F0D090'; ctx.fillRect(0, y, AW_W, .9); ctx.fillStyle = '#6A4A28'; ctx.fillRect(0, y + h - .7, AW_W, .7); }
+  // the deck's edge girder
+  const bg = ctx.createLinearGradient(0, T - 8, 0, T + 7); bg.addColorStop(0, '#6A5A64'); bg.addColorStop(1, '#2E2630'); ctx.fillStyle = bg; ctx.fillRect(0, T - 8, AW_W, 15);
+  for (let x = 3; x < AW_W; x += 6) { ctx.fillStyle = '#1E1820'; circle(x, T - 1, .9); ctx.fill(); ctx.fillStyle = '#C8A8A0'; circle(x - .3, T - 1.3, .4); ctx.fill(); }
+  // planks, wider toward us, with staggered joints, grain, knots and nails
+  let y = T + 7, h = 8;
+  while (y < VH) {
+    ctx.fillStyle = '#2E2018'; ctx.fillRect(0, y, AW_W, h);
+    for (const [x, w] of awRow(rnd, 70, 170)) {
+      const col = ['#A0825E', '#957754', '#AA8C66', '#8C6E4C', '#9A7A58'][Math.floor(rnd() * 5)];
+      ctx.fillStyle = col; ctx.fillRect(x + .6, y, w - 1.2, h - 1.1);
+      ctx.fillStyle = 'rgba(255,230,190,.35)'; ctx.fillRect(x + .6, y, w - 1.2, .9);
+      ctx.fillStyle = 'rgba(40,24,14,.3)'; ctx.fillRect(x + .6, y + h - 2.2, w - 1.2, 1.1);
+      ctx.strokeStyle = 'rgba(60,36,20,.3)'; ctx.lineWidth = .5; ctx.beginPath();
+      for (let k = 0; k < 3; k++) { const gy = y + h * (.25 + k * .22) + rnd(); ctx.moveTo(x + 2, gy); ctx.bezierCurveTo(x + w * .3, gy + rnd() * 1.4 - .7, x + w * .6, gy + rnd() * 1.4 - .7, x + w - 2, gy); } ctx.stroke();
+      if (rnd() < .25) { const kx = x + w * (.2 + rnd() * .6), ky = y + h * .5; ctx.strokeStyle = 'rgba(60,36,20,.55)'; ctx.lineWidth = .6; ell(kx, ky, 2.2, h * .2); ctx.stroke(); ctx.fillStyle = 'rgba(60,36,20,.5)'; ell(kx, ky, .9, h * .08); ctx.fill(); }
+      ctx.fillStyle = '#3A2E30'; for (const nx of [x + 3, x + w - 3]) for (const ny of [y + h * .28, y + h * .68]) { circle(nx, ny, .7); ctx.fill(); }
+      if (rnd() < .12) { ctx.fillStyle = 'rgba(30,20,20,.18)'; ell(x + w * rnd(), y + h * .5, 8 + rnd() * 8, h * .4); ctx.fill(); } // an oil stain
+    }
+    y += h; h += 1.3;
+  }
+  ctx.fillStyle = 'rgba(255,230,190,.08)'; ctx.fillRect(0, T + 30, AW_W, 64); // the walked middle of the deck is worn paler
+  ctx.strokeStyle = 'rgba(255,236,210,.18)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 0; i < 160; i++) { const x = rnd() * AW_W, yy = T + 30 + rnd() * 64; ctx.moveTo(x, yy); ctx.lineTo(x + 3 + rnd() * 6, yy + (rnd() - .5)); } ctx.stroke(); // scuffs
+  for (let i = 0; i < 3; i++) { // riveted hatches with teal grilles, and brass inlay strips
+    const x = 120 + i * 427 + rnd() * 80, yy = T + 40 + rnd() * 30, w = 36, hh = 16;
+    ctx.fillStyle = '#3E5A5A'; rrect(x, yy, w, hh, 2); ctx.fill(); ctx.strokeStyle = '#1E2A2A'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#9FD0C0'; ctx.fillRect(x + 1, yy + .5, w - 2, .9);
+    ctx.fillStyle = '#1A2626'; for (let gx = x + 6; gx < x + w - 6; gx += 4) ctx.fillRect(gx, yy + 4, 2, hh - 8);
+    ctx.fillStyle = '#C8A870'; for (const [rx, ry] of [[x + 2.5, yy + 2.5], [x + w - 2.5, yy + 2.5], [x + 2.5, yy + hh - 2.5], [x + w - 2.5, yy + hh - 2.5]]) { circle(rx, ry, 1); ctx.fill(); }
+  }
+  ctx.fillStyle = 'rgba(200,160,90,.6)'; ctx.fillRect(0, T + 99, AW_W, 1.2);
+  const sh = ctx.createLinearGradient(0, VH - 30, 0, VH); sh.addColorStop(0, 'rgba(30,18,20,0)'); sh.addColorStop(1, 'rgba(30,18,20,.4)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 30, AW_W, 30);
+}
+function awFloorPrism(rnd, th) {
+  const T = FLOOR_TOP; awSeams = [];
+  ctx.fillStyle = '#0C0818'; ctx.fillRect(0, T - 2, AW_W, VH - T + 2);
+  let y = T + 2, h = 9, row = 0;
+  while (y < VH) {
+    for (const [x, w] of awRow(rnd, h * 2.2, h * 3.4)) {
+      const g = ctx.createLinearGradient(0, y, 0, y + h); const lt = 1 - row * .06;
+      g.addColorStop(0, `hsl(${255 + rnd() * 20},38%,${30 * lt}%)`); g.addColorStop(1, `hsl(${250 + rnd() * 20},40%,${13 * lt}%)`);
+      ctx.fillStyle = g; ctx.fillRect(x + .7, y + .7, w - 1.4, h - 1.4);
+      ctx.fillStyle = 'rgba(170,150,240,.5)'; ctx.fillRect(x + .9, y + .7, w - 1.8, .8); ctx.fillStyle = 'rgba(140,120,220,.3)'; ctx.fillRect(x + .7, y + .7, .7, h - 1.4); // bevels
+      ctx.fillStyle = `hsla(${[190, 300, 330][Math.floor(rnd() * 3)]},70%,70%,.09)`; const rx = x + rnd() * w * .7; ctx.fillRect(rx, y + 1, 2 + rnd() * 5, h - 2); // a reflection of the spires
+      if (rnd() < .3) { ctx.fillStyle = '#0C0818'; awPath([x + w - .7, y + .7, x + w - 4, y + .7, x + w - .7, y + 3.5]); ctx.fill(); } // a chipped corner
+      if (rnd() < .14) { // a crack that glows from below
+        const pts = [], n = 4, hue = rnd() < .5 ? 180 : 320; for (let k = 0; k <= n; k++) pts.push([x + 2 + (w - 4) * k / n, y + 1.5 + rnd() * (h - 3)]);
+        awSeams.push({ pts, hue, ph: rnd() * TAU });
+        awGlow(`hsl(${hue},80%,65%)`, 5, () => { ctx.strokeStyle = `hsla(${hue},80%,72%,.8)`; ctx.lineWidth = .8; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); });
+      }
+      if (rnd() < .2) { ctx.fillStyle = 'rgba(255,255,255,.6)'; circle(x + rnd() * w, y + rnd() * h, .5); ctx.fill(); }
+    }
+    y += h; h += 2; row++;
+  }
+  for (let i = 0; i < 3; i++) { // rune circles inlaid in the floor
+    const x = 200 + i * 427 + rnd() * 60, yy = T + 52 + rnd() * 24, r = 26;
+    awGlow('#7FF5F0', 8, () => { ctx.strokeStyle = 'rgba(127,245,240,.45)'; ctx.lineWidth = 1; ell(x, yy, r, r * .28); ctx.stroke(); ell(x, yy, r * .78, r * .22); ctx.stroke();
+      ctx.beginPath(); for (let k = 0; k < 12; k++) { const a = k / 12 * TAU, c = Math.cos(a), s = Math.sin(a); ctx.moveTo(x + c * r * .8, yy + s * r * .23); ctx.lineTo(x + c * r * .96, yy + s * r * .27); } ctx.stroke(); });
+  }
+  // crystals and obsidian rubble along the back edge
+  for (let i = 0; i < 10; i++) awWR(rnd() * AW_W, 16, rnd, (x, r) => { const w = 8 + r() * 10; awFillPts([x - w, T + 4, x - w * .6, T - w * .5, x + w * .2, T - w * .7, x + w, T + 4], '#1E1834'); awFillPts([x + w * .2, T - w * .7, x + w, T + 4, x + w * .1, T + 4], '#4A3E78', .8); });
+  for (let i = 0; i < 16; i++) awWR(rnd() * AW_W, 24, rnd, (x, r) => awCluster(x, T + 1, 10 + r() * 16, [190, 280, 320, 170][i % 4], r, 50));
+  const sh = ctx.createLinearGradient(0, VH - 34, 0, VH); sh.addColorStop(0, 'rgba(6,4,14,0)'); sh.addColorStop(1, 'rgba(6,4,14,.45)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 34, AW_W, 34);
+}
+function awBuildFloor(themeId, th, seed) {
+  retire(awFloorC); awFloorC = null;
+  const [c, g] = makeLayer(AW_W, VH - AW_FT0), old = ctx; ctx = g; ctx.translate(0, -AW_FT0);
+  const rnd = mulberry(seed * 31 + 5);
+  ({ bloom: awFloorBloom, sky: awFloorSky, prism: awFloorPrism }[themeId] || awFloorBloom)(rnd, th);
+  ctx = old; awFloorC = c; awFloorKey = themeId;
+}
+// every frame: the painted floor strip scrolls with the world (anchored to world x, so nothing swims), plus a few live touches
+function drawFloorLayer(themeId, th, camX, t) {
+  if (!awFloorC || awFloorKey !== themeId) { const fg = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH); fg.addColorStop(0, th.floorA); fg.addColorStop(1, th.floorB); ctx.fillStyle = fg; ctx.fillRect(0, FLOOR_TOP - 4, VW, VH - FLOOR_TOP + 4); return; }
+  const ox = -((camX % AW_W + AW_W) % AW_W);
+  ctx.drawImage(awFloorC, ox, AW_FT0, AW_W, VH - AW_FT0); if (ox + AW_W < VW) ctx.drawImage(awFloorC, ox + AW_W, AW_FT0, AW_W, VH - AW_FT0);
+  const off = (n) => ((-camX) % n + n) % n - n;
+  const hsh = (x) => { const s = Math.sin(x * 12.9898) * 43758.5453; return s - Math.floor(s); }; // stable per-tile randomness
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  if (themeId === 'bloom') { // motes of pollen drifting in the low sun
+    for (let x = off(150); x < VW + 150; x += 150) { const w = Math.floor((x + camX) / 150 + .5), a = .35 + .3 * Math.sin(t * 1.7 + w * 3);
+      ctx.fillStyle = `rgba(255,236,170,${a})`; circle(x + hsh(w) * 140 + Math.sin(t * .6 + w) * 6, FLOOR_TOP - 8 + hsh(w + 1) * 40 + Math.sin(t * .9 + w * 2) * 4, 1.3); ctx.fill(); }
+  } else if (themeId === 'prism') { // the cracks in the floor breathe, and crystal grit twinkles
+    const x0 = camX % AW_W < 0 ? camX % AW_W + AW_W : camX % AW_W;
+    ctx.lineWidth = 1.4;
+    for (const s of awSeams) for (const tile of [0, AW_W]) {
+      const sx = s.pts[0][0] + tile - x0; if (sx > VW + 4 || s.pts[s.pts.length - 1][0] + tile - x0 < -4) continue;
+      ctx.strokeStyle = `hsla(${s.hue},80%,70%,${.18 + .18 * Math.sin(t * 2 + s.ph)})`; ctx.beginPath(); s.pts.forEach((p, i) => i ? ctx.lineTo(p[0] + tile - x0, p[1]) : ctx.moveTo(p[0] + tile - x0, p[1])); ctx.stroke();
+    }
+    for (let x = off(70); x < VW + 70; x += 70) { const w = Math.floor((x + camX) / 70 + .5), a = Math.max(0, Math.sin(t * 2.4 + w * 2.1)); if (a < .2) continue;
+      const px = x + hsh(w) * 60, py = FLOOR_TOP + 10 + hsh(w + 3) * 100, s = 1 + a * 2.2; ctx.fillStyle = `rgba(255,240,255,${a * .8})`; awPath([px, py - s, px + .4, py - .4, px + s, py, px + .4, py + .4, px, py + s, px - .4, py + .4, px - s, py, px - .4, py - .4]); ctx.fill(); }
+  }
+  ctx.restore();
+}
