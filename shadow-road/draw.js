@@ -1,6 +1,32 @@
 'use strict';
 const TRAIL = { fists: 'rgba(255,255,255,.9)', hammer: 'rgba(216,170,85,.95)', staff: 'rgba(126,194,176,.95)', sword: 'rgba(143,184,216,.95)' };
 const ease = (k) => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
+// Attacks are posed with the whole body: a wind-up that loads the back foot, a strike that drives into a planted
+// lunge with the free arm thrown back for balance, and a held finish that settles back into stance.
+// Each style has its own finish: overhead smashes drop into a deep wide squat, thrusts a long fencing lunge,
+// level sweeps a wide twisting base.
+const STANCES = {
+  load:   { f: 4, b: -13, fk: 1, bk: 10, sink: 5, lean: -.22, back: .1 },  // weight back, coiled
+  rear:   { f: 2, b: -9, fk: 0, bk: 3, sink: -1, lean: -.32, back: -.4 },  // up tall and arched back before an overhead smash
+  smash:  { f: 13, b: -12, fk: 9, bk: 1, sink: 9, lean: .42, back: 2.6 }, // a deep wide squat at impact
+  thrust: { f: 15, b: -14, fk: 8, bk: 0, sink: 5, lean: .3, back: 2.9 },  // a long fencing lunge
+  sweep:  { f: 11, b: -11, fk: 6, bk: 4, sink: 6, lean: .12, back: 2.2 }, // a wide, braced base
+  swing:  { f: 11, b: -10, fk: 7, bk: 2, sink: 5, lean: .24, back: 2.4 }, // any other committed swing
+};
+function attackStance(pose, m, k) {
+  const h0 = m.h[0], h1 = m.h[1];
+  const kind = m.smash || (m.arc && m.arc[0] < -2) ? 'smash' : m.style === 'thrust' ? 'thrust' : m.style ? 'sweep' : 'swing';
+  const end = STANCES[kind], load = STANCES.load, light = !m.power && kind !== 'smash' ? .6 : 1; // light jabs move the body less
+  let from, to, q;
+  if (k < h0) { from = null; to = kind === 'smash' ? STANCES.rear : load; q = ease(k / Math.max(.05, h0) * 1.4); } // winding up
+  else if (k < h1 + .08) { from = kind === 'smash' ? STANCES.rear : load; to = end; q = ease((k - h0) / Math.max(.05, h1 + .08 - h0) * 1.6); } // the strike, snapping into the finish
+  else { from = end; to = null; q = clamp((k - h1 - .08) / .35, 0, 1) * .8; } // holding the finish, then easing out
+  const base = { f: 7, b: -7, fk: 3, bk: 2, sink: 0, lean: 0, back: 1.2 };
+  const A = from || base, B = to || base, mix = (key) => lerp(A[key], B[key], clamp(q, 0, 1));
+  pose.legs = { f: mix('f') * light + base.f * (1 - light), b: mix('b') * light + base.b * (1 - light), fk: mix('fk'), bk: mix('bk') };
+  pose.sink = mix('sink') * light; pose.lean = (pose.lean || 0) * .4 + mix('lean') * light; pose.backArm = mix('back');
+  pose.walk = 0;
+}
 function playerPose() {
   const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : save.wl[P.w] };
   if (P.state === 'atk' || P.state === 'air') {
@@ -27,6 +53,7 @@ function playerPose() {
     }
     if (!m.style) pose.lean = m.power ? .16 : .08;
     pose.flow = Math.abs(P.vx) * .02;
+    if (P.z <= 2 && !m.kick && !m.rot && !m.around) attackStance(pose, m, k); // the body moves with the weapon
   } else if (P.state === 'charge') {
     pose.arm = -2.2; pose.crouch = 1; pose.walk = 0;
     pose.glow = ['', '#D8AA55', '#FFE9A0', '#C8607A'][P.clvl] || '';
@@ -55,8 +82,8 @@ function playerPose() {
 }
 function humanEnemyPose(e) {
   const pose = { walk: e.walk };
-  if (e.state === 'wind') pose.arm = e.plan === 'volley' || e.plan === 'shoot' ? 0 : -2.2;
-  else if (e.state === 'strike') { pose.arm = 1.1; pose.lean = .2; pose.trail = 60; pose.trailFrom = -2.2; pose.trailCol = 'rgba(208,74,98,.9)'; }
+  if (e.state === 'wind') { pose.arm = e.plan === 'volley' || e.plan === 'shoot' ? 0 : -2.2; if (!e.def.ranged) { const S = STANCES.load; pose.legs = { f: S.f, b: S.b, fk: S.fk, bk: S.bk }; pose.sink = S.sink; pose.lean = S.lean; pose.backArm = S.back; } }
+  else if (e.state === 'strike') { pose.arm = 1.1; pose.trail = 60; pose.trailFrom = -2.2; pose.trailCol = 'rgba(208,74,98,.9)'; const S = STANCES.swing; pose.legs = { f: S.f, b: S.b, fk: S.fk, bk: S.bk }; pose.sink = S.sink; pose.lean = S.lean; pose.backArm = S.back; }
   else if (e.state === 'dash') { pose.arm = .1; pose.lean = .4; pose.run = 1; }
   else if (e.state === 'leap') { pose.arm = -2.6; pose.crouch = 1; }
   else if (e.state === 'hurt') { pose.arm = -1; pose.lean = -.35; }

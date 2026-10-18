@@ -273,7 +273,7 @@ function drawHumanoid(look, pose) {
   ctx.save();
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
   if (pose.down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
-  const cr = pose.crouch ? 8 : 0, HIP = -30 + cr, SHO = -49 + cr, NECK = -53 + cr;
+  const cr = pose.crouch ? 8 : (pose.sink || 0), HIP = -30 + cr, SHO = -49 + cr, NECK = -53 + cr; // sink: how far the hips drop into a stance
   const skin = look.skin || '#C9A07E', sleeve = look.sleeve || look.body;
   // cape flows behind
   if (look.cape) {
@@ -314,8 +314,12 @@ function drawHumanoid(look, pose) {
     seg(-2, HIP, -4, -13, 8, 6, legs, .6); seg(-4, -13, -6, -6, 6, 4.6, legs, .6); seg(2, HIP, 6, -13, 8, 6, legs, .6); seg(6, -13, 8, -6, 6, 4.6, legs, .6);
   } else {
     const run = pose.run ? 1.6 : 1, st = pose.stance && !walk; // a fighting stance at rest: feet apart, knees loose
-    const f1 = st ? -7 : sw * 10 * run, f2 = st ? 7 : -sw * 10 * run;
-    const k1 = cr ? 9 : st ? 2 : Math.max(0, sw) * 6, k2 = cr ? 9 : st ? 3 : Math.max(0, -sw) * 6, ky = -15 + cr * .45;
+    let f1 = st ? -7 : sw * 10 * run, f2 = st ? 7 : -sw * 10 * run;
+    let k1 = cr ? 9 : st ? 2 : Math.max(0, sw) * 6, k2 = cr ? 9 : st ? 3 : Math.max(0, -sw) * 6;
+    if (pose.legs) { // an attack stance: where each foot plants and how far each knee bends
+      const L = pose.legs; f1 = L.b; f2 = L.f; k1 = L.bk; k2 = L.fk;
+    }
+    const ky = -15 + cr * .45;
     const leg = (x, f, k, col, bc) => { seg(x, HIP, x + f * .5 + k, ky, 8.4, 6.2, col, .9); seg(x + f * .5 + k, ky, x + f - .6, -8, 6.2, 4.6, col, 1); boot(x + f, bc); };
     leg(-3, f1, k1, shade(legs, -.15), shade(look.boots, -.12)); // the far leg
     leg(3, f2, k2, legs, look.boots);

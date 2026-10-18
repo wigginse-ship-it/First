@@ -190,6 +190,7 @@ const ENEMY_WEAPONS = {
   // an exhaust pipe, a teal steel barrel wound with brass coils and a flared muzzle glowing white-hot
   cannon(pose) {
     const now = performance.now() / 1000, pulse = .7 + .3 * Math.sin(now * 5);
+    ctx.save(); ctx.translate(6, 0); ctx.scale(.62, .62); // drawn large for detail, worn at the colossus's scale
     awInked('#8A6030', 2.6, () => { ctx.moveTo(6, -8); ctx.quadraticCurveTo(0, -12, -2, -18); }); // exhaust pipe
     rrect(-4.6, -21, 5.4, 4, 1.2); ctx.fillStyle = C('#5A4A3E'); ctx.fill(); outline(1);
     rrect(36, -7.4, 22, 14.8, 3); ctx.fillStyle = awVG(-7.4, 7.4, '#2F7C78', .45, -.4); ctx.fill(); outline(1.6); // barrel
@@ -213,7 +214,8 @@ const ENEMY_WEAPONS = {
     // the muzzle glow
     awHalo(64, 0, 26, '255,236,160', .5 * pulse); awHalo(64, 0, 14, '120,240,220', .45 * pulse);
     ell(64, 0, 1.7, 8); ctx.fillStyle = C(FLASH ? '#fff' : `rgb(255,${236 + 19 * pulse | 0},${180 + 60 * pulse | 0})`); ctx.fill();
-    awSwingGlow(pose, 0, 66);
+    ctx.restore();
+    awSwingGlow(pose, 6, 42);
   },
 };
 
@@ -283,7 +285,7 @@ function awRange(rnd, o) {
       const top = AW_SUN > 0 ? f.a : f.b, bot = f.v, crease = [lerp(top[0], bot[0], .18 + f.rnd * .2), lerp(top[1], o.base, .75)];
       const pts = f.pts.slice(); if (AW_SUN < 0) pts.reverse(); // now runs summit -> valley
       ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const p of pts) ctx.lineTo(p[0], p[1]);
-      ctx.lineTo(bot[0], o.base + 10); ctx.lineTo(crease[0], o.base + 10);
+      ctx.lineTo(lerp(bot[0], crease[0], .45), lerp(bot[1], o.base, .55)); ctx.lineTo(crease[0], crease[1]);
       for (let s = 4; s >= 1; s--) { const k = s / 5; ctx.lineTo(lerp(top[0], crease[0], k) + (Math.sin(s * 9.1 + f.r2 * 20) * jag * .4), lerp(top[1], crease[1], k)); }
       ctx.closePath(); ctx.globalAlpha = o.litA; ctx.fillStyle = o.lit; ctx.fill(); ctx.globalAlpha = 1;
       if (o.gully) { // gullies run down the faces
@@ -312,8 +314,9 @@ function awLeaves(cx, cy, r, rnd, g, n = 1) {
   const s = AW_SUN;
   for (let i = 0; i < 7 * n; i++) { const a = rnd() * TAU, d = rnd() * r * .7; dab(cx + Math.cos(a) * d - s * r * .1, cy + Math.sin(a) * d * .75 + r * .18, r * (.32 + rnd() * .22), g[0], 1); }
   for (let i = 0; i < 9 * n; i++) { const a = rnd() * TAU, d = rnd() * r * .6; dab(cx + Math.cos(a) * d + s * r * .06, cy + Math.sin(a) * d * .7 - r * .06, r * (.2 + rnd() * .2), g[1], .95); }
-  for (let i = 0; i < 8 * n; i++) { const a = -Math.PI / 2 + s * rnd() * 1.5, d = r * (.25 + rnd() * .45); dab(cx + Math.cos(a) * d * .9, cy + Math.sin(a) * d * .8, r * (.12 + rnd() * .16), g[2], .9); }
-  for (let i = 0; i < 5 * n; i++) { const a = -Math.PI / 2 + s * (.3 + rnd() * 1.1), d = r * (.55 + rnd() * .35); dab(cx + Math.cos(a) * d, cy + Math.sin(a) * d * .8, r * (.06 + rnd() * .07), g[3], .85); }
+  for (let i = 0; i < 8 * n; i++) { const a = -Math.PI / 2 + s * rnd() * 1.5, d = r * (.3 + rnd() * .45); dab(cx + Math.cos(a) * d * .9, cy + Math.sin(a) * d * .8, r * (.08 + rnd() * .1), awMix(g[1], g[2], .55), .9); }
+  for (let i = 0; i < 4 * n; i++) { const a = -Math.PI / 2 + s * (.2 + rnd() * 1.2), d = r * (.45 + rnd() * .4); dab(cx + Math.cos(a) * d * .9, cy + Math.sin(a) * d * .8, r * (.06 + rnd() * .07), g[2], .85); }
+  for (let i = 0; i < 4 * n; i++) { const a = -Math.PI / 2 + s * (.3 + rnd() * 1.1), d = r * (.6 + rnd() * .3); dab(cx + Math.cos(a) * d, cy + Math.sin(a) * d * .8, 1 + r * .04, g[3], .8); }
   for (let i = 0; i < 12 * n; i++) { const a = rnd() * TAU, d = r * (.85 + rnd() * .25); dab(cx + Math.cos(a) * d, cy + Math.sin(a) * d * .78, 1.4 + rnd() * 1.8, Math.sin(a) * s < 0 && Math.cos(a) * s > 0 ? g[2] : g[0], .95); } // leaves breaking the edge
 }
 // a tree: a tapering trunk with a root flare, a few branches, and a crown built of clustered leaf masses
@@ -643,11 +646,10 @@ function awWR(x, w, rnd, fn) { const s = Math.floor(rnd() * 1e9); awWrap(x, w, (
 // ---------- the three worlds ----------
 function awBloomFar(rnd, th, f) {
   AW_SUN = 1;
-  awRange(rnd, { n: 6, base: 178, hMin: 42, hMax: 96, col: '#9A90BC', lit: '#F2C2A8', litA: .55, snow: 112, snowLit: '#FFF2E2', snowShade: '#CCC2E4', gully: 'rgba(80,60,120,.22)', shade: 'rgba(150,120,170,.35)', jag: 7 });
-  hazeBand(f, th.haze, 110, FLOOR_TOP, .5);
+  awRange(rnd, { n: 6, base: 182, hMin: 50, hMax: 100, col: '#8C82B2', lit: '#F2C2A8', litA: .55, snow: 112, snowLit: '#FFF2E2', snowShade: '#CCC2E4', gully: 'rgba(80,60,120,.22)', shade: 'rgba(150,120,170,.35)', jag: 7 });
+  hazeBand(f, th.haze, 130, FLOOR_TOP, .42);
   const ip = { rock: '#7E7298', lit: '#DCA8A0', band: 'rgba(60,40,80,.3)', root: '#4A3E58', grass: '#729C82', grassLit: '#E0DCA0', tree0: '#4E7A6A', tree1: '#6E9A80', tree2: '#B8C890', stone: '#A096B0', roof: '#6A4E6A' };
-  for (let i = 0; i < 5; i++) awIsland(110 + i * 256 + rnd() * 50, 96 + rnd() * 44, 50 + rnd() * 44, rnd, ip, { trees: 1 + Math.floor(rnd() * 3), tower: i === 1 || i === 4, fall: i % 2 === 0 });
-  for (let i = 0; i < 7; i++) { const x = rnd() * AW_W, y = 80 + rnd() * 80, s = 3 + rnd() * 5; awWrap(x, 10, (x) => { awFillPts([x - s, y, x + s, y, x + s * .2, y + s * 1.6], '#7E7298'); awFillPts([x + s * .1, y, x + s, y, x + s * .2, y + s * 1.6], '#DCA8A0', .7); ctx.fillStyle = '#729C82'; ctx.fillRect(x - s, y - 1.2, s * 2, 1.6); }); } // little drifting rocks
+  for (let i = 0; i < 5; i++) awIsland(110 + i * 256 + rnd() * 50, 104 + rnd() * 34, 50 + rnd() * 44, rnd, ip, { trees: 1 + Math.floor(rnd() * 3), tower: i === 1 || i === 4, fall: i % 2 === 0 });
   const hy = awHills(194, [[3, 8], [7, 4], [13, 2]], 41, '#8090A4', '#ECC6A6', .45);
   for (let x = 0; x < AW_W; x += 3.2) if (Math.sin(x * .021) + Math.sin(x * .047) > -.4) dab(x, hy(x) - 1.5 - rnd() * 2, 2.4 + rnd() * 2.2, rnd() < .35 ? '#9AA4B4' : '#72829A', .95); // a tree line along the crest
   const cx = 860 + rnd() * 80; awWrap(cx, 40, (x) => awCastle(x, hy(cx) + 2, .62, { wall: '#7E86A2', lit: '#E8C8B4', roof: '#6A6492', roofLit: '#C8A0AE', win: '#FFE2A8', flag: '#C8607A' }));
@@ -664,7 +666,7 @@ function awBloomMid(rnd) {
 }
 function awSkyFar(rnd, th, f) {
   AW_SUN = -1;
-  awCloudBank(196, rnd, { shadow: '#9C88A8', body: '#C4A4B0', lit: '#F4CDB0', rim: '#FFE4CC' }, 40, 16, 34);
+  awCloudBank(198, rnd, { shadow: '#9C88A8', body: '#C4A4B0', lit: '#F4CDB0', rim: '#FFE4CC' }, 20, 9, 22); awCloudBank(208, rnd, { shadow: '#A890AC', body: '#CCAAB2', lit: '#F6D2B4', rim: '#FFE4CC' }, 16, 7, 16);
   hazeBand(f, th.haze, 120, FLOOR_TOP, .3);
   const pa = { wall: '#9088AC', lit: '#E8BCA8', dark: '#6E6890', roof: '#7A90A0', roofLit: '#D8C0B0', win: '#FFE6C0', winDark: '#6A6488', flag: '#C88A9A', glow: null };
   for (let i = 0; i < 9; i++) awTower(i * 142 + rnd() * 60, 205, 12 + rnd() * 10, 70 + rnd() * 70, rnd, pa);
@@ -674,7 +676,7 @@ function awSkyFar(rnd, th, f) {
   const sp = { fin: '#5A4E70', rig: '#3A3048', envTop: '#B89AB0', env: '#7E6A90', envBot: '#4A3E5E', envLit: '#F4C8A8', seam: 'rgba(40,30,60,.45)', hull: '#4A3A40', trim: '#C9A060', win: '#FFE2B0', glow: '#FFC98A', prop: '#D8C8D8' };
   for (let i = 0; i < 3; i++) awAirship(200 + i * 427 + rnd() * 80, 92 + rnd() * 50, .62 + rnd() * .3, rnd() < .5 ? -1 : 1, sp);
   awAirship(rnd() * AW_W, 70 + rnd() * 20, .3, 1, Object.assign({}, sp, { env: '#9A88A8', envBot: '#7A6A90', envTop: '#C8B0C0', hull: '#7A6A80' }));
-  awCloudBank(226, rnd, { shadow: '#B094A8', body: '#D8B0B0', lit: '#F8D6B8', rim: '#FFEAD6' }, 46, 12, 24);
+  awCloudBank(228, rnd, { shadow: '#B094A8', body: '#D8B0B0', lit: '#F8D6B8', rim: '#FFEAD6' }, 18, 8, 15);
   hazeBand(f, th.haze, 200, FLOOR_TOP, .3);
 }
 function awSkyMid(rnd) {
@@ -682,7 +684,7 @@ function awSkyMid(rnd) {
   const iron = { base: '#4A4458', lit: '#B8908A', dark: '#2E2A3A' }, brass = { base: '#8A6A3E', lit: '#E8C08A', dark: '#4E3A22', edge: '#FFE0A8', hub: '#4E7A74', hubLit: '#9FD0C0' };
   awTruss(176, 14, iron);
   const cols = [];
-  for (let i = 0; i < 6; i++) cols.push([70 + i * 213 + rnd() * 50, FLOOR_TOP - 78 - rnd() * 42, 22 + rnd() * 15]);
+  for (let i = 0; i < 6; i++) cols.push([70 + i * 213 + rnd() * 50, FLOOR_TOP - 92 - rnd() * 44, 30 + rnd() * 18]);
   for (let i = 0; i < cols.length; i++) { // pipes from column to column, with flanges, a valve wheel and a breath of steam
     const a = cols[i], b = cols[(i + 1) % cols.length], bx = i === cols.length - 1 ? b[0] + AW_W : b[0], py = FLOOR_TOP - 24 - rnd() * 22;
     for (const ox of [0, -AW_W]) {
@@ -757,7 +759,7 @@ function buildBackground(themeId, seed) {
 // ---------- the floor: painted once per world into a 1280-wide strip that tiles, then scrolled with the world ----------
 function awRow(rnd, min, max) { // piece widths that add up to exactly one tile, so every row repeats seamlessly
   const ws = []; let s = 0; while (s < AW_W - max) { const w = min + rnd() * (max - min); ws.push(w); s += w; }
-  ws.push(AW_W - s); const out = []; let x = 0; for (const w of ws) { out.push([x, w]); x += w; } return out;
+  ws.push(AW_W - s); const out = []; let x = rnd() * AW_W; for (const w of ws) { out.push([x % AW_W, w]); x += w; } return out;
 }
 function awBlades(rnd, n, y0, y1, len, cols, wdt = 1) { // painted grass: one path per tone, blades leaning a little with the breeze
   ctx.lineCap = 'round';
@@ -781,27 +783,32 @@ function awFloorBloom(rnd, th) {
   let y = P0 + 3, row = 0;
   for (const h of [6, 7, 8, 9, 10, 11, 12]) {
     const edge = row === 0 || row === 6, wear = 1 - Math.abs(row - 3) / 3;
-    for (const [x, w] of awRow(rnd, h * 1.5, h * 2.6)) {
-      if (rnd() < (edge ? .32 : .05)) { if (rnd() < .5) dab(x + w / 2, y + h * .6, h * .3, '#5E7A3E', .8); continue; } // a lost stone
-      const sx = x + .9, sy = y + .7, sw = w - 1.8, sh = h - 1.4, rr = Math.min(sw, sh) * .42;
-      const base = ['#B3A086', '#A08C70', '#BCA98C', '#97836A', '#AE9878'][Math.floor(rnd() * 5)], col = awMix(base, '#D8C8A8', wear * .25);
-      ctx.fillStyle = 'rgba(52,38,26,.75)'; rrect(sx - .9, sy + 1, sw, sh, rr); ctx.fill();
-      ctx.fillStyle = col; rrect(sx, sy, sw, sh, rr); ctx.fill();
-      ctx.fillStyle = awMix(col, '#FFF0D8', .45); ctx.globalAlpha = .6; rrect(sx + sw * .3, sy + .5, sw * .64, sh * .42, rr * .6); ctx.fill(); ctx.globalAlpha = 1;
-      if (rnd() < .5) { ctx.fillStyle = '#FFF6E4'; ctx.globalAlpha = .55; ell(sx + sw * .72, sy + sh * .3, sw * .1, sh * .1); ctx.fill(); ctx.globalAlpha = 1; }
-      if (rnd() < .18) dab(sx + sw * .22, sy + sh * .75, sh * .35, '#6E8A4A', .55); // moss
-      if (rnd() < .15) { ctx.strokeStyle = 'rgba(60,40,30,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(sx + sw * .3, sy + 1); ctx.lineTo(sx + sw * .45, sy + sh * .5); ctx.lineTo(sx + sw * .4, sy + sh - 1); ctx.stroke(); }
-    }
+    for (const [x0, w0] of awRow(rnd, h * 1.3, h * 2.8)) awWR(x0, w0 + 4, rnd, (x, r) => {
+      x = x < x0 - 1 ? x : x; const w = w0;
+      if (r() < (edge ? .32 : .05)) { if (r() < .5) dab(x + w / 2, y + h * .6, h * .3, '#5E7A3E', .8); return; } // a lost stone
+      const sh = h * (.72 + r() * .3), sw = w - 1.2 - r() * 1.5, sx = x + .6 + r() * .8, sy = y + (h - sh) * r() + .4, base = ['#B3A086', '#A08C70', '#BCA98C', '#97836A', '#AE9878', '#A89A8C'][Math.floor(r() * 6)], col = awMix(base, '#D8C8A8', wear * .25);
+      const stone = (ox, oy) => { const k = r(), q = [sx + ox + sw * .1, sy + oy, sx + ox + sw * (.85 + k * .1), sy + oy + sh * .05 * k, sx + ox + sw, sy + oy + sh * .5, sx + ox + sw * .92, sy + oy + sh, sx + ox + sw * .06, sy + oy + sh * (.95 + k * .05), sx + ox, sy + oy + sh * .45];
+        ctx.beginPath(); ctx.moveTo((q[0] + q[10]) / 2, (q[1] + q[11]) / 2); for (let i = 0; i < 12; i += 2) { const n = (i + 2) % 12; ctx.quadraticCurveTo(q[n], q[n + 1], (q[n] + q[(n + 2) % 12]) / 2, (q[n + 1] + q[(n + 3) % 12]) / 2); } ctx.closePath(); };
+      ctx.fillStyle = 'rgba(52,38,26,.75)'; stone(-.9, 1); ctx.fill();
+      ctx.fillStyle = col; stone(0, 0); ctx.fill();
+      ctx.fillStyle = awMix(col, '#FFF0D8', .45); ctx.globalAlpha = .55; ell(sx + sw * .6, sy + sh * .32, sw * .3, sh * .2); ctx.fill(); ctx.globalAlpha = 1;
+      if (r() < .5) { ctx.fillStyle = '#FFF6E4'; ctx.globalAlpha = .55; ell(sx + sw * .74, sy + sh * .28, sw * .08, sh * .09); ctx.fill(); ctx.globalAlpha = 1; }
+      if (r() < .18) dab(sx + sw * .22, sy + sh * .72, sh * .32, '#6E8A4A', .55); // moss
+      if (r() < .15) { ctx.strokeStyle = 'rgba(60,40,30,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(sx + sw * .3, sy + 1); ctx.lineTo(sx + sw * .45, sy + sh * .5); ctx.lineTo(sx + sw * .4, sy + sh - 1); ctx.stroke(); }
+    });
     y += h; row++;
   }
   awBlades(rnd, 520, P0 - 2, P0 + 8, 7, ['#5E7A3E', '#7E9A4E', '#A8BC6A']); awBlades(rnd, 380, P1 - 8, P1 + 2, 8, ['#4E6A36', '#6E8A44', '#9AB060']); // grass creeping over the road edges
-  awBlades(rnd, 1300, T, P0, 7, ['#4E6A36', '#6A8A44', '#8EA85A', '#B8C878']); awBlades(rnd, 900, P1, VH, 11, ['#2E4226', '#3E5630', '#56723E', '#7E9A50'], 1.3);
+  awBlades(rnd, 1600, T, P0, 5, ['#4E6A36', '#6A8A44', '#8EA85A', '#B8C878'], 1.2); awBlades(rnd, 1500, P1, VH, 6, ['#2E4226', '#3E5630', '#56723E', '#7E9A50'], 1.5);
   for (let i = 0; i < 70; i++) { const x = rnd() * AW_W, yy = rnd() < .5 ? T + 4 + rnd() * 22 : P1 + 4 + rnd() * 20, c = ['#F2B8C8', '#FFF2E0', '#F6D870', '#C8A8F0'][Math.floor(rnd() * 4)]; awWrap(x, 4, (x) => { dab(x, yy, 1.6, c, 1); dab(x + .5, yy - .5, .6, '#FFFFFF', .8); }); }
   // the verge: hedges of leaves, ferns and mossy stones along the back of the meadow
   const g = ['#1E3A2C', '#2F5446', '#4A7A52', '#C9C57E'];
   for (let x = 0; x < AW_W; x += 34) awWR(x + rnd() * 14, 34, rnd, (x, r) => { awBush(x, T + 3, 30 + r() * 26, 12 + r() * 14, r, g); if (r() < .4) dab(x + 6, T - 8 - r() * 8, 2.2, r() < .5 ? '#F6D6B8' : '#F2B8C8', 1); });
   for (let i = 0; i < 14; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => awFern(x, T + 6, 10 + r() * 8, '#2F5446', '#9AB060'));
-  for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 14, rnd, (x, r) => { const w = 7 + r() * 7; ctx.fillStyle = '#6E6878'; ell(x, T + 6, w, w * .6); ctx.fill(); ctx.fillStyle = '#D8B8A0'; ctx.globalAlpha = .6; ell(x + w * .3, T + 4, w * .5, w * .3); ctx.fill(); ctx.globalAlpha = 1; dab(x - w * .3, T + 3, w * .4, '#5E7A3E', .9); });
+  for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 16, rnd, (x, r) => { const w = 7 + r() * 7, y = T + 8; // mossy boulders half sunk in the grass
+    awFillPts([x - w, y, x - w * .8, y - w * .5, x - w * .2, y - w * .8, x + w * .5, y - w * .65, x + w, y - w * .1, x + w * .9, y], '#6E6878');
+    awFillPts([x - w * .2, y - w * .8, x + w * .5, y - w * .65, x + w, y - w * .1, x + w * .9, y, x + w * .15, y, x + w * .05, y - w * .4], '#D8B8A0', .7);
+    dab(x - w * .5, y - w * .45, w * .35, '#5E7A3E', .9); dab(x - w * .1, y - w * .7, w * .2, '#7E9A50', .8); });
   const sh = ctx.createLinearGradient(0, VH - 30, 0, VH); sh.addColorStop(0, 'rgba(20,24,30,0)'); sh.addColorStop(1, 'rgba(20,24,30,.35)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 30, AW_W, 30);
 }
 function awFloorSky(rnd, th) {
@@ -818,7 +825,7 @@ function awFloorSky(rnd, th) {
   let y = T + 7, h = 8;
   while (y < VH) {
     ctx.fillStyle = '#2E2018'; ctx.fillRect(0, y, AW_W, h);
-    for (const [x, w] of awRow(rnd, 70, 170)) {
+    for (const [x0, w] of awRow(rnd, 70, 170)) awWR(x0, w, rnd, (x, rnd) => {
       const col = ['#A0825E', '#957754', '#AA8C66', '#8C6E4C', '#9A7A58'][Math.floor(rnd() * 5)];
       ctx.fillStyle = col; ctx.fillRect(x + .6, y, w - 1.2, h - 1.1);
       ctx.fillStyle = 'rgba(255,230,190,.35)'; ctx.fillRect(x + .6, y, w - 1.2, .9);
@@ -828,7 +835,7 @@ function awFloorSky(rnd, th) {
       if (rnd() < .25) { const kx = x + w * (.2 + rnd() * .6), ky = y + h * .5; ctx.strokeStyle = 'rgba(60,36,20,.55)'; ctx.lineWidth = .6; ell(kx, ky, 2.2, h * .2); ctx.stroke(); ctx.fillStyle = 'rgba(60,36,20,.5)'; ell(kx, ky, .9, h * .08); ctx.fill(); }
       ctx.fillStyle = '#3A2E30'; for (const nx of [x + 3, x + w - 3]) for (const ny of [y + h * .28, y + h * .68]) { circle(nx, ny, .7); ctx.fill(); }
       if (rnd() < .12) { ctx.fillStyle = 'rgba(30,20,20,.18)'; ell(x + w * rnd(), y + h * .5, 8 + rnd() * 8, h * .4); ctx.fill(); } // an oil stain
-    }
+    });
     y += h; h += 1.3;
   }
   ctx.fillStyle = 'rgba(255,230,190,.08)'; ctx.fillRect(0, T + 30, AW_W, 64); // the walked middle of the deck is worn paler
@@ -848,22 +855,26 @@ function awFloorPrism(rnd, th) {
   ctx.fillStyle = '#0C0818'; ctx.fillRect(0, T - 2, AW_W, VH - T + 2);
   let y = T + 2, h = 9, row = 0;
   while (y < VH) {
-    for (const [x, w] of awRow(rnd, h * 2.2, h * 3.4)) {
+    for (const [x0, w] of awRow(rnd, h * 3.2, h * 5.2)) awWR(x0, w, rnd, (x, rnd) => {
       const g = ctx.createLinearGradient(0, y, 0, y + h); const lt = 1 - row * .06;
       g.addColorStop(0, `hsl(${255 + rnd() * 20},38%,${30 * lt}%)`); g.addColorStop(1, `hsl(${250 + rnd() * 20},40%,${13 * lt}%)`);
       ctx.fillStyle = g; ctx.fillRect(x + .7, y + .7, w - 1.4, h - 1.4);
       ctx.fillStyle = 'rgba(170,150,240,.5)'; ctx.fillRect(x + .9, y + .7, w - 1.8, .8); ctx.fillStyle = 'rgba(140,120,220,.3)'; ctx.fillRect(x + .7, y + .7, .7, h - 1.4); // bevels
       ctx.fillStyle = `hsla(${[190, 300, 330][Math.floor(rnd() * 3)]},70%,70%,.09)`; const rx = x + rnd() * w * .7; ctx.fillRect(rx, y + 1, 2 + rnd() * 5, h - 2); // a reflection of the spires
       if (rnd() < .3) { ctx.fillStyle = '#0C0818'; awPath([x + w - .7, y + .7, x + w - 4, y + .7, x + w - .7, y + 3.5]); ctx.fill(); } // a chipped corner
-      if (rnd() < .14) { // a crack that glows from below
+      if (rnd() < .09) { // a crack that glows from below
         const pts = [], n = 4, hue = rnd() < .5 ? 180 : 320; for (let k = 0; k <= n; k++) pts.push([x + 2 + (w - 4) * k / n, y + 1.5 + rnd() * (h - 3)]);
-        awSeams.push({ pts, hue, ph: rnd() * TAU });
+        const ph = rnd() * TAU; if (x >= 0 && x < AW_W) awSeams.push({ pts, hue, ph });
         awGlow(`hsl(${hue},80%,65%)`, 5, () => { ctx.strokeStyle = `hsla(${hue},80%,72%,.8)`; ctx.lineWidth = .8; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); });
       }
       if (rnd() < .2) { ctx.fillStyle = 'rgba(255,255,255,.6)'; circle(x + rnd() * w, y + rnd() * h, .5); ctx.fill(); }
-    }
+    });
     y += h; h += 2; row++;
   }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; // the polished floor mirrors the glow of the rim
+  const rg = ctx.createLinearGradient(0, T, 0, T + 70); rg.addColorStop(0, 'rgba(150,90,170,.28)'); rg.addColorStop(1, 'rgba(150,90,170,0)'); ctx.fillStyle = rg; ctx.fillRect(0, T, AW_W, 70);
+  for (let i = 0; i < 14; i++) { const x = rnd() * AW_W, w = 6 + rnd() * 14, hue = [190, 280, 320, 170][i % 4]; awWrap(x, w, (x) => { const g = ctx.createLinearGradient(0, T, 0, T + 50 + w * 2); g.addColorStop(0, `hsla(${hue},60%,60%,.16)`); g.addColorStop(1, `hsla(${hue},60%,60%,0)`); ctx.fillStyle = g; ctx.fillRect(x - w / 2, T, w, 50 + w * 2); }); } // reflections of the spires
+  ctx.restore();
   for (let i = 0; i < 3; i++) { // rune circles inlaid in the floor
     const x = 200 + i * 427 + rnd() * 60, yy = T + 52 + rnd() * 24, r = 26;
     awGlow('#7FF5F0', 8, () => { ctx.strokeStyle = 'rgba(127,245,240,.45)'; ctx.lineWidth = 1; ell(x, yy, r, r * .28); ctx.stroke(); ell(x, yy, r * .78, r * .22); ctx.stroke();
