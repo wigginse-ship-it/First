@@ -6,12 +6,12 @@ const ease = (k) => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
 // Each style has its own finish: overhead smashes drop into a deep wide squat, thrusts a long fencing lunge,
 // level sweeps a wide twisting base.
 const STANCES = {
-  load:   { f: 4, b: -13, fk: 1, bk: 10, sink: 5, lean: -.22, back: .1 },  // weight back, coiled
-  rear:   { f: 2, b: -9, fk: 0, bk: 3, sink: -1, lean: -.32, back: -.4 },  // up tall and arched back before an overhead smash
-  smash:  { f: 13, b: -12, fk: 9, bk: 1, sink: 9, lean: .42, back: 2.6 }, // a deep wide squat at impact
-  thrust: { f: 15, b: -14, fk: 8, bk: 0, sink: 5, lean: .3, back: 2.9 },  // a long fencing lunge
-  sweep:  { f: 11, b: -11, fk: 6, bk: 4, sink: 6, lean: .12, back: 2.2 }, // a wide, braced base
-  swing:  { f: 11, b: -10, fk: 7, bk: 2, sink: 5, lean: .24, back: 2.4 }, // any other committed swing
+  load:   { f: 4, b: -13, fk: 1, bk: 10, sink: 5, lean: -.34, back: .1 },  // weight back, coiled, the chest turned away
+  rear:   { f: 2, b: -9, fk: 0, bk: 3, sink: -1, lean: -.5, back: -.4 },   // up tall and arched back before an overhead smash
+  smash:  { f: 13, b: -12, fk: 9, bk: 1, sink: 9, lean: .75, back: 2.6 },  // folded over at the waist into a deep wide squat at impact
+  thrust: { f: 15, b: -14, fk: 8, bk: 0, sink: 5, lean: .5, back: 2.9 },   // a long fencing lunge, the chest driven over the knee
+  sweep:  { f: 11, b: -11, fk: 6, bk: 4, sink: 6, lean: .26, back: 2.2 },  // a wide, braced base
+  swing:  { f: 11, b: -10, fk: 7, bk: 2, sink: 5, lean: .45, back: 2.4 },  // any other committed swing, the body following through
 };
 function attackStance(pose, m, k) {
   const h0 = m.h[0], h1 = m.h[1];
@@ -44,11 +44,16 @@ function playerPose() {
       if (k >= m.h[0] && k <= m.h[1] + .12) pose.flat = { r: w.reach + 22, k: kk, rev, col: tcol, w: P.w === 'sword' || P.w === 'hammer' ? 8 : 5 };
       pose.lean = .1;
     }
-    if (m.kick && P.w === 'fists' && !m.around && m.name !== 'Roundhouse') { // the lunging front kick and the flying kick
-      const fly = P.z > 4 || m.key === 'R' || m.key === 'AA', h = m.h, out = k < h[0] ? 0 : k <= h[1] ? 1 : 1 - (k - h[1]) / (1 - h[1]);
-      pose.kickK = k; pose.kickH = h; pose.kickStyle = fly ? 'fly' : 'lunge';
-      if (fly) { pose.lean = -.22 * out - .05; pose.arm = lerp(-.9, -.4, out); pose.backArm = lerp(1.6, 2.7, out); pose.flow = 10; } // leaning back over the strike, arms flung for balance
-      else { pose.sink = 3 * out; pose.lean = lerp(.12, -.12, out); pose.arm = lerp(.9, .1, out); pose.elbow = lerp(1.3, 1, out); pose.backArm = lerp(1.2, 2.5, out); pose.flow = 8; } // guard kept tight, the back arm swung behind
+    if (m.kick && P.w === 'fists' && !m.around && m.name !== 'Roundhouse') { // the driving thrust kick and the flying dropkick
+      const fly = P.z > 4 || m.key === 'R' || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
+      pose.kickK = k; pose.kickH = m.h; pose.kickStyle = fly ? 'drop' : 'lunge'; pose.flow = 12;
+      if (fly) { // tucked, then laid out flat with both feet driven forward and the arms flung back behind his head
+        pose.rot = -1.2 * out; pose.lean = lerp(.35, -.1, out);
+        pose.arm = lerp(1, 3.6, out); pose.elbow = lerp(1.2, .3, out); pose.backArm = lerp(-.4, 3.4, out);
+      } else { // coiled forward over the chambered knee, then the whole torso arches back to throw the hips behind the heel
+        pose.sink = 4 * out; pose.lean = lerp(.3, -.5, out);
+        pose.arm = lerp(.9, 1.1, out); pose.elbow = lerp(1.7, 1.9, out); pose.backArm = lerp(.9, 2.4, out); // fists kept up in front of the chest
+      }
     } else if (m.kick) { pose.kick = 1; pose.arm = -.5; }
     if (m.crouch || m.dive) pose.crouch = 1;
     if (m.rot) pose.rot = m.rot * ease(k / .75);
@@ -56,14 +61,14 @@ function playerPose() {
       pose.trail = w.reach + 18; pose.trailFrom = arc[0];
       pose.trailCol = brandT > 0 ? `rgba(${ELEMENTS[brandEl].rgb},.95)` : m.power === 2 ? 'rgba(216,170,85,.95)' : TRAIL[P.w]; pose.trailW = P.w === 'sword' || P.w === 'hammer' ? 9 : 6;
     }
-    if (!m.style) pose.lean = m.power ? .16 : .08;
+    if (!m.style && pose.kickK === undefined) pose.lean = m.power ? .2 : .1;
     pose.flow = Math.abs(P.vx) * .02;
     if (P.z <= 2 && !m.kick && !m.rot && !m.around) attackStance(pose, m, k); // the body moves with the weapon
   } else if (P.state === 'charge') {
     pose.arm = -2.2; pose.crouch = 1; pose.walk = 0;
     pose.glow = ['', '#D8AA55', '#FFE9A0', '#C8607A'][P.clvl] || '';
     if (P.clvl && Math.sin(performance.now() / 45) > 0) pose.glow = '#FFFFFF';
-  } else if (P.state === 'run') { pose.run = 1; pose.lean = .28; pose.flow = 8; if (P.w === 'fists') { pose.arm = 1.35; pose.elbow = 1.45; pose.backArm = 1.5; } else { pose.arm = 1.9; pose.backArm = 2.2; } } // bare-handed he pumps his arms; armed, the weapon trails
+  } else if (P.state === 'run') { pose.run = 1; pose.lean = .36; pose.flow = 8; if (P.w === 'fists') { pose.arm = 1.35; pose.elbow = 1.45; pose.backArm = 1.5; } else { pose.arm = 1.9; pose.backArm = 2.2; } } // bare-handed he pumps his arms; armed, the weapon trails
   else if (P.state === 'jump') { pose.crouch = 1; pose.arm = .2; pose.rot = P.vz < 0 ? 0 : 0; pose.flow = 4; }
   else if (P.state === 'dodge') {
     const k = 1 - P.t / .34;
@@ -82,8 +87,8 @@ function playerPose() {
     pose.arm = .5 + Math.sin(now * 1.6) * .05; pose.grip = -.02 + Math.sin(now * 1.6 + 1) * .07 + twirl; pose.backArm = -.35; pose.lean = .08;
   }
   else { // hands low at his sides but loaded: elbows bent, fists forward at the waist, swaying with his breath
-    const b = Math.sin(performance.now() / 420) * .04;
-    pose.arm = 1.45 + b; pose.elbow = 1.15 + b; pose.backArm = 1.15 - b;
+    const b = Math.sin(performance.now() / 420) * .03;
+    pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; // arms hanging loose at his sides, just off the body
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
   return pose;
@@ -104,7 +109,6 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
   ctx.save(); ctx.globalAlpha = alpha;
   ctx.translate(x, y - z); ctx.scale(facing, 1);
   if (pose.stretch) ctx.scale(pose.stretch, 1 / pose.stretch); // smeared out by speed
-  if (pose.breath) ctx.translate(0, pose.breath * .5); // breathing at rest
   drawHumanoid(heroLook(), pose);
   ctx.restore();
 }
