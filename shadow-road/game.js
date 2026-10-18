@@ -50,11 +50,11 @@ function updatePlayer(dt) {
   P.inv = Math.max(0, P.inv - dt); P.chaseT = Math.max(0, (P.chaseT || 0) - dt);
   const wasAir = P.z > 0 || P.vz > 0;
   if (wasAir) {
-    P.vz -= GRAV * dt * (P.state === 'air' && P.move && P.move.dive ? 1.8 : 1);
+    P.vz -= GRAV * dt * (P.state === 'air' && P.move && P.move.dive ? 1.8 : 1) * roomGrav; // the Wyrm's Nest loosens its pull
     P.z += P.vz * dt;
     if (P.z <= 0) { P.z = 0; P.vz = 0; onLand(); }
   }
-  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1) * (pw('haste') ? 1.3 : 1); // tiny, he scurries
+  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1) * (pw('haste') ? 1.3 : 1) * roomSlow; // tiny, he scurries
   switch (P.state) {
     case 'idle': case 'walk': case 'run': {
       if (pressed.swap) swapWeapon();

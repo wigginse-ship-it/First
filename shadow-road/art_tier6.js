@@ -75,7 +75,7 @@ function t6Hammer(pose) {
     const y = s < 0 ? -27 : 20.5; rrect(30, y, 32, 6.5, 2); ctx.fillStyle = t6VG(y, y + 6.5, '#C8963E', .45, -.4); ctx.fill(); outline(1.3);
     ctx.fillStyle = C('#FFE8B0'); ctx.fillRect(32, s < 0 ? y + .4 : y + .6, 28, 1);
     const glyphs = [[0, -1.8, 0, 1.8, 0, -1.8, 2.6, 0], [0, 1.8, 1.4, -1.8, 2.8, 1.8, .6, 0, 2.2, 0], [0, -1.8, 2.6, 1.8, 2.6, -1.8, 0, 1.8], [1.3, -1.8, 1.3, 1.8, 1.3, -.4, 0, -1.6, 1.3, -.4, 2.6, -1.6]];
-    const rune = () => { ctx.beginPath(); glyphs.forEach((gl, i) => { const rx = 35.5 + i * 7.2 + (s < 0 ? 0 : 0), ry = y + 3.3; for (let k = 0; k < gl.length; k += 2) { const f = (k === 0 || (gl.length === 12 && k === 6)) ? 'moveTo' : 'lineTo'; ctx[f](rx + gl[k], ry + gl[k + 1] * s); } }); };
+    const rune = () => { ctx.beginPath(); glyphs.forEach((gl, i) => { const rx = 35.5 + i * 7.2, ry = y + 3.3; for (let k = 0; k < gl.length; k += 2) { const f = (k === 0 || (gl.length === 12 && k === 6)) ? 'moveTo' : 'lineTo'; ctx[f](rx + gl[k], ry + gl[k + 1] * s); } }); };
     ctx.lineCap = 'round'; rune(); ctx.strokeStyle = C('#5A2A14'); ctx.lineWidth = 1.4; ctx.stroke();
     t6Add(() => { rune(); ctx.strokeStyle = `rgba(255,170,80,${.6 + .3 * pulse})`; ctx.lineWidth = .8; ctx.stroke(); });
   }
@@ -242,7 +242,7 @@ function t6Sword(pose) {
   t6Halo(ex, 0, 18, '255,214,140', .5 + .2 * pulse);
   t6Add(() => { // long, faint sunbeams turning slowly about the eclipse
     ctx.translate(ex, 0); ctx.rotate(-now * .08);
-    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU, L3 = i % 2 ? 20 : 30; ctx.rotate(TAU / 10);
+    for (let i = 0; i < 10; i++) { const L3 = i % 2 ? 20 : 30; ctx.rotate(TAU / 10);
       const g = ctx.createLinearGradient(0, 0, L3, 0); g.addColorStop(0, 'rgba(255,220,150,.38)'); g.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = g;
       ctx.beginPath(); ctx.moveTo(0, -1.6); ctx.lineTo(L3, 0); ctx.lineTo(0, 1.6); ctx.closePath(); ctx.fill(); }
   });

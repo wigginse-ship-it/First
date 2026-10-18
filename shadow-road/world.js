@@ -396,7 +396,7 @@ function updateWorld(dt) {
   else camX = Math.max(camX, camX + (target - camX) * Math.min(1, dt * 5));
   camX = clamp(camX, 0, Math.max(0, stage.len - VW));
 
-  updateMech(dt); updateShrink(P, dt);
+  updateMech(dt); updateShrink(P, dt); updateBossRoom(dt);
   for (const e of enemies) { updateShrink(e, dt); updateEnemy(e, dt); }
   enemies = enemies.filter(e => !e.remove);
   if (stillT <= 0) for (const p of projs) {

@@ -1,7 +1,7 @@
 'use strict';
 // ---------- chiptune music: pulse lead + counter voice, pulse arpeggios, a triangle bass and noise drums ----------
 // All tunes are original, written in the spirit of 8- and 16-bit RPG and beat 'em up soundtracks.
-// Melodies: one string per bar of 16 musTokens (or the part's `n` steps). A note like E5 starts a note, '-' holds it,
+// Melodies: one string per bar of 16 tokens (or the part's `n` steps). A note like E5 starts a note, '-' holds it,
 // '.' is a rest and '|' is ignored (it only helps the eye). Chords: one per bar; 'C G' splits a bar in halves.
 // Chord symbols: root + optional m, dim, aug, sus2, sus4, 5, 7, m7, maj7, m7b5, and an optional /bass note.
 //
@@ -59,7 +59,7 @@ return {
     lead: ['E5 - - - C5 - - - A4 - - - - - - -', 'F5 - - - E5 - - - D5 - - - C5 - - -', 'B4 - - - G#4 - - - E4 - - - - - - -', 'A4 - - - - - - - - - - - . . . .'],
     harm: [H('C5', 'E4'), H('A4', 'F4'), H('G#4', 'B3'), 'C4 - - - - - - - - - - - . . . .'] },
   // F major in a rocking 12/8: each step is an eighth note
-  forge: { bpm: 50, n: 12, style: 'calm', duty: .5, vib: 8, arp: '024024024024', arpDuty: .5, av: .05, bass: 'R-----F-----', bv: .24, form: ['A', 'B'], parts: {
+  forge: { bpm: 50, n: 12, vol: 1.15, style: 'calm', duty: .5, vib: 8, arp: '024024024024', arpDuty: .5, av: .05, bass: 'R-----F-----', bv: .24, form: ['A', 'B'], parts: {
     A: { chords: ['F', 'C/E', 'Dm', 'Bb', 'F', 'Gm7', 'C', 'C7'],
          lead: ['C5 - - A4 - C5 F5 - - - - -', 'E5 - D5 C5 - - G4 - - - - -', 'A4 - Bb4 C5 - D5 F5 - - E5 - D5', 'D5 - - - - - . . . C5 - D5',
                 'C5 - - A4 - C5 F5 - - A5 - G5', 'F5 - - D5 - - Bb4 - - - - -', 'C5 - D5 E5 - F5 G5 - - - - -', 'E5 - - - - - Bb4 - - - - -'] },
@@ -79,7 +79,7 @@ return {
            'C5 - E5 - G5 - C6 - - - B5 - G5 - E5 -', 'F#5 - A5 - D6 - - - C6 - A5 - F#5 - D5 -', 'F5 - - - A5 - C6 - - - - - A5 - F5 -', 'F#5 - - - A5 - - - D5 - E5 - F#5 - A5 -'],
     harm: [R(), R(), R(), R(), R(), R(), R(), R(), H('G4', 'C5'), H('A4', 'D5'), H('B4', 'E5'), H('A4', 'F#4'), H('E4', 'G4'), H('A4', 'D5'), H('A4', 'C5'), H('A4', 'D5')] },
   // F# minor, hushed pizzicato steps through the dark wood; the bII (G) and a lydian G# keep it uneasy
-  bloom2: { bpm: 100, style: 'creep', duty: .25, kit: 'soft', echo: .25, vib: 14,
+  bloom2: { bpm: 100, vol: 1.2, style: 'creep', duty: .25, kit: 'soft', echo: .25, vib: 14,
     chords: ['F#m', 'F#m', 'D', 'C#', 'F#m', 'Bm', 'G', 'C#', 'Bm', 'F#m', 'Bm', 'C#', 'D', 'A/C#', 'Bm', 'C#7'],
     lead: ['F#4 - - - . . C#5 - A4 - - - . . G#4 A4', 'C#5 - - - - - - - B4 - A4 - G#4 - F#4 -', 'A4 - - - D5 - - - F#5 - - - E5 - D5 -', 'C#5 - - - - - - - G#4 - - - E#4 - - -',
            'F#5 - - - . . A5 - G#5 - F#5 - E5 - C#5 -', 'D5 - - - F#5 - - - B5 - - - A5 - F#5 -', 'G5 - - - - - F#5 - D5 - - - B4 - G4 -', 'G#4 - - - B4 - - - E#5 - - - G#5 - - -',
@@ -92,7 +92,7 @@ return {
            'Db5 - - - F5 - - - Bb5 - - - - - - -', 'Ab5 - - - Gb5 - - - - - - - Eb5 - - -', 'Db5 - - - - - - - Bb4 - Db5 - Gb5 - - -', 'F5 - - - - - - - - - - - . . . .',
            'Gb4 - - - Bb4 - - - Eb5 - - - - - - -', H('F5', 'Db5'), H('Eb5', 'Gb5'), 'E5 - - - - - - - A4 - - - C5 - - -'] },
   // C minor, a stomping half-time beast: pentatonic riffs in parallel fifths over toms
-  boss_mossback: { bpm: 116, style: 'tribal', kit: 'heavy', duty: .5, lv: .2, form: ['A', 'B'], parts: {
+  boss_mossback: { bpm: 116, vol: .88, style: 'tribal', kit: 'heavy', duty: .5, lv: .2, form: ['A', 'B'], parts: {
     A: { double: -7, chords: ['C5', 'C5', 'Ab5', 'Bb5', 'C5', 'C5', 'Eb5', 'F5'],
          lead: ['C4 - - Eb4 - - F4 - G4 - - - - - Bb4 -', 'C5 - - Bb4 - - G4 - F4 - Eb4 - F4 - - -', 'Eb4 - - F4 - - Ab4 - C5 - - - Bb4 - Ab4 -', 'G4 - - - - - - - F4 - - - D4 - - -',
                 'C4 - - Eb4 - - F4 - G4 - - - - - Bb4 -', 'C5 - - Eb5 - - F5 - G5 - - - F5 - Eb5 -', 'Eb5 - - - Bb4 - - - G4 - Bb4 - Eb5 - - -', 'F5 - - - Eb5 - C5 - Bb4 - - - G4 - - -'] },
@@ -102,7 +102,7 @@ return {
 
   // ---- world 2: the Clockwork Skyport ----
   // Eb major, a swung, bustling harbour tune with walking bass and ticking clockwork
-  sky: { bpm: 124, style: 'shuffle', swing: .6, duty: .25, vib: 10,
+  sky: { bpm: 124, vol: 1.35, style: 'shuffle', swing: .6, duty: .25, vib: 10,
     chords: ['Eb', 'Ab', 'Bb', 'Eb', 'Cm', 'Ab', 'F7', 'Bb7', 'Ab', 'Bb', 'G7', 'Cm', 'Ab', 'Bb', 'Eb', 'Bb7'],
     lead: ['Eb5 - G5 - Bb5 - - - G5 - Ab5 - Bb5 - - -', 'C6 - - - Bb5 - Ab5 - G5 - F5 - Eb5 - - -', 'F5 - - - D5 - F5 - Bb5 - Ab5 - F5 - D5 -', 'Eb5 - - - - - - - . . G4 - Bb4 - Eb5 -',
            'G5 - - - Eb5 - G5 - C6 - - - Bb5 - G5 -', 'Ab5 - - - C6 - - - Eb6 - - - C6 - Ab5 -', 'A5 - - - F5 - A5 - C6 - - - Eb6 - - -', 'D6 - - - C6 - Bb5 - Ab5 - F5 - D5 - Bb4 -',
@@ -141,7 +141,7 @@ return {
            'G5 - - - - - - - E5 - - - B4 - - -', 'F#5 - - - - - - - A5 - - - D6 - - -', 'B5 - - - - - G5 - - - E5 - - - - -', 'D#5 - E5 - F#5 - G5 - A5 - G5 - F#5 - D#5 -',
            'C6 - - - - - B5 - A5 - - - E5 - - -', 'D#6 - - - - - - - B5 - - - F#5 - - -', 'E5 - - - G5 - - - B5 - - - C6 - - -', 'B5 - - - - - - - - - - - . . . .'] },
   // D lydian in a quick 3/4 waltz; every other pass the whole gallery flips a tritone down
-  prism2: { bpm: 176, style: 'waltz', duty: .25, echo: .18, echoSteps: 4, form: ['A', 'B', 'A-6', 'B-6'], parts: {
+  prism2: { bpm: 176, vol: 1.3, style: 'waltz', duty: .25, echo: .18, echoSteps: 4, form: ['A', 'B', 'A-6', 'B-6'], parts: {
     A: { chords: ['D', 'E/D', 'F#m', 'E', 'D', 'E/D', 'Bm', 'A'],
          lead: ['A4 - D5 - F#5 - A5 - - - G#5 -', 'B5 - - - G#5 - E5 - - - D5 -', 'C#5 - - - F#5 - A5 - C#6 - - -', 'B5 - - - - - G#5 - - - E5 -',
                 'F#5 - A5 - D6 - - - C#6 - B5 -', 'G#5 - B5 - E6 - - - D6 - B5 -', 'A5 - - - F#5 - D5 - - - B4 -', 'C#5 - - - E5 - - - A4 - - -'] },

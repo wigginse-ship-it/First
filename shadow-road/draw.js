@@ -372,6 +372,7 @@ function drawScene(t) {
   if (zoom > 0) { const px = P.x - camX, py = P.y - 40; ctx.translate(px, py); ctx.scale(1 + zoom, 1 + zoom); ctx.translate(-px, -py); }
   zoneViewTurn();
   drawWorld(stage.theme, camX, t);
+  drawBossRoom(t);
   ctx.translate(-camX, 0);
   // resting debris lies flat on the floor under everything
   for (const p of parts) if (p.rest) drawPart(p);
