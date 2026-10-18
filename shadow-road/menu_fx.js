@@ -51,8 +51,8 @@
       let rank, suit;
       if (trumps) { rank = ROMAN[n + 1] || String(n + 1); suit = '✦'; }
       else {
-        const m = lv.match(/^LV (\d+)\/5/);
-        const armor = /^LV \d+\/5$/.test(lv.trim()); // the armor card reads just "LV n/5"
+        const m = lv.match(/^LV (\d+)\/\d+/);
+        const armor = /^LV \d+\/\d+$/.test(lv.trim()); // the armor card reads just "LV n/5"
         rank = m ? (ROMAN[+m[1]] || m[1]) : (c.classList.contains('locked') ? '?' : '0');
         suit = armor ? '♥︎' : '♠︎';
       }

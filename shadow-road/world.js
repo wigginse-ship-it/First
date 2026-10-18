@@ -323,6 +323,7 @@ function updateLoot(dt) {
     const d = Math.hypot(P.x - k.x, (P.y - k.y) * 1.5);
     if (P.state === 'dead' || k.t < .5) continue;
     if (k.kind === 'weapon') { if (d < 30) { k.got = true; gainWeapon(k.weapon); } continue; }
+    if (k.kind === 'power') { if (k.t > 8) { k.got = true; continue; } if (d < 22) { k.got = true; gainPower(k.power); } continue; } // grab it before it fades
     if (d < 80) { k.x += (P.x - k.x) * Math.min(1, dt * 9); k.y += (P.y - k.y) * Math.min(1, dt * 9); }
     if (d < 14) {
       k.got = true; sfx('pick');
@@ -351,7 +352,7 @@ function startStage(i) {
   setZoom(VIEW_NORMAL);
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;
-  runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stags = []; phoenixT = 0; brandT = 0;
+  runShards = 0; runSigils = 0; comboN = 0; comboT = 0; trumpCharge = 0; mirrorT = 0; stillT = 0; stags = []; phoenixT = 0; brandT = 0; resetPowers();
   // each run, a random enemy in a random wave carries each weapon this world can give
   // weapons you don't own yet, in a random order: any of them can turn up in any world
   carriers = [];
@@ -417,7 +418,7 @@ function updateWorld(dt) {
   projs = projs.filter(p => p.life > 0 && p.x > camX - 60 && p.x < camX + VW + 60);
   for (const p of props) p.flash = Math.max(0, (p.flash || 0) - dt);
   props = props.filter(p => !p.broken);
-  updateLoot(dt); updateTrumps(dt); updateHazards(dt);
+  updateLoot(dt); updateTrumps(dt); updatePowers(dt); updateHazards(dt);
   if (boss && !boss.dead && Math.random() < dt * 14) { // each boss's arena has its own weather
     const kind = boss.def.draw, x = camX + rand(0, VW);
     if (kind === 'mossback') parts.push({ x, y: rand(FLOOR_TOP, FLOOR_BOT), z: 260, vx: rand(-30, 10), vy: 0, vz: -40, life: 5, max: 5, col: pick(['#C9A86A', '#8A6A3A', boss.phase === 3 ? '#FF8A4A' : '#7EA460']), size: 3, shape: 'tuft', rot: rand(0, 6), vr: 2 });

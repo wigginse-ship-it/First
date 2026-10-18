@@ -340,6 +340,7 @@ function drawDeath(e, t) {
 }
 function drawLoot(k, t) {
   if (k.kind === 'weapon') { drawWeaponPickup(k, t); return; }
+  if (k.kind === 'power') { drawPowerLoot(k, t); return; }
   const x = k.x, y = k.y - k.z - 6 - Math.sin(t * 6 + k.x) * 2;
   shadow(k.x, k.y, 5);
   if (k.kind === 'shard') {
@@ -406,6 +407,7 @@ function drawScene(t) {
     drawPlayerAt(P.x, P.y, P.z, P.facing, Object.assign(playerPose(), { live: 1 }), blink);
     hatchActor(P.x, P.y - P.z, 13, 50);
   }]);
+  list.push([P.y + .15, () => onMain(() => drawPowerAura(t))]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
   for (const s of stags) list.push([s.y + .2, () => { ctx.save(); if (s.dir < 0) { ctx.translate(s.x * 2, 0); ctx.scale(-1, 1); } drawStag(s, t); ctx.restore(); }]);
   mechList(list, t);

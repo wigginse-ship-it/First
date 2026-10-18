@@ -54,7 +54,7 @@ function updatePlayer(dt) {
     P.z += P.vz * dt;
     if (P.z <= 0) { P.z = 0; P.vz = 0; onLand(); }
   }
-  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1); // tiny, he scurries
+  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1) * (pw('haste') ? 1.3 : 1); // tiny, he scurries
   switch (P.state) {
     case 'idle': case 'walk': case 'run': {
       if (pressed.swap) swapWeapon();
@@ -166,7 +166,7 @@ function onLand() {
   else if (P.state === 'hurt' && P.knocked) { P.state = 'down'; P.t = .6; shakeMag = Math.max(shakeMag, 3); }
 }
 function runMove(dt) {
-  const m = P.move; P.t += dt; const k = P.t / m.dur;
+  const m = P.move; P.t += dt * (pw('haste') ? 1.2 : 1); const k = P.t / m.dur;
   if (P.hopQ && k >= m.h[0] * .8) { P.vz = P.hopQ; P.hopQ = 0; dust(P.x, P.y, 5); }
   P.x += P.vx * dt; P.vx *= Math.pow(m.lunge > 300 ? .05 : .004, dt);
   if (m.lunge > 250 || m.rot || m.spin) { P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .035; addGhost(); } }
@@ -308,6 +308,8 @@ function strike(e, base, dir, m, echo) {
   }
   if (e.shrink < .8) { dmg = Math.round(dmg * 1.4); m = Object.assign({}, m, { kb: (m.kb || 0) * 2.4 + 120, launch: (m.launch || 0) * 1.5 + 140 }); } // a shrunken foe is punted
   if (P.shrink < .8) dmg = Math.max(1, Math.round(dmg * .75)); // and a shrunken prince hits softer
+  if (pw('might') && !m.trump) dmg = Math.round(dmg * 1.3);
+  if (pw('leech') && !m.trump && !e.boss) P.hp = Math.min(maxHp(), P.hp + 1 + dmg * .03);
   hurtEnemy(e, dmg, dir, m, crit);
   if (broke && !e.dead) { // the guard shatters and leaves it reeling
     e.state = 'down'; e.t = 1.3; e.vx = dir * 60; e.plan = null; hitstop = Math.max(hitstop, .14); shakeMag = Math.max(shakeMag, 7); sfx('break');
@@ -417,7 +419,8 @@ function popEnemy(e) { // the body hits the ground in a burst of debris and drop
 function dropLoot(e) {
   const [a, b] = e.def.shards || [30, 40];
   // richer pickings deeper in: each world drops more, and an armored elite drops a lot more
-  const n = Math.round(rand(a, b) * (1 + .2 * save.cycle) * [.55, .9, 1.3, 1.7][Math.min(stageIdx, 3)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
+  maybeDropPower(e);
+  const n = Math.round(rand(a, b) * (pw('fortune') ? 2 : 1) * (1 + .2 * save.cycle) * [.55, .9, 1.3, 1.7][Math.min(stageIdx, 3)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
   if (e.boss) for (let i = 0; i < 3 + Math.min(stageIdx, 2); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
   else if (Math.random() < (e.def.sigil || 0) * [1, 1.4, 1.8, 2.1][Math.min(stageIdx, 3)] + (e.elite ? .65 : 0) + .04 * Math.min(stageIdx, 3)) loot.push(makeLoot('sigil', e.x, e.y, 1)); // elites usually carry a sigil, the ink for Trump cards
@@ -453,6 +456,7 @@ function hitProp(p, m) {
 function playerDamage(dmg, fromX, big) {
   if (P.inv > 0 || P.state === 'dead' || P.state === 'dodge') return;
   if (P.state === 'parry' && P.t < .28) { riposte(fromX); return; }
+  if (pw('ward')) dmg = Math.max(1, Math.round(dmg * .5));
   P.hp -= dmg; P.inv = .8; shakeMag = Math.max(shakeMag, big ? 7 : 4); hitstop = .07; hurtFlash = .25;
   floatText(P.x, P.y, 70, '-' + dmg, '#D0566A', 16); sfx('hurt');
   burst(P.x, P.y, 34, ['#D0566A', '#FFFFFF'], 10, 'spark');
