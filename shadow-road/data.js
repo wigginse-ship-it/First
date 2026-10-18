@@ -102,14 +102,41 @@ const WEAPONS = {
       { dur: .65, h: [.35, .6], x0: 0, x1: 100, dmg: 54, kb: 420, launch: 340, arc: [-2.4, 1.4], depth: 28, power: 2, shock: 80, wave: 1 },
     ],
     extra: [{ lvl: 2, name: 'Shadow Cleave', how: 'Hold Heavy past the third flash', desc: 'Charge past the third flash and your swing sends a wave of shadow down the street.' }] },
+  // the prince's own blade: quick, a fencer's weapon. Cuts and long thrusts that cover ground, fancy spins, and a parry
+  // in place of the backstep: dodge in place or away and a blow that lands on the guard is answered at once
+  rapier: { name: 'Grayswandir', reach: 44, look: 'grayblade', parry: true, desc: 'Quick and precise. Dodge in place or away to parry, and answer with a riposte.',
+    tree: {
+      L:    { dur: .24, h: [.3, .6], x0: 0, x1: 60, dmg: 8, kb: 60, arc: [-1.3, .9], lunge: 80, depth: 18 },
+      LL:   { dur: .24, h: [.3, .6], x0: 0, x1: 60, dmg: 8, kb: 60, arc: [.9, -1.1], lunge: 80, depth: 18 },
+      LLL:  { name: 'Flèche', dur: .34, h: [.3, .62], x0: 0, x1: 88, dmg: 12, kb: 220, arc: [.02, .02], lunge: 320, power: 1 }, // a running thrust that crosses the gap
+      LLLL: { name: 'Flourish', dur: .5, h: [.18, .82], x0: 0, x1: 66, dmg: 6, kb: 170, arc: [-P_, P_], around: 1, multi: .1, spin: 1, lunge: 60, power: 1 }, // a pirouette, the blade a silver ring
+      H:    { name: 'Lunge', dur: .42, h: [.36, .62], x0: 0, x1: 100, dmg: 16, kb: 260, arc: [.04, .04], lunge: 430, power: 1, wall: 1 },
+      HH:   { name: 'Balestra', dur: .5, h: [.42, .66], x0: 0, x1: 96, dmg: 18, kb: 300, arc: [.02, .02], hop: 170, lunge: 260, power: 2 }, // a little jump forward into the thrust
+      HHH:  { name: 'Starfall Flurry', dur: .72, h: [.14, .82], x0: 0, x1: 88, dmg: 5, kb: 80, arc: [.04, .04], multi: .055, lunge: 90, power: 1, flurry: 1 }, // a storm of thrusts, each a point of light
+      LH:   { name: 'Crescent Flick', dur: .42, h: [.25, .55], x0: 0, x1: 68, dmg: 12, kb: 60, launch: 430, arc: [1.4, -2.1], hop: 120, power: 1 },
+      HL:   { name: 'Moulinet', dur: .56, h: [.14, .86], x0: 0, x1: 68, dmg: 5, kb: 90, arc: [-P_, 3 * P_], around: 1, multi: .07, power: 1 }, // the wrist spins the blade in wheels on both sides
+      LLH:  { name: 'Thousand Needles', dur: .6, h: [.12, .82], x0: 0, x1: 80, dmg: 4, kb: 40, arc: [.04, .04], multi: .045, lunge: 70, power: 1, flurry: 1 },
+      X:    { name: 'Rising Moon', dur: .5, h: [.34, .58], prep: 1, x0: 0, x1: 66, dmg: 11, kb: 40, launch: 580, arc: [1.6, -2.2], launcher: 1, power: 1 },
+      A:    { dur: .26, h: [.2, .6], x0: 0, x1: 62, dmg: 8, kb: 60, arc: [-1.4, .9] },
+      AA:   { dur: .28, h: [.2, .6], x0: 0, x1: 70, dmg: 9, kb: 90, arc: [.35, .35] },
+      AAA:  { dur: .4, h: [.2, .65], x0: 0, x1: 64, dmg: 13, kb: 120, arc: [-2.4, 1.4], spike: 1, power: 1 },
+      D:    { name: 'Running Flèche', dur: .42, h: [.12, .62], x0: 0, x1: 90, dmg: 14, kb: 380, arc: [.02, .02], lunge: 520, power: 1, wall: 1 },
+      R:    { dur: .36, h: [.25, .6], x0: 0, x1: 78, dmg: 13, kb: 200, arc: [.04, .04], lunge: 240, power: 1 },
+      RIP:  { name: 'Parry and Riposte', seq: ['DODGE'], dur: .4, h: [.18, .55], x0: -10, x1: 92, dmg: 26, kb: 340, arc: [.02, .02], lunge: 180, crit: 1, power: 2 }, // the answer to a parried blow: always a critical
+      M:    { lvl: 2, name: 'Advancing Cuts', how: 'Attack while walking', desc: 'Walk into them cutting left and right, every step another stroke.', dur: .5, h: [.1, .86], x0: 0, x1: 64, dmg: 6, kb: 60, arc: [-1.2, .9], multi: .1, lunge: 150, power: 1, weave: 1 },
+      RH:   { lvl: 3, name: 'Blade Dance', how: 'Heavy out of a dodge', desc: 'Pirouette twice through the crowd, the blade a silver ring around you.', dur: .7, h: [.1, .9], x0: 0, x1: 74, dmg: 7, kb: 180, arc: [-P_, 3 * P_], around: 1, multi: .08, spin: 2, lunge: 220, power: 1 },
+      AH:   { lvl: 4, name: 'Falling Star', how: 'Heavy in the air', desc: 'Dive point-first like a falling star; where you land, it bursts into light.', dur: .5, h: [.1, .97], x0: 0, x1: 62, dmg: 20, kb: 200, arc: [.95, .95], dive: 1, shock: 72, bounce: 1, power: 2 },
+      DH:   { lvl: 5, name: 'Shadow Flèche', how: 'Heavy while running', desc: 'Step through Shadow past everything in your way; a heartbeat later, every one of them is cut.', dur: .5, h: [.1, .55], x0: -40, x1: 64, dmg: 24, kb: 260, arc: [.02, .02], lunge: 860, power: 2, delayed: 1 },
+    } },
 };
-const WEAPON_ORDER = ['fists', 'hammer', 'staff', 'sword'];
+const WEAPON_ORDER = ['fists', 'hammer', 'staff', 'sword', 'rapier'];
 // how each swing moves: thrust = a stab straight out, sweep / sweepR = horizontal, around the body; the rest swing on their arcs
 const STYLES = {
   fists: { L: 'thrust', LL: 'thrust', LLL: 'sweep', LH: 'thrust', HH: 'thrust', HHH: 'thrust', A: 'thrust' },
   hammer: { L: 'sweep', LL: 'sweepR', D: 'sweep', A: 'sweep', AA: 'sweepR', DH: 'sweep' },
   staff: { L: 'thrust', LL: 'sweep', HH: 'sweep', HHH: 'thrust', LLL: 'thrust', LLH: 'thrust', M: 'thrust', AA: 'sweep' },
   sword: { LL: 'sweep', HH: 'sweep', LLL: 'thrust', D: 'thrust', A: 'sweep', AA: 'thrust', RH: 'sweep', DH: 'sweep' },
+  rapier: { LLL: 'thrust', H: 'thrust', HH: 'thrust', HHH: 'thrust', LLH: 'thrust', D: 'thrust', R: 'thrust', RIP: 'thrust', AA: 'thrust', DH: 'thrust' },
 };
 for (const id in STYLES) for (const k in STYLES[id]) if (WEAPONS[id].tree[k]) WEAPONS[id].tree[k].style = STYLES[id][k];
 for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) WEAPONS[id].tree[k].key = k;

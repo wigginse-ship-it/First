@@ -169,6 +169,7 @@ function drawWeapon(kind, pose) {
     ctx.strokeStyle = C(shade(g, -.55)); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(18.4, -4.2); ctx.lineTo(18.4, 4.2); ctx.moveTo(16, -2.4); ctx.lineTo(18.4, -2.4); ctx.stroke(); // fingers folded over, the thumb
     return;
   }
+  if (kind === 'grayblade' || kind === 'rapier') { drawGrayblade(pose || {}); return; } // the prince's own sword (art_rapier.js)
   // the hero's weapons change as they level: 1 iron and wood, 2 steel and leather, 3 gold and a gem, 4 runes that glow, 5 shadow-steel with a violet aura
   const tier = (pose && pose.tier) || 1, hand = (pose && pose.glove) || '#FFF1E0';
   const glowRune = (x, y, w, h, col) => { ctx.save(); if (!FLASH) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillStyle = C(col); ctx.fillRect(x, y, w, h); ctx.restore(); };

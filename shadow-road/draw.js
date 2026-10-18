@@ -1,5 +1,5 @@
 'use strict';
-const TRAIL = { fists: 'rgba(255,255,255,.9)', hammer: 'rgba(216,170,85,.95)', staff: 'rgba(126,194,176,.95)', sword: 'rgba(143,184,216,.95)' };
+const TRAIL = { fists: 'rgba(255,255,255,.9)', hammer: 'rgba(216,170,85,.95)', staff: 'rgba(126,194,176,.95)', sword: 'rgba(143,184,216,.95)', rapier: 'rgba(225,230,255,.95)' };
 const ease = (k) => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
 // Attacks are posed with the whole body: a wind-up that loads the back foot, a strike that drives into a planted
 // lunge with the free arm thrown back for balance, and a held finish that settles back into stance.
@@ -63,15 +63,19 @@ function playerPose() {
         pose.arm = lerp(.9, 1.1, out); pose.elbow = lerp(1.7, 1.9, out); pose.backArm = lerp(.9, 2.4, out); // fists kept up in front of the chest
       }
     } else if (m.kick) { pose.kick = 1; pose.arm = -.5; }
+    if (m.flurry && pose.ext !== undefined) pose.ext = Math.abs(Math.sin(kk * Math.PI * 7)); // a storm of thrusts, in and out
+    if (m.spin && !m.kick) pose.spin = -TAU * m.spin * ease(clamp(k / .85, 0, 1)); // a pirouette: the body turns right round
+    if (m.weave) { pose.arm = lerp(-1.2, .9, Math.abs(Math.sin(kk * Math.PI * 2.5))); }
     if (m.crouch || m.dive) pose.crouch = 1;
     if (m.rot) pose.rot = m.rot * ease(k / .75);
     if (!m.style && k >= m.h[0] && k <= m.h[1] + .12 && !m.kick && Math.abs(arc[1] - arc[0]) > .1) {
       pose.trail = w.reach + 18; pose.trailFrom = arc[0];
-      pose.trailCol = brandT > 0 ? `rgba(${ELEMENTS[brandEl].rgb},.95)` : m.power === 2 ? 'rgba(216,170,85,.95)' : TRAIL[P.w]; pose.trailW = P.w === 'sword' || P.w === 'hammer' ? 9 : 6;
+      pose.trailCol = brandT > 0 ? `rgba(${ELEMENTS[brandEl].rgb},.95)` : m.power === 2 ? 'rgba(216,170,85,.95)' : TRAIL[P.w]; pose.trailW = P.w === 'sword' || P.w === 'hammer' ? 9 : P.w === 'rapier' ? 3.5 : 6; if (P.w === 'rapier') pose.trail = w.reach + 10;
     }
     if (!m.style && pose.kickK === undefined) pose.lean = m.power ? .2 : .1;
     pose.flow = Math.abs(P.vx) * .02;
     if (P.z <= 2 && !m.kick && !m.rot && !m.around) attackStance(pose, m, k); // the body moves with the weapon
+    if (m.style === 'thrust' && !(P.w === 'fists' && BOXING[m.key])) pose.arm = arc[0] - (pose.lean || 0) * .9; // a thrust stays level with the target, however far he leans in
     if (P.w === 'fists' && BOXING[m.key]) { // boxing: punches go straight out at the enemy, hand to hand, the body turning behind each one
       const kind = BOXING[m.key], h0 = m.h[0], h1 = m.h[1];
       const e = k < h0 ? 0 : k < h1 ? Math.min(1, (k - h0) / ((h1 - h0) * .4)) : Math.max(0, 1 - (k - h1) / (1 - h1) * 1.3); // snap out, hold, pull back
@@ -108,9 +112,16 @@ function playerPose() {
     else if (P.dk === 'back') { pose.crouch = 1; pose.kick = k < .55 ? 1 : 0; pose.walk = -1.4; pose.lean = -.6 + k * .4; pose.arm = -.6; pose.backArm = -.2; pose.flow = -8; } // pushing off, one leg kicked out, guard up
     else { pose.crouch = 1; pose.walk = 1.4; pose.lean = .2; pose.arm = .3; pose.backArm = 2; } // the stride into Shadow
   }
+  else if (P.state === 'parry') { // the blade comes up across the body, the weight back, ready to answer
+    const q = ease(Math.min(1, P.t / .08));
+    pose.arm = lerp(.35, .15, q); pose.elbow = lerp(.5, 1.25, q); pose.grip = lerp(-.1, -.95, q); pose.backArm = 3.6; pose.backElbow = -.88; pose.lean = -.18 * q; pose.yaw = -.2 * q;
+    pose.legs = { f: 9, b: -11, fk: 2, bk: 6 }; pose.sink = 3;
+    if (P.t < .28) pose.glow = 'rgba(232,236,255,.6)';
+  }
   else if (P.state === 'hurt') { pose.arm = -1; pose.lean = -.3; }
   else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
   // at rest each weapon sits the way its wielder would carry it
+  else if (P.w === 'rapier') { pose.arm = .35; pose.elbow = .5; pose.grip = -.1; pose.backArm = 3.6; pose.backElbow = -.88; pose.legs = { f: 8, b: -9, fk: 3, bk: 4 }; pose.sink = 2; pose.lean = .04; } // en garde: point toward the enemy, the free hand raised behind
   else if (P.w === 'sword') { pose.arm = .8; pose.grip = -.08; } // a low guard, the point lowered toward the ground ahead
   else if (P.w === 'hammer') { pose.arm = 1.95; pose.grip = .28; pose.backArm = .9; } // dragged behind him, its head resting on the ground
   else if (P.w === 'staff') { // a fighting guard: the staff held low and level across the body, point toward the enemy,
@@ -276,6 +287,22 @@ function drawDeath(e, t) {
       const an = el * 6 + i * TAU / 3, sx = Math.cos(an) * 16, sy = -e.hh - 6 + Math.sin(an) * 4;
       ctx.fillStyle = '#EED48A'; ctx.beginPath(); for (let k = 0; k < 5; k++) { const q = -Math.PI / 2 + k * TAU / 5; ctx.lineTo(sx + Math.cos(q) * 4, sy + Math.sin(q) * 4); ctx.lineTo(sx + Math.cos(q + TAU / 10) * 1.6, sy + Math.sin(q + TAU / 10) * 1.6); } ctx.fill();
     }
+  } else if (e.death === 'pierce') { // run through by Grayswandir
+    FLASH = false;
+    const fold = el < .5 ? 0 : Math.min(1, (el - .5) / .55), tremble = el < .45 ? Math.sin(el * 70) * .03 : 0;
+    const fall = -dl * 1.42 * ease(fold); // they pitch forward, onto their faces
+    ctx.rotate(fall + tremble);
+    ctx.translate(0, -e.hh * .08 * fold); ctx.scale(1, 1 - .12 * Math.sin(fold * Math.PI)); // the knees go first
+    FLASH = el < .05; draw(); FLASH = false;
+    if (el < .9) { // points of light where the blade went in, then a silver cross cut flares over them
+      const a = el < .2 ? el / .2 : Math.max(0, 1 - (el - .2) / .7);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#F4F0FF';
+      for (const w of e.wounds || []) gbStar(w.x * e.hw, -w.y * e.hh, 3 + a * 5, a);
+      if (el > .3 && el < .6) { const q = (el - .3) / .3; ctx.strokeStyle = `rgba(232,236,255,${1 - q})`; ctx.lineWidth = 2.4; ctx.beginPath(); const r = e.hw * 1.2; ctx.moveTo(-r, -e.hh * .75); ctx.lineTo(r, -e.hh * .25); ctx.moveTo(r, -e.hh * .75); ctx.lineTo(-r, -e.hh * .25); ctx.stroke(); }
+      ctx.restore();
+    }
+    if (el > .9) { ctx.save(); ctx.translate(0, -e.hh * .55); ctx.rotate(-fall); ctx.scale(1.3, 1.3); // and a silver rose left lying on them: the Prince of Shadow was here
+      ctx.strokeStyle = C('#5E6E5A'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(-5, 4); ctx.stroke(); gbRose(0, 0, 3.2, '#D8DCE8', '#8E96A8'); ctx.restore(); }
   } else { // splat
     const c = Math.min(1, el / .07), settle = Math.sin(el * 32) * .05 * Math.exp(-el * 6);
     FLASH = false;
@@ -488,7 +515,7 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
     ctx.fillStyle = C('#8E96A8'); for (const y of [-9.5, -4.5, .5, 5]) { rrect(13, y, 4, 3.6, 1.2); ctx.fill(); } // steel knuckles
     ctx.fillStyle = C('#2A2830'); rrect(-4, -15, 11, 7, 3); ctx.fill(); outline(1.2); // the thumb
   }
-  else { const mid = { hammer: 30, staff: 15, sword: 40 }[id] || 30, sc = { hammer: .95, staff: .62, sword: .72 }[id] || .8; ctx.translate(32, 32); ctx.rotate(-.8); ctx.scale(sc, sc); ctx.translate(-mid, 0); drawWeapon(id, { tier, noHand: 1 }); }
+  else { const mid = { hammer: 30, staff: 15, sword: 40, rapier: 38 }[id] || 30, sc = { hammer: .95, staff: .62, sword: .72, rapier: .78 }[id] || .8; ctx.translate(32, 32); ctx.rotate(-.8); ctx.scale(sc, sc); ctx.translate(-mid, 0); drawWeapon(id, { tier, noHand: 1 }); }
   ctx = old;
   paintCard(canvas, s * .7);
 }

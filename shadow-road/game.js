@@ -2,7 +2,7 @@
 // ---------- run state ----------
 const SPX = 112, SPY = 72, RUN = 240, JUMP = 360;
 // lighter weapons let you move faster; the hammer and great sword keep the base pace
-const W_SPEED = { fists: 1.3, staff: 1.18, hammer: 1, sword: 1 };
+const W_SPEED = { fists: 1.3, staff: 1.18, hammer: 1, sword: 1, rapier: 1.24 };
 let mode = 'title';
 let stage = null, stageIdx = 0, P = null;
 let enemies = [], projs = [], parts = [], fx = [], nums = [], loot = [], props = [], ghosts = [], echoes = [], spawnQ = [];
@@ -113,6 +113,10 @@ function updatePlayer(dt) {
       }
       break;
     }
+    case 'parry': // the guard is up: a blow that lands on it in the first moments is answered (see playerDamage)
+      P.t += dt; P.x -= P.facing * 70 * Math.max(0, 1 - P.t * 4) * dt;
+      if (P.t >= .4) P.state = 'idle';
+      break;
     case 'dodge':
       P.t -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
       if (pressed.light) P.dq = 'L'; if (pressed.heavy) P.dq = unlocked(w.tree.RH) ? 'H' : 'L'; // attack out of a roll
@@ -196,9 +200,27 @@ function chaseJump() { // leap up after a launched enemy
   P.state = 'jump'; P.vz = 540; P.jvx = clamp(((P.chaseX || P.x) - P.x) / .55, -280, 280); P.jvy = 0; P.airN = 0; P.chaseT = 0;
   sfx('jump'); dust(P.x, P.y, 8); addGhost();
 }
+function startParry() {
+  P.state = 'parry'; P.t = 0; P.seq = ''; P.vx = 0; sfx('swing', .4);
+  fx.push({ kind: 'ring', x: P.x + P.facing * 16, y: P.y, z: 40, t: .22, max: .22, r: 26, col: '#E8ECFF' });
+}
+// a parried blow: steel rings, time catches, and the prince is already at the attacker with the point
+function riposte(fromX) {
+  let foe = null, best = 170;
+  for (const e of enemies) { if (e.dead) continue; const d = Math.abs(e.x - fromX) + Math.abs(e.y - P.y) * .5; if (d < best && Math.abs(e.x - P.x) < 200) { best = d; foe = e; } }
+  sfx('hit-metal', 1); flashT = .1; slowmo = .35; hitstop = Math.max(hitstop, .1); P.inv = .5;
+  floatText(P.x, P.y, 84, 'PARRY!', '#E8ECFF', 17);
+  burst(P.x + P.facing * 18, P.y, 44, ['#FFFFFF', '#E8ECFF', '#D8AA55'], 16, 'spark', P.facing, true);
+  if (!foe) { P.state = 'idle'; return; } // a shot turned aside: nothing close enough to answer
+  P.facing = Math.sign(foe.x - P.x) || P.facing;
+  if (!foe.boss) { foe.state = 'hurt'; foe.t = .9; foe.plan = null; foe.vx = 0; }
+  if (Math.abs(foe.x - P.x) > 46) { addGhost(true); P.x = foe.x - P.facing * 44; addGhost(true); } // he closes the distance in a blink
+  P.state = 'idle'; begin(WEAPONS[P.w].tree.RIP); P.inv = .5;
+}
 function startDodge() {
   let dx = input.mx, dy = input.my;
   if (!dx && !dy) dx = -P.facing; // dodging in place is the backstep: a hop away that keeps him facing the threat
+  if (WEAPONS[P.w].parry && P.z <= 0 && Math.abs(dy) <= Math.abs(dx) * 1.2 && Math.sign(dx) !== P.facing) { startParry(); return; } // a fencer parries instead
   const d = Math.hypot(dx, dy) || 1;
   P.state = 'dodge'; P.t = .34; P.dq = false; P.dvx = dx / d * 300; P.dvy = dy / d * 150; P.inv = Math.max(P.inv, .36); P.seq = '';
   // the dash depends on its direction: a low lunge forward, a hopping backstep that keeps you facing the enemy,
@@ -244,7 +266,10 @@ function doHits() {
     P.hits.set(e, now);
     if (m.launcher) { P.chaseT = .9; P.chaseX = e.x; }
     const dir = m.around ? (Math.sign(e.x - P.x) || P.facing) : P.facing;
-    strike(e, m.dmg * wMult(P.w), dir, m);
+    if (m.delayed) { // the Shadow Flèche: he is past them before the cut shows; a heartbeat later it lands
+      echoes.push({ e, dmg: m.dmg * wMult(P.w), dir, m: Object.assign({}, m, { delayed: 0 }), t: .38 });
+      fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .5, ang: rand(-.5, .5), t: .45, max: .45, size: 40 + e.hw, col: '#C8D0FF' });
+    } else strike(e, m.dmg * wMult(P.w), dir, m);
   }
   for (const p of props) {
     if (p.broken || P.hits.has(p)) continue;
@@ -344,7 +369,7 @@ function hurtEnemy(e, dmg, dir, m, crit) {
   }
 }
 // each weapon finishes enemies its own way: the sword cuts them in two, the staff caves them in, the hammer flattens them
-const DEATH_BY = { sword: 'slice', staff: 'crumple', hammer: 'splat' };
+const DEATH_BY = { sword: 'slice', staff: 'crumple', hammer: 'splat', rapier: 'pierce' };
 function killEnemy(e, dir, m) {
   e.dead = true; e.state = 'dying'; e.dir = dir; e.deadAt = performance.now() / 1000;
   e.death = m.trump ? 'pop' : P.w === 'hammer' ? (m.smash ? 'splat' : 'pop') : DEATH_BY[P.w] || 'pop'; // the hammer only splats on a downward smash
@@ -356,6 +381,11 @@ function killEnemy(e, dir, m) {
   } else {
     e.air = false; e.spin = 0; e.rotA = 0; e.vz = 0; e.dmax = e.t = e.death === 'splat' ? 2.4 : 2;
     e.vx = dir * (e.death === 'crumple' ? 170 : e.death === 'slice' ? 40 : 0) * (e.boss ? .3 : 1);
+    if (e.death === 'pierce') { // run through: they stiffen, points of light open where the blade went in, then they fold and fall, and a silver rose is left on them
+      e.dmax = e.t = 1.6; e.vx = 0; e.wounds = [0, 1, 2].map(() => ({ x: rand(-.4, .5), y: rand(.35, .75) }));
+      for (let i = 0; i < 14; i++) parts.push({ x: e.x, y: e.y + rand(-4, 4), z: e.z + e.hh * .55, vx: rand(-80, 80), vy: rand(-10, 10), vz: rand(30, 160), life: rand(1.4, 2.4), max: 2.4, col: pick(['#E8ECF4', '#C8CEDA', '#FFFFFF']), size: rand(2.4, 3.6), shape: 'tuft', rot: rand(0, 6), vr: rand(-5, 5) });
+      fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .55, ang: 0, t: .3, max: .3, size: 30 + e.hw, col: '#E8ECFF' }); sfx('slice');
+    }
     dropLoot(e);
     if (e.death === 'slice') {
       e.cut = rand(-.45, .45);
@@ -366,7 +396,7 @@ function killEnemy(e, dir, m) {
       e.dents = [0, 1, 2].map(() => ({ x: rand(-.6, .6), y: rand(.25, .85), r: rand(3, 6) }));
       burst(e.x, e.y, cy, cols, 14, e.def.mat === 'flesh' ? 'rock' : e.def.mat, dir);
       sfx('crunch'); shakeMag = Math.max(shakeMag, 5);
-    } else {
+    } else if (e.death === 'splat') {
       e.z = 0; e.splat = [...Array(11)].map((_, i) => ({ a: i / 11 * TAU + rand(-.2, .2), l: rand(.8, 1.6), w: rand(3, 6) }));
       for (let i = 0; i < 26; i++) parts.push({ x: e.x, y: e.y + rand(-6, 6), z: 2, vx: Math.cos(i / 26 * TAU) * rand(120, 260), vy: Math.sin(i / 26 * TAU) * rand(20, 60), vz: rand(60, 200), life: rand(1.5, 3), max: 3, col: pick(cols), size: rand(3, 6), shape: e.def.mat === 'metal' ? 'bolt' : e.def.mat === 'crystal' ? 'shard' : 'blob', rot: 0, vr: rand(-10, 10) });
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 60 + e.hw * 1.5, col: cols[0], flat: 1 });
@@ -390,7 +420,7 @@ function dropLoot(e) {
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
   if (e.boss) for (let i = 0; i < 3 + Math.min(stageIdx, 2); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
   else if (Math.random() < (e.def.sigil || 0) * [1, 1.4, 1.8][Math.min(stageIdx, 2)] + (e.elite ? .65 : 0) + .04 * Math.min(stageIdx, 2)) loot.push(makeLoot('sigil', e.x, e.y, 1)); // elites usually carry a sigil, the ink for Trump cards
-  if (Math.random() < (e.boss ? 1 : .12)) loot.push(makeLoot('heal', e.x, e.y, e.boss ? 50 : 25));
+  if (Math.random() < (e.boss ? 1 : .15)) loot.push(makeLoot('heal', e.x, e.y, e.boss ? 50 : 25));
   if (e.dropWeapon && !save.owned[e.dropWeapon]) loot.push(makeLoot('weapon', e.x, e.y, 0, e.dropWeapon));
 }
 function makeLoot(kind, x, y, val, weapon) {
@@ -417,10 +447,11 @@ function hitProp(p, m) {
   p.broken = true; sfx('break'); zoom = Math.max(zoom, .04);
   burst(p.x, p.y, 40, ['#E6FBFF', '#8FB8FF', '#EED48A', '#D08AB0'], 30, 'crystal', 0, true);
   for (let i = 0; i < 4; i++) loot.push(makeLoot('shard', p.x, p.y, 2));
-  if (Math.random() < .5) loot.push(makeLoot('heal', p.x, p.y, 20));
+  if (Math.random() < .6) loot.push(makeLoot('heal', p.x, p.y, 20));
 }
 function playerDamage(dmg, fromX, big) {
   if (P.inv > 0 || P.state === 'dead' || P.state === 'dodge') return;
+  if (P.state === 'parry' && P.t < .28) { riposte(fromX); return; }
   P.hp -= dmg; P.inv = .8; shakeMag = Math.max(shakeMag, big ? 7 : 4); hitstop = .07; hurtFlash = .25;
   floatText(P.x, P.y, 70, '-' + dmg, '#D0566A', 16); sfx('hurt');
   burst(P.x, P.y, 34, ['#D0566A', '#FFFFFF'], 10, 'spark');
