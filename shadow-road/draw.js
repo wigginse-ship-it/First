@@ -29,6 +29,8 @@ function attackStance(pose, m, k) {
 }
 const BOXING = { L: 'jab', LL: 'cross', LLL: 'hook', A: 'jab', R: 'slip' };
 function playerPose() {
+  { const now = performance.now() / 1000, d = Math.min(.05, Math.max(0, now - (P.poseT || now))); P.poseT = now; // how long he has stood still (for weapons that relax at rest)
+    P.restT = P.state === 'idle' ? (P.restT || 0) + d : 0; P.restK = clamp((P.restK || 0) + (P.restT > .35 ? d * 2.2 : -d * 7), 0, 1); }
   const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : Math.min(6, save.wl[P.w]) };
   if (P.state === 'atk' || P.state === 'air') {
     const m = P.move, k = P.t / m.dur, arc = m.arc || [1, 1];
@@ -140,7 +142,13 @@ function playerPose() {
   else if (P.state === 'hurt') { pose.arm = -1; pose.lean = -.3; }
   else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
   // at rest each weapon sits the way its wielder would carry it
-  else if (P.w === 'rapier') { pose.arm = .35; pose.elbow = .5; pose.grip = -.1; pose.backArm = 3.6; pose.backElbow = -.88; pose.lean = .04; if (P.state === 'idle') { pose.legs = { f: 8, b: -9, fk: 3, bk: 4 }; pose.sink = 2; } } // en garde (walking, the legs stride as usual) // en garde: point toward the enemy, the free hand raised behind
+  else if (P.w === 'rapier') { // en garde while he moves: point toward the enemy, the free hand raised behind. Standing still he
+    // eases out of it: the point drops low and forward, and the free hand comes down to hang a little behind him for balance
+    const r = ease(P.restK || 0);
+    pose.arm = lerp(.35, .85, r); pose.elbow = lerp(.5, .2, r); pose.grip = lerp(-.1, .12, r); pose.backArm = lerp(3.6, 2.15, r); pose.backElbow = lerp(-.88, .32, r); pose.lean = lerp(.04, 0, r);
+    if (r > .5) pose.openHand = 1;
+    if (P.state === 'idle') { pose.legs = { f: lerp(8, 6, r), b: lerp(-9, -6, r), fk: 3, bk: 4 }; pose.sink = lerp(2, .5, r); }
+  }
   else if (P.w === 'sword') { pose.arm = .8; pose.grip = -.08; } // a low guard, the point lowered toward the ground ahead
   else if (P.w === 'hammer') { pose.arm = 1.95; pose.grip = .28; pose.backArm = .9; } // dragged behind him, its head resting on the ground
   else if (P.w === 'staff') { // a fighting guard: the staff held low and level across the body, point toward the enemy,
