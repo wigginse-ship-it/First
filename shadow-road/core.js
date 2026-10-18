@@ -25,7 +25,7 @@ const freshSave = () => ({
   owned: { fists: true, hammer: false, staff: false, sword: false, rapier: false },
   wl: { fists: 1, hammer: 1, staff: 1, sword: 1, rapier: 1 },
   armor: 1, weapon: 'fists', pity: {},
-  trumps: { stag: false, brand: false, mirror: false, phoenix: false, stillness: false }, trump: null, tlv: {},
+  trumps: { stag: false, brand: false, mirror: false, phoenix: false, stillness: false }, trump: null, tlv: {}, arrows: 0, alv: 1,
 });
 let save = freshSave();
 try {
@@ -128,7 +128,7 @@ window.addEventListener('keydown', () => setKbd(true), true);
 window.addEventListener('touchstart', () => setKbd(false), { passive: true, capture: true });
 
 // ---------- input ----------
-const input = { mx: 0, my: 0, run: false, light: false, heavy: false, jump: false, dodge: false, swap: false, trump: false };
+const input = { mx: 0, my: 0, run: false, light: false, heavy: false, jump: false, dodge: false, swap: false, trump: false, shoot: false };
 const pressed = {};
 function press(k) { if (!input[k]) pressed[k] = true; input[k] = true; }
 function release(k) { input[k] = false; }
@@ -169,7 +169,7 @@ document.querySelectorAll('.btn').forEach((b) => {
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
   b.addEventListener('contextmenu', (e) => e.preventDefault());
 });
-const KEYMAP = { KeyJ: 'light', KeyZ: 'light', KeyK: 'heavy', KeyX: 'heavy', Space: 'jump', KeyL: 'dodge', ShiftLeft: 'dodge', KeyQ: 'swap', KeyC: 'swap', KeyE: 'trump', KeyV: 'trump' };
+const KEYMAP = { KeyJ: 'light', KeyZ: 'light', KeyK: 'heavy', KeyX: 'heavy', Space: 'jump', KeyL: 'dodge', ShiftLeft: 'dodge', KeyQ: 'swap', KeyC: 'swap', KeyE: 'trump', KeyV: 'trump', KeyI: 'shoot', KeyF: 'shoot' };
 const keys = new Set();
 let onKeyMenu = null; // set by ui.js for Escape/pause handling
 window.addEventListener('keydown', (e) => {

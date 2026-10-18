@@ -94,6 +94,7 @@
   .b-heavy { width: 66px; height: 66px; --ring: #D8AA55; --tint: rgba(150,110,40,.6); right: calc(max(26px, env(safe-area-inset-right, 0px)) + 90px); bottom: 12px; }
   .b-jump  { width: 60px; height: 60px; --ring: #8FB8D8; --tint: rgba(60,100,140,.6); right: calc(max(26px, env(safe-area-inset-right, 0px)) + 10px); bottom: 112px; }
   .b-dodge { width: 56px; height: 56px; --ring: #9A86C8; --tint: rgba(80,60,130,.6); right: calc(max(26px, env(safe-area-inset-right, 0px)) + 86px); bottom: 90px; }
+  .b-shoot { width: 48px; height: 60px; border-radius: 8px; --ring: #A88A5E; --tint: rgba(60,44,30,.7); color: #E8D8B0; font-size: 9px; right: calc(max(26px, env(safe-area-inset-right, 0px)) + 216px); bottom: 26px; }
   .b-swap  { width: 48px; height: 60px; border-radius: 8px; --ring: #D8AA55; --tint: rgba(46,36,68,.7); color: var(--gold); font-size: 9px; right: calc(max(26px, env(safe-area-inset-right, 0px)) + 160px); bottom: 26px; }
   .b-trump { width: 52px; height: 66px; border-radius: 8px; --ring: #C8607A; --tint: rgba(90,40,70,.7); color: #E8A0B0; font-size: 9px; right: calc(max(26px, env(safe-area-inset-right, 0px)) + 154px); bottom: 98px; }
   .b-trump.ready { opacity: .9; color: #fff; border-color: var(--gold); box-shadow: 0 0 16px var(--petal), 0 0 28px var(--gold); animation: glow 1s ease-in-out infinite alternate; }
@@ -351,6 +352,7 @@
     <button type="button" class="btn b-jump" data-k="jump">JUMP</button>
     <button type="button" class="btn b-dodge" data-k="dodge">DODGE</button>
     <button type="button" class="btn b-swap" data-k="swap">SWAP</button>
+    <button type="button" class="btn b-shoot" data-k="shoot" id="shootBtn" hidden>BOW</button>
     <button type="button" class="btn b-trump" data-k="trump" id="trumpBtn" hidden>TRUMP</button>
   </div>
 
@@ -492,6 +494,7 @@
 <script src="zones.js"></script>
 <script src="data_w4.js"></script>
 <script src="powerups.js"></script>
+<script src="arrows.js"></script>
 <script src="boss_fx.js"></script>
 <script src="secrets.js"></script>
 <script src="draw.js"></script>

@@ -85,7 +85,7 @@
   }
   // palettes
   const EMBER = '255,138,60', SULF = '240,196,90', BRUISE = '150,90,190';
-  const OBS = { base: '#1E1626', lit: '#6A4E80', dark: '#0A060E', sheen: '#9A7AB0', vein: '#FF8A3C' };
+  const OBS = { base: '#140D1A', lit: '#3E2C52', dark: '#050308', sheen: '#E8D0F8', vein: '#FF8A3C' };
 
   // ======================================================================================================
   // shared sky pieces: the eclipsed sun and the drifting fragments of other worlds (painted once, hung in the live sky)
@@ -174,25 +174,23 @@
   // THE BLACK ROAD
   // ======================================================================================================
   // a crag of obsidian rising out of the Abyss: facets, a sheen on the lit face, ember veins in the cracks
+  function shard(x, base, top, w, lean, rnd, P, veins) { // one blade of black glass: a dark face, a lit face split down its ridge, a bright edge
+    const tx = x + lean, ty = top, rx = x + w * (.25 + rnd() * .2) + lean * .4;
+    const L = [x - w, base, tx, ty, rx, base], Rf = [rx, base, tx, ty, x + w * (.9 + rnd() * .2), base];
+    poly([x - w, base, tx, ty, x + w * (.9 + rnd() * .2), base]); ctx.fillStyle = P.base; ctx.fill();
+    poly(AW_SUN > 0 ? Rf : L); ctx.fillStyle = P.lit; ctx.fill();
+    poly(AW_SUN > 0 ? L : Rf); ctx.fillStyle = P.dark; ctx.globalAlpha = .7; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = P.sheen; ctx.lineWidth = .9; ctx.globalAlpha = .8; ctx.beginPath(); ctx.moveTo(tx, ty + 1); ctx.lineTo(lerp(tx, rx, .55), lerp(ty, base, .55)); ctx.stroke(); ctx.globalAlpha = .35; ctx.beginPath(); ctx.moveTo(tx + .5, ty + 2); ctx.lineTo(lerp(tx, Rf[4], .4), lerp(ty, base, .4)); ctx.stroke(); ctx.globalAlpha = 1;
+    if (veins) awGlow(`rgb(${EMBER})`, 5, () => { ctx.strokeStyle = 'rgba(255,150,70,.85)'; ctx.lineWidth = .8; ctx.beginPath(); let vx = lerp(tx, x, .3), vy = lerp(ty, base, .3); ctx.moveTo(vx, vy); for (let s2 = 0; s2 < 4; s2++) { vx += (rnd() - .5) * w * .5; vy += (base - ty) * .14; ctx.lineTo(vx, vy); } ctx.stroke(); });
+  }
+  // a crag of obsidian rising out of the Abyss: a cluster of glass blades, the tallest in the middle
   function crag(x, top, w, rnd, P, o = {}) {
-    const base = T + 6, n = 5 + Math.floor(rnd() * 3), L = [], R = [];
-    for (let i = 0; i <= n; i++) { const k = i / n, wk = w * (.18 + .82 * Math.pow(k, .7)); L.push([x - wk * (.9 + rnd() * .2), lerp(top, base, k)]); R.push([x + wk * (.8 + rnd() * .2), lerp(top + w * .4, base, k)]); }
-    const tipX = x + (rnd() - .4) * w * .3, pts = [tipX, top - w * .5]; for (const p of R) pts.push(p[0], p[1]); for (let i = L.length - 1; i >= 0; i--) pts.push(L[i][0], L[i][1]);
-    poly(pts); const gr = ctx.createLinearGradient(x - w, 0, x + w, 0); gr.addColorStop(0, P.dark); gr.addColorStop(.55, P.base); gr.addColorStop(1, shade(P.base, .15)); ctx.fillStyle = gr; ctx.fill();
-    ctx.save(); poly(pts); ctx.clip();
-    // the lit facet: from the tip down the right side, closed by a crease
-    const cx = lerp(tipX, x, .5) + w * .1; const face = [tipX, top - w * .5]; for (const p of R) face.push(p[0], p[1]); face.push(x + w * .25, base, cx, top + (base - top) * .4);
-    poly(face); ctx.fillStyle = P.lit; ctx.globalAlpha = .55; ctx.fill(); ctx.globalAlpha = 1;
-    ctx.strokeStyle = P.sheen; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tipX + 1, top - w * .5 + 3); for (const p of R.slice(0, 3)) ctx.lineTo(p[0] - 1.5, p[1]); ctx.stroke(); ctx.globalAlpha = 1;
-    for (let i = 0; i < 6; i++) { const yy = lerp(top, base, .2 + rnd() * .75), xx = x + (rnd() - .5) * w * .9; dab(xx, yy, 2 + rnd() * 4, rnd() < .5 ? P.dark : shade(P.base, .1), .35); } // brushed texture
-    if (o.veins !== 0) awGlow(`rgb(${EMBER})`, 6, () => { // ember veins deep in the glass
-      ctx.strokeStyle = 'rgba(255,150,70,.85)'; ctx.lineWidth = .9; ctx.beginPath();
-      for (let v = 0; v < 2 + Math.floor(rnd() * 2); v++) { let vx = x + (rnd() - .5) * w * .6, vy = lerp(top, base, .25 + rnd() * .3); ctx.moveTo(vx, vy); for (let s = 0; s < 4; s++) { vx += (rnd() - .5) * w * .4; vy += 6 + rnd() * 12; ctx.lineTo(vx, vy); } }
-      ctx.stroke();
-    });
-    ctx.restore();
-    poly(pts); ctx.strokeStyle = 'rgba(255,200,150,.25)'; ctx.lineWidth = .6; ctx.stroke();
-    return [tipX, top - w * .5];
+    const base = T + 6, n = 2 + Math.floor(rnd() * 3), H = base - top;
+    const order = [...Array(n)].map((_, i) => i).sort(() => rnd() - .5);
+    for (const i of order) { const k = n === 1 ? 0 : i / (n - 1) - .5, hh = H * (1 - Math.abs(k) * (.5 + rnd() * .3)), ww = w * (.45 + rnd() * .3);
+      shard(x + k * w * 1.4, base, base - hh, ww, (k * .6 + (rnd() - .5) * .3) * hh * .25, rnd, P, o.veins !== 0 && rnd() < .6); }
+    for (let i = 0; i < 5; i++) dab(x + (rnd() - .5) * w * 1.4, base - rnd() * H * .3, 2 + rnd() * 3, P.dark, .4);
+    return [x, top];
   }
   // a twisted thorn-tree of the Black Road: black limbs, few sulfur leaves
   function thornTree(x, base, h, rnd) {
@@ -273,7 +271,7 @@
     for (let i = 0; i < 22; i++) { const x = rnd() * AW_W, y = 214 + rnd() * 20, r = 30 + rnd() * 40; awWrap(x, r, (x) => awSoft(x, y, r, r * .3, '60,24,50', .45)); }
     // crags of obsidian rising out of nothing, the black thorn growing on them, chains slung between them
     const tops = [];
-    for (let i = 0; i < 7; i++) { const x = 60 + i * 183 + rnd() * 70, w = 18 + rnd() * 30, top = T - 60 - rnd() * 100; tops.push([x, top + w * .2]); awWR(x, w * 1.4, rnd, (x, r) => { const tip = crag(x, top, w, r, OBS); if (r() < .55) thornTree(x + (r() - .3) * w * .5, top + w * .3, 40 + r() * 30, r); }); }
+    for (let i = 0; i < 5; i++) { const x = 60 + i * 256 + rnd() * 90, w = 18 + rnd() * 26, top = T - 60 - rnd() * 90; tops.push([x, top + w * .2]); awWR(x, w * 1.4, rnd, (x, r) => { const tip = crag(x, top, w, r, OBS); if (r() < .55) thornTree(x + (r() - .3) * w * .5, top + w * .3, 40 + r() * 30, r); }); }
     for (let i = 0; i < tops.length; i++) { const a = tops[i], b = tops[(i + 1) % tops.length], bx = i === tops.length - 1 ? b[0] + AW_W : b[0]; if (rnd() < .6) for (const ox of [0, -AW_W]) chain(a[0] + ox + 4, a[1] + 14, bx + ox - 4, b[1] + 16, 18 + rnd() * 14); }
     for (let i = 0; i < 4; i++) awWR(130 + i * 320 + rnd() * 60, 26, rnd, (x, r) => banner4(x, T + 4, 84 + r() * 30, r));
     // low shards of glass along the back of the road
@@ -579,7 +577,7 @@
   // ======================================================================================================
   Object.assign(HUMANS, {
     // a knight of the Courts: grey-violet skin, maroon surcoat over black steel, a horned gold circlet, eyes like coals
-    w4knight: { skin: '#B4A2B2', hair: '#120A10', body: '#5A1828', sleeve: '#481422', trim: '#C9A040', legs: '#1C1218', boots: '#120A10', plate: '#3A3244', plateTrim: '#C9A040', pauldron: '#2E2836', cape: '#2A0A16', crown: '#C9A040', eye: '#FFC850', weapon: 'w4flamberge' },
+    w4knight: { skin: '#B4A2B2', hair: '#120A10', body: '#5A1828', sleeve: '#481422', trim: '#C9A040', legs: '#1C1218', boots: '#120A10', plate: '#3A3244', plateTrim: '#C9A040', pauldron: '#2E2836', cape: '#2A0A16', mask: '#1A0E16', eye: '#FFC850', weapon: 'w4flamberge' },
     // an adept of the Logrus: a deep bruise-violet hood and robe, a black rod crowned with a knot of living chaos
     w4adept: { skin: '#C8B4C2', hood: '#2E1640', body: '#3E1E4E', sleeve: '#341844', trim: '#E0B040', legs: '#1A0E22', boots: '#120A18', coat: '#2E1840', coat2: '#3E2252', eye: '#F0D070', mask: '#1A0E1E', weapon: 'w4rod' },
     // Borel, Duke of Chaos, master of swords: silver plate chased with gold, long white hair, a crimson cloak
@@ -603,11 +601,11 @@
       limb([6.4, 0, 16, 0], '#2A1018', 4);
       if (awPlain()) { ctx.strokeStyle = '#8A2A30'; ctx.lineWidth = .7; ctx.beginPath(); for (let x = 7; x < 15; x += 1.6) { ctx.moveTo(x, -2); ctx.lineTo(x + 1.1, 2); } ctx.stroke(); }
       awHand(pose);
-      wavyBlade(21, 64, 3.6, .5, ['#241A2E', '#6A5684', '#9A86B8', 'rgba(255,150,70,.9)']);
+      wavyBlade(21, 54, 3.4, .55, ['#241A2E', '#6A5684', '#9A86B8', 'rgba(255,150,70,.9)']);
       // the guard: two gold horns curling back toward the hand
       horn(19.5, -1, 18, -7, 13, -10, 3, .4, '#C9A040', 1); horn(19.5, 1, 18, 7, 13, 10, 3, .4, '#C9A040', 1);
       rrect(18.4, -3.4, 3.2, 6.8, 1); ctx.fillStyle = C('#B08A34'); ctx.fill(); outline(1);
-      awSwingGlow(pose, 16, 56);
+      awSwingGlow(pose, 16, 46);
     },
     w4greatblade(pose) { // Borel's sword: longer, silver-black, with a ruby set in the guard
       awInked('#E8C060', 1.3, () => ctx.arc(3.6, 0, 2.8, 0, TAU));
@@ -690,7 +688,7 @@
     const tw = Math.sin(t * 2.4) * 3;
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 4.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-16, by - 2); ctx.quadraticCurveTo(-28, by - 6 + tw, -34, by - 14 + tw * 1.5); ctx.stroke();
     ctx.strokeStyle = C(hide); ctx.lineWidth = 2.4; ctx.stroke();
-    for (let i = 0; i < 3; i++) smokeLobe(-34 - i * 3.5 + Math.sin(t * 1.6 + i) * 1.2, by - 15 - i * 2.4 + tw * 1.5, 3.4 - i * .6, '#241830', .85 - i * .2);
+    smokeTongue(-34, by - 14 + tw * 1.5, 10, 4, -6, t, 2, '#241830');
     // legs: hip/shoulder -> knee -> hock/wrist -> paw. far pair darker, behind the body
     const leg = (hx, front, off, far) => {
       const s = Math.sin(ph + off) * moving, lift = Math.max(0, Math.cos(ph + off)) * 3.2 * moving, col = far ? '#120C18' : hide;
@@ -711,7 +709,7 @@
     cracks([[-14, by - 3, -10, by + 1, -12, by + 4], [2, by - 6, 4, by - 1, 1, by + 3, 3, by + 6], [-4, by - 5, -6, by - 1]], leap || bite ? 1 : .75);
     leg(-12, false, 0, false); leg(9, true, Math.PI, false);
     // the mane: smoke streaming back from the neck
-    for (let i = 0; i < 6; i++) { const k = i / 5, sx = 12 - k * 22, sy = by - 9 - Math.sin(k * Math.PI) * 4 + Math.sin(t * 2 + i) * 1.4; smokeLobe(sx - (leap ? 4 : 0), sy - 2, 4.6 - k * 1.6, i % 2 ? '#2A1A36' : '#1E1228', .9 - k * .3); }
+    for (let i = 0; i < 6; i++) { const k = i / 5, sx = 12 - k * 22, sy = by - 7 - Math.sin(k * Math.PI) * 3; smokeTongue(sx - (leap ? 4 : 0), sy, 10 - k * 3, 5 - k * 1.5, -9 - (leap ? 6 : 0), t, i, i % 2 ? '#2A1A36' : '#1E1228'); }
     // the neck, and the skull it wears: bone, cracked, with horns swept back
     const hx = 21 + (bite ? 5 : 0) - crouch * 2, hy = by - 9 + crouch * 7 + (bite ? 2 : 0);
     seg(10, by - 4, hx - 3, hy + 1, 10, 7, hide, 1);
@@ -769,7 +767,7 @@
   CREATURES.w4moth = function (e, a) {
     a = a || {}; const t = a.t || 0, wind = a.wind || 0, dash = e.state === 'dash';
     const flap = dash ? -.7 : Math.sin(t * 7 + (e.walk || 0)) * .85, bob = Math.sin(t * 7) * 1.2, cy = -16 + bob;
-    ctx.save(); ctx.lineJoin = 'round';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.scale(1.35, 1.35);
     if (dash) ctx.rotate(.18);
     const wing = (far, hind) => {
       const k = Math.cos(flap * (far ? 1 : 1.05)), sy = (hind ? .72 : 1) * Math.max(.12, Math.abs(k)) * (k < 0 ? -1 : 1);
@@ -1009,7 +1007,7 @@
     const spread = Math.max((st === 'wind' && plan === 'w4shadows') ? wind : act === 'shadows' ? 1 : 0, (st === 'wind' && plan === 'w4howl') ? wind : act === 'howl' ? 1 : 0, swoopWind * .6);
     const maw = (st === 'wind' && plan === 'w4maw') ? wind : act === 'maw' ? 1 : 0, down = st === 'down';
     const flap = down ? .9 : swoop ? 1.25 : Math.sin(t * 2.3) * .45 * (1 - spread * .6) - spread * .5;
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.4, 1.4);
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.28, 1.28);
     if (swoop) { ctx.rotate(.35); }
     const wing = (far) => { // a ragged membrane on four finger-bones, eyes opening along it
       ctx.save(); ctx.translate(far ? -6 : -2, -54); ctx.rotate((far ? -.18 : 0) + flap * (far ? .85 : 1)); if (far) ctx.scale(.82, .86);
@@ -1049,8 +1047,8 @@
     const open = Math.max(maw, spread * .6, swoopWind * .4, a.atk ? .6 : 0, .12 + Math.sin(t * 1.1) * .05);
     for (let i = 0; i < 7; i++) { const an = -2.8 + i * .52, L = 12 + (i % 2) * 7; horn(Math.cos(an) * 4, Math.sin(an) * 4 - 2, Math.cos(an) * L * .6 - 2, Math.sin(an) * L * .6 - 4, Math.cos(an) * L - 4, Math.sin(an) * L - 6, 4.4, .4, i % 2 ? '#1A1018' : '#2A1E2A', 1.1, '#060306'); }
     cel(PB([-6, -6, 2, -9, 10, -4, 11, 4, 4, 9, -4, 6]), '#3A2838', { d: 2, r: 1, w: 1.6, lite: '#8A6A88' });
-    ctx.fillStyle = C(TY.maw); ell(5, 0, 2 + open * 2.4, 6.5 * (.4 + open * .6)); ctx.fill(); outline(1); // the split mouth
-    ctx.fillStyle = C(TY.bone); for (let k = -2; k <= 2; k++) { poly([5 - 2 - open * 2.2, k * 2.2, 5 - .5, k * 2.2 + .6, 5 - 2 - open * 2.2, k * 2.2 + 1.2]); ctx.fill(); poly([5 + 2 + open * 2.2, k * 2.2, 5 + .5, k * 2.2 + .6, 5 + 2 + open * 2.2, k * 2.2 + 1.2]); ctx.fill(); }
+    const mw = 1.6 + open * 3.2; ctx.beginPath(); ctx.moveTo(5, -8); ctx.quadraticCurveTo(5 + mw * 1.6, 0, 5, 8); ctx.quadraticCurveTo(5 - mw * 1.6, 0, 5, -8); ctx.closePath(); ctx.fillStyle = C(TY.maw); ctx.fill(); outline(1.1); // the mouth, split down the middle
+    ctx.fillStyle = C(TY.bone); for (const k of [-1, 0, 1]) { const y = k * 3.6, ex = mw * (1 - Math.abs(k) * .35) * 1.15; poly([5 - ex, y - 1, 5 - ex + 1.6 + open, y, 5 - ex, y + 1]); ctx.fill(); poly([5 + ex, y - 1, 5 + ex - 1.6 - open, y, 5 + ex, y + 1]); ctx.fill(); }
     glowAt(5, 0, 10 + open * 10, maw > .3 ? '255,120,60' : SULF, .3 + open * .5);
     ctx.restore();
     wing(false);
@@ -1259,7 +1257,7 @@
     box(h, box) { box(h.x, h.y, 0, 120, 160); },
   });
   // SWOOP (horror): it climbs, then dives across the whole arena along the dark track on the floor, lowest where you stand
-  const swoopT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, x0 = e.x, x1 = d > 0 ? rightWall() - 30 : leftWall() + 30; return { x0, y0: e.y, x1, px: clamp(P.x, Math.min(x0, x1) + 20, Math.max(x0, x1) - 20), py: yClamp(P.y), d }; });
+  const swoopT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, x0 = e.x, x1 = d > 0 ? rightWall() - 70 : leftWall() + 70; return { x0, y0: e.y, x1, px: clamp(P.x, Math.min(x0, x1) + 20, Math.max(x0, x1) - 20), py: yClamp(P.y), d }; });
   const swoopAt = (T, u) => { const uP = clamp((T.px - T.x0) / (T.x1 - T.x0), .1, .9), x = lerp(T.x0, T.x1, u), y = u < uP ? lerp(T.y0, T.py, sm(u / uP)) : T.py, q = (u - uP) / (u < uP ? uP : 1 - uP); return [x, y, 6 + 104 * q * q]; };
   TELL_FX.w4swoop = (e, t, k) => { const T = swoopT(e); ctx.save();
     for (let i = 0; i <= 30; i++) { const u = i / 30, [x, y, z] = swoopAt(T, u), danger = z < 50, w = 14 + (1 - z / 110) * 14; if (u > k * 1.3) break;
@@ -1395,7 +1393,7 @@
   };
 
   // ---------------- THE RIM OF THE ABYSS: the Ty'iga's shapes ----------------
-  const FORM_BOX = { 1: [52, 68], 2: [40, 52], 3: [40, 104] };
+  const FORM_BOX = { 1: [52, 68], 2: [40, 52], 3: [38, 96] };
   MECH_FX.w4rim = {
     start(m) { m.ph = 1; },
     update(m, dt) {
@@ -1431,17 +1429,17 @@
     if (inP) {
       ctx.fillStyle = `rgba(8,4,12,${Math.pow(c, 3)})`; ctx.fillRect(0, Y0, X1, H);
       for (let i = 0; i < 44; i++) { // tendrils of ink from all four edges, curling as they come
-        const side = i % 4, u = hash1(i * 3.3), len = (110 + hash1(i + 7) * 260) * c, w = 14 + hash1(i + 2) * 26;
+        const side = i % 4, u = hash1(i * 3.3), len = (110 + hash1(i + 7) * 260) * c, w = 26 + hash1(i + 2) * 40;
         const [x0, y0, ang] = side === 0 ? [u * X1, Y0 - 4, Math.PI / 2] : side === 1 ? [u * X1, Y1 + 4, -Math.PI / 2] : side === 2 ? [-4, Y0 + u * H, 0] : [X1 + 4, Y0 + u * H, Math.PI];
         const curl = (hash1(i + 11) - .5) * 2.2, mx = x0 + Math.cos(ang + curl * .3) * len * .55, my = y0 + Math.sin(ang + curl * .3) * len * .55, ex = x0 + Math.cos(ang + curl) * len, ey = y0 + Math.sin(ang + curl) * len;
         const s = taper(x0, y0, mx, my, ex, ey, w, .6, 8); trace(s.L, s.R); ctx.fillStyle = '#0A0610'; ctx.fill();
-        ctx.strokeStyle = `rgba(150,100,200,${.55 * c})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(s.L[0], s.L[1]); for (let k = 2; k < s.L.length; k += 2) ctx.lineTo(s.L[k], s.L[k + 1]); ctx.stroke();
+        ctx.strokeStyle = `rgba(150,100,200,${.25 * c})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(s.L[0], s.L[1]); for (let k = 2; k < s.L.length; k += 2) ctx.lineTo(s.L[k], s.L[k + 1]); ctx.stroke();
       }
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(230,180,90,${.5 * c})`; ctx.lineWidth = 1.6; ctx.beginPath(); // the gold of the Logrus, burning in the ink
       for (let i = 0; i < 9; i++) { let x = cx + (hash1(i) - .5) * X1 * .9, y = cy + (hash1(i + 4) - .5) * H * .8, a = hash1(i + 9) * TAU; ctx.moveTo(x, y); for (let s = 0; s < 10 * c; s++) { a += Math.sin(i * 3 + s) * .9; x += Math.cos(a) * 14; y += Math.sin(a) * 10; ctx.lineTo(x, y); } }
       ctx.stroke(); ctx.restore();
     } else {
-      const q = 1 - c, R = Math.hypot(X1, H) * .62 * ease(q), edge = (a) => R * (1 + .12 * Math.sin(a * 5 + 1) + .07 * Math.sin(a * 11 + 3) + .04 * Math.sin(a * 23));
+      const q = 1 - c, R = Math.hypot(X1, H) * .64 * Math.pow(q, 1.3), edge = (a) => R * (1 + .12 * Math.sin(a * 5 + 1) + .07 * Math.sin(a * 11 + 3) + .04 * Math.sin(a * 23));
       const hole = (k) => { ctx.moveTo(cx + edge(0) * k, cy); for (let i = 1; i <= 72; i++) { const a = i / 72 * TAU; ctx.lineTo(cx + Math.cos(a) * edge(a) * k, cy + Math.sin(a) * edge(a) * k * .7); } ctx.closePath(); };
       ctx.beginPath(); ctx.rect(-10, Y0 - 10, X1 + 20, H + 20); hole(1); ctx.fillStyle = '#0A0610'; ctx.fill('evenodd');
       ctx.beginPath(); hole(1); ctx.strokeStyle = 'rgba(60,24,20,.9)'; ctx.lineWidth = 9; ctx.stroke(); // the charred rim
@@ -1473,13 +1471,13 @@
     const X1 = VW, Y0 = Y_OFF, H = VH - Y0, cx = X1 / 2, cy = Y0 + H / 2;
     if (inP) {
       ctx.fillStyle = `rgba(8,4,12,${Math.min(.85, c * 1.4)})`; ctx.fillRect(0, Y0, X1, H); // the world goes dark around the card
-      const k = ease(c), h = lerp(70, X1 / .62 * 1.08, Math.pow(k, 2.2)), w = h * .62, rot = (1 - k) * -.25;
+      const k = c, h = lerp(70, X1 / .62 * .98, Math.pow(Math.min(1, p * 2), 3)), w = h * .62, rot = (1 - k) * -.25;
       ctx.save(); ctx.translate(cx, cy + (1 - k) * 20); ctx.rotate(rot);
       ctx.fillStyle = 'rgba(255,220,150,.25)'; ctx.fillRect(-w / 2 - w * .12, -h / 2 - w * .12, w * 1.24, h + w * .24); // its glow
       trumpPicture(-w / 2, -h / 2, w, h, t); trumpFrame(-w / 2, -h / 2, w, h, 1);
       ctx.restore();
     } else {
-      const k = 1 - c, h = X1 / .62 * 1.08 * (1 + k * 1.2), w = h * .62;
+      const k = 1 - c, h = X1 / .62 * .98 * (1 + k * 1.2), w = h * .62;
       ctx.save(); ctx.translate(cx, cy); trumpFrame(-w / 2, -h / 2, w, h, c); ctx.restore();
       ctx.fillStyle = `rgba(255,236,190,${c * .25})`; ctx.fillRect(0, Y0, X1, H);
     }

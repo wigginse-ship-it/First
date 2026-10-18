@@ -125,6 +125,11 @@ function playerPose() {
     else if (P.dk === 'back') { pose.crouch = 1; pose.kick = k < .55 ? 1 : 0; pose.walk = -1.4; pose.lean = -.6 + k * .4; pose.arm = -.6; pose.backArm = -.2; pose.flow = -8; } // pushing off, one leg kicked out, guard up
     else { pose.crouch = 1; pose.walk = 1.4; pose.lean = .2; pose.arm = .3; pose.backArm = 2; } // the stride into Shadow
   }
+  else if (P.state === 'shoot') { // a short bow, drawn to the cheek and loosed, standing side-on
+    const dr = P.t < .16 ? ease(P.t / .16) : 0;
+    pose.weapon = 'shortbow'; pose.draw = dr; pose.arm = -.04; pose.elbow = .05; pose.backArm = Math.PI - .05; pose.backElbow = Math.PI - .2 - .5 * dr; pose.backReach = -.1 * dr; pose.yaw = -.25; pose.lean = -.05;
+    if (P.z <= 2) { pose.legs = { f: 9, b: -10, fk: 2, bk: 3 }; pose.sink = 2; }
+  }
   else if (P.state === 'parry') { // the blade comes up across the body, the weight back, ready to answer
     const q = ease(Math.min(1, P.t / .08));
     pose.arm = lerp(.35, .15, q); pose.elbow = lerp(.5, 1.25, q); pose.grip = lerp(-.1, -.95, q); pose.backArm = 3.6; pose.backElbow = -.88; pose.lean = -.18 * q; pose.yaw = -.2 * q;
@@ -341,6 +346,7 @@ function drawDeath(e, t) {
 function drawLoot(k, t) {
   if (k.kind === 'weapon') { drawWeaponPickup(k, t); return; }
   if (k.kind === 'power') { drawPowerLoot(k, t); return; }
+  if (k.kind === 'arrow') { drawArrowLoot(k, t); return; }
   const x = k.x, y = k.y - k.z - 6 - Math.sin(t * 6 + k.x) * 2;
   shadow(k.x, k.y, 5);
   if (k.kind === 'shard') {
@@ -435,7 +441,7 @@ function drawScene(t) {
     mg.addColorStop(0, `rgba(170,190,255,${.22 * k})`); mg.addColorStop(1, 'rgba(170,190,255,0)'); ctx.fillStyle = mg; ctx.fillRect(0, Y_OFF, VW, VIEW_H); ctx.restore();
   }
   if (boss && !boss.dead) { // the boss arena is lit in the boss's own color
-    ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = { mossback: 'rgba(120,170,80,.35)', colossus: 'rgba(230,120,60,.35)', wyrm: 'rgba(150,90,220,.4)' }[boss.def.draw]; ctx.fillRect(0, Y_OFF, VW, VIEW_H); ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ({ mossback: 'rgba(120,170,80,.35)', colossus: 'rgba(230,120,60,.35)', wyrm: 'rgba(150,90,220,.4)', tyiga: 'rgba(150,60,150,.32)' }[boss.def.draw] || 'rgba(0,0,0,0)'); ctx.fillRect(0, Y_OFF, VW, VIEW_H); ctx.restore();
   }
   if (stillT > 0) { ctx.fillStyle = 'rgba(111,180,255,.14)'; ctx.fillRect(0, Y_OFF, VW, VIEW_H); }
   if (flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(.7, flashT * 4)})`; ctx.fillRect(0, Y_OFF, VW, VIEW_H); }
@@ -504,6 +510,7 @@ function drawFx(f) {
   ctx.restore();
 }
 function drawProj(p, t) {
+  if (p.arrow) { drawArrowProj(p); return; }
   const x = p.x, y = p.y - p.z;
   if (p.quake) { // the hammer's fault line: shards of rock bursting up in a running crack
     ctx.strokeStyle = '#2A1B2C'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - Math.sign(p.vx) * 60, p.y); for (let i = 0; i <= 6; i++) ctx.lineTo(x - Math.sign(p.vx) * (60 - i * 10), p.y + (i % 2 ? 3 : -2)); ctx.stroke();
@@ -545,6 +552,7 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   // the weapon on its own, laid diagonally across the card
   const tier = id === 'fists' ? 1 : Math.min(6, save.wl[id]);
   if (id === 'armor') { ctx.translate(30, 63); ctx.scale(.7, .7); drawHumanoid(heroLook(), { arm: -.55, backArm: .05, weapon: 'fists', walk: 0, tier: 1 }); } // armor is shown on the prince himself
+  else if (id === 'arrow') { ctx.translate(34, 30); ctx.rotate(-.75); ctx.scale(1.5, 1.5); drawArrowShape(Math.min(5, save.alv || 1), 24); }
   else if (id === 'fists') { // a gauntleted fist, knuckles forward
     ctx.translate(32, 33); ctx.rotate(-.25);
     ctx.fillStyle = C('#3A3A46'); rrect(-15, 2, 14, 15, 3); ctx.fill(); outline(1.2); // the cuff

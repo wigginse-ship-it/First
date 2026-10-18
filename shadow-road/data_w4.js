@@ -10,7 +10,7 @@
   const FORM = {
     1: { move: 'ground', hover: 0, tail: 0, reachDown: 0 },     // the great shadow-wolf
     2: { move: 'fly', hover: 30, tail: 120, reachDown: 30 },     // the serpent of smoke, coiling low over the floor
-    3: { move: 'fly', hover: 78, tail: 0, reachDown: 70 },       // the winged horror, high over the arena
+    3: { move: 'fly', hover: 60, tail: 0, reachDown: 56 },       // the winged horror, high over the arena
   };
   // how close it closes before it starts each attack (it hunts up close as a wolf, keeps its distance as the others)
   const STANDOFF = { w4rake: 150, w4howl: 170, w4coil: 120, w4venom: 190, w4swoop: 230, w4shadows: 170, w4maw: 60 };
@@ -19,7 +19,7 @@
     // humans of the Courts
     chknight: { name: 'Knight of the Courts', draw: 'human', look: 'w4knight', mat: 'flesh', move: 'ground', hp: 62, spd: 76, hw: 12, hh: 62, dmg: 12, plans: ['swing', 'w4blink', 'swing'], wind: .45, cd: [1.0, 1.8], reach: 50, weight: 1, shards: [6, 9], kind: 'human' },
     chadept:  { name: 'Logrus Adept', draw: 'human', look: 'w4adept', mat: 'flesh', move: 'ground', hp: 46, spd: 58, hw: 12, hh: 62, dmg: 11, plans: ['w4grasp', 'shoot', 'w4grasp'], wind: .7, cd: [1.5, 2.4], ranged: 1, reach: 150, weight: 1, shards: [6, 9], sigil: .15, kind: 'human' },
-    chborel:  { name: 'Borel, Duke of Chaos', draw: 'human', look: 'w4borel', w4scale: 1.16, mat: 'flesh', move: 'ground', hp: 270, spd: 72, hw: 15, hh: 72, dmg: 15, plans: ['swing', 'w4blink', 'w4flurry', 'w4flurry'], wind: .5, cd: [.9, 1.6], reach: 56, weight: .55, poise: 4, shards: [20, 28], sigil: 1, kind: 'human' },
+    chborel:  { name: 'Borel, Duke of Chaos', noRandom: 1, draw: 'human', look: 'w4borel', w4scale: 1.16, mat: 'flesh', move: 'ground', hp: 270, spd: 72, hw: 15, hh: 72, dmg: 15, plans: ['swing', 'w4blink', 'w4flurry', 'w4flurry'], wind: .5, cd: [.9, 1.6], reach: 56, weight: .55, poise: 4, shards: [20, 28], sigil: 1, kind: 'human' },
     // the beasts and demons of the Abyss
     chhound:  { name: 'Hound of Chaos', draw: 'w4hound', mat: 'fur', move: 'ground', hp: 40, spd: 112, hw: 20, hh: 30, dmg: 10, plans: ['pounce', 'bite', 'pounce'], wind: .38, cd: [.9, 1.7], reach: 40, weight: 1.15, shards: [4, 7], kind: 'creature' },
     cheye:    { name: 'Watcher of the Abyss', draw: 'w4eye', mat: 'spark', move: 'fly', hover: 62, hp: 36, spd: 56, hw: 16, hh: 26, dmg: 11, plans: ['shoot', 'volley', 'shoot'], wind: .7, cd: [1.5, 2.5], ranged: 1, weight: 1.1, shards: [5, 8], kind: 'creature' },

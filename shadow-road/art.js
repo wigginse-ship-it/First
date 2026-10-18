@@ -196,7 +196,8 @@ function gripHand(col) { // a gloved hand closed around a haft
 }
 function drawWeapon(kind, pose) {
   if (kind === 'fists' || !kind) { drawHand((pose && pose.glove) || '#FFF1E0', pose && pose.openHand); return; }
-  if (kind === 'grayblade' || kind === 'rapier') { drawGrayblade(pose || {}); return; } // the prince's own sword (art_rapier.js)
+  if (kind === 'grayblade' || kind === 'rapier') { drawGrayblade(pose || {}); return; }
+  if (kind === 'shortbow') { drawShortBow(pose || {}); return; } // the prince's own sword (art_rapier.js)
   // the hero's weapons change as they level: 1 iron and wood, 2 steel and leather, 3 gold and a gem, 4 runes that glow, 5 shadow-steel with a violet aura
   const tier = (pose && pose.tier) || 1, hand = (pose && pose.glove) || '#FFF1E0';
   const glowRune = (x, y, w, h, col) => { ctx.save(); if (!FLASH) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillStyle = C(col); ctx.fillRect(x, y, w, h); ctx.restore(); };

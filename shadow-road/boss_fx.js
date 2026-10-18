@@ -3,7 +3,8 @@
 // The Brass Colossus: its vents blast jets of steam out along the floor to either side, hurling you away.
 // The Kaleidoscope Wyrm: it draws you in with a pull of light, then bursts into a ring of crystal shards.
 PLAN_FX.bramble = (e) => {
-  for (let i = 0; i < 3; i++) hazards.push({ kind: 'thornring', x: e.x, y: e.y, r: 20, R: 70 + i * 50, delay: i * .25, t: 1, max: 1, dmg: Math.round(edmg(e) * .9), hit: false });
+  const gap = e.thornGap ?? Math.atan2((P.y - e.y) * 2.2, P.x - e.x) + rand(-1.2, 1.2); e.thornGap = undefined; // one narrow gap runs through all three rings: find it
+  for (let i = 0; i < 3; i++) hazards.push({ kind: 'thornring', gap: gap + rand(-.12, .12), x: e.x, y: e.y, r: 20, R: 70 + i * 50, delay: i * .28, t: 1.6, max: 1.6, dmg: Math.round(edmg(e) * .9), hit: false });
   sfx('slam'); shakeMag = 8; recover(e, 1.2);
 };
 PLAN_FX.vent = (e) => {
@@ -16,8 +17,9 @@ PLAN_FX.coil = (e) => {
 };
 // tells: each warns in its own way
 TELL_FX.bramble = (e, t, k) => { // the ground cracks in rings around him
+  if (e.thornGap === undefined) e.thornGap = Math.atan2((P.y - e.y) * 2.2, P.x - e.x) + rand(-1.2, 1.2);
   ctx.strokeStyle = `rgba(126,164,96,${.3 + .5 * k})`; ctx.lineWidth = 2;
-  for (let i = 0; i < 3; i++) { const r = (70 + i * 50) * (.6 + .4 * k); ctx.beginPath(); ctx.ellipse(e.x, e.y, r, r / 2.2, 0, 0, TAU); ctx.stroke(); }
+  for (let i = 0; i < 3; i++) { const r = (70 + i * 50) * (.6 + .4 * k); ctx.beginPath(); ctx.ellipse(e.x, e.y, r, r / 2.2, 0, e.thornGap + .45, e.thornGap + TAU - .45); ctx.stroke(); } // the cracks leave the gap unbroken
 };
 TELL_FX.vent = (e, t, k) => { // pressure building: the vents glow and shudder
   for (const d of [-1, 1]) { const x0 = e.x + d * e.hw * .6; const g = ctx.createLinearGradient(x0, 0, x0 + d * 230, 0); g.addColorStop(0, `rgba(255,226,192,${.4 * k + .1})`); g.addColorStop(1, 'rgba(255,226,192,0)'); ctx.fillStyle = g; ctx.fillRect(Math.min(x0, x0 + d * 230), e.y - 14, 230, 28); }
@@ -31,14 +33,16 @@ HAZARD_FX.thornring = {
     if (h.delay > 0) { h.delay -= dt; h.t += dt; return; }
     h.r = Math.min(h.R, h.r + 420 * dt);
     const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2);
-    if (!h.hit && Math.abs(d - h.r) < 16 && P.z < 16) { h.hit = true; playerDamage(h.dmg, h.x, true); }
+    const ang = Math.atan2((P.y - h.y) * 2.2, P.x - h.x), off = Math.abs(((ang - h.gap) % TAU + TAU * 1.5) % TAU - Math.PI);
+    if (!h.hit && Math.abs(d - h.r) < 16 && P.z < 16 && off > .36) { h.hit = true; playerDamage(h.dmg, h.x, true); } // the gap is safe
     if (h.r >= h.R && !h.burst) { h.burst = true; for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; dust(h.x + Math.cos(a) * h.r, h.y + Math.sin(a) * h.r / 2.2, 1); } }
   },
   draw(h, t) {
     if (h.delay > 0) return;
-    const fade = Math.min(1, h.t / .3); // the thorns stand a moment, then sink back
+    const fade = Math.min(1, h.t / .4);
     for (let i = 0; i < 22; i++) { // a ring of thorns standing up out of the ground
-      const a = i / 22 * TAU + h.R, px = h.x + Math.cos(a) * h.r, py = h.y + Math.sin(a) * h.r / 2.2, hgt = (16 + (i % 3) * 6) * fade;
+      const a = i / 22 * TAU + h.gap; if (Math.abs(((a - h.gap) % TAU + TAU * 1.5) % TAU - Math.PI) < .3) continue; // leave the gap clear
+      const px = h.x + Math.cos(a) * h.r, py = h.y + Math.sin(a) * h.r / 2.2, hgt = (16 + (i % 3) * 6) * fade;
       ctx.fillStyle = C(i % 2 ? '#5E7A3A' : '#7EA460'); ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.quadraticCurveTo(px + Math.cos(a) * 2, py - hgt * .6, px + Math.cos(a) * 5, py - hgt); ctx.lineTo(px + 4, py); ctx.closePath(); ctx.fill(); outline(1);
     }
   },

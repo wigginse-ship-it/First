@@ -59,6 +59,7 @@ function updatePlayer(dt) {
     case 'idle': case 'walk': case 'run': {
       if (pressed.swap) swapWeapon();
       if (pressed.trump) playTrump();
+      if (pressed.shoot) { startShoot(); break; }
       const running = input.run && Math.abs(mx) > 0.3;
       if (pressed.jump) { if (P.chaseT > 0) { chaseJump(); break; } P.vz = JUMP; P.state = 'jump'; P.jvx = running ? Math.sign(mx) * RUN * sp * 1.05 : mx * SPX * sp; P.jvy = my * SPY * sp; P.airN = 0; sfx('jump'); dust(P.x, P.y, 5); break; }
       if (pressed.dodge) { startDodge(); break; }
@@ -81,6 +82,7 @@ function updatePlayer(dt) {
     case 'jump':
       P.x += P.jvx * dt; P.y += P.jvy * dt;
       if (airSpecial()) break;
+      if (pressed.shoot) { startShoot(); break; }
       if (pressed.heavy && unlocked(w.tree.AH)) { P.jvy = 0; begin(w.tree.AH); }
       else if ((pressed.light || pressed.heavy) && airNext()) { P.jvy = 0; begin(airNext()); }
       break;
@@ -113,6 +115,7 @@ function updatePlayer(dt) {
       }
       break;
     }
+    case 'shoot': P.x += P.vx * dt; P.vx *= Math.pow(.02, dt); if (P.z > 0) { P.x += (P.jvx || 0) * dt * .5; } updateShoot(dt); break;
     case 'parry': // the guard is up: a blow that lands on it in the first moments is answered (see playerDamage)
       P.t += dt; P.x -= P.facing * 70 * Math.max(0, 1 - P.t * 4) * dt;
       if (P.t >= .4) P.state = 'idle';
@@ -290,7 +293,7 @@ function strike(e, base, dir, m, echo) {
   let raw = base * rand(.9, 1.1) * (stillT > 0 ? (TL('stillness') >= 3 ? 3 : 2) : 1);
   if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
-  let dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' ? 1 : .78)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
+  let dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' || m.arrow ? 1 : .78)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
   // what counts as a heavy blow: it breaks blocks and guards
   const heavy = m.trump || m.power === 2 || m.launch || m.smash || m.shock || (m.key && m.key.includes('H')) || m.key === 'X';
   if (!e.boss && !m.trump && !m.el && !heavy && e.state === 'block' && Math.sign(P.x - e.x) === e.facing) { // a raised guard turns a light hit aside
@@ -419,7 +422,7 @@ function popEnemy(e) { // the body hits the ground in a burst of debris and drop
 function dropLoot(e) {
   const [a, b] = e.def.shards || [30, 40];
   // richer pickings deeper in: each world drops more, and an armored elite drops a lot more
-  maybeDropPower(e);
+  maybeDropPower(e); maybeDropArrow(e);
   if (e.champ) { loot.push(makeLoot('sigil', e.x, e.y, 1)); loot.push(makeLoot('heal', e.x, e.y, 30)); } // a champion always pays
   const n = Math.round(rand(a, b) * (pw('fortune') ? 2 : 1) * (1 + .2 * save.cycle) * [.55, .9, 1.3, 1.7][Math.min(stageIdx, 3)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));

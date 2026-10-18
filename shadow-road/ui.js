@@ -70,8 +70,8 @@ function stageClear() {
 
 // ---------- explaining moves: inputs shown as button chips ----------
 // on a keyboard the chips name the keys instead of the buttons
-const KEY_CHIP = { A: 'J', H: 'K', HOLDA: 'HOLD J', HOLD: 'HOLD K', HOLD3: 'HOLD K TO 3RD FLASH', RUN: 'RUN', WALK: 'WALK', JUMP: 'SPACE', DODGE: 'L' };
-const CHIP = { A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLDA: ['HOLD ATTACK', 'a'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], RUN: ['RUN', 'r'], WALK: ['WALK', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
+const KEY_CHIP = { SHOOT: 'I', A: 'J', H: 'K', HOLDA: 'HOLD J', HOLD: 'HOLD K', HOLD3: 'HOLD K TO 3RD FLASH', RUN: 'RUN', WALK: 'WALK', JUMP: 'SPACE', DODGE: 'L' };
+const CHIP = { SHOOT: ['BOW', 'j'], A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLDA: ['HOLD ATTACK', 'a'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], RUN: ['RUN', 'r'], WALK: ['WALK', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
 const KEY_INPUTS = { RH: ['DODGE', '+H'], J2: ['JUMP', 'JUMP'], AX: ['JUMP', '+HOLDA'], X: ['HOLDA'], M: ['WALK', '+A'], AH: ['JUMP', '+H'], HC: ['HOLD'], D: ['RUN', '+A'], DH: ['RUN', '+H'], A: ['JUMP', '+A'], R: ['DODGE', '+A'] };
 function inputsFor(id, m) {
   if (!m.key) return ['HOLD3'];
@@ -93,6 +93,7 @@ const BASICS = [
   { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge. Mix it into the combos below.', seq: ['H'] },
   { key: 'D', name: 'Dash attack', desc: 'Run (flick the joystick twice, or tap a direction key twice), then attack.' },
   { key: 'R', name: 'Dodge counter', desc: 'Tap Attack during a dodge to strike out of it.' },
+  { key: 'S', name: 'Arrows', desc: 'A short bow, with any weapon. Arrows are rare (shooters drop them) and you carry five at most; each one flies straight into the first foe in its way, hits hard and can crit.', seq: ['SHOOT'] },
 ];
 function moveListHtml(id) {
   const lvl = save.wl[id], tree = WEAPONS[id].tree;
@@ -150,6 +151,20 @@ function renderForge(note) {
     renderForge(`Rose Mail reinforced: max health ${maxHp()}.`);
   });
   wrap.appendChild(d);
+  // the arrows: five levels, each a better arrow
+  const al = Math.min(ARROW_TIERS.length, save.alv || 1), ac2 = arrowCost(al), almax = al >= ARROW_TIERS.length, alcan = !almax && save.shards >= ac2.s && save.sigils >= ac2.g;
+  const da = document.createElement('div'); da.className = 'card';
+  da.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">LV ${al}/${ARROW_TIERS.length} · ${save.arrows || 0}/${ARROW_MAX} IN THE QUIVER</div><div class="nm">${aTier().name}</div>
+    <p>Rare arrows from fallen shooters, loosed with any weapon. Each strikes the first foe in its path for ${aTier().dmg}+ damage.</p>
+    <ul>${ARROW_TIERS.map((tt, i) => `<li class="${al >= i + 1 ? 'got' : al === i ? 'next' : ''}"><b>LV${i + 1} · ${tt.name}</b><br><em>${tt.desc}</em></li>`).join('')}</ul>
+    <button class="buy" type="button" ${alcan ? '' : 'disabled'}>${almax ? 'The finest arrows' : `Fletch better arrows · ${costTxt(ac2)}`}</button>`;
+  drawIcon(da.querySelector('canvas'), 'arrow', .78);
+  da.querySelector('button').addEventListener('click', () => {
+    if (!alcan) return;
+    save.shards -= ac2.s; save.sigils -= ac2.g; save.alv = al + 1; persist(); sfx('buy');
+    renderForge(`Your arrows are now ${aTier().name}.`);
+  });
+  wrap.appendChild(da);
 
   const tw = $('#trumpCards'); tw.innerHTML = '';
   for (const id of TRUMP_ORDER) {

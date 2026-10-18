@@ -329,6 +329,7 @@ function updateLoot(dt) {
     const d = Math.hypot(P.x - k.x, (P.y - k.y) * 1.5);
     if (P.state === 'dead' || k.t < .5) continue;
     if (k.kind === 'weapon') { if (d < 30) { k.got = true; gainWeapon(k.weapon); } continue; }
+    if (k.kind === 'arrow') { if (d < 36) { k.got = true; if ((save.arrows || 0) < ARROW_MAX) gainArrow(); } continue; }
     if (k.kind === 'power') { if (k.t > 8) { k.got = true; continue; } if (d < 22) { k.got = true; gainPower(k.power); } continue; } // grab it before it fades
     if (d < 80) { k.x += (P.x - k.x) * Math.min(1, dt * 9); k.y += (P.y - k.y) * Math.min(1, dt * 9); }
     if (d < 14) {
@@ -374,7 +375,7 @@ function startStage(i) {
   persist();
   enterZone(0);
   $('#bossbar').hidden = true; $('#go').hidden = true;
-  refreshHud(true); refreshCombo();
+  refreshHud(true); refreshCombo(); refreshArrows();
   banner(stage.name, stage.sub + (save.cycle ? ' · CYCLE ' + (save.cycle + 1) : ''), 2.4);
 }
 const waveAt = (i) => 520 + i * ((stage.len - 1300) / stage.waves.length);
@@ -422,6 +423,7 @@ function updateWorld(dt) {
       if (p.ground && Math.random() < .7) dust(p.x, p.y, 1);
       if (Math.abs(p.x - P.x) < (p.ground ? 16 : 12) && Math.abs(p.y - P.y) < (p.ground ? 16 : 12) && P.z < (p.ground ? 14 : 40) && P.state !== 'dead') { playerDamage(p.dmg, p.x - p.vx, false); p.life = 0; }
     } else {
+      if (p.arrow) { if (arrowHit(p)) p.life = 0; continue; }
       for (const e of enemies) if (!e.dead && !p.hit.has(e) && Math.abs(p.x - e.x) < 24 && Math.abs(p.y - e.y) < 26) { p.hit.add(e); strike(e, p.dmg, Math.sign(p.vx), p.quake ? { dmg: p.dmg, kb: 120, launch: 380, power: 2, smash: 1 } : { dmg: p.dmg, kb: 300, launch: 300, power: 2 }); }
       if (p.quake) { if (Math.random() < .8) dust(p.x, p.y, 1); }
       else if (Math.random() < .9) parts.push({ x: p.x, y: p.y + rand(-10, 10), z: rand(0, 40), vx: 0, vy: 0, vz: 40, life: .4, max: .4, col: '#D08AB0', size: 3, shape: 'star', rot: 0, vr: 4 });
