@@ -61,10 +61,10 @@ function updatePlayer(dt) {
     if (P.z <= 0) { P.z = 0; P.vz = 0; onLand(); }
   }
   const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1) * (pw('haste') ? 1.3 : 1) * roomSlow; // tiny, he scurries
+  if (pressed.trump && !['dead', 'down'].includes(P.state)) playTrump(); // the card can be played whatever else he is doing
   switch (P.state) {
     case 'idle': case 'walk': case 'run': {
       if (pressed.swap) swapWeapon();
-      if (pressed.trump) playTrump();
       if (pressed.shoot) { startShoot(); break; }
       const running = input.run && Math.abs(mx) > 0.3;
       if (pressed.jump) { if (P.chaseT > 0) { chaseJump(); break; } P.vz = JUMP; P.state = 'jump'; P.jvx = running ? Math.sign(mx) * RUN * sp * 1.05 : mx * SPX * sp; P.jvy = my * SPY * sp; P.airN = 0; P.runJump = running; P.jhUsed = false; sfx('jump'); dust(P.x, P.y, 5); break; }
