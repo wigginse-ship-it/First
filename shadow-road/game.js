@@ -302,7 +302,7 @@ function critChance(e) {
   if ((P.x - e.x) * e.facing < 0) c += .12;                 // struck from behind
   if (e.state === 'down' || e.frozen > 0) c += .14;          // staggered, knocked down or frozen
   else if (e.air) c += .05;                                  // juggled in the air
-  const fast = { rapier: 1.45, fists: 1.3, staff: 1.12, hammer: .8, sword: .85 }[P.w] || 1; // quick weapons find the gaps more often
+  const fast = { rapier: 1.45, fists: 1.3, staff: 1.75, hammer: .85, sword: .85 }[P.w] || 1; // quick weapons find the gaps more often
   return Math.min(.35 * Math.max(1, fast), c * fast);
 }
 function strike(e, base, dir, m, echo) {
