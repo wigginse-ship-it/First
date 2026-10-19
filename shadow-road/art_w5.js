@@ -1487,6 +1487,8 @@
       const e = spawnEnemy('w5sphinx', 1); if (e.elite) { e.elite = false; e.guard = e.guardMax = 0; e.hp = e.maxHp = Math.round(e.maxHp / 1.5); } e.x = lockX + VW * .74; e.y = (FLOOR_TOP + FLOOR_BOT) / 2 + 6; e.facing = -1; e.w5calm = 1;
       if (typeof setEntrance === 'function') setEntrance(e, 'w5descend'); e.facing = -1;
       m.sph = { phase: 'arrive', e, t: 0, ex: e.x };
+      for (const c of corpses) for (let i = 0; i < 6; i++) parts.push({ x: c.x + rand(-16, 16), y: c.y + rand(-4, 4), z: rand(2, 30), vx: rand(-20, 20), vy: 0, vz: rand(20, 60), life: .9, max: .9, col: 'rgba(210,222,245,.55)', size: rand(5, 10), shape: 'puff' }); // the fallen fade into moon-mist, so nothing lies over her answers
+      corpses.length = 0;
       banner('The Sphinx', 'SHE WILL ASK YOU A RIDDLE', 2.6); if (typeof TRACKS !== 'undefined' && TRACKS.w5riddle) playMusic('w5riddle');
       return;
     }
@@ -1494,6 +1496,8 @@
     if (!enemies.includes(e) && S.phase !== 'leave') { m.sph = null; if (S.phase === 'fight') m.sphDone = true; return; } // she is gone (a room change, a reset): ask again later
     if (S.phase === 'arrive' && e.state === 'idle') {
       const q = pick(RIDDLES), opts = [q[1], q[2], q[3]].sort(() => Math.random() - .5), ys = [FLOOR_TOP + 24, (FLOOR_TOP + FLOOR_BOT) / 2 + 2, FLOOR_BOT - 12];
+      for (const c of corpses) for (let i = 0; i < 6; i++) parts.push({ x: c.x + rand(-16, 16), y: c.y + rand(-4, 4), z: rand(2, 30), vx: rand(-20, 20), vy: 0, vz: rand(20, 60), life: .9, max: .9, col: 'rgba(210,222,245,.55)', size: rand(5, 10), shape: 'puff' });
+      corpses.length = 0; // (any that were still falling when she landed)
       S.phase = 'ask'; S.t = 0; S.q = q[0]; S.right = q[1]; S.ex = e.x; e.state = 'w5riddle'; e.facing = -1;
       S.plates = opts.map((a, i) => ({ a, x: e.x - 130 - (i === 1 ? 14 : 0), y: ys[i] }));
       sfx('trump');
