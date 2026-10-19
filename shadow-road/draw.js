@@ -144,7 +144,7 @@ function playerPose() {
   else if (P.state === 'dodge') {
     const k = 1 - P.t / .34;
     if (P.dk === 'fwd') { pose.crouch = 1; pose.run = 1; pose.walk = 1.5; pose.lean = .85; pose.arm = 2.7; pose.backArm = 3; pose.flow = 16; pose.stretch = 1.18; } // flat out, body almost level, arms flung back
-    else if (P.dk === 'back') { pose.crouch = 1; pose.kick = k < .55 ? 1 : 0; pose.walk = -1.4; pose.lean = -.6 + k * .4; pose.arm = -.6; pose.backArm = -.2; pose.flow = -8; } // pushing off, one leg kicked out, guard up
+    else if (P.dk === 'back') { pose.crouch = 1; pose.kick = k < .55 ? 1 : 0; pose.kickBend = 1; pose.walk = -1.4; pose.lean = -.6 + k * .4; pose.arm = -.6; pose.backArm = -.2; pose.flow = -8; } // pushing off, one leg kicked out, guard up
     else { pose.crouch = 1; pose.walk = 1.4; pose.lean = .2; pose.arm = .3; pose.backArm = 2; } // the stride into Shadow
   }
   else if (P.state === 'shoot') { // a short bow, drawn to the cheek and loosed, standing side-on

@@ -477,8 +477,9 @@ function drawHumanoid(look, pose) {
   if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX, Y, CS);
   else if (pose.kick) {
     seg(-2, HIP, -5, HIP + 15, 8, 6, shade(legs, -.15), .6); seg(-5, HIP + 15, -4, -8, 6, 4.6, shade(legs, -.15), .8); boot(-4, shade(look.boots, -.1));
-    seg(2, HIP, 17, HIP - 2, 8.4, 6.4, legs, .8); seg(17, HIP - 2, 30, HIP - 4, 6.4, 4.8, legs, .6);
-    ctx.save(); ctx.translate(30, HIP - 4); ctx.rotate(-Math.PI / 2); ctx.translate(-1, 9); boot(0, look.boots); ctx.restore();
+    const kb = pose.kickBend || 0, kx = 17 - kb, ky = HIP - 2 + 5 * kb, fx = 30 - 3 * kb, fy = HIP - 4 + kb; // kickBend: the knee gives a little
+    seg(2, HIP, kx, ky, 8.4, 6.4, legs, .8); seg(kx, ky, fx, fy, 6.4, 4.8, legs, .6);
+    ctx.save(); ctx.translate(fx, fy); ctx.rotate(-Math.PI / 2 + .12 * kb); ctx.translate(-1, 9); boot(0, look.boots); ctx.restore();
   } else if (pose.down) {
     seg(-2, HIP, -4, -13, 8, 6, legs, .6); seg(-4, -13, -6, -6, 6, 4.6, legs, .6); seg(2, HIP, 6, -13, 8, 6, legs, .6); seg(6, -13, 8, -6, 6, 4.6, legs, .6);
   } else {
