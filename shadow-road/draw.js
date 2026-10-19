@@ -188,6 +188,12 @@ function playerPose() {
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
   if (P.state === 'idle' && !pose.legs) { pose.legs = { f: -11, b: 13, fk: 7, bk: 5, w: 1.6 }; pose.sink = 2.5; } // a wide, grounded stance: his far (left) foot leads, the near one braced behind
+  // every great-sword heavy, its charge and its charged blows are cut with both hands on the hilt; the chest squares
+  // into the blow as it lands
+  if (P.w === 'sword' && (P.state === 'charge' || ((P.state === 'atk' || P.state === 'air') && P.move && /H/.test(P.move.key || '')))) {
+    pose.twoHand = 1;
+    const m = P.move; if (P.state !== 'charge' && !m.spin && !m.rot) { const kk = clamp((P.t / m.dur - m.h[0]) / (m.h[1] - m.h[0]), 0, 1); pose.yaw = (pose.yaw ?? 0) + .28 * Math.sin(Math.PI * kk); }
+  }
   if (P.shrink < 1) pose.shrink = P.shrink;
   // turning: walking toward or away from us he shows his chest or his back, and a change of direction is a quick
   // turn through the front (through the back when heading away) instead of a flip
@@ -200,7 +206,7 @@ function playerPose() {
   // eyes and head still on what is in front of him (the en garde rapier stays side-on until he relaxes)
   else if (P.state === 'idle') tY = P.w === 'rapier' ? lerp(.12, .68, ease(P.restK || 0)) : IDLE_Y[P.w] ?? .55;
   const dtv = Math.min(.05, (now - (P.yawAt || now)) / 1000); P.yawAt = now;
-  P.yawV = (P.yawV || 0) + (tY - (P.yawV || 0)) * Math.min(1, dtv * 9);
+  P.yawV = (P.yawV || 0) + (tY - (P.yawV || 0)) * Math.min(1, dtv * (loco ? 9 : 20)); // out of the stance into a blow, he squares up fast
   P.lookV = (P.lookV || 0) + ((P.state === 'idle' ? .78 : 0) - (P.lookV || 0)) * Math.min(1, dtv * 9);
   if (pose.yaw === undefined) pose.yaw = P.yawV;
   const tt = (now - (P.turnAt || 0)) / 170;

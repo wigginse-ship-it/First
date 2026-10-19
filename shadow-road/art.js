@@ -334,6 +334,7 @@ function drawWeapon(kind, pose) {
       aura('rgba(159,232,240,.14)', () => rrect(16, -10, len + 14, 20, 9));
     }
     if (pose && pose.glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .55; ctx.fillStyle = pose.glow; rrect(16, -10, len + 14, 20, 8); ctx.fill(); ctx.restore(); }
+    if (!(pose && pose.noHand)) gripHand(hand); // his hand closed on the grip
     return;
   }
   // enemies' weapons can be redrawn in their own file (art_world.js) without touching the hero's
@@ -355,6 +356,7 @@ function drawWeapon(kind, pose) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .55;
       ctx.fillStyle = pose.glow; rrect(16, -10, len + 14, 20, 8); ctx.fill(); ctx.restore();
     }
+    if (hero && !(pose && pose.noHand)) gripHand(pose.glove || "#FFF1E0");
     return;
   }
   if (kind === 'dagger') { limb([6, 0, 17, 0], '#4A3A2A', 3.5); ctx.beginPath(); ctx.moveTo(18, -3); ctx.lineTo(36, 0); ctx.lineTo(18, 3); ctx.closePath(); ctx.fillStyle = C('#D8DCE6'); ctx.fill(); outline(1.2); return; }
@@ -452,6 +454,18 @@ function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1) {
   if (kickFar) { kicker(); support(); } else { support(); kicker(); }
   ctx.restore();
 }
+// where the weapon's grip is, a little below the weapon hand, in the upper body's frame: the same chain of transforms
+// frontArm() draws through (shoulder, arm, sweep, reach or bent elbow, wrist turn), worked out ahead so the far arm can reach it
+function twoHandGrip(pose, PX, SHO, sw, armSw, ASX) {
+  const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw, ca = Math.cos(arm) * ASX, sa = Math.sin(arm), D = 180 / Math.PI;
+  let m = new DOMMatrix().translate(PX(1, 9.5), SHO + 2).rotate(Math.atan2(sa, ca) * D).scale(Math.hypot(ca, sa), 1);
+  if (pose.sweep !== undefined) m = m.scale(Math.sign(pose.sweep || 1) * Math.max(.14, Math.abs(pose.sweep)), 1);
+  if (pose.elbow) { const eb = -pose.elbow; m = m.translate(10 + Math.cos(eb) * 9, Math.sin(eb) * 9).rotate(eb * D).translate(-15, 0); }
+  else m = m.translate(19 + (pose.ext || 0) * 12 - 15, 0);
+  if (pose.grip) m = m.translate(17, 0).rotate(pose.grip * D).translate(-17, 0);
+  const a = m.transformPoint({ x: 9.5, y: 0 }), b = m.transformPoint({ x: 14, y: 0 });
+  return { x: a.x, y: a.y, ang: Math.atan2(b.y - a.y, b.x - a.x) };
+}
 // Figures are built heroic: long legs, a broad V of shoulders over a narrow waist, and a head about a sixth of their height.
 // Feet at y=0, hips at -30, shoulders at -49, head at -61. +x is the facing direction.
 function drawHumanoid(look, pose) {
@@ -515,12 +529,25 @@ function drawHumanoid(look, pose) {
   const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = PX(-3, -9.5), bsy = SHO + 1.5;
   const bb = pose.backElbow !== undefined ? -pose.backElbow : .25; // how far the forearm folds up from the upper arm
   const bl = 1 + (pose.backReach || 0); // a thrown rear hand reaches further, the shoulder driven through
-  const bex = bsx + Math.cos(ba) * 10 * bl * ASX, bey = bsy + Math.sin(ba) * 10 * bl, bwx = bex + Math.cos(ba + bb) * 9 * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * bl;
+  let bex = bsx + Math.cos(ba) * 10 * bl * ASX, bey = bsy + Math.sin(ba) * 10 * bl, bwx = bex + Math.cos(ba + bb) * 9 * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * bl;
+  let bha = Math.atan2(Math.sin(ba + bb), Math.cos(ba + bb) * ASX); // the far hand's angle
+  if (pose.twoHand) { // both hands on the grip: the far hand is solved onto the hilt, just below the weapon hand, every frame
+    const g = twoHandGrip(pose, PX, SHO, sw, armSw, ASX), wx = g.x - Math.cos(g.ang) * 4.5, wy = g.y - Math.sin(g.ang) * 4.5;
+    const dx = wx - bsx, dy = wy - bsy, d = Math.hypot(dx, dy) || 1e-3, k = Math.max(1, d / 18.6), L1 = 10 * k, L2 = 9 * k; // a long reach stretches the shoulder through
+    const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), b0 = Math.atan2(dy, dx);
+    const e1 = [bsx + Math.cos(b0 + A) * L1, bsy + Math.sin(b0 + A) * L1], e2 = [bsx + Math.cos(b0 - A) * L1, bsy + Math.sin(b0 - A) * L1];
+    [bex, bey] = e1[1] > e2[1] ? e1 : e2; bwx = wx; bwy = wy; bha = g.ang; // the elbow bends down, under the blade
+  }
+  const across = pose.twoHand && !BACK; // a two-handed grip: the far arm reaches across his chest, drawn over it
+  const farArm = () => {
   if (arms) { arms.sleeve(look, bsx, bsy, bex, bey, true); arms.fore(look, bex, bey, bwx, bwy, true); }
   else { seg(bsx, bsy, bex, bey, 8, 6.4, shade(sleeve, -.18), 1.3); seg(bex, bey, bwx, bwy, 6.4, 4.8, shade(sleeve, -.18), .8); }
-  ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(Math.atan2(Math.sin(ba + bb), Math.cos(ba + bb) * ASX)); ctx.translate(-13, 0); drawHand(shade(look.glove || skin, -.18), pose.openHand); ctx.restore(); // the far hand
+  if (!across) farHand();
+  };
+  const farHand = () => { ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(bha); ctx.translate(-13, 0); drawHand(shade(look.glove || skin, -.18), pose.twoHand ? 0 : pose.openHand); ctx.restore(); }; // the far hand
+  if (!across) farArm();
   const bpA = clamp((ba - 1.25) * .3, -.5, .5); // his far shoulder guard: hidden by his chest in profile, over the cloak when he faces us
-  if (arms && Y < .3) arms.pauldron(look, bsx, bsy - 1.4, bpA, true, .92);
+  if (arms && Y < .3 && !across) arms.pauldron(look, bsx, bsy - 1.4, bpA, true, .92);
   ctx.restore();
   if (CP && !BACK && !pose.down) CW.cloak.half(look, CP, false);
   // legs: thighs and calves with a swell, pants tucked into boots
@@ -623,7 +650,7 @@ function drawHumanoid(look, pose) {
     if (BACK && CP) { CW.cloak.half(look, CP, true); CW.cloak.half(look, CP, false); }
     ctx.save(); upper();
     if (BACK) { CW.PART('mail', look).neck(look, G); if (CP) CW.cloak.hood(look, G, true); }
-    else { if (CP) CW.cloak.mantle(look, G); if (arms && Y >= .3) arms.pauldron(look, bsx, bsy - 1.4, bpA, true, .92); CW.PART('mail', look).neck(look, G); }
+    else { if (CP) CW.cloak.mantle(look, G); if (arms && Y >= .3 && !across) arms.pauldron(look, bsx, bsy - 1.4, bpA, true, .92); CW.PART('mail', look).neck(look, G); }
     ctx.restore();
   }
   ctx.save(); upper();
@@ -662,7 +689,9 @@ function drawHumanoid(look, pose) {
     ctx.restore();
   }
   ctx.restore();
+  if (across) { farArm(); if (arms) arms.pauldron(look, bsx, bsy - 1.4, bpA, true, .92); } // (still in the upper body's frame here)
   if (!BACK) frontArm();
+  if (across) farHand(); // its hand closed on the hilt over the grip, beside the weapon hand
   // front arm + weapon: shoulder, a bent elbow, forearm, hand
   function frontArm() {
   const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw;

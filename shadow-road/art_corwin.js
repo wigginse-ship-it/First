@@ -286,7 +286,7 @@ const CORWIN = (() => {
         let dyy = 0; const L3 = len * v, hz = Math.min(L3 * .94, Math.hypot(ofx, olz)), dy = Math.sqrt(L3 * L3 - hz * hz) + br * .35 * v; // it keeps its length: streaming out, it rises
         let dx = ofx * CS - olz * Y, a = LEAN * (1 - .8 * v), ca = Math.cos(a), sa = Math.sin(a);
         if (down) { // knocked flat: the near half lies over him like a shroud down to his boots, the rest spreads on the street past his head
-          if (i >= (S - 1) / 2) { const q = (i - (S - 1) / 2) / ((S - 1) / 2); dx = lerp(-7, 6.5, q) * Math.min(1, v * 3) + (1 - Math.min(1, v * 3)) * (fxa - lerp(-7, 6.5, q) * 0); dyy = L3 * .92; } else { dx = -2 - olz * .3 - 3 * v; dyy = -L3 * .7; } }
+          if (i >= (S - 1) / 2) { const q = (i - (S - 1) / 2) / ((S - 1) / 2); dx = lerp(1.5, 7.5, q) * Math.min(1, v * 3); dyy = L3 * .92; } else { dx = -2 - olz * .3 - 3 * v; dyy = -L3 * .7; } }
         const dy2 = down ? dyy : dy;
         tgt[o] = ax + dx * ca - dy2 * sa; tgt[o + 1] = ay + dx * sa + dy2 * ca;
       }
@@ -314,6 +314,7 @@ const CORWIN = (() => {
     SIM.wx = CD.wx; SIM.wy = CD.wy; SIM.seen = now; SIM.f = CD.facing;
     const pose = g.pose, free = pose.down || pose.rot || pose.spin, soft = pose.down ? .55 : free ? .5 : 1, ground = CD.z - .4;
     SIM.acc += dt; let n = 0;
+    if (pose.down) SIM.acc = 0; // (knocked flat: no swing, see below)
     while (SIM.acc >= H && n < 7) {
       SIM.acc -= H; n++;
       P[0] = Q[0] = spT[0]; P[1] = Q[1] = spT[1];
@@ -331,6 +332,7 @@ const CORWIN = (() => {
       }
     }
     if (n === 7) SIM.acc = 0;
+    if (pose.down) { const q = 1 - Math.exp(-dt * 3.5); P[0] = Q[0] = spT[0]; P[1] = Q[1] = spT[1]; for (let k = 2; k < SP; k++) { P[k] += (spT[k] - P[k]) * q; Q[k] = P[k]; } } // knocked flat, it settles over him rather than swinging
     // lay the spine's throw on every strand as a turn of each of its segments (most at the back, less at the front
     // edges), so the strands fan out from one another however far the cloth is thrown, and keep their lengths
     const out = SIM.pts, dA = SIM.dA;
