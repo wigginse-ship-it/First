@@ -17,12 +17,12 @@
     w5courtier: { name: 'Lantern Courtier', draw: 'w5courtier', mat: 'ghost', move: 'ground', hp: 52, spd: 60, hw: 12, hh: 64, dmg: 12, plans: ['w5moonfire', 'w5moonfire', 'w5censer'], wind: .7, cd: [1.4, 2.3], ranged: 1, reach: 130, weight: 1, shards: [6, 9], sigil: .15, kind: 'ghost' },
     w5reflect:  { name: 'Colorless Reflection', draw: 'w5reflect', mat: 'ghost', move: 'ground', hp: 62, spd: 84, hw: 12, hh: 62, dmg: 13, plans: ['w5mimic', 'w5mimic', 'swing'], wind: .55, cd: [1.0, 1.8], reach: 56, weight: 1, shards: [6, 9], kind: 'ghost' },
     w5knave:    { name: 'Knave of Moons', draw: 'w5knave', mat: 'ghost', move: 'ground', hp: 58, spd: 72, hw: 14, hh: 58, dmg: 13, plans: ['w5flip', 'w5flip', 'w5deal'], wind: .5, cd: [1.1, 2.0], reach: 110, weight: 1, shards: [6, 9], sigil: .2, kind: 'ghost' },
-    w5statue:   { name: 'Weeping Watcher', draw: 'w5statue', mat: 'rock', move: 'ground', hp: 175, spd: 150, hw: 20, hh: 70, dmg: 18, plans: ['w5seize'], wind: .3, cd: [.5, 1.0], reach: 40, weight: .4, poise: 4, shards: [12, 16], sigil: .5 },
+    w5statue:   { name: 'Weeping Watcher', draw: 'w5statue', mat: 'rock', move: 'ground', hp: 175, spd: 150, hw: 20, hh: 70, dmg: 15, plans: ['w5seize'], wind: .3, cd: [.5, 1.0], reach: 40, weight: .4, poise: 4, shards: [12, 16], sigil: .5 },
     // its beasts
     w5hound:    { name: 'Hound of the Wild Hunt', draw: 'w5hound', mat: 'fur', move: 'ground', hp: 46, spd: 124, hw: 20, hh: 30, dmg: 11, plans: ['w5course', 'pounce', 'bite'], wind: .42, cd: [.9, 1.7], reach: 40, weight: 1.15, shards: [5, 8], kind: 'creature' },
     w5moth:     { name: 'Moonmoth', draw: 'w5moth', mat: 'fur', move: 'fly', hover: 54, hp: 36, spd: 92, hw: 16, hh: 18, dmg: 9, plans: ['w5latch', 'w5latch', 'w5dust'], wind: .6, cd: [1.4, 2.4], ranged: 1, reach: 130, weight: 1.15, shards: [5, 8], kind: 'creature' },
     // she waits at the end of the street with a riddle; answered wrong, she fights (see the 'w5cloud' rule)
-    w5sphinx:   { name: 'The Sphinx', noRandom: 1, draw: 'w5sphinx', mat: 'rock', move: 'ground', hp: 390, spd: 80, hw: 34, hh: 56, dmg: 17, plans: ['pounce', 'w5wings', 'w5glyphs', 'pounce'], wind: .6, cd: [.9, 1.6], reach: 70, weight: .4, poise: 7, shards: [26, 34], sigil: 1, kind: 'creature' },
+    w5sphinx:   { name: 'The Sphinx', noRandom: 1, draw: 'w5sphinx', mat: 'rock', move: 'ground', hp: 320, spd: 80, hw: 34, hh: 56, dmg: 17, plans: ['pounce', 'w5wings', 'w5glyphs', 'pounce'], wind: .6, cd: [.9, 1.6], reach: 70, weight: .4, poise: 7, shards: [26, 34], sigil: 1, kind: 'creature' },
   });
 
   BOSSES.benedict = {

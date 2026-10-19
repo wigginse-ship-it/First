@@ -606,7 +606,7 @@
     // the near arm: folded into the sleeve, lifted palm-up under the lantern to throw its fire, or holding the lantern's chain
     if (firing) { cel(PB([1, -45, 10, -48, 16, -55, 13, -58, 6, -52, -2, -40]), robe, { d: 1.6, r: .8, w: 1.4, dark: robeDk, lite: robeLt }); ghostHand(14, -57, -1.2, 1.1, true); glowAt(14, -60, 14 + wind * 10, PALE, .3 + wind * .5); }
     else if (held) {
-      const sa = e.w5swing ?? -2, hx = 12, hy = -40, L = 22, lx = hx + Math.cos(sa) * L, ly = hy + Math.sin(sa) * L;
+      const sa = e.w5swing ?? -2, hx = 12, hy = -40, L = e.w5chain ?? 22, lx = hx + Math.cos(sa) * L, ly = hy + Math.sin(sa) * L;
       cel(PB([1, -45, 8, -44, 13, -40, 10, -36, 3, -38, -2, -40]), robe, { d: 1.4, r: .7, w: 1.3, dark: robeDk });
       ghostHand(hx, hy, sa, 1, false);
       ctx.strokeStyle = C('#5A6890'); ctx.lineWidth = 1.2; ctx.setLineDash([1.6, 1.2]); ctx.beginPath(); ctx.moveTo(hx + 3, hy); ctx.lineTo(lx, ly); ctx.stroke(); ctx.setLineDash([]); // the chain
@@ -972,6 +972,7 @@
     const HIP = -38 + p.sink + bob, SHO = -60 + p.sink + bob, NECK = -64 + p.sink + bob, HY = -72 + p.sink + bob;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     if (!dead) ctx.globalAlpha *= .94; // a ghost: very nearly there
+    if (e.w5vis !== undefined) ctx.globalAlpha *= cl01(e.w5vis); // stepping through the air in his feint
     if (p.spin) { const c = Math.cos(p.spin); ctx.scale(Math.max(.2, Math.abs(c)), 1); if (c < 0) ctx.scale(-1, 1); }
     mandorla(-4, SHO - 10, haloK, e.w5blades ?? 11, t);
     const upper = (fn) => { ctx.save(); ctx.translate(0, HIP); ctx.rotate(p.lean); ctx.translate(0, -HIP); fn(); ctx.restore(); };
@@ -1050,5 +1051,830 @@
     }
     benedict(e, a, t);
   };
+
+  // ======================================================================================================
+  // ATTACKS: plans for the city's ghosts and beasts, the Sphinx and the Phantom, their tells and the hazards they leave.
+  // They plug into world.js and zones.js, which load after this file: data_w5.js calls late() once they exist
+  // ======================================================================================================
+  const HZ = {}; // this world's hazards: { update(h, dt), draw(h, t) on the floor, ups(h, list, t) upright, box(h, box) }
+  const late = () => {
+  const reg = (kind, o) => { HZ[kind] = o; HAZARD_FX[kind] = { update: o.update || (() => {}), draw: o.draw || (() => {}) }; };
+  const inEll = (x, y, cx, cy, r) => Math.hypot(x - cx, (y - cy) * 2.2) < r;
+  const yClamp = (y) => clamp(y, FLOOR_TOP + 10, FLOOR_BOT - 2);
+  const xClamp = (x) => clamp(x, leftWall() + 24, rightWall() - 24);
+  const hitP = (dmg, fromX, big) => { if (P.state !== 'dead') playerDamage(dmg, fromX, big); };
+  const tellCol = (k, a = 1) => `rgba(230,70,90,${(.14 + .3 * k) * a})`, tellLine = (k) => `rgba(255,140,150,${.5 + .4 * k})`;
+  const guardCol = (k) => `rgba(120,170,255,${.16 + .3 * k})`, guardLine = (k) => `rgba(190,215,255,${.55 + .4 * k})`;
+  const label = (x, y, s, a) => { ctx.fillStyle = `rgba(240,244,255,${a})`; ctx.font = '700 9px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(s, x, y); };
+  // an attack that takes time: the enemy is held in the 'w5act' state while a controller hazard drives it each frame
+  function act(e, name, step, o = {}) {
+    e.state = 'w5act'; e.w5a = name; e.struck = false; e.walk = 0; e.w5k = 0;
+    const h = Object.assign({ kind: 'w5ctl', e, name, el: 0, step, t: 99, max: 99, y: e.y }, o); hazards.push(h); return h;
+  }
+  function endAct(h) { const e = h.e; h.t = -1; e.w5k = 1; e.w5guarding = false; e.w5thrust = 0; e.w5spin = 0; if (e.w5vis !== undefined) e.w5vis = 1; if (e.w5caught) e.w5caught = 0; e.w5reach = 0; }
+  reg('w5ctl', {
+    update(h, dt) { const e = h.e; if (h.done) { h.t = -1; return; } if (e.dead || e.state !== 'w5act' || e.w5a !== h.name) { endAct(h); h.done = 1; return; } h.el += dt; if (h.step(h, dt, e)) { endAct(h); h.done = 1; } },
+    draw(h, t) { if (h.draw) h.draw(h, t); },
+    ups(h, list, t) { if (h.up) list.push([h.uy ?? h.e.y, () => h.up(h, t)]); },
+  });
+  function targets(e, make) { // targets fixed when the wind-up starts, kept until the attack is done
+    const T0 = e.w5T;
+    if (!T0 || T0.plan !== e.plan || (e.state === 'wind' && e.t > T0.lastT + 1e-6)) e.w5T = Object.assign({ plan: e.plan, lastT: e.t }, make(e));
+    if (e.state === 'wind') e.w5T.lastT = e.t;
+    return e.w5T;
+  }
+  const mist = (x, y, z, n = 10) => { for (let i = 0; i < n; i++) parts.push({ x: x + rand(-10, 10), y: y + rand(-4, 4), z: z + rand(0, 40), vx: rand(-40, 40), vy: rand(-5, 5), vz: rand(10, 50), life: .7, max: .7, col: pick(['rgba(200,214,245,.7)', 'rgba(150,170,220,.6)', 'rgba(235,242,255,.6)']), size: rand(4, 8), shape: 'puff', rot: 0, vr: 0 }); };
+  const silverBurst = (x, y, z, n = 12) => burst(x, y, z, ['#EEF2FA', '#C8D4EC', '#8A9AC8'], n, 'spark', 0, true);
+
+  // ---------------- LANTERN COURTIER: MOONFIRE, a ball of cold fire lobbed out of its lantern onto where you stand ----------------
+  PLAN_FX.w5moonfire = (e) => {
+    sfx('shoot'); const tx = clamp(P.x, leftWall() + 10, rightWall() - 10), ty = yClamp(P.y);
+    hazards.push({ kind: 'w5orb', x0: e.x + e.facing * 8, y0: e.y, z0: e.z + 66, x: tx, y: ty, tx, ty, fl: .95, el: 0, t: 9, max: 9, dmg: edmg(e) });
+    recover(e, .8);
+  };
+  reg('w5orb', {
+    update(h, dt) { h.el += dt; const u = h.el / h.fl;
+      if (u >= 1 && !h.landed) { h.landed = true; h.pool = 0; sfx('hit-crystal'); silverBurst(h.tx, h.ty, 4, 10); if (inEll(P.x, P.y, h.tx, h.ty, 32) && P.z < 30) { h.hitP = true; hitP(h.dmg, h.tx, false); } }
+      if (h.landed) { h.pool += dt; if (!h.hitP && h.pool < 1.4 && inEll(P.x, P.y, h.tx, h.ty, 24) && P.z < 10) { h.hitP = true; hitP(Math.round(h.dmg * .6), h.tx, false); } if (h.pool > 1.6) h.t = -1; } },
+    draw(h, t) { const u = Math.min(1, h.el / h.fl);
+      ctx.save();
+      if (!h.landed) { ctx.strokeStyle = tellLine(u); ctx.lineWidth = 1.6; ell(h.tx, h.ty, 30, 30 / 2.2); ctx.stroke(); ctx.fillStyle = tellCol(u); ell(h.tx, h.ty, 30 * u, 30 * u / 2.2); ctx.fill(); }
+      else { const f = 1 - cl01((h.pool - 1.1) / .5); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(h.tx, h.ty, 2, h.tx, h.ty, 26); g.addColorStop(0, `rgba(230,238,255,${.55 * f})`); g.addColorStop(1, 'rgba(150,180,255,0)'); ctx.fillStyle = g; ell(h.tx, h.ty, 26, 12); ctx.fill();
+        for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + h.pool * .6, x = h.tx + Math.cos(a) * 12, y = h.ty + Math.sin(a) * 5, hh = (6 + (i % 2) * 4) * f; ctx.fillStyle = `rgba(225,235,255,${.6 * f})`; ctx.beginPath(); ctx.moveTo(x - 2, y); ctx.quadraticCurveTo(x - 1, y - hh * .6, x, y - hh); ctx.quadraticCurveTo(x + 1, y - hh * .6, x + 2, y); ctx.fill(); } } // the cold fire burning on the stone
+      ctx.restore(); },
+    ups(h, list, t) { if (h.landed) return; const u = Math.min(1, h.el / h.fl), x = lerp(h.x0, h.tx, u), y = lerp(h.y0, h.ty, u), z = lerp(h.z0, 6, u) + Math.sin(u * Math.PI) * 60;
+      list.push([y, () => onMain(() => { shadow(x, y, 6); glowM(x, y - z, 16, PALE, .55); ctx.fillStyle = '#F4F8FF'; ctx.beginPath(); ctx.moveTo(x, y - z + 4); ctx.quadraticCurveTo(x - 4, y - z, x, y - z - 6); ctx.quadraticCurveTo(x + 4, y - z, x, y - z + 4); ctx.fill(); })]); },
+    box(h, box) { box((h.x0 + h.tx) / 2, h.ty, 0, Math.abs(h.tx - h.x0) / 2 + 40, 140); },
+  });
+  // ---------------- LANTERN COURTIER: THE CENSER, its lantern-head unhooked and swung out on a long chain ----------------
+  PLAN_FX.w5censer = (e) => {
+    sfx('whoosh');
+    act(e, 'censer', (h, dt, e) => {
+      const k = h.el / .6; e.w5k = k; e.w5swing = lerp(-2.4, 1.0, sm(cl01(k))); e.w5chain = 22 + 92 * Math.sin(Math.PI * cl01(k));
+      if (!h.hit && k > .45 && k < .75) { const fwd = (P.x - e.x) * e.facing; if (fwd > 10 && fwd < 128 && Math.abs(P.y - e.y) < 20 && P.z < 50) { h.hit = true; hitP(edmg(e), e.x, true); } }
+      if (k >= 1) { e.w5chain = 22; recover(e, .9); return true; } return false;
+    });
+  };
+  // ---------------- WEEPING WATCHER: THE SEIZING, a lunge with hooked stone fingers ----------------
+  PLAN_FX.w5seize = (e) => {
+    sfx('crunch'); e.w5pose = 'seize';
+    act(e, 'seize', (h, dt, e) => {
+      if (h.el < .2) e.x += e.facing * 360 * dt;
+      if (!h.hit && h.el > .1) { const fwd = (P.x - e.x) * e.facing; if (fwd > -8 && fwd < e.def.reach + e.hw + 8 && Math.abs(P.y - e.y) < 20 && P.z < 40) { h.hit = true; hitP(edmg(e), e.x, true); } }
+      if (h.el > .4) { recover(e, .8); return true; } return false;
+    });
+  };
+  // ---------------- COLORLESS REFLECTION: MIMICRY, it does to you the last thing you did ----------------
+  const DEFAULT_LAST = { name: 'Lunge', x1: 96, around: 0, multi: 0, power: 1, lunge: 200, style: 'thrust', w: 'rapier' };
+  PLAN_FX.w5mimic = (e) => {
+    const m = W5.last || DEFAULT_LAST, reach = clamp(m.x1 || 60, 42, 116) + e.hw, hits = m.multi ? 3 : 1;
+    e.w5w = m.w; e.w5thrust = m.style === 'thrust' ? 1 : 0;
+    floatText(e.x, e.y, e.hh + 26, 'YOUR ' + (m.name || 'CUT').toUpperCase(), '#DDE6F4', 12); sfx('swing');
+    act(e, 'mimic', (h, dt, e) => {
+      const k = h.el / .42; e.w5k = cl01(k * 1.6); if (m.around) e.w5spin = k * TAU;
+      if (k < .5) e.x += e.facing * Math.min(260, (m.lunge || 0) * .7) * dt;
+      const n = Math.floor(k * hits * 1.25);
+      if (k > .3 && h.n !== n && n < hits) { h.n = n; const dx = P.x - e.x, fwd = dx * e.facing;
+        if ((m.around ? Math.abs(dx) < reach : fwd > -8 && fwd < reach) && Math.abs(P.y - e.y) < 20 && P.z < 44) { hitP(Math.round(edmg(e) * (m.power === 2 ? 1.25 : 1) * (hits > 1 ? .45 : 1)), e.x, m.power === 2); }
+        fx.push({ kind: 'slash', x: e.x + e.facing * reach * .6, y: e.y, z: 36, ang: rand(-.4, .4), t: .2, max: .2, size: 30, col: '#E8EEF8' }); }
+      if (k >= 1) { recover(e, .85); return true; } return false;
+    });
+  };
+  // ---------------- MOONMOTH: THE LATCH, it darts at you and clings to your back, drinking your light ----------------
+  PLAN_FX.w5latch = (e) => {
+    sfx('whoosh'); const tx = P.x, ty = yClamp(P.y);
+    act(e, 'dart', (h, dt, e) => {
+      const k = h.el / .55; e.w5k = k; const gx = lerp(h.x0, P.x * .5 + tx * .5, sm(cl01(k))), gy = lerp(h.y0, P.y, sm(cl01(k)));
+      e.x = gx; e.y = gy; e.z = lerp(h.z0, P.z + 40, sm(cl01(k))); e.facing = Math.sign(P.x - e.x) || e.facing;
+      if (Math.abs(P.x - e.x) < 18 && Math.abs(P.y - e.y) < 14 && P.state !== 'dodge' && P.state !== 'dead' && P.inv <= 0) { latchOn(e); return false; }
+      if (k >= 1) { recover(e, .9); return true; } return false;
+    }, { x0: e.x, y0: e.y, z0: e.z });
+  };
+  function latchOn(e) {
+    sfx('hit-goo'); e.state = 'w5act'; e.w5a = 'latch';
+    if (!W5.latchTold) { W5.latchTold = 1; floatText(P.x, P.y, 104, 'A MOTH ON YOUR BACK · DODGE TO SHAKE IT OFF', '#DDE6F4', 12); }
+    act(e, 'latch', (h, dt, e) => {
+      e.x = P.x - P.facing * 7; e.y = P.y - .4; e.z = P.z + 42; e.facing = P.facing; P.w5slowT = Math.max(P.w5slowT || 0, .12);
+      if (P.state === 'dodge' || P.state === 'dead' || h.el > 4.2) { // shaken off (or tired of it)
+        e.state = 'hurt'; e.t = .6; e.vx = -P.facing * 220; e.cd = 1.4; sfx('whoosh'); mist(e.x, e.y, e.z, 6); return true; }
+      h.tick = (h.tick || 0) + dt;
+      if (save.trump && trumpCharge > 0) { trumpCharge = Math.max(0, trumpCharge - 50 * dt); if (h.tick > .8) { h.tick = 0; floatText(P.x, P.y, 90, 'IT DRINKS YOUR TRUMP', '#C8D4EC', 11); } }
+      else if (h.tick > .6) { h.tick = 0; const d = Math.max(1, Math.round(maxHp() * .012)); if (P.hp - d <= 0) hitP(d, e.x, false); else { P.hp -= d; floatText(P.x, P.y, 76, '-' + d, '#C8D4EC', 12); hurtFlash = .1; } }
+      return false;
+    }).uy = P.y + .3;
+  }
+  // ---------------- MOONMOTH: MOONDUST, a slow puff of scale-dust that makes the legs heavy ----------------
+  PLAN_FX.w5dust = (e) => {
+    for (const o of [-14, 14]) projs.push({ owner: 'e', x: e.x + e.facing * 10, y: clamp(e.y + o * .4, FLOOR_TOP + 6, FLOOR_BOT), z: Math.max(20, e.z), vx: e.facing * 120, vy: clamp((P.y - e.y) * .6, -40, 40), vz: -(Math.max(20, e.z) - 24) / 2, dmg: Math.round(edmg(e) * .7), life: 2.6, col: '#DCE8F4', w5dust: 1 });
+    sfx('shoot'); recover(e, .8);
+  };
+  // ---------------- HOUND OF THE WILD HUNT: COURSING, a run round you in a wide half circle, and the bite from the far side ----------------
+  PLAN_FX.w5course = (e) => {
+    const cx = P.x, cy = yClamp(P.y), dx = e.x - cx, rx = clamp(Math.abs(dx), 70, 150), ry = 34, a0 = dx > 0 ? 0 : Math.PI, dir = cy > (FLOOR_TOP + FLOOR_BOT) / 2 ? -1 : 1;
+    const at = (u) => [xClamp(cx + Math.cos(a0 + dir * Math.PI * u) * rx), clamp(cy + Math.sin(a0 + dir * Math.PI * u) * ry, FLOOR_TOP + 8, FLOOR_BOT)];
+    sfx('growl'); const end = at(1);
+    act(e, 'course', (h, dt, e) => {
+      const u = cl01(h.el / .8); e.w5k = u;
+      if (u < 1) { const [x, y] = at(sm(u)); e.facing = Math.sign(x - e.x) || e.facing; e.x = x; e.y = y; if (Math.random() < .5) dust(e.x, e.y, 1); return false; }
+      const q = cl01((h.el - .8) / .16); e.x = lerp(end[0], cx, q); e.y = lerp(end[1], cy, q); e.facing = Math.sign(cx - end[0]) || e.facing; // then in, from the far side, to where you stood
+      if (q >= 1 && !h.bit) { h.bit = true; sfx('swing'); if (inEll(P.x, P.y, cx, cy, 40) && P.z < 30) hitP(edmg(e), end[0], false); }
+      if (h.el > 1.1) { recover(e, .9); return true; } return false;
+    }).draw = (h, t) => { if (h.bit) return; const u = cl01(h.el / .8); ctx.save(); ctx.setLineDash([3, 5]); ctx.strokeStyle = tellLine(u * .6); ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = 0; i <= 24; i++) { const [x, y] = at(i / 24); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = tellCol(u); ell(cx, cy, 40, 40 / 2.2); ctx.fill(); ctx.strokeStyle = tellLine(u); ctx.stroke(); ctx.restore(); }; // its course round you, and where it bites: where you stood
+  };
+  // ---------------- KNAVE OF MOONS: THE FLIP, edge-on (where nothing can touch it) it glides at you, and turns face-on to cut ----------------
+  PLAN_FX.w5flip = (e) => {
+    const side = Math.sign(e.x - P.x) || 1, tx = xClamp(P.x + side * 46), ty = yClamp(P.y), x0 = e.x, y0 = e.y; sfx('whoosh');
+    act(e, 'glide', (h, dt, e) => {
+      const u = cl01(h.el / .42); e.w5k = u; e.x = lerp(x0, tx, sm(u)); e.y = lerp(y0, ty, sm(u)); e.facing = Math.sign(P.x - e.x) || e.facing;
+      if (u >= 1) { e.w5a = 'slash'; h.name = 'slash'; h.el = 0; sfx('slice');
+        h.step = (h, dt, e) => { e.w5k = cl01(h.el / .25); if (!h.hit && h.el > .08) { const fwd = (P.x - e.x) * e.facing; if (fwd > -6 && fwd < 66 && Math.abs(P.y - e.y) < 20 && P.z < 44) { h.hit = true; hitP(edmg(e), e.x, false); } } if (h.el > .3) { recover(e, 1.1); return true; } return false; }; }
+      return false;
+    }).draw = (h, t) => { if (h.name !== 'glide') return; ctx.save(); ctx.strokeStyle = 'rgba(235,242,255,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(tx, ty); ctx.stroke(); ctx.fillStyle = tellCol(.7); ell(tx + (P.x > tx ? 30 : -30), ty, 34, 14); ctx.fill(); ctx.restore(); }; // a paper-cut line on the floor, and where it will cut
+  };
+  // ---------------- KNAVE OF MOONS: THE DEAL, three cards thrown spinning down three lanes ----------------
+  PLAN_FX.w5deal = (e) => {
+    sfx('swing'); for (const o of [-30, 0, 30]) hazards.push({ kind: 'w5card', x: e.x + e.facing * 12, y: clamp(P.y + o, FLOOR_TOP + 8, FLOOR_BOT - 2), z: 30, vx: e.facing * 230, t: 3, max: 3, dmg: Math.round(edmg(e) * .8), spin: rand(0, 6) });
+    act(e, 'deal', (h, dt, e) => { if (h.el > .3) { recover(e, .8); return true; } return false; });
+  };
+  reg('w5card', {
+    update(h, dt) { h.x += h.vx * dt; h.spin += dt * 14; if (!h.hit && Math.abs(P.x - h.x) < 13 && Math.abs(P.y - h.y) < 12 && P.z < 44) { h.hit = true; h.t = -1; hitP(h.dmg, h.x - h.vx, false); } if (h.x < camX - 60 || h.x > camX + VW + 60) h.t = -1; },
+    draw(h, t) { shadow(h.x, h.y, 6); },
+    ups(h, list, t) { list.push([h.y, () => { ctx.save(); ctx.translate(h.x, h.y - h.z); ctx.rotate(h.spin); ctx.scale(Math.max(.15, Math.abs(Math.cos(h.spin * .5))), 1); rrect(-4, -6, 8, 12, 1.4); ctx.fillStyle = C('#F2EEE4'); ctx.fill(); outline(1.1); ctx.fillStyle = C('#2E3A78'); ctx.fillRect(-2, -3, 4, 6); ctx.restore(); }]); },
+    box(h, box) { box(h.x, h.y, h.z, 20, 20); },
+  });
+  // ---------------- THE SPHINX: her wings beat (a gale and a flight of silver quills), and her riddles burn into the floor ----------------
+  PLAN_FX.w5wings = (e) => {
+    sfx('roar'); shakeMag = Math.max(shakeMag, 6);
+    for (let i = 0; i < 5; i++) projs.push({ owner: 'e', x: e.x + e.facing * 20, y: clamp(e.y + (i - 2) * 16, FLOOR_TOP + 6, FLOOR_BOT), z: 40 + i * 4, vx: e.facing * 250, vy: (i - 2) * 22, dmg: Math.round(edmg(e) * .6), life: 2, col: '#E8EEF8' });
+    act(e, 'wings', (h, dt, e) => { const dx = P.x - e.x; if (Math.abs(dx) < 280 && Math.sign(dx) === e.facing && P.state !== 'dodge' && P.state !== 'dead') P.x += e.facing * 190 * dt; // the gale
+      if (Math.random() < .6) parts.push({ x: e.x + e.facing * rand(20, 200), y: e.y + rand(-30, 30), z: rand(10, 70), vx: e.facing * 260, vy: 0, vz: 0, life: .4, max: .4, col: 'rgba(225,235,255,.5)', size: 2, shape: 'streak', rot: 0, vr: 0 });
+      if (h.el > .8) { recover(e, 1.0); return true; } return false; });
+  };
+  const GLYPHS = ['?', 'Ⅲ', '☾', 'Ⅰ', 'Ⅳ'];
+  PLAN_FX.w5glyphs = (e) => {
+    sfx('charge', 2);
+    for (const [ox, oy, d] of [[0, 0, 0], [-80, -16, .2], [80, 16, .4], [0, P.y > 290 ? -40 : 40, .6]]) hazards.push({ kind: 'w5glyph', x: xClamp(P.x + ox), y: yClamp(P.y + oy), r: 34, t: 1 + d, max: 1 + d, dmg: edmg(e), g: pick(GLYPHS) });
+    act(e, 'glyphs', (h, dt, e) => { if (h.el > .6) { recover(e, 1.0); return true; } return false; });
+  };
+  reg('w5glyph', {
+    update(h, dt) { if (h.t <= 0 && !h.done) { h.done = true; sfx('crunch'); silverBurst(h.x, h.y, 4, 14); shakeMag = Math.max(shakeMag, 4); if (inEll(P.x, P.y, h.x, h.y, h.r + 4) && P.z < 30) hitP(h.dmg, h.x, true); } },
+    draw(h, t) { const k = 1 - Math.max(0, h.t) / h.max; if (h.done) { const f = 1 + h.t / .4; if (f <= 0) return; ctx.save(); ctx.globalAlpha = f; ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(230,238,255,.6)'; ell(h.x, h.y, h.r, h.r / 2.2); ctx.fill(); ctx.restore(); return; }
+      ctx.save(); ctx.fillStyle = tellCol(k); ell(h.x, h.y, h.r * (.4 + .6 * k), h.r * (.4 + .6 * k) / 2.2); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke();
+      ctx.translate(h.x, h.y); ctx.scale(1, .45); ctx.strokeStyle = `rgba(235,242,255,${.4 + .5 * k})`; ctx.lineWidth = 1.2; circle(0, 0, h.r * .7); ctx.stroke(); ctx.fillStyle = `rgba(235,242,255,${.5 + .4 * k})`; ctx.font = '700 22px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(h.g, 0, 8); ctx.restore(); },
+  });
+
+  // ======================================================================================================
+  // THE PHANTOM OF BENEDICT
+  // ======================================================================================================
+  Object.assign(BOSS_WIND, { w5lunge: 1.0, w5feint: .85, w5guard: .7, w5grip: 1.05, w5cross: 1.0, w5steps: .95, w5blades: 1.0, w5wheel: 1.05 });
+  const isBen = (e) => e && e.def === BOSSES.benedict;
+  // THE LONG LUNGE: down your lane, from one end of the hall to the other; with the silver arm he comes back down another
+  const lungeT = (e) => targets(e, () => ({ y: yClamp(P.y), d: Math.sign(P.x - e.x) || e.facing }));
+  function lungeBand(x0, d, y, k) {
+    const x1 = d > 0 ? rightWall() : leftWall(); ctx.fillStyle = tellCol(k); ctx.fillRect(Math.min(x0, x1), y - 16, Math.abs(x1 - x0), 32);
+    ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x0, y - 16); ctx.lineTo(x1, y - 16); ctx.moveTo(x0, y + 16); ctx.lineTo(x1, y + 16); ctx.stroke();
+    ctx.lineWidth = 2; for (let i = 1; i < 7; i++) { const ax = x0 + d * (i * 60 + (performance.now() / 6) % 60); if ((ax - x1) * d > 0) break; ctx.beginPath(); ctx.moveTo(ax, y - 8); ctx.lineTo(ax + d * 10, y); ctx.lineTo(ax, y + 8); ctx.stroke(); }
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(235,242,255,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.restore(); // the line of his point
+  }
+  TELL_FX.w5lunge = (e, t, k) => { const T = lungeT(e); lungeBand(e.x, T.d, T.y, k); };
+  PLAN_FX.w5lunge = (e) => {
+    const T = lungeT(e); e.w5T = null; sfx('whoosh');
+    const run = (h, from, d, y) => { h.x0 = from; h.d = d; h.ly = y; h.x1 = d > 0 ? Math.min(rightWall() - 30, from + 520) : Math.max(leftWall() + 30, from - 520); h.r = 0; h.hit = false; };
+    act(e, 'lunge', (h, dt, e) => {
+      if (h.wait > 0) { h.wait -= dt; e.facing = h.d; if (h.wait <= 0) { sfx('whoosh'); h.r = 0; } return false; }
+      h.r += dt; const u = cl01(h.r / .32), px = e.x; e.x = lerp(h.x0, h.x1, sm(u)); e.y += (h.ly - e.y) * Math.min(1, dt * 14); e.facing = h.d;
+      if (!h.hit && Math.abs(P.y - h.ly) < 18 && P.z < 40 && (P.x - Math.min(px, e.x) + e.hw + 30) >= 0 && (Math.max(px, e.x) + e.hw + 30 - P.x) >= 0 && Math.sign(P.x - h.x0) === h.d) { h.hit = true; hitP(Math.round(edmg(e) * 1.1), e.x, true); }
+      if (Math.random() < .7) dust(e.x - h.d * 20, e.y, 1);
+      if (u >= 1) {
+        if (e.phase >= 2 && !h.second) { h.second = true; run(h, e.x, -h.d, yClamp(P.y)); h.wait = .5; return false; } // and back again, down the lane you are in now
+        recover(e, 1.05); return true; } // spent at the end of the hall: your opening
+      return false;
+    }, { wait: 0 });
+    const h = hazards[hazards.length - 1]; run(h, e.x, T.d, T.y);
+    h.draw = (h, t) => { if (h.wait > 0) { ctx.save(); lungeBand(e.x, h.d, h.ly, 1 - h.wait / .5); ctx.restore(); } };
+  };
+  // FEINT AND CUT: he shows you the cut in front of him, steps through the air, and the real cut comes from behind you
+  TELL_FX.w5feint = (e, t, k) => { const R = 84; ctx.fillStyle = tellCol(k * .7); ctx.beginPath(); ctx.ellipse(e.x, e.y, R, R / 2.2, 0, e.facing > 0 ? -Math.PI / 2 : Math.PI / 2, e.facing > 0 ? Math.PI / 2 : Math.PI * 1.5); ctx.lineTo(e.x, e.y); ctx.fill(); ctx.setLineDash([5, 4]); ctx.strokeStyle = tellLine(k * .6); ctx.lineWidth = 1.4; ctx.stroke(); ctx.setLineDash([]); };
+  PLAN_FX.w5feint = (e) => {
+    sfx('whoosh'); mist(e.x, e.y, 30, 12); ghosts.push({ x: e.x, y: e.y, z: 0, facing: e.facing, pose: { arm: -2 }, a: .3, dark: false });
+    act(e, 'feint', (h, dt, e) => {
+      if (h.el < .22) { e.w5vis = 1 - h.el / .22; e.w5k = 0; return false; }
+      if (!h.moved) { h.moved = true; let tx = P.x - P.facing * 58; if (tx < leftWall() + 30 || tx > rightWall() - 30) tx = P.x + P.facing * 58; e.x = xClamp(tx); e.y = yClamp(P.y); e.facing = Math.sign(P.x - e.x) || 1; h.mx = e.x; h.my = e.y; h.mf = e.facing; mist(e.x, e.y, 30, 12); sfx('swing'); floatText(P.x, P.y, 100, 'BEHIND YOU', '#E8EEF8', 13); }
+      e.w5vis = Math.min(1, (h.el - .22) / .2); e.facing = h.mf;
+      const k = cl01((h.el - .6) / .2); e.w5k = k;
+      if (h.el > .6 && !h.hit) { h.hit = true; sfx('slice'); const fwd = (P.x - e.x) * e.facing; if (fwd > -10 && fwd < 92 && Math.abs(P.y - e.y) < 24 && P.z < 44) hitP(edmg(e), e.x, true); }
+      if (h.el > .85) { recover(e, 1.1); return true; } return false;
+    }).draw = (h, t) => { if (!h.moved || h.hit) return; const k = cl01((h.el - .22) / .38), R = 92; ctx.save(); ctx.fillStyle = tellCol(k); ctx.beginPath(); ctx.ellipse(h.mx, h.my, R, R / 2.2, 0, h.mf > 0 ? -Math.PI / 2 : Math.PI / 2, h.mf > 0 ? Math.PI / 2 : Math.PI * 1.5); ctx.lineTo(h.mx, h.my); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); };
+  };
+  // THE PERFECT GUARD: he stands en garde. Strike his front and he parries and ripostes at once; get behind him and break it
+  TELL_FX.w5guard = (e, t, k) => guardSign(e, k);
+  function guardSign(e, k) { const R = 46 + e.hw; ctx.fillStyle = guardCol(k); ell(e.x, e.y, R, R / 2.2); ctx.fill(); ctx.strokeStyle = guardLine(k); ctx.lineWidth = 2; ell(e.x, e.y, R, R / 2.2); ctx.stroke();
+    ctx.lineWidth = 2.4; ctx.beginPath(); const fx = e.x + e.facing * R * .7; ctx.moveTo(fx - 9, e.y - 6); ctx.lineTo(fx + 9, e.y + 6); ctx.moveTo(fx + 9, e.y - 6); ctx.lineTo(fx - 9, e.y + 6); ctx.stroke(); // crossed blades on his guarded side
+    label(e.x - e.facing * R * .6, e.y + 3, 'OPEN', .4 + .4 * k); }
+  PLAN_FX.w5guard = (e) => {
+    floatText(e.x, e.y, e.hh * e.size + 30, 'EN GARDE', '#C8DAFF', 15); sfx('hit-metal', .4); e.w5guarding = true; e.w5parryT = 0;
+    act(e, 'guard', (h, dt, e) => { e.w5guarding = true; e.facing = Math.sign(P.x - e.x) || e.facing; e.w5parryT = Math.max(0, (e.w5parryT || 0) - dt); if (h.el > 2.1) { e.w5guarding = false; recover(e, .5); return true; } return false; })
+      .draw = (h, t) => guardSign(h.e, 1);
+  };
+  // what happens to a blow that lands on his guard (strike() is wrapped in w5Dom)
+  W5.guardHit = (e, m) => {
+    if (m.trump) return false; // a Trump's power is not a blade
+    const front = (P.x - e.x) * e.facing > 0;
+    if (front) {
+      floatText(e.x, e.y, e.hh * e.size + 18, 'PARRIED', '#C8DAFF', 15); sfx('hit-metal', 1); hitstop = Math.max(hitstop, .08); shakeMag = Math.max(shakeMag, 4);
+      burst(e.x + e.facing * 20, e.y, 50, ['#FFFFFF', '#C8DAFF'], 10, 'spark', -e.facing);
+      if ((e.w5parryT || 0) <= 0) { e.w5parryT = .45; fx.push({ kind: 'slash', x: e.x + e.facing * 40, y: e.y, z: 40, ang: 0, t: .2, max: .2, size: 50, col: '#E8EEF8' }); const fwd = (P.x - e.x) * e.facing; if (fwd < 110 && Math.abs(P.y - e.y) < 26 && P.z < 50) hitP(Math.round(edmg(e) * .8), e.x, true); } // the riposte
+      return true;
+    }
+    e.w5guarding = false; e.state = 'down'; e.t = 1.5; e.plan = null; floatText(e.x, e.y, e.hh * e.size + 24, 'GUARD BROKEN', '#FFE2A0', 17); sfx('break'); hitstop = Math.max(hitstop, .12); shakeMag = Math.max(shakeMag, 8);
+    return 'crit';
+  };
+  // THE SILVER ARM REACHES: the hand comes out on its chain of moonlight to where you stand; caught, you are drawn in to the blade
+  W5.gripT = (e) => e.w5G || { x: P.x, y: yClamp(P.y) };
+  TELL_FX.w5grip = (e, t, k) => { const G = W5.gripT(e), lock = k > .7, r = 34; ctx.fillStyle = tellCol(lock ? k : k * .5); ell(G.x, G.y, r, r / 2.2); ctx.fill(); if (!lock) ctx.setLineDash([4, 4]); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(G.x, G.y, r, r / 2.2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = `rgba(255,220,220,${.4 + .4 * k})`; for (let i = 0; i < 4; i++) { ell(G.x + 8 + i * 3, G.y - 6 + i * 3.4, 6, 1.2, .2); ctx.fill(); } ell(G.x - 6, G.y, 7, 4); ctx.fill(); // an open hand on the floor
+    if (lock) label(G.x, G.y - r / 2.2 - 4, 'LOCKED', .5 + .4 * k); };
+  PLAN_FX.w5grip = (e) => {
+    const G = Object.assign({}, W5.gripT(e)); e.w5G = null; sfx('charge', 1);
+    const local = () => { const s = e.size, lx = (G.x - e.x) * e.facing / s - 4, ly = (G.y - e.y) / s - (-58 + 5); return [lx, ly]; }; // from his shoulder, in his own space
+    act(e, 'grip', (h, dt, e) => {
+      const [lx, ly] = local(), d = Math.hypot(lx, ly), A = Math.atan2(ly, lx), full = Math.max(0, d - 23); e.w5siA = A;
+      if (h.el < .32) { e.w5reach = full * sm(h.el / .32); return false; }
+      if (!h.slam) { h.slam = true; e.w5reach = full; sfx('slam'); shakeMag = Math.max(shakeMag, 5); silverBurst(G.x, G.y, 4, 10);
+        if (inEll(P.x, P.y, G.x, G.y, 36) && P.z < 30 && P.state !== 'dodge' && P.inv <= 0) { h.caught = true; e.w5caught = 1; floatText(P.x, P.y, 96, 'CAUGHT', '#E8EEF8', 15); } }
+      if (h.caught) { // drawn in on the chain, then the cut
+        const u = cl01((h.el - .32) / .38), tx = e.x + e.facing * 44; P.state = 'hurt'; P.t = Math.max(P.t, .2); P.vx = 0; P.x = lerp(G.x, tx, sm(u)); P.y = lerp(G.y, e.y, sm(u)); e.w5reach = full * (1 - sm(u)) + 2;
+        if (u >= 1 && !h.cut) { h.cut = true; sfx('slice'); hitP(Math.round(edmg(e) * 1.2), e.x, true); fx.push({ kind: 'slash', x: tx, y: e.y, z: 40, ang: -.4, t: .25, max: .25, size: 56, col: '#E8EEF8' }); }
+        if (h.el > .85) { recover(e, .8); return true; } return false;
+      }
+      e.w5reach = full * (1 - sm(cl01((h.el - .5) / .35))); // it missed: the arm comes home, slowly
+      if (h.el > .9) { recover(e, 1.15); return true; } return false; // and he is open while it does
+    });
+  };
+  // CROSSED BLADES: the sword and the silver hand cut an X through where you stand, one stroke after the other
+  const crossT = (e) => targets(e, () => ({ x: clamp(P.x, leftWall() + 60, rightWall() - 60), y: yClamp(P.y) }));
+  const crossSeg = (T, i) => { const dx = 170, dy = 52, s = i ? -1 : 1; return [T.x - dx, T.y - dy * s, T.x + dx, T.y + dy * s]; };
+  const segDist = (px, py, s) => { const [x0, y0, x1, y1] = s, vx = x1 - x0, vy = y1 - y0, u = cl01(((px - x0) * vx + (py - y0) * vy) / (vx * vx + vy * vy)); return Math.hypot(px - (x0 + vx * u), py - (y0 + vy * u)); };
+  function crossBand(s, k, n, live) { const [x0, y0, x1, y1] = s, a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0);
+    ctx.save(); ctx.translate(x0, y0); ctx.rotate(a); ctx.fillStyle = live ? tellCol(k) : tellCol(k * .5); ctx.fillRect(0, -11, L, 22); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; ctx.strokeRect(0, -11, L, 22); ctx.restore(); label(x0 + (x1 - x0) * .1, y0 + (y1 - y0) * .1 - 6, String(n), .5 + .4 * k); }
+  TELL_FX.w5cross = (e, t, k) => { const T = crossT(e); crossBand(crossSeg(T, 0), k, 1, true); crossBand(crossSeg(T, 1), k, 2, false); };
+  PLAN_FX.w5cross = (e) => {
+    const T = crossT(e); e.w5T = null; sfx('whoosh');
+    act(e, 'cross', (h, dt, e) => { e.w5k = cl01(h.el / .5);
+      for (const [i, at] of [[0, .12], [1, .34]]) if (h.el > at && !h['c' + i]) { h['c' + i] = true; sfx('slice'); shakeMag = Math.max(shakeMag, 5); const s = crossSeg(T, i); h.flash.push({ s, t: .3 });
+        if (!h.hit && segDist(P.x, P.y, s) < 15 && P.z < 44) { h.hit = true; hitP(Math.round(edmg(e) * 1.05), e.x, true); } }
+      for (const f of h.flash) f.t -= dt;
+      if (h.el > .75) { recover(e, 1.0); return true; } return false;
+    }, { flash: [] }).draw = (h, t) => { if (!h.c1) crossBand(crossSeg(T, 1), 1, 2, true); for (const f of h.flash) if (f.t > 0) { const [x0, y0, x1, y1] = f.s; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(235,242,255,${f.t * 3})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.restore(); } };
+  };
+  // ECHO OF YOUR STEPS: the city remembers where you walked. A ghost blade falls on each footprint, oldest first: don't go back
+  W5.trail = [];
+  TELL_FX.w5steps = (e, t, k) => { for (let i = 0; i < W5.trail.length; i++) { const p = W5.trail[i]; footprint(p.x, p.y, k * (.4 + .6 * i / W5.trail.length), false); } };
+  function footprint(x, y, k, next) { ctx.fillStyle = next ? tellCol(1) : `rgba(225,235,255,${.25 + .45 * k})`; ell(x - 3, y - 2, 4, 1.8, -.2); ctx.fill(); ell(x + 3, y + 2, 4, 1.8, -.2); ctx.fill(); if (next) { ctx.strokeStyle = tellLine(1); ctx.lineWidth = 1.4; ell(x, y, 22, 10); ctx.stroke(); } }
+  PLAN_FX.w5steps = (e) => {
+    const marks = W5.trail.map((p, i) => ({ x: p.x, y: p.y, at: .55 + i * .13, done: false })); sfx('charge', 2);
+    if (!marks.length) marks.push({ x: P.x, y: P.y, at: .6, done: false });
+    hazards.push({ kind: 'w5steps', marks, el: 0, t: 9, max: 9, dmg: edmg(e), hit: false });
+    act(e, 'steps', (h, dt, e) => { if (h.el > .7) { recover(e, .9); return true; } return false; });
+  };
+  reg('w5steps', {
+    update(h, dt) { h.el += dt; let left = 0;
+      for (const m of h.marks) { if (m.done) continue; left++; if (h.el >= m.at) { m.done = true; m.f = .4; sfx('slice'); if (!h.hit && inEll(P.x, P.y, m.x, m.y, 26) && P.z < 36) { h.hit = true; hitP(h.dmg, m.x, true); } } }
+      for (const m of h.marks) if (m.f > 0) m.f -= dt;
+      if (!left && h.marks.every(m => !(m.f > 0))) h.t = -1; },
+    draw(h, t) { const next = h.marks.find(m => !m.done); for (const m of h.marks) if (!m.done) footprint(m.x, m.y, 1, m === next); },
+    ups(h, list, t) { for (const m of h.marks) { if (m.done && !(m.f > 0)) continue; const z = m.done ? 0 : Math.max(0, (m.at - h.el) / .3) * 120; if (!m.done && z > 110) continue;
+      list.push([m.y, () => onMain(() => { ctx.save(); ctx.globalAlpha = m.done ? m.f / .4 : .8; ctx.translate(m.x, m.y - 4 - z); ctx.rotate(Math.PI / 2); benSword(40, 0); ctx.restore(); })]); } },
+    box(h, box) { for (const m of h.marks) box(m.x, m.y, 0, 30, 140); },
+  });
+  // MOONFALL OF BLADES: the swords of his mandorla fall across the hall in a sweeping wave, one rank after another; one gap runs through them
+  PLAN_FX.w5blades = (e) => {
+    const n = 9, x0 = leftWall() + 6, x1 = rightWall() - 6, w = (x1 - x0) / n, dir = e.x < (x0 + x1) / 2 ? 1 : -1, cols = [];
+    let gy = yClamp(P.y + (P.y > (FLOOR_TOP + FLOOR_BOT) / 2 ? -1 : 1) * rand(46, 70)); for (let i = 0; i < n; i++) { const ci = dir > 0 ? i : n - 1 - i; gy = clamp(gy + rand(-26, 26), FLOOR_TOP + 22, FLOOR_BOT - 14); cols.push({ x: x0 + (ci + .5) * w, w, gy, at: .85 + i * .2, done: false }); }
+    hazards.push({ kind: 'w5blades', cols, el: 0, t: 9, max: 9, dmg: edmg(e), hit: false }); e.w5halo = 0; sfx('charge', 2);
+    act(e, 'blades', (h, dt, e) => { if (h.el > .9) { recover(e, 1.0); return true; } return false; });
+  };
+  reg('w5blades', {
+    update(h, dt) { h.el += dt; let left = 0;
+      for (const c of h.cols) { if (c.done) { c.f -= dt; continue; } left++; if (h.el >= c.at) { c.done = true; c.f = .45; sfx('slice'); shakeMag = Math.max(shakeMag, 3);
+        if (!h.hit && Math.abs(P.x - c.x) < c.w / 2 + 4 && Math.abs(P.y - c.gy) > 20 && P.z < 60) { h.hit = true; hitP(h.dmg, c.x, true); } } }
+      if (!left && h.cols.every(c => c.f <= 0)) h.t = -1; },
+    draw(h, t) { for (const c of h.cols) { if (c.done) continue; const k = cl01(1 - (c.at - h.el) / .9);
+      ctx.fillStyle = tellCol(k * .8); ctx.fillRect(c.x - c.w / 2 + 2, FLOOR_TOP + 6, c.w - 4, c.gy - 20 - FLOOR_TOP - 6); ctx.fillRect(c.x - c.w / 2 + 2, c.gy + 20, c.w - 4, FLOOR_BOT + 6 - c.gy - 20);
+      ctx.strokeStyle = 'rgba(200,225,255,.7)'; ctx.lineWidth = 1.4; ell(c.x, c.gy, c.w / 2 - 2, 9); ctx.stroke(); } }, // the gap, left clear
+    ups(h, list, t) { for (const c of h.cols) { const pre = (c.at - h.el); if (c.done ? c.f <= 0 : pre > .3) continue; const z = c.done ? 0 : pre / .3 * 140, a = c.done ? c.f / .45 : 1;
+      for (let j = 0; j < 4; j++) { const y = FLOOR_TOP + 14 + j * 26 + (j > 1 ? 8 : 0); if (Math.abs(y - c.gy) < 20) continue; list.push([y, () => onMain(() => { ctx.save(); ctx.globalAlpha = a * .85; ctx.translate(c.x + (j % 2) * 6 - 3, y - z - 2); ctx.rotate(Math.PI / 2); benSword(38, 0); ctx.restore(); })]); } } },
+    box(h, box) { for (const c of h.cols) box(c.x, FLOOR_BOT, 0, c.w, 260); },
+  });
+  // THE SILVER WHEEL (his close-range answer): blade and silver hand together in a full turn, a wheel of light round him
+  const wheelR = (e) => e.hw + 84;
+  TELL_FX.w5wheel = (e, t, k) => { const R = wheelR(e); ctx.fillStyle = tellCol(k); ell(e.x, e.y, R * (.4 + .6 * k), R * (.4 + .6 * k) / 2.2); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(e.x, e.y, R, R / 2.2); ctx.stroke();
+    ctx.lineWidth = 2.2; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + t * 2 * k; ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * R * .8, e.y + Math.sin(a) * R * .8 / 2.2); ctx.lineTo(e.x + Math.cos(a + .25) * R, e.y + Math.sin(a + .25) * R / 2.2); ctx.stroke(); } };
+  PLAN_FX.w5wheel = (e) => {
+    sfx('whoosh'); shakeMag = Math.max(shakeMag, 8);
+    act(e, 'wheel', (h, dt, e) => { e.w5k = cl01(h.el / .5);
+      if (!h.hit && h.el > .12) { h.hit = true; const R = wheelR(e); if (inEll(P.x, P.y, e.x, e.y, R) && P.z < 50) hitP(Math.round(edmg(e) * 1.1), e.x, true); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 30, t: .4, max: .4, r: R, col: '#E8EEF8' }); silverBurst(e.x, e.y, 40, 20); }
+      if (h.el > .5) { recover(e, 1.2); return true; } return false; }); // it leaves him turned and open for a moment
+  };
+
+  // ======================================================================================================
+  // THE RULES OF THE PLACES
+  // ======================================================================================================
+  // ---------------- THE STAIR OF MOONLIGHT: the dawn is coming up behind you ----------------
+  // Tir-na Nog'th is there only while the moon is up. Behind you the sky is paling, and wherever the dawn has reached
+  // the city is simply gone: stand in it and it burns you and drives you on. It creeps in on you even while you fight
+  // (though slowly, and never past a third of the way across), and every foe you put down wins a little of the night back.
+  // The ghosts of the city burn in it too: knock them back into the light.
+  MECH_FX.w5dawn = {
+    start(m) { m.x = -260; m.seen = new Set(); m.tick = 0; m.etick = 0; m.told = 0; },
+    update(m, dt) {
+      if (stillT > 0 || zoneTrans) return;
+      if (!m.told && P.x > 140) { m.told = 1; floatText(P.x, P.y, 110, 'THE DAWN IS COMING · KEEP AHEAD OF IT', '#F4D8C8', 14); }
+      for (const e of enemies) if (e.dead && !m.seen.has(e)) { m.seen.add(e); m.x -= 46; } // every foe put down wins back a little night
+      const lx = lockX !== null ? lockX : camX;
+      if (waveActive) m.x = Math.min(m.x + 9 * dt, lx + VW * .34);
+      else { m.x = Math.max(m.x, camX - 140); m.x += (P.x - m.x > 420 ? 60 : 26) * dt; }
+      m.x = Math.max(m.x, -260);
+      m.k = cl01((m.x - camX + 40) / 120);
+      if (P.x < m.x - 6 && P.state !== 'dead') { m.tick -= dt; if (m.tick <= 0) { m.tick = .5; hitP(Math.max(4, Math.round(maxHp() * .05)), P.x - 60, false); if (P.state === 'hurt') P.vx = 260; floatText(P.x, P.y, 90, 'THE DAWN BURNS', '#FFD8C0', 13); } }
+      m.etick -= dt;
+      if (m.etick <= 0) { m.etick = .4; for (const e of enemies) if (!e.dead && !e.boss && e.state !== 'enter' && e.x < m.x) { strike(e, 8, 1, { dmg: 8, kb: 120, power: 0, trump: 1 }); if (!e.w5burnt) { e.w5burnt = 1; floatText(e.x, e.y, e.hh + 24, 'THE DAWN TAKES IT', '#FFD8C0', 11); } } }
+    },
+    boxes(m, box) {},
+    list(m, list, t) {
+      const x1 = m.x; if (x1 < camX - 20) return;
+      list.push([FLOOR_TOP - 2, () => onMain(() => { // where the dawn has come, the city is not: only the pale sky, and motes of what was there
+        ctx.save(); const x0 = camX - 10, edge = 60, top = Y_OFF;
+        const g = ctx.createLinearGradient(x1 - edge, 0, x1, 0); g.addColorStop(0, 'rgba(250,214,196,.86)'); g.addColorStop(1, 'rgba(250,214,196,0)');
+        const v = ctx.createLinearGradient(0, top, 0, VH); v.addColorStop(0, 'rgba(246,190,176,.9)'); v.addColorStop(.5, 'rgba(252,222,200,.86)'); v.addColorStop(1, 'rgba(255,236,214,.8)');
+        if (x1 - edge > x0) { ctx.fillStyle = v; ctx.fillRect(x0, top, x1 - edge - x0, VH - top); }
+        ctx.fillStyle = g; ctx.fillRect(Math.max(x0, x1 - edge), top, Math.min(edge, x1 - x0), VH - top);
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 28; i++) { const life = (t * .25 + hsh(i)) % 1, px = x1 - hsh(i + 1) * 70, py = VH - life * (VH - top) * (.6 + hsh(i + 2) * .4); ctx.fillStyle = `rgba(255,240,220,${Math.sin(life * Math.PI) * .6})`; circle(px, py, 1 + hsh(i + 3) * 1.4); ctx.fill(); } // the city coming apart at the edge
+        ctx.restore();
+      })]);
+    },
+  };
+
+  // ---------------- THE STREETS: the city is only where the moon falls ----------------
+  // Clouds drift slowly over the moon, and their shadows drift over the street; under a shadow the paving is not there
+  // (you see the night sky through it, and the cloud far below). Stand in one and you sink, and fall through, and the moon
+  // catches you somewhere else, hurt. The ghosts of the city float over it; but anything knocked down into it falls.
+  // At the end of the street the Sphinx waits with a riddle (see below).
+  const cloudsFor = () => { const c = []; for (let i = 0; i < 4; i++) c.push(newCloud(i, true)); return c; };
+  function newCloud(i, init) { const dir = i % 2 ? -1 : 1, rx = rand(62, 96);
+    return { id: Math.random() * 1e4 | 0, dir, x: init ? 320 + i * 380 + rand(-60, 60) : (dir > 0 ? camX - rx - rand(60, 300) : camX + VW + rx + rand(60, 300)), y: rand(FLOOR_TOP + 28, FLOOR_BOT - 22), rx, ry: rand(18, 26), vx: dir * rand(18, 28) }; }
+  const inCore = (c, x, y, s = .74) => Math.hypot((x - c.x) / (c.rx * s), (y - c.y) / (c.ry * s)) < 1;
+  const inAnyCore = (x, y, s) => MECH_ONE && MECH_ONE.cl && MECH_ONE.cl.some(c => inCore(c, x, y, s));
+  let MECH_ONE = null;
+  function safeSpot(x, y) { // the nearest place the moon is shining
+    for (let r = 0; r < 300; r += 12) for (const [dx, dy] of [[r, 0], [-r, 0], [0, r * .4], [0, -r * .4], [r, r * .3], [-r, -r * .3]]) { const px = clamp(x + dx, leftWall() + 20, rightWall() - 20), py = clamp(y + dy, FLOOR_TOP + 10, FLOOR_BOT - 2); if (!inAnyCore(px, py, 1.05)) return [px, py]; }
+    return [x, y];
+  }
+  const RIDDLES = [
+    ['What walks on four legs in the morning, on two at noon, and on three in the evening?', 'A man', 'The moon', 'A unicorn'],
+    ['The more of me there is, the less you see. What am I?', 'Darkness', 'Moonlight', 'A mirror'],
+    ['I am drawn, but never pulled. I am cold to the touch. I am a face, and I am a door. What am I?', 'A Trump', 'A sword', 'A ghost'],
+    ['Walk me once and you are made anew. I lie beneath the true city, and the one who stops on me dies. What am I?', 'The Pattern', 'The Black Road', 'The moon-stair'],
+    ['I have a mouth but never speak, a bed but never sleep, and I run but never walk. What am I?', 'A river', 'A road', 'A hound'],
+    ['What can fill a hall to its rafters and yet take up no room at all?', 'Light', 'Water', 'A crowd'],
+  ];
+  MECH_FX.w5cloud = {
+    start(m) { MECH_ONE = m; m.cl = cloudsFor(); m.warn = 0; m.sph = null; m.sphDone = false; },
+    update(m, dt) {
+      MECH_ONE = m;
+      if (!zoneTrans && stillT <= 0) for (const c of m.cl) { c.x += c.vx * dt * (m.sph && m.sph.phase !== 'fight' ? .3 : 1); if ((c.dir > 0 && c.x > camX + VW + c.rx + 320) || (c.dir < 0 && c.x < camX - c.rx - 320)) Object.assign(c, newCloud(c.dir > 0 ? 0 : 1, false)); }
+      m.warn = Math.max(0, m.warn - dt);
+      // the prince: in the shadow of a cloud he sinks, and falls through the city
+      const inside = !zoneTrans && P.z <= 1 && !['dodge', 'dead'].includes(P.state) && P.inv <= 0 && inAnyCore(P.x, P.y);
+      P.w5sink = inside ? (P.w5sink || 0) + dt : Math.max(0, (P.w5sink || 0) - dt * 2);
+      if (inside && !m.warn) { m.warn = 3; floatText(P.x, P.y, 100, 'THE STREET IS NOT THERE', '#C8D4EC', 13); }
+      if (P.w5sink > .55) { P.w5sink = 0; sfx('whoosh'); mist(P.x, P.y, 10, 14);
+        const [sx, sy] = safeSpot(P.x, P.y); P.x = sx; P.y = sy; hitP(Math.max(6, Math.round(maxHp() * .1)), P.x, false); floatText(P.x, P.y, 96, 'FELL THROUGH THE CITY', '#C8D4EC', 13); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .5, max: .5, r: 50, col: '#DDE6F4', flat: 1 }); }
+      // the fallen: anything knocked down into the shadow goes through
+      for (const e of enemies) { if (e.dead || e.boss || e.def.move === 'fly' || e.state === 'enter' || e.state === 'w5riddle') continue;
+        const knocked = ['hurt', 'down'].includes(e.state) && e.z < 4;
+        e.w5sink = knocked && inAnyCore(e.x, e.y) ? (e.w5sink || 0) + dt : 0;
+        if (e.w5sink > .3) { e.w5sink = 0; mist(e.x, e.y, 10, 14); floatText(e.x, e.y, e.hh + 26, 'FELL THROUGH', '#C8D4EC', 13); sfx('whoosh');
+          const dmg = e.type === 'w5sphinx' ? Math.round(e.maxHp * .15) : Math.max(30, Math.round(e.maxHp * .6)); strike(e, dmg, Math.sign(e.x - P.x) || 1, { dmg, kb: 0, power: 2, trump: 1 });
+          if (!e.dead) { const [sx, sy] = safeSpot(e.x, e.y); e.x = sx; e.y = sy; } } }
+      sphinxUpdate(m, dt);
+    },
+    boxes(m, box) { const S = m.sph; if (S) { box(S.ex - 120, FLOOR_TOP + 50, 0, 70, 80); box(camX + VW / 2, Y_OFF + 60, 0, VW / 2, 60); } },
+    list(m, list, t) {
+      for (const c of m.cl) { if (c.x + c.rx < camX - 20 || c.x - c.rx > camX + VW + 20) continue;
+        list.push([FLOOR_TOP - 1, () => onMain(() => { // the shadow on the street; inside it, the street is gone and there is the night
+          ctx.save(); ctx.fillStyle = 'rgba(4,8,24,.4)'; ell(c.x, c.y, c.rx, c.ry); ctx.fill();
+          ell(c.x, c.y, c.rx * .74, c.ry * .74); ctx.clip();
+          const g = ctx.createLinearGradient(0, c.y - c.ry, 0, c.y + c.ry); g.addColorStop(0, '#02040C'); g.addColorStop(1, '#101A3C'); ctx.fillStyle = g; ctx.fillRect(c.x - c.rx, c.y - c.ry, c.rx * 2, c.ry * 2);
+          for (let i = 0; i < 16; i++) { ctx.fillStyle = `rgba(230,238,255,${.4 + hsh(c.id + i) * .5})`; circle(c.x + (hsh(c.id + i * 3) - .5) * c.rx * 1.4, c.y + (hsh(c.id + i * 7) - .5) * c.ry * 1.4, .6 + hsh(i) * .6); ctx.fill(); } // stars, far below the city
+          ctx.fillStyle = 'rgba(60,76,130,.5)'; for (let i = 0; i < 4; i++) ell(c.x + (hsh(c.id + i * 11) - .5) * c.rx, c.y + c.ry * .4, c.rx * .3, c.ry * .16); ctx.fill(); // the cloud sea, a long way down
+          ctx.restore();
+          ctx.save(); ctx.setLineDash([4, 5]); ctx.strokeStyle = 'rgba(205,218,245,.45)'; ctx.lineWidth = 1.2; ell(c.x, c.y, c.rx * .74, c.ry * .74); ctx.stroke(); ctx.restore();
+        })]); }
+      if ((P.w5sink || 0) > 0) list.push([P.y + .3, () => onMain(() => { const k = P.w5sink / .55; ctx.save(); ctx.fillStyle = `rgba(2,4,14,${.4 + .5 * k})`; ell(P.x, P.y, 16, 5); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(200,214,245,${.3 * k})`; ell(P.x, P.y - 20 * k, 14, 30 * k); ctx.fill(); ctx.restore(); })]); // he is sinking
+      sphinxList(m, list, t);
+    },
+  };
+  // ---------------- THE SPHINX: she bars the end of the street and asks one riddle. Walk onto your answer. ----------------
+  // Answered rightly, she gives you a gift and flies; answered wrongly, she will have you instead, and you must fight her.
+  function sphinxUpdate(m, dt) {
+    if (stage.secret || m.sphDone) return;
+    if (!m.sph) {
+      if (!stage.waves.length || waveIdx < stage.waves.length || waveActive || zoneTrans) return;
+      waveActive = true; lockX = clamp(camX, 0, Math.max(0, stage.len - VW)); $('#go').hidden = true;
+      const e = spawnEnemy('w5sphinx', 1); if (e.elite) { e.elite = false; e.guard = e.guardMax = 0; e.hp = e.maxHp = Math.round(e.maxHp / 1.5); } e.x = lockX + VW * .74; e.y = (FLOOR_TOP + FLOOR_BOT) / 2 + 6; e.facing = -1; e.w5calm = 1;
+      if (typeof setEntrance === 'function') setEntrance(e, 'w5descend'); e.facing = -1;
+      m.sph = { phase: 'arrive', e, t: 0, ex: e.x };
+      banner('The Sphinx', 'SHE WILL ASK YOU A RIDDLE', 2.6); if (typeof TRACKS !== 'undefined' && TRACKS.w5riddle) playMusic('w5riddle');
+      return;
+    }
+    const S = m.sph, e = S.e; S.t += dt;
+    if (!enemies.includes(e) && S.phase !== 'leave') { m.sph = null; if (S.phase === 'fight') m.sphDone = true; return; } // she is gone (a room change, a reset): ask again later
+    if (S.phase === 'arrive' && e.state === 'idle') {
+      const q = pick(RIDDLES), opts = [q[1], q[2], q[3]].sort(() => Math.random() - .5), ys = [FLOOR_TOP + 24, (FLOOR_TOP + FLOOR_BOT) / 2 + 2, FLOOR_BOT - 12];
+      S.phase = 'ask'; S.t = 0; S.q = q[0]; S.right = q[1]; S.ex = e.x; e.state = 'w5riddle'; e.facing = -1;
+      S.plates = opts.map((a, i) => ({ a, x: e.x - 130 - (i === 1 ? 14 : 0), y: ys[i] }));
+      sfx('trump');
+    }
+    if (S.phase === 'ask') {
+      e.state = 'w5riddle'; e.cd = 1; P.x = Math.min(P.x, e.x - 66); // she bars the way
+      if (S.t > 1.4 && P.z < 10) for (const p of S.plates) if (Math.abs(P.x - p.x) < 24 && Math.abs(P.y - p.y) < 13) { answer(m, p); break; }
+    }
+    if (S.phase === 'leave') { e.state = 'w5riddle'; e.z += dt * (60 + S.t * 220); e.x += dt * 40; if (e.z > 320) { e.remove = true; m.sphDone = true; m.sph = null; if (TRACKS.moon2) playMusic('moon2'); } }
+    if (S.phase === 'fight' && e.dead) { m.sphDone = true; m.sph = null; if (TRACKS.moon2) playMusic('moon2'); banner('The Sphinx', 'SHE IS ANSWERED, ANOTHER WAY', 2.2); }
+  }
+  function answer(m, p) {
+    const S = m.sph, e = S.e;
+    if (p.a === S.right) {
+      S.phase = 'leave'; S.t = 0; sfx('weapon'); flashT = .12; p.ok = 1;
+      const sh = Math.round(160 * (1 + .5 * save.cycle)); save.shards += sh; runShards += sh; save.sigils += 3; runSigils += 3; P.hp = maxHp(); refreshHud(true);
+      banner('Rightly answered', `"${S.right.toUpperCase()}" · SHE STEPS ASIDE · +${sh} SHARDS · +3 SIGILS · HEALED`, 3);
+      burst(e.x, e.y, 40, ['#FFFFFF', '#DDE6F4', '#C8D4EC'], 30, 'spark', 0, true);
+    } else {
+      S.phase = 'fight'; p.bad = 1; e.state = 'wind'; e.plan = 'pounce'; e.t = e.windMax = .7; e.w5calm = 0; sfx('roar'); shakeMag = 10;
+      banner('Wrongly answered', 'THE SPHINX WILL HAVE YOU INSTEAD', 2.4);
+    }
+  }
+  function wrapText(s, w) { const out = []; let line = ''; for (const word of s.split(' ')) { const tryL = line ? line + ' ' + word : word; if (ctx.measureText(tryL).width > w && line) { out.push(line); line = word; } else line = tryL; } if (line) out.push(line); return out; }
+  function sphinxList(m, list, t) {
+    const S = m.sph; if (!S || S.phase !== 'ask') return;
+    const a = cl01(S.t / .8);
+    for (const p of S.plates) list.push([p.y - 1, () => onMain(() => { // a tablet of moonstone laid in the street, the answer cut into it
+      ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y); ctx.fillStyle = 'rgba(20,28,60,.85)'; ell(0, 0, 30, 9); ctx.fill(); ctx.strokeStyle = 'rgba(214,222,236,.9)'; ctx.lineWidth = 1.4; ell(0, 0, 30, 9); ctx.stroke();
+      ctx.fillStyle = '#EEF2FA'; ctx.font = '700 8px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(p.a.toUpperCase(), 0, 3);
+      ctx.restore(); })]);
+    list.push([FLOOR_BOT + 50, () => onMain(() => { // the riddle, as she speaks it
+      ctx.save(); ctx.globalAlpha = a; ctx.font = '700 10px Cinzel, Georgia, serif'; const W = Math.min(360, VW - 80), lines = wrapText(S.q, W - 24), H = 34 + lines.length * 13, x = camX + VW / 2 - W / 2, y = Y_OFF + 30;
+      ctx.fillStyle = 'rgba(8,12,32,.86)'; rrect(x, y, W, H, 6); ctx.fill(); ctx.strokeStyle = '#C8D2E4'; ctx.lineWidth = 1.6; ctx.stroke(); ctx.strokeStyle = 'rgba(200,210,230,.4)'; ctx.lineWidth = .8; rrect(x + 4, y + 4, W - 8, H - 8, 4); ctx.stroke();
+      ctx.fillStyle = '#B8C6DC'; ctx.font = '700 8px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText('THE SPHINX ASKS', x + W / 2, y + 14);
+      ctx.fillStyle = '#F4F7FC'; ctx.font = '700 10px Cinzel, Georgia, serif'; lines.forEach((l, i) => ctx.fillText(l, x + W / 2, y + 28 + i * 13));
+      ctx.fillStyle = '#B8C6DC'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.fillText('WALK ONTO YOUR ANSWER', x + W / 2, y + H - 6);
+      ctx.restore(); })]);
+  }
+
+  // ---------------- THE MOON THRONE: the night ends as the fight does ----------------
+  // As the Phantom changes the moon goes down and the east pales; in his last shape the dawn has reached the edges of
+  // the hall, and the floor is not there at either end. The city remembers where you have walked (his Echo of Your Steps).
+  MECH_FX.w5throne = {
+    start(m) { m.ph = 1; m.rec = 0; W5.trail = []; W5.dawnK = 0; m.edge = 0; m.tick = 0; m.arm = null; },
+    update(m, dt) {
+      const e = boss && isBen(boss) ? boss : null;
+      if (!e) { W5.dawnK = 0; return; }
+      if (e.phase !== m.ph && !e.dead) { m.ph = e.phase; e.w5shift = 1; e.w5T = null; mist(e.x, e.y, 30, 24); sfx('trump');
+        floatText(e.x, e.y, e.hh * e.size + 40, e.phase === 2 ? 'THE SILVER ARM' : 'THE PHANTOM UNBOUND', '#EEF2FA', 17); }
+      if (e.w5shift > 0) e.w5shift = Math.max(0, e.w5shift - dt / 1.4);
+      e.w5halo = Math.min(1, (e.w5halo ?? 1) + dt * (e.state === 'w5act' && e.w5a === 'blades' ? 0 : .35));
+      if (e.state !== 'w5act' || e.w5a !== 'blades') e.w5blades = Math.round(11 * e.w5halo);
+      const target = e.dead ? 1 : [0, 0, .35, .75][e.phase]; W5.dawnK += (target - W5.dawnK) * Math.min(1, dt * .6);
+      if (e.state === 'wind' && e.plan === 'w5grip' && 1 - e.t / e.windMax < .7) e.w5G = { x: P.x, y: yClamp(P.y) }; // the hand follows you, then fixes
+      if (stillT > 0) return;
+      m.rec -= dt; if (m.rec <= 0) { m.rec = .2; W5.trail.push({ x: P.x, y: P.y }); if (W5.trail.length > 15) W5.trail.shift(); } // the city remembers where you walked
+      // in his last shape, the dawn has come to both ends of the hall
+      m.edge += ((e.phase >= 3 && !e.dead ? 58 : 0) - m.edge) * Math.min(1, dt * 1.2);
+      if (m.edge > 8 && P.state !== 'dead') { const L = leftWall() + m.edge, R = rightWall() - m.edge;
+        if ((P.x < L || P.x > R) && P.z < 10) { m.tick -= dt; if (m.tick <= 0) { m.tick = .5; hitP(Math.max(4, Math.round(maxHp() * .045)), P.x < L ? P.x - 50 : P.x + 50, false); if (P.state === 'hurt') P.vx = P.x < L ? 260 : -260; floatText(P.x, P.y, 90, 'THE DAWN BURNS', '#FFD8C0', 13); } } }
+      if (e.dead && !m.arm) m.arm = { x: e.x - e.facing * 8, y: e.y + 2 }; // the silver arm, left lying where he fell
+      for (const p of parts) if (!p.w5 && p.shape === 'star' && p.max === 1.6 && (p.col === '#D8A0E8' || p.col === '#9FD8E0' || p.col === '#FFF0C0')) { p.w5 = 1; p.col = pick(['#EEF2FA', '#C8D4EC', '#9AAAD0']); } // the arena's weather, silver here
+    },
+    boxes(m, box) { if (m.arm) box(m.arm.x, m.arm.y, 0, 40, 40); },
+    list(m, list, t) {
+      if (m.edge > 2) list.push([FLOOR_TOP - 2, () => onMain(() => { ctx.save(); for (const s of [-1, 1]) { const x = s < 0 ? leftWall() + m.edge : rightWall() - m.edge, x0 = s < 0 ? camX - 10 : x, w = s < 0 ? x - x0 : camX + VW + 10 - x;
+        const g = ctx.createLinearGradient(x, 0, x - s * 30, 0); g.addColorStop(0, 'rgba(252,218,200,0)'); g.addColorStop(1, 'rgba(252,218,200,.85)'); ctx.fillStyle = g; ctx.fillRect(x0, Y_OFF, w, VH - Y_OFF); } ctx.restore(); })]);
+      if (m.arm) list.push([m.arm.y, () => { ctx.save(); ctx.translate(m.arm.x, m.arm.y); silverArm(-8, -3, -.05, 0, 1, 1.12, t); ctx.restore(); glowM(m.arm.x, m.arm.y - 4, 26, '235,242,255', .25); }]);
+    },
+  };
+
+  // ======================================================================================================
+  // PASSAGES
+  // ======================================================================================================
+  // THE MOON-PATH (Stair of Moonlight -> the Streets): the night closes in, a stair of light unrolls from the floor up to the
+  // moon, step by step, and he climbs it; at the top the mist parts on the streets of the ghost city
+  TRANS_FX.w5moonpath = (T, p, c, inP, t) => {
+    const X1 = VW, Y0 = Y_OFF, H = VH - Y0, mx = X1 * .78, my = Y0 + H * .22;
+    ctx.fillStyle = `rgba(4,6,16,${Math.min(.92, c * 1.15)})`; ctx.fillRect(0, Y0, X1, H);
+    glowM(mx, my, 120, '200,215,250', .35 * c); ctx.fillStyle = `rgba(240,244,252,${c})`; circle(mx, my, 34); ctx.fill();
+    ctx.fillStyle = `rgba(190,200,220,${.45 * c})`; for (const [x, y, r] of [[-10, -8, 9], [8, -12, 6], [10, 6, 8], [-6, 12, 5]]) { circle(mx + x, my + y, r); ctx.fill(); }
+    const n = 30, shown = inP ? Math.floor(n * Math.min(1, p * 2.4)) : n, P0 = [X1 * .1, VH - 14], P1 = [X1 * .45, VH - 40], P2 = [mx - 20, my + 30];
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < shown; i++) { const u = i / n, iu = 1 - u, x = iu * iu * P0[0] + 2 * iu * u * P1[0] + u * u * P2[0], y = iu * iu * P0[1] + 2 * iu * u * P1[1] + u * u * P2[1], w = lerp(90, 14, u);
+      ctx.fillStyle = `rgba(225,235,255,${(.75 - u * .3) * c})`; ctx.fillRect(x - w / 2, y, w, lerp(5, 1.5, u)); ctx.fillStyle = `rgba(150,170,220,${.3 * c})`; ctx.fillRect(x - w / 2, y + lerp(5, 1.5, u), w, lerp(7, 2, u)); }
+    ctx.restore();
+    if (inP) { const u = Math.min(1, p * 2), iu = 1 - u, x = iu * iu * P0[0] + 2 * iu * u * P1[0] + u * u * P2[0], y = iu * iu * P0[1] + 2 * iu * u * P1[1] + u * u * P2[1]; // he climbs, getting smaller as he goes up
+      ctx.save(); ctx.translate(x, y); const s = lerp(1, .3, u); ctx.scale(s, s); TINT = '#D6E0F2'; drawHumanoid(heroLook(), { walk: t * 10 }); TINT = null; ctx.restore(); }
+    else for (let i = 0; i < 6; i++) softDab(X1 * (i / 5), Y0 + H * .55 + Math.sin(i) * 20, 110, '200,214,245', .5 * c); // the mist he comes out of
+  };
+  // SILVER LEAF (the Streets -> the Moon Throne): the picture flakes away like silver leaf lifting off a panel, onto night;
+  // then the night flakes away in its turn onto the throne
+  TRANS_FX.w5mist = (T, p, c, inP, t) => {
+    const X1 = VW, Y0 = Y_OFF, H = VH - Y0, cols = 18, rows = 10, cw = X1 / cols, ch = H / rows;
+    for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
+      const id = r * cols + q, d = (q / cols) * .6 + hash1(id) * .4, x = q * cw, y = Y0 + r * ch;
+      const k = inP ? cl01((p * 2 - d * .8) / .3) : 1 - cl01(((p - .5) * 2 - d * .8) / .3); // how far this square has gone
+      if (k <= 0) continue;
+      ctx.fillStyle = '#05070F'; ctx.fillRect(x - .5, y - .5, cw + 1, ch + 1); // the night underneath
+      if (hash1(id + 5) < .25) { ctx.fillStyle = `rgba(230,238,255,${.6 * k})`; circle(x + hash1(id + 2) * cw, y + hash1(id + 3) * ch, .8); ctx.fill(); }
+      const f = inP ? k : 1 - k; // the flake itself, lifting, turning, catching the light
+      if (f > 0 && f < 1) { ctx.save(); ctx.translate(x + cw / 2 + hash1(id + 7) * 30 * f, y + ch / 2 - f * 90 - hash1(id + 9) * 40 * f); ctx.rotate((hash1(id + 11) - .5) * 5 * f); ctx.scale(Math.cos(f * 4 + id), 1);
+        ctx.globalAlpha = 1 - f; const g = ctx.createLinearGradient(-cw / 2, -ch / 2, cw / 2, ch / 2); g.addColorStop(0, '#F4F7FC'); g.addColorStop(.5, '#A8B4CA'); g.addColorStop(1, '#D6DEEA'); ctx.fillStyle = g; ctx.fillRect(-cw / 2, -ch / 2, cw, ch);
+        ctx.strokeStyle = 'rgba(40,50,80,.6)'; ctx.lineWidth = .8; ctx.strokeRect(-cw / 2, -ch / 2, cw, ch); ctx.restore(); }
+    }
+  };
+  }; // end of late()
+
+  // ======================================================================================================
+  // THE LATE HOOKS: entrances, landmarks, and the small behaviours of this world's foes, wrapped round functions from
+  // files that load after data_w5.js (entrances.js, thresholds.js, ui.js, draw.js). data_w5.js runs this at DOMContentLoaded
+  // ======================================================================================================
+  const dom = () => {
+  const yC = (y) => clamp(y, FLOOR_TOP + 10, FLOOR_BOT - 2);
+  // ---------------- how each of them comes on ----------------
+  if (typeof ENTRY !== 'undefined') Object.assign(ENTRY, {
+    w5courtier: ['w5kindle'], w5statue: ['w5unseen'], w5reflect: ['w5pool'], w5moth: ['w5moonbeam'], w5hound: ['w5hunt'], w5knave: ['w5dealt'], w5sphinx: ['w5descend'],
+  });
+  if (typeof ENTER_FX !== 'undefined') Object.assign(ENTER_FX, {
+    // a lantern courtier: a mote of moonfire kindles in the air, the lantern forms round it, and the robes pour down beneath
+    w5kindle: { max: 1.5, start(e, n) { e.x = entranceSpot(e); sfx('charge'); },
+      update(e, n, dt) { if (n.t > .5 && !n.s) { n.s = 1; sfx('hit-crystal'); } return n.t >= n.max; },
+      draw(e, n, t, inner) { const top = e.y - 74; glowM(e.x + e.facing * 6, top + 14, 18 * Math.min(1, n.t / .3), PALE, .6 * (1 - cl01((n.t - 1.1) / .4)));
+        if (n.t < .35) return; const k = cl01((n.t - .35) / .9); ctx.save(); ctx.beginPath(); ctx.rect(e.x - 60, top - 10, 120, 18 + (e.y + 12 - top) * k); ctx.clip(); ctx.globalAlpha = .4 + .6 * k; inner(); ctx.restore(); } },
+    // a weeping watcher: it is already there, at your back, where you were not looking
+    w5unseen: { max: 1.1, start(e, n) { const x = P.x - P.facing * rand(120, 170); e.x = clamp(x, camX + 50, camX + VW - 50); if (Math.abs(e.x - P.x) < 90) e.x = clamp(P.x + P.facing * -150, camX + 50, camX + VW - 50); e.y = yC(P.y + rand(-20, 20)); e.w5pose = 'reach'; },
+      update(e, n, dt) { if (n.t > .2 && !n.s) { n.s = 1; sfx('crunch'); } return n.t >= n.max; },
+      draw(e, n, t, inner) { const k = cl01(n.t / .9); ctx.save(); ctx.globalAlpha = k; inner(); ctx.restore(); glowM(e.x, e.y - 40, 40, '220,232,255', .3 * (1 - k)); } },
+    // a colorless reflection: a pool of moonlight spreads on the stone and the reflection in it climbs out, the right way up
+    w5pool: { max: 1.5, start(e, n) { e.x = entranceSpot(e); sfx('charge'); },
+      update(e, n, dt) { if (n.t > .85 && !n.s) { n.s = 1; sfx('hit-crystal'); } return n.t >= n.max; },
+      draw(e, n, t, inner) { const p = cl01(n.t / .4), f = 1 - cl01((n.t - 1.2) / .3);
+        ctx.save(); ctx.globalAlpha = f; ctx.fillStyle = 'rgba(200,214,245,.6)'; ell(e.x, e.y, 26 * p, 7 * p); ctx.fill(); ctx.strokeStyle = 'rgba(240,244,255,.8)'; ctx.lineWidth = 1; ell(e.x, e.y, 26 * p, 7 * p); ctx.stroke(); ctx.restore();
+        if (n.t < .85) { if (n.t < .3) return; ctx.save(); ell(e.x, e.y, 26, 7); ctx.clip(); ctx.translate(e.x, e.y); ctx.scale(1, -.28); ctx.translate(-e.x, -e.y); ctx.globalAlpha = .6; inner(); ctx.restore(); return; } // only the reflection, in the pool
+        const k = cl01((n.t - .85) / .6); ctx.save(); ctx.beginPath(); ctx.rect(e.x - 200, e.y - 400, 400, 403); ctx.clip(); ctx.translate(0, (1 - sm(k)) * e.hh * 1.1); inner(); ctx.restore(); } },
+    // a moonmoth: it comes spiralling down a shaft of moonlight
+    w5moonbeam: { max: 1.6, start(e, n) { n.x0 = entranceSpot(e); n.z0 = e.y - Y_OFF + 40; e.x = n.x0; e.z = n.z0; sfx('whoosh'); },
+      update(e, n, dt) { const k = sm(cl01(n.t / n.max)); e.z = lerp(n.z0, e.def.hover, k); e.x = n.x0 + Math.cos(n.t * 5) * 18 * (1 - k); e.facing = Math.sin(n.t * 5) > 0 ? -1 : 1; return n.t >= n.max; },
+      draw(e, n, t, inner) { const a = .35 * (1 - cl01((n.t - 1.1) / .5)); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(0, Y_OFF, 0, e.y); g.addColorStop(0, `rgba(220,232,255,${a})`); g.addColorStop(1, 'rgba(220,232,255,0)'); ctx.fillStyle = g; ctx.fillRect(n.x0 - 22, Y_OFF, 44, e.y - Y_OFF); ctx.restore(); inner(); } },
+    // a hound of the wild hunt: it comes down out of the sky at a gallop, as the hunt rides
+    w5hunt: { max: 1.2, keepFace: 1, start(e, n) { n.x1 = entranceSpot(e); n.dir = Math.sign(P.x - n.x1) || 1; n.x0 = n.x1 - n.dir * 240; n.z0 = 190; n.y1 = yC(e.y); e.x = n.x0; e.z = n.z0; e.facing = n.dir; sfx('growl'); tone && actx && sfxOn && tone(330, .5, 'triangle', .05, 290); },
+      update(e, n, dt) { const k = cl01(n.t / n.max); e.x = lerp(n.x0, n.x1, k); e.z = n.z0 * (1 - k) * (1 - k * .3); e.walk += dt * 14; if (Math.random() < .6) parts.push({ x: e.x - n.dir * 18, y: e.y, z: e.z + 4, vx: -n.dir * 40, vy: 0, vz: 0, life: .6, max: .6, col: 'rgba(220,230,250,.55)', size: rand(4, 7), shape: 'puff', rot: 0, vr: 0 });
+        if (k >= 1) { e.z = 0; dust(e.x, e.y, 6); return true; } return false; },
+      draw(e, n, t, inner) { inner(); } },
+    // a knave of moons: dealt from the sky, it spins down and stands up on the road, then unfolds its legs
+    w5dealt: { max: 1.2, start(e, n) { e.x = entranceSpot(e); n.z0 = e.y - Y_OFF + 30; e.z = n.z0; sfx('whoosh'); },
+      update(e, n, dt) { const k = cl01(n.t / .8); e.z = n.z0 * (1 - sm(k)); e.w5turn = k < 1 ? (n.t * 7) % 4 : Math.max(0, (e.w5turn || 0) - dt * 4); if (k >= 1 && !n.l) { n.l = 1; sfx('slam'); dust(e.x, e.y, 4); } return n.t >= n.max; },
+      draw(e, n, t, inner) { inner(); } },
+    // the sphinx: down out of the moon on her wings
+    w5descend: { max: 2.2, keepFace: 1, start(e, n) { n.z0 = 300; e.z = n.z0; sfx('roar'); },
+      update(e, n, dt) { const k = sm(cl01(n.t / 2)); e.z = n.z0 * (1 - k); if (n.t > 2 && !n.l) { n.l = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 8); dust(e.x, e.y, 14); } return n.t >= n.max; },
+      draw(e, n, t, inner) { inner(); } },
+  });
+  // ---------------- the landmarks at the end of each area ----------------
+  if (typeof THRESH !== 'undefined') {
+    // the Stair of Moonlight -> the Streets: the foot of a stair of light, climbing up out of sight into the sky
+    THRESH.w5moonpath = (x, y, k, t) => {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 22; i++) { const u = i / 22, sx = x - 40 + u * 120, sy = y + 30 - u * (y + 30 - Y_OFF + 20), w = 70 - u * 30;
+        ctx.fillStyle = `rgba(225,235,255,${(.25 + .45 * k) * (1 - u * .5)})`; ctx.fillRect(sx - w / 2, sy, w, 4); ctx.fillStyle = `rgba(140,160,215,${.18 + .15 * k})`; ctx.fillRect(sx - w / 2, sy + 4, w, 6); }
+      ctx.restore();
+      for (const s of [-1, 1]) { ctx.fillStyle = C('#9AAAC8'); ctx.fillRect(x - 40 + s * 38 - 3, y - 14, 6, 44); ctx.beginPath(); ctx.rect(x - 40 + s * 38 - 3, y - 14, 6, 44); outline(1.2); ctx.fillStyle = C('#E8EEF8'); circle(x - 40 + s * 38, y - 17, 4.4); ctx.fill(); outline(1); glowM(x - 40 + s * 38, y - 17, 16, PALE, .2 + .4 * k); } // newel posts, silver-capped
+      glowM(x, y - 20, 90, '210,225,255', .15 + .25 * k);
+    };
+    // the Streets -> the Moon Throne: the doors of the ghost palace, the unicorn on each leaf; they open as the way clears
+    THRESH.w5mist = (x, y, k, t) => {
+      const w = 46, h = 110, top = y - h + 30, open = sm(k);
+      ctx.fillStyle = 'rgba(4,6,16,.92)'; ctx.beginPath(); ctx.moveTo(x - w, y + 30); ctx.lineTo(x - w, top + 30); ctx.quadraticCurveTo(x - w, top - 14, x, top - 22); ctx.quadraticCurveTo(x + w, top - 14, x + w, top + 30); ctx.lineTo(x + w, y + 30); ctx.fill();
+      glowM(x, y - 20, 70, '225,235,255', .15 + .45 * open);
+      for (const s of [-1, 1]) { const lw = w * (1 - open * .82); ctx.save(); ctx.translate(x + s * w, 0); ctx.scale(s, 1); // each leaf swings back on its hinge
+        ctx.fillStyle = C('#2A3866'); ctx.beginPath(); ctx.moveTo(0, y + 30); ctx.lineTo(0, top + 30); ctx.quadraticCurveTo(0, top - 10, lw, top - 18 + (1 - open) * 0); ctx.lineTo(lw, y + 30); ctx.closePath(); ctx.fill(); outline(1.4);
+        ctx.strokeStyle = C('#C8D2E4'); ctx.lineWidth = 1; ctx.beginPath(); const ux = lw * .5, uy = y - 30; ctx.moveTo(ux - 6, uy + 18); ctx.quadraticCurveTo(ux - 8, uy + 4, ux - 2, uy - 2); ctx.lineTo(ux + 5, uy); ctx.lineTo(ux + 2, uy + 4); ctx.quadraticCurveTo(ux, uy + 10, ux + 4, uy + 18); ctx.moveTo(ux - 2, uy - 2); ctx.lineTo(ux + 3, uy - 13); ctx.stroke(); ctx.restore(); } // the unicorn
+      ctx.strokeStyle = C('#C8D2E4'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - w - 4, y + 30); ctx.lineTo(x - w - 4, top + 30); ctx.quadraticCurveTo(x - w - 4, top - 18, x, top - 27); ctx.quadraticCurveTo(x + w + 4, top - 18, x + w + 4, top + 30); ctx.lineTo(x + w + 4, y + 30); ctx.stroke(); // the arch, silver leaf
+      for (let i = 0; i < 4; i++) softDab(x + (i - 1.5) * 30, y + 26, 30, '200,214,245', .2); // mist on the threshold
+    };
+  }
+  // ---------------- what each of them does every frame ----------------
+  // the weeping watcher moves only while he is not looking at it; the knave turns edge-on; the reflection carries his weapon;
+  // the sphinx keeps perfectly still while she waits for her answer
+  const watched = (e) => P && P.state !== 'dead' && mode === 'play' && (e.x - P.x) * P.facing > -4 && e.x > camX - 10 && e.x < camX + VW + 10;
+  const FREEZE = ['idle', 'wind', 'recover', 'strike', 'w5act', 'evade', 'block'];
+  const _upd = updateEnemy;
+  updateEnemy = function (e, dt) {
+    if (e.state === 'w5riddle') { e.flash = Math.max(0, e.flash - dt); e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12); return; }
+    if (e.type === 'w5statue' && !e.dead && e.state !== 'enter') {
+      const seen = watched(e) && FREEZE.includes(e.state); e.w5seen = seen;
+      if (seen) { e.flash = Math.max(0, e.flash - dt); e.jit = Math.max(0, e.jit - dt); e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12); return; } // stone, while you look at it
+      e.w5poseT = (e.w5poseT || 0) - dt; if (e.w5poseT <= 0) { e.w5poseT = .3; e.w5pose = e.state === 'w5act' || e.state === 'wind' ? 'seize' : e.state === 'recover' ? 'weep' : 'reach'; }
+    }
+    if (e.type === 'w5knave' && !e.dead) {
+      e.w5edgeT = Math.max(0, (e.w5edgeT || 0) - dt); e.w5edgeCd = Math.max(0, (e.w5edgeCd || 0) - dt);
+      const goal = e.state === 'enter' ? (e.w5turn || 0) : e.state === 'wind' && e.plan === 'w5flip' ? 1 - e.t / e.windMax : e.state === 'w5act' && e.w5a === 'glide' ? 1 : e.w5edgeT > 0 ? 1 : 0;
+      if (e.state !== 'enter') e.w5turn = (e.w5turn || 0) + (goal - (e.w5turn || 0)) * Math.min(1, dt * (goal > (e.w5turn || 0) ? 9 : 14));
+    }
+    if (e.type === 'w5reflect' && e.state !== 'w5act') e.w5w = (W5.last && W5.last.w) || (P && P.w) || 'rapier';
+    return _upd(e, dt);
+  };
+  // his last move is remembered (for the reflections); a big swing is seen coming by a knave, which turns edge-on to it
+  const _begin = begin;
+  begin = function (m) {
+    _begin(m);
+    if (m && m !== 'charge' && P) {
+      W5.last = { name: m.name || ({ L: 'cut', LL: 'cut', A: 'cut', D: 'running strike', R: 'counter' }[m.key] || 'blow'), x1: m.x1, around: m.around, multi: m.multi, power: m.power || 0, lunge: m.lunge || 0, style: m.style, w: P.w };
+      for (const e of enemies) if (e.type === 'w5knave' && !e.dead && ['idle', 'recover'].includes(e.state) && !(e.w5edgeCd > 0) && Math.abs(e.y - P.y) < 30 && (e.x - P.x) * P.facing > -10 && (e.x - P.x) * P.facing < (m.x1 || 60) + 60 && Math.random() < .4) { e.w5edgeT = .55; e.w5edgeCd = 2.2; }
+    }
+  };
+  // blows that can't land: on a riddling sphinx, on a knave turned edge-on, and on the Phantom's guard
+  const _strike = strike;
+  strike = function (e, base, dir, m, echo) {
+    if (e.state === 'w5riddle') return;
+    if (e.type === 'w5knave' && (e.w5turn || 0) > .72 && !(m && m.trump)) { if (!(e.w5edgeMsg > performance.now())) { e.w5edgeMsg = performance.now() + 600; floatText(e.x, e.y, e.hh + 12, 'EDGE-ON', '#DDE6F4', 12); } return; }
+    if (e.def === BOSSES.benedict && e.w5guarding && e.state === 'w5act' && e.w5a === 'guard' && W5.guardHit) { const r = W5.guardHit(e, m || {}); if (r === true) return; if (r === 'crit') m = Object.assign({}, m, { crit: 1 }); }
+    return _strike(e, base, dir, m, echo);
+  };
+  // moondust, and a moth on your back, make your legs heavy
+  const _up = updatePlayer;
+  updatePlayer = function (dt) { const x0 = P.x, y0 = P.y; _up(dt); if ((P.w5slowT || 0) > 0) { P.w5slowT -= dt; if (P.state !== 'dodge') { P.x = x0 + (P.x - x0) * .6; P.y = y0 + (P.y - y0) * .6; } } };
+  { const _hit = playerDamage; playerDamage = function (dmg, fromX, big) { const before = P.hp; _hit(dmg, fromX, big); if (P.hp < before && projs.some(p => p.w5dust && Math.abs(p.x - P.x) < 20)) P.w5slowT = 1.6; }; }
+  // this world's upright effects are drawn in depth with the figures, wherever they are (secret rooms too)
+  const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); for (const h of hazards) if (HZ[h.kind] && HZ[h.kind].box) HZ[h.kind].box(h, box); };
+  const _ml = mechList; mechList = function (list, t) { _ml(list, t); for (const h of hazards) if (HZ[h.kind] && HZ[h.kind].ups && h.t > -.4) HZ[h.kind].ups(h, list, t); };
+  // the silver arm, carried down out of the sky: from then on his hands are silver
+  const _look = heroLook; heroLook = function () { const L = _look(); if (save.silverArm) L.glove = '#C8D0DE'; return L; };
+  // the ending: the last world's boss does not go straight to the win screen
+  W5.hookEnding();
+  };
+
+  // ======================================================================================================
+  // THE ENDING: dawn breaks over Tir-na Nog'th. The city dissolves around him, and he goes down the moon-stair with the
+  // ghost's silver arm as the stair fades under his feet; then his own Trump, a few lines, the credits, and the road again
+  // ======================================================================================================
+  let END = null;
+  const isLastWorld = () => typeof baseStage !== 'undefined' && baseStage && baseStage.theme === 'moon' && stageIdx === STAGES.length - 1;
+  const LINES = ['Dawn came, and Tir-na Nog\'th went out like a lamp, and its stair with it.', 'What the city of the moon shows you may never be,', 'but the silver arm he carried down out of the sky was real,', 'and it did not fade.'];
+  const CREDITS = [['SHADOW ROAD', 22], ['five shadows walked', 9], ['', 6], ['BLOOMWILD VALE · THE CLOCKWORK SKYPORT · THE PRISM RIM', 8], ['THE COURTS OF CHAOS · TIR-NA NOG\'TH', 8], ['', 10],
+    ['after Roger Zelazny\'s The Chronicles of Amber', 10], ['', 8], ['CORWIN', 11], ['Prince of Amber, Prince of Shadow', 8], ['', 6], ['BENEDICT', 11], ['his phantom, by moonlight', 8], ['', 6], ['THE SPHINX', 11], ['who would still like an answer', 8], ['', 10],
+    ['painted in ink and silver leaf', 9], ['', 14], ['Thank you for walking the road.', 12]];
+  // the dawn sky over the sea of cloud, with the true Amber far below on Kolvir, catching the first light
+  function dawnSky(k, t) {
+    const Y0 = Y_OFF, H = VH - Y0, g = ctx.createLinearGradient(0, Y0, 0, VH);
+    g.addColorStop(0, awMix('#0A1230', '#5A6AA8', k)); g.addColorStop(.45, awMix('#1E2C5A', '#D8A0A8', k)); g.addColorStop(.7, awMix('#3A4C7E', '#F6C8A8', k)); g.addColorStop(1, awMix('#4A5C8E', '#FFE6C8', k));
+    ctx.fillStyle = g; ctx.fillRect(0, Y0, VW, H);
+    glowM(VW * .12, Y0 + H * .66, 220, '255,210,170', .55 * k); ctx.fillStyle = `rgba(255,236,200,${k})`; circle(VW * .12, Y0 + H * .66 + (1 - k) * 30, 16); ctx.fill(); // the sun coming up in the east
+    ctx.save(); ctx.globalAlpha = 1 - k * .6; ctx.fillStyle = 'rgba(240,244,252,.9)'; circle(VW * .82, Y0 + H * .2 + k * 30, 22); ctx.fill(); ctx.restore(); // the moon going down in the west
+    ctx.fillStyle = awMix('#1A2448', '#7A6A86', k); poly([VW * .5 - 120, Y0 + H * .72, VW * .5 - 30, Y0 + H * .58, VW * .5 + 10, Y0 + H * .55, VW * .5 + 60, Y0 + H * .62, VW * .5 + 150, Y0 + H * .72]); ctx.fill(); // Kolvir
+    for (const [dx, dy] of [[-6, .57], [4, .565], [14, .58], [-16, .6], [24, .6]]) { ctx.fillStyle = `rgba(255,214,150,${.4 + .5 * k})`; ctx.fillRect(VW * .5 + dx, Y0 + H * dy, 2, 3); } // Amber, the true city
+    for (let b = 0; b < 4; b++) { const y = Y0 + H * (.7 + b * .08); ctx.fillStyle = awMix(['#1E2850', '#26325E', '#2E3C6A', '#364676'][b], ['#C890A0', '#E0A8A0', '#F0C0A8', '#F8D4B8'][b], k); ctx.beginPath(); ctx.moveTo(0, VH); for (let x = 0; x <= VW; x += 20) ctx.lineTo(x, y + Math.sin(x * .02 + b * 2 + t * .05) * 5); ctx.lineTo(VW, VH); ctx.fill(); } // the sea of cloud
+  }
+  // the painted surface: the sky laid on in long strokes, brushwork over the cloud, as on every other panel of the road
+  function brushOver() { skyWash(0); ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'brush'); ctx.scale(.5, .5); ctx.fillRect(0, Y_OFF * 2, VW * 2, (VH - Y_OFF) * 2); ctx.restore(); }
+  // the moon-stair going down through the cloud, fading as the day comes; he walks down it
+  function stairDown(fade, walkU, t) {
+    const Y0 = Y_OFF, H = VH - Y0, P0 = [VW * .2, Y0 + H * .62], P1 = [VW * .55, Y0 + H * .7], P2 = [VW * 1.05, VH + 20];
+    const at = (u) => { const iu = 1 - u; return [iu * iu * P0[0] + 2 * iu * u * P1[0] + u * u * P2[0], iu * iu * P0[1] + 2 * iu * u * P1[1] + u * u * P2[1]]; };
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 34; i++) { const u = i / 34, [x, y] = at(u), w = lerp(40, 110, u), a = (1 - fade) * (.7 - Math.abs(u - walkU) * .25);
+      if (a <= 0) continue; ctx.fillStyle = `rgba(230,238,255,${a})`; ctx.fillRect(x - w / 2, y, w, lerp(2, 6, u)); ctx.fillStyle = `rgba(150,170,220,${a * .4})`; ctx.fillRect(x - w / 2, y + lerp(2, 6, u), w, lerp(3, 9, u)); }
+    ctx.restore();
+    const [x, y] = at(walkU), s = lerp(.7, 1.15, walkU);
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    shadow(0, 0, 12); drawHumanoid(heroLook(), { walk: t * 7, weapon: 'fists', arm: 1.2 });
+    ctx.translate(-6, -44); ctx.rotate(.9); silverArm(0, 0, 1.4, 0, 0, .8, t); // the silver arm, carried over his shoulder
+    ctx.restore();
+  }
+  // his own Trump: the Prince of Shadow, black and silver, the silver rose, the moon and its stair behind him, in a frame of silver leaf
+  function princeTrump(cx, cy, h, a, t) {
+    const w = h * .62, x = cx - w / 2, y = cy - h / 2;
+    ctx.save(); ctx.globalAlpha = a;
+    glowM(cx, cy, h * .8, '220,230,255', .25);
+    ctx.save(); rrect(x, y, w, h, 6); ctx.clip();
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#060A1C'); g.addColorStop(.55, '#1E2C5A'); g.addColorStop(.8, '#4A5C8E'); g.addColorStop(1, '#141C38'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    for (let i = 0; i < 30; i++) { ctx.fillStyle = `rgba(235,242,255,${.4 + hsh(i) * .5})`; circle(x + hsh(i + 1) * w, y + hsh(i + 2) * h * .5, .6 + hsh(i + 3) * .7); ctx.fill(); }
+    glowM(x + w * .7, y + h * .22, w * .4, '220,232,255', .45); ctx.fillStyle = '#F2F5FB'; circle(x + w * .7, y + h * .22, w * .14); ctx.fill(); ctx.fillStyle = 'rgba(170,182,206,.6)'; circle(x + w * .66, y + h * .2, w * .04); ctx.fill(); circle(x + w * .74, y + h * .25, w * .03); ctx.fill();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 16; i++) { const u = i / 16, sx = lerp(x + w * .1, x + w * .64, u), sy = lerp(y + h * .82, y + h * .3, u); ctx.fillStyle = `rgba(225,235,255,${.5 - u * .3})`; ctx.fillRect(sx - 9 + u * 6, sy, 18 - u * 12, 1.6); } ctx.restore(); // the stair to the moon
+    ctx.fillStyle = '#10162E'; ctx.fillRect(x, y + h * .84, w, h * .16);
+    ctx.save(); ctx.translate(cx - w * .04, y + h * .9); const s = h / 128; ctx.scale(s, s); drawHumanoid(heroLook(), { weapon: 'rapier', arm: .6, Y: .45, breath: Math.sin(t * 1.2) }); ctx.restore();
+    ctx.restore();
+    // the frame: silver leaf, burnished, with tooled dots and roses at the corners
+    const b = w * .06; ctx.beginPath(); ctx.rect(x - b, y - b, w + b * 2, h + b * 2); ctx.rect(x, y, w, h); const fg = ctx.createLinearGradient(x, y, x + w, y + h); fg.addColorStop(0, '#F4F7FC'); fg.addColorStop(.5, '#8E9AB4'); fg.addColorStop(1, '#DCE4F0'); ctx.fillStyle = fg; ctx.fill('evenodd');
+    ctx.strokeStyle = '#1A2034'; ctx.lineWidth = 1.2; ctx.strokeRect(x - b, y - b, w + b * 2, h + b * 2); ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(40,48,80,.55)'; for (let i = 0; i < 26; i++) { const u = i / 25; circle(x - b / 2 + u * (w + b), y - b / 2, .8); ctx.fill(); circle(x - b / 2 + u * (w + b), y + h + b / 2, .8); ctx.fill(); }
+    for (const [px, py] of [[x - b / 2, y - b / 2], [x + w + b / 2, y - b / 2], [x - b / 2, y + h + b / 2], [x + w + b / 2, y + h + b / 2]]) silverRose(px, py, b * .3, false);
+    ctx.fillStyle = 'rgba(8,12,30,.85)'; rrect(x + w * .1, y + h - 22, w * .8, 16, 3); ctx.fill(); ctx.fillStyle = '#E8EEF8'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText('THE PRINCE OF SHADOW', cx, y + h - 11);
+    ctx.restore();
+  }
+  function renderEnding(t) {
+    const now = performance.now(), dt = Math.min(.05, (now - END.last) / 1000); END.last = now; END.t += dt; const T = END.t;
+    if (T < 3.6) { // the city dissolving round him, from the east (the left) where the sun is coming
+      P.state = 'walk'; P.facing = 1; P.walk += dt * 7; P.x = Math.min(P.x + 24 * dt, camX + VW - 90);
+      END.orig(t);
+      const d = T / 3.6, cs = 24; ctx.save(); ctx.beginPath();
+      for (let gx = 0; gx < VW + cs; gx += cs) for (let gy = Y_OFF; gy < VH + cs; gy += cs) { const id = gx * 7 + gy * 13, th = (gx / VW) * .7 + hash1(id) * .3, r = cs * .9 * cl01((d * 1.5 - th) / .35); if (r > .5) { ctx.moveTo(gx + r, gy); ctx.arc(gx, gy, r, 0, TAU); } }
+      ctx.clip(); dawnSky(d * .5, t); brushOver(); ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 40; i++) { const life = (T * .3 + hsh(i)) % 1; ctx.fillStyle = `rgba(255,240,225,${Math.sin(life * Math.PI) * .6 * d})`; circle(hsh(i + 1) * VW * d * 1.3, VH - life * (VH - Y_OFF), 1.2); ctx.fill(); } ctx.restore(); // what the city was, rising off as motes
+      paperFrame(); return;
+    }
+    const dawn = cl01((T - 3.6) / 6) * .5 + .5;
+    dawnSky(dawn, t); brushOver();
+    stairDown(cl01((T - 7) / 5), cl01((T - 3.6) / 7) * .78, t);
+    if (T > 9) { const a = cl01((T - 9) / 1.2) * (1 - cl01((T - 17.5) / 1)); ctx.fillStyle = `rgba(4,6,16,${.55 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
+      const h = Math.min(230, (VH - Y_OFF) * .78), cx = VW * .3, cy = Y_OFF + (VH - Y_OFF) / 2 + (1 - cl01((T - 9) / 1.4)) * 40; if (a > 0) princeTrump(cx, cy, h, a, t);
+      ctx.textAlign = 'left'; ctx.font = '700 10px Cinzel, Georgia, serif';
+      const x0 = cx + h * .31 + 22, tw = VW - x0 - 24; let ly = Y_OFF + (VH - Y_OFF) * .3;
+      LINES.forEach((l, i) => { const la = cl01((T - 10.5 - i * 1.4) / 1) * (1 - cl01((T - 17.5) / 1));
+        const words = l.split(' '), rows = []; let row = ''; for (const w of words) { const tr = row ? row + ' ' + w : w; if (ctx.measureText(tr).width > tw && row) { rows.push(row); row = w; } else row = tr; } rows.push(row);
+        for (const r of rows) { if (la > 0) { ctx.fillStyle = `rgba(240,244,252,${la})`; ctx.fillText(r, x0, ly); } ly += 15; } ly += 6; }); }
+    if (T > 18) { const k = T - 18, a = cl01(k / 1.2); ctx.fillStyle = `rgba(4,6,16,${.85 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
+      let y = VH + 10 - k * 26; ctx.textAlign = 'center';
+      for (const [s, sz] of CREDITS) { y += sz + 8; if (!s) continue; const fa = cl01((y - Y_OFF) / 40) * cl01((VH - y) / 40); ctx.fillStyle = `rgba(232,238,250,${fa})`; ctx.font = `700 ${sz}px Cinzel, Georgia, serif`; ctx.fillText(s, VW / 2, y); }
+      if (y < Y_OFF - 10) finishEnding(); }
+    if (T > 2) { ctx.fillStyle = 'rgba(200,210,230,.55)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); }
+    paperFrame();
+  }
+  function skipEnding() { if (!END || END.t < 1.5) return; if (END.t < 9) END.t = 9; else if (END.t < 18) END.t = 18; else finishEnding(); }
+  function finishEnding() {
+    if (!END) return; const sc = END.sc; END = null; W5.ending = false;
+    app.classList.remove('nocontrols'); if (stageIdx === STAGES.length - 1) save.stage = Math.max(save.stage, STAGES.length - 1); // the last world always ends the road
+    sc();
+    if (mode === 'win') { // the win card, rewritten for the true end of the road
+      const k = $('#winOv .kicker'), h2 = $('#winOv .h2'); if (k) k.textContent = 'THE NIGHT IS OVER'; if (h2) h2.textContent = 'You came down from the moon';
+      $('#winText').textContent = "Tir-na Nog'th faded with the dawn, and every shadow of the road is behind you. You carried the Phantom's silver arm down the stair, and your hand is silver now. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and Trump cards come with you.";
+      const row = $('#winOv .row'); if (row && !$('#w5TitleBtn')) { const b = document.createElement('button'); b.className = 'cta alt'; b.id = 'w5TitleBtn'; b.type = 'button'; b.textContent = 'Title screen'; b.addEventListener('click', () => { mode = 'title'; refreshTitle(); showOnly('titleOv'); playMusic('title'); }); row.appendChild(b); }
+    }
+  }
+  W5.startEnding = (sc) => {
+    END = { t: 0, last: performance.now(), sc, orig: W5.origDraw }; W5.ending = true; mode = 'ending';
+    save.silverArm = true; persist(); clearInput();
+    $('#hud').hidden = true; $('#bossbar').hidden = true; app.classList.add('nocontrols'); app.classList.remove('playing');
+    if (TRACKS.w5dawn) playMusic('w5dawn');
+  };
+  W5.endT = () => END && END.t;
+  W5.skipEnding = skipEnding;
+  W5.hookEnding = () => {
+    const _sc = stageClear; stageClear = function () { if (isLastWorld() && !END) { W5.startEnding(_sc); return; } return _sc(); };
+    const _ds = drawScene; W5.origDraw = _ds; drawScene = function (t) { if (END) { renderEnding(t); return; } return _ds(t); };
+    window.addEventListener('keydown', (e) => { if (END && (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape' || e.code === 'KeyJ')) skipEnding(); }, true);
+    window.addEventListener('pointerdown', () => { if (END) skipEnding(); }, true);
+  };
+
+  // ======================================================================================================
+  // MUSIC (music.js notation: one string per bar; a note starts, '-' holds, '.' rests)
+  // ======================================================================================================
+  if (typeof TRACKS !== 'undefined') {
+    const Wb = (n, steps = 16) => n + ' -'.repeat(steps - 1), Hb = (a, b) => a + ' -'.repeat(7) + ' ' + b + ' -'.repeat(7);
+    Object.assign(TRACKS, {
+      // the Stair of Moonlight: E dorian in a slow 12/8, like a music box left open in an empty hall
+      moon: { bpm: 80, n: 12, style: 'calm', kit: 'soft', duty: .5, vib: 12, echo: .3, echoSteps: 3, arp: '024024024024', arpDuty: .25, av: .045, bass: 'R-----F-----', bv: .22,
+        drums: { k: 'x...........', h: '......g.....' }, fill: false, form: ['A', 'B'], parts: {
+        A: { chords: ['Em', 'C', 'D', 'Bm', 'Em', 'C', 'Am', 'B'],
+             lead: ['B4 - - E5 - - G5 - F#5 E5 - -', 'G5 - - - - - E5 - - C5 - -', 'D5 - - F#5 - - A5 - G5 F#5 - -', 'F#5 - - - - - D5 - - B4 - -',
+                    'B4 - - E5 - - G5 - B5 A5 - G5', 'E5 - - - - - C5 - - E5 - -', 'A4 - - C5 - - E5 - D5 C5 - -', 'D#5 - - - - - F#5 - - B4 - -'] },
+        B: { chords: ['A', 'Em', 'A', 'B', 'C', 'D', 'Em', 'Em'],
+             lead: ['C#5 - - E5 - - A5 - - G#5 - -', 'B4 - - - - - G5 - - E5 - -', 'E5 - - A5 - - C#6 - B5 A5 - -', 'B5 - - - - - F#5 - - D#5 - -',
+                    'C5 - - E5 - - G5 - - C6 - -', 'A5 - - F#5 - - D5 - - A4 - -', 'B4 - - E5 - - G5 - F#5 G5 - -', 'E5 - - - - - - - - . . .'] } } },
+      // the Streets: B minor, driving, the echo of footsteps in an empty city
+      moon2: { bpm: 128, style: 'drive', duty: .25, vib: 10, echo: .15,
+        chords: ['Bm', 'G', 'D', 'A', 'Bm', 'G', 'Em', 'F#'],
+        lead: ['F#5 - - - B5 - - - A5 - F#5 - E5 - D5 -', 'D5 - - - - - B4 - G4 - B4 - D5 - G5 -', 'F#5 - - - A5 - - - D6 - - - C#6 - A5 -', 'E5 - - - - - C#5 - A4 - - - C#5 - E5 -',
+               'F#5 - - - B5 - - - D6 - C#6 - B5 - A5 -', 'G5 - - - - - D5 - B4 - D5 - G5 - B5 -', 'A5 - G5 - F#5 - E5 - G5 - - - B4 - - -', 'A#4 - - - C#5 - - - F#5 - - - E5 - C#5 -'] },
+      // the Moon Throne, before he comes: D minor, held breath
+      moonBoss: { bpm: 60, style: 'ambient', kit: 'soft', duty: .5, lv: .17, vib: 14, echo: .4, echoSteps: 4,
+        chords: ['Dm', 'Bb', 'Gm', 'A'], lead: [Wb('D5'), Hb('F5', 'E5'), Hb('D5', 'Bb4'), Wb('A4')] },
+      // the Phantom of Benedict: D harmonic minor, a duel; the second part fences in staccato, the last turns to a grave 3/4
+      boss_w5benedict: { duty: .25, vib: 12, echo: .12, form: ['A', 'B', 'A', 'B', 'C', 'C'], parts: {
+        A: { bpm: 170, style: 'battle', chords: ['Dm', 'Bb', 'Gm', 'A'],
+             lead: ['D5 - F5 - A5 - D6 - C#6 - A5 - F5 - E5 -', 'F5 - - - D5 - Bb4 - D5 - F5 - Bb5 - A5 -', 'G5 - - - Bb5 - G5 - D5 - G4 - Bb4 - D5 -', 'E5 - - - C#5 - A4 - C#5 - E5 - G5 - A5 -'] },
+        B: { bpm: 170, style: 'battle', chords: ['Dm', 'C', 'Bb', 'A'], arp: '0.2.1.2.0.2.1.2.',
+             lead: ['A5 . A5 . F5 . D5 . A5 - G5 - F5 - E5 -', 'G5 . G5 . E5 . C5 . G5 - F5 - E5 - D5 -', 'F5 . F5 . D5 . Bb4 . F5 - E5 - D5 - C5 -', 'C#5 - - - E5 - - - A5 - - - C#6 - - -'] },
+        C: { bpm: 132, n: 12, style: 'grand', chords: ['Dm', 'Gm', 'A', 'Dm'], arp: '0-1-2-1-0-1-', bass: 'R-----V-----', drums: { k: 'X.....x.....', s: '......X.....', h: '..x...x...x.' }, fill: false, double: -12,
+             lead: ['D6 - - - - - A5 - - F5 - -', 'Bb5 - - - - - G5 - - D5 - -', 'C#6 - - - - - E5 - - A5 - -', 'D6 - - - - - - - - . . .'] } } },
+      // the Sphinx: A phrygian dominant, slow and sly
+      w5riddle: { bpm: 92, style: 'creep', duty: .5, vib: 14, echo: .25, chords: ['A', 'Bb', 'A', 'Gm'],
+        lead: ['A4 - - - C#5 - - - D5 - - - E5 - - -', 'F5 - - - E5 - D5 - C#5 - - - Bb4 - - -', 'A4 - - - E5 - - - G5 - F5 - E5 - - -', 'D5 - - - Bb4 - - - G4 - - - A4 - - -'] },
+      // the ending: D major, a hymn for the dawn, played once
+      w5dawn: { bpm: 72, style: 'hymn', duty: .5, vib: 10, echo: .35, echoSteps: 4, once: true, chords: ['D', 'A/C#', 'Bm', 'G', 'D', 'G', 'A', 'D'],
+        lead: ['F#5 - - - A5 - - - D6 - - - C#6 - - -', 'E5 - - - - - - - A5 - - - G5 - F#5 -', 'F#5 - - - D5 - - - B4 - - - D5 - - -', 'G5 - - - - - - - B5 - - - A5 - G5 -',
+               'F#5 - - - A5 - - - D6 - - - F#6 - - -', 'E6 - - - D6 - - - B5 - - - G5 - - -', 'A5 - - - - - - - C#6 - - - E6 - - -', 'D6 - - - - - - - - - - - . . . .'] },
+    });
+  }
+  window.w5Late = late;
+  window.w5Dom = dom;
 
 })();
