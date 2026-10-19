@@ -144,7 +144,12 @@ function playerPose() {
   else if (P.state === 'dodge') {
     const k = 1 - P.t / .34;
     if (P.dk === 'fwd') { pose.crouch = 1; pose.run = 1; pose.walk = 1.5; pose.lean = .85; pose.arm = 2.7; pose.backArm = 3; pose.flow = 16; pose.stretch = 1.18; } // flat out, body almost level, arms flung back
-    else if (P.dk === 'back') { pose.crouch = 1; pose.kick = k < .55 ? 1 : 0; pose.walk = -1.4; pose.lean = -.6 + k * .4; pose.arm = -.6; pose.backArm = -.2; pose.flow = -8; } // pushing off, one leg kicked out, guard up
+    else if (P.dk === 'back') { // a coiled bound backward: he drops and drives off both feet, flies back tucked with the coat
+      // flaring and his guard up, then lands low and skids, the trailing hand brushing the street to steady him
+      if (k < .14) { const q = ease(k / .14); pose.sink = 7 * q; pose.legs = { f: 7, b: -7, fk: 3 + 5 * q, bk: 3 + 5 * q }; pose.lean = .18 * q; pose.arm = lerp(.4, 1.2, q); pose.elbow = 1.3; pose.backArm = lerp(1.5, 2.2, q); pose.flow = 2; }
+      else if (k < .66) { const q = ease((k - .14) / .52); pose.crouch = 1; pose.legs = { f: 3 + 3 * q, b: -1 - 3 * q, fk: 11 - 3 * q, bk: 12 - 2 * q }; pose.lean = lerp(-.12, -.42, q); pose.arm = lerp(.85, .7, q); pose.elbow = P.w === 'fists' ? 1.7 : .9; pose.backArm = lerp(2.4, 2.9, q); pose.backElbow = .4; pose.flow = -12 - 4 * q; }
+      else { const q = ease((k - .66) / .34); pose.sink = lerp(9, 4, q); pose.legs = { f: 10, b: -13, fk: lerp(9, 4, q), bk: lerp(10, 6, q) }; pose.lean = lerp(.38, .14, q); pose.arm = lerp(.5, .7, q); pose.elbow = 1.4; pose.backArm = lerp(.95, 1.35, q); pose.backElbow = .1; pose.openHand = 1; pose.flow = lerp(-6, 0, q); }
+    }
     else { pose.crouch = 1; pose.walk = 1.4; pose.lean = .2; pose.arm = .3; pose.backArm = 2; } // the stride into Shadow
   }
   else if (P.state === 'shoot') { // a short bow, drawn to the cheek and loosed, standing side-on
