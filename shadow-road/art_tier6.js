@@ -317,13 +317,24 @@ function t6Rapier(pose) {
   if (!pose.noHand) gripHand(pose.glove || '#2E2C36');
 }
 
+// level 7: the same legendary weapon, now gilt: a thin line of gold light runs its length, with a glint travelling
+// slowly from the hand to the tip and a mote of gold drifting off it now and then
+function t7Gilt(kind, pose) {
+  if (!t6Plain()) return;
+  const [a, b] = { hammer: [6, 56], staff: [-26, 64], sword: [22, 96], grayblade: [20, 70], rapier: [20, 70] }[kind] || [10, 60];
+  const now = performance.now() / 1000, q = (now * .32) % 1, gx = a + (b - a) * q;
+  t6Add(() => {
+    ctx.strokeStyle = 'rgba(255,214,120,.32)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a, -1.8); ctx.lineTo(b, -1.8); ctx.stroke();
+    const g = ctx.createRadialGradient(gx, -1.8, 0, gx, -1.8, 9); g.addColorStop(0, 'rgba(255,236,170,.75)'); g.addColorStop(1, 'rgba(255,214,120,0)');
+    ctx.fillStyle = g; ctx.fillRect(gx - 9, -11, 18, 18);
+    t6Star(gx, -1.8, 2.6, .9, 'rgba(255,250,225,.95)');
+  });
+}
 const _drawWeapon6 = drawWeapon;
 drawWeapon = function (kind, pose) {
   if (pose && pose.tier >= 6) {
-    if (kind === 'hammer') { t6Hammer(pose); return; }
-    if (kind === 'staff') { t6Staff(pose); return; }
-    if (kind === 'sword') { t6Sword(pose); return; }
-    if (kind === 'grayblade' || kind === 'rapier') { t6Rapier(pose); return; }
+    const f = { hammer: t6Hammer, staff: t6Staff, sword: t6Sword, grayblade: t6Rapier, rapier: t6Rapier }[kind];
+    if (f) { f(pose); if (pose.tier >= 7) t7Gilt(kind, pose); return; }
   }
   return _drawWeapon6(kind, pose);
 };

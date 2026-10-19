@@ -70,11 +70,12 @@ function stageClear() {
 
 // ---------- explaining moves: inputs shown as button chips ----------
 // on a keyboard the chips name the keys instead of the buttons
-const KEY_CHIP = { SHOOT: 'I', A: 'J', H: 'K', HOLDA: 'HOLD J', HOLD: 'HOLD K', HOLD3: 'HOLD K TO 3RD FLASH', RUN: 'RUN', WALK: 'WALK', JUMP: 'SPACE', DODGE: 'L' };
-const CHIP = { SHOOT: ['BOW', 'j'], A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLDA: ['HOLD ATTACK', 'a'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], RUN: ['RUN', 'r'], WALK: ['WALK', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
-const KEY_INPUTS = { RH: ['DODGE', '+H'], J2: ['JUMP', 'JUMP'], AX: ['JUMP', '+HOLDA'], X: ['HOLDA'], M: ['WALK', '+A'], AH: ['JUMP', '+H'], HC: ['HOLD'], D: ['RUN', '+A'], DH: ['RUN', '+H'], A: ['JUMP', '+A'], R: ['DODGE', '+A'] };
+const KEY_CHIP = { SHOOT: 'I', A: 'J', H: 'K', HOLDA: 'HOLD J', HOLD: 'HOLD K', HOLD3: 'HOLD K TO 3RD FLASH', HOLD4: 'HOLD K TO 4TH FLASH', RUNJUMP: 'RUN + SPACE', RUN: 'RUN', WALK: 'WALK', JUMP: 'SPACE', DODGE: 'L' };
+const CHIP = { SHOOT: ['BOW', 'j'], A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLDA: ['HOLD ATTACK', 'a'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], HOLD4: ['HOLD HEAVY TO 4TH FLASH', 'h'], RUNJUMP: ['RUNNING JUMP', 'j'], RUN: ['RUN', 'r'], WALK: ['WALK', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
+const KEY_INPUTS = { RH: ['DODGE', '+H'], J2: ['JUMP', 'JUMP'], AX: ['JUMP', '+HOLDA'], X: ['HOLDA'], M: ['WALK', '+A'], AH: ['JUMP', '+HOLD'], JH: ['JUMP', '+H'], DA: ['RUNJUMP', '+A'], HOLD4: ['HOLD4'], HC: ['HOLD'], D: ['RUN', '+A'], DH: ['RUN', '+H'], A: ['JUMP', '+A'], R: ['DODGE', '+A'] };
 function inputsFor(id, m) {
   if (!m.key) return ['HOLD3'];
+  if (m.key === 'HOLD4') return ['HOLD4'];
   if (m.seq) return m.seq;
   if (KEY_INPUTS[m.key]) return KEY_INPUTS[m.key];
   return m.key.split('').map((c, i) => c === 'L' ? 'A' : (id === 'sword' && i === 0 ? 'HOLD' : 'H'));
@@ -88,6 +89,8 @@ function chips(id, m) {
 }
 const BASICS = [
   { key: 'L', name: 'Combo', desc: 'Tap Attack again and again to chain the full combo.', seq: ['A', 'A', 'A'] },
+  { key: 'JH', name: 'Air heavy', desc: 'Heavy in the air: every weapon has its own big aerial move, once per jump.' },
+  { key: 'DA', name: 'Running jump attack', desc: 'Jump out of a run, then Attack: a flying strike that keeps all your speed.' },
   { key: 'X', name: 'Launcher', desc: 'Hold Attack to throw an enemy into the air. Tap Jump right after to leap up after them.' },
   { key: 'A', name: 'Air combo', desc: 'Up to three Attacks in the air. Air hits keep enemies floating and hit harder; the third drives them into the ground.', seq: ['JUMP', '+A', 'A', 'A'] },
   { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge. Mix it into the combos below.', seq: ['H'] },
@@ -106,9 +109,9 @@ function moveListHtml(id) {
 // ---------- the forge ----------
 // prices climb steeply, and each new cycle of the road makes everything dearer again
 const cyc = () => 1 + .5 * (save.cycle || 0);
-const WMAX = () => save.cycle > 0 ? 12 : 6; // past level 6 (new cycles only) each level is a plain damage bump
+const WMAX = () => save.cycle > 0 ? WLEARN + 6 : WLEARN; // past level 7 (new cycles only) each level is a plain damage bump
 // tuned so a world pays for one or two upgrades, no more
-const wCost = (lvl) => lvl < 6 ? { s: Math.round([0, 90, 190, 330, 520, 760][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7][lvl] * cyc()) } : { s: Math.round((900 + 120 * (lvl - 6)) * cyc()), g: Math.round((8 + 2 * (lvl - 6)) * cyc()) };
+const wCost = (lvl) => lvl < WLEARN ? { s: Math.round([0, 90, 190, 330, 520, 760, 1050][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) } : { s: Math.round((1150 + 120 * (lvl - WLEARN)) * cyc()), g: Math.round((10 + 2 * (lvl - WLEARN)) * cyc()) }; // level 7, the last move, is a step dearer than 6
 const aCost = (lvl) => ({ s: Math.round([0, 100, 220, 380, 600, 900][lvl] * cyc()), g: Math.round([0, 0, 1, 2, 3, 4][lvl] * cyc()) });
 const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
@@ -129,7 +132,7 @@ function renderForge(note) {
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/${WMAX()} · DAMAGE ×${wMult(id).toFixed(2)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
       <p>${bare ? w.desc + ' Fists never level up.' : owned ? w.desc : 'Not found yet. Defeat enemies to find it.'}</p><ul>${moves}</ul>
-      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX() > 6 ? 'Fully tempered' : 'Every move learned') : lvl >= 6 ? `Temper: +6% damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
+      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX() > WLEARN ? 'Fully tempered' : 'Every move learned') : lvl >= WLEARN ? `Temper: +6% damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
     if (b) b.addEventListener('click', () => {
@@ -280,14 +283,16 @@ function step(now) {
   if (live) {
     readMove();
     if (input.light) P.holdL = (P.holdL || 0) + rawDt; else { P.holdL = 0; P.holdUsed = false; } // real time, so hit freezes don't stall a held button
+    P.holdH = input.heavy ? (P.holdH || 0) + rawDt : 0;
     if (slowmo > 0) { slowmo -= dt; dt *= .3; }
-    if (hitstop > 0) hitstop -= dt;
+    const froze = hitstop > 0;
+    if (froze) hitstop -= dt;
     else if (zoneTrans) updateZoneTrans(dt);
     else { updatePlayer(dt); updateWorld(dt); }
     updateFx(hitstop > 0 ? dt * .25 : dt);
     shakeMag = Math.max(0, shakeMag - dt * 30); zoom = Math.max(0, zoom - dt * .25);
     flashT = Math.max(0, flashT - dt); hurtFlash = Math.max(0, hurtFlash - dt);
-    if (hitstop <= 0) for (const k in pressed) pressed[k] = false; // a press during a hit freeze is kept until the action resumes
+    if (!froze) for (const k in pressed) pressed[k] = false; // a press during a hit freeze is kept until the action has actually resumed
     hudTick();
   } else if (mode === 'title' && P) { // the title screen keeps a gentle scene moving behind it
     P.walk += dt * 8; updateFx(dt);

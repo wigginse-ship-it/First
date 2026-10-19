@@ -26,15 +26,20 @@ function nextMove(key) {
   if (key === 'H' && (w.charge || unlocked(tree.HC))) return 'charge';
   return unlocked(tree[key]) ? tree[key] : null;
 }
+// (out of a hopping backstep a dodge counter is still a ground move, so it plays out in full)
 function begin(m) {
   if (m === 'charge') { P.state = 'charge'; P.ct = 0; P.clvl = 0; P.seq = 'H'; return; }
   if (!m) { P.state = 'idle'; return; }
-  P.state = m.dive || (P.z > 0 && !m.hop) ? 'air' : 'atk'; P.move = m; P.t = 0; P.moveId = (P.moveId || 0) + 1; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false;
+  P.state = m.dive || (P.z > 0 && !m.hop && P.state !== 'dodge') ? 'air' : 'atk'; P.move = m; P.t = 0; P.moveId = (P.moveId || 0) + 1; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false; P.finDone = false; P.turned = false; P.vaultVx = undefined; P.stormed = false; P.blinkList = null;
   if (Math.abs(input.mx) > 0.3 && !m.dive) P.facing = Math.sign(input.mx);
   P.vx = (m.lunge || 0) * P.facing;
   P.hopQ = 0; if (m.hop) { if (m.prep) P.hopQ = m.hop; else P.vz = m.hop; } // a loaded move leaves the ground only once the knees have bent
   if (m.dive) { P.vz = Math.min(P.vz, -120); P.jvx = P.facing * 240; }
-  else if (P.state === 'air') { P.vz = Math.max(P.vz, 110); P.jvx *= .3; P.airN = (P.airN || 0) + 1; }
+  else if (P.state === 'air') { P.vz = Math.max(P.vz, m.fly ? 70 : 110); P.jvx = m.fly ? P.facing * Math.max(Math.abs(P.jvx), 270) : P.jvx * .3; P.airN = (P.airN || 0) + 1; } // a flying attack keeps all the run's speed
+  if (m.blink) { // Hellride: pick out who he will step to, nearest first
+    P.blinkList = enemies.filter(e => !e.dead && Math.abs(e.x - P.x) < 320 && e.x > camX + 10 && e.x < camX + VW - 10).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x)).slice(0, m.blink);
+    P.blinkI = 0; P.inv = Math.max(P.inv, m.dur);
+  }
   if (m.launcher) { P.holdUsed = true; P.chaseQ = false; }
   if (stageIdx >= 2 && (m.power === 2 || m.smash)) for (const e of enemies) { // third-world enemies see a big swing coming and hop clear of it
     if (e.dead || e.boss || e.air || !['idle', 'recover'].includes(e.state)) continue;
@@ -42,16 +47,13 @@ function begin(m) {
     if (dx > -10 && dx < (m.x1 || 60) + 50 && Math.abs(e.y - P.y) < 30 && Math.random() < .28) { e.state = 'evade'; e.t = .38; e.vx = Math.sign(e.x - P.x || 1) * 330; e.sqx = .8; e.sqy = 1.15; dust(e.x, e.y, 4); }
   }
   sfx(m.power === 2 || m.rot || m.spin ? 'whoosh' : 'swing');
-  if (m.lvl) { // a learned move: a soft chime and a gold glint along the weapon, so you know it came out
-    P.specialT = .4; sfx('charge', 3);
-    fx.push({ kind: 'ring', x: P.x + P.facing * 14, y: P.y, z: 40, t: .3, max: .3, r: 22, col: '#EED48A' });
-  }
+  if (m.lvl) learnedCue(m); // a learned move announces itself: a chime, a gilded flourish, gold along the weapon and round him (moves.js)
 }
 
 // ---------- player ----------
 function updatePlayer(dt) {
   const w = WEAPONS[P.w];
-  P.inv = Math.max(0, P.inv - dt); P.chaseT = Math.max(0, (P.chaseT || 0) - dt);
+  P.inv = Math.max(0, P.inv - dt); P.specialT = Math.max(0, (P.specialT || 0) - dt); P.chaseT = Math.max(0, (P.chaseT || 0) - dt);
   const wasAir = P.z > 0 || P.vz > 0;
   if (wasAir) {
     P.vz -= GRAV * dt * (P.state === 'air' && P.move && P.move.dive ? 1.8 : 1) * roomGrav; // the Wyrm's Nest loosens its pull
@@ -65,7 +67,7 @@ function updatePlayer(dt) {
       if (pressed.trump) playTrump();
       if (pressed.shoot) { startShoot(); break; }
       const running = input.run && Math.abs(mx) > 0.3;
-      if (pressed.jump) { if (P.chaseT > 0) { chaseJump(); break; } P.vz = JUMP; P.state = 'jump'; P.jvx = running ? Math.sign(mx) * RUN * sp * 1.05 : mx * SPX * sp; P.jvy = my * SPY * sp; P.airN = 0; sfx('jump'); dust(P.x, P.y, 5); break; }
+      if (pressed.jump) { if (P.chaseT > 0) { chaseJump(); break; } P.vz = JUMP; P.state = 'jump'; P.jvx = running ? Math.sign(mx) * RUN * sp * 1.05 : mx * SPX * sp; P.jvy = my * SPY * sp; P.airN = 0; P.runJump = running; P.jhUsed = false; sfx('jump'); dust(P.x, P.y, 5); break; }
       if (pressed.dodge) { startDodge(); break; }
       if (input.light && P.holdL >= .2 && !P.holdUsed) { begin(w.tree.X); break; } // hold Attack: launcher
       if (pressed.light) { const walking = Math.abs(mx) > .5 || Math.abs(my) > .5; begin(running ? w.tree.D : walking && unlocked(w.tree.M) ? w.tree.M : nextMove('L')); break; }
@@ -87,7 +89,9 @@ function updatePlayer(dt) {
       P.x += P.jvx * dt; P.y += P.jvy * dt;
       if (airSpecial()) break;
       if (pressed.shoot) { startShoot(); break; }
-      if (pressed.heavy && unlocked(w.tree.AH)) { P.jvy = 0; begin(w.tree.AH); }
+      if (pressed.heavy && P.jhUsed && unlocked(w.tree.AH)) { P.jvy = 0; begin(w.tree.AH); } // a second Heavy in the same jump: the learned dive
+      else if (pressed.heavy && !P.jhUsed && w.tree.JH) { P.jvy = 0; P.jhUsed = true; begin(w.tree.JH); } // the air heavy, once a jump
+      else if (pressed.light && P.runJump && !P.airN && w.tree.DA) { P.jvy = 0; P.runJump = false; begin(w.tree.DA); } // off a run: the flying attack
       else if ((pressed.light || pressed.heavy) && airNext()) { P.jvy = 0; begin(airNext()); }
       break;
     case 'air': { // air combo: up to three hits, then a spike back to the ground
@@ -96,6 +100,8 @@ function updatePlayer(dt) {
       if (m.dive || (k >= m.h[0] && k <= m.h[1])) doHits();
       if (m.hover) P.vz = Math.max(P.vz, -15); // the helicopter spin holds you up
       if (!m.hover && airSpecial()) break;
+      if (airHeavyHold(m)) break;
+      if (P.specialT > 0) learnedTrail(dt);
       if (k > .3) { if (pressed.light) P.q = 'L'; if (pressed.heavy) P.q = 'H'; }
       if (!m.dive && P.t >= m.dur) {
         if (P.q === 'H' && unlocked(w.tree.AH)) begin(w.tree.AH);
@@ -107,9 +113,9 @@ function updatePlayer(dt) {
     case 'atk': runMove(dt); break;
     case 'charge': {
       P.ct += dt;
-      const maxL = save.wl.sword >= 2 ? 3 : 2; // Shadow Cleave is the sword's first upgrade
-      const lvl = !w.charge ? (P.ct >= .45 ? 1 : 0) : P.ct >= 1.5 && maxL === 3 ? 3 : P.ct >= .95 ? 2 : P.ct >= .45 ? 1 : 0;
-      if (lvl > P.clvl) { P.clvl = lvl; sfx('charge', lvl); burst(P.x - P.facing * 6, P.y, 56, lvl === 3 ? '#C8607A' : '#D8AA55', 8 + lvl * 4, 'spark'); zoom = Math.max(zoom, .02); }
+      const maxL = save.wl.sword >= 7 ? 4 : save.wl.sword >= 2 ? 3 : 2; // Shadow Cleave is the sword's first upgrade, the Judgement of Amber its last
+      const lvl = !w.charge ? (P.ct >= .45 ? 1 : 0) : P.ct >= 2.05 && maxL === 4 ? 4 : P.ct >= 1.5 && maxL >= 3 ? 3 : P.ct >= .95 ? 2 : P.ct >= .45 ? 1 : 0;
+      if (lvl > P.clvl) { P.clvl = lvl; sfx('charge', lvl); burst(P.x - P.facing * 6, P.y, 56, lvl === 4 ? ['#FFE9A0', '#FFFFFF'] : lvl === 3 ? '#C8607A' : '#D8AA55', 8 + lvl * 4, 'spark'); zoom = Math.max(zoom, .02 + (lvl === 4 ? .02 : 0)); }
       if (Math.abs(mx) > 0.3) P.facing = Math.sign(mx);
       if (pressed.dodge) { startDodge(); break; }
       if (!input.heavy) {
@@ -162,7 +168,7 @@ function updatePlayer(dt) {
 }
 function onLand() {
   dust(P.x, P.y, 6);
-  P.airN = 0; P.j2 = false;
+  P.airN = 0; P.j2 = false; P.jhUsed = false; P.runJump = false;
   if (P.state === 'jump') { P.state = 'idle'; }
   else if (P.state === 'air' || (P.state === 'atk' && P.move && (P.move.shock || P.move.bounce) && P.move.hop)) {
     const m = P.move;
@@ -173,17 +179,22 @@ function onLand() {
   else if (P.state === 'hurt' && P.knocked) { P.state = 'down'; P.t = .6; shakeMag = Math.max(shakeMag, 3); }
 }
 function runMove(dt) {
-  const m = P.move; P.specialT = Math.max(0, (P.specialT || 0) - dt); P.t += dt * (pw('haste') ? 1.2 : 1); const k = P.t / m.dur;
+  let m = P.move; P.t += dt * (pw('haste') ? 1.2 : 1); const k = P.t / m.dur;
   if (P.hopQ && k >= m.h[0] * .8) { P.vz = P.hopQ; P.hopQ = 0; dust(P.x, P.y, 5); }
   P.x += P.vx * dt; P.vx *= Math.pow(m.lunge > 300 ? .05 : .004, dt);
   if (m.lunge > 250 || m.rot || m.spin) { P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .035; addGhost(); } }
   const airborne = P.z > 0;
-  if ((k >= m.h[0] && k <= m.h[1]) || (airborne && k >= m.h[0] && (m.bounce || m.shock))) doHits();
+  if (m.fin && !P.finDone && k >= m.fin.at) { // the move's last beat hits differently: everyone is struck once more, by the finisher
+    P.finDone = true; P.hits = new Map(); P.shocked = false; if (m.fin.vz) P.vz = m.fin.vz;
+    m = P.move = Object.assign({}, m, m.fin, { fin: null, finBase: m });
+  }
+  if (moveExtras(m, k, dt, airborne)) return;
+  if (((k >= m.h[0] && k <= m.h[1]) || (airborne && k >= m.h[0] && (m.bounce || m.shock))) && !(P.blinkList && P.blinkList.length)) doHits();
   if (m.shock && !m.hop && !P.shocked && k >= m.h[0]) shockwave(P.x + P.facing * (m.x1 * .7), P.y, m.shock, m);
   if (m.wave && !P.waved && k >= m.h[0]) {
     P.waved = true;
     const quake = m.waveKind === 'quake'; // the hammer's crack runs along the ground; the sword's wave is a crescent of light
-    projs.push({ owner: 'p', x: P.x + P.facing * 40, y: P.y, z: 0, vx: P.facing * (quake ? 300 : 340), dmg: Math.round((m.wave === 1 ? 40 : m.wave) * wMult(P.w)), life: quake ? .9 : 1, hit: new Set(), wave: 1, quake });
+    for (const d of m.wave2 ? [1, -1] : [1]) projs.push({ owner: 'p', x: P.x + d * P.facing * 40, y: P.y, z: 0, vx: d * P.facing * (quake ? 300 : 340), dmg: Math.round((m.wave === 1 ? 40 : m.wave) * wMult(P.w)), life: quake ? .9 : 1, hit: new Set(), wave: 1, quake }); // wave2: it runs both ways
   }
   if (k > .3) { if (pressed.light) P.q = 'L'; if (pressed.heavy) P.q = 'H'; }
   if (pressed.dodge && k > .4) { startDodge(); return; }
@@ -204,7 +215,7 @@ function airSpecial() { // the staff's air tricks: a second vault, or a hovering
 }
 function airNext() { return WEAPONS[P.w].tree['A'.repeat((P.airN || 0) + 1)] || null; }
 function chaseJump() { // leap up after a launched enemy
-  P.state = 'jump'; P.vz = 540; P.jvx = clamp(((P.chaseX || P.x) - P.x) / .55, -280, 280); P.jvy = 0; P.airN = 0; P.chaseT = 0;
+  P.state = 'jump'; P.vz = 540; P.jvx = clamp(((P.chaseX || P.x) - P.x) / .55, -280, 280); P.jvy = 0; P.airN = 0; P.chaseT = 0; P.jhUsed = false; P.runJump = false;
   sfx('jump'); dust(P.x, P.y, 8); addGhost();
 }
 function startParry() {
@@ -318,6 +329,7 @@ function strike(e, base, dir, m, echo) {
   if (pw('might') && !m.trump) dmg = Math.round(dmg * 1.3);
   if (pw('leech') && !m.trump && !e.boss) P.hp = Math.min(maxHp(), P.hp + 1 + dmg * .03);
   hurtEnemy(e, dmg, dir, m, crit);
+  if (P.specialHit && (m === P.move || (P.move && m.key === P.move.key))) learnedFirstHit(e, dir);
   if (broke && !e.dead) { // the guard shatters and leaves it reeling
     e.state = 'down'; e.t = 1.3; e.vx = dir * 60; e.plan = null; hitstop = Math.max(hitstop, .14); shakeMag = Math.max(shakeMag, 7); sfx('break');
     floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD BREAK!', '#FFD27A', 18); burst(e.x, e.y, e.z + e.hh * .6, ['#EED48A', '#FFFFFF', '#D8AA55'], 24, 'crystal', dir, true);

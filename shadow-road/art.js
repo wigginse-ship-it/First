@@ -428,7 +428,7 @@ function drawHumanoid(look, pose) {
   const gait = walk && !pose.legs && !pose.kick && pose.kickK === undefined && !pose.down && !pose.crouch;
   const bob = gait ? (pose.run ? (1 - Math.abs(sw)) * 3 : Math.abs(sw) * 1.6) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
   const br = pose.breath ? (pose.breath + 1) * .45 : 0; // breathing settles the body over planted feet
-  const cr = (pose.crouch ? 8 : (pose.sink || 0)) + bob + br, HIP = -30 + cr, SHO = -49 + cr, NECK = -53 + cr; // sink: how far the hips drop into a stance
+  const cr = (pose.crouchK ?? (pose.crouch ? 8 : (pose.sink || 0))) + bob + br, HIP = -30 + cr, SHO = -49 + cr, NECK = -53 + cr; // sink: how far the hips drop into a stance
   const skin = look.skin || '#C9A07E', sleeve = look.sleeve || look.body;
   // the whole upper body bends at the waist; as it tips forward the hips slide back to keep his weight over his feet,
   // and as it arches back they push forward

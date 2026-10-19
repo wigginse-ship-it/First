@@ -96,6 +96,7 @@ function sfx(k, power = 1) {
       case 'weapon': [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.25, 'triangle', 0.09, 0, i * 0.08)); break;
       case 'jump': tone(300, 0.12, 'triangle', 0.06, 520); break;
       case 'shoot': tone(1200, 0.14, 'square', 0.035, 300); break;
+      case 'learned': [1568, 2093, 2637].forEach((f, i) => tone(f, 0.32 - i * .05, 'sine', 0.07, 0, i * 0.045)); tone(3136, 0.5, 'triangle', 0.025, 0, 0.12); noise(0.18, 0.06, 6000, 2); break; // a small bright bell: a learned move
       case 'charge': tone(400 + 200 * power, 0.14, 'sine', 0.09, 800 + 300 * power); break;
       case 'trump': [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, 0.4, 'sine', 0.1, 0, i * 0.05)); noise(0.5, 0.15, 3000, 0.5); break;
       case 'buy': tone(660, 0.1, 'triangle', 0.1); tone(990, 0.16, 'triangle', 0.1, 0, 0.09); break;

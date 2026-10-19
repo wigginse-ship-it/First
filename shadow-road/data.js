@@ -18,13 +18,15 @@ const WEAPONS = {
       LL:   { dur: .22, h: [.3, .6], x0: 0, x1: 34, dmg: 7, kb: 50, arc: [.9, -.15], lunge: 70 },
       LLL:  { name: 'Hook', dur: .3, h: [.3, .65], x0: 0, x1: 38, dmg: 9, kb: 160, arc: [.3, .3], lunge: 60 },
       LLLL: { name: 'Roundhouse', dur: .48, h: [.34, .66], x0: 0, x1: 42, dmg: 12, kb: 300, kick: 1, lunge: 140, spin: 1, power: 1 }, // a spinning back kick: he turns his back, then the heel comes round
-      H:    { name: 'Jumping Uppercut', dur: .54, h: [.33, .6], prep: 1, x0: 0, x1: 34, dmg: 13, kb: 60, launch: 430, arc: [1.6, -1.8], hop: 210, lunge: 210, power: 1 },
+      H:    { name: 'Rising Dragon', dur: .56, h: [.34, .6], prep: 1, x0: 0, x1: 34, dmg: 13, kb: 60, launch: 430, arc: [1.6, -1.8], hop: 210, lunge: 210, power: 1 },
       HH:   { name: 'Thunder Palm', dur: .46, h: [.3, .6], x0: 0, x1: 42, dmg: 16, kb: 380, arc: [.2, .2], lunge: 200, power: 2, wall: 1 }, // both palms driven forward hard enough to bounce them off a wall
       HHH:  { name: 'Dragon Fist', dur: .55, h: [.32, .6], x0: 0, x1: 46, dmg: 24, kb: 460, arc: [.1, .1], lunge: 320, power: 2, wall: 1 }, // the whole body behind one straight punch: sends them flying into the wall
       LH:   { name: 'Shoulder Bash', dur: .45, h: [.15, .7], x0: 0, x1: 38, dmg: 15, kb: 420, lunge: 460, arc: [.2, .2], power: 2, wall: 1 },
       LLH:  { name: 'Whirlwind Kick', dur: .62, h: [.15, .85], x0: 0, x1: 42, dmg: 6, kb: 220, kick: 1, around: 1, multi: .11, hop: 260, spin: 2, power: 1 },
       HL:   { name: 'Sky Hammer', dur: .55, h: [.55, .8], x0: 0, x1: 40, dmg: 18, kb: 120, arc: [-2.6, 1.4], hop: 280, lunge: 110, bounce: 1, power: 2 },
-      X:    { name: 'Rising Fist', dur: .5, h: [.34, .58], prep: 1, x0: 0, x1: 36, dmg: 10, kb: 30, launch: 580, arc: [1.6, -1.8], launcher: 1, power: 1 },
+      X:    { name: 'Rising Fist', dur: .5, h: [.36, .58], prep: 1, x0: 0, x1: 36, dmg: 10, kb: 30, launch: 580, arc: [1.6, -1.8], launcher: 1, power: 1 }, // a boxer's uppercut: dipped low to the lead side, then driven up from the legs
+      JH:   { name: 'Tornado Kick', dur: .5, h: [.3, .62], x0: 0, x1: 44, dmg: 13, kb: 320, kick: 1, spin: 1, power: 1, wall: 1 }, // Heavy in the air: a spinning hook kick, heel first
+      DA:   { name: 'Superman Punch', dur: .46, h: [.24, .6], x0: 0, x1: 48, dmg: 14, kb: 360, arc: [.1, .1], fly: 1, power: 1, wall: 1 }, // Attack in a running jump: laid out flat behind a flying cross
       A:    { dur: .28, h: [.2, .6], x0: 0, x1: 38, dmg: 7, kb: 60, arc: [.9, -.2] },
       AA:   { dur: .3,  h: [.2, .6], x0: 0, x1: 40, dmg: 8, kb: 60, kick: 1 },
       AAA:  { dur: .4,  h: [.2, .65], x0: 0, x1: 42, dmg: 12, kb: 120, arc: [-2.4, 1.4], spike: 1, power: 1 },
@@ -37,21 +39,26 @@ const WEAPONS = {
       L:    { dur: .46, h: [.35, .65], x0: 0, x1: 64, dmg: 15, kb: 220, arc: [.35, .35], lunge: 50, depth: 24, power: 1 },
       LL:   { dur: .5,  h: [.35, .65], x0: 0, x1: 64, dmg: 17, kb: 260, arc: [.35, .35], lunge: 60, depth: 24, power: 1 },
       LLL:  { name: 'Hammer Cyclone', dur: .85, h: [.12, .88], x0: 0, x1: 62, dmg: 9, kb: 200, arc: [-P_, 3 * P_], around: 1, multi: .13, lunge: 140, power: 1 },
-      H:    { name: 'Overhead Smash', smash: 1, dur: .64, h: [.45, .62], x0: 0, x1: 66, dmg: 24, kb: 90, launch: 330, arc: [-2.7, 1.5], hop: 140, lunge: 150, bounce: 1, shock: 70, power: 2 },
+      H:    { name: 'Pivot Crusher', dur: .62, h: [.42, .62], x0: 0, x1: 70, dmg: 22, kb: 340, arc: [.3, .3], spin: 1, lunge: 130, power: 2, wall: 1, depth: 26 }, // he turns his back and the hammer comes round flat, the whole body behind it
       LH:   { name: 'Golf Swing', dur: .55, h: [.35, .6], x0: 0, x1: 62, dmg: 20, kb: 80, launch: 560, arc: [2.3, -2.6], power: 2 },
-      HH:   { name: 'Fault Line', smash: 1, dur: .62, h: [.42, .62], x0: 0, x1: 68, dmg: 26, kb: 120, launch: 340, arc: [-2.8, 1.5], lunge: 90, shock: 60, wave: 30, waveKind: 'quake', power: 2 }, // drive the hammer into the ground and split the earth in a line ahead
-      HHH:  { name: 'Avalanche', smash: 1, dur: .78, h: [.46, .62], x0: 0, x1: 72, dmg: 34, kb: 260, launch: 380, arc: [-2.9, 1.5], lunge: 70, shock: 150, power: 2 }, // a two-handed slam whose shockwave throws up everyone nearby
+      HH:   { name: 'Rising Ruin', dur: .6, h: [.38, .58], prep: 1, x0: 0, x1: 66, dmg: 22, kb: 60, launch: 540, arc: [2.4, -2.5], hop: 120, lunge: 110, drag: .38, power: 2 }, // the spin carries on: the head scrapes the street in a shower of sparks and comes up under them
+      HHH:  { name: 'Maelstrom Slam', dur: 1, h: [.06, .86], x0: 0, x1: 72, dmg: 5, kb: 140, multi: .15, around: 1, lunge: 90, power: 1, drag: .55,
+              fin: { at: .7, dmg: 22, kb: 260, launch: 380, multi: 0, around: 0, smash: 1, shock: 150, wave: 30, waveKind: 'quake', power: 2 } }, // two full turns with the hammer at arm's length, then up over the head and down: the street splits
       LLH:  { name: 'Comet Drop', smash: 1, dur: .8, h: [.62, .8], x0: 0, x1: 70, dmg: 38, kb: 160, launch: 300, arc: [-2.8, 1.5], hop: 420, rot: TAU, lunge: 220, bounce: 1, shock: 110, power: 2 },
       X:    { name: 'Uplift', dur: .58, h: [.33, .57], prep: 1, x0: 0, x1: 62, dmg: 16, kb: 40, launch: 580, arc: [2.3, -2.4], launcher: 1, power: 1 },
       A:    { dur: .36, h: [.25, .6], x0: 0, x1: 58, dmg: 12, kb: 120, arc: [-1.8, 1.0] },
       AA:   { dur: .4,  h: [.25, .6], x0: 0, x1: 58, dmg: 13, kb: 120, arc: [1.0, -1.6] },
       AAA:  { dur: .5,  h: [.25, .65], x0: 0, x1: 60, dmg: 18, kb: 140, arc: [-2.6, 1.5], spike: 1, smash: 1, power: 2 },
+      JH:   { name: 'Somersault Smash', dur: .7, h: [.48, .8], x0: 0, x1: 66, dmg: 24, kb: 120, launch: 300, arc: [-2.8, 1.5], hop: 250, lunge: 210, rot: TAU, slamDrop: .5, smash: 1, bounce: 1, shock: 90, power: 2 }, // Heavy in the air: up and over in a front flip, the hammer coming over with him into the street
+      DA:   { name: 'Flying Wheel', dur: .55, h: [.18, .8], x0: 0, x1: 64, dmg: 7, kb: 200, arc: [.3, .3], around: 1, multi: .14, spin: 1, fly: 1, power: 1 }, // Attack in a running jump: he turns once in the air with the hammer held out flat
       D:    { dur: .56, h: [.1, .6], x0: 0, x1: 60, dmg: 18, kb: 360, arc: [1.4, 1.4], lunge: 440, crouch: 1, power: 1 },
       R:    { name: 'Lunging Drive', dur: .48, h: [.3, .62], x0: 0, x1: 64, dmg: 20, kb: 340, arc: [.15, .15], lunge: 290, dodgeLunge: 1, power: 2 }, // out of the dodge he drives the hammer's head into them
-      AH:   { lvl: 3, name: 'Hammer Plunge', how: 'Heavy in the air', desc: 'Fall from the sky hammer-first; the landing sends a shockwave out both ways.', smash: 1, dur: .55, h: [.15, .97], x0: 0, x1: 54, dmg: 22, kb: 160, arc: [-2, 1.5], dive: 1, shock: 70, power: 2 },
-      RH:   { lvl: 4, name: 'Pivot Quake', how: 'Heavy out of a dodge', desc: 'Come out of the dodge spinning and slam the hammer down; the quake hits everyone around you.', smash: 1, dur: .7, h: [.5, .7], x0: 0, x1: 70, dmg: 30, kb: 260, launch: 320, arc: [-P_, 1.5], around: 1, rot: -TAU, shock: 120, power: 2 },
+      AH:   { lvl: 3, name: 'Hammer Plunge', how: 'Hold Heavy in the air', desc: 'Fall from the sky hammer-first; the landing sends a shockwave out both ways.', smash: 1, dur: .55, h: [.15, .97], x0: 0, x1: 54, dmg: 22, kb: 160, arc: [-2, 1.5], dive: 1, shock: 70, power: 2 },
+      RH:   { lvl: 4, name: 'Tempest Uplift', how: 'Heavy out of a dodge', desc: 'Corkscrew out of the dodge, the hammer dragged screaming round you along the street, and whip it up in a rising swing that throws everyone around you sky-high.', dur: .92, h: [.08, .86], x0: 0, x1: 72, dmg: 7, kb: 150, multi: .13, around: 1, lunge: 150, drag: .58, power: 1,
+              fin: { at: .6, dmg: 24, kb: 110, launch: 660, multi: 0, around: 1, power: 2, vz: 230, hop: 1 } },
       HC:   { lvl: 2, name: 'Titan Slam', how: 'Hold Heavy, then let go', desc: 'Wind up, leap and flip, and bring the hammer down hard enough to launch everyone near you.', smash: 1, dur: .85, h: [.65, .8], x0: 0, x1: 76, dmg: 40, kb: 220, launch: 420, arc: [-2.8, 1.5], hop: 300, rot: -TAU, around: 1, shock: 170, power: 2 },
       DH:   { lvl: 5, name: 'Rampage', how: 'Heavy while running', desc: 'Charge through the crowd spinning the hammer, hitting everything in your path.', dur: .8, h: [.1, .9], x0: 0, x1: 62, dmg: 10, kb: 260, arc: [-P_, 3 * P_], around: 1, multi: .1, lunge: 520, power: 1 },
+      LLLL: { lvl: 7, name: 'Worldbreaker', how: 'A fourth Attack', desc: 'Out of the cyclone, wheel the hammer twice over your head and drive it into the street: the ground splits both ways at once and everyone near you is thrown into the air.', dur: 1.05, h: [.6, .74], x0: 0, x1: 78, dmg: 52, kb: 260, launch: 460, arc: [-2.9, 1.5], lunge: 60, smash: 1, shock: 170, wave: 44, wave2: 1, waveKind: 'quake', power: 2 },
       HHHH: { lvl: 6, name: 'Starfall Maul', how: 'A fourth Heavy', desc: 'Leap after the third blow and bring the hammer down like a falling star: the ground splits and the quake runs on down the street.', dur: .9, h: [.6, .78], x0: 0, x1: 76, dmg: 50, kb: 220, launch: 360, arc: [-2.9, 1.5], hop: 340, lunge: 160, smash: 1, shock: 140, wave: 1, waveKind: 'quake', bounce: 1, power: 2 },
     } },
   staff: { name: 'Bowstaff', reach: 54, look: 'staff', desc: 'Long reach, spins that hit all around, and big acrobatics.',
@@ -70,18 +77,22 @@ const WEAPONS = {
       A:    { dur: .3,  h: [.15, .7], x0: 0, x1: 66, dmg: 6, kb: 80, arc: [-1.6, 1.6], around: 1, multi: .12 },
       AA:   { dur: .3,  h: [.15, .7], x0: 0, x1: 66, dmg: 6, kb: 80, arc: [1.6, -1.6], around: 1, multi: .12 },
       AAA:  { dur: .42, h: [.2, .65], x0: 0, x1: 68, dmg: 12, kb: 140, arc: [-2.2, 1.4], spike: 1, power: 1 },
-      D:    { dur: .62, h: [.35, .85], x0: 0, x1: 46, dmg: 18, kb: 220, launch: 340, kick: 1, lunge: 400, hop: 320, power: 1 },
+      JH:   { name: 'Halo Sweep', dur: .5, h: [.18, .78], x0: 0, x1: 72, dmg: 4, kb: 120, arc: [.35, .35], around: 1, ends: 1, multi: .1, spin: 1, power: 1 }, // Heavy in the air: he turns once with the staff level at the waist, a ring of wood all round him
+      DA:   { name: 'Flying Lance', dur: .46, h: [.22, .62], x0: 8, x1: 96, dmg: 13, kb: 320, arc: [.25, .25], fly: 1, power: 1, wall: 1 }, // Attack in a running jump: laid out behind the staff like a thrown spear
+      D:    { name: 'Sliding Pole', dur: .62, h: [.12, .82], x0: 8, x1: 80, dmg: 4, kb: 260, multi: .18, lunge: 470, slide: 1, power: 1, depth: 22,
+              fin: { at: .62, dmg: 10, kb: 60, launch: 470, multi: 0, power: 1 } }, // drops into a slide off the sprint, the staff low and level, and flicks it up under them at the end
       R:    { name: 'Darting Strike', dur: .42, h: [.28, .62], x0: 8, x1: 84, dmg: 13, kb: 260, arc: [.05, .05], lunge: 300, dodgeLunge: 1, power: 1 }, // low out of the dodge, the staff driven straight in
-      J2:   { lvl: 3, name: 'Pole Vault', how: 'Jump again in mid-air', desc: 'Plant the staff on thin air and vault higher, kicking whatever is in front of you on the way up.', dur: .55, h: [.15, .6], x0: 0, x1: 46, dmg: 14, kb: 160, launch: 360, kick: 1, hop: 420, lunge: 140, rot: -TAU, power: 1 },
-      M:    { lvl: 2, name: 'Lunging Thrust', how: 'Attack while walking', desc: 'Throw your whole body behind a long thrust that skewers the front of the crowd.', dur: .42, h: [.15, .6], x0: 8, x1: 84, dmg: 16, kb: 320, arc: [.2, -.05], lunge: 440, power: 1, wall: 1 },
-      AX:   { lvl: 4, name: 'Helicopter', how: 'Hold Attack in the air', desc: 'Spin the staff overhead like a rotor and hover, shredding everything around you before you drop.', hover: 1, dur: 1.0, h: [.05, .9], x0: 0, x1: 76, dmg: 5, kb: 90, arc: [-P_, 5 * P_], around: 1, multi: .09, power: 1 },
-      DH:   { lvl: 5, name: 'Comet Pole', how: 'Heavy while running', desc: 'Vault high off a sprint and come down with a ground-splitting strike.', dur: .75, h: [.55, .8], x0: 0, x1: 72, dmg: 28, kb: 200, launch: 300, arc: [-2.4, 1.4], hop: 380, lunge: 360, rot: TAU, bounce: 1, shock: 90, power: 2 },
+      M:    { lvl: 2, name: 'Lunging Thrust', how: 'Attack while walking', desc: 'Throw your whole body behind a long two-handed thrust that skewers the front of the crowd.', dur: .46, h: [.26, .6], x0: 8, x1: 88, dmg: 16, kb: 320, arc: [.08, .08], lunge: 420, power: 1, wall: 1 },
+      RH:   { lvl: 3, name: 'Vaulting Reversal', how: 'Heavy out of a dodge', desc: 'Plant the staff, vault clean over whoever is in front of you, turn as you land and crack them across the back. Blows from behind often land as criticals.', dur: .78, h: [.56, .8], x0: -20, x1: 76, dmg: 20, kb: 240, arc: [-2.2, .55], around: 1, hop: 330, lunge: 290, turnAt: .5, power: 2 },
+      AX:   { lvl: 5, name: 'Helicopter', how: 'Hold Attack in the air', desc: 'Spin the staff overhead like a rotor and hover, shredding everything around you before you drop.', hover: 1, dur: 1.0, h: [.05, .9], x0: 0, x1: 76, dmg: 5, kb: 90, arc: [-P_, 5 * P_], around: 1, multi: .09, power: 1 },
+      DH:   { lvl: 4, name: 'Vaulting Dragon', how: 'Heavy while running', desc: 'Plant the staff at a sprint, swing up on it and drive both feet into the crowd: whoever takes the kick is sent flying, and the landing knocks the rest off their feet.', dur: .72, h: [.3, .6], x0: 0, x1: 54, dmg: 22, kb: 460, launch: 150, kick: 1, hop: 270, lunge: 400, wall: 1, shock: 70, power: 2 },
+      HC:   { lvl: 7, name: 'Eye of the Storm', how: 'Hold Heavy, then let go', desc: 'Spin the staff so fast it tears loose a whirlwind: it rolls down the street dragging everyone into it, beating at them, and throws them all high when it breaks.', dur: .8, h: [.1, .8], x0: 0, x1: 74, dmg: 5, kb: 80, arc: [.2, .2], around: 1, ends: 1, twirl: 5, multi: .09, tornado: 9, power: 2 },
       HHHH: { lvl: 6, name: 'Cyclone', how: 'A fourth Heavy', desc: 'Rise in a whirlwind with the staff spinning end over end; both ends tear through everyone around you.', dur: .95, h: [.08, .88], x0: 0, x1: 80, dmg: 4, kb: 120, launch: 260, arc: [-P_, 7 * P_], around: 1, ends: 1, twirl: 6, spin: 2, multi: .06, hop: 220, power: 2 },
     } },
   sword: { name: 'Great Sword', reach: 64, look: 'sword', charge: true, desc: 'Huge damage. Hold Heavy to charge, release to strike.',
     tree: {
-      L:    { dur: .5,  h: [.4, .62], x0: 0, x1: 84, dmg: 18, kb: 200, arc: [-1.9, 1.1], lunge: 120, depth: 20, power: 1 }, // each swing carries him a step in
-      LL:   { name: 'Horizontal Cleave', dur: .55, h: [.35, .65], x0: 0, x1: 90, dmg: 22, kb: 300, arc: [.25, .25], lunge: 130, depth: 28, power: 1 },
+      L:    { name: 'Rising Cut', dur: .42, h: [.32, .6], x0: 0, x1: 84, dmg: 15, kb: 180, arc: [1.9, -.75], lunge: 110, depth: 22, power: 1 }, // a quick cut rising from low behind to high in front, the hips turning through it: nothing like the heavy's overhead
+      LL:   { name: 'Backhand Cleave', dur: .52, h: [.33, .63], x0: 0, x1: 90, dmg: 21, kb: 300, arc: [.15, .15], lunge: 130, depth: 28, power: 1 }, // and back the other way
       LLL:  { name: 'Piercing Thrust', dur: .5, h: [.35, .6], x0: 0, x1: 112, dmg: 24, kb: 340, arc: [.05, .05], lunge: 120, power: 1, wall: 1 },
       LLLL: { name: 'Wheel Cleave', dur: .62, h: [.25, .7], x0: 0, x1: 86, dmg: 26, kb: 320, arc: [-P_, P_], around: 1, hop: 160, spin: 1, power: 2 },
       LH:   { name: 'Rising Slash', dur: .55, h: [.2, .55], x0: 0, x1: 80, dmg: 22, kb: 80, launch: 500, arc: [1.6, -2.3], hop: 320, lunge: 170, power: 1 },
@@ -92,20 +103,24 @@ const WEAPONS = {
       A:    { dur: .38, h: [.25, .6], x0: 0, x1: 80, dmg: 14, kb: 120, arc: [-1.8, 1.0] },
       AA:   { dur: .42, h: [.25, .6], x0: 0, x1: 80, dmg: 15, kb: 120, arc: [1.0, -1.6] },
       AAA:  { dur: .5,  h: [.25, .65], x0: 0, x1: 82, dmg: 22, kb: 160, arc: [-2.6, 1.5], spike: 1, power: 2 },
+      JH:   { name: 'Wheel of Steel', dur: .62, h: [.16, .76], x0: 0, x1: 86, dmg: 6, kb: 150, multi: .12, arc: [-.2, -.2], hop: 210, lunge: 120, rot: TAU, power: 1 }, // Heavy in the air: a front flip with the blade held straight out, a wheel of steel
+      DA:   { name: 'Gale Cleave', dur: .5, h: [.24, .62], x0: 0, x1: 94, dmg: 18, kb: 340, arc: [.35, .35], fly: 1, power: 2, depth: 26 }, // Attack in a running jump: one great flat cut thrown from the flying body
       D:    { dur: .55, h: [.1, .6], x0: 0, x1: 88, dmg: 22, kb: 420, arc: [.1, .1], lunge: 480, power: 1, wall: 1 },
       R:    { name: 'Lunging Thrust', dur: .5, h: [.3, .62], x0: 0, x1: 98, dmg: 26, kb: 320, arc: [.05, .05], lunge: 290, dodgeLunge: 1, power: 2, depth: 22 }, // low out of the dodge behind the point
       RH:   { lvl: 3, name: 'Riposte', how: 'Heavy out of a dodge', desc: 'Dodge past the attack and answer with a precise cut that always lands as a critical hit.', crit: 1, dur: .5, h: [.3, .6], x0: 0, x1: 90, dmg: 30, kb: 300, arc: [1.2, -1.8], lunge: 260, power: 2 },
-      AH:   { lvl: 4, name: 'Plunging Blade', how: 'Heavy in the air', desc: 'Point the blade down and drop; whatever is underneath is pinned to the ground.', dur: .55, h: [.15, .97], x0: 0, x1: 70, dmg: 24, kb: 160, arc: [-2, 1.5], dive: 1, shock: 60, bounce: 1, power: 2 },
+      AH:   { lvl: 4, name: 'Plunging Blade', how: 'Hold Heavy in the air', desc: 'Point the blade down and drop; whatever is underneath is pinned to the ground.', dur: .55, h: [.15, .97], x0: 0, x1: 70, dmg: 24, kb: 160, arc: [-2, 1.5], dive: 1, shock: 60, bounce: 1, power: 2 },
       DH:   { lvl: 5, name: 'Phantom Rush', how: 'Heavy while running', desc: 'Blur through the crowd in a flurry of afterimage cuts.', dur: .6, h: [.1, .85], x0: 0, x1: 90, dmg: 9, kb: 140, arc: [-1.2, 1.2], multi: .08, lunge: 620, power: 1 },
       HHHH: { lvl: 6, name: 'Eclipse Rend', how: 'A fourth Heavy', desc: 'Turn once on your heel and bring the great blade down with everything you have: a wall of darkness runs down the street.', dur: 1, h: [.58, .74], x0: 0, x1: 104, dmg: 62, kb: 260, launch: 340, arc: [-3, 1.5], spin: 1, spinEnd: .45, lunge: 140, shock: 120, wave: 1, power: 2 },
     },
     charged: [
-      { dur: .5,  h: [.35, .6], x0: 0, x1: 84, dmg: 18, kb: 200, arc: [-2, 1.2], depth: 20, power: 1 },
+      { dur: .54, h: [.4, .62], x0: 0, x1: 86, dmg: 19, kb: 220, arc: [-2.3, 1.3], depth: 20, power: 1 }, // a tap: still the full overhead, reared back and dropped into the squat
       { dur: .55, h: [.35, .6], x0: 0, x1: 92, dmg: 34, kb: 300, launch: 220, arc: [-2.2, 1.3], depth: 22, power: 2 },
       { dur: .6,  h: [.35, .6], x0: 0, x1: 100, dmg: 54, kb: 420, launch: 340, arc: [-2.4, 1.4], depth: 28, power: 2, shock: 80 },
       { dur: .65, h: [.35, .6], x0: 0, x1: 100, dmg: 54, kb: 420, launch: 340, arc: [-2.4, 1.4], depth: 28, power: 2, shock: 80, wave: 1 },
+      { lvl: 7, name: 'Judgement of Amber', dur: 1, h: [.56, .72], x0: 0, x1: 112, dmg: 78, kb: 460, launch: 440, arc: [-3, 1.5], spin: 1, spinEnd: .38, hop: 190, lunge: 90, depth: 32, power: 2, shock: 170, wave: 1, wave2: 1, bounce: 1 }, // the fourth flash
     ],
-    extra: [{ lvl: 2, name: 'Shadow Cleave', how: 'Hold Heavy past the third flash', desc: 'Charge past the third flash and your swing sends a wave of shadow down the street.' }] },
+    extra: [{ lvl: 2, name: 'Shadow Cleave', how: 'Hold Heavy past the third flash', desc: 'Charge past the third flash and your swing sends a wave of shadow down the street.' },
+      { lvl: 7, name: 'Judgement of Amber', key: 'HOLD4', how: 'Hold Heavy past the fourth flash', desc: 'Hold on past a fourth, golden flash: turn once on your heel, leap, and split the street with a blow that sends waves of shadow running both ways.' }] },
   // the prince's own blade: quick, a fencer's weapon. Cuts and long thrusts that cover ground, fancy spins, and a parry
   // in place of the backstep: dodge in place or away and a blow that lands on the guard is answered at once
   rapier: { get name() { return save.wl.rapier >= 6 ? 'Grayswandir' : 'Rapier'; }, // only at its last level does it show itself as Grayswandir
@@ -125,13 +140,16 @@ const WEAPONS = {
       A:    { dur: .26, h: [.2, .6], x0: 0, x1: 62, dmg: 6, kb: 45, arc: [-1.4, .9], noStun: 1 },
       AA:   { dur: .28, h: [.2, .6], x0: 0, x1: 70, dmg: 7, kb: 68, arc: [.35, .35], noStun: 1 },
       AAA:  { dur: .4, h: [.2, .65], x0: 0, x1: 64, dmg: 10, kb: 90, arc: [-2.4, 1.4], spike: 1, power: 1 },
+      JH:   { name: 'Falling Petal', dur: .52, h: [.18, .8], x0: 0, x1: 68, dmg: 4, kb: 80, arc: [-2.3, 1.2], around: 1, multi: .07, spin: 1, power: 1 }, // Heavy in the air: a pirouette in the air, the point spiralling down through everyone around him
+      DA:   { name: 'Flying Flèche', dur: .44, h: [.22, .62], x0: 0, x1: 98, dmg: 12, kb: 260, arc: [.25, .25], fly: 1, power: 1, wall: 1 }, // Attack in a running jump: a flèche thrown from the air
       D:    { name: 'Backspin Flèche', spin: 1, spinEnd: .42, dur: .55, h: [.42, .76], x0: 0, x1: 90, dmg: 11, kb: 285, arc: [.02, .02], lunge: 364, power: 1, wall: 1 },
       R:    { name: 'Low Lunge', dur: .38, h: [.25, .6], x0: 0, x1: 78, dmg: 10, kb: 150, arc: [.04, .04], lunge: 190, dodgeLunge: 1, power: 1 },
       RIP:  { name: 'Parry and Riposte', seq: ['DODGE'], dur: .4, h: [.18, .55], x0: -10, x1: 92, dmg: 21, kb: 255, arc: [.02, .02], lunge: 126, crit: 1, power: 2 }, // the answer to a parried blow: always a critical
       M:    { lvl: 2, name: 'Advancing Cuts', how: 'Attack while walking', desc: 'Walk into them cutting left and right, every step another stroke.', dur: .5, h: [.1, .86], x0: 0, x1: 64, dmg: 5, kb: 45, arc: [-1.2, .9], multi: .1, lunge: 105, power: 1, weave: 1 },
       RH:   { lvl: 3, name: 'Blade Dance', how: 'Heavy out of a dodge', desc: 'Pirouette twice through the crowd, the blade a silver ring around you.', dur: .7, h: [.1, .9], x0: 0, x1: 74, dmg: 6, kb: 135, arc: [-P_, 3 * P_], around: 1, multi: .08, spin: 2, lunge: 154, power: 1 },
-      AH:   { lvl: 4, name: 'Falling Star', how: 'Heavy in the air', desc: 'Dive point-first like a falling star; where you land, it bursts into light.', dur: .5, h: [.1, .97], x0: 0, x1: 62, dmg: 16, kb: 150, arc: [.95, .95], dive: 1, shock: 72, bounce: 1, power: 2 },
+      AH:   { lvl: 4, name: 'Falling Star', how: 'Hold Heavy in the air', desc: 'Dive point-first like a falling star; where you land, it bursts into light.', dur: .5, h: [.1, .97], x0: 0, x1: 62, dmg: 16, kb: 150, arc: [.95, .95], dive: 1, shock: 72, bounce: 1, power: 2 },
       DH:   { lvl: 5, name: 'Shadow Flèche', how: 'Heavy while running', desc: 'Step through Shadow past everything in your way; a heartbeat later, every one of them is cut.', dur: .5, h: [.1, .55], x0: -40, x1: 64, dmg: 19, kb: 195, arc: [.02, .02], lunge: 602, power: 2, delayed: 1 },
+      HC:   { lvl: 7, name: 'Hellride', how: 'Hold Heavy, then let go', desc: 'Ride through Shadow: vanish, and step out of the air beside each enemy around you in turn, running every one of them through. Every thrust is a critical.', dur: 1, h: [.1, .9], x0: -10, x1: 80, dmg: 14, kb: 220, arc: [.03, .03], blink: 6, crit: 1, power: 2 },
       HHHH: { lvl: 6, name: 'The Pattern Walked', how: 'A fourth Heavy', desc: 'Trace the Pattern with the point: a blur of thrusts as you advance, every one leaving its mark, all of them landing at once.', dur: .8, h: [.1, .7], x0: 0, x1: 92, dmg: 9, kb: 120, arc: [.03, .03], multi: .08, flurry: 1, delayed: 1, lunge: 220, power: 2 },
     } },
 };
@@ -139,22 +157,23 @@ const WEAPON_ORDER = ['fists', 'hammer', 'staff', 'sword', 'rapier'];
 // how each swing moves: thrust = a stab straight out, sweep / sweepR = horizontal, around the body; the rest swing on their arcs
 const STYLES = {
   fists: { L: 'thrust', LL: 'thrust', LLL: 'sweep', LH: 'thrust', HH: 'thrust', HHH: 'thrust', A: 'thrust' },
-  hammer: { L: 'sweep', LL: 'sweepR', D: 'sweep', A: 'sweep', AA: 'sweepR', DH: 'sweep', R: 'thrust' },
-  staff: { L: 'thrust', HH: 'sweep', HHH: 'thrust', M: 'thrust', AA: 'sweep', R: 'thrust' },
-  sword: { LL: 'sweep', HH: 'sweep', LLL: 'thrust', D: 'thrust', A: 'sweep', AA: 'thrust', RH: 'sweep', DH: 'sweep', R: 'thrust' },
-  rapier: { HHHH: 'thrust', LLL: 'thrust', H: 'thrust', HH: 'thrust', HHH: 'thrust', LLH: 'thrust', D: 'thrust', R: 'thrust', RIP: 'thrust', AA: 'thrust', DH: 'thrust' },
+  hammer: { L: 'sweep', LL: 'sweepR', D: 'sweep', A: 'sweep', AA: 'sweepR', DH: 'sweep', R: 'thrust', H: 'sweep', HHH: 'sweep', DA: 'sweep', RH: 'sweep' },
+  staff: { L: 'thrust', HH: 'sweep', HHH: 'thrust', M: 'thrust', AA: 'sweep', R: 'thrust', D: 'thrust', DA: 'thrust', JH: 'sweep' },
+  sword: { LL: 'sweepR', DA: 'sweep', HH: 'sweep', LLL: 'thrust', D: 'thrust', A: 'sweep', AA: 'thrust', RH: 'sweep', DH: 'sweep', R: 'thrust' },
+  rapier: { HC: 'thrust', DA: 'thrust', HHHH: 'thrust', LLL: 'thrust', H: 'thrust', HH: 'thrust', HHH: 'thrust', LLH: 'thrust', D: 'thrust', R: 'thrust', RIP: 'thrust', AA: 'thrust', DH: 'thrust' },
 };
 for (const id in STYLES) for (const k in STYLES[id]) if (WEAPONS[id].tree[k]) WEAPONS[id].tree[k].style = STYLES[id][k];
 for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) WEAPONS[id].tree[k].key = k;
 // the everyday combos hit a little softer and the learned moves a good deal harder, so the moves you earn are worth using
-for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) { const m = WEAPONS[id].tree[k]; if (k === 'RIP') continue; m.dmg = m.lvl ? Math.round(m.dmg * 1.3) : Math.max(1, Math.round(m.dmg * (id === 'fists' ? .92 : id === 'staff' ? 1.08 : .85))); }
+for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) { const m = WEAPONS[id].tree[k]; if (k === 'RIP') continue; const f = m.lvl ? 1.3 : id === 'fists' ? .92 : id === 'staff' ? 1.08 : .85; m.dmg = Math.max(1, Math.round(m.dmg * f)); if (m.fin) m.fin.dmg = Math.max(1, Math.round(m.fin.dmg * f)); }
 function unlockList(id) {
   const w = WEAPONS[id], list = [];
   for (const k in w.tree) if (w.tree[k].lvl) list.push(w.tree[k]);
   if (w.extra) list.push(...w.extra);
   return list.sort((a, b) => a.lvl - b.lvl);
 }
-const wMult = (id) => 1 + 0.2 * (Math.min(6, save.wl[id]) - 1) + .06 * Math.max(0, save.wl[id] - 6); // each level to 6 adds 20% and a new move; tempering past 6 adds 6%
+const WLEARN = 7; // the last level that teaches a move; NG+ tempering goes past it
+const wMult = (id) => 1 + 0.2 * (Math.min(WLEARN, save.wl[id]) - 1) + .06 * Math.max(0, save.wl[id] - WLEARN); // each level to 7 adds 20% and a new move; tempering past 7 adds 6%
 const maxHp = () => 120 + 30 * (save.armor - 1);
 
 // ---------- enemies ----------
