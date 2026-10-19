@@ -109,3 +109,5 @@ function drawBossRoom(t) { // the rising water in the Sunken Grove
   for (let i = 0; i < 12; i++) { const y = y0 + 8 + i * 10, x = ((i * 137 + t * 14) % (VW + 80)) - 40; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 40 + lvl, y); ctx.stroke(); }
   ctx.restore();
 }
+// Old Mossback's jumping stomp lifts it well above its usual drawing box: give the ink room for the tree on its back
+{ const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (boss && !boss.dead && boss.def.draw === 'mossback' && boss.plan === 'bramble' && boss.state === 'wind') box(boss.x, boss.y, 60, (boss.hw + 110) * boss.size, (boss.hh + 150) * boss.size); }; }

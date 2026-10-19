@@ -254,8 +254,19 @@
     const runeCol = rage || P3 ? '#FF8A4A' : '#9FE8C8', runeA = (rage ? .95 : P3 ? .8 : .55) + Math.sin(t * 2.4) * .12 + wind * .3;
     ctx.save(); ctx.scale(1.3, 1.3); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     if (e.state === 'dash' && e.plan === 'roll') { tuckedShell(e, a, pal, phase, rage, t, runeCol); ctx.restore(); return; }
+    // the bramble burst is a jumping stomp, not a bite: it crouches, heaves its whole bulk up off the ground (its shadow stays
+    // below), hangs, and comes crashing down just as the thorn rings erupt, then squats from the impact
+    const stomp = e.plan === 'bramble' && (e.state === 'wind' || e.state === 'recover');
+    if (stomp) {
+      if (e.state === 'wind') { const k = wind;
+        const hop = k < .35 ? 0 : k < .82 ? ease((k - .35) / .47) * 44 : 44 * (1 - Math.pow((k - .82) / .18, 2));
+        const sq = k < .35 ? ease(k / .35) * .12 : k < .5 ? .12 * (1 - (k - .35) / .15) - .06 * ((k - .35) / .15) : -.06 * (1 - Math.min(1, (k - .5) / .3));
+        ctx.translate(0, -hop); ctx.scale(1 + sq * .6, 1 - sq);
+      } else if (e.t > .95) { const q = Math.min(1, (e.t - .95) / .25); ctx.scale(1 + .14 * q, 1 - .16 * q); } // the landing squash
+      a = Object.assign({}, a, { wind: 0, atk: false }); // the head stays in, the mouth shut
+    }
     const walking = !!a.walk, bob = walking ? -Math.abs(Math.sin(ph)) * 1.4 : Math.sin(t * 1.6) * .6;
-    const lunge = atk ? 22 : wind ? -10 * wind : Math.sin(t * 1.6) * 2;
+    const lunge = stomp ? -4 : atk ? 22 : wind ? -10 * wind : Math.sin(t * 1.6) * 2;
     // the stone-plated tail
     const tw = Math.sin(t * 2) * 3;
     seg(-98, -14 + tw, -78, -18 + tw * .6, 4, 10, pal.skin, .6); seg(-78, -18 + tw * .6, -52, -24 + bob, 10, 17, pal.skin, 1);
