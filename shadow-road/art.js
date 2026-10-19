@@ -237,7 +237,7 @@ function drawWeapon(kind, pose) {
       glow('#B89CFF', 12, () => { ctx.fillStyle = C('#D8C8FF'); circle(45, 0, 3.6); ctx.fill(); });
       aura('rgba(184,156,255,.22)', () => rrect(26, -32, 38, 66, 14));
     }
-    if (!pose.noHand) gripHand(hand); return;
+    if (!(pose && pose.noHand)) gripHand(hand); return;
   }
   if (kind === 'staff') {
     // 1 a plain ash staff, 2 ironbound with steel points, 3 crimson lacquer with gold bands and a tassel,
@@ -266,7 +266,7 @@ function drawWeapon(kind, pose) {
       ctx.fillStyle = C('#B89CFF'); for (const x of [-10, 8, 26, 44]) ctx.fillRect(x, -2.4, 1.6, 4.8);
       aura('rgba(184,156,255,.2)', () => rrect(back - 26, -8, len - back + 52, 16, 8));
     }
-    if (!pose.noHand) gripHand(hand); return;
+    if (!(pose && pose.noHand)) gripHand(hand); return;
   }
   if (kind === 'sword' && tier <= 4) {
     // the hero's great sword, a different blade at each level: 1 a plain iron greatsword, 2 a steel claymore with a
