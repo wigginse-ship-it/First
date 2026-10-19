@@ -6,6 +6,9 @@ PLAN_FX.bramble = (e) => {
   const gap = e.thornGap ?? Math.atan2((P.y - e.y) * 2.2, P.x - e.x) + rand(-1.2, 1.2); e.thornGap = undefined; // one narrow gap runs through all three rings: find it
   for (let i = 0; i < 3; i++) hazards.push({ kind: 'thornring', gap: gap + rand(-.12, .12), x: e.x, y: e.y, r: 20, R: 70 + i * 50, delay: i * .28, t: 1.6, max: 1.6, dmg: Math.round(edmg(e) * .9), hit: false });
   sfx('slam'); shakeMag = 8; recover(e, 1.2);
+  if (e.def.draw === 'mossback') { const hx = e.x + e.facing * 80 * (e.size || 1); // the roots tear loose with him: clods, sod and splinters
+    for (let i = 0; i < 26; i++) parts.push({ x: hx + rand(-20, 20), y: e.y + rand(-6, 6), z: rand(2, 20), vx: rand(-140, 140), vy: rand(-12, 12), vz: rand(120, 300), life: 1, max: 1, col: pick(['#5A4430', '#3E2E20', '#6E8A44', '#4E6A32']), size: rand(2.5, 5.5), shape: i % 3 ? 'chunk' : 'tuft', rot: rand(0, 6), vr: rand(-8, 8) });
+    sfx('crunch'); }
 };
 PLAN_FX.vent = (e) => {
   for (const d of [-1, 1]) hazards.push({ kind: 'steamjet', x: e.x + d * e.hw * .6, y: e.y, dir: d, len: 0, L: 230, t: .9, max: .9, dmg: Math.round(edmg(e) * .8), hit: false });
@@ -110,4 +113,15 @@ function drawBossRoom(t) { // the rising water in the Sunken Grove
   ctx.restore();
 }
 // Old Mossback's jumping stomp lifts it well above its usual drawing box: give the ink room for the tree on its back
-{ const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (boss && !boss.dead && boss.def.draw === 'mossback' && boss.plan === 'bramble' && boss.state === 'wind') box(boss.x, boss.y, 60, (boss.hw + 110) * boss.size, (boss.hh + 150) * boss.size); }; }
+{ const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (boss && !boss.dead && boss.def.draw === 'mossback' && boss.plan === 'sweep' && boss.state === 'wind') box(boss.x, boss.y, 60, (boss.hw + 110) * boss.size, (boss.hh + 150) * boss.size); }; }
+// Mossback's stomp and dig, beat by beat: sod flies while he digs, and the stomp lands with a shockwave
+{ const _upd = updateBossRoom; let wasStrike = false;
+  updateBossRoom = function (dt) { _upd(dt);
+    const e = boss; if (!e || e.dead || e.def.draw !== 'mossback') return;
+    if (e.plan === 'bramble' && e.state === 'wind' && (1 - e.t / e.windMax) > .3 && Math.random() < dt * 22) { const hx = e.x + e.facing * 80 * e.size;
+      parts.push({ x: hx + rand(-10, 10), y: e.y + rand(-4, 4), z: rand(2, 10), vx: -e.facing * rand(60, 200), vy: rand(-10, 10), vz: rand(140, 280), life: .9, max: .9, col: pick(['#5A4430', '#3E2E20', '#6E8A44']), size: rand(2, 4.5), shape: Math.random() < .3 ? 'tuft' : 'chunk', rot: rand(0, 6), vr: 6 }); }
+    const strike = e.plan === 'sweep' && e.state === 'strike';
+    if (strike && !wasStrike) { shakeMag = Math.max(shakeMag, 11); hitstop = Math.max(hitstop, .05); sfx('slam'); dust(e.x, e.y, 18);
+      fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .4, max: .4, r: (e.def.reach + e.hw) * 1.1, col: '#E8D8B0', flat: 1 }); }
+    wasStrike = strike; };
+}
