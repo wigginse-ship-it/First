@@ -154,17 +154,16 @@ function drawCorwinHeadTurn(look, hy, Y) {
     ctx.fillStyle = C(shade(sk, -.3)); ell(P(phi, 7), hy + 1.4, .6 + .6 * Math.abs(Math.cos(phi + th)), 1.9); ctx.fill(); outline(.6);
   }
   // the hair: a cap fixed to the skull (it turns with him, it does not reshape), cut away for the face, with a ragged
-  // fringe over the brow, locks over the ears and tufts standing up off the crown
+  // fringe over the brow and locks over the ears
   const hairShape = () => ell(cx - .4, hy - 3.2, 8.6, 9);
   ctx.save(); hairShape(); ctx.clip(); ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, Y > -.25 ? 18 : 20.4); ctx.clip();
   ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, 30);
   if (Y > -.25) { const fv = clamp((Y + .25) / .55, 0, 1); const fx0 = cx + 4 * CS, frx = (3.9 + 2.1 * Math.max(0, Y)) * (.6 + .4 * fv); ctx.moveTo(fx0 + frx, hy + 2.2); ctx.ellipse(fx0, hy + 2.2, frx, 9.9, 0, 0, TAU); } // the face, cut out of the hair
   ctx.fillStyle = C(hair); ctx.fill('evenodd');
   ctx.restore();
-  ctx.beginPath(); // the hanging locks: over the ears and down the sides, the fringe over the brow, tufts on the crown
+  ctx.beginPath(); // the hanging locks: over the ears and down the sides, the fringe over the brow
   for (const sd of [-1, 1]) for (const k of [0, 1, 2]) { const phi = sd * (1.25 + k * .42); if (D(phi) >= .3 || Y <= -.25) lock(phi, 8.3, hy - 1 + k * 1.2, hy + 4.2 + k * 1.6, .24); }
   if (Y > -.25) for (const [k, phi] of [-.62, -.24, .14, .5].entries()) if (D(phi) > -.1) { const r = 7.9; ctx.moveTo(P(phi - .26, r), hy - 7.4); ctx.lineTo(P(phi + .05, r + .4), hy - 2.6 - (k % 2) * .9); ctx.lineTo(P(phi + .24, r), hy - 7.2); }
-  for (const [dx, h] of [[-4.6, .9], [-.6, 1.2], [3.4, .8]]) { ctx.moveTo(cx + dx - 1.6, hy - 10.6); ctx.lineTo(cx + dx - 1.2, hy - 11.6 - h); ctx.lineTo(cx + dx + 1.6, hy - 11.2); }
   ctx.fillStyle = C(hair); ctx.fill(); outline(.8);
   if (Y < -.25) backLocks(true); // seen from behind, the ends at the nape lie over the collar
   ctx.beginPath(); ctx.ellipse(cx - .4, hy - 3.2, 8.6, 9, 0, Math.PI * .9, Math.PI * (Y > -.25 ? 1.76 : 2.1)); outline(1.05); // the crown's edge, kept off the face

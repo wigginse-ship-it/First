@@ -277,7 +277,7 @@ const CORWIN = (() => {
       const phi = (i / (S - 1) * 2 - 1) * PHIMAX, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp);
       const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 9.8 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
       const ax0 = fxa * CS - lza * Y, ax = HX + ax0 * cl - (ya - HIP) * sl, ay = HIP + ax0 * sl + (ya - HIP) * cl;
-      const len = (43 + 3.5 * cp - 6 * front) * (1 - down * .1), fl = 15.5 + .25 * Math.abs(flow) + down * 4;
+      const len = (43 + 3.5 * cp - 6 * front) * (1 - down * .1), fl = 15.5 + .25 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
       for (let j = 0; j <= M; j++) {
         const o = ix(i, j); if (!j) { tgt[o] = ax; tgt[o + 1] = ay; continue; }
         const v = j / M, vf = Math.pow(v, .85);

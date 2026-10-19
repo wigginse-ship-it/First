@@ -169,7 +169,7 @@ function playerPose() {
     const r = ease(P.restK || 0);
     pose.arm = lerp(.35, 1.2, r); pose.elbow = lerp(.5, 1.05, r); pose.grip = lerp(-.1, -.42, r); pose.backArm = lerp(3.6, 1.62, r); pose.backElbow = lerp(-.88, .3, r); pose.lean = lerp(.04, 0, r);
     if (r > .5) pose.openHand = 1;
-    if (P.state === 'idle') { pose.legs = { f: lerp(8, 10, r), b: lerp(-9, -10, r), fk: lerp(3, 4, r), bk: lerp(4, 5, r), w: lerp(1, 1.5, r) }; pose.sink = lerp(2, 1.5, r); }
+    if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 7, r), bk: lerp(4, 5, r), w: lerp(1, 1.6, r) }; pose.sink = lerp(2, 2.5, r); }
   }
   else if (P.w === 'sword') { // walking, a low guard with the point lowered toward the ground ahead; standing, both hands on the
     // grip at his waist and the blade angled up across his body toward the foe, as in the paint-over
@@ -187,7 +187,7 @@ function playerPose() {
     pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; pose.openHand = 1; // arms hanging loose at his sides, just off the body
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
-  if (P.state === 'idle' && !pose.legs) { pose.legs = { f: 10, b: -10, fk: 4, bk: 5, w: 1.5 }; pose.sink = 1.5; } // a wide, grounded stance
+  if (P.state === 'idle' && !pose.legs) { pose.legs = { f: -11, b: 13, fk: 7, bk: 5, w: 1.6 }; pose.sink = 2.5; } // a wide, grounded stance: his far (left) foot leads, the near one braced behind
   if (P.shrink < 1) pose.shrink = P.shrink;
   // turning: walking toward or away from us he shows his chest or his back, and a change of direction is a quick
   // turn through the front (through the back when heading away) instead of a flip
