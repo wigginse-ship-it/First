@@ -70,7 +70,7 @@ function arrowHit(p) {
   }
   if (!best) return false;
   p.hit.add(best);
-  strike(best, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .15 + p.crit });
+  strike(best, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .08 + p.crit * .7 });
   burst(best.x, best.y, p.z, ['#FFFFFF', '#E8D8B0'], 8, 'spark', Math.sign(p.vx));
   if (p.blast) { // rune and starfall arrows burst where they land
     fx.push({ kind: 'ring', x: best.x, y: best.y, z: 4, t: .35, max: .35, r: p.blast * 1.4, col: p.arrow >= 5 ? '#E8E0FF' : '#9FE8F0', flat: 1 });
