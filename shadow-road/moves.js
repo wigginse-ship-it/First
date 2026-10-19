@@ -108,7 +108,7 @@ function drawLearnedRim(pose) { // a gold rim of light just outside his silhouet
     const cy = P.y - P.z - 34, g = ctx.createRadialGradient(P.x, cy, 4, P.x, cy, 62);
     g.addColorStop(0, `rgba(255,214,120,${.22 * a})`); g.addColorStop(1, 'rgba(255,214,120,0)'); ctx.fillStyle = g; ell(P.x, cy, 62, 56); ctx.fill();
     TINT = '#F2C866';
-    for (const [dx, dy] of [[2.6, 0], [-2.6, 0], [0, 2.6], [0, -2.6]]) drawPlayerAt(P.x + dx, P.y + dy, P.z, P.facing, Object.assign({}, pose), .5 * a);
+    for (const [dx, dy] of [[2.6, 0], [-2.6, 0], [0, 2.6], [0, -2.6]]) drawPlayerAt(P.x + dx, P.y + dy, P.z, P.facing, Object.assign({}, pose, { noSim: 1 }), .5 * a);
     TINT = null;
   });
 }
@@ -402,54 +402,68 @@ function blendPose(pose) {
     if (prev.legs && tl && pose.kickK === undefined) {
       const a = 1 - Math.exp(-dt / .075), L = {};
       for (const j of ['f', 'b', 'fk', 'bk']) L[j] = prev.legs[j] + (tl[j] - prev.legs[j]) * a;
+      L.w = (prev.legs.w || 1) + ((tl.w || 1) - (prev.legs.w || 1)) * a; // how wide the feet are set
       if (pose.legs || Math.abs(L.f - tl.f) + Math.abs(L.b - tl.b) + Math.abs(L.fk - tl.fk) > .6) pose.legs = L;
     }
   }
   const keep = {}; for (const f in BLEND_TAU) keep[f] = pose[f] ?? BLEND_DEF[f];
   keep.legs = pose.legs ? Object.assign({}, pose.legs) : (pose.stance && !pose.walk ? { f: 7, b: -7, fk: 9, bk: 9 } : null);
+  if (!keep.legs && pose.walk && !pose.run && pose.stance && !pose.crouch) { const w = Math.sin(pose.walk) * 11.5; keep.legs = { f: -w, b: w, fk: 1.5, bk: 1.5, w: 1 }; } // mid-stride, so stopping eases the feet into his stance
   BL.prev = keep;
   return pose;
 }
 
 // ---------- the forge's armor card: the Rose Mail on its own, from the front ----------
-// an empty suit on a stand: a black gambeson and coat at 1, a strap and shoulder guards at 2, a steel breastplate at 3,
-// silver trim at 4 and the violet-runed shadow-plate with a gilt edge at 5; the silver rose is always at the breast
+// the prince's costume on a stand: the quilted black doublet, white sleeves and jabot, steel pauldrons and vambraces,
+// belts and gold-edged tabs, the cloak hanging behind; then a leather baldric at 2, a steel breastplate at 3, bright
+// silver at 4 and violet-runed shadow-steel with a gilt edge at 5. The silver rose pins the cloak at the throat.
 function drawArmorSuit(lv) {
-  const L = heroLook(), gold = '#D8AA55';
+  const L = heroLook(), gold = '#D8AA55', det = !FLASH && !TINT;
   const poly = (pts, col, w = 1.4) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); ctx.fillStyle = typeof col === 'string' ? C(col) : col; ctx.fill(); outline(w); };
-  const vg = (x0, x1, col) => { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, C(shade(col, -.35))); g.addColorStop(.6, C(col)); g.addColorStop(1, C(shade(col, .25))); return g; };
+  const vg = (x0, x1, col) => { const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, C(shade(col, -.35))); g.addColorStop(.6, C(col)); g.addColorStop(1, C(shade(col, .3))); return g; };
+  const steel = (y0, y1, col) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, C(shade(col, .5))); g.addColorStop(.45, C(col)); g.addColorStop(1, C(shade(col, -.3))); return g; };
   // the stand: a post and a foot
   ctx.fillStyle = C('#3A2A20'); ctx.fillRect(-1.6, 6, 3.2, 22); outline(1);
   poly([-11, 30, 11, 30, 7, 26, -7, 26], '#4A3428', 1.2);
-  // the coat skirts falling from the waist
-  poly([-10, 2, 10, 2, 13, 22, 4, 20, 0, 24, -4, 20, -13, 22], vg(-13, 13, L.coat), 1.4);
-  if (!FLASH) { ctx.strokeStyle = shade(L.coat, -.4); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-6, 4); ctx.lineTo(-8, 20); ctx.moveTo(6, 4); ctx.lineTo(8, 20); ctx.stroke(); }
-  // the body: a broad V of shoulders down to the waist
+  // the cloak behind, its hem torn into brushstrokes
+  ctx.beginPath(); ctx.moveTo(-15, -22); ctx.lineTo(15, -22); ctx.lineTo(20, 18);
+  for (let i = 0; i <= 10; i++) { const x = 20 - i * 4, y = 18 + (i % 2 ? 2 : 6) + Math.sin(i * 2.3) * 1.5; ctx.lineTo(x, y); }
+  ctx.closePath(); ctx.fillStyle = C(L.cloak); ctx.fill(); outline(1.2);
+  if (det) { ctx.lineCap = 'round'; for (const [c, xs] of [[L.cloakSlate, [-16, -9, 11, 17]], [L.cloakGrey, [-13, 14]]]) { ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath(); for (const x of xs) { ctx.moveTo(x * .8, -14); ctx.lineTo(x * 1.05, 24); } ctx.stroke(); } }
+  // gold-edged tabs over the hips
+  for (const x of [-10, -5, 0, 5]) { poly([x, 2, x + 5, 2, x + 5.6, 12, x - .6, 12], shade(L.body, .1), 1); ctx.strokeStyle = C(L.trim); ctx.lineWidth = .8; ctx.strokeRect(x + .6, 2.8, 3.8, 8.4); }
+  // the doublet: a broad V of shoulders down to the waist, quilted in a diamond lattice
   poly([-15, -22, 15, -22, 12, -10, 9, 3, -9, 3, -12, -10], vg(-15, 15, L.body), 1.6);
-  ctx.fillStyle = C(shade(L.body, .18)); poly([-7, -22, 0, -10, -3, -22], shade(L.body, .18), .9); poly([7, -22, 0, -10, 3, -22], shade(L.body, .18), .9); // lapels
-  if (lv === 2) { ctx.strokeStyle = C('#4A3A2E'); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-12, -19); ctx.lineTo(9, 1); ctx.stroke(); }
+  if (det) { ctx.save(); ctx.beginPath(); ctx.moveTo(-15, -22); ctx.lineTo(15, -22); ctx.lineTo(12, -10); ctx.lineTo(9, 3); ctx.lineTo(-9, 3); ctx.lineTo(-12, -10); ctx.closePath(); ctx.clip();
+    ctx.strokeStyle = L.lattice; ctx.lineWidth = .5; ctx.beginPath(); for (let k = -30; k <= 30; k += 5) { ctx.moveTo(k - 8, -22); ctx.lineTo(k + 8, 4); ctx.moveTo(k + 8, -22); ctx.lineTo(k - 8, 4); } ctx.stroke(); ctx.restore(); }
+  ctx.fillStyle = C(L.button); for (let k = 0; k < 5; k++) { circle(0, -11 + k * 3, .8); ctx.fill(); }
+  if (lv === 2) { ctx.strokeStyle = C(L.strap || '#4A3022'); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-12, -19); ctx.lineTo(9, 1); ctx.stroke(); }
   if (lv >= 3) { // the breastplate, lit from the upper right
-    const pc = lv >= 5 ? '#3A344E' : '#8E96A8';
+    const pc = L.plate;
     const g = ctx.createLinearGradient(-11, -20, 11, 0); g.addColorStop(0, C(shade(pc, -.25))); g.addColorStop(.55, C(pc)); g.addColorStop(.72, C(shade(pc, .45))); g.addColorStop(1, C(pc));
-    ctx.beginPath(); ctx.moveTo(-11, -18); ctx.quadraticCurveTo(0, -22, 11, -18); ctx.lineTo(9, -4); ctx.quadraticCurveTo(0, 2, -9, -4); ctx.closePath(); ctx.fillStyle = g; ctx.fill(); outline(1.4);
-    if (lv >= 4) { ctx.strokeStyle = C(lv >= 5 ? gold : '#E4E8F0'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-9, -5); ctx.quadraticCurveTo(0, 1, 9, -5); ctx.moveTo(0, -20); ctx.lineTo(0, -1); ctx.stroke(); }
-    if (lv >= 5) { ctx.save(); if (!FLASH) { ctx.shadowColor = '#B89CFF'; ctx.shadowBlur = 6; } ctx.strokeStyle = C('#B89CFF'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-5, -15); ctx.lineTo(-3, -11); ctx.lineTo(-5, -7); ctx.moveTo(5, -15); ctx.lineTo(3, -11); ctx.lineTo(5, -7); ctx.stroke(); ctx.restore(); }
+    ctx.beginPath(); ctx.moveTo(-11, -15); ctx.quadraticCurveTo(0, -19, 11, -15); ctx.lineTo(9, -4); ctx.quadraticCurveTo(0, 2, -9, -4); ctx.closePath(); ctx.fillStyle = g; ctx.fill(); outline(1.4);
+    if (lv >= 4) { ctx.strokeStyle = C(lv >= 5 ? gold : '#E4E8F0'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-9, -5); ctx.quadraticCurveTo(0, 1, 9, -5); ctx.moveTo(0, -17); ctx.lineTo(0, -1); ctx.stroke(); }
+    if (lv >= 5) { ctx.save(); if (!FLASH) { ctx.shadowColor = '#B89CFF'; ctx.shadowBlur = 6; } ctx.strokeStyle = C('#B89CFF'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-5, -13); ctx.lineTo(-3, -9); ctx.lineTo(-5, -5); ctx.moveTo(5, -13); ctx.lineTo(3, -9); ctx.lineTo(5, -5); ctx.stroke(); ctx.restore(); }
   }
-  ctx.fillStyle = C(lv >= 4 ? '#E4E8F0' : L.trim); ctx.fillRect(-9, 0, 18, 3.4); ctx.fillStyle = C('#C9A86A'); ctx.fillRect(-1.6, -.4, 3.2, 4.2); // belt and buckle
-  // the collar, standing up empty where a head would be
-  poly([-6, -22, -4, -29, 4, -29, 6, -22, 0, -19], shade(L.body, -.2), 1.3);
-  // shoulders: plain at 1, leather guards at 2, steel from 3, edged in gilt at 5
-  const pc = lv >= 5 ? '#2E2A40' : lv >= 3 ? '#8E96A8' : lv >= 2 ? '#5A4A3E' : '#3A3A46';
+  // the belts: one at the waist with a brass buckle, the sword belt slung lower across it
+  ctx.lineCap = 'butt'; for (const [y0, y1, w, c] of [[0, 0, 3.4, L.leather], [4, 1, 2.4, shade(L.leather, -.12)]]) { ctx.beginPath(); ctx.moveTo(-10, y0); ctx.lineTo(10, y1); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = w + 1.6; ctx.stroke(); ctx.strokeStyle = C(c); ctx.lineWidth = w; ctx.stroke(); }
+  ctx.fillStyle = C(L.brass); ctx.fillRect(-1.8, -1.9, 3.6, 3.8); ctx.fillStyle = C(shade(L.leather, -.4)); ctx.fillRect(-.9, -1, 1.8, 2);
+  // the cloak over the shoulders, the high white collar and the jabot
+  ctx.beginPath(); ctx.moveTo(-17, -17); ctx.quadraticCurveTo(-12, -27, -4, -27); ctx.lineTo(-3, -21); ctx.lineTo(-9, -19); ctx.closePath(); ctx.moveTo(17, -17); ctx.quadraticCurveTo(12, -27, 4, -27); ctx.lineTo(3, -21); ctx.lineTo(9, -19); ctx.closePath(); ctx.fillStyle = C(L.cloak); ctx.fill(); outline(1.1);
+  poly([-5, -22, -4.4, -30, -1, -27, 1, -27, 4.4, -30, 5, -22, 0, -20], shade(L.shirt, -.1), 1.1);
+  for (let k = 3; k >= 0; k--) { const y = -22 + k * 2.4, w = 3 + k * .7; poly([-w * .5, y, -w, y + 3.4, -w * .3, y + 4.4, w * .3, y + 4.4, w, y + 3.4, w * .5, y], k % 2 ? shade(L.shirt, -.06) : L.shirt, .7); }
+  // shoulders: steel pauldrons; sleeves of white shirt hanging empty, steel vambraces over them
   for (const d of [-1, 1]) {
     ctx.save(); ctx.scale(d, 1);
-    ctx.beginPath(); ctx.ellipse(15, -20, lv >= 2 ? 8 : 6, lv >= 2 ? 6 : 4.5, .35, Math.PI * .85, Math.PI * 2.15); ctx.closePath(); ctx.fillStyle = C(pc); ctx.fill(); outline(1.4);
-    if (lv >= 3) { ctx.beginPath(); ctx.ellipse(17, -16, 7, 4.5, .45, Math.PI * .9, Math.PI * 2.05); ctx.fillStyle = C(shade(pc, -.15)); ctx.fill(); outline(1.1); }
-    if (lv >= 4) { ctx.strokeStyle = C(lv >= 5 ? gold : '#E4E8F0'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(15, -20, 7, 5, .35, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
-    // the sleeves, hanging empty
-    ctx.beginPath(); ctx.moveTo(19, -16); ctx.quadraticCurveTo(22, -4, 20, 6); ctx.lineTo(15, 6); ctx.quadraticCurveTo(16, -4, 13, -13); ctx.closePath(); ctx.fillStyle = C(L.sleeve); ctx.fill(); outline(1.3);
+    ctx.beginPath(); ctx.moveTo(19, -16); ctx.quadraticCurveTo(22, -4, 20, 6); ctx.lineTo(15, 6); ctx.quadraticCurveTo(16, -4, 13, -13); ctx.closePath(); ctx.fillStyle = C(L.shirt); ctx.fill(); outline(1.3);
+    ctx.beginPath(); ctx.moveTo(14.6, -3); ctx.lineTo(20.6, -3.6); ctx.lineTo(20.4, 5.6); ctx.lineTo(15, 5.6); ctx.closePath(); ctx.fillStyle = steel(-3, 6, L.steel); ctx.fill(); outline(1);
+    ctx.fillStyle = C(L.leather); ctx.fillRect(14.8, -.4, 5.8, 1.4); ctx.fillRect(14.9, 3, 5.6, 1.3);
+    for (const [cy, rx, ry] of [[-13.4, 6.2, 3.4], [-15.6, 6.8, 3.4]]) { ctx.beginPath(); ctx.ellipse(16, cy, rx, ry, .25, 0, Math.PI); ctx.closePath(); ctx.fillStyle = steel(cy - 1, cy + ry, L.pauldron); ctx.fill(); outline(1); }
+    ctx.beginPath(); ctx.ellipse(15.4, -18, 7.4, 5.6, .25, Math.PI, TAU); ctx.ellipse(15.4, -18, 7.4, 1.8, .25, 0, Math.PI); ctx.fillStyle = steel(-24, -16, L.pauldron); ctx.fill(); outline(1.2);
+    if (lv >= 4) { ctx.strokeStyle = C(lv >= 5 ? gold : '#E4E8F0'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.ellipse(15.4, -18, 6.2, 4.4, .25, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
     ctx.fillStyle = C(L.glove); rrect(15, 5, 5.4, 6, 2); ctx.fill(); outline(1);
     ctx.restore();
   }
-  silverRose(-5.5, -15, 1.3, true); // the silver rose at the breast
+  CORWIN.roseClasp(0, -24, 2.6, L.steel); // the silver rose at the throat
   if (lv >= 5 && !FLASH) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(0, -8, 4, 0, -8, 34); g.addColorStop(0, 'rgba(184,156,255,.22)'); g.addColorStop(1, 'rgba(184,156,255,0)'); ctx.fillStyle = g; ctx.fillRect(-34, -42, 68, 68); ctx.restore(); }
 }

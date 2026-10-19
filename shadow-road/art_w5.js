@@ -1721,7 +1721,7 @@
   const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); for (const h of hazards) if (HZ[h.kind] && HZ[h.kind].box) HZ[h.kind].box(h, box); };
   const _ml = mechList; mechList = function (list, t) { _ml(list, t); for (const h of hazards) if (HZ[h.kind] && HZ[h.kind].ups && h.t > -.4) HZ[h.kind].ups(h, list, t); };
   // the silver arm, carried down out of the sky: from then on his hands are silver
-  const _look = heroLook; heroLook = function () { const L = _look(); if (save.silverArm) L.glove = '#C8D0DE'; return L; };
+  const _look = heroLook; heroLook = function () { const L = _look(); if (save.silverArm) { L.glove = '#C8D0DE'; L.gauntPlate = 1; } return L; };
   // the ending: the last world's boss does not go straight to the win screen
   W5.hookEnding();
   };

@@ -121,8 +121,10 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     }
   const cp = MOVE_POSE[movePoseKey(m)]; if (cp) cp(pose, m, k, k < m.h[0] ? 0 : k > m.h[1] ? 1 : (k - m.h[0]) / (m.h[1] - m.h[0]));
 }
+const IDLE_Y = { fists: .72, sword: .7, hammer: .66, staff: .66 };
 function playerPose() {
-  { const now = performance.now() / 1000, d = Math.min(.05, Math.max(0, now - (P.poseT || now))); P.poseT = now; // how long he has stood still (for weapons that relax at rest)
+  const clk = () => (BL.clock ? BL.clock() : performance.now()); // (a test harness can drive the clock)
+  { const now = clk() / 1000, d = Math.min(.05, Math.max(0, now - (P.poseT || now))); P.poseT = now; // how long he has stood still (for weapons that relax at rest)
     P.restT = P.state === 'idle' ? (P.restT || 0) + d : 0; P.restK = clamp((P.restK || 0) + (P.restT > .35 ? d * 2.2 : -d * 7), 0, 1); }
   const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : Math.min(7, save.wl[P.w]) };
   if (P.state === 'atk' || P.state === 'air') {
@@ -163,12 +165,17 @@ function playerPose() {
   // at rest each weapon sits the way its wielder would carry it
   else if (P.w === 'rapier') { // en garde while he moves: point toward the enemy, the free hand raised behind. Standing still he
     // eases out of it: the point drops low and forward, and the free hand comes down to hang a little behind him for balance
+    // At rest his chest turns to us (see IDLE_Y below), the blade held low across his body, its point up toward the foe
     const r = ease(P.restK || 0);
-    pose.arm = lerp(.35, .85, r); pose.elbow = lerp(.5, .2, r); pose.grip = lerp(-.1, .12, r); pose.backArm = lerp(3.6, 2.15, r); pose.backElbow = lerp(-.88, .32, r); pose.lean = lerp(.04, 0, r);
+    pose.arm = lerp(.35, 1.2, r); pose.elbow = lerp(.5, 1.05, r); pose.grip = lerp(-.1, -.42, r); pose.backArm = lerp(3.6, 1.62, r); pose.backElbow = lerp(-.88, .3, r); pose.lean = lerp(.04, 0, r);
     if (r > .5) pose.openHand = 1;
-    if (P.state === 'idle') { pose.legs = { f: lerp(8, 6, r), b: lerp(-9, -6, r), fk: 3, bk: 4 }; pose.sink = lerp(2, .5, r); }
+    if (P.state === 'idle') { pose.legs = { f: lerp(8, 10, r), b: lerp(-9, -10, r), fk: lerp(3, 4, r), bk: lerp(4, 5, r), w: lerp(1, 1.5, r) }; pose.sink = lerp(2, 1.5, r); }
   }
-  else if (P.w === 'sword') { pose.arm = .8; pose.grip = -.08; } // a low guard, the point lowered toward the ground ahead
+  else if (P.w === 'sword') { // walking, a low guard with the point lowered toward the ground ahead; standing, both hands on the
+    // grip at his waist and the blade angled up across his body toward the foe, as in the paint-over
+    if (P.state === 'idle') { pose.arm = 1.18; pose.elbow = 1.12; pose.grip = -.62; pose.backArm = .9; pose.backElbow = 1.05; }
+    else { pose.arm = .8; pose.grip = -.08; }
+  }
   else if (P.w === 'hammer') { pose.arm = 1.95; pose.grip = .28; pose.backArm = .9; } // dragged behind him, its head resting on the ground
   else if (P.w === 'staff') { // a fighting guard: the staff held low and level across the body, point toward the enemy,
     // swaying with his breath, and every few seconds he twirls it once through his fingers
@@ -180,19 +187,26 @@ function playerPose() {
     pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; pose.openHand = 1; // arms hanging loose at his sides, just off the body
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
+  if (P.state === 'idle' && !pose.legs) { pose.legs = { f: 10, b: -10, fk: 4, bk: 5, w: 1.5 }; pose.sink = 1.5; } // a wide, grounded stance
   if (P.shrink < 1) pose.shrink = P.shrink;
   // turning: walking toward or away from us he shows his chest or his back, and a change of direction is a quick
   // turn through the front (through the back when heading away) instead of a flip
-  const now = performance.now(), loco = ['idle', 'walk', 'run'].includes(P.state);
+  const now = clk(), loco = ['idle', 'walk', 'run'].includes(P.state);
   if (P.lastF === undefined) P.lastF = P.facing;
   if (P.facing !== P.lastF) { P.lastF = P.facing; P.turnAt = loco ? now : 0; P.turnDir = input.my < -.25 ? -1 : 1; }
   let tY = 0;
   if (P.state === 'walk' || P.state === 'run') { const ax = Math.abs(input.mx), ay = Math.abs(input.my); if (ay > .2) tY = Math.sign(input.my) * ay / (ax + ay) * .95; }
+  // standing, he stands as a fighter does in a fighting game: chest turned three-quarters to us to show the costume,
+  // eyes and head still on what is in front of him (the en garde rapier stays side-on until he relaxes)
+  else if (P.state === 'idle') tY = P.w === 'rapier' ? lerp(.12, .68, ease(P.restK || 0)) : IDLE_Y[P.w] ?? .55;
   const dtv = Math.min(.05, (now - (P.yawAt || now)) / 1000); P.yawAt = now;
   P.yawV = (P.yawV || 0) + (tY - (P.yawV || 0)) * Math.min(1, dtv * 9);
+  P.lookV = (P.lookV || 0) + ((P.state === 'idle' ? .78 : 0) - (P.lookV || 0)) * Math.min(1, dtv * 9);
   if (pose.yaw === undefined) pose.yaw = P.yawV;
   const tt = (now - (P.turnAt || 0)) / 170;
   if (loco && tt < 1 && !pose.spin) pose.spin = P.turnDir * Math.PI * (1 - ease(tt));
+  pose.look = P.lookV; // how far his eyes stay on what is ahead while his chest is turned to us
+  pose.cloakS = CORWIN.cloak.snapshot(); // afterimages keep the cloak as it was
   return pose;
 }
 function humanEnemyPose(e) {
@@ -210,16 +224,21 @@ function humanEnemyPose(e) {
 let headTurned = false;
 function drawPlayerAt(x, y, z, facing, pose, alpha) {
   // his turn (yaw) plus any spin in progress: past a quarter turn he is seen facing the other way
-  const ang = Math.asin(clamp(pose.yaw || 0, -1, 1)) + (pose.spin || 0), c = Math.cos(ang);
+  const yaw = Math.asin(clamp(pose.yaw || 0, -1, 1)), ang = yaw + (pose.spin || 0), c = Math.cos(ang);
   pose.Y = Math.sin(ang); if (c < 0) facing = -facing;
+  // his head can keep looking where he faces while his chest turns to us (pose.look: 0 turns with the chest, 1 straight ahead)
+  const hAng = yaw * (1 - (pose.look || 0)) + (pose.spin || 0); pose.HY = Math.cos(hAng) * c < 0 ? pose.Y : Math.sin(hAng);
   // the head swaps between its profile drawing and its turned drawing with a deadband, so it never flickers
   // back and forth while he walks at a slant
-  if (pose.live) { const a = Math.abs(pose.Y); headTurned = headTurned ? a > .3 : a > .55; pose.headTurn = headTurned; }
+  if (pose.live) { const a = Math.abs(pose.HY); headTurned = headTurned ? a > .3 : a > .55; pose.headTurn = headTurned; }
   ctx.save(); ctx.globalAlpha = alpha;
-  ctx.translate(x, y - z); ctx.scale(facing, 1);
+  ctx.translate(x, y - z);
+  CLOAK_DRAW = { Binv: ctx.getTransform().inverse(), facing, z, wx: x, wy: y - z, live: !!pose.live }; // the frame his cloak moves in (art_corwin.js)
+  ctx.scale(facing, 1);
   if (pose.stretch) ctx.scale(pose.stretch, 1 / pose.stretch); // smeared out by speed
   if (pose.shrink && pose.shrink < 1) ctx.scale(pose.shrink, pose.shrink); // shrunk by the spores
   drawHumanoid(heroLook(), pose);
+  CLOAK_DRAW = null;
   ctx.restore();
 }
 function drawEnemy(e, t) {
@@ -430,6 +449,7 @@ function drawScene(t) {
   for (const e of enemies) list.push([e.y, () => drawEnemy(e, t)]);
   // afterimages are light, not ink, so they are painted straight onto the page
   for (const g of ghosts) list.push([g.y - .1, () => onMain(() => { // light afterimages glow; shadow ones are dark doubles of him
+    g.pose.noCloak = 1; // (afterimages leave the cloak out: its dark mass, many times over, would only smear the trail)
     if (g.dark) { TINT = '#2A1840'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .75); TINT = null; }
     else if (g.gold) { ctx.globalCompositeOperation = 'lighter'; TINT = '#E8B850'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .55); TINT = null; } // a learned move's gold afterimages
     else { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(g.x, g.y, g.z, g.facing, g.pose, g.a * .6); }
