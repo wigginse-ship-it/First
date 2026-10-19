@@ -553,4 +553,502 @@
     ctx.restore();
   };
 
+  // ======================================================================================================
+  // THE PEOPLE AND BEASTS OF THE GHOST CITY
+  // ======================================================================================================
+  // a tongue of mist curling up off a hem or a paw: a tapering stroke that thins as it rises (slow, never flickering)
+  function mistTongue(x, y, len, w, lean, t, i, col = 'rgba(200,214,245,.55)') {
+    const sw = Math.sin(t * .9 + i * 2.1) * len * .16, s = taper(x, y, x + lean * .5 + sw, y + len * .55, x + lean + sw * 1.6, y + len, w, .4, 6);
+    trace(s.L, s.R); ctx.fillStyle = TINT || (FLASH ? '#FFFFFF' : col); ctx.fill();
+  }
+  // a ghost's hand: long, pale, nearly transparent fingers
+  function ghostHand(x, y, ang, s, open, col = '#C8D4EA') {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s);
+    cel(PE(2, 0, 3.4, 2.6), col, { d: .8, r: .4, w: 1 });
+    for (let i = 0; i < 4; i++) { const by = -1.8 + i * 1.2, L = [5, 6, 5.6, 4.4][i], c = open ? .1 : .9; horn(4, by, 4 + L * .6, by + c * 1.4, 4 + L, by + c * 3, 1.4, .5, col, .7); }
+    horn(1.6, -2, 3.4, -4.4 + (open ? 0 : 2), 5.4, -4.6 + (open ? 0 : 3), 1.6, .5, col, .7);
+    ctx.restore();
+  }
+
+  // ---------------- LANTERN COURTIER: a courtier of the moon, robed in indigo, with a lantern hung where its head should be ----------------
+  CREATURES.w5courtier = function (e, a) {
+    a = a || {}; const t = a.t || 0, wind = a.wind || 0, st = e.state, ph = a.walk || 0;
+    const firing = st === 'wind' && e.plan === 'w5moonfire', bowing = (st === 'wind' && e.plan === 'w5censer') || (st === 'w5act' && e.w5a === 'censer');
+    const bob = Math.sin(t * 1.3 + (e.walk || 0) * .3) * 1.2 - 3, bow = bowing ? (st === 'w5act' ? .32 : wind * .32) : 0;
+    const robe = '#1E2754', robeDk = '#0C1028', robeLt = '#4A5A94', silk = '#C8D2E6';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.translate(0, bob);
+    // the hem never quite reaches the floor: it frays into mist
+    for (let i = 0; i < 5; i++) mistTongue(-11 + i * 5.5, -5, 5 + (i % 2) * 2.5, 4.4, -3 - (ph ? 3 : 0), t, i, 'rgba(190,206,240,.35)');
+    ctx.save(); ctx.translate(0, -22); ctx.rotate(bow); ctx.translate(0, 22);
+    // the far sleeve, hanging in long dags
+    const farA = firing ? -.2 : .2;
+    cel(PB([-6, -44, -14, -36 + farA * 10, -16, -20, -12, -14, -8, -22, -4, -34]), '#141A3E', { d: 2, r: .6, w: 1.3, dark: robeDk });
+    // the robe: a long houppelande, wide at the hem, its front banded with silver leaf and crescents
+    const sway = Math.sin(t * 1.1 + ph * .5) * 1.5;
+    const body = PB([-7, -47, 7, -47, 10, -32, 14 + sway, -6, 6, -2, -4, -3, -14 + sway, -5, -11, -30]);
+    cel(body, robe, { d: 3.2, r: 1.2, w: 1.7, dark: robeDk, lite: robeLt, tex: () => {
+      ctx.strokeStyle = 'rgba(8,10,30,.45)'; ctx.lineWidth = .9; ctx.beginPath(); for (let i = 0; i < 4; i++) { const x = -8 + i * 5; ctx.moveTo(x * .5, -42); ctx.quadraticCurveTo(x, -22, x * 1.3 + sway, -4); } ctx.stroke(); // the folds
+      ctx.fillStyle = 'rgba(214,222,236,.85)'; ctx.fillRect(1.5, -46, 2.6, 42); // the band down the front
+      ctx.fillStyle = robeDk; for (let y = -42; y < -6; y += 7) { ctx.beginPath(); ctx.arc(2.8, y, 1.3, -1.2, 1.9); ctx.arc(3.4, y - .2, .9, 1.9, -1.2, true); ctx.fill(); } // crescents worked into it
+      ctx.fillStyle = 'rgba(214,222,236,.7)'; ctx.beginPath(); ctx.moveTo(-14 + sway, -6); for (let x = -14; x <= 14; x += 4) ctx.lineTo(x + sway * (1 - Math.abs(x) / 14 * .2), -5 + (x % 8 ? 1.4 : -.8)); ctx.lineTo(14 + sway, -9); ctx.lineTo(-13 + sway, -9); ctx.closePath(); ctx.fill(); // the hem embroidery
+    } });
+    // the stiff collar standing up round the neck-iron
+    fillPoly([-8, -46, -11, -55, -4, -49, 0, -50, 4, -49, 10, -55, 8, -46], silk, 1.1);
+    if (DET()) { ctx.strokeStyle = 'rgba(110,124,160,.6)'; ctx.lineWidth = .5; ctx.beginPath(); for (const x of [-7, -4, 5, 8]) { ctx.moveTo(x, -47); ctx.lineTo(x * 1.25, -53); } ctx.stroke(); }
+    // the neck-iron: a crook of black iron rising from the collar; the lantern hangs from its hook and sways a little
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-3, -47); ctx.quadraticCurveTo(-5, -62, -1, -69); ctx.quadraticCurveTo(3, -73, 6, -69); ctx.stroke();
+    ctx.strokeStyle = C('#3A4466'); ctx.lineWidth = 1.2; ctx.stroke();
+    const held = bowing && st === 'w5act';
+    if (!held) { // the lantern on its hook (or, while it bows, taken down into its hand)
+      const sw = Math.sin(t * 1.05 + (e.walk || 0) * .25) * .1 + (a.hurt ? .25 : 0) + (bowing ? wind * .6 : 0);
+      ctx.save(); ctx.translate(6, -69); ctx.rotate(sw); w5lantern(0, 0, 1, firing ? wind : 0, a.hurt, t); ctx.restore();
+    }
+    // the near arm: folded into the sleeve, lifted palm-up under the lantern to throw its fire, or holding the lantern's chain
+    if (firing) { cel(PB([1, -45, 10, -48, 16, -55, 13, -58, 6, -52, -2, -40]), robe, { d: 1.6, r: .8, w: 1.4, dark: robeDk, lite: robeLt }); ghostHand(14, -57, -1.2, 1.1, true); glowAt(14, -60, 14 + wind * 10, PALE, .3 + wind * .5); }
+    else if (held) {
+      const sa = e.w5swing ?? -2, hx = 12, hy = -40, L = 22, lx = hx + Math.cos(sa) * L, ly = hy + Math.sin(sa) * L;
+      cel(PB([1, -45, 8, -44, 13, -40, 10, -36, 3, -38, -2, -40]), robe, { d: 1.4, r: .7, w: 1.3, dark: robeDk });
+      ghostHand(hx, hy, sa, 1, false);
+      ctx.strokeStyle = C('#5A6890'); ctx.lineWidth = 1.2; ctx.setLineDash([1.6, 1.2]); ctx.beginPath(); ctx.moveTo(hx + 3, hy); ctx.lineTo(lx, ly); ctx.stroke(); ctx.setLineDash([]); // the chain
+      ctx.save(); ctx.translate(lx, ly); ctx.rotate(sa + Math.PI / 2); w5lantern(0, 0, 1.05, 1, false, t); ctx.restore();
+      if (DET()) add(() => { ctx.strokeStyle = 'rgba(210,225,255,.35)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(hx, hy, L, sa - .9, sa); ctx.stroke(); }); // its swing, smeared with light
+    } else {
+      cel(PB([1, -45, 9, -40, 12, -30, 9, -24, 4, -26, 2, -36]), robe, { d: 1.6, r: .8, w: 1.4, dark: robeDk, lite: robeLt });
+      fillPoly([9, -26, 13, -24, 12, -14, 9, -18, 7, -12, 5, -22], '#232E60', 1); // the long dag of the sleeve
+      ghostHand(9, -27, .3, .9, false);
+    }
+    ctx.restore(); ctx.restore();
+  };
+  // its lantern head: a cage of black iron with a pointed cap, panes of pale horn, and a cold white flame inside
+  function w5lantern(x, y, s, hot, hurt, t) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 1; circle(0, 1.6, 1.6); ctx.stroke(); // the ring it hangs by
+    const top = 3.6, bot = 17, w = 5.4;
+    fillPoly([-w - 1, top + 3, 0, top - 1.6, w + 1, top + 3], '#1A2140', 1.1); // the cap
+    poly([-w, top + 3, w, top + 3, w - .8, bot, -w + .8, bot]); ctx.fillStyle = C('#9AAAC8'); ctx.fill(); // the panes
+    if (DET()) { const g = ctx.createRadialGradient(0, (top + bot) / 2 + 2, 1, 0, (top + bot) / 2, 8); g.addColorStop(0, `rgba(250,252,255,${.9})`); g.addColorStop(1, 'rgba(150,170,215,.4)'); ctx.fillStyle = g; poly([-w, top + 3, w, top + 3, w - .8, bot, -w + .8, bot]); ctx.fill(); }
+    const fl = hurt ? .6 : 1 + hot * .5, fy = (top + bot) / 2 + 2.6; // the flame: a teardrop, leaning a little with the sway
+    ctx.fillStyle = C('#E8F0FF'); ctx.beginPath(); ctx.moveTo(0, fy + 3 * fl); ctx.quadraticCurveTo(-2.6 * fl, fy, 0, fy - 5 * fl); ctx.quadraticCurveTo(2.6 * fl, fy, 0, fy + 3 * fl); ctx.fill();
+    if (DET()) { ctx.fillStyle = 'rgba(150,180,255,.9)'; ell(0, fy + 1.2, 1.1 * fl, 1.6 * fl); ctx.fill(); }
+    ctx.strokeStyle = C('#1A2140'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-w, top + 3); ctx.lineTo(-w + .8, bot); ctx.moveTo(w, top + 3); ctx.lineTo(w - .8, bot); ctx.moveTo(0, top + 3); ctx.lineTo(0, bot); ctx.moveTo(-w, (top + bot) / 2 + 1); ctx.lineTo(w, (top + bot) / 2 + 1); ctx.stroke(); // the cage
+    poly([-w, top + 3, w, top + 3, w - .8, bot, -w + .8, bot]); outline(1.2);
+    fillPoly([-w + .6, bot, w - .6, bot, 2, bot + 3, -2, bot + 3], '#1A2140', 1); // the foot
+    glowAt(0, fy, 14 + hot * 10, PALE, hurt ? .15 : .35 + hot * .45);
+    ctx.restore();
+  }
+
+  // ---------------- WEEPING WATCHER: a mourning figure of moon-marble, hooded, its hands over its face. It moves only while unseen ----------------
+  // pose: 'weep' (its hands over its face), 'reach' (arms out, its face bare) or 'seize' (lunging, fingers hooked)
+  CREATURES.w5statue = function (e, a) {
+    a = a || {}; const t = a.t || 0, pose = e.w5pose || 'weep', live = !e.w5seen && !e.dead && !a.hurt;
+    const stone = '#C4CAD8', stoneDk = '#6E7896', stoneLt = '#F2F5FA', vein = 'rgba(110,120,150,.35)';
+    const lean = pose === 'seize' ? .32 : pose === 'reach' ? .12 : 0;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.translate(0, -8); ctx.rotate(lean); ctx.translate(0, 8);
+    // folded wings of stone behind the shoulders, the feathers laid like scales
+    const wing = (far) => { const c = far ? '#9AA2B8' : stone; cel(PB([-6, -56, -18, -66, -24, -58, -24, -34, -18, -16, -12, -24, -8, -42]), c, { d: 2.4, r: 1, w: 1.5, dark: stoneDk, lite: stoneLt, tex: () => {
+      ctx.strokeStyle = vein; ctx.lineWidth = .7; ctx.beginPath(); for (let r = 0; r < 5; r++) for (let i = 0; i < 2; i++) { const x = -20 + i * 6 - r * .6, y = -58 + r * 9; ctx.moveTo(x - 3, y); ctx.quadraticCurveTo(x, y + 3, x + 3, y); } ctx.stroke(); } }); };
+    ctx.save(); ctx.translate(-3, 0); wing(true); ctx.restore();
+    // the shroud: heavy drapery falling to a pool on the floor
+    const body = PB([-10, -58, 8, -58, 14, -40, 18, -10, 20, 0, -20, 0, -18, -12, -15, -40]);
+    cel(body, stone, { d: 3.6, r: 1.4, w: 1.9, dark: stoneDk, lite: stoneLt, tex: () => {
+      ctx.strokeStyle = 'rgba(70,80,110,.45)'; ctx.lineWidth = 1.1; ctx.beginPath(); for (let i = 0; i < 6; i++) { const x = -14 + i * 5.6; ctx.moveTo(x * .55, -52); ctx.quadraticCurveTo(x * .9, -26, x * 1.12, 0); } ctx.stroke(); // the folds
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 5; i++) { const x = -11 + i * 5.6; ctx.moveTo(x * .55 + 1.2, -50); ctx.quadraticCurveTo(x * .9 + 1.4, -26, x * 1.12 + 1.4, -2); } ctx.stroke();
+      ctx.strokeStyle = vein; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(-12, -30); ctx.quadraticCurveTo(-4, -24, -6, -12); ctx.moveTo(6, -44); ctx.quadraticCurveTo(10, -36, 8, -28); ctx.stroke(); // veins in the marble
+    } });
+    // cracks: when it moves, a cold light shows in them
+    const crack = [[-8, -36, -4, -30, -6, -24, -2, -18], [8, -48, 5, -42, 9, -36], [-2, -12, 3, -7, 1, -2]];
+    ctx.strokeStyle = C('#4A5470'); ctx.lineWidth = .9; ctx.beginPath(); for (const c of crack) { ctx.moveTo(c[0], c[1]); for (let i = 2; i < c.length; i += 2) ctx.lineTo(c[i], c[i + 1]); } ctx.stroke();
+    if (live && DET()) add(() => { ctx.strokeStyle = 'rgba(225,235,255,.85)'; ctx.lineWidth = .8; ctx.beginPath(); for (const c of crack) { ctx.moveTo(c[0], c[1]); for (let i = 2; i < c.length; i += 2) ctx.lineTo(c[i], c[i + 1]); } ctx.stroke(); });
+    // the hood and the face under it
+    const hx = 2, hy = -64;
+    cel(PB([hx - 9, hy + 8, hx - 10, hy - 4, hx - 2, hy - 11, hx + 8, hy - 8, hx + 11, hy + 2, hx + 9, hy + 10]), stone, { d: 2.4, r: 1, w: 1.6, dark: stoneDk, lite: stoneLt });
+    ctx.fillStyle = C('#9AA2BA'); ell(hx + 4, hy + 1, 5.4, 6.6); ctx.fill(); // the face, recessed in the hood
+    if (pose !== 'weep') { // bare: blank and smooth, two hollows for eyes, a mouth open on nothing
+      ctx.fillStyle = C('#20263C'); ell(hx + 3, hy - 1, 1.2, 1.9); ctx.fill(); ell(hx + 7, hy - 1.2, 1.1, 1.8); ctx.fill(); ell(hx + 5.6, hy + 4.4, 1.4, pose === 'seize' ? 2.6 : 1.8); ctx.fill();
+      if (live) { glowAt(hx + 3, hy - 1, 5, '220,232,255', .6); glowAt(hx + 7, hy - 1.2, 5, '220,232,255', .6); }
+      if (DET()) { ctx.strokeStyle = 'rgba(60,70,100,.5)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(hx + 3, hy + .8); ctx.quadraticCurveTo(hx + 2.4, hy + 4, hx + 3.4, hy + 7); ctx.stroke(); } // a tear-track worn into the stone
+    }
+    // the arms: over its face, reaching out, or hooked to seize
+    const shoulder = [6, -54];
+    const arm = (far) => {
+      const col = far ? '#A0A8BE' : stone, sx = shoulder[0] - (far ? 5 : 0), sy = shoulder[1] + (far ? 1 : 0);
+      let ex, ey, hxx, hyy, ang;
+      if (pose === 'weep') { ex = sx + 7; ey = sy + 8; hxx = hx + 4 + (far ? -2 : 1); hyy = hy + 1 + (far ? -1 : 1); ang = -1.9; }
+      else if (pose === 'reach') { ex = sx + 9; ey = sy + 3; hxx = sx + 20; hyy = sy + 2 + (far ? -3 : 0); ang = .05; }
+      else { ex = sx + 9; ey = sy + 6; hxx = sx + 22; hyy = sy + 10 + (far ? -4 : 0); ang = .45; }
+      seg(sx, sy, ex, ey, 6.4, 5, col, 1); seg(ex, ey, hxx, hyy, 5, 4, col, .5);
+      ctx.save(); ctx.translate(hxx, hyy); ctx.rotate(ang); // a hand of stone: the palm, and long fingers spread or hooked
+      cel(PE(1.5, 0, 3, 2.4), col, { d: .9, r: .4, w: 1 });
+      for (let i = 0; i < 4; i++) { const by = -1.6 + i * 1.1, L = [5.4, 6.2, 5.8, 4.6][i], c = pose === 'seize' ? 1.6 : pose === 'weep' ? .3 : .1; horn(3.6, by, 3.6 + L * .6, by + c, 3.6 + L, by + c * 2.6, 1.6, .7, col, .7, stoneDk); }
+      ctx.restore();
+    };
+    arm(true); if (pose === 'weep') { ctx.save(); arm(false); ctx.restore(); } else arm(false);
+    ctx.restore();
+    ctx.save(); wing(false); ctx.restore(); // its near wing comes round in front of the shoulder (only its edge shows)
+    ctx.restore();
+  };
+
+  // ---------------- COLORLESS REFLECTION: the prince's own image out of a still pool, every color drained from it ----------------
+  // it wears his face and his armor in greys, a crack runs through it like a broken mirror, and its eyes are white
+  const greyOf = (hex) => { if (!hex || hex[0] !== '#' || hex.length !== 7) return hex; const n = parseInt(hex.slice(1), 16), l = ((n >> 16) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11) / 255; return awMix('#2A3048', '#E8EEF8', clamp(.12 + l * 1.25, 0, 1)); };
+  function greyLook() { const L = Object.assign({}, heroLook()); for (const k in L) if (typeof L[k] === 'string') L[k] = greyOf(L[k]); L.eye = '#FFFFFF'; return L; }
+  CREATURES.w5reflect = function (e, a) {
+    a = a || {}; const t = a.t || 0, st = e.state, wind = a.wind || 0, w = e.w5w || 'rapier';
+    const pose = { walk: e.walk || 0, weapon: w, stance: 1, breath: Math.sin(t * 1.7), Y: 0 };
+    if (st === 'wind') { pose.arm = -2.1 * (.3 + .7 * wind); pose.lean = -.15 * wind; pose.backArm = -.4; pose.sink = 3 * wind; }
+    else if (st === 'strike' || (st === 'w5act' && e.w5a === 'mimic')) { const k = e.w5k ?? 1; pose.arm = lerp(-2.1, 1.0, k); pose.trail = 60; pose.trailFrom = -2.1; pose.trailCol = 'rgba(220,230,255,.9)'; pose.lean = .3; pose.sink = 4; if (e.w5thrust) { pose.arm = .05; pose.ext = 1; pose.trail = 0; pose.lean = .45; } if (e.w5spin) pose.spin = (e.w5spin || 0); }
+    else if (a.hurt) { pose.arm = -1; pose.lean = -.35; }
+    if (e.state === 'down') pose.down = 1;
+    ctx.save();
+    drawHumanoid(greyLook(), pose);
+    if (DET() && typeof inkG !== 'undefined' && ctx === inkG) { // the silvering: a sheen across it, and the crack where the glass broke
+      ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ((fn) => { fn(); ctx.restore(); })(() => { ctx.globalAlpha = .3; const g = ctx.createLinearGradient(-14, -70, 14, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.45, 'rgba(235,242,255,.9)'); g.addColorStop(.6, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(-16, -74, 34, 76); });
+      ctx.strokeStyle = 'rgba(40,46,70,.8)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-6, -66); ctx.lineTo(-1, -52); ctx.lineTo(-5, -44); ctx.lineTo(2, -34); ctx.lineTo(-1, -22); ctx.lineTo(4, -10); ctx.stroke();
+      ctx.strokeStyle = 'rgba(250,252,255,.8)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(-5.4, -66); ctx.lineTo(-.4, -52); ctx.lineTo(-4.4, -44); ctx.lineTo(2.6, -34); ctx.lineTo(-.4, -22); ctx.lineTo(4.6, -10); ctx.stroke();
+    }
+    glowAt(7, -61, 6, '240,246,255', .5);
+    ctx.restore();
+  };
+
+  // ---------------- MOONMOTH: a great luna moth, pale as the moon, with long tails; drawn to the silver of a prince ----------------
+  CREATURES.w5moth = function (e, a) {
+    a = a || {}; const t = a.t || 0, wind = a.wind || 0, latched = e.state === 'w5act' && e.w5a === 'latch', dash = e.state === 'w5act' && e.w5a === 'dart';
+    const rate = latched ? 2.4 : 6, flap = dash ? -.75 : Math.sin(t * rate + (e.walk || 0)) * (latched ? .35 : .85) + (latched ? -.6 : 0), cy = -16 + (latched ? 0 : Math.sin(t * rate) * 1.2);
+    const wingC = '#B8D4CC', wingLt = '#EEF6F2', wingDk = '#6A8A88', costa = '#8C7EA8';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.scale(1.3, 1.3); if (dash) ctx.rotate(.2);
+    const wing = (far, hind) => {
+      const k = Math.cos(flap * (far ? 1 : 1.06)), sy = (hind ? .78 : 1) * Math.max(.14, Math.abs(k)) * (k < 0 ? -1 : 1);
+      ctx.save(); ctx.translate(-1, cy - 2); ctx.scale(far ? .84 : 1, sy);
+      if (hind) { // the hindwing and its long swallowtail, streaming back
+        const tw = Math.sin(t * 1.4 + (far ? 1 : 0)) * 3;
+        cel(PB([0, 0, -6, -6, -14, -12, -18, -10, -16, -4, -10, 0]), far ? '#8EAAA6' : wingC, { d: 2, r: 1, w: 1.2, dark: wingDk, lite: wingLt });
+        horn(-14, -9, -24, -8 + tw * .4, -34, -2 + tw, 3.6, .8, far ? '#8EAAA6' : wingC, 1, wingDk);
+        if (!far && DET()) { ctx.fillStyle = 'rgba(140,120,170,.7)'; circle(-11, -7, 1.6); ctx.fill(); }
+      } else { // the forewing: broad, its leading edge lavender, a crescent moon worked into it
+        cel(PB([2, 0, 0, -10, -6, -22, -14, -28, -24, -26, -22, -16, -10, -5]), far ? '#90ACA8' : wingC, { d: 2.4, r: 1.2, w: 1.3, dark: wingDk, lite: wingLt, tex: () => {
+          ctx.strokeStyle = 'rgba(60,80,90,.35)'; ctx.lineWidth = .5; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(0, -2); ctx.lineTo(-22 * (.4 + i * .2), -26 * (.95 - i * .16)); } ctx.stroke(); // veins
+        } });
+        ctx.strokeStyle = C(costa); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(1, -2); ctx.quadraticCurveTo(-4, -18, -14, -28); ctx.stroke();
+        const ex = -13, ey = -17; ctx.fillStyle = C('#E8EEF8'); circle(ex, ey, 3.4); ctx.fill(); ctx.fillStyle = C(far ? '#7A8A98' : '#5A6A8A'); circle(ex + 1.1, ey - .6, 2.8); ctx.fill(); // the crescent
+        if (DET()) { ctx.strokeStyle = 'rgba(140,120,170,.6)'; ctx.lineWidth = .6; circle(ex, ey, 3.8); ctx.stroke(); }
+      }
+      ctx.restore();
+    };
+    wing(true, true); wing(true, false);
+    // the body: thick white fur, a banded abdomen, feathered antennae
+    cel(PB([-3, cy - 1, -12, cy + 1, -18, cy + 5, -19, cy + 2, -12, cy - 3, -3, cy - 4]), '#D8DEE8', { d: 1.4, r: .6, w: 1.2, tex: () => { ctx.strokeStyle = 'rgba(120,130,160,.6)'; ctx.lineWidth = .7; ctx.beginPath(); for (let x = -6; x > -18; x -= 3) { ctx.moveTo(x, cy - 3.4); ctx.lineTo(x - .8, cy + 3); } ctx.stroke(); } });
+    cel(PE(1, cy - 2, 5.6, 4.8), '#F2F4F8', { d: 1.4, r: .6, w: 1.3, dark: '#A8B0C4', tex: () => { for (let i = 0; i < 6; i++) dab(-2 + i * 1.3, cy - 4 + (i % 3) * 1.8, 1.3, i % 2 ? '#FFFFFF' : '#C8CEDC', .7); } });
+    cel(PE(6.4, cy - 2.6, 2.8, 2.6), '#E4E8F0', { d: .8, r: .5, w: 1.1 });
+    ctx.fillStyle = C('#20263A'); circle(7.6, cy - 3, 1.1); ctx.fill(); if (DET()) { ctx.fillStyle = '#FFFFFF'; circle(7.9, cy - 3.4, .35); ctx.fill(); }
+    for (const s of [0, 1]) { ctx.strokeStyle = C('#8A8EA8'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(7, cy - 5); ctx.quadraticCurveTo(10 + s * 2, cy - 12, 7 + s * 5, cy - 15 + s); ctx.stroke();
+      if (DET()) { ctx.strokeStyle = 'rgba(200,205,225,.8)'; ctx.lineWidth = .5; ctx.beginPath(); for (let k = 0; k < 6; k++) { const q = k / 6, px = lerp(7, 7 + s * 5, q) + 2 * q, py = lerp(cy - 5, cy - 15 + s, q); ctx.moveTo(px, py); ctx.lineTo(px + 1.8, py - .8); } ctx.stroke(); } }
+    wing(false, true); wing(false, false);
+    if (wind > 0 || latched) glowAt(-8, cy - 10, 18, PALE, latched ? .35 : wind * .4);
+    ctx.restore();
+  };
+
+  // ---------------- HOUND OF THE WILD HUNT: a white hound of the otherworld with red ears, mist streaming off its paws ----------------
+  CREATURES.w5hound = function (e, a) {
+    a = a || {}; const t = a.t || 0, ph = a.walk || 0, wind = a.wind || 0, st = e.state;
+    const leap = st === 'pounce' || (st === 'w5act' && e.w5a === 'course'), bite = st === 'strike', crouch = st === 'wind' ? wind : 0, moving = ph || leap ? 1 : 0, gal = leap ? t * 16 : ph;
+    const by = -22 + crouch * 6 + Math.abs(Math.sin(gal)) * -1.8 * moving, tilt = leap ? -.06 + Math.sin(gal) * .05 : crouch * .12;
+    const coat = '#E6EAF2', dk = '#8A92AC', lt = '#FFFFFF', ear = '#B4303E';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.rotate(tilt);
+    // the tail: long, feathered, carried low
+    const tw = Math.sin(t * 2 + ph) * 2.4;
+    cel(PB([-17, by - 3, -26, by + 2 + tw * .4, -34, by + 6 + tw, -36, by + 9 + tw, -30, by + 6 + tw * .5, -22, by + 3, -16, by + 1]), coat, { d: 1.6, r: .6, w: 1.2, dark: dk });
+    const leg = (hx, front, off, far) => {
+      const s = Math.sin(gal + off) * moving, lift = Math.max(0, Math.cos(gal + off)) * 3.6 * moving, col = far ? '#AEB6CA' : coat;
+      let k, h2, p;
+      if (leap) { const sp = Math.sin(gal + off); k = front ? [hx + 6 + sp * 4, by + 8] : [hx - 5 + sp * 3, by + 9]; h2 = front ? [hx + 12 + sp * 8, by + 13] : [hx - 12 + sp * 6, by + 12]; p = front ? [hx + 18 + sp * 9, by + 12 + Math.max(0, -sp) * 4] : [hx - 19 + sp * 8, by + 11]; }
+      else if (front) { k = [hx + s * 3, by + 11 - crouch * 2]; h2 = [hx + 2 + s * 6, -5 - lift]; p = [hx + 5 + s * 7, -.8 - lift]; }
+      else { k = [hx + 4 + s * 4, by + 9]; h2 = [hx - 3 + s * 6, -6 - lift + crouch * 2]; p = [hx - 1 + s * 7, -.8 - lift]; }
+      seg(hx, by + 2, k[0], k[1], 9, 5, col, 1.4); seg(k[0], k[1], h2[0], h2[1], 4.4, 3.4, col, .4); seg(h2[0], h2[1], p[0], p[1], 3.4, 2.8, col, 0);
+      ctx.fillStyle = C(far ? '#9AA2B8' : '#D0D6E4'); ell(p[0] + 1.4, p[1] - .2, 3, 1.5); ctx.fill(); outline(.8);
+      if (!far && moving) mistTongue(p[0] - 2, p[1] - 1, -6, 3, -6, t, hx);
+    };
+    leg(-12, false, Math.PI, true); leg(9, true, 0, true);
+    // a deep chest and a waist drawn in tight, a coat of rough white
+    const body = PB([18, by - 4, 14, by + 11, 2, by + 7, -6, by + 4, -16, by + 7, -22, by - 1, -17, by - 9, -6, by - 8, 7, by - 12]);
+    cel(body, coat, { d: 3.2, r: 1.2, w: 1.7, dark: dk, lite: lt, tex: () => {
+      ctx.strokeStyle = 'rgba(120,130,160,.45)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 10; i++) { const x = -16 + i * 3.4, y = by - 6 + (i % 3) * 3; ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 1.6, y + 1.4, x - 3.6, y + 2.4); } ctx.stroke(); // the rough coat, brushed back
+    } });
+    leg(-12, false, 0, false); leg(9, true, Math.PI, false);
+    // the collar of silver, a crescent hanging from it
+    ctx.strokeStyle = C('#9AA6C2'); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(10, by - 9); ctx.quadraticCurveTo(14, by - 3, 12, by + 3); ctx.stroke();
+    // the neck and the long head of a sighthound, carried forward
+    const hx = 21 + (bite ? 5 : 0) - crouch * 2 + (leap ? 3 : 0), hy = by - 10 + crouch * 7 + (bite ? 2 : 0);
+    seg(10, by - 6, hx - 3, hy + 1, 11, 7, coat, 1.2);
+    const open = bite ? .5 : leap ? .3 : crouch * .3;
+    ctx.save(); ctx.translate(hx, hy);
+    horn(-2, -4, -5, -8, -9, -7, 4.4, 1.4, '#7A1E2A', 1, '#4A0E18'); // the far ear
+    ctx.save(); ctx.rotate(open); fillPoly([-2, 1, 11, 1.6, 12, 3.4, 2, 5, -2, 3.4], '#D0D6E4', 1); ctx.restore(); // the lower jaw
+    if (open > .2) { ctx.fillStyle = C('#3A1A2A'); poly([0, 0, 12, 0, 11, 2 + open * 8, 0, 3.6]); ctx.fill(); }
+    cel(PB([-5, -4, 2, -6.6, 10, -4.6, 15, -1.6, 14, 1, 5, 1.6, -3, 2.4]), coat, { d: 1.8, r: .8, w: 1.4, dark: dk, lite: lt });
+    ctx.fillStyle = C('#2A2E40'); ell(14.4, -1, 1, .7); ctx.fill(); // the nose
+    if (!a.hurt) { ctx.fillStyle = C('#F4F8FF'); ell(5.6, -3.4, 1.4, .9, -.2); ctx.fill(); glowAt(5.6, -3.4, 6, '230,240,255', wind ? .7 : .4); } // eyes like the moon
+    else { ctx.strokeStyle = C('#2A2E40'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(4, -3.4); ctx.lineTo(7, -3.6); ctx.stroke(); }
+    horn(0, -5, -3, -9, -8, -9.4, 5, 1.6, ear, 1.1, '#6A1622'); // the near ear: the red of the otherworld
+    ctx.restore();
+    ctx.restore();
+  };
+
+  // ---------------- KNAVE OF MOONS: a Trump that walked out of the pack: a painted card on legs of ink ----------------
+  // it can turn edge-on to you, and then there is nothing there to hit
+  CREATURES.w5knave = function (e, a) {
+    a = a || {}; const t = a.t || 0, ph = a.walk || 0, st = e.state, wind = a.wind || 0;
+    const turn = e.w5turn || 0; // 0 face on .. 1 edge on .. 2 its back
+    const cs = Math.cos(turn * Math.PI / 2), back = cs < 0, sx = Math.max(.05, Math.abs(cs));
+    const slash = st === 'w5act' && e.w5a === 'slash', deal = st === 'w5act' && e.w5a === 'deal';
+    const walk = Math.sin(ph) * (ph ? 1 : 0), cw = 13, ch = 21, cy = -36 + Math.abs(walk) * -1;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // legs of ink, thin as a pen stroke, with pointed shoes
+    for (const s of [-1, 1]) { const fx = s * 5 + walk * s * 6, kx = s * 4 + walk * s * 3; ctx.strokeStyle = C(OUT); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(s * 4 * sx, cy + ch - 1); ctx.lineTo(kx, -8); ctx.lineTo(fx, 0); ctx.stroke(); ctx.fillStyle = C(OUT); poly([fx - 1, 0, fx + 4, 0, fx - 1, -2]); ctx.fill(); }
+    // the arm behind
+    const aA = slash ? (e.w5k ?? 1) * 1.6 - .6 : deal ? -1.2 : (st === 'wind' && e.plan === 'w5flip') ? -1.8 * wind : .9 + Math.sin(t * 1.4) * .1;
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-cw * sx, cy - 4); ctx.lineTo(-cw * sx - 6, cy + 6); ctx.lineTo(-cw * sx - 4, cy + 13); ctx.stroke();
+    // the card
+    ctx.save(); ctx.translate(0, cy); ctx.scale(sx, 1);
+    rrect(-cw, -ch, cw * 2, ch * 2, 3); ctx.fillStyle = C(back ? '#1E2858' : '#F2EEE4'); ctx.fill(); outline(1.6 / Math.max(.4, sx));
+    if (DET()) {
+      ctx.save(); rrect(-cw, -ch, cw * 2, ch * 2, 3); ctx.clip();
+      if (back) { // its back: a diaper of moons and stars in silver on night-blue
+        ctx.strokeStyle = 'rgba(200,212,240,.7)'; ctx.lineWidth = .7; rrect(-cw + 2, -ch + 2, cw * 2 - 4, ch * 2 - 4, 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(214,222,236,.85)'; for (let y = -ch + 6; y < ch - 3; y += 7) for (let x = -cw + 5 + ((y / 7) & 1) * 3.5; x < cw - 3; x += 7) { ctx.beginPath(); ctx.arc(x, y, 1.6, -1, 2); ctx.arc(x + .8, y - .2, 1.1, 2, -1, true); ctx.fill(); }
+      } else { // its face: the knave, half-length, in a tall cap, holding up a crescent moon; a mirrored twin below him
+        ctx.strokeStyle = 'rgba(160,140,90,.8)'; ctx.lineWidth = .9; rrect(-cw + 2, -ch + 2, cw * 2 - 4, ch * 2 - 4, 2); ctx.stroke();
+        const knave = (flip) => { ctx.save(); if (flip) ctx.scale(-1, -1);
+          ctx.fillStyle = '#2E3A78'; poly([-7, 0, -6, -8, -2, -10, 3, -10, 7, -7, 7, 0]); ctx.fill(); // the doublet
+          ctx.fillStyle = '#A8343E'; ctx.fillRect(-2, -10, 3, 10); // the red of the old cards, in one stripe
+          ctx.fillStyle = '#E8D8C0'; ell(1, -13.5, 3, 3.4); ctx.fill(); ctx.fillStyle = '#2E3A78'; poly([-2.6, -15.6, 1, -21, 4.6, -15.6]); ctx.fill(); ctx.fillStyle = '#D6DEEA'; circle(1, -21, 1); ctx.fill(); // the face and the cap
+          ctx.fillStyle = '#20263A'; circle(2.3, -14, .5); ctx.fill(); ctx.strokeStyle = '#7A5A40'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(1.6, -12.3); ctx.lineTo(3, -12.4); ctx.stroke();
+          ctx.fillStyle = '#D6DEEA'; ctx.beginPath(); ctx.arc(-6, -11, 3, -1.2, 1.9); ctx.arc(-5.2, -11.3, 2.2, 1.9, -1.2, true); ctx.fill(); // the crescent he holds
+          ctx.restore(); };
+        knave(false); knave(true);
+        ctx.strokeStyle = 'rgba(160,140,90,.6)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(-cw + 3, 0); ctx.lineTo(cw - 3, 0); ctx.stroke();
+        ctx.fillStyle = '#2E3A78'; ctx.font = '700 5px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText('J', -cw + 4.6, -ch + 7.4); ctx.save(); ctx.scale(-1, -1); ctx.fillText('J', -cw + 4.6, -ch + 7.4); ctx.restore(); // its indices
+        if (!a.hurt) { ctx.fillStyle = (st === 'wind' || slash) ? '#FFFFFF' : '#20263A'; circle(2.3, -14, .6); ctx.fill(); } // the painted eye follows you
+      }
+      ctx.restore();
+      if (sx < .5) add(() => { ctx.fillStyle = `rgba(235,242,255,${.8 * (1 - sx * 2)})`; ctx.fillRect(-cw * .3, -ch, cw * .6, ch * 2); }); // its edge catches the light
+    }
+    ctx.restore();
+    // the near arm, with its paper-knife
+    const hx = cw * sx + Math.cos(aA) * 9, hy = cy - 4 + Math.sin(aA) * 9;
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(cw * sx - 1, cy - 4); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(aA - .3); fillPoly([0, -1, 16, 0, 0, 1.2], '#DCE4F2', .9); ctx.fillStyle = C(OUT); ctx.fillRect(-2.4, -1.4, 3, 2.8); ctx.restore();
+    if (slash && DET()) add(() => { ctx.strokeStyle = 'rgba(230,238,255,.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cw * sx, cy - 4, 22, -1.2, aA); ctx.stroke(); });
+    ctx.restore();
+  };
+
+  // ---------------- THE SPHINX: a lion of moon-marble with a woman's face and wings of silver leaf. She asks before she eats ----------------
+  CREATURES.w5sphinx = function (e, a) {
+    a = a || {}; const t = a.t || 0, ph = a.walk || 0, st = e.state, wind = a.wind || 0;
+    const couch = st === 'w5riddle' || st === 'enter' || (e.w5calm && st !== 'w5act'), wings = (st === 'wind' && e.plan === 'w5wings') || (st === 'w5act' && e.w5a === 'wings'), casting = (st === 'wind' && e.plan === 'w5glyphs') || (st === 'w5act' && e.w5a === 'glyphs');
+    const leap = st === 'pounce', moving = ph ? 1 : 0, breath = Math.sin(t * 1.1) * .8;
+    const hide = '#D2D6E2', hideDk = '#7A8298', hideLt = '#F6F8FC', leafC = '#C2CCDC';
+    const B = couch ? -16 : -30 - (leap ? 4 : 0) + Math.abs(Math.sin(ph)) * -1.4 * moving;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.05, 1.05);
+    // the far wing
+    const wingA = wings ? .8 + wind * .5 + (st === 'w5act' ? Math.sin(t * 7) * .3 : 0) : couch ? .12 : .25 + breath * .03;
+    const wing = (far) => { ctx.save(); ctx.translate(-2 + (far ? -6 : 0), B - 12); ctx.rotate(wingA); ctx.scale(1, wings ? 1.25 : 1);
+      for (let i = 0; i < 7; i++) { const L = 34 - Math.abs(i - 2) * 3, a0 = -2.7 + i * .2; horn(0, 0, Math.cos(a0) * L * .5, Math.sin(a0) * L * .5 - 2, Math.cos(a0) * L, Math.sin(a0) * L, 7, 1.2, far ? '#9AA4B8' : leafC, 1, far ? '#5A6480' : '#7A86A0'); }
+      cel(PB([0, 0, -10, -8, -22, -10, -28, -4, -16, 2]), far ? '#A8B0C4' : '#DDE4EE', { d: 2, r: 1, w: 1.3, dark: '#7A86A0', lite: '#FFFFFF', tex: () => { ctx.strokeStyle = 'rgba(80,90,120,.4)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-6 - i * 5, -7); ctx.quadraticCurveTo(-4 - i * 5, -3, -8 - i * 5, 0); } ctx.stroke(); } }); // the coverts, silver leaf
+      ctx.restore(); };
+    wing(true);
+    // the tail, ending in a tuft
+    const tw = Math.sin(t * 1.2) * 4;
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(-26, B + 2); ctx.quadraticCurveTo(-40, B + 6 + tw, -44, B - 8 + tw); ctx.stroke(); ctx.strokeStyle = C(hide); ctx.lineWidth = 2; ctx.stroke();
+    cel(PE(-44, B - 10 + tw, 3.4, 4.6, .3), '#5A6688', { d: 1, r: .5, w: 1.1 });
+    // legs: folded under when she lies couchant, planted when she stands
+    const leg = (hx, front, off, far) => { const col = far ? '#A8AEC0' : hide;
+      if (couch) { const px = front ? hx + 16 : hx + 6; seg(hx, B + 4, hx + 5, -4, 11, 8, col, 1); seg(hx + 5, -4, px, -2.4, 7, 6, col, 0); cel(PE(px + 2, -2.6, 4.4, 2.6), col, { d: 1, r: .5, w: 1.1 }); return; }
+      const s = Math.sin(ph + off) * moving, lift = Math.max(0, Math.cos(ph + off)) * 4 * moving, k = leap ? [hx + (front ? 10 : -8), B + 16] : [hx + s * 4 + (front ? 0 : 4), B + 16], p = leap ? [hx + (front ? 18 : -16), B + 24] : [hx + s * 7 + (front ? 3 : -1), -1 - lift];
+      seg(hx, B + 2, k[0], k[1], front ? 14 : 17, 10, col, 1.6); seg(k[0], k[1], p[0], p[1], 9, 7.6, col, .4); cel(PE(p[0] + 2, p[1] - 1.4, 4.6, 2.6), col, { d: 1, r: .5, w: 1.1 }); };
+    leg(-18, false, Math.PI, true); leg(14, true, 0, true);
+    // the lion's body
+    const body = PB([24, B - 12, 26, B + 4, 16, B + 10, 0, B + 8, -16, B + 10, -28, B + 6, -30, B - 6, -18, B - 12, 2, B - 12]);
+    cel(body, hide, { d: 4, r: 1.6, w: 2, dark: hideDk, lite: hideLt, tex: () => {
+      ctx.strokeStyle = 'rgba(110,118,150,.4)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 5; i++) { const x = -20 + i * 6; ctx.moveTo(x, B - 8); ctx.quadraticCurveTo(x + 2, B - 2, x + 1, B + 4); } ctx.stroke(); // the ribs, as a sculptor carves them
+    } });
+    leg(-18, false, 0, false); leg(14, true, Math.PI, false);
+    wing(false);
+    // the breast and the head: a woman's face, calm, under a striped headcloth that falls to her shoulders
+    const hx = 26, hy = B - 24 + breath * .3 + (casting ? -2 : 0);
+    cel(PB([14, B - 10, 22, B - 18, 30, B - 16, 30, B - 2, 22, B + 2]), hide, { d: 2.4, r: 1, w: 1.6, dark: hideDk, lite: hideLt });
+    ctx.save(); ctx.translate(hx, hy);
+    cel(PB([-9, -6, -6, -12, 2, -13, 8, -9, 9, -2, 8, 6, 4, 14, -4, 14, -10, 6]), '#2A3466', { d: 2.4, r: 1, w: 1.6, dark: '#141A40', lite: '#4A5A94', tex: () => { ctx.fillStyle = 'rgba(214,222,236,.9)'; for (let i = 0; i < 6; i++) { const y = -10 + i * 4; ctx.fillRect(-10, y, 20, 1.4); } } }); // the headcloth, banded in silver
+    cel(PB([0, -9, 6, -9, 9, -5, 10, 0, 8, 6, 3, 8, 0, 4]), '#E2E4EC', { d: 1.6, r: .7, w: 1.3, dark: '#9AA0B8', lite: '#FFFFFF' }); // the face
+    ctx.fillStyle = C('#1E2440'); if (a.hurt) { ctx.fillRect(4, -3, 3, .7); } else { ell(5.4, -2.6, 1.4, .8); ctx.fill(); glowAt(5.4, -2.6, 5, '230,238,255', wind || casting ? .7 : .35); }
+    ctx.strokeStyle = C('#5A607A'); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(3.6, -4.6); ctx.lineTo(7.2, -4.4); ctx.moveTo(8.4, -1); ctx.lineTo(9.6, 1.6); ctx.lineTo(8.4, 2.2); ctx.moveTo(6, 4.4); ctx.quadraticCurveTo(7.4, 4.8, 8.4, 4.2); ctx.stroke(); // brow, nose, a faint smile
+    ctx.fillStyle = C('#C8D2E4'); ctx.fillRect(-1, -12, 5, 2.4); // the band across the brow
+    if (DET()) { ctx.fillStyle = '#E8EEF8'; ell(1.6, -12, 1.2, 1.6); ctx.fill(); }
+    ctx.restore();
+    if (casting) { const k = st === 'w5act' ? 1 : wind; ctx.save(); ctx.translate(hx + 4, hy - 22); ctx.globalAlpha = .4 + .5 * k; ctx.strokeStyle = C('#E8EEF8'); ctx.lineWidth = 1.2; circle(0, 0, 6 + k * 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-3, 2); ctx.quadraticCurveTo(0, -6, 3, 2); ctx.moveTo(0, -2); ctx.lineTo(0, 5); ctx.stroke(); ctx.restore(); glowAt(hx + 4, hy - 22, 20, PALE, .3 + .4 * k); } // a riddle-glyph kindling over her brow
+    ctx.restore();
+  };
+
+  // ======================================================================================================
+  // THE PHANTOM OF BENEDICT: what Tir-na Nog'th makes of Amber's master of arms. It wears three shapes:
+  //   phase 1  Benedict as he is: tall, gaunt, plainly dressed, his right sleeve empty and pinned; he fights left-handed
+  //   phase 2  The Silver Arm: an arm of silver, plated and jointed and gilded at the joints, unfolds from the empty sleeve
+  //   phase 3  The Phantom unbound: dawn is coming and he is coming apart: his legs go to mist, and behind him a mandorla
+  //            of phantom swords stands open like the halo of a saint in a panel painting
+  // He faces right, so the near side is his right: the empty sleeve, then the silver arm. The sword is in his far hand.
+  // ======================================================================================================
+  const BN = { skin: '#B6C2D8', skinDk: '#6E7A98', skinLt: '#E6ECF6', hair: '#2A3048', coat: '#34446E', coatDk: '#161E3C', coatLt: '#6A7EB0', cloak: '#222C52', cloakDk: '#0C1230', cloakLt: '#4E5E92',
+    legs: '#262E50', boots: '#1A2038', blade: '#DCE4F2', silver: '#C8D0DE', silverDk: '#6A748E', silverLt: '#FFFFFF', gilt: '#D8D0B0' };
+  // his pose for what he is doing: the stance of the feet, how far he sinks and leans, and where his two arms are
+  function benPose(e, a, t) {
+    const st = e.state, plan = e.plan, w = a.wind || 0, act = st === 'w5act' ? e.w5a : null, k = e.w5k ?? 1, ph = e.phase || 1;
+    const p = { sink: 3, lean: .04, ff: 13, fb: -13, fk: 3, bk: 2, swA: .3, swExt: .62, swRot: 0, siA: 1.2, siExt: 0, siOpen: 0, flow: 0, glint: 0, spin: 0 };
+    const walk = a.walk || 0; if (walk && st === 'idle') { const s = Math.sin(walk); p.ff = 8 + s * 12; p.fb = -8 - s * 12; p.fk = 2 + Math.max(0, s) * 5; p.bk = 2 + Math.max(0, -s) * 5; p.flow = 3; p.swA = .4; }
+    const W = (pl) => st === 'wind' && plan === pl ? w : 0;
+    if (W('w5lunge') || act === 'lunge') { const q = act ? 1 : W('w5lunge'); if (act) { p.sink = 11; p.lean = .3; p.ff = 32; p.fb = -28; p.fk = 9; p.bk = 0; p.swA = 0; p.swExt = 1.25; p.flow = 10; p.siA = 1.9; }
+      else { p.sink = 3 + 8 * q; p.lean = -.12 * q; p.ff = 16; p.fb = -20; p.fk = 4 + 4 * q; p.swA = -.05; p.swExt = .2 + .2 * (1 - q); p.siA = 2.4; p.glint = q; } }
+    if (W('w5feint') || act === 'feint') { const q = act ? 1 : W('w5feint'); p.swA = act ? lerp(-2.2, 1.05, k) : -2.2 * q; p.swExt = .9; p.lean = act ? lerp(-.1, .3, k) : -.1 * q; p.sink = act ? 6 : 3 + 3 * q; p.ff = act ? 22 : 14; p.flow = act ? 8 : 2; }
+    if (W('w5guard') || act === 'guard') { const q = act ? 1 : W('w5guard'); p.swA = lerp(.3, -1.15, q); p.swExt = lerp(.62, .55, q); p.swRot = -1.25 * q; p.sink = 4 + 2 * q; p.lean = -.06; p.glint = act ? 1 : q; p.ff = 10; p.fb = -14; }
+    if (W('w5grip') || act === 'grip') { const q = act ? 1 : W('w5grip'); p.siA = act ? (e.w5siA ?? 0) : lerp(1.2, -2.5, q); p.siExt = act ? (e.w5reach || 0) : 0; p.siOpen = act ? (e.w5caught ? 0 : 1) : q; p.lean = act ? .18 : -.12 * q; p.sink = 5; p.swA = .7; }
+    if (W('w5cross') || act === 'cross') { const q = act ? 1 : W('w5cross'); p.swA = act ? lerp(-2.4, 1.3, cl01(k * 2)) : -2.4 * q; p.siA = act ? lerp(-2.0, 1.1, cl01(k * 2 - .5)) : -2.0 * q; p.swExt = .95; p.lean = act ? .25 : -.15 * q; p.sink = act ? 8 : 3 + 4 * q; p.ff = act ? 20 : 14; p.flow = act ? 8 : 2; }
+    if (W('w5steps') || W('w5blades') || act === 'steps' || act === 'blades') { const q = act ? 1 : Math.max(W('w5steps'), W('w5blades')); p.swA = lerp(.3, -2.7, q); p.swRot = -.2 * q; p.siA = lerp(1.2, -2.3, q); p.siOpen = q; p.lean = -.12 * q; p.sink = 2; p.glint = q; }
+    if (W('w5wheel') || act === 'wheel') { const q = act ? 1 : W('w5wheel'); p.sink = 6 + 4 * q; p.swA = act ? 0 : lerp(.3, 2.2, q); p.siA = act ? 0 : lerp(1.2, 2.2, q); p.swExt = 1.1; p.siExt = act ? 4 : 0; p.spin = act ? k * TAU * 2 : 0; p.lean = act ? 0 : .2 * q; p.flow = act ? 12 : 0; }
+    if (st === 'wind' && plan === 'roar') { p.swA = -.6; p.siA = -.4; p.siOpen = 1; p.lean = -.2 * w; }
+    if (st === 'down' || a.hurt && st !== 'hurt') { p.sink = 14; p.lean = .45; p.ff = 16; p.fb = -6; p.fk = 10; p.bk = 12; p.swA = 1.45; p.swExt = .8; p.siA = 1.5; }
+    else if (st === 'hurt') { p.lean = -.25; p.swA = -.6; }
+    if (ph < 2 && p.siA !== undefined) p.siA = 1.2; // no arm there yet
+    return p;
+  }
+  // the sword: a long straight blade of ghost-steel, a plain cross guard, a wheel pommel. In his far hand
+  function benSword(len, glint) {
+    fillPoly([-6, -2, -2, -2.4, -2, 2.4, -6, 2], '#3A4466', 1); // the grip
+    ctx.fillStyle = C(BN.silver); circle(-7, 0, 2.4); ctx.fill(); outline(1); // the pommel
+    rrect(-2, -7, 3, 14, 1.2); ctx.fillStyle = C(BN.silver); ctx.fill(); outline(1); // the guard
+    poly([1, -2, len, -1, len + 5, 0, len, 1, 1, 2]); const g = ctx.createLinearGradient(0, -2, 0, 2); g.addColorStop(0, C('#FFFFFF')); g.addColorStop(.5, C(BN.blade)); g.addColorStop(1, C('#8A96B4')); ctx.fillStyle = g; ctx.fill(); outline(1.1);
+    if (DET()) { ctx.strokeStyle = 'rgba(110,124,160,.7)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(len * .7, 0); ctx.stroke(); // the fuller
+      add(() => { ctx.strokeStyle = 'rgba(220,232,255,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(len + 4, 0); ctx.stroke(); }); // the blade is a little made of moonlight
+      if (glint > 0) { const gx = 4 + (len - 4) * ((performance.now() / 900) % 1); glowAt(gx, 0, 6 + glint * 4, '235,242,255', .6 * glint); } }
+  }
+  // the silver arm: plates of silver over a jointed frame, the joints set in silver-gilt; it can reach out on a chain of moonlight
+  function silverArm(sx, sy, A, ext, open, s, t) {
+    const L1 = 12 * s, L2 = 11 * s, E = [sx + Math.cos(A) * L1, sy + Math.sin(A) * L1], fa = A - .25 + (ext > 0 ? .25 : 0);
+    const seg1 = (x0, y0, x1, y1, w0, w1) => { const st = taper(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2, x1, y1, w0, w1, 4); cel(stripPath(st), BN.silver, { d: 1.6, r: .8, w: 1.3, dark: BN.silverDk, lite: BN.silverLt, tex: () => {
+      ctx.strokeStyle = 'rgba(60,70,100,.6)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 1; i < 4; i++) { const q = i / 4; ctx.moveTo(st.L[0] + (st.L[st.L.length - 2] - st.L[0]) * q, st.L[1] + (st.L[st.L.length - 1] - st.L[1]) * q); ctx.lineTo(st.R[0] + (st.R[st.R.length - 2] - st.R[0]) * q, st.R[1] + (st.R[st.R.length - 1] - st.R[1]) * q); } ctx.stroke(); // the lames of the plate
+    } }); };
+    seg1(sx, sy, E[0], E[1], 7.6 * s, 6 * s);
+    let H;
+    if (ext > 0) { // the forearm travels out along a chain of moonlight, its plates riding on it
+      const L = L2 + ext, n = Math.max(3, Math.floor(ext / 14)); H = [E[0] + Math.cos(fa) * L, E[1] + Math.sin(fa) * L];
+      add(() => { ctx.strokeStyle = 'rgba(210,225,255,.5)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(...E); ctx.lineTo(...H); ctx.stroke(); });
+      ctx.strokeStyle = C(BN.silverDk); ctx.lineWidth = 1.4; ctx.setLineDash([2, 1.5]); ctx.beginPath(); ctx.moveTo(...E); ctx.lineTo(...H); ctx.stroke(); ctx.setLineDash([]);
+      for (let i = 1; i < n; i++) { const q = i / n, x = lerp(E[0], H[0], q), y = lerp(E[1], H[1], q); ctx.save(); ctx.translate(x, y); ctx.rotate(fa); rrect(-3 * s, -2.6 * s, 6 * s, 5.2 * s, 1.4); ctx.fillStyle = C(BN.silver); ctx.fill(); outline(1); ctx.restore(); }
+    } else { H = [E[0] + Math.cos(fa) * L2, E[1] + Math.sin(fa) * L2]; seg1(E[0], E[1], H[0], H[1], 6 * s, 5 * s); }
+    ctx.fillStyle = C(BN.gilt); circle(E[0], E[1], 2.8 * s); ctx.fill(); outline(1); if (DET()) { ctx.fillStyle = '#FFFFFF'; circle(E[0] + .6, E[1] - .8, .8 * s); ctx.fill(); } // the elbow, set in silver-gilt
+    ctx.fillStyle = C(BN.gilt); circle(sx, sy, 3.2 * s); ctx.fill(); outline(1);
+    // the hand: a palm plate and four long jointed fingers, open to grip or closed on what it caught
+    ctx.save(); ctx.translate(H[0], H[1]); ctx.rotate(fa);
+    cel(PE(2, 0, 3.6 * s, 3 * s), BN.silver, { d: 1, r: .5, w: 1.1, dark: BN.silverDk });
+    for (let i = 0; i < 4; i++) { const by = (-2.2 + i * 1.45) * s, c = open ? .15 : 1.2, L = [5.6, 6.6, 6.2, 5][i] * s; horn(4.6 * s, by, 4.6 * s + L * .55, by + c * 1.4, 4.6 * s + L, by + c * 3.4, 1.8 * s, .9 * s, BN.silver, .8, BN.silverDk); }
+    horn(2 * s, -2.6 * s, 4 * s, -5.4 * s + (open ? 0 : 2.6), 6.4 * s, -5.8 * s + (open ? 0 : 3.6), 2 * s, 1 * s, BN.silver, .8, BN.silverDk);
+    ctx.restore();
+    glowAt(H[0], H[1], 12, '225,235,255', open ? .35 : .2);
+    return H;
+  }
+  // the mandorla: an almond of silver leaf behind him, and the phantom swords standing in it
+  function mandorla(cx, cy, k, n, t) {
+    if (k <= .02) return;
+    ctx.save(); ctx.globalAlpha *= k;
+    add(() => { const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 80); g.addColorStop(0, 'rgba(210,225,255,.35)'); g.addColorStop(1, 'rgba(210,225,255,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 80, cy - 80, 160, 160); });
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 1.35); leafLine(() => { ctx.ellipse(0, -6, 42, 52, 0, 0, TAU); }, 1.6, .75); ctx.restore();
+    for (let i = 0; i < 11; i++) { if (i >= n) continue; const an = -Math.PI / 2 + (i - 5) * .27 + Math.sin(t * .4 + i) * .02, L = 44 + (i % 2) * 10;
+      ctx.save(); ctx.translate(cx + Math.cos(an) * 14, cy + Math.sin(an) * 14); ctx.rotate(an); ctx.globalAlpha *= .7; benSword(L, 0); ctx.restore(); }
+    ctx.restore();
+  }
+  function benedict(e, a, t) {
+    const ph = Math.min(3, Math.max(1, e.phase || 1)), p = benPose(e, a, t), dead = e.dead;
+    const shiftK = e.w5shift > 0 ? 1 - e.w5shift : 1; // the change as each new shape comes on
+    const silverK = ph >= 2 ? (ph === 2 ? sm(shiftK) : 1) : 0, mist = ph >= 3 ? sm(shiftK) : 0, haloK = ph >= 3 ? sm(shiftK) * (e.w5halo ?? 1) : 0;
+    const bob = mist * (Math.sin(t * 1.3) * 2 - 6);
+    const HIP = -38 + p.sink + bob, SHO = -60 + p.sink + bob, NECK = -64 + p.sink + bob, HY = -72 + p.sink + bob;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (!dead) ctx.globalAlpha *= .94; // a ghost: very nearly there
+    if (p.spin) { const c = Math.cos(p.spin); ctx.scale(Math.max(.2, Math.abs(c)), 1); if (c < 0) ctx.scale(-1, 1); }
+    mandorla(-4, SHO - 10, haloK, e.w5blades ?? 11, t);
+    const upper = (fn) => { ctx.save(); ctx.translate(0, HIP); ctx.rotate(p.lean); ctx.translate(0, -HIP); fn(); ctx.restore(); };
+    // the cloak, thrown back off the shoulders, its hem going to mist
+    upper(() => {
+      const fl = p.flow + Math.sin(t * .8) * 2;
+      cel(PB([-4, SHO - 2, -12, SHO + 4, -20 - fl, -24 + bob * .5, -24 - fl * 1.4, -6 + bob * .3, -10 - fl * .4, -4 + bob * .3, -2, HIP + 6]), BN.cloak, { d: 3, r: 1.2, w: 1.7, dark: BN.cloakDk, lite: BN.cloakLt, tex: () => {
+        ctx.strokeStyle = 'rgba(6,10,30,.5)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-6 - i * 3, SHO + 4); ctx.quadraticCurveTo(-10 - i * 3 - fl * .5, -30, -12 - i * 3 - fl, -8); } ctx.stroke(); } });
+      for (let i = 0; i < 4; i++) mistTongue(-22 - p.flow * 1.2 + i * 4, -6 + bob * .3, 7 + i % 2 * 4, 4, -4, t, i);
+    });
+    // the far arm and the sword
+    const swordArm = () => upper(() => {
+      const sx = -2, sy = SHO + 2, A = p.swA, bend = (1 - Math.min(1, p.swExt)) * 1.1, L1 = 12, L2 = 11 * Math.min(1.15, .7 + p.swExt * .4);
+      const E = [sx + Math.cos(A + bend) * L1, sy + Math.sin(A + bend) * L1], fa = A - bend * .4, Hh = [E[0] + Math.cos(fa) * L2, E[1] + Math.sin(fa) * L2];
+      seg(sx, sy, E[0], E[1], 7.6, 6, shade(BN.coat, -.2), 1); seg(E[0], E[1], Hh[0], Hh[1], 6, 4.8, shade(BN.coat, -.2), .6);
+      ctx.save(); ctx.translate(Hh[0], Hh[1]); ctx.rotate(fa + p.swRot); benSword(50, p.glint); ctx.fillStyle = C(BN.skinDk); ell(-3, 0, 3, 3.2); ctx.fill(); outline(1); ctx.restore();
+    });
+    const guardFront = (e.state === 'w5act' && e.w5a === 'guard') || (e.state === 'wind' && e.plan === 'w5guard');
+    if (!guardFront) swordArm();
+    // the legs, long, in boots; when he is unbound they end in mist below the knee
+    const leg = (hx, fx, kb, near) => {
+      const col = near ? BN.legs : shade(BN.legs, -.2), kx = (hx + fx) / 2 + kb * .8 + 2, ky = (HIP + 0) / 2 - kb * .3 + 2;
+      seg(hx, HIP, kx, ky, 9.6, 7.2, col, 1);
+      if (mist > .5) { for (let i = 0; i < 3; i++) mistTongue(kx - 2 + i * 2.4, ky + 1, 10 + i * 3, 6 - i, (i - 1) * 3, t, i + (near ? 5 : 0)); return; }
+      seg(kx, ky, fx, -9, 7.2, 5.4, col, .9); ctx.save(); ctx.translate(fx, 0); ctx.scale(1.15, 1.15); boot(0, near ? BN.boots : shade(BN.boots, -.2)); ctx.restore();
+      if (mist > 0) mistTongue(fx, -4, -8, 6 * mist, 0, t, near ? 3 : 4);
+    };
+    leg(-3, p.fb, p.bk, false); leg(3, p.ff, p.fk, true);
+    // the body: a plain doublet of grey-blue, a baldric of silver across it, a belt
+    upper(() => {
+      const ty = SHO - 2, torso = PB([-11.6, ty + 2, 0, ty - 3, 11.6, ty + 2, 12, ty + 12, 8.6, HIP - 2, 9, HIP + 4, -9, HIP + 4, -8.8, HIP - 2, -12, ty + 12]);
+      cel(torso, BN.coat, { d: 3.6, r: 1.4, w: 1.9, dark: BN.coatDk, lite: BN.coatLt, tex: () => {
+        ctx.strokeStyle = 'rgba(10,16,40,.45)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-6, ty + 9); ctx.quadraticCurveTo(0, ty + 12, 7, ty + 8.6); ctx.moveTo(-4, ty + 14); ctx.quadraticCurveTo(-1, ty + 19, -2, HIP); ctx.stroke(); // the chest, the folds
+        ctx.fillStyle = 'rgba(12,18,44,.5)'; ctx.fillRect(-1, ty, 1.6, HIP - ty + 2); // the line of buttons down the front
+        ctx.fillStyle = 'rgba(214,222,236,.85)'; for (let y = ty + 4; y < HIP - 2; y += 4.2) { circle(.2, y, .7); ctx.fill(); }
+      } });
+      ctx.strokeStyle = C(BN.silver); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(9, ty + 2); ctx.lineTo(-7, HIP - 1); ctx.stroke(); // the baldric
+      ctx.fillStyle = C('#141A34'); ctx.fillRect(-9, HIP - 2.6, 18, 4); ctx.fillStyle = C(BN.silver); ctx.fillRect(1, HIP - 3, 4, 4.8);
+      // the head: long and gaunt, close-cropped hair, a long straight nose, eyes of white light under a heavy brow
+      ctx.fillStyle = C(BN.skinDk); ctx.fillRect(-1, NECK - 2, 5, 8);
+      const head = PB([-6.4, HY - 6, 0, HY - 10.4, 6.6, HY - 8.4, 9, HY - 3, 11.2, HY + 1.6, 9.4, HY + 3, 9.8, HY + 6, 8, HY + 9.4, 2, HY + 8, -2.6, HY + 4, -7, HY]);
+      cel(head, BN.skin, { d: 2.4, r: 1, w: 1.5, dark: BN.skinDk, lite: BN.skinLt, tex: () => {
+        ctx.fillStyle = 'rgba(80,90,120,.45)'; poly([2, HY + 1.6, 7, HY + 2.4, 3.4, HY + 4.6]); ctx.fill(); // the hollow of the cheek
+        ctx.strokeStyle = 'rgba(70,80,110,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(8.8, HY + 3.4); ctx.quadraticCurveTo(7.6, HY + 4.6, 7.8, HY + 6.4); ctx.stroke(); // the line from nose to mouth
+      } });
+      ctx.fillStyle = C(BN.hair); ctx.beginPath(); ctx.moveTo(7.6, HY - 7.4); ctx.quadraticCurveTo(4, HY - 11.6, -2, HY - 10.8); ctx.quadraticCurveTo(-7.6, HY - 9, -7.2, HY - 1); ctx.lineTo(-4.6, HY + 1.4); ctx.quadraticCurveTo(-4, HY - 4, -1, HY - 5.6); ctx.quadraticCurveTo(3, HY - 7.4, 7.6, HY - 7.4); ctx.fill(); outline(1); // the cropped hair
+      ctx.fillStyle = C(BN.skinDk); ell(-2.6, HY + 1, 1.5, 2.3); ctx.fill(); // the ear
+      ctx.fillStyle = C('#141A30'); poly([3.6, HY - 3.2, 9.4, HY - 3.6, 9, HY - 2.2, 4, HY - 1.8]); ctx.fill(); // the brow, drawn down
+      if (!a.hurt) { ctx.fillStyle = C('#FFFFFF'); poly([5, HY - 1.4, 8.4, HY - 1.6, 8, HY - .6, 5.4, HY - .6]); ctx.fill(); glowAt(6.8, HY - 1, 7, '230,238,255', .55 + p.glint * .3); }
+      else { ctx.strokeStyle = C('#141A30'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(5, HY - 1); ctx.lineTo(8.4, HY - 1.2); ctx.stroke(); }
+      ctx.strokeStyle = C('#3A4466'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(7.4, HY + 5); ctx.lineTo(9.6, HY + 4.8); ctx.stroke(); // a set mouth
+      // the near side: the empty sleeve pinned up, or the silver arm
+      const ssx = 4, ssy = SHO + 2;
+      if (silverK < .99) { // the empty sleeve, folded and pinned with a brooch of the unicorn
+        ctx.save(); ctx.globalAlpha *= 1 - silverK;
+        cel(PB([ssx - 4, ssy - 2, ssx + 5, ssy - 1, ssx + 6, ssy + 8, ssx + 2, ssy + 12, ssx - 3, ssy + 9]), BN.coat, { d: 1.6, r: .7, w: 1.4, dark: BN.coatDk, lite: BN.coatLt });
+        ctx.fillStyle = C(BN.silver); circle(ssx + 1.4, ssy + 3, 2.2); ctx.fill(); outline(.9); if (DET()) { ctx.fillStyle = '#FFFFFF'; circle(ssx + .8, ssy + 2.4, .6); ctx.fill(); }
+        ctx.restore();
+      }
+      if (silverK > 0) { ctx.save(); ctx.globalAlpha *= silverK; // the silver arm, unfolding from the sleeve as it comes
+        const A = lerp(1.9, p.siA, silverK); e.w5hand = silverArm(ssx, ssy, A, p.siExt * silverK, p.siOpen, lerp(.6, 1.12, silverK), t); ctx.restore();
+        if (ph === 2 && e.w5shift > 0) glowAt(ssx, ssy + 6, 24, '230,238,255', .6 * (1 - silverK)); }
+    });
+    if (guardFront) swordArm(); // in his guard the blade stands up before his face
+    if (p.spin && DET()) add(() => { ctx.strokeStyle = 'rgba(225,235,255,.45)'; ctx.lineWidth = 5; ell(0, SHO + 8, 58, 14); ctx.stroke(); }); // the silver wheel
+    if (p.flow >= 10 && DET()) add(() => { ctx.strokeStyle = 'rgba(210,225,255,.35)'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = SHO + i * 9; ctx.moveTo(-30 - i * 4, y); ctx.lineTo(-80 - i * 8, y + 2); } ctx.stroke(); }); // the speed of the lunge
+    ctx.restore();
+  }
+  CREATURES.w5benedict = function (e, a) {
+    a = a || {}; const t = a.t || 0;
+    if (e.dead) { // he comes apart into moonlight; the silver arm falls and stays
+      const k = cl01((performance.now() / 1000 - (e.deadAt || 0)) / 2.4);
+      ctx.save(); ctx.globalAlpha *= 1 - k; ctx.translate(0, k * 6); benedict(e, a, t); ctx.restore();
+      if (k > .2 && e.phase >= 2) { ctx.save(); ctx.globalAlpha *= cl01((k - .2) * 3); silverArm(-6, -3, -.08, 0, 1, 1.12, t); ctx.restore(); }
+      return;
+    }
+    benedict(e, a, t);
+  };
+
 })();
