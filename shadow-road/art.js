@@ -71,8 +71,9 @@ function drawCorwinHead(look, hy) {
   ctx.fillStyle = C(shade(sk, -.55)); ctx.beginPath(); ctx.moveTo(7.6, hy + 5); ctx.lineTo(9.5, hy + 4.7); ctx.lineTo(9.4, hy + 5.3); ctx.lineTo(7.8, hy + 5.4); ctx.closePath(); ctx.fill(); // a set mouth
   ctx.fillStyle = C(shade(sk, .12)); ctx.fillRect(8.2, hy + 5.7, 1.1, .5); // light on the lower lip
   // shaggy dark-brown hair, longer and tousled: a ragged fringe falling over the brow, locks over the ear, and
-  // pointed ends at the nape lying on the collar
+  // pointed ends at the nape lying on the collar (with the same locks as the turned head, so the turn is seamless)
   const hair = look.hair, hl = look.hairLt || shade(hair, .4), hd = look.hairDk || shade(hair, -.5);
+  ctx.save(); ctx.globalCompositeOperation = 'destination-over'; hairLocks(look, hy, 0, .6, 'back', true); ctx.restore();
   ctx.beginPath();
   ctx.moveTo(10.2, hy - 5.8);
   ctx.lineTo(9.3, hy - 3); ctx.lineTo(8.4, hy - 5.2); ctx.lineTo(7, hy - 2.4); ctx.lineTo(6.2, hy - 5.3); ctx.lineTo(4.4, hy - 3); ctx.lineTo(3.6, hy - 5.6); // the fringe
@@ -96,8 +97,50 @@ function drawCorwinHead(look, hy) {
     ctx.moveTo(2.2, hy - 11.6); ctx.quadraticCurveTo(-1.6, hy - 11.2, -4.6, hy - 9.2); ctx.stroke();
     ctx.restore();
   }
+  hairLocks(look, hy, 0, .6, 'front', true);
 }
 
+// His hair: shaggy, layered locks, each fixed to a place on the skull (a longitude phi round from the face, an
+// elevation e up from the ears) and projected for his turn, so the hair turns with the head and never reshapes. Only
+// the tips give a little with his motion (HAIR_SWAY, in head space). Crown locks stand up and sweep back and to one
+// side; locks fall over the ears; jagged ends lie on the nape; a few strands fall over the brow.
+let HAIR_SWAY = [0, 0];
+const HAIR_LOCKS = (() => {
+  // base (phi, e) on the skull, tip (phi + dp, te) at radius R + out, base half-width w (radians); k: which group
+  const L = [], h = (i) => { const v = Math.sin(i * 91.7 + 7.3) * 43758.5; return v - Math.floor(v); };
+  for (let i = 0; i < 8; i++) { const phi = -2.9 + i * .78 + h(i) * .2, back = Math.sign(phi || 1); // tufts off the crown, swept up and back
+    L.push({ phi, e: .5 + h(i + 1) * .16, dp: Math.abs(phi) < .5 ? .7 : back * .6, te: .78 + h(i + 2) * .22, out: 2.4 + h(i + 3) * 1.6, w: .46, k: 'crown' }); }
+  for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) L.push({ phi: sd * (1.25 + i * .5), e: .28 - i * .08, dp: sd * .12, te: -.5 - h(i + 11 + sd) * .3, out: 2 + h(i + 13) * 1.3, w: .34, k: 'side' }); // over the ears
+  for (let i = 0; i < 6; i++) L.push({ phi: Math.PI + (i - 2.5) * .42, e: .2, dp: (i - 2.5) * .07, te: -1 - [.2, .05, .28, .1, .22, .02][i], out: 2.2 + [1.2, .4, 1.5, .6, 1, .3][i], w: .36, k: 'nape' }); // jagged ends at the nape
+  for (let i = 0; i < 3; i++) L.push({ phi: -.36 + i * .36, e: .66, dp: .16, te: .22 + h(i + 40) * .14, out: .3, w: .17, k: 'fringe' }); // strands over the brow
+  return L;
+})();
+function hairLocks(look, hy, Y, cx, which, profile) {
+  const CS = Math.sqrt(Math.max(0, 1 - Y * Y)), th = Math.atan2(Y, CS), cy = hy - 2.4, R = 8.1;
+  const pt = (phi, e, r) => [cx + r * Math.cos(e) * Math.cos(phi + th), cy - r * Math.sin(e) * 1.1, Math.cos(e) * Math.sin(phi + th)];
+  const hair = look.hair, hl = look.hairLt || shade(hair, .4), hd = look.hairDk || shade(hair, -.5);
+  const list = [];
+  for (const l of HAIR_LOCKS) {
+    if (profile && l.k === 'fringe') continue;
+    if (l.k === 'fringe' && Y < -.25) continue;
+    const d = pt(l.phi, l.e, R)[2];
+    if (which === 'back' ? d >= 0 : d < 0) continue;
+    list.push([d, l]);
+  }
+  list.sort((a, b) => a[0] - b[0]);
+  const sx = HAIR_SWAY[0], sy = HAIR_SWAY[1], back = which === 'back';
+  for (const [d, l] of list) {
+    const a = pt(l.phi - l.w, l.e, R * .9), b = pt(l.phi + l.w, l.e, R * .9), tp = pt(l.phi + l.dp, l.te, R + l.out);
+    const g = (l.out + 1.5) / 3, tx = tp[0] + sx * g, ty = tp[1] + sy * g;
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, ax = tx - mx, ay = ty - my, al = Math.hypot(ax, ay) || 1, nx = -ay / al, ny = ax / al;
+    const bw = Math.hypot(b[0] - a[0], b[1] - a[1]) * .5 + .8, sgn = Math.sign((a[0] - mx) * nx + (a[1] - my) * ny) || 1; // the lock swells, then narrows to its point
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]);
+    ctx.quadraticCurveTo(mx + ax * .45 + nx * bw * sgn, my + ay * .45 + ny * bw * sgn, tx, ty);
+    ctx.quadraticCurveTo(mx + ax * .45 - nx * bw * sgn * .8, my + ay * .45 - ny * bw * sgn * .8, b[0], b[1]); ctx.closePath();
+    ctx.fillStyle = C(back ? hd : hair); ctx.fill(); outline(back ? .8 : .7);
+    if (!back && !FLASH && !TINT && d > .15) { ctx.strokeStyle = hl; ctx.lineWidth = .6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(mx + ax * .15 + nx * bw * .3, my + ay * .15 + ny * bw * .3); ctx.quadraticCurveTo(mx + ax * .5 + nx * bw * .4, my + ay * .5 + ny * bw * .4, mx + ax * .8, my + ay * .8); ctx.stroke(); }
+  }
+}
 // The same head turned away from profile, for his 3/4, front and back views. The head is treated as a solid: every
 // feature sits at an angle around it (0 = straight ahead, + toward the near side) and is projected for the body's
 // turn Y (sin of the turn: +1 facing the viewer, -1 facing away). Features on the hidden side drop out.
@@ -115,10 +158,11 @@ function drawCorwinHeadTurn(look, hy, Y) {
   const hair = look.hair, hl = look.hairLt || shade(hair, .4), hd = look.hairDk || shade(hair, -.5);
   const lock = (phi, r, y0, y1, w) => { ctx.moveTo(P(phi - w, r), y0); ctx.lineTo(P(phi, r - .4), y1); ctx.lineTo(P(phi + w, r), y0); };
   const backLocks = (front) => { ctx.beginPath(); for (let k = 1; k < 8; k++) { const phi = Math.PI + (k - 4) * .44; if ((D(phi) >= .3) === front) lock(phi, 8.1, hy + (front ? -.5 : 1.6), hy + 6 + [2.6, .4, 3.4, 1.2, 3, .2, 2.2][k - 1], front ? .3 : .26); } ctx.fillStyle = C(front ? hair : shade(hair, -.25)); ctx.fill(); outline(front ? .5 : .9); };
-  backLocks(false);
+  if (look.corwin) hairLocks(look, hy, Y, cx, 'back'); else backLocks(false);
   // outline the two shapes, then fill them again so only their joined edge keeps its line
-  for (const f of [skull, jaw]) { f(); ctx.lineWidth = 2.1; ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.stroke(); }
-  for (const f of [skull, jaw]) { f(); ctx.fillStyle = C(sk); ctx.fill(); }
+  const shapes = Y < -.4 ? [skull] : [skull, jaw]; // (from behind, the jaw is hidden by the back of the head)
+  for (const f of shapes) { f(); ctx.lineWidth = 2.1; ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.stroke(); }
+  for (const f of shapes) { f(); ctx.fillStyle = C(sk); ctx.fill(); }
   if (!FLASH && !TINT) { // light from the upper right: the far side of the head turns into shadow
     ctx.save(); skull(); ctx.clip(); const g = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g.addColorStop(0, 'rgba(70,40,40,.32)'); g.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 9, hy - 12, 18, 24); ctx.restore();
     ctx.save(); jaw(); ctx.clip(); const g2 = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g2.addColorStop(0, 'rgba(70,40,40,.32)'); g2.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g2; ctx.fillRect(cx - 9, hy - 2, 18, 14);
@@ -155,23 +199,19 @@ function drawCorwinHeadTurn(look, hy, Y) {
   }
   // the hair: a cap fixed to the skull (it turns with him, it does not reshape), cut away for the face, with a ragged
   // fringe over the brow and locks over the ears
-  const hairShape = () => ell(cx - .4, hy - 3.2, 8.6, 9);
-  ctx.save(); hairShape(); ctx.clip(); ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, Y > -.25 ? 18 : 20.4); ctx.clip();
+  const hairShape = () => ell(cx - .4, hy - 3.2, 8.4, 8.8);
+  ctx.save(); hairShape(); ctx.clip(); ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, Y > -.25 ? 18 : 19); ctx.clip();
   ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, 30);
   if (Y > -.25) { const fv = clamp((Y + .25) / .55, 0, 1); const fx0 = cx + 4 * CS, frx = (3.9 + 2.1 * Math.max(0, Y)) * (.6 + .4 * fv); ctx.moveTo(fx0 + frx, hy + 2.2); ctx.ellipse(fx0, hy + 2.2, frx, 9.9, 0, 0, TAU); } // the face, cut out of the hair
   ctx.fillStyle = C(hair); ctx.fill('evenodd');
   ctx.restore();
-  ctx.beginPath(); // the hanging locks: over the ears and down the sides, the fringe over the brow
-  for (const sd of [-1, 1]) for (const k of [0, 1, 2]) { const phi = sd * (1.25 + k * .42); if (D(phi) >= .3 || Y <= -.25) lock(phi, 8.3, hy - 1 + k * 1.2, hy + 4.2 + k * 1.6, .24); }
-  if (Y > -.25) for (const [k, phi] of [-.62, -.24, .14, .5].entries()) if (D(phi) > -.1) { const r = 7.9; ctx.moveTo(P(phi - .26, r), hy - 7.4); ctx.lineTo(P(phi + .05, r + .4), hy - 2.6 - (k % 2) * .9); ctx.lineTo(P(phi + .24, r), hy - 7.2); }
-  ctx.fillStyle = C(hair); ctx.fill(); outline(.8);
-  if (Y < -.25) backLocks(true); // seen from behind, the ends at the nape lie over the collar
   ctx.beginPath(); ctx.ellipse(cx - .4, hy - 3.2, 8.6, 9, 0, Math.PI * .9, Math.PI * (Y > -.25 ? 1.76 : 2.1)); outline(1.05); // the crown's edge, kept off the face
+  hairLocks(look, hy, Y, cx, 'front'); // the locks over it: the crown, over the ears, the nape, strands over the brow
   if (!FLASH && !TINT) {
     ctx.strokeStyle = hd; ctx.lineWidth = .6; ctx.lineCap = 'round'; ctx.beginPath(); // locks combed back by hand
     for (const o of [-3.4, 0, 3.4]) {
       if (Y > -.25) { ctx.moveTo(cx + o + 2.5 * CS, hy - 7.2); ctx.quadraticCurveTo(cx + o * .9, hy - 10.6, cx + o * .6 - 3 * CS, hy - 11.2); }
-      else { ctx.moveTo(cx + o * .6, hy - 10.8); ctx.quadraticCurveTo(cx + o * 1.2, hy - 4, cx + o * 1.1, hy + 4.6); }
+      else if (o) { ctx.moveTo(cx + o * .5, hy - 9.6); ctx.quadraticCurveTo(cx + o * .9, hy - 5, cx + o * .9, hy + 1.6); }
     }
     ctx.stroke();
     ctx.strokeStyle = hl; ctx.lineWidth = .8; ctx.beginPath(); // light catching the top
@@ -181,7 +221,9 @@ function drawCorwinHeadTurn(look, hy, Y) {
 
 // a hand in hand space (the wrist at x=13, the fingers toward +x): a clenched fist, knuckles forward, or a relaxed
 // open hand with the fingers loosely curled and the thumb along the top
+let HAND_S = 1; // the prince's hands are drawn smaller, in proportion to his figure
 function drawHand(g, open) {
+  if (HAND_S !== 1) { ctx.save(); ctx.translate(14, 0); ctx.scale(HAND_S, HAND_S); ctx.translate(-14, 0); const s = HAND_S; HAND_S = 1; drawHand(g, open); HAND_S = s; ctx.restore(); return; }
   if (open) {
     const fin = (y0, len, curl) => { const f = () => { ctx.beginPath(); ctx.moveTo(18.4, y0); ctx.quadraticCurveTo(18.4 + len * .7, y0 + curl * .3, 18.4 + len, y0 + curl); }; ctx.lineCap = 'round';
       f(); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = 3.1; ctx.stroke(); f(); ctx.strokeStyle = C(g); ctx.lineWidth = 1.7; ctx.stroke(); };
@@ -223,6 +265,7 @@ function silverRose(x, y, s, stem, base = '#A4AAB8') {
 }
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
 function gripHand(col) { // a gloved hand closed around a haft
+  if (HAND_S !== 1) { ctx.save(); ctx.translate(17, 0); ctx.scale(HAND_S, HAND_S); ctx.translate(-17, 0); const s = HAND_S; HAND_S = 1; gripHand(col); HAND_S = s; ctx.restore(); return; }
   rrect(13.6, -3.8, 7, 7.6, 2.4); ctx.fillStyle = C(col); ctx.fill(); outline(1.1);
   ctx.strokeStyle = C(shade(col, -.55)); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(15.8, -3.4); ctx.lineTo(15.8, 3.4); ctx.moveTo(18, -3.4); ctx.lineTo(18, 3.4); ctx.stroke();
 }
@@ -406,18 +449,18 @@ function boot(x, col) {
 function kickOut(k, h0, h1) { // 0 chambered .. 1 full extension, with a snap out and a slower recovery
   return k < h0 ? ease(k / h0) * .25 : k <= h1 ? .25 + .75 * Math.min(1, (k - h0) / Math.max(.04, (h1 - h0) * .3)) : Math.max(0, 1 - ease((k - h1) / Math.max(.05, 1 - h1)));
 }
-function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1) {
+function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1, LS = 1) {
   const out = kickOut(pose.kickK, pose.kickH[0], pose.kickH[1]), chamber = pose.kickK < pose.kickH[0];
   const L = (a, b, t) => a + (b - a) * t, legs = look.legs;
   // the prince's legs are dressed by his own costume (art_corwin.js): trousers, knee cops and tall boots
   const cw = look.corwin ? CORWIN.PART('pants', look) : null; let last = null;
   const deco = () => { if (!cw || !last) return; const [h, kn, ft, far, s] = last; last = null; cw.shinDetail(look, kn[0], kn[1], ft[0], ft[1], far, s);
     const tx = kn[0] - h[0], ty = kn[1] - h[1], sx = ft[0] - kn[0], sy = ft[1] - kn[1], tl = Math.hypot(tx, ty) || 1, sl = Math.hypot(sx, sy) || 1; cw.knee(look, kn[0], kn[1], tx / tl + sx / sl, ty / tl + sy / sl, far, s); };
-  const foot = (col) => { if (cw) cw.foot(look, 0, col !== look.boots); else boot(0, col); };
+  const foot = (col) => { if (cw) { ctx.save(); ctx.scale(1 / LS, 1); cw.foot(look, 0, col !== look.boots); ctx.restore(); } else boot(0, col); }; // (drawn long: keep the foot its length)
   const bootAt = (x, y, ang, col) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.translate(-1, 9); foot(col); ctx.restore(); deco(); };
   const footAt = (x, col, rot = 0) => { ctx.save(); ctx.translate(x, 0); if (rot) ctx.rotate(rot); foot(col); ctx.restore(); deco(); };
   const lw = pose.kickStyle === 'drop' ? 1.25 : 1, limb = (h, kn, ft, col) => {
-    if (cw) { const far = col !== legs; cw.thigh(look, h[0], h[1], kn[0], kn[1], far, lw); cw.shin(look, kn[0], kn[1], ft[0], ft[1], far, lw); last = [h, kn, ft, far, lw]; return; }
+    if (cw) { const far = col !== legs; cw.thigh(look, h[0], h[1], kn[0], kn[1], far, lw / LS); cw.shin(look, kn[0], kn[1], ft[0], ft[1], far, lw / LS); last = [h, kn, ft, far, lw / LS]; return; }
     seg(h[0], h[1], kn[0], kn[1], 8.4 * lw, 6.6 * lw, col, .9); seg(kn[0], kn[1], ft[0], ft[1], 6.6 * lw, 5 * lw, col, .8); };
   // turned, each leg is foreshortened along his facing and set out to its own side; the nearer one is drawn last
   const SX = pose.kickStyle === 'drop' ? 1 : Math.max(.4, CS); // the dropkick's legs point straight along the body: turning doesn't shorten them
@@ -456,12 +499,12 @@ function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1) {
 }
 // where the weapon's grip is, a little below the weapon hand, in the upper body's frame: the same chain of transforms
 // frontArm() draws through (shoulder, arm, sweep, reach or bent elbow, wrist turn), worked out ahead so the far arm can reach it
-function twoHandGrip(pose, PX, SHO, sw, armSw, ASX) {
+function twoHandGrip(pose, PX, SHO, sw, armSw, ASX, AS = 1, SWL = 9.5) {
   const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw, ca = Math.cos(arm) * ASX, sa = Math.sin(arm), D = 180 / Math.PI;
-  let m = new DOMMatrix().translate(PX(1, 9.5), SHO + 2).rotate(Math.atan2(sa, ca) * D).scale(Math.hypot(ca, sa), 1);
+  let m = new DOMMatrix().translate(PX(1, SWL), SHO + 2).rotate(Math.atan2(sa, ca) * D).scale(Math.hypot(ca, sa), 1);
   if (pose.sweep !== undefined) m = m.scale(Math.sign(pose.sweep || 1) * Math.max(.14, Math.abs(pose.sweep)), 1);
-  if (pose.elbow) { const eb = -pose.elbow; m = m.translate(10 + Math.cos(eb) * 9, Math.sin(eb) * 9).rotate(eb * D).translate(-15, 0); }
-  else m = m.translate(19 + (pose.ext || 0) * 12 - 15, 0);
+  if (pose.elbow) { const eb = -pose.elbow; m = m.translate(10 * AS + Math.cos(eb) * 9 * AS, Math.sin(eb) * 9 * AS).rotate(eb * D).translate(-15, 0); }
+  else m = m.translate(19 * AS + (pose.ext || 0) * 12 - 15, 0);
   if (pose.grip) m = m.translate(17, 0).rotate(pose.grip * D).translate(-17, 0);
   const a = m.transformPoint({ x: 9.5, y: 0 }), b = m.transformPoint({ x: 14, y: 0 });
   return { x: a.x, y: a.y, ang: Math.atan2(b.y - a.y, b.x - a.x) };
@@ -476,6 +519,9 @@ function drawHumanoid(look, pose) {
   const ASX = Math.max(.32, CS); // arms swinging fore and aft foreshorten as he turns
   const CW = look.corwin ? CORWIN : null, arms = CW ? CW.PART('gauntlets', look) : null; // the prince's own costume and cloak (art_corwin.js)
   HAND_PLATE = !!(CW && look.gauntPlate);
+  // the prince is built as a heroic adult, about seven heads tall at the same overall height: a smaller head on a
+  // defined neck, broad shoulders over a long torso, legs half his height (drawn at LS about the feet) and long arms (AS)
+  const LS = CW ? 1.24 : 1, AS = CW ? 1.3 : 1, SWL = CW ? 10.6 : 9.5; HAND_S = CW ? .72 : 1;
   ctx.save();
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
   if (pose.down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
@@ -484,15 +530,16 @@ function drawHumanoid(look, pose) {
   const gait = walk && !pose.legs && !pose.kick && pose.kickK === undefined && !pose.down && !pose.crouch;
   const bob = gait ? (pose.run ? (1 - Math.abs(sw)) * 3 : Math.abs(sw) * 1.6) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
   const br = pose.breath ? (pose.breath + 1) * .45 : 0; // breathing settles the body over planted feet
-  const cr = (pose.crouchK ?? (pose.crouch ? 8 : (pose.sink || 0))) + bob + br, HIP = -30 + cr, SHO = -49 + cr, NECK = -53 + cr; // sink: how far the hips drop into a stance
+  const cr = (pose.crouchK ?? (pose.crouch ? 8 : (pose.sink || 0))) + bob + br, HIPL = -30 + cr; // sink: how far the hips drop into a stance
+  const HIP = HIPL * LS, SHO = CW ? HIP - 22 : -49 + cr, NECK = CW ? SHO - 3.6 : -53 + cr; // (HIPL: the hips in the legs' own, unscaled frame)
   const skin = look.skin || '#C9A07E', sleeve = look.sleeve || look.body;
   // the whole upper body bends at the waist; as it tips forward the hips slide back to keep his weight over his feet,
   // and as it arches back they push forward
   const LEAN = ((pose.lean || 0) + (gait ? Math.sin(walk * 2) * .025 : 0)) * (.25 + .75 * CS), HX = clamp(-LEAN * 6, -5, 5) * CS; // seen from the front, a bend is mostly toward or away from us
-  const upper = () => { ctx.translate(HX, HIP); ctx.rotate(LEAN); ctx.translate(0, -HIP); };
+  const upper = () => { ctx.translate(HX, HIP); ctx.rotate(LEAN); ctx.translate(0, -HIP); }, HXL = HX / LS;
   // his cloak: where it hangs this frame, then drawn in layers: the far half behind everything, the near half behind
   // his legs and in front of his far arm, and the whole of it over him when his back is to us
-  const G = CW ? { Y, CS, PX, HIP, SHO, NECK, HX, LEAN, cr, walk, sw, gait, pose, BACK, t: performance.now() / 1000 } : null;
+  const G = CW ? { Y, CS, PX, HIP, SHO, NECK, HX, LEAN, cr, walk, sw, gait, pose, BACK, SWL, t: performance.now() / 1000 } : null;
   const CP = CW && !pose.noCloak ? CW.cloak.begin(look, G) : null;
   if (CP && !BACK) { CW.cloak.half(look, CP, true); ctx.save(); upper(); CW.cloak.hood(look, G, false); ctx.restore(); }
   ctx.save(); upper();
@@ -502,7 +549,7 @@ function drawHumanoid(look, pose) {
     ctx.beginPath(); ctx.moveTo(-4, SHO); ctx.quadraticCurveTo(-20 - flow, SHO + 18, -18 - flow * 1.4, -8 + Math.sin(walk * .5) * 3);
     ctx.lineTo(-4, HIP + 14); ctx.closePath(); ctx.fillStyle = C(look.cape); ctx.fill(); outline(1.8);
   }
-  const hs = look.corwin ? 1.02 : .9, headScale = () => { ctx.translate(1, NECK); ctx.scale(hs, hs); ctx.translate(-1, -NECK); };
+  const hs = look.corwin ? .52 : .9, headScale = () => { ctx.translate(1, NECK); ctx.scale(hs, hs); ctx.translate(-1, -NECK); };
   if (look.longHair) {
     ctx.save(); headScale();
     const flow = (pose.flow || 0) * .8 + Math.abs(sw) * 2;
@@ -526,14 +573,14 @@ function drawHumanoid(look, pose) {
   if (!BACK) drawCoat();
   // back arm, a shade darker for being further away
   ctx.save(); upper();
-  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = PX(-3, -9.5), bsy = SHO + 1.5;
+  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = PX(-3, -SWL), bsy = SHO + 1.5;
   const bb = pose.backElbow !== undefined ? -pose.backElbow : .25; // how far the forearm folds up from the upper arm
   const bl = 1 + (pose.backReach || 0); // a thrown rear hand reaches further, the shoulder driven through
-  let bex = bsx + Math.cos(ba) * 10 * bl * ASX, bey = bsy + Math.sin(ba) * 10 * bl, bwx = bex + Math.cos(ba + bb) * 9 * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * bl;
+  let bex = bsx + Math.cos(ba) * 10 * AS * bl * ASX, bey = bsy + Math.sin(ba) * 10 * AS * bl, bwx = bex + Math.cos(ba + bb) * 9 * AS * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * AS * bl;
   let bha = Math.atan2(Math.sin(ba + bb), Math.cos(ba + bb) * ASX); // the far hand's angle
   if (pose.twoHand) { // both hands on the grip: the far hand is solved onto the hilt, just below the weapon hand, every frame
-    const g = twoHandGrip(pose, PX, SHO, sw, armSw, ASX), wx = g.x - Math.cos(g.ang) * 4.5, wy = g.y - Math.sin(g.ang) * 4.5;
-    const dx = wx - bsx, dy = wy - bsy, d = Math.hypot(dx, dy) || 1e-3, k = Math.max(1, d / 18.6), L1 = 10 * k, L2 = 9 * k; // a long reach stretches the shoulder through
+    const g = twoHandGrip(pose, PX, SHO, sw, armSw, ASX, AS, SWL), wx = g.x - Math.cos(g.ang) * 4.5 * HAND_S, wy = g.y - Math.sin(g.ang) * 4.5 * HAND_S;
+    const dx = wx - bsx, dy = wy - bsy, d = Math.hypot(dx, dy) || 1e-3, k = Math.max(1, d / (18.6 * AS)), L1 = 10 * AS * k, L2 = 9 * AS * k; // a long reach stretches the shoulder through
     const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), b0 = Math.atan2(dy, dx);
     const e1 = [bsx + Math.cos(b0 + A) * L1, bsy + Math.sin(b0 + A) * L1], e2 = [bsx + Math.cos(b0 - A) * L1, bsy + Math.sin(b0 - A) * L1];
     [bex, bey] = e1[1] > e2[1] ? e1 : e2; bwx = wx; bwy = wy; bha = g.ang; // the elbow bends down, under the blade
@@ -547,22 +594,24 @@ function drawHumanoid(look, pose) {
   const farHand = () => { ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(bha); ctx.translate(-13, 0); drawHand(shade(look.glove || skin, -.18), pose.twoHand ? 0 : pose.openHand); ctx.restore(); }; // the far hand
   if (!across) farArm();
   const bpA = clamp((ba - 1.25) * .3, -.5, .5); // his far shoulder guard: hidden by his chest in profile, over the cloak when he faces us
-  if (arms && Y < .3 && !across) arms.pauldron(look, bsx, bsy - 1.4, bpA, true, .92);
+  if (arms && Y < .3 && !across) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .62);
   ctx.restore();
   if (CP && !BACK && !pose.down) CW.cloak.half(look, CP, false);
-  // legs: thighs and calves with a swell, pants tucked into boots
-  const legs = look.legs;
-  if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX, Y, CS);
+  // legs: thighs and calves with a swell, pants tucked into boots (the prince's drawn at LS about his feet, so they are long)
+  const legs = look.legs, LW = 1 / LS;
+  ctx.save(); if (LS !== 1) ctx.scale(LS, LS);
+  { const HIP = HIPL, HX = HXL;
+  if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX, Y, CS, LS);
   else if (pose.kick) {
     const kb = pose.kickBend || 0, kx = 17 - kb, ky = HIP - 2 - 5 * kb, fx = 30 - 3 * kb, fy = HIP - 4 + 2 * kb; // kickBend: the knee gives a little
-    if (CW) { const r = -Math.PI / 2 + .2 * kb; CW.leg(look, -2, HIP, -5, HIP + 15, -4, -8, -4, 0, 0, 1, true); CW.leg(look, 2, HIP, kx, ky, fx, fy, fx - Math.cos(r) - 9 * Math.sin(r), fy - Math.sin(r) + 9 * Math.cos(r), r, 1, false); }
+    if (CW) { const r = -Math.PI / 2 + .2 * kb; CW.leg(look, -2, HIP, -5, HIP + 15, -4, -8, -4, 0, 0, LW, true, LW); CW.leg(look, 2, HIP, kx, ky, fx, fy, fx - Math.cos(r) - 9 * Math.sin(r), fy - Math.sin(r) + 9 * Math.cos(r), r, LW, false, LW); }
     else {
     seg(-2, HIP, -5, HIP + 15, 8, 6, shade(legs, -.15), .6); seg(-5, HIP + 15, -4, -8, 6, 4.6, shade(legs, -.15), .8); boot(-4, shade(look.boots, -.1));
     seg(2, HIP, kx, ky, 8.4, 6.4, legs, .8); seg(kx, ky, fx, fy, 6.4, 4.8, legs, .6);
     ctx.save(); ctx.translate(fx, fy); ctx.rotate(-Math.PI / 2 + .2 * kb); ctx.translate(-1, 9); boot(0, look.boots); ctx.restore();
     }
   } else if (pose.down) {
-    if (CW) { CW.leg(look, -2, HIP, -4, -13, -6, -6, -6.6, 2.4, 0, 1, true); CW.leg(look, 2, HIP, 6, -13, 8, -6, 7.4, 2.4, 0, 1, false); }
+    if (CW) { CW.leg(look, -2, HIP, -4, -13, -6, -6, -6.6, 2.4, 0, LW, true, LW); CW.leg(look, 2, HIP, 6, -13, 8, -6, 7.4, 2.4, 0, LW, false, LW); }
     else { seg(-2, HIP, -4, -13, 8, 6, legs, .6); seg(-4, -13, -6, -6, 6, 4.6, legs, .6); seg(2, HIP, 6, -13, 8, 6, legs, .6); seg(6, -13, 8, -6, 6, 4.6, legs, .6); }
   } else {
     const run = pose.run ? 1.95 : 1.15, st = pose.stance && !walk; // a fighting stance at rest: feet apart, knees loose
@@ -578,7 +627,7 @@ function drawHumanoid(look, pose) {
     const W = (pose.legs && pose.legs.w) || 1; // how far apart the feet are set, side to side (seen when he is turned)
     const leg = (x, lz, f, k, col, bc, lift) => {
       const hx0 = PX(x, lz * .8) + HX, kx = PX(x + f * .5 + k + lift * .5, lz * (.9 + (W - 1) * .8)) + HX * .5, kyy = ky - lift * (pose.run ? .55 : .35), fx = PX(x + f - lift * .4, lz * W);
-      if (CW) { CW.leg(look, hx0, HIP, kx, kyy, fx - .6 * CS, -8 - lift, fx, -lift, lift ? lift * .03 : 0, bsc, col !== legs); return; }
+      if (CW) { CW.leg(look, hx0, HIP, kx, kyy, fx - .6 * CS, -8 - lift, fx, -lift, lift ? lift * .03 : 0, bsc * LW, col !== legs, LW); return; }
       seg(hx0, HIP, kx, kyy, 8.4, 6.2, col, .9); seg(kx, kyy, fx - .6 * CS, -8 - lift, 6.2, 4.6, col, 1);
       ctx.save(); ctx.translate(fx, -lift); if (lift) ctx.rotate(lift * .03); ctx.scale(bsc, 1); boot(0, bc); ctx.restore();
     };
@@ -588,8 +637,12 @@ function drawHumanoid(look, pose) {
     const L2 = () => leg(3, 5.5, f2, k2, nearFirst ? shade(legs, -.15) : legs, nearFirst ? shade(look.boots, -.12) : look.boots, l2);
     if (nearFirst) { L2(); L1(); } else { L1(); L2(); }
   }
+  }
+  ctx.restore();
   if (BACK) drawCoat();
-  if (BACK) { ctx.save(); upper(); frontArm(); ctx.restore(); } // his back is to us: the weapon arm is on the far side of him
+  // a blow in progress is never hidden by the cloak: with his back to us the weapon arm is then drawn over it
+  const atkVis = !!(pose.trail || pose.flat || pose.sweep !== undefined || (pose.ext || 0) > 0 || pose.twoHand || pose.glow);
+  if (BACK && !atkVis) { ctx.save(); upper(); frontArm(); ctx.restore(); } // his back is to us: the weapon arm is on the far side of him
   // torso (leans around the hips): a broad V of shoulders over a narrow waist
   ctx.save(); upper();
   if (look.robot) {
@@ -650,18 +703,21 @@ function drawHumanoid(look, pose) {
     if (BACK && CP) { CW.cloak.half(look, CP, true); CW.cloak.half(look, CP, false); }
     ctx.save(); upper();
     if (BACK) { CW.PART('mail', look).neck(look, G); if (CP) CW.cloak.hood(look, G, true); }
-    else { if (CP) CW.cloak.mantle(look, G); if (arms && Y >= .3 && !across) arms.pauldron(look, bsx, bsy - 1.4, bpA, true, .92); CW.PART('mail', look).neck(look, G); }
+    else { if (CP) CW.cloak.mantle(look, G); if (arms && Y >= .3 && !across) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .62); CW.PART('mail', look).neck(look, G); }
     ctx.restore();
   }
   ctx.save(); upper();
   // head
-  const hy = -61 + cr;
+  const hy = CW ? NECK - 14 : -61 + cr; // (in the head's own frame, which headScale shrinks about the neck)
   ctx.save(); ctx.translate(1, NECK); ctx.rotate(-LEAN * .3); ctx.translate(-1, -NECK); // the head stays level on the eyes, as a fighter's does
   if (look.robot) {
     rrect(-8, hy - 8, 17, 15, 4); ctx.fillStyle = C(look.helm); ctx.fill(); outline();
     ctx.fillStyle = C(look.visor); ctx.fillRect(1, hy - 3, 8, 3.5);
     if (look.plume) { ctx.fillStyle = C(look.plume); ctx.beginPath(); ctx.moveTo(-6, hy - 8); ctx.quadraticCurveTo(-14, hy - 18, -20, hy - 8); ctx.quadraticCurveTo(-12, hy - 10, -6, hy - 4); ctx.fill(); }
   } else if (look.corwin) {
+    // the hair's tips give a little to his motion (blown back by speed, a bob with each stride); only the tips move
+    HAIR_SWAY = [clamp(-(pose.flow || 0) * .1 - (gait ? (pose.run ? 1.4 : .4) : 0) + Math.sin(walk * 2) * (gait ? .35 : 0) + Math.sin(performance.now() / 900) * .15, -2.6, 1.2),
+      clamp((gait ? Math.cos(walk * 2) * (pose.run ? .5 : .2) : 0) - (pose.crouch && !gait ? .4 : 0), -1, 1)];
     const HY = pose.HY ?? Y; // his head can stay turned toward what is in front of him while his chest is turned to us
     ctx.save(); headScale(); if (!(pose.headTurn ?? Math.abs(HY) >= .3)) drawCorwinHead(look, hy); else drawCorwinHeadTurn(look, hy, HY); ctx.restore();
   } else {
@@ -689,22 +745,24 @@ function drawHumanoid(look, pose) {
     ctx.restore();
   }
   ctx.restore();
-  if (across) { farArm(); if (arms) arms.pauldron(look, bsx, bsy - 1.4, bpA, true, .92); } // (still in the upper body's frame here)
+  if (BACK && atkVis) frontArm(); // (still in the upper body's frame)
+  if (across) { farArm(); if (arms) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .62); } // (still in the upper body's frame here)
   if (!BACK) frontArm();
   if (across) farHand(); // its hand closed on the hilt over the grip, beside the weapon hand
   // front arm + weapon: shoulder, a bent elbow, forearm, hand
   function frontArm() {
   const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw;
-  if (pose.trail) drawTrail(0, SHO + 2, pose);
-  if (pose.flat) drawFlatTrail(1, SHO + 2, pose.flat);
-  ctx.save(); ctx.translate(PX(1, 9.5), SHO + 2);
+  const ARX = 19 * (AS - 1); // longer arms carry the weapon further out: its trails follow
+  if (pose.trail) drawTrail(0, SHO + 2, ARX ? Object.assign({}, pose, { trail: pose.trail + ARX }) : pose);
+  if (pose.flat) drawFlatTrail(1, SHO + 2, ARX ? Object.assign({}, pose.flat, { r: pose.flat.r + ARX }) : pose.flat);
+  ctx.save(); ctx.translate(PX(1, SWL), SHO + 2);
   { const ca = Math.cos(arm) * ASX, sa = Math.sin(arm); ctx.rotate(Math.atan2(sa, ca)); ctx.scale(Math.hypot(ca, sa), 1); } // turned, the arm only shortens along its length: it never gets thinner
   if (pose.sweep !== undefined) ctx.scale(Math.sign(pose.sweep || 1) * Math.max(.14, Math.abs(pose.sweep)), 1); // a horizontal swing: the weapon comes around the body
-  const reach = 19 + (pose.ext || 0) * 12; // a thrust drives the arm out
+  const reach = 19 * AS + (pose.ext || 0) * 12; // a thrust drives the arm out
   const ex = reach * .53, ey = 1.6 - (pose.ext || 0) * 1.2;
   if (pose.elbow) { // a bent elbow: the upper arm hangs, the forearm comes forward from it
-    const eb = -pose.elbow, hx = 10 + Math.cos(eb) * 9, hy = Math.sin(eb) * 9;
-    if (arms) { arms.sleeve(look, 0, 0, 10, 0, BACK); arms.fore(look, 10, 0, hx, hy, BACK); }
+    const eb = -pose.elbow, hx = 10 * AS + Math.cos(eb) * 9 * AS, hy = Math.sin(eb) * 9 * AS;
+    if (arms) { arms.sleeve(look, 0, 0, 10 * AS, 0, BACK); arms.fore(look, 10 * AS, 0, hx, hy, BACK); }
     else { seg(0, 0, 10, 0, 8.6, 6.6, sleeve, 1.4); seg(10, 0, hx, hy, 6.6, 5, sleeve, .9); }
     ctx.translate(hx, hy); ctx.rotate(eb); ctx.translate(-15, 0);
   } else if (arms) { arms.sleeve(look, 0, 0, ex, ey, BACK); arms.fore(look, ex, ey, reach, 0, BACK); }
@@ -715,7 +773,7 @@ function drawHumanoid(look, pose) {
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   drawWeapon(pose.weapon || look.weapon, pose);
   ctx.restore();
-  if (arms) arms.pauldron(look, PX(1, 9.5), SHO + .2, clamp((arm - 1.1) * .3, -.45, .45), BACK);
+  if (arms) arms.pauldron(look, PX(1, SWL), SHO + .2, clamp((arm - 1.1) * .3, -.45, .45), BACK, .68);
   else if (look.pauldron) { ctx.save(); ctx.translate(PX(1, 9.5) - 1, 0);
     ctx.beginPath(); ctx.ellipse(1, SHO + 1, 8.6, 6.4, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); ctx.fillStyle = C(look.pauldron); ctx.fill();
     if (!FLASH && !TINT) { ctx.fillStyle = shade(look.pauldron, .35); ell(4, SHO - 2.4, 3, 1.2, -.3); ctx.fill(); }
@@ -724,6 +782,7 @@ function drawHumanoid(look, pose) {
   }
   ctx.restore();
   ctx.restore();
+  HAND_S = 1; HAND_PLATE = false;
 }
 // swing trails are dry-brush strokes of light: many thin bristle lines instead of one solid band.
 // They are painted straight onto the page so the ink pass does not outline them.

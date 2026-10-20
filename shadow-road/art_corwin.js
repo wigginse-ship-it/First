@@ -78,18 +78,18 @@ const CORWIN = (() => {
   const vambrace = {
     sleeve(L, ax, ay, bx, by, far) { // the white shirt sleeve, full and loose
       const col = far ? shade(L.shirt, -.24) : L.shirt;
-      seg(ax, ay, bx, by, 8.8, 7.4, col, 2.2);
+      seg(ax, ay, bx, by, 7.4, 6.2, col, 1.8);
       if (FINE()) { ctx.save(); const len = along(ax, ay, bx, by); ctx.strokeStyle = shade(col, -.3); ctx.lineWidth = .6; ctx.beginPath(); for (const k of [.35, .62]) { ctx.moveTo(len * k, -3.6); ctx.quadraticCurveTo(len * k + 1.6, 0, len * k - .4, 3.6); } ctx.stroke(); ctx.restore(); } // folds
     },
     fore(L, ax, ay, bx, by, far) { // a steel vambrace strapped over the sleeve, the shirt bunched at the elbow above it
       const col = far ? shade(L.steel, -.22) : L.steel;
       ctx.save(); const len = along(ax, ay, bx, by);
-      ctx.beginPath(); ctx.moveTo(1.2, -3.5); ctx.lineTo(len - .4, -2.9); ctx.quadraticCurveTo(len + 1, 0, len - .4, 2.9); ctx.lineTo(1.2, 3.5); ctx.quadraticCurveTo(-.2, 0, 1.2, -3.5); ctx.closePath();
-      ctx.fillStyle = metal(0, -3.5, 0, 3.5, col); ctx.fill(); outline(1);
-      for (const k of [.34, .74]) { const x = len * k; ctx.fillStyle = C(far ? shade(L.leather, -.2) : L.leather); ctx.fillRect(x - .8, -3.6, 1.6, 7.2); ctx.fillStyle = C(shade(col, .2)); ctx.fillRect(x - 1, -3.8, 2, 1.6); }
-      if (DET()) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(3, -2.2); ctx.lineTo(len - 2, -1.8); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(1.6, -3.1); ctx.lineTo(len - .4, -2.4); ctx.quadraticCurveTo(len + .9, 0, len - .4, 2.4); ctx.lineTo(1.6, 3.1); ctx.quadraticCurveTo(.2, 0, 1.6, -3.1); ctx.closePath();
+      ctx.fillStyle = metal(0, -3.1, 0, 3.1, col); ctx.fill(); outline(1);
+      for (const k of [.36, .76]) { const x = len * k; ctx.fillStyle = C(far ? shade(L.leather, -.2) : L.leather); ctx.fillRect(x - .7, -3.2, 1.4, 6.4); ctx.fillStyle = C(shade(col, .2)); ctx.fillRect(x - .9, -3.4, 1.8, 1.4); }
+      if (DET()) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(3, -1.9); ctx.lineTo(len - 2, -1.5); ctx.stroke(); }
       ctx.restore();
-      ell(ax, ay, 2.9, 2.6); ctx.fillStyle = C(far ? shade(L.shirt, -.3) : shade(L.shirt, -.08)); ctx.fill(); outline(.7); // the shirt gathered at the elbow
+      ell(ax, ay, 2.6, 2.3); ctx.fillStyle = C(far ? shade(L.shirt, -.3) : shade(L.shirt, -.08)); ctx.fill(); outline(.7); // the shirt gathered at the elbow
     },
     pauldron(L, x, y, ang, far, s = 1) { // layered steel lames over the shoulder, riveted, the cap on top
       const col = far ? shade(L.pauldron, -.24) : L.pauldron;
@@ -106,9 +106,10 @@ const CORWIN = (() => {
 
   // ===================================================== torso =====================================================
   const torsoPath = (ty, HIP) => {
-    ctx.beginPath(); ctx.moveTo(-10.4, ty + 2); ctx.quadraticCurveTo(0, ty - 2.4, 10.4, ty + 2);
-    ctx.quadraticCurveTo(11, ty + 9, 7.6, ty + 15); ctx.quadraticCurveTo(6.4, HIP - 4, 7.6, HIP + 1.5);
-    ctx.lineTo(-7.6, HIP + 1.5); ctx.quadraticCurveTo(-6.6, HIP - 4, -7.8, ty + 15); ctx.quadraticCurveTo(-11, ty + 9, -10.4, ty + 2); ctx.closePath();
+    // broad shoulders over a deep chest, tapering to a narrow waist
+    ctx.beginPath(); ctx.moveTo(-11.6, ty + 2.2); ctx.quadraticCurveTo(0, ty - 2.6, 11.6, ty + 2.2);
+    ctx.quadraticCurveTo(12.2, ty + 10, 7.4, ty + 16.5); ctx.quadraticCurveTo(5.8, HIP - 4, 7, HIP + 1.5);
+    ctx.lineTo(-7, HIP + 1.5); ctx.quadraticCurveTo(-6, HIP - 4, -7.6, ty + 16.5); ctx.quadraticCurveTo(-12.2, ty + 10, -11.6, ty + 2.2); ctx.closePath();
   };
   const doublet = {
     torso(L, g) {
@@ -150,20 +151,20 @@ const CORWIN = (() => {
     },
     // the high white collar, the ruffled jabot falling from his throat, and the silver rose that pins the cloak
     neck(L, g) {
-      const { SHO, NECK, CS, Y, BACK } = g, ty = SHO - 2, nx = 1.4, sh = L.shirt;
+      const { SHO, NECK, CS, Y, BACK } = g, ty = SHO - 2, nx = 1.2, sh = L.shirt;
       // the collar: a band standing round the neck, highest at the back, its points open at the throat
-      const a0 = Math.atan2(CS, Y), r = 3.8, pts = [];
+      const a0 = Math.atan2(CS, Y), r = 2.9, pts = [];
       for (let i = 0; i <= 8; i++) { const th = a0 - Math.PI / 2 + Math.PI * i / 8; if (!BACK && Math.cos(th) > .82) continue; pts.push([nx + r * (Math.cos(th) * CS - Math.sin(th) * Y), th]); }
       if (pts.length > 1) {
-        ctx.beginPath(); pts.forEach(([x, th], i) => { const y = NECK - 1.6 - 1.2 * Math.max(0, -Math.cos(th)) - (Math.cos(th) > .5 ? 1 : 0); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
-        for (let i = pts.length - 1; i >= 0; i--) ctx.lineTo(pts[i][0], NECK + 2.6);
+        ctx.beginPath(); pts.forEach(([x, th], i) => { const y = NECK - 2.2 - 1.2 * Math.max(0, -Math.cos(th)) - (Math.cos(th) > .5 ? .8 : 0); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+        for (let i = pts.length - 1; i >= 0; i--) ctx.lineTo(pts[i][0], NECK + 2.8);
         ctx.closePath(); ctx.fillStyle = C(shade(sh, -.1)); ctx.fill(); outline(.8);
       }
       if (BACK) return;
       // the jabot: tiers of ruffled lace from the throat down over the chest, the lowest first
-      const F = Math.pow(CS, 1.6), xn = nx + 3 * F - .4, xc = .6 + 8.6 * F, wy = Math.abs(Y);
+      const F = Math.pow(CS, 1.6), xn = nx + 2.4 * F - .2, xc = .6 + 9.4 * F, wy = Math.abs(Y);
       for (let k = 3; k >= 0; k--) {
-        const q = k / 3, x = lerp(xn, xc, q * .85), y = ty - .8 + k * 2.5, w = 2.2 + 2.6 * wy + k * .55;
+        const q = k / 3, x = lerp(xn, xc, q * .85), y = ty - .6 + k * 2.4, w = 1.9 + 2.2 * wy + k * .5;
         ctx.beginPath(); ctx.moveTo(x - w * .45, y);
         ctx.quadraticCurveTo(x - w * .8, y + 2.2, x - w * .62, y + 3.6);
         for (let s = 0; s < 3; s++) { const x0 = x - w * .62 + w * 1.24 * s / 3, x1 = x - w * .62 + w * 1.24 * (s + 1) / 3; ctx.quadraticCurveTo((x0 + x1) / 2, y + 5, x1, y + 3.6); }
@@ -174,9 +175,9 @@ const CORWIN = (() => {
       }
       // the clasp: a silver rose, and a short chain across to the cloak's other edge
       const rx = xn + .3, ry = ty - .4;
-      const ex = nx + 6.4 * (Math.cos(-1.25) * CS - Math.sin(-1.25) * Y), ey = ty + 1.8; // the cloak's far edge, at the collarbone
+      const ex = nx + 6.8 * (Math.cos(-1.25) * CS - Math.sin(-1.25) * Y), ey = ty + 1.8; // the cloak's far edge, at the collarbone
       if (Math.abs(ex - rx) > 1.5) { ctx.fillStyle = C(L.steel); for (let i = 1; i <= 5; i++) { const u = i / 6, x = lerp(rx, ex, u), y = lerp(ry, ey, u) + Math.sin(u * Math.PI) * 2.2; circle(x, y, .55); ctx.fill(); } }
-      roseClasp(rx, ry, 2.5, L.steel);
+      roseClasp(rx, ry, 2.1, L.steel);
     },
   };
   function roseClasp(x, y, r, col) { // a silver rose seen face on: an outer ring of petals, an inner ring, and a curled heart
@@ -227,7 +228,7 @@ const CORWIN = (() => {
     scabbard(L, g, drawn) { // brown leather and brass at his left hip, hanging back; his own sword in it unless it is in his hand
       const { HIP, CS, Y } = g, th = -1.85, fx = 7 * Math.cos(th), lz = 9.2 * Math.sin(th);
       const x0 = fx * CS - lz * Y, y0 = HIP + 2 - 2.4 * Math.sin(th) + .6;
-      const a = .98 + Math.sin(g.walk) * .05 - (g.LEAN || 0) * .85, dx = -Math.cos(a) * CS + .42 * Y, dy = Math.sin(a), len = 28; // back, and out from his hip when seen from the front
+      const a = .98 + Math.sin(g.walk) * .05 - (g.LEAN || 0) * .85, dx = -Math.cos(a) * CS + .42 * Y, dy = Math.sin(a), len = 31; // back, and out from his hip when seen from the front
       const x1 = x0 + dx * len, y1 = y0 + dy * len;
       if (!drawn) { // the hilt: a brass cross-guard and pommel on a dark grip, standing up out of the locket
         const hx = x0 - dx * 7, hy = y0 - dy * 7;
@@ -260,29 +261,29 @@ const CORWIN = (() => {
   const SIM = { pts: new Float32Array(NP * 2), sp: new Float32Array((M + 1) * 2), sq: new Float32Array((M + 1) * 2), dA: new Float32Array(M + 1), ok: false, wx: 0, wy: 0, at: 0, acc: 0, f: 1 };
   let CLOAK_GEO = null;
   // the hem is torn: teeth and notches along it, and bristle marks splaying past it, fixed once so they never shimmer
-  const JAG = []; for (let k = 0; k < (S - 1) * 3; k++) JAG.push(k % 3 === 1 ? 2.2 + hsh(k) * 2.6 : hsh(k + 40) * .9);
+  const JAG = []; for (let k = 0; k < (S - 1) * 3; k++) JAG.push(k % 3 === 1 ? 4.5 + hsh(k) * 6.5 : hsh(k + 40) * 2.2 - .6); // big, ragged teeth and notches
   const STREAKS = [], BRISTLES = [];
   { // dry-brush streaks down the cloth: slate-blue and grey dragged through the black, a few lighter catches of the light
     const cols = ['s', 's', 'g', 'd', 's', 'g', 'l', 'd'];
     for (let k = 0; k < 18; k++) { const u = .03 + .94 * hsh(k + 3), v0 = .08 + hsh(k + 9) * .5; STREAKS.push({ u, du: (hsh(k + 17) - .5) * .06, v0, v1: Math.min(1.04, v0 + .25 + hsh(k + 21) * .5), c: cols[k % cols.length], w: .35 + hsh(k + 31) * .9 }); }
-    for (let k = 0; k < 34; k++) { const u = (k + hsh(k + 51) * .8) / 34; BRISTLES.push({ u, du: (hsh(k + 57) - .5) * .05, v0: .86 + hsh(k + 61) * .08, v1: 1.02 + hsh(k + 67) * .13, c: k % 4 === 0 ? 's' : k % 7 === 0 ? 'g' : 'b', w: .5 + hsh(k + 71) * 1.1 }); }
-    for (let k = 0; k < 12; k++) BRISTLES.push({ trail: 1, v: .25 + .7 * k / 11, len: 2.5 + hsh(k + 81) * 4.5, c: k % 2 ? 's' : 'b', w: .5 + hsh(k + 83) * .9 });
+    for (let k = 0; k < 34; k++) { const u = (k + hsh(k + 51) * .8) / 34; BRISTLES.push({ u, du: (hsh(k + 57) - .5) * .09, v0: .8 + hsh(k + 61) * .1, v1: 1.06 + hsh(k + 67) * .28, c: k % 4 === 0 ? 's' : k % 7 === 0 ? 'g' : 'b', w: .5 + hsh(k + 71) * 1.1 }); }
+    for (let k = 0; k < 16; k++) BRISTLES.push({ trail: 1, v: .2 + .82 * k / 15, len: 6 + hsh(k + 81) * 11, c: k % 2 ? 's' : 'b', w: .5 + hsh(k + 83) * .9 });
   }
   function targets(L, g) {
     const { Y, CS, HIP, SHO, HX, LEAN, walk, sw, pose, gait, t } = g, cl = Math.cos(LEAN), sl = Math.sin(LEAN);
     const flow = clamp(pose.flow || 0, -12, 20), down = pose.down ? 1 : 0;
-    const trail = 6.5 + flow * 1.05 + (gait ? (pose.run ? 7 : 2 + Math.abs(sw) * 1.6) : 0);
+    const still = pose.stance && !walk ? 1 : 0, trail = (still ? 5 : 8) + flow * 2.4 + (gait ? (pose.run ? 16 : 3 + Math.abs(sw) * 2) : 0), stream = clamp((trail - 14) / 40, 0, 1); // running or dashing it streams out about his own length
     const br = pose.breath || 0, air = Math.sin(t * 1.1);
     for (let i = 0; i < S; i++) {
       const phi = (i / (S - 1) * 2 - 1) * PHIMAX, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp);
-      const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 9.8 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
+      const fxa = -6.8 * cp + 1.2 - front * 1.5, lza = 11.6 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
       const ax0 = fxa * CS - lza * Y, ax = HX + ax0 * cl - (ya - HIP) * sl, ay = HIP + ax0 * sl + (ya - HIP) * cl;
-      const len = (43 + 3.5 * cp - 6 * front) * (1 - down * .1), fl = 15.5 + .25 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
+      const len = (51 + 4 * cp - 7 * front) * (1 - down * .1) * (1 + .45 * stream), fl = 15 + .3 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 8 : 0); // standing, it spreads wide round him
       for (let j = 0; j <= M; j++) {
         const o = ix(i, j); if (!j) { tgt[o] = ax; tgt[o + 1] = ay; continue; }
         const v = j / M, vf = Math.pow(v, .85);
         const sway = (Math.sin(walk * .5 + i * .9 - v * 1.6) * (gait ? 1.8 : 0) + (air * .45 + br * .25) * Math.sin(i * 1.7 + v * 2.2)) * v;
-        const ofx = -Math.max(0, cp) * 1.15 * fl * vf + front * .3 * fl * vf - trail * Math.pow(v, 1.5) - front * 6.5 * v + sway, olz = sp * fl * vf;
+        const ofx = -Math.max(0, cp) * 1.15 * fl * vf + front * (.3 + .45 * still) * fl * vf - trail * Math.pow(v, 1.5) - front * 6.5 * v + sway, olz = sp * fl * vf;
         let dyy = 0; const L3 = len * v, hz = Math.min(L3 * .94, Math.hypot(ofx, olz)), dy = Math.sqrt(L3 * L3 - hz * hz) + br * .35 * v; // it keeps its length: streaming out, it rises
         let dx = ofx * CS - olz * Y, a = LEAN * (1 - .8 * v), ca = Math.cos(a), sa = Math.sin(a);
         if (down) { // knocked flat: the near half lies over him like a shroud down to his boots, the rest spreads on the street past his head
@@ -414,7 +415,7 @@ const CORWIN = (() => {
           uv(Pt, .5, s.v); const bx = UX, by = UY; uv(Pt, .22, s.v); const sx = UX, sy = UY; uv(Pt, .78, s.v); let ox = bx - (sx + UX) / 2, oy = by - (sy + UY) / 2; const ol = Math.hypot(ox, oy); if (ol < 2.5) continue;
           ox /= ol; oy /= ol; uv(Pt, .5, s.v + .15); let dx = UX - bx, dy = UY - by; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
           ctx.moveTo(bx - ox * .6, by - oy * .6); ctx.lineTo(bx + (ox * .55 + dx) * s.len, by + (oy * .55 + dy) * s.len); any = true; }
-        if (any) { ctx.lineWidth = wcls ? 1.15 : .6; ctx.stroke(); }
+        if (any) { ctx.lineWidth = c === 'b' ? (wcls ? 2.4 : 1.3) : wcls ? 1.5 : .8; ctx.stroke(); }
       }
     }
     ctx.globalAlpha = 1;
@@ -433,9 +434,9 @@ const CORWIN = (() => {
   function mantle(L, g) { // the cloak where it lies over his shoulders, round the back of his neck, open at the throat
     const { SHO, NECK, CS, Y } = g, P = (fx, lz) => fx * CS - lz * Y, out = [], inn = [];
     for (let i = 0; i <= 12; i++) {
-      const th = .78 + (TAU - 1.56) * i / 12, c = Math.cos(th), s = Math.sin(th), ro = 10.9 + Math.sin(th * 5) * .5, ri = 3.6;
+      const th = .78 + (TAU - 1.56) * i / 12, c = Math.cos(th), s = Math.sin(th), ro = 12 + Math.sin(th * 5) * .7, ri = 2.7;
       out.push([P(ro * c - 1, ro * s), SHO + 2.4 + 2.4 * Math.abs(s) - 1.6 * Math.max(0, -c) + Math.cos(th * 4) * .5]);
-      inn.push([P(ri * c + 1.4, ri * s), NECK + 1.2 + .8 * c]);
+      inn.push([P(ri * c + 1.2, ri * s), NECK + 1.6 + .8 * c]);
     }
     ctx.beginPath(); out.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); for (let i = inn.length - 1; i >= 0; i--) ctx.lineTo(inn[i][0], inn[i][1]); ctx.closePath();
     ctx.fillStyle = C(L.cloak); ctx.fill(); outline(1);
