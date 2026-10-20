@@ -32,7 +32,7 @@ function begin(m) {
   if (!m) { P.state = 'idle'; return; }
   P.state = m.dive || (P.z > 0 && !m.hop && P.state !== 'dodge') ? 'air' : 'atk'; P.move = m; P.t = 0; P.moveId = (P.moveId || 0) + 1; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false; P.finDone = false; P.turned = false; P.vaultVx = undefined; P.stormed = false; P.blinkList = null;
   if (Math.abs(input.mx) > 0.3 && !m.dive) P.facing = Math.sign(input.mx);
-  P.vx = (m.lunge || 0) * P.facing;
+  P.vx = (m.lunge || 0) * P.facing; P.dodgeCarry = 0;
   P.hopQ = 0; if (m.hop) { if (m.prep) P.hopQ = m.hop; else P.vz = m.hop; } // a loaded move leaves the ground only once the knees have bent
   if (m.dive) { P.vz = Math.min(P.vz, -120); P.jvx = P.facing * 240; }
   else if (P.state === 'air') { P.vz = Math.max(P.vz, m.fly ? 70 : 110); P.jvx = m.fly ? P.facing * Math.max(Math.abs(P.jvx), 270) : P.jvx * .3; P.airN = (P.airN || 0) + 1; } // a flying attack keeps all the run's speed
@@ -133,7 +133,7 @@ function updatePlayer(dt) {
     case 'dodge':
       P.t -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
       if (pressed.light) P.dq = 'L'; if (pressed.heavy) P.dq = unlocked(w.tree.RH) ? 'H' : 'L'; // attack out of a roll
-      if (P.dq && P.t < .2) { const k = P.dq; P.dq = false; P.inv = Math.max(P.inv, .15); begin(k === 'H' ? w.tree.RH : w.tree.R); break; }
+      if (P.dq && P.t < .2) { const k = P.dq, dv = Math.abs(P.dvx); P.dq = false; P.inv = Math.max(P.inv, .15); begin(k === 'H' ? w.tree.RH : w.tree.R); if (k !== 'H' && Math.sign(P.dvx) === P.facing) { P.vx = P.facing * Math.max(Math.abs(P.vx), dv * 1.2); P.dodgeCarry = 1; } break; } // a dodge-attack keeps the dodge's momentum
       P.ghostT -= dt;
       if (P.ghostT <= 0) { // the forward lunge drags a dark trail of afterimages; the backstep leaves a couple of pale ones
         if (P.dk === 'fwd') { P.ghostT = .022; addGhost(true); if (Math.random() < .6) fx.push({ kind: 'speed', x: P.x, y: P.y, z: rand(10, 50), dir: P.facing, t: .22, max: .22 }); }
@@ -181,7 +181,7 @@ function onLand() {
 function runMove(dt) {
   let m = P.move; P.t += dt * (pw('haste') ? 1.2 : 1); const k = P.t / m.dur;
   if (P.hopQ && k >= m.h[0] * .8) { P.vz = P.hopQ; P.hopQ = 0; dust(P.x, P.y, 5); }
-  P.x += P.vx * dt; P.vx *= Math.pow(m.lunge > 300 ? .05 : .004, dt);
+  P.x += P.vx * dt; P.vx *= Math.pow(P.dodgeCarry && m.key === 'R' ? .3 : m.lunge > 300 ? .05 : .004, dt);
   if (m.slide && P.z <= 2 && Math.abs(P.vx) > 40 && Math.random() < .6) dust(P.x - P.facing * 8, P.y, 1); // the slide kicks up the street
   if (m.lunge > 250 || m.rot || m.spin) { P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .035; addGhost(); } }
   const airborne = P.z > 0;
