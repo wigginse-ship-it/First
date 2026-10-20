@@ -104,7 +104,9 @@ THRESH.w4trump = (x, y, k, t) => {
   drawEnemy = function (e, t) {
     _draw(e, t);
     if (!e.boss || e.dead || e.state !== 'down') return;
+    const fadeIn = clamp((t - (e.stunAt || t)) / .5, 0, 1); if (fadeIn <= 0) return;
     onMain(() => {
+      ctx.globalAlpha = fadeIn;
       const s = e.size || 1, hx = e.x + e.facing * e.hw * .55, hy = e.y - e.z - e.hh * s * .95, R = 16 + e.hw * .25;
       ctx.save(); ctx.strokeStyle = `rgba(238,212,138,${.35 + .2 * Math.sin(t * 6)})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(hx, hy, R, R * .32, 0, 0, TAU); ctx.stroke();
       for (let i = 0; i < 4; i++) { // stars and little birds chasing each other round the ring

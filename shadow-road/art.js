@@ -530,6 +530,7 @@ function drawHumanoid(look, pose) {
   // per-pose proportion touches, eased by blendPose: legX stretches a stride fore and aft (never taller), armS lengthens a reach
   const LS = CW ? 1.24 : 1, AS = CW ? 1.3 * (pose.armS || 1) : 1, SWL = CW ? 9.4 : 9.5, LX = CW ? (pose.legX || 1) : 1; HAND_S = CW ? .72 : 1;
   ctx.save();
+  if (pose.oy) ctx.translate(0, pose.oy); // the whole figure dropped (a slide)
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
   if (pose.down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
   // a walking or running body carries its weight: the hips dip as each foot lands and rise as the legs pass,

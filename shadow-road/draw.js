@@ -94,8 +94,8 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     }
     if (m.slide && P.z <= 2) { // the sliding kick: laid back low and streamlined like the forward dodge, both feet driven out ahead
       const q = ease(Math.min(1, k / .2)), out = k > .78 ? 1 - ease((k - .78) / .22) : 1;
-      pose.crouch = 1; pose.rot = .62 * q * out; pose.lean = -.55 * q; pose.legs = { f: lerp(6, 16, q * out), b: lerp(-6, 10, q * out), fk: lerp(6, 1, q), bk: lerp(6, 4, q) };
-      pose.arm = lerp(1.1, 2.6, q * out); pose.elbow = .4; pose.backArm = lerp(1.5, 3, q * out); pose.backElbow = .2; pose.openHand = 1; pose.flow = 18; pose.stretch = 1.12;
+      delete pose.kickK; pose.kickStyle = undefined; pose.kick = 0; pose.yaw = 0; pose.spin = 0; pose.sink = 6 * q * out; pose.oy = 16 * q * out; pose.rot = -.55 * q * out; pose.lean = .25 * q; pose.legs = { f: lerp(6, 30, q * out), b: lerp(-6, 25, q * out), fk: lerp(6, 0, q), bk: lerp(6, 2, q) }; // both legs out ahead together, like a Mega Man slide
+      pose.arm = lerp(1.1, .9, q * out); pose.elbow = .9; pose.backArm = lerp(1.5, 2.3, q * out); pose.backElbow = .5; pose.openHand = 1; pose.flow = 18; pose.stretch = 1.12;
     }
     if (P.w === 'fists' && BOXING[m.key]) { // boxing: punches go straight out at the enemy, hand to hand, the body turning behind each one
       const kind = BOXING[m.key], h0 = m.h[0], h1 = m.h[1];
@@ -289,7 +289,12 @@ function drawEnemy(e, t) {
   let rot = e.rotA || 0;
   const stun = e.boss && e.state === 'down' && !e.dead; // a staggered boss reels, dazed, instead of keeling over
   if ((e.state === 'down' || (e.state === 'dying' && !e.air)) && !a.pose && !stun) rot = e.def.move === 'hop' ? 0 : -1.35;
-  if (stun) { rot = Math.sin(t * 3.2) * .09; e.sqy = .9 + .03 * Math.sin(t * 6.4); e.sqx = 1.06; }
+  if (stun) { // into the stun: a hard recoil back, a sag as the legs go, then the dazed sway
+    if (!e.stunAt) e.stunAt = t; const u = t - e.stunAt;
+    const recoil = u < .18 ? ease(u / .18) : u < .55 ? 1 - ease((u - .18) / .37) : 0, sag = ease(clamp((u - .1) / .45, 0, 1));
+    rot = -.22 * recoil + Math.sin(t * 3.2) * .09 * sag;
+    e.sqy = lerp(1, .9 + .03 * Math.sin(t * 6.4), sag) - .06 * recoil; e.sqx = lerp(1, 1.06, sag) + .05 * recoil;
+  } else if (e.boss) e.stunAt = 0;
   ctx.scale(e.facing, 1);
   if (rot) { ctx.translate(0, -e.hh * .5); ctx.rotate(rot * e.facing); ctx.translate(0, e.hh * .5); }
   if (e.boss && e.state === 'wind') { const w = 1 - e.t / e.windMax; ctx.translate(-e.hw * .6, 0); ctx.rotate(-.1 * w); ctx.translate(e.hw * .6, 0); } // rears back before striking
