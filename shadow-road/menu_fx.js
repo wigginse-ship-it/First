@@ -67,7 +67,16 @@
   decorate(fc, false); decorate(tc, true);
 
   // ---------- the title card's trump: the prince on the road, the true city on its mountain behind him ----------
+  // the title card shows the prince's painted portrait (head and shoulders, from the character art); the little painted
+  // scene below is only a fallback if the picture can't be loaded
   function portrait() {
+    const cvp = $1('#mfxPortrait'); if (!cvp) return;
+    const img = new Image();
+    img.onload = () => { const g = cvp.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(img, 0, 0, cvp.width, cvp.height); };
+    img.onerror = paintedPortrait;
+    img.src = 'corwin_portrait.jpg';
+  }
+  function paintedPortrait() {
     const cvp = $1('#mfxPortrait'); if (!cvp) return;
     const box = cvp.closest('.trump-portrait');
     let old = null;
