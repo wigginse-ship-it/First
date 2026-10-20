@@ -1,6 +1,6 @@
 'use strict';
 // ---------- the Prince of Shadow: his costume, piece by piece, and his cloak ----------
-// After the reference sheet: a black doublet quilted in a diamond lattice over a white shirt, a ruffled jabot and a
+// After the reference sheet: a black doublet quilted in a diamond lattice over a white shirt, and a
 // high collar, steel pauldrons, vambraces and knee cops, crossed sword belts with a scabbard at the left hip, tall
 // buckled boots, and over it all a great black cloak painted in dry, ragged brushstrokes, pinned at the throat with a
 // silver rose on a short chain.
@@ -152,7 +152,7 @@ const CORWIN = (() => {
         if (L.runes) { ctx.save(); if (!FLASH) { ctx.shadowColor = L.runes; ctx.shadowBlur = 6; } ctx.strokeStyle = C(L.runes); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-4, ty + 9); ctx.lineTo(-2, ty + 12); ctx.lineTo(-4, ty + 15); ctx.moveTo(4, ty + 9); ctx.lineTo(2, ty + 12); ctx.lineTo(4, ty + 15); ctx.stroke(); ctx.restore(); }
       }
     },
-    // the high white collar, the ruffled jabot falling from his throat, and the silver rose that pins the cloak
+    // the high white collar, and the silver rose that pins the cloak
     neck(L, g) {
       const { SHO, NECK, CS, Y, BACK } = g, ty = SHO - 2, nx = 1.2, sh = L.shirt;
       // the collar: a band standing round the neck, highest at the back, its points open at the throat
@@ -164,18 +164,7 @@ const CORWIN = (() => {
         ctx.closePath(); ctx.fillStyle = C(shade(sh, -.1)); ctx.fill(); outline(.8);
       }
       if (BACK) return;
-      // the jabot: tiers of ruffled lace from the throat down over the chest, the lowest first
-      const F = Math.pow(CS, 1.6), xn = nx + 2.2 * F - .2, xc = .6 + 5.6 * F, wy = Math.abs(Y); // side-on it lies flat against his chest, inside its line
-      for (let k = 3; k >= 0; k--) {
-        const q = k / 3, x = lerp(xn, xc, q * .85), y = ty - .6 + k * 2.4, w = 1.9 + 2.2 * wy + k * .5;
-        ctx.beginPath(); ctx.moveTo(x - w * .45, y);
-        ctx.quadraticCurveTo(x - w * .8, y + 2.2, x - w * .62, y + 3.6);
-        for (let s = 0; s < 3; s++) { const x0 = x - w * .62 + w * 1.24 * s / 3, x1 = x - w * .62 + w * 1.24 * (s + 1) / 3; ctx.quadraticCurveTo((x0 + x1) / 2, y + 5, x1, y + 3.6); }
-        ctx.quadraticCurveTo(x + w * .8, y + 2.2, x + w * .45, y); ctx.closePath();
-        const jg = ctx.createLinearGradient(0, y, 0, y + 4.6); jg.addColorStop(0, C(shade(sh, -.22))); jg.addColorStop(.6, C(sh)); jg.addColorStop(1, C(shade(sh, .2)));
-        ctx.fillStyle = jg; ctx.fill(); outline(.7);
-        if (FINE()) { ctx.strokeStyle = shade(sh, -.3); ctx.lineWidth = .4; ctx.beginPath(); ctx.moveTo(x - w * .2, y + 1); ctx.lineTo(x - w * .3, y + 3.6); ctx.moveTo(x + w * .2, y + 1); ctx.lineTo(x + w * .3, y + 3.6); ctx.stroke(); }
-      }
+      const F = Math.pow(CS, 1.6), xn = nx + 2.2 * F - .2; // where the throat is (the rose pins the cloak there)
       // the clasp: a silver rose, and a short chain across to the cloak's other edge
       const rx = xn + .3, ry = ty - .4;
       const ex = nx + 6.8 * (Math.cos(-1.25) * CS - Math.sin(-1.25) * Y), ey = ty + 1.8; // the cloak's far edge, at the collarbone

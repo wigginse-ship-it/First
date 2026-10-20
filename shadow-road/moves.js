@@ -448,10 +448,9 @@ function drawArmorSuit(lv) {
   // the belts: one at the waist with a brass buckle, the sword belt slung lower across it
   ctx.lineCap = 'butt'; for (const [y0, y1, w, c] of [[0, 0, 3.4, L.leather], [4, 1, 2.4, shade(L.leather, -.12)]]) { ctx.beginPath(); ctx.moveTo(-10, y0); ctx.lineTo(10, y1); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = w + 1.6; ctx.stroke(); ctx.strokeStyle = C(c); ctx.lineWidth = w; ctx.stroke(); }
   ctx.fillStyle = C(L.brass); ctx.fillRect(-1.8, -1.9, 3.6, 3.8); ctx.fillStyle = C(shade(L.leather, -.4)); ctx.fillRect(-.9, -1, 1.8, 2);
-  // the cloak over the shoulders, the high white collar and the jabot
+  // the cloak over the shoulders, and the high white collar
   ctx.beginPath(); ctx.moveTo(-17, -17); ctx.quadraticCurveTo(-12, -27, -4, -27); ctx.lineTo(-3, -21); ctx.lineTo(-9, -19); ctx.closePath(); ctx.moveTo(17, -17); ctx.quadraticCurveTo(12, -27, 4, -27); ctx.lineTo(3, -21); ctx.lineTo(9, -19); ctx.closePath(); ctx.fillStyle = C(L.cloak); ctx.fill(); outline(1.1);
   poly([-5, -22, -4.4, -30, -1, -27, 1, -27, 4.4, -30, 5, -22, 0, -20], shade(L.shirt, -.1), 1.1);
-  for (let k = 3; k >= 0; k--) { const y = -22 + k * 2.4, w = 3 + k * .7; poly([-w * .5, y, -w, y + 3.4, -w * .3, y + 4.4, w * .3, y + 4.4, w, y + 3.4, w * .5, y], k % 2 ? shade(L.shirt, -.06) : L.shirt, .7); }
   // shoulders: steel pauldrons; sleeves of white shirt hanging empty, steel vambraces over them
   for (const d of [-1, 1]) {
     ctx.save(); ctx.scale(d, 1);
