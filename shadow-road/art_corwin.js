@@ -261,24 +261,24 @@ const CORWIN = (() => {
   const SIM = { pts: new Float32Array(NP * 2), sp: new Float32Array((M + 1) * 2), sq: new Float32Array((M + 1) * 2), dA: new Float32Array(M + 1), ok: false, wx: 0, wy: 0, at: 0, acc: 0, f: 1 };
   let CLOAK_GEO = null;
   // the hem is torn: teeth and notches along it, and bristle marks splaying past it, fixed once so they never shimmer
-  const JAG = []; for (let k = 0; k < (S - 1) * 3; k++) JAG.push(k % 3 === 1 ? 4.5 + hsh(k) * 6.5 : hsh(k + 40) * 2.2 - .6); // big, ragged teeth and notches
+  const JAG = []; for (let k = 0; k < (S - 1) * 3; k++) JAG.push(k % 3 === 1 ? 2.2 + hsh(k) * 2.6 : hsh(k + 40) * .9);
   const STREAKS = [], BRISTLES = [];
   { // dry-brush streaks down the cloth: slate-blue and grey dragged through the black, a few lighter catches of the light
     const cols = ['s', 's', 'g', 'd', 's', 'g', 'l', 'd'];
     for (let k = 0; k < 18; k++) { const u = .03 + .94 * hsh(k + 3), v0 = .08 + hsh(k + 9) * .5; STREAKS.push({ u, du: (hsh(k + 17) - .5) * .06, v0, v1: Math.min(1.04, v0 + .25 + hsh(k + 21) * .5), c: cols[k % cols.length], w: .35 + hsh(k + 31) * .9 }); }
-    for (let k = 0; k < 34; k++) { const u = (k + hsh(k + 51) * .8) / 34; BRISTLES.push({ u, du: (hsh(k + 57) - .5) * .09, v0: .8 + hsh(k + 61) * .1, v1: 1.06 + hsh(k + 67) * .28, c: k % 4 === 0 ? 's' : k % 7 === 0 ? 'g' : 'b', w: .5 + hsh(k + 71) * 1.1 }); }
-    for (let k = 0; k < 16; k++) BRISTLES.push({ trail: 1, v: .2 + .82 * k / 15, len: 6 + hsh(k + 81) * 11, c: k % 2 ? 's' : 'b', w: .5 + hsh(k + 83) * .9 });
+    for (let k = 0; k < 34; k++) { const u = (k + hsh(k + 51) * .8) / 34; BRISTLES.push({ u, du: (hsh(k + 57) - .5) * .05, v0: .86 + hsh(k + 61) * .08, v1: 1.02 + hsh(k + 67) * .13, c: k % 4 === 0 ? 's' : k % 7 === 0 ? 'g' : 'b', w: .5 + hsh(k + 71) * 1.1 }); }
+    for (let k = 0; k < 12; k++) BRISTLES.push({ trail: 1, v: .25 + .7 * k / 11, len: 2.5 + hsh(k + 81) * 4.5, c: k % 2 ? 's' : 'b', w: .5 + hsh(k + 83) * .9 });
   }
   function targets(L, g) {
     const { Y, CS, HIP, SHO, HX, LEAN, walk, sw, pose, gait, t } = g, cl = Math.cos(LEAN), sl = Math.sin(LEAN);
     const flow = clamp(pose.flow || 0, -12, 20), down = pose.down ? 1 : 0;
-    const still = pose.stance && !walk ? 1 : 0, trail = (still ? 5 : 8) + flow * 2.4 + (gait ? (pose.run ? 16 : 3 + Math.abs(sw) * 2) : 0), stream = clamp((trail - 14) / 40, 0, 1); // running or dashing it streams out about his own length
+    const still = 0, stream = 0, trail = 6.5 + flow * 1.05 + (gait ? (pose.run ? 7 : 2 + Math.abs(sw) * 1.6) : 0);
     const br = pose.breath || 0, air = Math.sin(t * 1.1);
     for (let i = 0; i < S; i++) {
       const phi = (i / (S - 1) * 2 - 1) * PHIMAX, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp);
       const fxa = -6.8 * cp + 1.2 - front * 1.5, lza = 11.6 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
       const ax0 = fxa * CS - lza * Y, ax = HX + ax0 * cl - (ya - HIP) * sl, ay = HIP + ax0 * sl + (ya - HIP) * cl;
-      const len = (51 + 4 * cp - 7 * front) * (1 - down * .1) * (1 + .45 * stream), fl = 15 + .3 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 8 : 0); // standing, it spreads wide round him
+      const len = (43 + 3.5 * cp - 6 * front) * (1 - down * .1), fl = 15.5 + .25 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
       for (let j = 0; j <= M; j++) {
         const o = ix(i, j); if (!j) { tgt[o] = ax; tgt[o + 1] = ay; continue; }
         const v = j / M, vf = Math.pow(v, .85);
@@ -415,7 +415,7 @@ const CORWIN = (() => {
           uv(Pt, .5, s.v); const bx = UX, by = UY; uv(Pt, .22, s.v); const sx = UX, sy = UY; uv(Pt, .78, s.v); let ox = bx - (sx + UX) / 2, oy = by - (sy + UY) / 2; const ol = Math.hypot(ox, oy); if (ol < 2.5) continue;
           ox /= ol; oy /= ol; uv(Pt, .5, s.v + .15); let dx = UX - bx, dy = UY - by; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
           ctx.moveTo(bx - ox * .6, by - oy * .6); ctx.lineTo(bx + (ox * .55 + dx) * s.len, by + (oy * .55 + dy) * s.len); any = true; }
-        if (any) { ctx.lineWidth = c === 'b' ? (wcls ? 2.4 : 1.3) : wcls ? 1.5 : .8; ctx.stroke(); }
+        if (any) { ctx.lineWidth = wcls ? 1.15 : .6; ctx.stroke(); }
       }
     }
     ctx.globalAlpha = 1;
