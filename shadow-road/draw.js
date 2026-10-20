@@ -44,13 +44,11 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
       pose.arm = arc[0]; pose.ext = k < m.h[0] ? -.35 : Math.min(1, kk * 1.6);
       if (k >= m.h[0] && k <= m.h[1] + .1) pose.streak = { len: w.reach + 26, a: .8 * (1 - Math.max(0, kk - .6)), col: tcol };
       pose.lean = .22 * Math.max(0, pose.ext);
-      if (P.w === 'rapier') { const e = Math.max(0, pose.ext); pose.backArm = lerp(1.95, 3.45, e); pose.backElbow = lerp(.25, -.75, e); } // the fencer's free hand flies up behind for balance as he drives in
     } else if (m.style === 'sweep' || m.style === 'sweepR') { // come around the body, side to side
       const rev = m.style === 'sweepR';
       pose.arm = arc[0]; pose.sweep = rev ? lerp(1, -1, kk) : lerp(-1, 1, kk); pose.ext = .4;
       if (k >= m.h[0] && k <= m.h[1] + .12) pose.flat = { r: w.reach + 22, k: kk, rev, col: tcol, w: P.w === 'sword' || P.w === 'hammer' ? 8 : 5 };
       pose.lean = .1;
-      if (P.w === 'rapier') { pose.backArm = 3.3; pose.backElbow = -.7; } // cutting, the fencer's free hand still rides up behind for balance
     }
     if (m.kick && P.w === 'fists' && (m.key === 'LLLL' || m.key === 'LLH' || m.key === 'JH')) { // spinning kicks: the whole body turns, through his back
       const spinK = m.key === 'LLH';
@@ -60,7 +58,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
       if (spinK) { pose.arm = -.25; pose.elbow = .2; pose.backArm = 3.5; pose.lean = -.15; } // arms flung wide like rotor blades
       else { pose.lean = lerp(.1, -.3, out); pose.arm = .9; pose.elbow = 1.6; pose.backArm = lerp(1, 2.6, out); } // guard kept, leaning away from the kick
     } else if (m.kick && P.w === 'fists') { // the driving thrust kick and the flying dropkick
-      const fly = P.z > 4 || m.key === 'RH' || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
+      const fly = P.z > 4 || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
       pose.kickK = k; pose.kickH = m.h; pose.kickStyle = fly ? 'drop' : 'lunge'; pose.flow = 12;
       if (fly) { // tucked, then laid out flat with both feet driven forward, the body twisting open toward us
         // like a wrestler's: he turns onto his side in the air, chest toward us, so at impact the two straight legs are stacked one above the other
@@ -91,6 +89,14 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     pose.flow = Math.abs(P.vx) * .02;
     if (P.z <= 2 && !m.kick && !m.rot && !m.around && !m.dodgeLunge) attackStance(pose, m, k); // the body moves with the weapon
     if (m.style === 'thrust' && !(P.w === 'fists' && BOXING[m.key])) pose.arm = arc[0] - (pose.lean || 0) * .9; // a thrust stays level with the target, however far he leans in
+    if (P.w === 'rapier' && !m.kick && !m.around && !m.spin) { // the fencer's free hand: up and back behind him, curled over, balancing every stroke and lunge
+      const e = Math.sin(Math.PI * clamp(k / .9, 0, 1)); pose.backArm = 3.55 + .3 * e; pose.backElbow = -1.05 - .25 * e; pose.openHand = 1;
+    }
+    if (m.slide && P.z <= 2) { // the sliding kick: dropped low and leaning back, the lead leg out along the street, the other folded under him
+      const out = kickOut(k, m.h[0], m.h[1]), q = ease(Math.min(1, k / .22));
+      pose.sink = 9 * q; pose.lean = lerp(.1, -.48, q); pose.yaw = 0; pose.arm = lerp(1.1, .75, q); pose.elbow = lerp(1.2, .5, q); pose.backArm = lerp(1.5, 2.05, q); pose.backElbow = lerp(.3, -.2, q); pose.openHand = 1; pose.flow = 16; // the lead hand out for balance, the back one trailing down toward the street
+      pose.kickK = k; pose.kickH = m.h; pose.kickStyle = 'slide'; if (k > .6) pose.rot = -.15 * (k - .6) / .4;
+    }
     if (P.w === 'fists' && BOXING[m.key]) { // boxing: punches go straight out at the enemy, hand to hand, the body turning behind each one
       const kind = BOXING[m.key], h0 = m.h[0], h1 = m.h[1];
       const e = k < h0 ? 0 : k < h1 ? Math.min(1, (k - h0) / ((h1 - h0) * .4)) : Math.max(0, 1 - (k - h1) / (1 - h1) * 1.3); // snap out, hold, pull back
@@ -169,7 +175,7 @@ function playerPose() {
     // eases out of it: the point drops low and forward, and the free hand comes down to hang a little behind him for balance
     // At rest his chest turns to us (see IDLE_Y below), the blade held low across his body, its point up toward the foe
     const r = ease(P.restK || 0);
-    pose.arm = lerp(.35, 1.2, r); pose.elbow = lerp(.5, 1.05, r); pose.grip = lerp(-.1, -.42, r); pose.backArm = lerp(1.95, 1.62, r); pose.backElbow = lerp(.25, .3, r); pose.lean = lerp(.04, 0, r);
+    pose.arm = lerp(.35, .95, r); pose.elbow = lerp(.5, .35, r); pose.grip = lerp(-.1, .1, r); pose.backArm = lerp(1.95, 1.62, r); pose.backElbow = lerp(.25, .3, r); pose.lean = lerp(.04, 0, r);
     if (r > .5) pose.openHand = 1;
     if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 1.6, r), bk: lerp(4, 1.2, r), w: lerp(1, 1.5, r) }; pose.sink = lerp(2, .6, r); }
   }
@@ -211,7 +217,7 @@ function playerPose() {
   if (P.state === 'walk' || P.state === 'run') { const ax = Math.abs(input.mx), ay = Math.abs(input.my); if (ay > .2) tY = Math.sign(input.my) * ay / (ax + ay) * .95; }
   // standing, he stands as a fighter does in a fighting game: chest turned three-quarters to us to show the costume,
   // eyes and head still on what is in front of him (the en garde rapier stays side-on until he relaxes)
-  else if (P.state === 'idle') tY = P.w === 'rapier' ? lerp(.12, .82, ease(P.restK || 0)) : IDLE_Y[P.w] ?? .55;
+  else if (P.state === 'idle') tY = P.w === 'rapier' ? lerp(.12, .3, ease(P.restK || 0)) : IDLE_Y[P.w] ?? .55;
   const dtv = Math.min(.05, (now - (P.yawAt || now)) / 1000); P.yawAt = now;
   P.yawV = (P.yawV || 0) + (tY - (P.yawV || 0)) * Math.min(1, dtv * (loco ? 9 : 20)); // out of the stance into a blow, he squares up fast
   P.lookV = (P.lookV || 0) + ((P.state === 'idle' ? 1 : 0) - (P.lookV || 0)) * Math.min(1, dtv * 9);

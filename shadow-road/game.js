@@ -182,6 +182,7 @@ function runMove(dt) {
   let m = P.move; P.t += dt * (pw('haste') ? 1.2 : 1); const k = P.t / m.dur;
   if (P.hopQ && k >= m.h[0] * .8) { P.vz = P.hopQ; P.hopQ = 0; dust(P.x, P.y, 5); }
   P.x += P.vx * dt; P.vx *= Math.pow(m.lunge > 300 ? .05 : .004, dt);
+  if (m.slide && P.z <= 2 && Math.abs(P.vx) > 40 && Math.random() < .6) dust(P.x - P.facing * 8, P.y, 1); // the slide kicks up the street
   if (m.lunge > 250 || m.rot || m.spin) { P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .035; addGhost(); } }
   const airborne = P.z > 0;
   if (m.fin && !P.finDone && k >= m.fin.at) { // the move's last beat hits differently: everyone is struck once more, by the finisher

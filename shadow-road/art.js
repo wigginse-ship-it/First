@@ -486,6 +486,12 @@ function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1, LS = 1) {
     });
     const kn = [L(12, 16, out), L(HIP + 2, HIP - 2, out)], ft = [L(6, 33, out), L(HIP + 12, HIP - 5, out)];
     kicker = () => side(4, () => { limb([2 + hx, HIP], kn, ft, kickFar ? shade(legs, -.15) : legs); bootAt(ft[0], ft[1], L(.4, -Math.PI / 2 + .5, out), look.boots); });
+  } else if (pose.kickStyle === 'slide') {
+    // a baseball slide: the trailing leg folded under him, knee down on the street, and the lead leg shot out low along it, toe up
+    const kn0 = [L(-6, -12, out), L(-12, -5, out)], ft0 = [L(-2, -3, out), L(-6, -2.5, out)];
+    support = () => side(-4, () => { limb([-2 + hx, HIP], kn0, ft0, kickFar ? legs : shade(legs, -.15)); bootAt(ft0[0], ft0[1], L(.3, 1.35, out), kickFar ? look.boots : shade(look.boots, -.1)); });
+    const kn = [L(10, 17, out), L(HIP + 5, -9, out)], ft = [L(14, 33, out), L(HIP + 14, -6, out)];
+    kicker = () => side(4, () => { limb([2 + hx, HIP], kn, ft, kickFar ? shade(legs, -.15) : legs); bootAt(ft[0], ft[1], L(.2, -Math.PI / 2 + .3, out), kickFar ? shade(look.boots, -.1) : look.boots); });
   } else {
     // a driving thrust kick: the standing leg bent deep and turned out, heel up, pushing the hips in; the kicking
     // leg's knee pulled up high to the chest, then the heel driven straight out, leg locked, at chest height

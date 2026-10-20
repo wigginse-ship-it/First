@@ -32,7 +32,7 @@ const WEAPONS = {
       AAA:  { dur: .4,  h: [.2, .65], x0: 0, x1: 42, dmg: 12, kb: 120, arc: [-2.4, 1.4], spike: 1, power: 1 },
       D:    { dur: .44, h: [.18, .68], x0: 0, x1: 42, dmg: 12, kb: 300, kick: 1, lunge: 440, power: 1 }, // a stepping front kick driven in off the run
       R:    { name: 'Slipping Cross', dur: .4, h: [.28, .62], x0: 0, x1: 46, dmg: 14, kb: 280, lunge: 330, power: 1 }, // out of the dodge he stays low and drives in behind a long rear-hand punch
-      RH:   { name: 'Dropkick', dur: .5, h: [.22, .62], x0: 0, x1: 40, dmg: 16, kb: 80, launch: 380, kick: 1, lunge: 300, hop: 220, power: 1 }, // springs out of the dodge into a flying two-footed kick
+      RH:   { name: 'Sliding Kick', dur: .5, h: [.2, .64], x0: 0, x1: 46, dmg: 16, kb: 80, launch: 420, kick: 1, slide: 1, lunge: 340, power: 1 }, // drops out of the dodge into a long low slide, the lead foot up under them: it launches
     } },
   hammer: { name: 'Hammer', reach: 46, look: 'hammer', desc: 'Slow and crushing. Every heavy shakes the ground.',
     tree: {
@@ -143,7 +143,7 @@ const WEAPONS = {
       JH:   { name: 'Falling Petal', dur: .52, h: [.18, .8], x0: 0, x1: 68, dmg: 4, kb: 80, arc: [-2.3, 1.2], around: 1, multi: .07, spin: 1, power: 1 }, // Heavy in the air: a pirouette in the air, the point spiralling down through everyone around him
       DA:   { name: 'Flying Flèche', dur: .44, h: [.22, .62], x0: 0, x1: 98, dmg: 12, kb: 260, arc: [.25, .25], fly: 1, power: 1, wall: 1 }, // Attack in a running jump: a flèche thrown from the air
       D:    { name: 'Backspin Flèche', spin: 1, spinEnd: .42, dur: .55, h: [.42, .76], x0: 0, x1: 90, dmg: 11, kb: 285, arc: [.02, .02], lunge: 364, power: 1, wall: 1 },
-      R:    { name: 'Low Lunge', dur: .38, h: [.25, .6], x0: 0, x1: 78, dmg: 10, kb: 150, arc: [.04, .04], lunge: 190, dodgeLunge: 1, power: 1 },
+      R:    { name: 'Low Lunge', dur: .38, h: [.25, .6], x0: 0, x1: 78, dmg: 10, kb: 150, arc: [.04, .04], lunge: 240, dodgeLunge: 1, power: 1 },
       RIP:  { name: 'Parry and Riposte', seq: ['DODGE'], dur: .4, h: [.18, .55], x0: -10, x1: 92, dmg: 21, kb: 255, arc: [.02, .02], lunge: 126, crit: 1, power: 2 }, // the answer to a parried blow: always a critical
       M:    { lvl: 2, name: 'Advancing Cuts', how: 'Attack while walking', desc: 'Walk into them cutting left and right, every step another stroke.', dur: .5, h: [.1, .86], x0: 0, x1: 64, dmg: 5, kb: 45, arc: [-1.2, .9], multi: .1, lunge: 105, power: 1, weave: 1 },
       RH:   { lvl: 3, name: 'Blade Dance', how: 'Heavy out of a dodge', desc: 'Pirouette twice through the crowd, the blade a silver ring around you.', dur: .7, h: [.1, .9], x0: 0, x1: 74, dmg: 6, kb: 135, arc: [-P_, 3 * P_], around: 1, multi: .08, spin: 2, lunge: 154, power: 1 },
