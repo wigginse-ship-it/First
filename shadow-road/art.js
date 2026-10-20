@@ -496,7 +496,10 @@ function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1, LS = 1) {
     // a driving thrust kick: the standing leg bent deep and turned out, heel up, pushing the hips in; the kicking
     // leg's knee pulled up high to the chest, then the heel driven straight out, leg locked, at chest height
     const sx = L(-4, -11, out), skx = L(2, 4, out), sky = L(-15, -12, out);
-    support = () => side(-4, () => { limb([-2 + hx, HIP], [skx, sky], [sx + .4, -8], kickFar ? legs : shade(legs, -.15)); footAt(sx, kickFar ? look.boots : shade(look.boots, -.1), -.22 * out); });
+    if (pose.kickTuck) support = () => side(-4, () => { // in the air the other leg is folded up tight under him, knee high, heel to the seat
+      const kn = [L(6, 10, out), L(HIP + 4, HIP + 1, out)], ft = [L(-3, -6, out), L(HIP + 12, HIP + 9, out)];
+      limb([-2 + hx, HIP], kn, ft, kickFar ? legs : shade(legs, -.15)); bootAt(ft[0], ft[1], L(.9, 1.2, out), kickFar ? look.boots : shade(look.boots, -.1)); });
+    else support = () => side(-4, () => { limb([-2 + hx, HIP], [skx, sky], [sx + .4, -8], kickFar ? legs : shade(legs, -.15)); footAt(sx, kickFar ? look.boots : shade(look.boots, -.1), -.22 * out); });
     const kn = [L(13, 17, out), L(HIP - 7, HIP - 5, out)], ft = [L(12, 35, out), L(HIP + 6, HIP - 9, out)];
     kicker = () => side(4, () => { limb([2 + hx, HIP], kn, ft, kickFar ? shade(legs, -.15) : legs); bootAt(ft[0], ft[1], L(.2, -Math.PI / 2 - .12, out), kickFar ? shade(look.boots, -.1) : look.boots); });
   }

@@ -58,7 +58,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
       if (spinK) { pose.arm = -.25; pose.elbow = .2; pose.backArm = 3.5; pose.lean = -.15; } // arms flung wide like rotor blades
       else { pose.lean = lerp(.1, -.3, out); pose.arm = .9; pose.elbow = 1.6; pose.backArm = lerp(1, 2.6, out); } // guard kept, leaning away from the kick
     } else if (m.kick && P.w === 'fists') { // the driving thrust kick and the flying dropkick
-      const fly = P.z > 4 || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
+      const fly = (P.z > 4 && !m.flyside) || m.key === 'AA', out = kickOut(k, m.h[0], m.h[1]);
       pose.kickK = k; pose.kickH = m.h; pose.kickStyle = fly ? 'drop' : 'lunge'; pose.flow = 12;
       if (fly) { // tucked, then laid out flat with both feet driven forward, the body twisting open toward us
         // like a wrestler's: he turns onto his side in the air, chest toward us, so at impact the two straight legs are stacked one above the other
@@ -68,6 +68,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
         pose.sink = 4 * out; pose.lean = lerp(.3, -.5, out); pose.yaw = lerp(0, -.5, out);
         pose.arm = lerp(.9, 1.1, out); pose.elbow = lerp(1.7, 1.9, out); pose.backArm = lerp(.9, 2.4, out); // fists kept up in front of the chest
       }
+      if (m.flyside) { pose.kickTuck = 1; pose.sink = 0; pose.lean = lerp(.1, -.38, out); pose.yaw = lerp(-.1, -.35, out); pose.arm = lerp(1, .8, out); pose.elbow = 1.8; pose.backArm = lerp(1.2, 2.9, out); pose.backElbow = -.3; pose.flow = 14; } // a Bruce Lee flying side kick: guard up, the rear arm thrown back
     } else if (m.kick) { pose.kick = 1; pose.arm = -.5; }
     if (m.flurry && pose.ext !== undefined) pose.ext = Math.abs(Math.sin(kk * Math.PI * 7)); // a storm of thrusts, in and out
     if (m.spin && !m.kick) pose.spin = -TAU * m.spin * ease(clamp(k / (m.spinEnd || .85), 0, 1)); // a pirouette, turning through his back first
