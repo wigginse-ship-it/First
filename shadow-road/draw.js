@@ -203,6 +203,7 @@ function playerPose() {
     pose.twoHand = 1;
     const m = P.move; if (P.state !== 'charge' && !m.spin && !m.rot) { const kk = clamp((P.t / m.dur - m.h[0]) / (m.h[1] - m.h[0]), 0, 1); pose.yaw = (pose.yaw ?? 0) + .28 * Math.sin(Math.PI * kk); }
   }
+  if (P.w === 'hammer' && ['atk', 'air', 'charge'].includes(P.state)) pose.twoHand = 1; // every hammer blow is swung with both hands on the haft
   // proportions per pose, as in the reference frames: a long, stretched stride in the run and the dash, a longer reach
   // in a thrust or a lunge (drawn only: hitboxes are untouched)
   if (P.state === 'run') pose.legX = 1.1;
