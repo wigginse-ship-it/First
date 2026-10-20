@@ -94,7 +94,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     }
     if (m.slide && P.z <= 2) { // the sliding kick: laid back low and streamlined like the forward dodge, both feet driven out ahead
       const q = ease(Math.min(1, k / .2)), out = k > .78 ? 1 - ease((k - .78) / .22) : 1;
-      delete pose.kickK; pose.kickStyle = undefined; pose.kick = 0; pose.yaw = 0; pose.spin = 0; pose.sink = 6 * q * out; pose.oy = 16 * q * out; pose.rot = -.55 * q * out; pose.lean = .25 * q; pose.legs = { f: lerp(6, 30, q * out), b: lerp(-6, 15, q * out), fk: lerp(6, 0, q), bk: lerp(6, 11, q) }; // the lead leg out straight, the other knee up and bent // both legs out ahead together, like a Mega Man slide
+      delete pose.kickK; pose.kickStyle = undefined; pose.kick = 0; pose.yaw = 0; pose.spin = 0; pose.sink = 6 * q * out; pose.oy = 16 * q * out; pose.rot = -.55 * q * out; pose.lean = .25 * q; pose.legs = { f: lerp(6, 30, q * out), b: lerp(-6, 22, q * out), fk: lerp(6, 0, q), bk: lerp(6, 12, q), bku: 16 * q * out }; // the lead leg out straight, the other knee up and bent // both legs out ahead together, like a Mega Man slide
       pose.arm = lerp(1.1, .9, q * out); pose.elbow = .9; pose.backArm = lerp(1.5, 2.3, q * out); pose.backElbow = .5; pose.openHand = 1; pose.flow = 18; pose.stretch = 1.12;
     }
     if (P.w === 'fists' && BOXING[m.key]) { // boxing: punches go straight out at the enemy, hand to hand, the body turning behind each one

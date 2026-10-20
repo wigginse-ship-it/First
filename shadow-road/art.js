@@ -634,7 +634,7 @@ function drawHumanoid(look, pose) {
     const bsc = .5 + .5 * CS; // a boot seen from the front is narrower
     const W = (pose.legs && pose.legs.w) || 1; // how far apart the feet are set, side to side (seen when he is turned)
     const leg = (x, lz, f, k, col, bc, lift) => {
-      const hx0 = PX(x, lz * .8) + HX, kx = PX(x + f * .5 + k + lift * .5, lz * (.9 + (W - 1) * .8)) + HX * .5, kyy = ky - lift * (pose.run ? .55 : .35), fx = PX(x + f - lift * .4, lz * W);
+      const hx0 = PX(x, lz * .8) + HX, kx = PX(x + f * .5 + k + lift * .5, lz * (.9 + (W - 1) * .8)) + HX * .5, kyy = ky - lift * (pose.run ? .55 : .35) - (x < 0 && pose.legs ? pose.legs.bku || 0 : 0), fx = PX(x + f - lift * .4, lz * W);
       if (CW) { CW.leg(look, hx0, HIP, kx, kyy, fx - .6 * CS, -8 - lift, fx, -lift, lift ? lift * .03 : 0, bsc * LW, col !== legs, LW); return; }
       seg(hx0, HIP, kx, kyy, 8.4, 6.2, col, .9); seg(kx, kyy, fx - .6 * CS, -8 - lift, 6.2, 4.6, col, 1);
       ctx.save(); ctx.translate(fx, -lift); if (lift) ctx.rotate(lift * .03); ctx.scale(bsc, 1); boot(0, bc); ctx.restore();
