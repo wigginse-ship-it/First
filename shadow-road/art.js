@@ -521,7 +521,8 @@ function drawHumanoid(look, pose) {
   HAND_PLATE = !!(CW && look.gauntPlate);
   // the prince is built as a heroic adult, about seven heads tall at the same overall height: a smaller head on a
   // defined neck, broad shoulders over a long torso, legs half his height (drawn at LS about the feet) and long arms (AS)
-  const LS = CW ? 1.24 : 1, AS = CW ? 1.3 : 1, SWL = CW ? 10.6 : 9.5; HAND_S = CW ? .72 : 1;
+  // per-pose proportion touches, eased by blendPose: legX stretches a stride fore and aft (never taller), armS lengthens a reach
+  const LS = CW ? 1.24 : 1, AS = CW ? 1.3 * (pose.armS || 1) : 1, SWL = CW ? 10.6 : 9.5, LX = CW ? (pose.legX || 1) : 1; HAND_S = CW ? .72 : 1;
   ctx.save();
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
   if (pose.down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
@@ -599,8 +600,8 @@ function drawHumanoid(look, pose) {
   if (CP && !BACK && !pose.down) CW.cloak.half(look, CP, false);
   // legs: thighs and calves with a swell, pants tucked into boots (the prince's drawn at LS about his feet, so they are long)
   const legs = look.legs, LW = 1 / LS;
-  ctx.save(); if (LS !== 1) ctx.scale(LS, LS);
-  { const HIP = HIPL, HX = HXL;
+  ctx.save(); if (LS !== 1 || LX !== 1) ctx.scale(LS * LX, LS);
+  { const HIP = HIPL, HX = HXL / LX;
   if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX, Y, CS, LS);
   else if (pose.kick) {
     const kb = pose.kickBend || 0, kx = 17 - kb, ky = HIP - 2 - 5 * kb, fx = 30 - 3 * kb, fy = HIP - 4 + 2 * kb; // kickBend: the knee gives a little

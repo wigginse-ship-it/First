@@ -194,6 +194,11 @@ function playerPose() {
     pose.twoHand = 1;
     const m = P.move; if (P.state !== 'charge' && !m.spin && !m.rot) { const kk = clamp((P.t / m.dur - m.h[0]) / (m.h[1] - m.h[0]), 0, 1); pose.yaw = (pose.yaw ?? 0) + .28 * Math.sin(Math.PI * kk); }
   }
+  // proportions per pose, as in the reference frames: a long, stretched stride in the run and the dash, a longer reach
+  // in a thrust or a lunge (drawn only: hitboxes are untouched)
+  if (P.state === 'run') pose.legX = 1.1;
+  else if (P.state === 'dodge' && P.dk === 'fwd') pose.legX = 1.2;
+  else if ((P.state === 'atk' || P.state === 'air') && P.move) { const m = P.move; if (m.style === 'thrust' || m.dodgeLunge) { pose.armS = 1 + .1 * clamp(pose.ext || 0, 0, 1); pose.legX = 1 + .1 * clamp(pose.ext || 0, 0, 1); } }
   if (P.shrink < 1) pose.shrink = P.shrink;
   // turning: walking toward or away from us he shows his chest or his back, and a change of direction is a quick
   // turn through the front (through the back when heading away) instead of a flip
