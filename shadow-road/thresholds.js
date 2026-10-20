@@ -97,3 +97,23 @@ THRESH.w4trump = (x, y, k, t) => {
   ctx.fillStyle = `rgba(238,212,138,${.5 + .5 * k})`; drawTrumpGlyph('stillness', 0, -h / 2, 16); ctx.restore();
   glowAt(x, y0 - h / 2, 70, '238,212,138', .25 * k);
 };
+
+// ---------- a staggered boss is stunned: it reels on the spot with stars and a ring of dizziness circling its head ----------
+{
+  const _draw = drawEnemy;
+  drawEnemy = function (e, t) {
+    _draw(e, t);
+    if (!e.boss || e.dead || e.state !== 'down') return;
+    onMain(() => {
+      const s = e.size || 1, hx = e.x + e.facing * e.hw * .55, hy = e.y - e.z - e.hh * s * .95, R = 16 + e.hw * .25;
+      ctx.save(); ctx.strokeStyle = `rgba(238,212,138,${.35 + .2 * Math.sin(t * 6)})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(hx, hy, R, R * .32, 0, 0, TAU); ctx.stroke();
+      for (let i = 0; i < 4; i++) { // stars and little birds chasing each other round the ring
+        const a = t * 4.2 + i / 4 * TAU, x = hx + Math.cos(a) * R, y = hy + Math.sin(a) * R * .32, front = Math.sin(a) > 0, sc = front ? 1 : .7;
+        ctx.globalAlpha = front ? 1 : .55;
+        if (i % 2) { ctx.fillStyle = '#FFE9A0'; ctx.beginPath(); for (let k = 0; k < 10; k++) { const r = (k % 2 ? 2.2 : 5.2) * sc, b = k / 10 * TAU - Math.PI / 2 + t * 2; ctx.lineTo(x + Math.cos(b) * r, y + Math.sin(b) * r); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#7A5A20'; ctx.lineWidth = .8; ctx.stroke(); }
+        else { const fl = Math.sin(t * 22 + i) * 2.5; ctx.strokeStyle = '#F4EEE0'; ctx.lineWidth = 1.6 * sc; ctx.beginPath(); ctx.moveTo(x - 4 * sc, y - fl * sc); ctx.quadraticCurveTo(x - 1.5 * sc, y - 1 * sc, x, y + .5); ctx.quadraticCurveTo(x + 1.5 * sc, y - 1 * sc, x + 4 * sc, y - fl * sc); ctx.stroke(); }
+      }
+      ctx.restore();
+    });
+  };
+}

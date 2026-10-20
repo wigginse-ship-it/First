@@ -580,7 +580,7 @@ function drawHumanoid(look, pose) {
   if (!BACK) drawCoat();
   // back arm, a shade darker for being further away
   ctx.save(); upper();
-  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .8 : .4) * (gait ? 1 : 0), bsx = PX(-3, -SWL), bsy = SHO + 1.5;
+  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .42 : .3) * (gait ? 1 : 0), bsx = PX(-3, -SWL), bsy = SHO + 1.5;
   const bb = pose.backElbow !== undefined ? -pose.backElbow : .25; // how far the forearm folds up from the upper arm
   const bl = 1 + (pose.backReach || 0); // a thrown rear hand reaches further, the shoulder driven through
   let bex = bsx + Math.cos(ba) * 10 * AS * bl * ASX, bey = bsy + Math.sin(ba) * 10 * AS * bl, bwx = bex + Math.cos(ba + bb) * 9 * AS * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * AS * bl;

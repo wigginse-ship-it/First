@@ -90,12 +90,12 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     if (P.z <= 2 && !m.kick && !m.rot && !m.around && !m.dodgeLunge) attackStance(pose, m, k); // the body moves with the weapon
     if (m.style === 'thrust' && !(P.w === 'fists' && BOXING[m.key])) pose.arm = arc[0] - (pose.lean || 0) * .9; // a thrust stays level with the target, however far he leans in
     if (P.w === 'rapier' && !m.kick && !m.around && !m.spin) { // the fencer's free hand: up and back behind him, curled over, balancing every stroke and lunge
-      const e = Math.sin(Math.PI * clamp(k / .9, 0, 1)); pose.backArm = 3.55 + .3 * e; pose.backElbow = -1.05 - .25 * e; pose.openHand = 1;
+      const e = Math.sin(Math.PI * clamp(k / .9, 0, 1)); pose.backArm = 3.0 + .18 * e; pose.backElbow = -.45 - .15 * e; pose.openHand = 1; // out behind, a little above the shoulder
     }
-    if (m.slide && P.z <= 2) { // the sliding kick: dropped low and leaning back, the lead leg out along the street, the other folded under him
-      const out = kickOut(k, m.h[0], m.h[1]), q = ease(Math.min(1, k / .22));
-      pose.sink = 9 * q; pose.lean = lerp(.1, -.48, q); pose.yaw = 0; pose.arm = lerp(1.1, .75, q); pose.elbow = lerp(1.2, .5, q); pose.backArm = lerp(1.5, 2.05, q); pose.backElbow = lerp(.3, -.2, q); pose.openHand = 1; pose.flow = 16; // the lead hand out for balance, the back one trailing down toward the street
-      pose.kickK = k; pose.kickH = m.h; pose.kickStyle = 'slide'; if (k > .6) pose.rot = -.15 * (k - .6) / .4;
+    if (m.slide && P.z <= 2) { // the sliding kick: laid back low and streamlined like the forward dodge, both feet driven out ahead
+      const q = ease(Math.min(1, k / .2)), out = k > .78 ? 1 - ease((k - .78) / .22) : 1;
+      pose.crouch = 1; pose.rot = .62 * q * out; pose.lean = -.55 * q; pose.legs = { f: lerp(6, 16, q * out), b: lerp(-6, 10, q * out), fk: lerp(6, 1, q), bk: lerp(6, 4, q) };
+      pose.arm = lerp(1.1, 2.6, q * out); pose.elbow = .4; pose.backArm = lerp(1.5, 3, q * out); pose.backElbow = .2; pose.openHand = 1; pose.flow = 18; pose.stretch = 1.12;
     }
     if (P.w === 'fists' && BOXING[m.key]) { // boxing: punches go straight out at the enemy, hand to hand, the body turning behind each one
       const kind = BOXING[m.key], h0 = m.h[0], h1 = m.h[1];
@@ -149,7 +149,7 @@ function playerPose() {
     pose.arm = -2.2; pose.crouch = 1; pose.walk = 0;
     pose.glow = ['', '#D8AA55', '#FFE9A0', '#C8607A', '#FFD27A'][P.clvl] || '';
     if (P.clvl && Math.sin(performance.now() / 45) > 0) pose.glow = '#FFFFFF';
-  } else if (P.state === 'run') { pose.run = 1; pose.lean = .36; pose.flow = 8; if (P.w === 'fists') { pose.arm = 1.35; pose.elbow = 1.45; pose.backArm = 1.5; } else { pose.arm = 1.9; pose.backArm = 2.2; } } // bare-handed he pumps his arms; armed, the weapon trails
+  } else if (P.state === 'run') { pose.run = 1; pose.lean = .36; pose.flow = 8; if (P.w === 'fists') { pose.arm = 1.35; pose.elbow = 1.45; pose.backArm = 1.5; } else { pose.arm = 1.9; pose.backArm = 1.75; pose.backElbow = -1.2; } } // bare-handed he pumps his arms; armed, the weapon trails and the free arm drives, bent, close at his side
   else if (P.state === 'jump') { pose.crouch = 1; pose.arm = .2; pose.rot = P.vz < 0 ? 0 : 0; pose.flow = 4; }
   else if (P.state === 'dodge') {
     const k = 1 - P.t / .34;
@@ -264,7 +264,7 @@ function drawEnemy(e, t) {
   if (e.state === 'dying' && e.death && e.death !== 'pop') { drawDeath(e, t); return; }
   const scale = (e.boss ? e.size : e.champ ? 1.3 : 1) * (e.shrink || 1);
   const a = { walk: e.dead ? 0 : e.walk, t: e.dead ? e.deadAt : t, wind: e.state === 'wind' ? 1 - e.t / e.windMax : 0, atk: ['strike', 'dash', 'pounce'].includes(e.state), hurt: ['hurt', 'down', 'dying'].includes(e.state) };
-  if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') { a.pose = humanEnemyPose(e); if (e.state === 'down' || (e.state === 'dying' && !e.air)) a.pose.down = 1; }
+  if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') { a.pose = humanEnemyPose(e); if ((e.state === 'down' && !(e.boss && !e.dead)) || (e.state === 'dying' && !e.air)) a.pose.down = 1; }
   shadow(e.x, e.y, e.hw * 1.1 * Math.max(.4, 1 - e.z / 200));
   if (e.boss && e.enraged && !e.dead) { // an enraged boss smoulders
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -287,7 +287,9 @@ function drawEnemy(e, t) {
   ctx.save();
   ctx.translate(e.x + jx, e.y - e.z);
   let rot = e.rotA || 0;
-  if ((e.state === 'down' || (e.state === 'dying' && !e.air)) && !a.pose) rot = e.def.move === 'hop' ? 0 : -1.35;
+  const stun = e.boss && e.state === 'down' && !e.dead; // a staggered boss reels, dazed, instead of keeling over
+  if ((e.state === 'down' || (e.state === 'dying' && !e.air)) && !a.pose && !stun) rot = e.def.move === 'hop' ? 0 : -1.35;
+  if (stun) { rot = Math.sin(t * 3.2) * .09; e.sqy = .9 + .03 * Math.sin(t * 6.4); e.sqx = 1.06; }
   ctx.scale(e.facing, 1);
   if (rot) { ctx.translate(0, -e.hh * .5); ctx.rotate(rot * e.facing); ctx.translate(0, e.hh * .5); }
   if (e.boss && e.state === 'wind') { const w = 1 - e.t / e.windMax; ctx.translate(-e.hw * .6, 0); ctx.rotate(-.1 * w); ctx.translate(e.hw * .6, 0); } // rears back before striking

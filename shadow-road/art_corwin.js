@@ -105,15 +105,18 @@ const CORWIN = (() => {
   };
 
   // ===================================================== torso =====================================================
+  let TW = 1; // how wide the chest reads: full face on, slimmer turned side-on (a chest is deeper than it is wide only in cartoons)
   const torsoPath = (ty, HIP) => {
-    // broad shoulders over a deep chest, tapering to a narrow waist
-    ctx.beginPath(); ctx.moveTo(-10.2, ty + 2.2); ctx.quadraticCurveTo(0, ty - 2.4, 10.2, ty + 2.2);
-    ctx.quadraticCurveTo(10.6, ty + 10, 6.6, ty + 16.5); ctx.quadraticCurveTo(5.3, HIP - 4, 6.4, HIP + 1.5);
-    ctx.lineTo(-6.4, HIP + 1.5); ctx.quadraticCurveTo(-5.5, HIP - 4, -6.8, ty + 16.5); ctx.quadraticCurveTo(-10.6, ty + 10, -10.2, ty + 2.2); ctx.closePath();
+    // shoulders over a chest that tapers to a narrow waist; the front is a flat plane, no pigeon breast
+    const w = TW;
+    ctx.beginPath(); ctx.moveTo(-9.4 * w, ty + 2.2); ctx.quadraticCurveTo(0, ty - 1.6, 9.4 * w, ty + 2.2);
+    ctx.lineTo(8.8 * w, ty + 9); ctx.quadraticCurveTo(7.2 * w, ty + 14, 6 * w, ty + 16.5); ctx.quadraticCurveTo(5.2 * w, HIP - 4, 6 * w, HIP + 1.5);
+    ctx.lineTo(-6 * w, HIP + 1.5); ctx.quadraticCurveTo(-5.2 * w, HIP - 4, -6 * w, ty + 16.5); ctx.quadraticCurveTo(-7.2 * w, ty + 14, -8.8 * w, ty + 9); ctx.lineTo(-9.4 * w, ty + 2.2); ctx.closePath();
   };
   const doublet = {
     torso(L, g) {
       const { HIP, SHO, CS, Y, BACK } = g, ty = SHO - 2, body = L.body;
+      TW = .62 + .38 * Math.abs(Y);
       const tg = ctx.createLinearGradient(-10, ty, 10, ty + 22); // lit from the upper right
       tg.addColorStop(0, C(shade(body, -.3))); tg.addColorStop(.55, C(body)); tg.addColorStop(1, C(shade(body, .4)));
       torsoPath(ty, HIP); ctx.fillStyle = tg; ctx.fill();
@@ -128,7 +131,7 @@ const CORWIN = (() => {
           ctx.fillStyle = shade(L.lattice, .25);
           for (let r = 0; r < 6; r++) for (let k = -16; k <= 22; k += 4.6) { const y = ty + r * h / 6 + h / 12, x = k + ph + (r % 2 ? 2.3 : 0) - 7 + 7; ctx.fillRect(x - .3, y - .3, .6, .6); }
         }
-        ctx.strokeStyle = shade(body, .5); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(9.4, ty + 3); ctx.quadraticCurveTo(10, ty + 9, 7.2, ty + 14.6); ctx.stroke(); // rim light
+        ctx.strokeStyle = shade(body, .5); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8.8 * TW, ty + 3); ctx.lineTo(8.4 * TW, ty + 9); ctx.quadraticCurveTo(7 * TW, ty + 13.5, 6 * TW, ty + 16); ctx.stroke(); // rim light
         ctx.restore();
       }
       torsoPath(ty, HIP); outline();
@@ -136,7 +139,7 @@ const CORWIN = (() => {
         ctx.strokeStyle = C(shade(body, -.5)); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(0, ty + 2); ctx.lineTo(0, HIP - 2); ctx.stroke();
         return;
       }
-      const fx = 6.6 * Math.pow(CS, 1.6); // where the doublet buttons: the chest's edge in profile, down his middle face on
+      const fx = 6.6 * TW * Math.pow(CS, 1.6); // where the doublet buttons: the chest's edge in profile, down his middle face on
       if (Y > -.3) {
         ctx.strokeStyle = C(shade(body, -.6)); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(fx, ty + 7); ctx.lineTo(fx - .4, HIP - 1); ctx.stroke();
         for (let k = 0; k < 5; k++) { const y = ty + 10 + k * 3.3; ctx.fillStyle = C(L.button); circle(fx + .5, y, .78); ctx.fill(); if (DET()) { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(fx + .2, y - .6, .45, .45); } }
