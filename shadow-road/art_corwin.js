@@ -247,7 +247,7 @@ const CORWIN = (() => {
   // street when he goes down. Anything else that draws him (afterimages, menus, portraits) uses a snapshot or the targets.
   const S = 7, M = 4, NP = S * (M + 1), PHIMAX = Math.PI * .62;
   const KJ = [0, 260, 165, 105, 66];          // spring stiffness down a strand (1/s^2)
-  const GRAVITY = 300, DRAG_X = 2.1, DRAG_Y = 2.2, DAMP = 2.4, H = 1 / 120;
+  const GRAVITY = 230, DRAG_X = 2.9, DRAG_Y = 2.7, DAMP = 1.7, H = 1 / 120;
   const tgt = new Float32Array(NP * 2), loc = new Float32Array(NP * 2), rest = new Float32Array(NP);
   const ix = (i, j) => (i * (M + 1) + j) * 2;
   const SIM = { pts: new Float32Array(NP * 2), sp: new Float32Array((M + 1) * 2), sq: new Float32Array((M + 1) * 2), dA: new Float32Array(M + 1), ok: false, wx: 0, wy: 0, at: 0, acc: 0, f: 1 };
@@ -257,7 +257,7 @@ const CORWIN = (() => {
   const STREAKS = [], BRISTLES = [];
   { // dry-brush streaks down the cloth: slate-blue and grey dragged through the black, a few lighter catches of the light
     const cols = ['s', 's', 'g', 'd', 's', 'g', 'l', 'd'];
-    for (let k = 0; k < 18; k++) { const u = .03 + .94 * hsh(k + 3), v0 = .08 + hsh(k + 9) * .5; STREAKS.push({ u, du: (hsh(k + 17) - .5) * .06, v0, v1: Math.min(1.04, v0 + .25 + hsh(k + 21) * .5), c: cols[k % cols.length], w: .35 + hsh(k + 31) * .9 }); }
+    for (let k = 0; k < 26; k++) { const u = .03 + .94 * hsh(k + 3), v0 = .08 + hsh(k + 9) * .5; STREAKS.push({ u, du: (hsh(k + 17) - .5) * .06, v0, v1: Math.min(1.04, v0 + .25 + hsh(k + 21) * .5), c: cols[k % cols.length], w: .35 + hsh(k + 31) * .9 }); }
     for (let k = 0; k < 34; k++) { const u = (k + hsh(k + 51) * .8) / 34; BRISTLES.push({ u, du: (hsh(k + 57) - .5) * .05, v0: .86 + hsh(k + 61) * .08, v1: 1.02 + hsh(k + 67) * .13, c: k % 4 === 0 ? 's' : k % 7 === 0 ? 'g' : 'b', w: .5 + hsh(k + 71) * 1.1 }); }
     for (let k = 0; k < 12; k++) BRISTLES.push({ trail: 1, v: .25 + .7 * k / 11, len: 2.5 + hsh(k + 81) * 4.5, c: k % 2 ? 's' : 'b', w: .5 + hsh(k + 83) * .9 });
   }
@@ -268,13 +268,13 @@ const CORWIN = (() => {
     const br = pose.breath || 0, air = Math.sin(t * 1.1);
     for (let i = 0; i < S; i++) {
       const phi = (i / (S - 1) * 2 - 1) * PHIMAX, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp);
-      const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 10.3 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
+      const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 11.2 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
       const ax0 = fxa * CS - lza * Y, ax = HX + ax0 * cl - (ya - HIP) * sl, ay = HIP + ax0 * sl + (ya - HIP) * cl;
-      const len = (43 + 3.5 * cp - 6 * front) * (1 - down * .1), fl = 15.5 + .25 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
+      const len = (45 + 3.5 * cp - 6 * front) * (1 - down * .1), fl = 18 + .32 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
       for (let j = 0; j <= M; j++) {
         const o = ix(i, j); if (!j) { tgt[o] = ax; tgt[o + 1] = ay; continue; }
         const v = j / M, vf = Math.pow(v, .85);
-        const sway = (Math.sin(walk * .5 + i * .9 - v * 1.6) * (gait ? 1.8 : 0) + (air * .45 + br * .25) * Math.sin(i * 1.7 + v * 2.2)) * v;
+        const sway = (Math.sin(walk * .5 + i * .9 - v * 1.6) * (gait ? 2.6 : 0) + (air * 1.1 + br * .4) * Math.sin(i * 1.7 + v * 2.2 + t * .7)) * v; // it drifts on the air even standing
         const ofx = -Math.max(0, cp) * 1.15 * fl * vf + front * (.3 + .45 * still) * fl * vf - trail * Math.pow(v, 1.5) - front * 6.5 * v + sway, olz = sp * fl * vf;
         let dyy = 0; const L3 = len * v, hz = Math.min(L3 * .94, Math.hypot(ofx, olz)), dy = Math.sqrt(L3 * L3 - hz * hz) + br * .35 * v; // it keeps its length: streaming out, it rises
         let dx = ofx * CS - olz * Y, a = LEAN * (1 - .8 * v), ca = Math.cos(a), sa = Math.sin(a);
@@ -396,7 +396,7 @@ const CORWIN = (() => {
     ctx.lineCap = 'round';
     for (const c of ['d', 's', 'g', 'l', 'b']) {
       if (!det && c !== 'b') continue;
-      ctx.strokeStyle = det ? CCOL(L, c) : C(L.cloak); ctx.globalAlpha = c === 'l' ? .22 : c === 'b' ? 1 : c === 'd' ? .7 : .38;
+      ctx.strokeStyle = det ? CCOL(L, c) : C(L.cloak); ctx.globalAlpha = c === 'l' ? .13 : c === 'b' ? 1 : c === 'd' ? .75 : .26;
       for (const wcls of [0, 1]) {
         ctx.beginPath(); let any = false;
         if (det && c !== 'b' && !(few && c === 'l')) for (const s of STREAKS) { if (s.c !== c || (s.w > 1.1 ? 1 : 0) !== wcls || s.u < lo || s.u > hi) continue; if (far && few) continue;
@@ -407,7 +407,7 @@ const CORWIN = (() => {
           uv(Pt, .5, s.v); const bx = UX, by = UY; uv(Pt, .22, s.v); const sx = UX, sy = UY; uv(Pt, .78, s.v); let ox = bx - (sx + UX) / 2, oy = by - (sy + UY) / 2; const ol = Math.hypot(ox, oy); if (ol < 2.5) continue;
           ox /= ol; oy /= ol; uv(Pt, .5, s.v + .15); let dx = UX - bx, dy = UY - by; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
           ctx.moveTo(bx - ox * .6, by - oy * .6); ctx.lineTo(bx + (ox * .55 + dx) * s.len, by + (oy * .55 + dy) * s.len); any = true; }
-        if (any) { ctx.lineWidth = wcls ? 1.15 : .6; ctx.stroke(); }
+        if (any) { ctx.lineWidth = c === 'b' ? (wcls ? 1.7 : 1.05) : wcls ? 2.8 : 1.7; ctx.stroke(); } // broad, loaded strokes of paint
       }
     }
     ctx.globalAlpha = 1;
