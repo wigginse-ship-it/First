@@ -44,6 +44,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
       pose.arm = arc[0]; pose.ext = k < m.h[0] ? -.35 : Math.min(1, kk * 1.6);
       if (k >= m.h[0] && k <= m.h[1] + .1) pose.streak = { len: w.reach + 26, a: .8 * (1 - Math.max(0, kk - .6)), col: tcol };
       pose.lean = .22 * Math.max(0, pose.ext);
+      if (P.w === 'rapier') { const e = Math.max(0, pose.ext); pose.backArm = lerp(1.95, 3.45, e); pose.backElbow = lerp(.25, -.75, e); } // the fencer's free hand flies up behind for balance as he drives in
     } else if (m.style === 'sweep' || m.style === 'sweepR') { // come around the body, side to side
       const rev = m.style === 'sweepR';
       pose.arm = arc[0]; pose.sweep = rev ? lerp(1, -1, kk) : lerp(-1, 1, kk); pose.ext = .4;
@@ -167,7 +168,7 @@ function playerPose() {
     // eases out of it: the point drops low and forward, and the free hand comes down to hang a little behind him for balance
     // At rest his chest turns to us (see IDLE_Y below), the blade held low across his body, its point up toward the foe
     const r = ease(P.restK || 0);
-    pose.arm = lerp(.35, 1.2, r); pose.elbow = lerp(.5, 1.05, r); pose.grip = lerp(-.1, -.42, r); pose.backArm = lerp(3.6, 1.62, r); pose.backElbow = lerp(-.88, .3, r); pose.lean = lerp(.04, 0, r);
+    pose.arm = lerp(.35, 1.2, r); pose.elbow = lerp(.5, 1.05, r); pose.grip = lerp(-.1, -.42, r); pose.backArm = lerp(1.95, 1.62, r); pose.backElbow = lerp(.25, .3, r); pose.lean = lerp(.04, 0, r);
     if (r > .5) pose.openHand = 1;
     if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 7, r), bk: lerp(4, 5, r), w: lerp(1, 1.6, r) }; pose.sink = lerp(2, 2.5, r); }
   }

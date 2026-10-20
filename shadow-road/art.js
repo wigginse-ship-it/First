@@ -522,7 +522,7 @@ function drawHumanoid(look, pose) {
   // the prince is built as a heroic adult, about seven heads tall at the same overall height: a smaller head on a
   // defined neck, broad shoulders over a long torso, legs half his height (drawn at LS about the feet) and long arms (AS)
   // per-pose proportion touches, eased by blendPose: legX stretches a stride fore and aft (never taller), armS lengthens a reach
-  const LS = CW ? 1.24 : 1, AS = CW ? 1.3 * (pose.armS || 1) : 1, SWL = CW ? 10.6 : 9.5, LX = CW ? (pose.legX || 1) : 1; HAND_S = CW ? .72 : 1;
+  const LS = CW ? 1.24 : 1, AS = CW ? 1.3 * (pose.armS || 1) : 1, SWL = CW ? 9.4 : 9.5, LX = CW ? (pose.legX || 1) : 1; HAND_S = CW ? .72 : 1;
   ctx.save();
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
   if (pose.down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
@@ -595,7 +595,7 @@ function drawHumanoid(look, pose) {
   const farHand = () => { ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(bha); ctx.translate(-13, 0); drawHand(shade(look.glove || skin, -.18), pose.twoHand ? 0 : pose.openHand); ctx.restore(); }; // the far hand
   if (!across) farArm();
   const bpA = clamp((ba - 1.25) * .3, -.5, .5); // his far shoulder guard: hidden by his chest in profile, over the cloak when he faces us
-  if (arms && Y < .3 && !across) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .62);
+  if (arms && Y < .3 && !across) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .54);
   ctx.restore();
   if (CP && !BACK && !pose.down) CW.cloak.half(look, CP, false);
   // legs: thighs and calves with a swell, pants tucked into boots (the prince's drawn at LS about his feet, so they are long)
@@ -704,7 +704,7 @@ function drawHumanoid(look, pose) {
     if (BACK && CP) { CW.cloak.half(look, CP, true); CW.cloak.half(look, CP, false); }
     ctx.save(); upper();
     if (BACK) { CW.PART('mail', look).neck(look, G); if (CP) CW.cloak.hood(look, G, true); }
-    else { if (CP) CW.cloak.mantle(look, G); if (arms && Y >= .3 && !across) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .62); CW.PART('mail', look).neck(look, G); }
+    else { if (CP) CW.cloak.mantle(look, G); if (arms && Y >= .3 && !across) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .54); CW.PART('mail', look).neck(look, G); }
     ctx.restore();
   }
   ctx.save(); upper();
@@ -747,7 +747,7 @@ function drawHumanoid(look, pose) {
   }
   ctx.restore();
   if (BACK && atkVis) frontArm(); // (still in the upper body's frame)
-  if (across) { farArm(); if (arms) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .62); } // (still in the upper body's frame here)
+  if (across) { farArm(); if (arms) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .54); } // (still in the upper body's frame here)
   if (!BACK) frontArm();
   if (across) farHand(); // its hand closed on the hilt over the grip, beside the weapon hand
   // front arm + weapon: shoulder, a bent elbow, forearm, hand
@@ -774,7 +774,7 @@ function drawHumanoid(look, pose) {
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   drawWeapon(pose.weapon || look.weapon, pose);
   ctx.restore();
-  if (arms) arms.pauldron(look, PX(1, SWL), SHO + .2, clamp((arm - 1.1) * .3, -.45, .45), BACK, .68);
+  if (arms) arms.pauldron(look, PX(1, SWL), SHO + .2, clamp((arm - 1.1) * .3, -.45, .45), BACK, .59);
   else if (look.pauldron) { ctx.save(); ctx.translate(PX(1, 9.5) - 1, 0);
     ctx.beginPath(); ctx.ellipse(1, SHO + 1, 8.6, 6.4, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); ctx.fillStyle = C(look.pauldron); ctx.fill();
     if (!FLASH && !TINT) { ctx.fillStyle = shade(look.pauldron, .35); ell(4, SHO - 2.4, 3, 1.2, -.3); ctx.fill(); }

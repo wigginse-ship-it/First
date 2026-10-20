@@ -107,9 +107,9 @@ const CORWIN = (() => {
   // ===================================================== torso =====================================================
   const torsoPath = (ty, HIP) => {
     // broad shoulders over a deep chest, tapering to a narrow waist
-    ctx.beginPath(); ctx.moveTo(-11.6, ty + 2.2); ctx.quadraticCurveTo(0, ty - 2.6, 11.6, ty + 2.2);
-    ctx.quadraticCurveTo(12.2, ty + 10, 7.4, ty + 16.5); ctx.quadraticCurveTo(5.8, HIP - 4, 7, HIP + 1.5);
-    ctx.lineTo(-7, HIP + 1.5); ctx.quadraticCurveTo(-6, HIP - 4, -7.6, ty + 16.5); ctx.quadraticCurveTo(-12.2, ty + 10, -11.6, ty + 2.2); ctx.closePath();
+    ctx.beginPath(); ctx.moveTo(-10.2, ty + 2.2); ctx.quadraticCurveTo(0, ty - 2.4, 10.2, ty + 2.2);
+    ctx.quadraticCurveTo(10.6, ty + 10, 6.6, ty + 16.5); ctx.quadraticCurveTo(5.3, HIP - 4, 6.4, HIP + 1.5);
+    ctx.lineTo(-6.4, HIP + 1.5); ctx.quadraticCurveTo(-5.5, HIP - 4, -6.8, ty + 16.5); ctx.quadraticCurveTo(-10.6, ty + 10, -10.2, ty + 2.2); ctx.closePath();
   };
   const doublet = {
     torso(L, g) {
@@ -276,7 +276,7 @@ const CORWIN = (() => {
     const br = pose.breath || 0, air = Math.sin(t * 1.1);
     for (let i = 0; i < S; i++) {
       const phi = (i / (S - 1) * 2 - 1) * PHIMAX, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp);
-      const fxa = -6.8 * cp + 1.2 - front * 1.5, lza = 11.6 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
+      const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 10.3 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
       const ax0 = fxa * CS - lza * Y, ax = HX + ax0 * cl - (ya - HIP) * sl, ay = HIP + ax0 * sl + (ya - HIP) * cl;
       const len = (43 + 3.5 * cp - 6 * front) * (1 - down * .1), fl = 15.5 + .25 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
       for (let j = 0; j <= M; j++) {
