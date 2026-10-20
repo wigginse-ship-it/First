@@ -123,7 +123,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     }
   const cp = MOVE_POSE[movePoseKey(m)]; if (cp) cp(pose, m, k, k < m.h[0] ? 0 : k > m.h[1] ? 1 : (k - m.h[0]) / (m.h[1] - m.h[0]));
 }
-const IDLE_Y = { fists: .72, sword: .7, hammer: .66, staff: .66 };
+const IDLE_Y = { fists: .86, sword: .84, hammer: .82, staff: .82 }; // chest turned well round to us, like a fighting-game idle
 function playerPose() {
   const clk = () => (BL.clock ? BL.clock() : performance.now()); // (a test harness can drive the clock)
   { const now = clk() / 1000, d = Math.min(.05, Math.max(0, now - (P.poseT || now))); P.poseT = now; // how long he has stood still (for weapons that relax at rest)
@@ -171,11 +171,11 @@ function playerPose() {
     const r = ease(P.restK || 0);
     pose.arm = lerp(.35, 1.2, r); pose.elbow = lerp(.5, 1.05, r); pose.grip = lerp(-.1, -.42, r); pose.backArm = lerp(1.95, 1.62, r); pose.backElbow = lerp(.25, .3, r); pose.lean = lerp(.04, 0, r);
     if (r > .5) pose.openHand = 1;
-    if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 7, r), bk: lerp(4, 5, r), w: lerp(1, 1.6, r) }; pose.sink = lerp(2, 2.5, r); }
+    if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 1.6, r), bk: lerp(4, 1.2, r), w: lerp(1, 1.5, r) }; pose.sink = lerp(2, .6, r); }
   }
   else if (P.w === 'sword') { // walking, a low guard with the point lowered toward the ground ahead; standing, both hands on the
     // grip at his waist and the blade angled up across his body toward the foe, as in the paint-over
-    if (P.state === 'idle') { pose.arm = 1.18; pose.elbow = 1.12; pose.grip = -.62; pose.backArm = .9; pose.backElbow = 1.05; }
+    if (P.state === 'idle') { pose.arm = 1.18; pose.elbow = 1.12; pose.grip = -.62; pose.backArm = .9; pose.backElbow = 1.05; pose.twoHand = 1; } // both hands on the hilt
     else { pose.arm = .8; pose.grip = -.08; }
   }
   else if (P.w === 'hammer') { pose.arm = 1.95; pose.grip = .28; pose.backArm = .9; } // dragged behind him, its head resting on the ground
@@ -189,7 +189,7 @@ function playerPose() {
     pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; pose.openHand = 1; // arms hanging loose at his sides, just off the body
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
-  if (P.state === 'idle' && !pose.legs) { pose.legs = { f: -11, b: 13, fk: 7, bk: 5, w: 1.6 }; pose.sink = 2.5; } // a wide, grounded stance: his far (left) foot leads, the near one braced behind
+  if (P.state === 'idle' && !pose.legs) { pose.legs = { f: -11, b: 13, fk: 1.6, bk: 1.2, w: 1.5 }; pose.sink = .6; } // standing tall in a wide A: legs nearly straight, the far foot ahead, the near one planted behind
   // every great-sword heavy, its charge and its charged blows are cut with both hands on the hilt; the chest squares
   // into the blow as it lands
   if (P.w === 'sword' && (P.state === 'charge' || ((P.state === 'atk' || P.state === 'air') && P.move && /H/.test(P.move.key || '')))) {
@@ -211,10 +211,10 @@ function playerPose() {
   if (P.state === 'walk' || P.state === 'run') { const ax = Math.abs(input.mx), ay = Math.abs(input.my); if (ay > .2) tY = Math.sign(input.my) * ay / (ax + ay) * .95; }
   // standing, he stands as a fighter does in a fighting game: chest turned three-quarters to us to show the costume,
   // eyes and head still on what is in front of him (the en garde rapier stays side-on until he relaxes)
-  else if (P.state === 'idle') tY = P.w === 'rapier' ? lerp(.12, .68, ease(P.restK || 0)) : IDLE_Y[P.w] ?? .55;
+  else if (P.state === 'idle') tY = P.w === 'rapier' ? lerp(.12, .82, ease(P.restK || 0)) : IDLE_Y[P.w] ?? .55;
   const dtv = Math.min(.05, (now - (P.yawAt || now)) / 1000); P.yawAt = now;
   P.yawV = (P.yawV || 0) + (tY - (P.yawV || 0)) * Math.min(1, dtv * (loco ? 9 : 20)); // out of the stance into a blow, he squares up fast
-  P.lookV = (P.lookV || 0) + ((P.state === 'idle' ? .78 : 0) - (P.lookV || 0)) * Math.min(1, dtv * 9);
+  P.lookV = (P.lookV || 0) + ((P.state === 'idle' ? 1 : 0) - (P.lookV || 0)) * Math.min(1, dtv * 9);
   if (pose.yaw === undefined) pose.yaw = P.yawV;
   const tt = (now - (P.turnAt || 0)) / 170;
   if (loco && tt < 1 && !pose.spin) pose.spin = P.turnDir * Math.PI * (1 - ease(tt));

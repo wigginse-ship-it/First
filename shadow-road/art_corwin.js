@@ -162,7 +162,7 @@ const CORWIN = (() => {
       }
       if (BACK) return;
       // the jabot: tiers of ruffled lace from the throat down over the chest, the lowest first
-      const F = Math.pow(CS, 1.6), xn = nx + 2.4 * F - .2, xc = .6 + 9.4 * F, wy = Math.abs(Y);
+      const F = Math.pow(CS, 1.6), xn = nx + 2.2 * F - .2, xc = .6 + 5.6 * F, wy = Math.abs(Y); // side-on it lies flat against his chest, inside its line
       for (let k = 3; k >= 0; k--) {
         const q = k / 3, x = lerp(xn, xc, q * .85), y = ty - .6 + k * 2.4, w = 1.9 + 2.2 * wy + k * .5;
         ctx.beginPath(); ctx.moveTo(x - w * .45, y);
