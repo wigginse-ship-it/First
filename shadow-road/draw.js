@@ -50,6 +50,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
       pose.arm = arc[0]; pose.sweep = rev ? lerp(1, -1, kk) : lerp(-1, 1, kk); pose.ext = .4;
       if (k >= m.h[0] && k <= m.h[1] + .12) pose.flat = { r: w.reach + 22, k: kk, rev, col: tcol, w: P.w === 'sword' || P.w === 'hammer' ? 8 : 5 };
       pose.lean = .1;
+      if (P.w === 'rapier') { pose.backArm = 3.3; pose.backElbow = -.7; } // cutting, the fencer's free hand still rides up behind for balance
     }
     if (m.kick && P.w === 'fists' && (m.key === 'LLLL' || m.key === 'LLH' || m.key === 'JH')) { // spinning kicks: the whole body turns, through his back
       const spinK = m.key === 'LLH';
