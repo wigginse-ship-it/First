@@ -271,6 +271,46 @@
   .moves li.next b { color: var(--gold); }
   .moves em { font-style: normal; color: var(--soft); font-size: 12.5px; }
 
+  /* ----- the inventory: the prince and his slots on one card, the bag on another ----- */
+  .inv-spread { display: grid; grid-template-columns: minmax(250px, 330px) minmax(0, 540px); gap: 16px; align-items: start; justify-content: center; justify-items: stretch; width: 100%; max-width: 900px; }
+  .inv-hero, .inv-bagcard { display: grid; gap: 9px; padding: 16px 16px 14px; justify-items: center; }
+  .inv-hero { rotate: -.8deg; } .inv-bagcard { rotate: .5deg; }
+  .inv-hero .h2 { font-size: clamp(22px, 3.4vw, 30px); }
+  .inv-figure { display: grid; grid-template-columns: auto auto; gap: 10px; align-items: center; }
+  .inv-fig { position: relative; width: 112px; aspect-ratio: 240 / 330; border-radius: 6px; background: radial-gradient(ellipse at 50% 40%, #4A3046, #160C14 75%);
+    box-shadow: 0 0 0 1px #0A0705, 0 0 0 2.5px #C9A050, 0 0 0 3.5px #0A0705, inset 0 0 14px rgba(0,0,0,.6); }
+  .inv-fig canvas { width: 100%; height: 100%; display: block; }
+  .inv-fig span { position: absolute; left: 50%; top: 4px; translate: -50% 0; font: 700 8px var(--label); letter-spacing: .16em; color: #EBCB7C; text-shadow: 0 1px 0 #000; }
+  .inv-slots { display: grid; grid-template-columns: repeat(2, 58px); gap: 7px; }
+  .inv-slots .inv-cell { width: 58px; height: 70px; }
+  .inv-slots .inv-cell canvas { height: 46px; }
+  .inv-cell { position: relative; display: grid; justify-items: center; align-content: center; gap: 1px; padding: 3px; border-radius: 7px; cursor: pointer; aspect-ratio: 1; min-width: 0; color: var(--soft);
+    border: 1.5px solid transparent; background: var(--engrave) padding-box, var(--lacq) padding-box, linear-gradient(var(--tc, #5E4A2E), var(--tc, #5E4A2E)) border-box;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), 0 4px 8px -3px rgba(0,0,0,.8); transition: translate .1s; }
+  .inv-cell canvas { width: 100%; height: 100%; max-height: 52px; object-fit: contain; }
+  .inv-cell span { font: 700 8px var(--label); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+  .inv-cell.empty { background: var(--engrave) padding-box, rgba(10,6,8,.55) padding-box, linear-gradient(rgba(214,174,88,.25), rgba(214,174,88,.25)) border-box; box-shadow: inset 0 0 8px rgba(0,0,0,.7); }
+  .inv-cell.ench { box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), 0 0 0 1px rgba(200,160,255,.55), 0 0 10px rgba(214,170,90,.35), 0 4px 8px -3px rgba(0,0,0,.8); }
+  .inv-cell.sel { translate: 0 -3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), 0 0 0 2px #FFE6A0, 0 0 14px rgba(216,170,85,.6); }
+  .inv-cell:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+  .inv-bag { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; width: 100%; }
+  .inv-stats, .inv-detail { width: 100%; text-align: left; font-size: 12.5px; line-height: 1.4; color: var(--soft); }
+  .inv-totals { color: var(--text); text-align: center; } .inv-totals b { color: var(--mint); }
+  .inv-aff { color: #E8C8FF; text-align: center; font-size: 12px; margin-top: 3px; }
+  .inv-set { list-style: none; margin: 6px 0 0; padding: 6px 0 0; display: grid; gap: 2px; font-size: 12px; border-top: 1px solid transparent; border-image: linear-gradient(90deg, transparent, rgba(214,174,88,.55), transparent) 1; }
+  .inv-set li { opacity: .55; } .inv-set li.got { opacity: 1; color: var(--mint); } .inv-set li.next { opacity: 1; color: var(--gold); } .inv-set li.hd { opacity: 1; font: 700 11px var(--label); letter-spacing: .08em; color: var(--gold); }
+  .inv-set li b { color: inherit; } .inv-set em { font-style: normal; opacity: .85; }
+  .inv-name { font: 700 15px var(--label); color: var(--sc, var(--text)); text-shadow: 0 1px 0 #000; }
+  .inv-name.ench { text-shadow: none; filter: drop-shadow(0 1px 0 #000); background: linear-gradient(90deg, #FFE6A0, #D8B0FF 60%, #FFE6A0); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .inv-sub { font: 700 9.5px var(--label); letter-spacing: .12em; color: var(--gold); text-transform: uppercase; margin-top: 1px; }
+  .inv-stat { list-style: none; margin: 5px 0 0; padding: 0; display: grid; gap: 1px; } .inv-stat b { color: var(--text); } .inv-stat li.ench { color: #E8C8FF; }
+  .inv-cmp { margin-top: 6px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px rgba(214,174,88,.3); font-size: 12px; }
+  .inv-cmp b { color: var(--text); } .inv-cmp .up { color: var(--mint); font-weight: 700; } .inv-cmp .down { color: #FF9A8A; font-weight: 700; }
+  .inv-look { margin: 6px 0 0; font-size: 11.5px; font-style: italic; opacity: .8; }
+  .inv-full { color: #FF9A8A; }
+  .inv-acts .cta { padding-inline: 16px; min-height: 40px; font-size: 13px; }
+  .inv-acts .cta:disabled { opacity: .45; cursor: default; translate: none; }
+
   /* ----- game over and the win: one card turned up ----- */
   .solo { width: 100%; max-width: 600px; display: grid; gap: 12px; justify-items: center; padding: 26px clamp(30px, 6vw, 56px) 24px; }
   .solo .lede { font-size: 15px; }
@@ -302,7 +342,7 @@
   .mfx-in .flipback { display: block; animation: mfxBack .44s both; }
 
   /* ----- small screens ----- */
-  @media (max-width: 600px) { .hero-card { grid-template-columns: 1fr; padding-left: 18px; } .trump-portrait { display: none; } .spread { grid-template-columns: 1fr; } .menu-card { position: static; rotate: none; } }
+  @media (max-width: 600px) { .inv-spread { grid-template-columns: 1fr; } .inv-hero, .inv-bagcard { rotate: none; } .hero-card { grid-template-columns: 1fr; padding-left: 18px; } .trump-portrait { display: none; } .spread { grid-template-columns: 1fr; } .menu-card { position: static; rotate: none; } }
   @media (max-height: 440px) {
     .ov { padding-block: 16px; }
     .wrap { gap: 10px; }
@@ -313,6 +353,7 @@
     .menu-card { padding: 16px 16px 12px; gap: 8px; } .menu-card .stack { gap: 6px; }
     .plaque { padding-block: 12px 10px; gap: 6px; }
     .solo { padding-block: 20px 18px; gap: 10px; }
+    .inv-bag { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; } .inv-hero, .inv-bagcard { padding-block: 12px 10px; gap: 7px; }
   }
   @media (prefers-reduced-motion: reduce) {
     #go, .phone, .b-trump.ready, #combo.pop b { animation: none; }
@@ -405,6 +446,7 @@
       <div class="cards" id="trumpCards"></div>
       <div class="row forge-foot">
         <button class="cta" id="walkBtn" type="button">Walk on</button>
+        <button class="cta alt" id="forgeInvBtn" type="button">Inventory</button>
         <button class="cta alt" id="forgeTitleBtn" type="button">Title screen</button>
       </div>
     </div>
@@ -417,6 +459,7 @@
         <h2 class="h2">Paused</h2>
         <div class="stack">
           <button class="cta" id="resumeBtn" type="button">Resume</button>
+          <button class="cta alt" id="invBtn" type="button">Inventory</button>
           <button class="cta alt" id="sfxBtn" type="button">Sound: on</button>
           <button class="cta alt" id="musicBtn" type="button">Music: on</button>
           <button class="cta alt" id="quitBtn" type="button">Quit to title</button>
@@ -427,6 +470,35 @@
         <h3 class="h3" id="moveTitle">Moves</h3>
         <p class="small t-kbd keys"><kbd>←→↑↓</kbd>/<kbd>WASD</kbd> move · <kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge · <kbd>Q</kbd> Swap · <kbd>E</kbd> Trump · <kbd>Esc</kbd> Resume</p>
         <div id="moveList" class="movebox"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ov glass" id="invOv" hidden>
+    <div class="wrap center inv-spread">
+      <div class="face inv-hero dealt">
+        <span class="pip" aria-hidden="true">XIII<i>&#9829;&#xFE0E;</i></span><span class="pip tr" aria-hidden="true">XIII<i>&#9829;&#xFE0E;</i></span>
+        <h2 class="h2">Inventory</h2>
+        <div class="inv-figure">
+          <div class="inv-fig"><canvas id="invFig" width="240" height="330"></canvas><span id="invFigCap">WEARING</span></div>
+          <div class="inv-slots" id="invSlots"></div>
+        </div>
+        <div class="inv-stats" id="invStats"></div>
+      </div>
+      <div class="face inv-bagcard dealt">
+        <h3 class="h3">The Bag <span id="invCount"></span></h3>
+        <div class="matbar"><span class="s">&#9670; <span id="invShards">0</span> shards</span></div>
+        <p class="small inv-full" id="invFull" hidden>The bag is full: new pieces stay on the ground until you make room, and whatever you leave behind is salvaged for shards when you move on.</p>
+        <div class="inv-bag" id="invBag"></div>
+        <div class="inv-detail" id="invDetail"></div>
+        <div class="note" id="invNote"></div>
+        <div class="row inv-acts">
+          <button class="cta" id="invAct" type="button">Put it on</button>
+          <button class="cta alt" id="invSalv" type="button">Salvage</button>
+          <button class="cta alt" id="invBack" type="button">Back</button>
+        </div>
+        <p class="small t-kbd keys"><kbd>←→↑↓</kbd> choose · <kbd>Enter</kbd> put on / take off · <kbd>X</kbd> salvage · <kbd>Esc</kbd> back</p>
+        <p class="small t-touch">Tap a piece to look at it, tap it again to put it on or take it off.</p>
       </div>
     </div>
   </div>
@@ -477,6 +549,8 @@
 <script src="data.js"></script>
 <script src="art.js"></script>
 <script src="art_corwin.js"></script>
+<script src="gear.js"></script>
+<script src="art_gear.js"></script>
 <script src="art_rapier.js"></script>
 <script src="paint.js"></script>
 <script src="creatures.js"></script>
@@ -503,6 +577,7 @@
 <script src="draw.js"></script>
 <script src="moves.js"></script>
 <script src="ui.js"></script>
+<script src="inventory.js"></script>
 <script src="menu_fx.js"></script>
 <script src="entrances.js"></script>
 <script src="thresholds.js"></script>

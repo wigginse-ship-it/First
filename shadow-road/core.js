@@ -24,7 +24,8 @@ const freshSave = () => ({
   stage: 0, shards: 0, sigils: 0, cycle: 0, started: false,
   owned: { fists: true, hammer: false, staff: false, sword: false, rapier: false },
   wl: { fists: 1, hammer: 1, staff: 1, sword: 1, rapier: 1 },
-  armor: 1, weapon: 'fists', pity: {},
+  weapon: 'fists', pity: {},
+  gear: { eq: { mail: null, pants: null, gauntlets: null, waist: null }, bag: [], pity: 0, uid: 1 }, // armor worn and carried (gear.js)
   trumps: { stag: false, brand: false, mirror: false, phoenix: false, stillness: false }, trump: null, tlv: {}, arrows: 0, alv: 1,
 });
 let save = freshSave();

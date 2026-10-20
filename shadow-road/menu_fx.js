@@ -12,7 +12,7 @@
   const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const ROMAN = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
   const TABLE = ['titleOv', 'forgeOv', 'winOv']; // overlays that cover the game completely
-  const OVS = ['titleOv', 'forgeOv', 'pauseOv', 'overOv', 'winOv'];
+  const OVS = ['titleOv', 'forgeOv', 'pauseOv', 'overOv', 'winOv', 'invOv'];
 
   // ---------- dealing ----------
   function deal(ov) {
@@ -52,9 +52,8 @@
       if (trumps) { rank = ROMAN[n + 1] || String(n + 1); suit = '✦'; }
       else {
         const m = lv.match(/^LV (\d+)\/\d+/);
-        const armor = /^LV \d+\/\d+$/.test(lv.trim()); // the armor card reads just "LV n/5"
         rank = m ? (ROMAN[+m[1]] || m[1]) : (c.classList.contains('locked') ? '?' : '0');
-        suit = armor ? '♥︎' : '♠︎';
+        suit = '♠︎';
       }
       c.prepend(pip('tr', rank, suit)); c.prepend(pip('', rank, suit));
       const t = ((n % 2 ? 1 : -1) * (.5 + ((n * 5) % 3) * .35)).toFixed(2);

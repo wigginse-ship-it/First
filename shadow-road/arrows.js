@@ -47,7 +47,7 @@ function loose() {
   const perfect = P.full && P.sinceFull < .12; // let go the instant the draw is full: a perfect release always crits
   if (perfect) { floatText(P.x, P.y, 96, 'PERFECT', '#FFE08A', 15); flashT = .06; burst(P.x + P.facing * 28, P.y, P.z + 40, ['#FFE08A', '#FFFFFF'], 14, 'spark', P.facing, true); }
   projs.push({ owner: 'p', arrow: lvl, x: P.x + P.facing * 22, y: P.y, z: Math.max(30, P.z + 40), vx: P.facing * sp * Math.cos(P.aim), vz: sp * Math.sin(P.aim),
-    dmg: Math.round(T.dmg * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1)), perfect, life: 1.3, hit: new Set(), pierce: k >= 1 ? T.pierce : 0, crit: T.crit + (k >= 1 ? .1 : 0), blast: k >= 1 ? T.blast : T.blast * .5, full: k >= 1 });
+    dmg: Math.round(T.dmg * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1) * (1 + gearStat('arrow'))), perfect, life: 1.3, hit: new Set(), pierce: k >= 1 ? T.pierce : 0, crit: T.crit + (k >= 1 ? .1 : 0), blast: k >= 1 ? T.blast : T.blast * .5, full: k >= 1 });
   sfx('shoot'); P.vx = -P.facing * (40 + 60 * k);
 }
 // while drawn: a faint line along the shot, brightening to gold at full strength

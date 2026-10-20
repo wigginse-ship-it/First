@@ -156,26 +156,26 @@ function updateEnemy(e, dt) {
       if (!e.struck) {
         e.struck = true;
         const fwd = (P.x - e.x) * (e.around ? Math.sign(P.x - e.x) || 1 : e.facing), reach = e.def.reach + e.hw;
-        if (fwd > -10 && fwd < reach && Math.abs(dyp) < 18 + e.hw * .2 && P.z < 40) playerDamage(edmg(e), e.x, e.hw > 22 || e.boss);
+        if (fwd > -10 && fwd < reach && Math.abs(dyp) < 18 + e.hw * .2 && P.z < 40) hitPlayer({ kind: 'melee', e }, edmg(e), e.x, e.hw > 22 || e.boss);
       }
       if (e.t <= 0) { e.around = false; recover(e, .5); }
       return;
     case 'dash':
       e.t -= dt; e.x += e.facing * (e.plan === 'roll' ? 400 : e.boss ? 330 : 300) * dt; if (e.plan === 'roll') e.rotA += e.facing * dt * 14;
       if (Math.random() < .7) dust(e.x - e.facing * e.hw, e.y, 1);
-      if (!e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 18 && P.z < 30) { e.struck = true; playerDamage(Math.round(edmg(e) * 1.2), e.x, true); }
+      if (!e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 18 && P.z < 30) { e.struck = true; hitPlayer({ kind: 'melee', e }, Math.round(edmg(e) * 1.2), e.x, true); }
       if (e.rolls > 0 && (e.x < leftWall() || e.x > rightWall())) { // the rolling shell rebounds off the edges
         e.rolls--; e.facing *= -1; e.t = .9; e.struck = false; e.x = clamp(e.x, leftWall(), rightWall()); shakeMag = 8; sfx('slam'); dust(e.x, e.y, 10);
       } else if (e.t <= 0 || e.x < leftWall() || e.x > rightWall()) { e.rolls = 0; e.rotA = 0; e.x = clamp(e.x, leftWall(), rightWall()); recover(e, .8); }
       return;
     case 'pounce': case 'leap':
-      if (e.state === 'pounce' && !e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 16 && zOverlap(P.z, 60, e.z, e.hh)) { e.struck = true; playerDamage(edmg(e), e.x, false); }
+      if (e.state === 'pounce' && !e.struck && Math.abs(P.x - e.x) < e.hw + 12 && Math.abs(dyp) < 16 && zOverlap(P.z, 60, e.z, e.hh)) { e.struck = true; hitPlayer({ kind: 'melee', e }, edmg(e), e.x, false); }
       if (e.state === 'leap') e.y += (e.ty - e.y) * Math.min(1, dt * 3);
       return;
     case 'dive': { // the wyrm plunges at the marked spot
       e.t -= dt; const k = 1 - Math.max(0, e.t) / .5;
       e.x = lerp(e.dx0, e.tx, k); e.y = lerp(e.dy0, e.ty, k); e.z = lerp(e.dz0, 0, k);
-      if (!e.struck && Math.abs(P.x - e.x) < e.hw + 10 && Math.abs(P.y - e.y) < 22 && P.z < 40) { e.struck = true; playerDamage(Math.round(edmg(e) * 1.2), e.x, true); }
+      if (!e.struck && Math.abs(P.x - e.x) < e.hw + 10 && Math.abs(P.y - e.y) < 22 && P.z < 40) { e.struck = true; hitPlayer({ kind: 'melee', e }, Math.round(edmg(e) * 1.2), e.x, true); }
       if (e.t <= 0) { e.z = 0; e.grounded = 1.3; shakeMag = 10; sfx('slam'); burst(e.x, e.y, 6, ['#FFFFFF', '#D8A0E8', '#9FD8E0'], 24, 'crystal', 0, true); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .4, max: .4, r: 90, col: '#FFFFFF', flat: 1 }); recover(e, 1.3); }
       return;
     }
@@ -267,7 +267,7 @@ function execute(e) {
   else if (p === 'breath') { [-44, -22, 0, 22, 44].forEach((o, i) => setTimeout(() => !e.dead && bolt(e, clamp(e.y + o, FLOOR_TOP + 6, FLOOR_BOT)), i * 60)); recover(e, 1); }
   else if (p === e.def.close) {
     const R = e.hw + 70, col = { bramble: '#7EA460', vent: '#FFE2C0', coil: '#C8A0FF' }[p];
-    if (Math.hypot(P.x - e.x, (P.y - e.y) * 2.2) < R && P.z < 70) { playerDamage(Math.round(edmg(e) * 1.1), e.x, true); if (p === 'vent' && P.state === 'hurt') P.vx = Math.sign(P.x - e.x || 1) * 360; } // the steam blows you clear
+    if (Math.hypot(P.x - e.x, (P.y - e.y) * 2.2) < R && P.z < 70) { hitPlayer({ kind: 'melee', e }, Math.round(edmg(e) * 1.1), e.x, true); if (p === 'vent' && P.state === 'hurt') P.vx = Math.sign(P.x - e.x || 1) * 360; } // the steam blows you clear
     fx.push({ kind: 'nova', style: p, x: e.x, y: e.y, z: 0, r: R, t: .5, max: .5, col, seed: Math.random() * 6 });
     burst(e.x, e.y, 20, [col, '#FFFFFF'], 22, p === 'bramble' ? 'rock' : p === 'vent' ? 'spark' : 'crystal', 0, true);
     shakeMag = 10; sfx(p === 'vent' ? 'whoosh' : 'slam'); recover(e, 1.1); // it stays spent for a moment afterward: your opening
@@ -311,7 +311,7 @@ function slamLand(e) {
   shakeMag = 9; sfx('slam'); e.vx = 0;
   fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 110, col: '#FFFFFF', flat: 1 });
   burst(e.x, e.y, 4, ['#FFFFFF', '#E9D8B0'], 18, 'rock', 0, true);
-  if (Math.hypot(P.x - e.x, (P.y - e.y) * 2) < 95 && P.z < 16) playerDamage(Math.round(edmg(e) * 1.3), e.x, true);
+  if (Math.hypot(P.x - e.x, (P.y - e.y) * 2) < 95 && P.z < 16) hitPlayer({ kind: 'melee', e }, Math.round(edmg(e) * 1.3), e.x, true);
   recover(e, .9);
 }
 function bolt(e, y) {
@@ -329,6 +329,7 @@ function updateLoot(dt) {
     const d = Math.hypot(P.x - k.x, (P.y - k.y) * 1.5);
     if (P.state === 'dead' || k.t < .5) continue;
     if (k.kind === 'weapon') { if (d < 30) { k.got = true; gainWeapon(k.weapon); } continue; }
+    if (k.kind === 'gear') { if (d < 30) k.got = pickGear(k); continue; } // armor: worn at once if the slot is empty, otherwise into the bag
     if (k.kind === 'arrow') { if (d < 36) { k.got = true; if ((save.arrows || 0) < ARROW_MAX) gainArrow(); } continue; }
     if (k.kind === 'power') { if (k.t > 8) { k.got = true; continue; } if (d < 22) { k.got = true; gainPower(k.power); } continue; } // grab it before it fades
     if (d < 80) { k.x += (P.x - k.x) * Math.min(1, dt * 9); k.y += (P.y - k.y) * Math.min(1, dt * 9); }
@@ -421,7 +422,7 @@ function updateWorld(dt) {
     p.x += p.vx * dt; p.y = clamp(p.y + (p.vy || 0) * dt, FLOOR_TOP + 4, FLOOR_BOT); p.life -= dt; if (p.vz) p.z += p.vz * dt;
     if (p.owner === 'e') {
       if (p.ground && Math.random() < .7) dust(p.x, p.y, 1);
-      if (Math.abs(p.x - P.x) < (p.ground ? 16 : 12) && Math.abs(p.y - P.y) < (p.ground ? 16 : 12) && P.z < (p.ground ? 14 : 40) && P.state !== 'dead') { playerDamage(p.dmg, p.x - p.vx, false); p.life = 0; }
+      if (Math.abs(p.x - P.x) < (p.ground ? 16 : 12) && Math.abs(p.y - P.y) < (p.ground ? 16 : 12) && P.z < (p.ground ? 14 : 40) && P.state !== 'dead') { hitPlayer({ kind: 'proj', p }, p.dmg, p.x - p.vx, false); if (p.owner === 'e') p.life = 0; }
     } else {
       if (p.tornado) { tornadoTick(p, dt); continue; }
       if (p.arrow) { if (p.z < 2) { p.life = 0; dust(p.x, p.y, 2); continue; } if (arrowHit(p)) p.life = 0; continue; } // an arrow aimed low ends in the ground
@@ -433,7 +434,7 @@ function updateWorld(dt) {
   projs = projs.filter(p => p.life > 0 && p.x > camX - 60 && p.x < camX + VW + 60);
   for (const p of props) p.flash = Math.max(0, (p.flash || 0) - dt);
   props = props.filter(p => !p.broken);
-  updateLoot(dt); updateTrumps(dt); updatePowers(dt); updateHazards(dt);
+  updateLoot(dt); updateTrumps(dt); updatePowers(dt); updateGear(dt); updateHazards(dt);
   if (boss && !boss.dead && Math.random() < dt * 14) { // each boss's arena has its own weather
     const kind = boss.def.draw, x = camX + rand(0, VW);
     if (kind === 'mossback') parts.push({ x, y: rand(FLOOR_TOP, FLOOR_BOT), z: 260, vx: rand(-30, 10), vy: 0, vz: -40, life: 5, max: 5, col: pick(['#C9A86A', '#8A6A3A', boss.phase === 3 ? '#FF8A4A' : '#7EA460']), size: 3, shape: 'tuft', rot: rand(0, 6), vr: 2 });

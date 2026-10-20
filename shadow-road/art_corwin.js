@@ -6,7 +6,7 @@
 // silver rose on a short chain.
 // Every piece is drawn by its own function from a flat palette (the look: strings only, so a greyed copy of it greys
 // every piece), and the piece is picked by the look's slot names, so gear can swap one later:
-//   CORWIN.parts.mail[look.mail]       the torso, its collar and jabot
+//   CORWIN.parts.mail[look.mail]       the torso and its collar
 //   CORWIN.parts.pants[look.pants]     thighs, shins, knees and boots
 //   CORWIN.parts.gauntlets[look.gauntlets]  sleeves, forearms, shoulder guards and hands
 //   CORWIN.parts.waist[look.waist]     belts, the skirt tabs at the hips and the scabbard
@@ -143,13 +143,6 @@ const CORWIN = (() => {
       if (Y > -.3) {
         ctx.strokeStyle = C(shade(body, -.6)); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(fx, ty + 7); ctx.lineTo(fx - .4, HIP - 1); ctx.stroke();
         for (let k = 0; k < 5; k++) { const y = ty + 10 + k * 3.3; ctx.fillStyle = C(L.button); circle(fx + .5, y, .78); ctx.fill(); if (DET()) { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(fx + .2, y - .6, .45, .45); } }
-      }
-      if (L.strap) { ctx.strokeStyle = C(L.strap); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-9 * CS + 8 * Y * 0, ty + 3); ctx.lineTo(7 * CS - 4 * Y, HIP - 3); ctx.stroke(); outline(.1); }
-      if (L.plate) { // a steel breastplate over the doublet (the forge's armor), lit and trimmed
-        const pg = ctx.createLinearGradient(-9, ty, 9, ty + 20); pg.addColorStop(0, C(shade(L.plate, -.25))); pg.addColorStop(.55, C(L.plate)); pg.addColorStop(.75, C(shade(L.plate, .45))); pg.addColorStop(1, C(L.plate));
-        ctx.beginPath(); ctx.moveTo(-9, ty + 6); ctx.quadraticCurveTo(0, ty + 3, 9, ty + 6); ctx.lineTo(7.6, ty + 18); ctx.quadraticCurveTo(0, ty + 23, -7.4, ty + 18); ctx.closePath(); ctx.fillStyle = pg; ctx.fill(); outline(1.3);
-        if (L.plateTrim) { ctx.strokeStyle = C(L.plateTrim); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-7.4, ty + 17); ctx.quadraticCurveTo(0, ty + 22, 7.4, ty + 17); ctx.moveTo(fx * .6, ty + 5); ctx.lineTo(fx * .6, ty + 20); ctx.stroke(); }
-        if (L.runes) { ctx.save(); if (!FLASH) { ctx.shadowColor = L.runes; ctx.shadowBlur = 6; } ctx.strokeStyle = C(L.runes); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-4, ty + 9); ctx.lineTo(-2, ty + 12); ctx.lineTo(-4, ty + 15); ctx.moveTo(4, ty + 9); ctx.lineTo(2, ty + 12); ctx.lineTo(4, ty + 15); ctx.stroke(); ctx.restore(); }
       }
     },
     // the high white collar, and the silver rose that pins the cloak
@@ -440,5 +433,7 @@ const CORWIN = (() => {
   const parts = { mail: { doublet }, pants: { trousers }, gauntlets: { vambrace }, waist: { swordbelt } };
   const DEF = { mail: 'doublet', pants: 'trousers', gauntlets: 'vambrace', waist: 'swordbelt' };
   const PART = (slot, L) => parts[slot][L[slot]] || parts[slot][DEF[slot]];
-  return { parts, PART, leg, cloak, roseClasp, get geo() { return CLOAK_GEO; } };
+  // the drawing helpers the armor sets share (art_gear.js): TW is set here the way the doublet sets it
+  const kit = { DET, FINE, metal, rivet, along, ring, torsoPath, setTW(Y) { TW = .62 + .38 * Math.abs(Y); return TW; }, get TW() { return TW; } };
+  return { parts, PART, DEF, leg, cloak, roseClasp, kit, get geo() { return CLOAK_GEO; } };
 })();

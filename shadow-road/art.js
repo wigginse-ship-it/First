@@ -710,7 +710,7 @@ function drawHumanoid(look, pose) {
   }
   ctx.restore();
   if (CP && pose.down) CW.cloak.half(look, CP, false); // knocked down, the cloak lies over him
-  if (CW) { // the cloak over his back when he faces away; otherwise the cloak over his shoulders, his far shoulder guard, collar, jabot and the rose
+  if (CW) { // the cloak over his back when he faces away; otherwise the cloak over his shoulders, his far shoulder guard, collar and the rose
     if (BACK && CP) { CW.cloak.half(look, CP, true); CW.cloak.half(look, CP, false); }
     ctx.save(); upper();
     if (BACK) { CW.PART('mail', look).neck(look, G); if (CP) CW.cloak.hood(look, G, true); }
@@ -818,7 +818,7 @@ function drawTrail(cx, cy, pose) {
   onPage(() => brushArc((o, h) => { ctx.beginPath(); const cut = (hi - lo) * h * .25; ctx.arc(cx, cy, Math.max(1, r + o - 4), lead ? lo + cut : lo, lead ? hi : hi - cut); }, pose.trailCol, (pose.trailW || 6) * 1.6, .85));
 }
 // the Prince of Shadow, after Corwin, as in the reference sheet: shaggy dark-brown hair, green eyes, a black quilted doublet
-// over a white shirt and jabot, steel at the shoulders, forearms and knees, brown leather belts and boots, brass fittings,
+// over a white shirt, steel at the shoulders, forearms and knees, brown leather belts and boots, brass fittings,
 // and a great black cloak brushed with slate and grey. Every color is a flat string, so a greyed copy greys all of it.
 // mail / pants / gauntlets / waist name the piece drawn for each slot (art_corwin.js), so gear can swap them later.
 const HERO = { corwin: 1, mail: 'doublet', pants: 'trousers', gauntlets: 'vambrace', waist: 'swordbelt',
@@ -827,15 +827,11 @@ const HERO = { corwin: 1, mail: 'doublet', pants: 'trousers', gauntlets: 'vambra
   steel: '#AEB4C0', pauldron: '#AEB4C0', leather: '#6A4228', brass: '#CBA251', scab: '#5A3822',
   legs: '#2B2832', boots: '#3E2C22', cuff: '#5C4231',
   cloak: '#16151B', cloakSlate: '#4A566E', cloakGrey: '#62646F', cloakLt: '#9198A8' };
-// the hero's armor shows its forge level: 2 a leather baldric, 3 a steel breastplate over the doublet, 4 bright silver
-// steel and trim, 5 shadow-steel with violet runes and gilt
+// his look comes from the armor he wears (gear.js): each slot he fills swaps that part of his costume for the set's
+// own piece; an empty slot keeps his traveller's costume above
 function heroLook() {
-  const a = save.armor, L = Object.assign({}, HERO);
-  if (a >= 2) L.strap = '#4A3022';
-  if (a >= 3) { L.plate = '#9AA2B2'; L.strap = null; }
-  if (a >= 4) { L.plateTrim = '#E4E8F0'; L.trim = '#D8DEE8'; L.steel = L.pauldron = '#C4CAD6'; } // bright silver, his colors
-  if (a >= 5) { L.plate = '#3A344E'; L.pauldron = '#4C4664'; L.steel = '#5E5878'; L.runes = '#B89CFF'; L.trim = '#D8AA55'; }
-  return L;
+  if (!heroLookCache) heroLookCache = buildHeroLook(save.gear.eq);
+  return Object.assign({}, heroLookCache);
 }
 // human enemies, a third of every world
 const HUMANS = {

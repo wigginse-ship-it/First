@@ -50,7 +50,8 @@ function enterSecret() {
 const boonW = () => [save.weapon, ...WEAPON_ORDER].find(id => id !== 'fists' && save.owned[id] && save.wl[id] < WMAX());
 const BOONS = {
   edge: { name: "The Unicorn's Edge", sub: () => `${WEAPONS[boonW()].name.toUpperCase()} +1 LEVEL`, ok: () => !!boonW(), give() { const id = boonW(); save.wl[id]++; } },
-  heart: { name: 'Heart of the Unicorn', sub: () => '+30 MAX HEALTH, FOR GOOD', ok: () => save.armor < 5, give() { save.armor++; P.hp = maxHp(); } },
+  heart: { name: 'Heart of the Unicorn', sub: () => `AN ENCHANTED PIECE OF ${GEAR_SETS[worldTier()].short.toUpperCase()} ARMOR`, ok: () => true, // armor of this world, always enchanted, always with more health
+    give() { const it = makeGearItem(worldTier(), pick(GEAR_SLOTS), { ench: ['hp', ...(worldTier() >= 3 ? [pick(AFFIX_IDS.filter(k => k !== 'hp'))] : [])] }); if (!pickGear({ item: it })) loot.push(Object.assign(makeLoot('gear', P.x + 30, P.y, 0), { item: it })); P.hp = maxHp(); } },
   quiver: { name: 'Quiver of Starlight', sub: () => save.alv < 5 ? `A FULL QUIVER · ${ARROW_TIERS[save.alv].name.toUpperCase()}` : 'A FULL QUIVER', ok: () => true, give() { save.arrows = ARROW_MAX; if (save.alv < 5) save.alv++; refreshArrows(); } },
   card: { name: 'A Trump, Freshly Drawn', sub: () => { const id = TRUMP_ORDER.find(k => !save.trumps[k]); return id ? `THE ${TRUMPS[id].name.toUpperCase()}` : 'ONE OF YOUR CARDS, INSCRIBED DEEPER'; },
     ok: () => TRUMP_ORDER.some(k => !save.trumps[k] || TL(k) < 3),
@@ -88,15 +89,17 @@ function updateSecret(dt) {
   if ((R.kind === 'hall' || R.kind === 'duel') && gateOpen() && !stage.rewarded) { // the reward for the fight
     stage.rewarded = true; const x = P.x + 60, y = P.y;
     if (R.kind === 'hall') {
-      banner('THE TRUMP’S REWARD', 'SHARDS, SIGILS, ARROWS AND A BOON', 2);
+      banner('THE TRUMP’S REWARD', 'SHARDS, SIGILS, ARROWS AND ARMOR', 2);
       for (let i = 0; i < 10; i++) loot.push(makeLoot('shard', x, y, 6 + stageIdx * 4));
       for (let i = 0; i < 2 + (stageIdx >= 2 ? 1 : 0); i++) loot.push(makeLoot('sigil', x, y, 1));
       for (let i = 0; i < 2; i++) loot.push(makeLoot('arrow', x, y, 1));
+      secretGear(x, y, .6, Math.random() < .35 ? 2 : 1); // and armor
     } else { // Eric yields, and pays: a level for your weapon (or a purse if they're all tempered), and ink
       const id = boonW();
       if (id) { save.wl[id]++; persist(); banner('ERIC YIELDS', `${WEAPONS[id].name.toUpperCase()} +1 LEVEL · AND HIS PURSE`, 2.4); }
       else { banner('ERIC YIELDS', 'HIS PURSE IS YOURS', 2.2); for (let i = 0; i < 8; i++) loot.push(makeLoot('shard', x, y, Math.round(hoardN() / 8))); }
       for (let i = 0; i < 3; i++) loot.push(makeLoot('sigil', x, y, 1));
+      secretGear(x, y, 1); // and a piece of enchanted armor from his own wardrobe
     }
     loot.push(Object.assign(makeLoot('power', x, y, 0), { power: pick(POWER_ORDER) }));
     burst(x, y, 40, ['#EED48A', '#FFFFFF', '#C8607A'], 40, 'spark', 0, true); sfx('weapon');
@@ -249,6 +252,7 @@ const ericDef = () => Object.assign({}, EDEF.chknight || EDEF.bandit, { name: 'E
       for (let i = 0; i < 6; i++) loot.push(makeLoot('shard', p.x, p.y, 5 + stageIdx * 3));
       for (let i = 0; i < 3; i++) loot.push(makeLoot('sigil', p.x, p.y, 1));
       loot.push(makeLoot('arrow', p.x, p.y, 1)); loot.push(Object.assign(makeLoot('power', p.x, p.y, 0), { power: pick(POWER_ORDER) }));
+      secretGear(p.x, p.y, .5); // a piece of armor from Rebma's drowned armoury
       const un = WEAPON_ORDER.filter(id => id !== 'fists' && !save.owned[id]); if (un.length && Math.random() < .35) loot.push(makeLoot('weapon', p.x, p.y, 0, pick(un)));
       return;
     }

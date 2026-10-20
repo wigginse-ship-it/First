@@ -60,7 +60,7 @@ function updatePlayer(dt) {
     P.z += P.vz * dt;
     if (P.z <= 0) { P.z = 0; P.vz = 0; onLand(); }
   }
-  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1) * (pw('haste') ? 1.3 : 1) * roomSlow; // tiny, he scurries
+  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1) * (pw('haste') ? 1.3 : 1) * (1 + gearStat('speed')) * roomSlow; // tiny, he scurries (and some armor is light on its feet)
   if (pressed.trump && !['dead', 'down'].includes(P.state)) playTrump(); // the card can be played whatever else he is doing
   switch (P.state) {
     case 'idle': case 'walk': case 'run': {
@@ -241,7 +241,8 @@ function startDodge() {
   if (!dx && !dy) dx = -P.facing; // dodging in place is the backstep: a hop away that keeps him facing the threat
   if (WEAPONS[P.w].parry && P.z <= 0 && Math.abs(dy) <= Math.abs(dx) * 1.2 && Math.sign(dx) !== P.facing) { startParry(); return; } // a fencer parries instead
   const d = Math.hypot(dx, dy) || 1;
-  P.state = 'dodge'; P.t = .34; P.dq = false; P.dvx = dx / d * 300; P.dvy = dy / d * 150; P.inv = Math.max(P.inv, .36); P.seq = '';
+  const quick = 1 - gearStat('dodgeFast'); // the wayfarer's set: the same dodge, over sooner
+  P.state = 'dodge'; P.dodgeDur = P.t = .34 * quick; P.dq = false; P.dvx = dx / d * 300 / quick; P.dvy = dy / d * 150 / quick; P.inv = Math.max(P.inv, .36 + gearStat('iframes')); P.seq = '';
   // the dash depends on its direction: a low lunge forward, a hopping backstep that keeps you facing the enemy,
   // or a quick sidestep up or down the street
   P.dk = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'side' : Math.sign(dx) === P.facing ? 'fwd' : 'back';
@@ -299,12 +300,12 @@ function doHits() {
 }
 // critical hits: a small base chance, much better from behind or against helpless enemies
 function critChance(e) {
-  let c = .04 + .008 * (save.wl[P.w] - 1);
+  let c = .04 + .008 * (save.wl[P.w] - 1) + gearStat('crit');
   if ((P.x - e.x) * e.facing < 0) c += .12;                 // struck from behind
   if (e.state === 'down' || e.frozen > 0) c += .14;          // staggered, knocked down or frozen
   else if (e.air) c += .05;                                  // juggled in the air
   const fast = { rapier: 1.45, fists: 1.3, staff: 1.75, hammer: .85, sword: .85 }[P.w] || 1; // quick weapons find the gaps more often
-  return Math.min(.35 * Math.max(1, fast), c * fast);
+  return Math.min(.35 * Math.max(1, fast) + gearStat('crit'), c * fast);
 }
 function strike(e, base, dir, m, echo) {
   let raw = base * rand(.9, 1.1) * (stillT > 0 ? (TL('stillness') >= 3 ? 3 : 2) : 1);
@@ -330,6 +331,7 @@ function strike(e, base, dir, m, echo) {
   if (P.shrink < .8) dmg = Math.max(1, Math.round(dmg * .75)); // and a shrunken prince hits softer
   if (pw('might') && !m.trump) dmg = Math.round(dmg * 1.3);
   if (pw('leech') && !m.trump && !e.boss) P.hp = Math.min(maxHp(), P.hp + 1 + dmg * .03);
+  if (!m.trump && P.hp > 0 && gearStat('leech')) { P.leechAcc = (P.leechAcc || 0) + dmg * gearStat('leech'); if (P.leechAcc >= 1) { const h = Math.floor(P.leechAcc); P.leechAcc -= h; P.hp = Math.min(maxHp(), P.hp + h); } } // armor that drinks
   hurtEnemy(e, dmg, dir, m, crit);
   if (P.specialHit && (m === P.move || (P.move && m.key === P.move.key))) learnedFirstHit(e, dir);
   if (broke && !e.dead) { // the guard shatters and leaves it reeling
@@ -359,7 +361,7 @@ function hurtEnemy(e, dmg, dir, m, crit) {
   } else floatText(e.x, e.y, e.z + e.hh + 10, String(dmg), pw === 2 ? '#D8AA55' : '#FFFFFF', 14 + pw * 4);
   sfx(MAT_SFX[e.def.mat], pw * .5);
   comboN++; comboT = 1.8; refreshCombo(true);
-  if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg);
+  if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg * (1 + gearStat('trump')));
   if (e.hp <= 0) { killEnemy(e, dir, m); return; }
   e.cd = Math.max(e.cd, .4);
   if (m.noStun) { e.vx = dir * 25; e.flinch = .08; return; } // an armored elite doesn't even stagger
@@ -440,9 +442,9 @@ function popEnemy(e) { // the body hits the ground in a burst of debris and drop
 function dropLoot(e) {
   const [a, b] = e.def.shards || [30, 40];
   // richer pickings deeper in: each world drops more, and an armored elite drops a lot more
-  maybeDropPower(e); maybeDropArrow(e);
+  maybeDropPower(e); maybeDropArrow(e); maybeDropGear(e);
   if (e.champ) { loot.push(makeLoot('sigil', e.x, e.y, 1)); loot.push(makeLoot('heal', e.x, e.y, 30)); } // a champion always pays
-  const n = Math.round(rand(a, b) * (pw('fortune') ? 2 : 1) * (1 + .2 * save.cycle) * [.47, .77, 1.1, 1.45, 1.8][Math.min(stageIdx, 4)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
+  const n = Math.round(rand(a, b) * (pw('fortune') ? 2 : 1) * (1 + gearStat('shards')) * (1 + .2 * save.cycle) * [.47, .77, 1.1, 1.45, 1.8][Math.min(stageIdx, 4)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
   if (e.boss) for (let i = 0; i < 3 + Math.min(stageIdx, 2); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
   else if (Math.random() < (e.def.sigil || 0) * [1, 1.4, 1.8, 2.1, 2.4][Math.min(stageIdx, 4)] + (e.elite ? .65 : 0) + .04 * Math.min(stageIdx, 4)) loot.push(makeLoot('sigil', e.x, e.y, 1)); // elites usually carry a sigil, the ink for Trump cards
@@ -478,13 +480,17 @@ function hitProp(p, m) {
 function playerDamage(dmg, fromX, big) {
   if (P.inv > 0 || P.state === 'dead' || P.state === 'dodge') return;
   if (P.state === 'parry' && P.t < .28) { riposte(fromX); return; }
+  if (tryReflect()) return; // prism scale: the shot goes back the way it came
+  const raw = dmg;
   if (pw('ward')) dmg = Math.max(1, Math.round(dmg * .5));
+  dmg = armorDamage(dmg); thornsBack(raw); P.hurtT = 0; // armor turns part of every blow aside (gear.js)
   P.hp -= dmg; P.inv = .8; shakeMag = Math.max(shakeMag, big ? 7 : 4); hitstop = .07; hurtFlash = .25;
   floatText(P.x, P.y, 70, '-' + dmg, '#D0566A', 16); sfx('hurt');
   burst(P.x, P.y, 34, ['#D0566A', '#FFFFFF'], 10, 'spark');
   const dir = Math.sign(P.x - fromX) || -P.facing;
   P.vx = dir * (big ? 240 : 130); P.facing = -dir; P.seq = '';
   comboN = 0; refreshCombo();
+  if (P.hp <= 0 && deathSave()) { P.state = 'hurt'; P.knocked = big; P.t = .3; return; }
   if (P.hp <= 0) { P.hp = 0; P.state = 'dead'; P.vz = 220; P.t = 1.6; slowmo = .8; return; }
   P.state = 'hurt'; P.knocked = big; P.t = big ? .45 : .3; if (big) P.vz = 220;
 }

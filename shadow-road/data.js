@@ -174,7 +174,7 @@ function unlockList(id) {
 }
 const WLEARN = 7; // the last level that teaches a move; NG+ tempering goes past it
 const wMult = (id) => 1 + 0.2 * (Math.min(WLEARN, save.wl[id]) - 1) + .06 * Math.max(0, save.wl[id] - WLEARN); // each level to 7 adds 20% and a new move; tempering past 7 adds 6%
-const maxHp = () => 120 + 30 * (save.armor - 1);
+const maxHp = () => gearMaxHp(); // 120, plus what his armor adds (gear.js)
 
 // ---------- enemies ----------
 // move: ground | hop | fly. plans: attack patterns the AI picks from. mat: what flies out when hit.

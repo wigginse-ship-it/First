@@ -153,7 +153,7 @@ function playerPose() {
   } else if (P.state === 'run') { pose.run = 1; pose.lean = .36; pose.flow = 8; if (P.w === 'fists') { pose.arm = 1.35; pose.elbow = 1.45; pose.backArm = 1.5; } else { pose.arm = 1.9; pose.backArm = 1.75; pose.backElbow = -1.2; } } // bare-handed he pumps his arms; armed, the weapon trails and the free arm drives, bent, close at his side
   else if (P.state === 'jump') { pose.crouch = 1; pose.arm = .2; pose.rot = P.vz < 0 ? 0 : 0; pose.flow = 4; }
   else if (P.state === 'dodge') {
-    const k = 1 - P.t / .34;
+    const k = 1 - P.t / (P.dodgeDur || .34);
     if (P.dk === 'fwd') { pose.crouch = 1; pose.run = 1; pose.walk = 1.5; pose.lean = .85; pose.arm = 2.7; pose.backArm = 3; pose.flow = 16; pose.stretch = 1.18; } // flat out, body almost level, arms flung back
     else if (P.dk === 'back') { pose.crouch = 1; pose.kick = k < .55 ? 1 : 0; pose.kickBend = 1; pose.walk = -1.4; pose.lean = -.6 + k * .4; pose.arm = -.6; pose.backArm = -.2; pose.flow = -8; } // pushing off, one leg kicked out, guard up
     else { pose.crouch = 1; pose.walk = 1.4; pose.lean = .2; pose.arm = .3; pose.backArm = 2; } // the stride into Shadow
@@ -422,6 +422,7 @@ function drawLoot(k, t) {
   if (k.kind === 'weapon') { drawWeaponPickup(k, t); return; }
   if (k.kind === 'power') { drawPowerLoot(k, t); return; }
   if (k.kind === 'arrow') { drawArrowLoot(k, t); return; }
+  if (k.kind === 'gear') { drawGearLoot(k, t); return; }
   const x = k.x, y = k.y - k.z - 6 - Math.sin(t * 6 + k.x) * 2;
   shadow(k.x, k.y, 5);
   if (k.kind === 'shard') {
@@ -487,18 +488,19 @@ function drawScene(t) {
   list.push([P.y + .1, () => {
     shadow(P.x, P.y, 13 * Math.max(.5, 1 - P.z / 220));
     if (P.inv > 0 && !['dodge', 'down', 'dead'].includes(P.state) && Math.floor(t * 18) % 2) return;
-    const blink = P.state === 'dodge' && P.dk === 'side' ? Math.max(.1, Math.abs(1 - P.t / .34 - .5) * 2) : 1; // stepping through Shadow, he is barely there mid-step
+    const blink = P.state === 'dodge' && P.dk === 'side' ? Math.max(.1, Math.abs(1 - P.t / (P.dodgeDur || .34) - .5) * 2) : 1; // stepping through Shadow, he is barely there mid-step
     const pose = blendPose(Object.assign(playerPose(), { live: 1 })); // eased from last frame's pose (moves.js)
     if (P.specialT > 0) drawLearnedRim(pose);
     drawPlayerAt(P.x, P.y, P.z, P.facing, pose, blink);
     hatchActor(P.x, P.y - P.z, 13, 50);
   }]);
-  list.push([P.y + .15, () => onMain(() => { drawPowerAura(t); drawAimLine(); })]);
+  list.push([P.y + .15, () => onMain(() => { drawGearAura(t); drawPowerAura(t); drawAimLine(); })]);
   for (const p of projs) list.push([p.y, () => drawProj(p, t)]);
   for (const s of stags) list.push([s.y + .2, () => { ctx.save(); if (s.dir < 0) { ctx.translate(s.x * 2, 0); ctx.scale(-1, 1); } drawStag(s, t); ctx.restore(); }]);
   mechList(list, t); secretList(list, t);
   list.sort((a, b) => a[0] - b[0]).forEach(o => o[1]());
   inkEnd(t);
+  drawGearAura(t, true); // an enchanted piece's motes circle in front of him as well as behind
   for (const p of parts) if (!p.rest) drawPart(p);
   for (const h of hazards) if (h.kind === 'beam') drawHazard(h, t);
   for (const f of fx) drawFx(f);
@@ -632,8 +634,7 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   g.setTransform(s, 0, 0, s, 0, 0);
   // the weapon on its own, laid diagonally across the card
   const tier = id === 'fists' ? 1 : Math.min(7, save.wl[id]);
-  if (id === 'armor') { ctx.translate(32, 33); ctx.scale(.98, .98); drawArmorSuit(save.armor); } // the Rose Mail on its stand, from the front (moves.js)
-  else if (id === 'arrow') { ctx.translate(34, 30); ctx.rotate(-.75); ctx.scale(1.5, 1.5); drawArrowShape(Math.min(5, save.alv || 1), 24); }
+  if (id === 'arrow') { ctx.translate(34, 30); ctx.rotate(-.75); ctx.scale(1.5, 1.5); drawArrowShape(Math.min(5, save.alv || 1), 24); }
   else if (id === 'fists') { // a gauntleted fist, knuckles forward
     ctx.translate(32, 33); ctx.rotate(-.25);
     ctx.fillStyle = C('#3A3A46'); rrect(-15, 2, 14, 15, 3); ctx.fill(); outline(1.2); // the cuff

@@ -33,12 +33,12 @@ function hudTick() {
 }
 
 // ---------- screens ----------
-const OVERLAYS = ['titleOv', 'forgeOv', 'pauseOv', 'overOv', 'winOv'];
+const OVERLAYS = ['titleOv', 'forgeOv', 'pauseOv', 'overOv', 'winOv', 'invOv'];
 function showOnly(id) {
   OVERLAYS.forEach(o => { $('#' + o).hidden = o !== id; });
   app.classList.toggle('nocontrols', id !== null && id !== 'pauseOv');
   app.classList.toggle('playing', id === null);
-  $('#hud').hidden = id === 'titleOv' || id === 'forgeOv' || id === 'winOv';
+  $('#hud').hidden = id === 'titleOv' || id === 'forgeOv' || id === 'winOv' || (id === 'invOv' && typeof invFrom !== 'undefined' && invFrom === 'forge');
 }
 function play(i, zone = 0) {
   save.started = true; persist(); clearInput();
@@ -46,7 +46,7 @@ function play(i, zone = 0) {
   if (zone > 0) { enterZone(zone); const Z = ZONES[i].zones[zone]; banner(Z.title, Z.sub, 2.4); } // a retry starts where you fell
   mode = 'play'; showOnly(null); playMusic(STAGES[i].theme);
 }
-function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
+function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); if (typeof invBtnText === 'function') $('#invBtn').textContent = invBtnText(); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
 function resume() { mode = 'play'; clearInput(); showOnly(null); }
 function gameOver() {
   mode = 'over'; persist();
@@ -58,6 +58,7 @@ function stageClear() {
     if (k.kind === 'shard') { save.shards += k.val; runShards += k.val; }
     else if (k.kind === 'sigil') { save.sigils += k.val; runSigils += k.val; }
     else if (k.kind === 'weapon') save.owned[k.weapon] = true;
+    else if (k.kind === 'gear') sweepGear(k);
   }
   loot = [];
   save.stage += 1; persist();
@@ -112,7 +113,6 @@ const cyc = () => 1 + .5 * (save.cycle || 0);
 const WMAX = () => save.cycle > 0 ? WLEARN + 6 : WLEARN; // past level 7 (new cycles only) each level is a plain damage bump
 // tuned so a world pays for one or two upgrades, no more
 const wCost = (lvl) => lvl < WLEARN ? { s: Math.round([0, 90, 190, 330, 520, 760, 1050][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) } : { s: Math.round((1150 + 120 * (lvl - WLEARN)) * cyc()), g: Math.round((10 + 2 * (lvl - WLEARN)) * cyc()) }; // level 7, the last move, is a step dearer than 6
-const aCost = (lvl) => ({ s: Math.round([0, 100, 220, 380, 600, 900][lvl] * cyc()), g: Math.round([0, 0, 1, 2, 3, 4][lvl] * cyc()) });
 const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
@@ -143,18 +143,6 @@ function renderForge(note) {
     });
     wrap.appendChild(d);
   }
-  const a = save.armor, ac = aCost(a), amax = a >= 5, acan = !amax && save.shards >= ac.s && save.sigils >= ac.g;
-  const d = document.createElement('div'); d.className = 'card';
-  d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">LV ${a}/5</div><div class="nm">Rose Mail</div>
-    <p>Max health ${maxHp()}${amax ? '' : ` → ${maxHp() + 30}`}. Health refills at the start of every world.</p>
-    <button class="buy" type="button" ${acan ? '' : 'disabled'}>${amax ? 'Fully forged' : `Reinforce · ${costTxt(ac)}`}</button>`;
-  drawIcon(d.querySelector('canvas'), 'armor', .78);
-  d.querySelector('button').addEventListener('click', () => {
-    if (!acan) return;
-    save.shards -= ac.s; save.sigils -= ac.g; save.armor++; persist(); sfx('buy');
-    renderForge(`Rose Mail reinforced: max health ${maxHp()}.`);
-  });
-  wrap.appendChild(d);
   // the arrows: five levels, each a better arrow
   const al = Math.min(ARROW_TIERS.length, save.alv || 1), ac2 = arrowCost(al), almax = al >= ARROW_TIERS.length, alcan = !almax && save.shards >= ac2.s && save.sigils >= ac2.g;
   const da = document.createElement('div'); da.className = 'card';
@@ -222,7 +210,7 @@ $('#contBtn').addEventListener('click', () => { audioInit(); if (save.stage > 0)
 $('#newBtn').addEventListener('click', () => {
   audioInit();
   if (save.started && !confirmNew) { confirmNew = true; $('#newBtn').textContent = 'Tap again to erase your save'; return; }
-  confirmNew = false; save = freshSave(); persist(); play(0);
+  confirmNew = false; save = freshSave(); gearChanged(); persist(); play(0);
 });
 $('#walkBtn').addEventListener('click', () => play(Math.min(save.stage, STAGES.length - 1)));
 $('#forgeTitleBtn').addEventListener('click', () => { mode = 'title'; refreshTitle(); showOnly('titleOv'); });
@@ -235,6 +223,7 @@ $('#retryBtn').addEventListener('click', () => play(save.stage));
 $('#overForgeBtn').addEventListener('click', () => openForge('REGROUP AND REFORGE'));
 $('#cycleBtn').addEventListener('click', () => { save.cycle++; save.stage = 0; persist(); openForge('CYCLE ' + (save.cycle + 1) + ' BEGINS'); });
 onKeyMenu = (e) => {
+  if (mode === 'inv') return invKey(e); // the inventory has its own keys (inventory.js)
   if (e.code === 'Enter' || e.code === 'NumpadEnter') { // Enter takes the main choice on any menu
     const btn = { title: $('#contBtn').hidden ? $('#newBtn') : $('#contBtn'), forge: $('#walkBtn'), pause: $('#resumeBtn'), over: document.querySelector('#overOv .cta'), win: document.querySelector('#winOv .cta') }[mode];
     if (btn && document.activeElement?.tagName !== 'BUTTON') { btn.click(); return true; }
