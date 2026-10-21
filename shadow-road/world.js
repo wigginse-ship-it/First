@@ -394,7 +394,7 @@ function updateWorld(dt) {
     }
     for (const d of carriers) if (d.wave === stage.w0 + waveIdx && !save.owned[d.weapon]) spawnQ[d.slot].drop = d.weapon; // nothing marks the carrier
   }
-  if (!stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length && P.x > stage.len - 90) startZoneTrans(); // on to the next place
+  if (!stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length && P.x > stage.len - (typeof exitX === 'function' && typeof threshKind === 'function' && THRESH[threshKind()] ? stage.len - exitX() + 18 : 90)) startZoneTrans(); // on to the next place: you step into the landmark at the end of the road
   if (stage.bossRoom && !bossSpawned && P.x > stage.len - VW * .75) {
     setZoom(VIEW_BOSS); // pull the camera back so the whole arena and the boss fit
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;
