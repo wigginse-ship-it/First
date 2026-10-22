@@ -224,7 +224,7 @@ function approach(e, tx, ty, dt, k) {
   e.y = clamp(e.y, FLOOR_TOP + 8, FLOOR_BOT);
 }
 // bosses take longer to wind up, so every big attack can be read and dodged
-const BOSS_WIND = { bramble: 1.1, vent: 1.15, coil: 1.05, quake: .9, mines: .7, magnet: .8, dive: .95, orbit: .7, prismwall: .6, bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
+const BOSS_WIND = { submerge: .7, bramble: 1.1, vent: 1.15, coil: 1.05, quake: .9, mines: .7, magnet: .8, dive: .95, orbit: .7, prismwall: .6, bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
 // in the third world, enemies cover for each other: when one winds up, a nearby ally may attack with it
 function recruitPartner(e) {
   if (e.boss || stageIdx < 2 || Math.random() > .35) return;
