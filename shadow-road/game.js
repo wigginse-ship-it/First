@@ -133,7 +133,7 @@ function updatePlayer(dt) {
     case 'dodge':
       P.t -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
       if (pressed.light) P.dq = 'L'; if (pressed.heavy) P.dq = unlocked(w.tree.RH) ? 'H' : 'L'; // attack out of a roll
-      if (P.dq && P.t < .2) { const k = P.dq, dv = Math.abs(P.dvx); P.dq = false; P.inv = Math.max(P.inv, .15); begin(k === 'H' ? w.tree.RH : w.tree.R); if (k !== 'H' && Math.sign(P.dvx) === P.facing) { P.vx = P.facing * Math.max(Math.abs(P.vx), dv * 1.2); P.dodgeCarry = 1; } break; } // a dodge-attack keeps the dodge's momentum
+      if (P.dq && P.t < .2) { const k = P.dq, dv = Math.abs(P.dvx); P.dq = false; P.inv = Math.max(P.inv, .15); begin(k === 'H' ? w.tree.RH : w.tree.R); if (k !== 'H' && P.w === 'rapier' && Math.sign(P.dvx) === P.facing) { P.vx = P.facing * Math.max(Math.abs(P.vx), dv * 1.2); P.dodgeCarry = 1; } break; } // a dodge-attack keeps the dodge's momentum
       P.ghostT -= dt;
       if (P.ghostT <= 0) { // the forward lunge drags a dark trail of afterimages; the backstep leaves a couple of pale ones
         if (P.dk === 'fwd') { P.ghostT = .022; addGhost(true); if (Math.random() < .6) fx.push({ kind: 'speed', x: P.x, y: P.y, z: rand(10, 50), dir: P.facing, t: .22, max: .22 }); }

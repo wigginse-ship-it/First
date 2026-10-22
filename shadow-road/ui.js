@@ -125,6 +125,7 @@ function renderForge(note) {
   $('#fShards').textContent = save.shards; $('#fSigils').textContent = save.sigils;
   const wrap = $('#forgeCards'); wrap.innerHTML = '';
   for (const id of WEAPON_ORDER) {
+    if (id === 'fists') continue; // bare hands have nothing to forge
     const w = WEAPONS[id], owned = save.owned[id], lvl = save.wl[id], max = lvl >= WMAX(), c = wCost(lvl);
     const bare = id === 'fists'; // fists never level up
     const can = owned && !bare && !max && save.shards >= c.s && save.sigils >= c.g;
