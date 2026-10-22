@@ -60,6 +60,7 @@
   .pause { pointer-events: auto; width: 40px; height: 48px; border-radius: 6px; color: #EBCB7C; font: 700 13px var(--label); cursor: pointer; border: 1.5px solid transparent;
     background: linear-gradient(150deg, rgba(42,32,24,.85), rgba(12,10,8,.85) 60%) padding-box, linear-gradient(125deg, #6A4A18, #E2BE66 18%, #FFF2BE 26%, #B0812D 45%, #6A4A18 62%, #E8C878 85%, #6A4A18) border-box;
     box-shadow: inset 0 0 0 2px rgba(0,0,0,.55), inset 0 0 0 2.8px rgba(214,174,88,.4), 0 2px 8px rgba(0,0,0,.5); text-shadow: 0 1px 0 #000; }
+  #muteBtn { display: grid; place-items: center; margin-right: 6px; } #muteBtn svg { width: 20px; height: 20px; }
   #bossbar { position: absolute; bottom: calc(var(--fi, 14px) + 6px); left: 50%; transform: translateX(-50%); width: min(34%, 360px); display: grid; gap: 3px; justify-items: center; pointer-events: none; }
   #bossbar span { font: 700 14px var(--label); color: var(--text); text-shadow: 0 2px 0 rgba(0,0,0,.6), 0 0 12px rgba(255,111,181,.8); white-space: nowrap; }
   #bossbar .bar { width: 100%; height: 14px; border-color: var(--gold); position: relative; }
@@ -377,6 +378,7 @@
     </div>
     <div class="hud-r">
       <div class="mats"><span class="s">&#9670; <span id="shards">0</span></span><span class="g">&#10022; <span id="sigils">0</span></span></div>
+      <button class="pause" id="muteBtn" type="button" aria-label="Mute sound" title="Mute (M)"></button>
       <button class="pause" id="pauseBtn" type="button" aria-label="Pause">II</button>
     </div>
     <div id="bossbar" hidden><span id="bossname"></span><div class="bar"><i id="bosshp"></i></div></div>
