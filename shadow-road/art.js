@@ -268,10 +268,46 @@ function silverRose(x, y, s, stem, base = '#A4AAB8') {
   ctx.restore();
 }
 // ---------- weapons (drawn in hand space: the hand is at (16,0), pointing along +x) ----------
-function gripHand(col) { // a gloved hand closed around a haft
-  if (HAND_S !== 1) { ctx.save(); ctx.translate(17, 0); ctx.scale(HAND_S, HAND_S); ctx.translate(-17, 0); const s = HAND_S; HAND_S = 1; gripHand(col); HAND_S = s; ctx.restore(); return; }
-  rrect(13.6, -3.8, 7, 7.6, 2.4); ctx.fillStyle = C(col); ctx.fill(); outline(1.1);
-  ctx.strokeStyle = C(shade(col, -.55)); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(15.8, -3.4); ctx.lineTo(15.8, 3.4); ctx.moveTo(18, -3.4); ctx.lineTo(18, 3.4); ctx.stroke();
+// A hand closed round a handle, drawn in two layers so the handle passes through the fist: the back layer (the palm
+// and the far side of the fist) is laid down before the handle, the front one (the fingers curled over the front of
+// the handle, their knuckles, and the thumb wrapped round from the other side) after it. The fist is centred at
+// GRIP.cx along the handle (hand space: the handle runs along x), turned by GRIP.rot (a bow's riser runs across).
+// gripHand() draws the front layer when the back was laid already (GRIP.back), else the whole fist.
+const GRIP = { cx: 17.1, rot: 0, back: false };
+function gripCX(kind) { // where the fist closes on each weapon: a sword's or a rapier's on the grip below the guard
+  return kind === 'sword' || kind === 'grayblade' || kind === 'rapier' ? 15.9 - 3.7 * HAND_S : kind === 'shortbow' ? 15.5 : 17.1;
+}
+function gripFrame(cx, rot, fn) { ctx.save(); ctx.translate(cx, 0); if (rot) ctx.rotate(rot); ctx.scale(HAND_S, HAND_S); fn(); ctx.restore(); }
+function gripBack(col, cx = GRIP.cx, rot = GRIP.rot) {
+  gripFrame(cx, rot, () => {
+    if (HAND_PLATE) { ctx.beginPath(); ctx.moveTo(-6.6, -5.4); ctx.lineTo(-3.2, -4.4); ctx.lineTo(-3.2, 4.4); ctx.lineTo(-6.6, 5.4); ctx.closePath(); ctx.fillStyle = C(shade(col, -.12)); ctx.fill(); outline(.8); } // the gauntlet's cuff
+    rrect(-3.7, -4.4, 7.4, 8.6, 2.6); ctx.fillStyle = C(shade(col, -.3)); ctx.fill(); outline(1.1); // the palm and the far side of the fist
+  });
+}
+function gripFront(col, cx = GRIP.cx, rot = GRIP.rot) {
+  gripFrame(cx, rot, () => {
+    const det = !FLASH && !TINT;
+    // four fingers, little finger (toward the pommel) to index (toward the guard), each curled over the front of the handle
+    for (const [x, t, b] of [[-2.76, -2.9, 3.3], [-.92, -3.5, 3.9], [.92, -3.6, 4], [2.76, -3.4, 3.8]]) {
+      rrect(x - .95, t, 1.9, b - t, .92);
+      if (det) { const g = ctx.createLinearGradient(0, t, 0, b); g.addColorStop(0, shade(col, .1)); g.addColorStop(.55, col); g.addColorStop(1, shade(col, -.22)); ctx.fillStyle = g; } else ctx.fillStyle = C(col);
+      ctx.fill(); outline(.65);
+      if (det) {
+        ctx.fillStyle = shade(col, .3); ell(x + .1, t + .62, .62, .42); ctx.fill(); // the knuckle
+        ctx.strokeStyle = shade(col, -.45); ctx.lineWidth = .35; ctx.beginPath(); ctx.moveTo(x - .6, 1.1); ctx.quadraticCurveTo(x, 1.4, x + .6, 1.1); ctx.stroke(); // the middle joint's crease
+      }
+      if (HAND_PLATE) { ctx.fillStyle = C(shade(col, .14)); rrect(x - .95, t, 1.9, 2.2, .8); ctx.fill(); outline(.45); } // the gauntlet's lames over the knuckles
+    }
+    // the thumb, wrapped round from the other side and laid across the index finger
+    const th = () => { ctx.beginPath(); ctx.moveTo(-1.6, -4.3); ctx.quadraticCurveTo(2.7, -4.9, 3.1, -.6); }; ctx.lineCap = 'round';
+    th(); ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.lineWidth = 2.1 + 1.3 * OUTK; ctx.stroke(); th(); ctx.strokeStyle = C(shade(col, .06)); ctx.lineWidth = 2.1; ctx.stroke();
+    if (det) { ctx.fillStyle = shade(col, .35); ell(3.05, -1.05, .55, .4, 1.2); ctx.fill(); } // the thumbnail
+    if (HAND_PLATE && det) { ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fillRect(-2.9, -3.2, 2.4, .5); }
+  });
+}
+function gripHand(col) { // a gloved hand closed around a haft (the weapon's last stroke)
+  if (GRIP.back) { GRIP.back = false; gripFront(col); return; }
+  gripBack(col); gripFront(col);
 }
 function drawWeapon(kind, pose) {
   if (kind === 'fists' || !kind) { drawHand((pose && pose.glove) || '#FFF1E0', pose && pose.openHand); return; }
@@ -696,6 +732,11 @@ function drawHumanoid(look, pose) {
   if (!across) farHand();
   };
   const farHand = () => { ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(bha); ctx.translate(-13, 0); drawHand(shade(look.glove || skin, -.18), pose.twoHand ? 0 : pose.openHand); ctx.restore(); }; // the far hand
+  // on a two-handed grip the far hand closes round the handle too, in two layers either side of it, just behind the weapon hand
+  // (on a sword's grip the two fists sit one against the other below the guard; on a haft, where the old hand was)
+  const farGrip = (front) => { const kind = pose.weapon || look.weapon, gap = pose.gripGap || 4.5 * HAND_S;
+    const cx = (kind === 'sword' || kind === 'grayblade') && !pose.gripGap ? 13 + gripCX(kind) - 7.4 * HAND_S - (9.5 - gap) : 14 + 3.5 * HAND_S;
+    ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(bha); ctx.translate(-13, 0); (front ? gripFront : gripBack)(shade(look.glove || skin, -.18), cx, 0); ctx.restore(); };
   const overCloak = pose.backOver && !across && !BACK; // the fencer's free arm is shown over his cloak: raised behind, thrown back, or the hand in the small of his back
   if (!across && !overCloak) farArm();
   const bpA = clamp((ba - 1.25) * .3, -.5, .5); // his far shoulder guard: hidden by his chest in profile, over the cloak when he faces us
@@ -880,9 +921,9 @@ function drawHumanoid(look, pose) {
   }
   ctx.restore();
   if (BACK && atkVis) frontArm(); // (still in the upper body's frame)
-  if (across) { farArm(); if (arms) farPauldron(() => arms.pauldron(look, bsx, bsy - 1, bpA, true, .5), Y >= 0 ? Y : 1); } // (still in the upper body's frame here)
+  if (across) { farArm(); farGrip(false); if (arms) farPauldron(() => arms.pauldron(look, bsx, bsy - 1, bpA, true, .5), Y >= 0 ? Y : 1); } // (still in the upper body's frame here)
   if (!BACK) frontArm();
-  if (across) farHand(); // its hand closed on the hilt over the grip, beside the weapon hand
+  if (across) farGrip(true); // its hand closed on the hilt over the grip, beside the weapon hand
   // front arm + weapon: shoulder, a bent elbow, forearm, hand
   function frontArm() {
   const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw;
@@ -905,7 +946,10 @@ function drawHumanoid(look, pose) {
   if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); }
   if (!pose.elbow) ctx.translate(reach - 15, 0);
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
-  drawWeapon(pose.weapon || look.weapon, pose);
+  { const kind = pose.weapon || look.weapon, held = ['hammer', 'staff', 'sword', 'grayblade', 'rapier', 'shortbow'].includes(kind) && !pose.noHand; // (the weapons whose last stroke is the hand)
+    if (held) { GRIP.cx = gripCX(kind); GRIP.rot = kind === 'shortbow' ? Math.PI / 2 : 0; gripBack(look.glove || '#FFF1E0'); GRIP.back = true; } // the palm, under the handle
+    drawWeapon(kind, pose); // (its last stroke closes the fingers over the handle: gripHand)
+    GRIP.back = false; GRIP.cx = 17.1; GRIP.rot = 0; }
   ctx.restore();
   if (arms) farPauldron(() => arms.pauldron(look, PX(1, SWL), SHO + .4, clamp((arm - 1.1) * .3, -.45, .45), BACK, .54), Y >= 0 ? 1 : -Y); // (his back to us, this is the far shoulder)
   else if (look.pauldron) { ctx.save(); ctx.translate(PX(1, 9.5) - 1, 0);
@@ -945,7 +989,7 @@ function drawTrail(cx, cy, pose) {
 // and a great black cloak brushed with slate and grey. Every color is a flat string, so a greyed copy greys all of it.
 // mail / pants / gauntlets / waist name the piece drawn for each slot (art_corwin.js), so gear can swap them later.
 const HERO = { corwin: 1, mail: 'doublet', pants: 'trousers', gauntlets: 'vambrace', waist: 'swordbelt',
-  skin: '#D2A480', glove: '#C89A76', hair: '#33231A', hairLt: '#7E5A3A', hairDk: '#140D09', eye: '#3FA08A',
+  skin: '#D8AC88', glove: '#C89A76', hair: '#33231A', hairLt: '#7E5A3A', hairDk: '#140D09', eye: '#3FA08A',
   body: '#1E1C24', lattice: '#43404F', button: '#BDB6A6', trim: '#BC9440', shirt: '#E9E3D5', sleeve: '#E9E3D5',
   steel: '#A4A4A8', pauldron: '#A4A4A8', leather: '#6A4228', brass: '#CBA251', scab: '#5A3822',
   legs: '#2B2832', boots: '#3E2C22', cuff: '#5C4231',

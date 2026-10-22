@@ -111,10 +111,12 @@ function drawArrowLoot(k, t) { // an arrow stuck in the ground, gleaming
 // the short bow, drawn in his hand while he looses
 function drawShortBow(pose) {
   const k = pose.draw || 0;
+  ctx.save(); ctx.translate(-9.5, 0); // (the riser sits in his fist)
   ctx.strokeStyle = C('#5A3A22'); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(10, 0, 15, -1.2, 1.2); ctx.stroke(); outline(.1);
   ctx.strokeStyle = C('#E8E0D0'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(10 + Math.cos(-1.2) * 15, Math.sin(-1.2) * 15); ctx.lineTo(10 - k * 10, 0); ctx.lineTo(10 + Math.cos(1.2) * 15, Math.sin(1.2) * 15); ctx.stroke();
   if (k > 0 && k < 1) { ctx.save(); ctx.translate(26, 0); drawArrowShape(Math.min(5, save.alv || 1), 18 + k * 8); ctx.restore(); }
-  gripHand(pose.glove || '#2E2C36');
+  ctx.restore();
+  gripHand(pose.glove || '#2E2C36'); // (its fingers wrapped round the riser: GRIP is turned across for the bow)
 }
 // the quiver count on the HUD, and the BOW button on touch screens
 let arrowHudEl = null;

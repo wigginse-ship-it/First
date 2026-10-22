@@ -47,7 +47,7 @@ function attackStance(pose, m, k) {
 const RAPIER_TUCK = { LL: 1, M: 1, RIP: 1 };
 function rapierOffHand(pose, mode, x = 0, wind = 0) {
   pose.backOver = 1; // (drawn over the cloak, so it reads)
-  if (mode === 'tuck') { pose.backArm = 2.3; pose.backElbow = 1.4; pose.backWrist = .35; pose.openHand = 0; pose.backHold = 1; return; } // the elbow out behind, the forearm folded down and in across the small of his back
+  if (mode === 'tuck') { pose.backArm = 2.5; pose.backElbow = 1.75; pose.backWrist = .35; pose.openHand = 0; pose.backHold = 1; return; } // the elbow out behind, the forearm folded down and in across the small of his back
   const down = 2.42 - (pose.lean || 0) * .2; // (the arm is drawn in the leaning chest's frame: down the line of the rear leg on the street)
   pose.backArm = lerp(3.32 + .1 * wind, down, x); pose.backElbow = lerp(-1.22 - .08 * wind, .06, x); pose.backWrist = lerp(.95, -.2, x); pose.openHand = 1; pose.backHold = 1;
 }
