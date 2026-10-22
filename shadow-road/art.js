@@ -434,6 +434,73 @@ function seg(ax, ay, bx, by, wa, wb, col, bul = 0) {
   }
   path(); outline(1.1);
 }
+// ---------- skinned limbs (the prince) ----------
+// One arm or leg drawn as a single closed outline down its chain of joints (shoulder-elbow-wrist, hip-knee-ankle)
+// instead of two sticks pinned together. Both edges are offset from the bones by a width profile (W: the root, the
+// upper swell, the joint, where the upper swell sits, the lower swell, the end, where it sits) and traced with smooth curves,
+// so the joint reads as one bending limb: the outside of the bend stays round (an arc about the joint), the inside
+// compresses into a soft crease where the two offset edges meet. The root is left un-inked so it melts into the
+// shoulder or the seat it grows out of. col2 (optional) colors the lower half from just past the joint: a boot shaft
+// under the knee. Shadow along the +n edge and a rim of light along the other, as seg() does.
+const SKL = [], SKR = []; // reused point buffers: [x0, y0, x1, y1, ...] down each edge
+const skW = (a, m, b, u, t) => t < u ? a + (m - a) * (1 - Math.cos(Math.PI * t / u)) / 2 : m + (b - m) * (1 - Math.cos(Math.PI * (t - u) / (1 - u))) / 2;
+function skinEdges(ax, ay, bx, by, cx, cy, W, s) {
+  let d1x = bx - ax, d1y = by - ay; const l1 = Math.hypot(d1x, d1y) || 1e-3; d1x /= l1; d1y /= l1;
+  let d2x = cx - bx, d2y = cy - by; const l2 = Math.hypot(d2x, d2y) || 1e-3; d2x /= l2; d2y /= l2;
+  const cr = d1x * d2y - d1y * d2x, th = Math.acos(clamp(d1x * d2x + d1y * d2y, -1, 1)), j = W[2] * s / 2;
+  const cut = j * Math.tan(Math.min(th, 2.5) / 2) * 1.05; // how far the inside edges overlap at the bend
+  SKL.length = 0; SKR.length = 0;
+  for (const sd of [1, -1]) {
+    const E = sd > 0 ? SKL : SKR, inner = th > .06 && (cr > 0) === (sd > 0);
+    for (const t of [0, .22, .45, .7, .88]) { if (inner && (1 - t) * l1 < cut) continue; const w = skW(W[0], W[1], W[2], W[3], t) * s / 2;
+      E.push(ax + d1x * t * l1 - d1y * sd * w, ay + d1y * t * l1 + d1x * sd * w); }
+    if (th <= .06) E.push(bx - d1y * sd * j, by + d1x * sd * j);
+    else if (inner) { // the crease: where the two inside edges meet, pulled in a little as the flesh compresses
+      let nx = -d1y - d2y, ny = d1x + d2x; const nl = Math.hypot(nx, ny) || 1; nx = nx / nl * sd; ny = ny / nl * sd;
+      const r = Math.min(j * 1.25, j / Math.max(.3, Math.cos(th / 2))) * .88; E.push(bx + nx * r, by + ny * r);
+    } else { // round over the outside of the joint
+      const a0 = Math.atan2(d1x * sd, -d1y * sd); let da = Math.atan2(d2x * sd, -d2y * sd) - a0; da = Math.atan2(Math.sin(da), Math.cos(da));
+      for (const q of [0, .5, 1]) { const a = a0 + da * q, r = j * (1.03 + .05 * Math.sin(Math.PI * q)); E.push(bx + Math.cos(a) * r, by + Math.sin(a) * r); }
+    }
+    for (const t of [.12, .3, .55, .8, 1]) { if (inner && t * l2 < cut) continue; const w = skW(W[2], W[4], W[5], W[6], t) * s / 2;
+      E.push(bx + d2x * t * l2 - d2y * sd * w, by + d2y * t * l2 + d2x * sd * w); }
+  }
+  return { d1x, d1y, d2x, d2y, th, cr, j };
+}
+function skTrace(E, rev, first) { // a smooth curve through an edge's points (midpoint quadratics)
+  const n = E.length / 2, at = (i) => (rev ? n - 1 - i : i) * 2;
+  let o = at(0); if (first) ctx.moveTo(E[o], E[o + 1]); else ctx.lineTo(E[o], E[o + 1]);
+  for (let i = 1; i < n - 1; i++) { const p = at(i), q = at(i + 1); ctx.quadraticCurveTo(E[p], E[p + 1], (E[p] + E[q]) / 2, (E[p + 1] + E[q + 1]) / 2); }
+  o = at(n - 1); ctx.lineTo(E[o], E[o + 1]);
+}
+function skinLimb(ax, ay, bx, by, cx, cy, W, s, col, col2, split = .5) {
+  const g = skinEdges(ax, ay, bx, by, cx, cy, W, s), ra = W[0] * s / 2, rc = W[5] * s / 2;
+  const a1 = Math.atan2(g.d1y, g.d1x), a2 = Math.atan2(g.d2y, g.d2x);
+  const path = (close) => { ctx.beginPath(); skTrace(SKL, false, true); ctx.arc(cx, cy, rc, a2 + Math.PI / 2, a2 - Math.PI / 2, true); skTrace(SKR, true, false);
+    if (close) { ctx.arc(ax, ay, ra, a1 - Math.PI / 2, a1 - Math.PI * 1.5, true); ctx.closePath(); } };
+  path(true); ctx.fillStyle = C(col); ctx.fill();
+  const det = !FLASH && !TINT;
+  if (col2 || det) {
+    ctx.save(); path(true); ctx.clip();
+    if (col2) { // the lower half in its own color, from just past the joint
+      const ox = bx + g.d2x * split * s, oy = by + g.d2y * split * s, w = W[4] * s * .75, L = Math.hypot(cx - bx, cy - by) + 12;
+      ctx.beginPath(); ctx.moveTo(ox - g.d2y * w, oy + g.d2x * w); ctx.lineTo(ox + g.d2y * w, oy - g.d2x * w); ctx.lineTo(ox + g.d2y * w + g.d2x * L, oy - g.d2x * w + g.d2y * L); ctx.lineTo(ox - g.d2y * w + g.d2x * L, oy + g.d2x * w + g.d2y * L); ctx.closePath();
+      ctx.fillStyle = C(col2); ctx.fill();
+    }
+    if (det) {
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(12,6,16,.34)'; ctx.lineWidth = (W[1] + W[4]) * s * .3; ctx.beginPath(); skTrace(SKL, false, true); ctx.stroke(); // the shadowed side
+      ctx.strokeStyle = 'rgba(255,248,236,.3)'; ctx.lineWidth = 1.7; ctx.beginPath(); skTrace(SKR, false, true); ctx.stroke(); // light along the other
+      if (g.th > .45) { // the crease on the inside of the bend
+        const sd = g.cr > 0 ? 1 : -1; let nx = -g.d1y - g.d2y, ny = g.d1x + g.d2x; const nl = Math.hypot(nx, ny) || 1; nx = nx / nl * sd; ny = ny / nl * sd;
+        const r = g.j * Math.min(1.1, .9 / Math.max(.3, Math.cos(g.th / 2)));
+        ctx.strokeStyle = 'rgba(12,6,16,.5)'; ctx.lineWidth = .75; ctx.beginPath(); ctx.moveTo(bx + nx * r, by + ny * r); ctx.lineTo(bx + nx * r * .3, by + ny * r * .3); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  path(false); ctx.lineJoin = 'round'; outline(1.1);
+}
 // a booted foot, toe forward: shaft, heel, a thick sole and a shine on the toe
 function boot(x, col) {
   ctx.beginPath(); ctx.moveTo(x - 3.4, -9); ctx.lineTo(x - 4, -1.4); ctx.lineTo(x - 4.4, 0); ctx.lineTo(x + 6.6, 0); ctx.quadraticCurveTo(x + 7, -2.8, x + 4.6, -3.8); ctx.quadraticCurveTo(x + 2.4, -4.6, x + 2.2, -9); ctx.closePath();
@@ -460,7 +527,7 @@ function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1, LS = 1) {
   const bootAt = (x, y, ang, col) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.translate(-1, 9); foot(col); ctx.restore(); deco(); };
   const footAt = (x, col, rot = 0) => { ctx.save(); ctx.translate(x, 0); if (rot) ctx.rotate(rot); foot(col); ctx.restore(); deco(); };
   const lw = pose.kickStyle === 'drop' ? 1.25 : 1, limb = (h, kn, ft, col) => {
-    if (cw) { const far = col !== legs; cw.thigh(look, h[0], h[1], kn[0], kn[1], far, lw / LS); cw.shin(look, kn[0], kn[1], ft[0], ft[1], far, lw / LS); last = [h, kn, ft, far, lw / LS]; return; }
+    if (cw) { const far = col !== legs; CORWIN.legSkin(look, h[0], h[1], kn[0], kn[1], ft[0], ft[1], far, lw / LS, cw); last = [h, kn, ft, far, lw / LS]; return; }
     seg(h[0], h[1], kn[0], kn[1], 8.4 * lw, 6.6 * lw, col, .9); seg(kn[0], kn[1], ft[0], ft[1], 6.6 * lw, 5 * lw, col, .8); };
   // turned, each leg is foreshortened along his facing and set out to its own side; the nearer one is drawn last
   const SX = pose.kickStyle === 'drop' ? 1 : Math.max(.4, CS); // the dropkick's legs point straight along the body: turning doesn't shorten them
@@ -503,7 +570,8 @@ function drawKickLegs(look, pose, HIP, hx, Y = 0, CS = 1, LS = 1) {
     const kn = [L(13, 17, out), L(HIP - 7, HIP - 5, out)], ft = [L(12, 35, out), L(HIP + 6, HIP - 9, out)];
     kicker = () => side(4, () => { limb([2 + hx, HIP], kn, ft, kickFar ? shade(legs, -.15) : legs); bootAt(ft[0], ft[1], L(.2, -Math.PI / 2 - .12, out), kickFar ? shade(look.boots, -.1) : look.boots); });
   }
-  if (kickFar) { kicker(); support(); } else { support(); kicker(); }
+  const seat = () => { if (cw) side(0, () => CORWIN.seat(look, -2 + hx, 2 + hx, HIP, lw / LS, 4)); }; // the thighs grow out of one seat
+  if (kickFar) { kicker(); seat(); support(); } else { support(); seat(); kicker(); }
   ctx.restore();
 }
 // where the weapon's grip is, a little below the weapon hand, in the upper body's frame: the same chain of transforms
@@ -525,6 +593,8 @@ function drawHumanoid(look, pose) {
   // the prince can turn: Y is how far he has turned from profile toward the viewer (+1, chest to us) or away (-1, his back)
   const Y = look.corwin ? clamp(pose.Y ?? pose.yaw ?? 0, -1, 1) : 0, CS = Math.sqrt(1 - Y * Y), BACK = Y < -.35;
   const PX = (fx, lz) => fx * CS - lz * Y; // where a point lands as he turns: fx along his facing, lz out to his near side
+  // his hips can lead his chest round (YL: the turn of the hips and legs; the hips start each blow, the shoulders follow)
+  const YL = look.corwin ? clamp(pose.YL ?? Y, -1, 1) : Y, CSL = Math.sqrt(1 - YL * YL), PXL = (fx, lz) => fx * CSL - lz * YL;
   const ASX = Math.max(.32, CS); // arms swinging fore and aft foreshorten as he turns
   const CW = look.corwin ? CORWIN : null, arms = CW ? CW.PART('gauntlets', look) : null; // the prince's own costume and cloak (art_corwin.js)
   HAND_PLATE = !!(CW && look.gauntPlate);
@@ -546,7 +616,8 @@ function drawHumanoid(look, pose) {
   const skin = look.skin || '#C9A07E', sleeve = look.sleeve || look.body;
   // the whole upper body bends at the waist; as it tips forward the hips slide back to keep his weight over his feet,
   // and as it arches back they push forward
-  const LEAN = ((pose.lean || 0) + (gait ? Math.sin(walk * 2) * .025 : 0)) * (.25 + .75 * CS), HX = clamp(-LEAN * 6, -5, 5) * CS; // seen from the front, a bend is mostly toward or away from us
+  const LEAN = ((pose.lean || 0) + (gait ? Math.sin(walk * 2) * .025 : 0)) * (.25 + .75 * CS), HX = (clamp(-LEAN * 6, -5, 5) + (pose.shift || 0)) * CS; // seen from the front, a bend is mostly toward or away from us
+  // (shift: his weight carried forward over the front foot as a blow lands, back over the rear one as he loads)
   const upper = () => { ctx.translate(HX, HIP); ctx.rotate(LEAN); ctx.translate(0, -HIP); }, HXL = HX / LS;
   // his cloak: where it hangs this frame, then drawn in layers: the far half behind everything, the near half behind
   // his legs and in front of his far arm, and the whole of it over him when his back is to us
@@ -590,7 +661,7 @@ function drawHumanoid(look, pose) {
   let bex = bsx + Math.cos(ba) * 10 * AS * bl * ASX, bey = bsy + Math.sin(ba) * 10 * AS * bl, bwx = bex + Math.cos(ba + bb) * 9 * AS * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * AS * bl;
   let bha = Math.atan2(Math.sin(ba + bb), Math.cos(ba + bb) * ASX); // the far hand's angle
   if (pose.twoHand) { // both hands on the grip: the far hand is solved onto the hilt, just below the weapon hand, every frame
-    const g = twoHandGrip(pose, PX, SHO, sw, armSw, ASX, AS, SWL), wx = g.x - Math.cos(g.ang) * 4.5 * HAND_S, wy = g.y - Math.sin(g.ang) * 4.5 * HAND_S;
+    const g = twoHandGrip(pose, PX, SHO, sw, armSw, ASX, AS, SWL), gap = pose.gripGap || 4.5 * HAND_S, wx = g.x - Math.cos(g.ang) * gap, wy = g.y - Math.sin(g.ang) * gap; // (a staff is held with the hands apart)
     const dx = wx - bsx, dy = wy - bsy, d = Math.hypot(dx, dy) || 1e-3, k = Math.max(1, d / (18.6 * AS)), L1 = 10 * AS * k, L2 = 9 * AS * k; // a long reach stretches the shoulder through
     const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), b0 = Math.atan2(dy, dx);
     const e1 = [bsx + Math.cos(b0 + A) * L1, bsy + Math.sin(b0 + A) * L1], e2 = [bsx + Math.cos(b0 - A) * L1, bsy + Math.sin(b0 - A) * L1];
@@ -598,7 +669,7 @@ function drawHumanoid(look, pose) {
   }
   const across = pose.twoHand && !BACK; // a two-handed grip: the far arm reaches across his chest, drawn over it
   const farArm = () => {
-  if (arms) { arms.sleeve(look, bsx, bsy, bex, bey, true); arms.fore(look, bex, bey, bwx, bwy, true); }
+  if (arms) CW.arm(look, bsx, bsy, bex, bey, bwx, bwy, true); // one skinned arm, shoulder to wrist
   else { seg(bsx, bsy, bex, bey, 8, 6.4, shade(sleeve, -.18), 1.3); seg(bex, bey, bwx, bwy, 6.4, 4.8, shade(sleeve, -.18), .8); }
   if (!across) farHand();
   };
@@ -611,18 +682,18 @@ function drawHumanoid(look, pose) {
   // legs: thighs and calves with a swell, pants tucked into boots (the prince's drawn at LS about his feet, so they are long)
   const legs = look.legs, LW = 1 / LS;
   ctx.save(); if (LS !== 1 || LX !== 1) ctx.scale(LS * LX, LS);
-  { const HIP = HIPL, HX = HXL / LX;
+  { const HIP = HIPL, HX = HXL / LX, Y = YL, CS = CSL, PX = PXL; // (the legs turn with the hips)
   if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX, Y, CS, LS);
   else if (pose.kick) {
     const kb = pose.kickBend || 0, kx = 17 - kb, ky = HIP - 2 - 5 * kb, fx = 30 - 3 * kb, fy = HIP - 4 + 2 * kb; // kickBend: the knee gives a little
-    if (CW) { const r = -Math.PI / 2 + .2 * kb; CW.leg(look, -2, HIP, -5, HIP + 15, -4, -8, -4, 0, 0, LW, true, LW); CW.leg(look, 2, HIP, kx, ky, fx, fy, fx - Math.cos(r) - 9 * Math.sin(r), fy - Math.sin(r) + 9 * Math.cos(r), r, LW, false, LW); }
+    if (CW) { const r = -Math.PI / 2 + .2 * kb; CW.leg(look, -2, HIP, -5, HIP + 15, -4, -8, -4, 0, 0, LW, true, LW); CW.seat(look, -2, 2, HIP, LW, 4); CW.leg(look, 2, HIP, kx, ky, fx, fy, fx - Math.cos(r) - 9 * Math.sin(r), fy - Math.sin(r) + 9 * Math.cos(r), r, LW, false, LW); }
     else {
     seg(-2, HIP, -5, HIP + 15, 8, 6, shade(legs, -.15), .6); seg(-5, HIP + 15, -4, -8, 6, 4.6, shade(legs, -.15), .8); boot(-4, shade(look.boots, -.1));
     seg(2, HIP, kx, ky, 8.4, 6.4, legs, .8); seg(kx, ky, fx, fy, 6.4, 4.8, legs, .6);
     ctx.save(); ctx.translate(fx, fy); ctx.rotate(-Math.PI / 2 + .2 * kb); ctx.translate(-1, 9); boot(0, look.boots); ctx.restore();
     }
   } else if (pose.down) {
-    if (CW) { CW.leg(look, -2, HIP, -4, -13, -6, -6, -6.6, 2.4, 0, LW, true, LW); CW.leg(look, 2, HIP, 6, -13, 8, -6, 7.4, 2.4, 0, LW, false, LW); }
+    if (CW) { CW.leg(look, -2, HIP, -4, -13, -6, -6, -6.6, 2.4, 0, LW, true, LW); CW.seat(look, -2, 2, HIP, LW); CW.leg(look, 2, HIP, 6, -13, 8, -6, 7.4, 2.4, 0, LW, false, LW); }
     else { seg(-2, HIP, -4, -13, 8, 6, legs, .6); seg(-4, -13, -6, -6, 6, 4.6, legs, .6); seg(2, HIP, 6, -13, 8, 6, legs, .6); seg(6, -13, 8, -6, 6, 4.6, legs, .6); }
   } else {
     const run = pose.run ? 1.95 : 1.15, st = pose.stance && !walk; // a fighting stance at rest: feet apart, knees loose
@@ -636,17 +707,26 @@ function drawHumanoid(look, pose) {
     const lh = gait ? (pose.run ? 11 : 3.5) : 0, l1 = Math.max(0, Math.cos(walk)) * lh, l2 = Math.max(0, -Math.cos(walk)) * lh;
     const bsc = .5 + .5 * CS; // a boot seen from the front is narrower
     const W = (pose.legs && pose.legs.w) || 1; // how far apart the feet are set, side to side (seen when he is turned)
-    const leg = (x, lz, f, k, col, bc, lift) => {
-      const hx0 = PX(x, lz * .8) + HX, kx = PX(x + f * .5 + k + lift * .5, lz * (.9 + (W - 1) * .8)) + HX * .5, kyy = ky - lift * (pose.run ? .55 : .35) - (x < 0 && pose.legs ? pose.legs.bku || 0 : 0), fx = PX(x + f - lift * .4, lz * W);
-      if (CW) { CW.leg(look, hx0, HIP, kx, kyy, fx - .6 * CS, -8 - lift, fx, -lift, lift ? lift * .03 : 0, bsc * LW, col !== legs, LW); return; }
+    const PL = pose.legs || {}, heel = clamp(PL.bh || 0, 0, 1); // a planted stance can lift a foot (fl, bl) and raise the rear heel (bh)
+    const leg = (x, lz, f, k, col, bc, lift, kl = 0) => {
+      const hx0 = PX(x, lz * .8) + HX; let kx = PX(x + f * .5 + k + lift * .5 + kl * .4, lz * (.9 + (W - 1) * .8)) + HX * .5, kyy = ky - lift * (pose.run ? .55 : .35) - kl * .6 - (x < 0 && pose.legs ? pose.legs.bku || 0 : 0); const fx = PX(x + f - lift * .4, lz * W);
+      lift += kl;
+      if (CW) {
+        let ax = fx - .6 * CS, ay = -8 - lift, rot = lift ? lift * .03 : 0, ox = fx, oy = -lift;
+        if (x < 0 && heel > .01) { // the rear heel comes up: the foot rolls over its toe, the ankle and knee rising with it
+          const a = heel * .62, tx = fx + 5.6 * bsc * LW, ca = Math.cos(a), sa = Math.sin(a), dx = ax - tx;
+          ax = tx + dx * ca + 8 * sa; ay = -lift + dx * sa - 8 * ca; ox = tx + (fx - tx) * ca; oy = -lift + (fx - tx) * sa; rot += a; kyy -= heel * 1.6; kx += heel * 1.2;
+        }
+        CW.leg(look, hx0, HIP, kx, kyy, ax, ay, ox, oy, rot, bsc * LW, col !== legs, LW); return; }
       seg(hx0, HIP, kx, kyy, 8.4, 6.2, col, .9); seg(kx, kyy, fx - .6 * CS, -8 - lift, 6.2, 4.6, col, 1);
       ctx.save(); ctx.translate(fx, -lift); if (lift) ctx.rotate(lift * .03); ctx.scale(bsc, 1); boot(0, bc); ctx.restore();
     };
     // nearer leg drawn last: in profile that is the near side, turned it is whichever foot is closer to us
     const dFar = (-3 + f1) * Y - 5.5 * CS, dNear = (3 + f2) * Y + 5.5 * CS, nearFirst = dNear < dFar;
-    const L1 = () => leg(-3, -5.5, f1, k1, nearFirst ? legs : shade(legs, -.15), nearFirst ? look.boots : shade(look.boots, -.12), l1);
-    const L2 = () => leg(3, 5.5, f2, k2, nearFirst ? shade(legs, -.15) : legs, nearFirst ? shade(look.boots, -.12) : look.boots, l2);
-    if (nearFirst) { L2(); L1(); } else { L1(); L2(); }
+    const L1 = () => leg(-3, -5.5, f1, k1, nearFirst ? legs : shade(legs, -.15), nearFirst ? look.boots : shade(look.boots, -.12), l1, PL.bl || 0);
+    const L2 = () => leg(3, 5.5, f2, k2, nearFirst ? shade(legs, -.15) : legs, nearFirst ? shade(look.boots, -.12) : look.boots, l2, PL.fl || 0);
+    const seat = () => { if (CW) CW.seat(look, PX(-3, -4.4) + HX, PX(3, 4.4) + HX, HIP, LW, cr); }; // the tops of the thighs joined in one seat
+    if (nearFirst) { L2(); seat(); L1(); } else { L1(); seat(); L2(); }
   }
   }
   ctx.restore();
@@ -662,8 +742,15 @@ function drawHumanoid(look, pose) {
     ctx.fillStyle = C(look.trim); ctx.fillRect(-12, HIP - 3, 24, 4.5);
     ctx.save(); ctx.globalCompositeOperation = FLASH ? 'source-over' : 'lighter'; ctx.fillStyle = C(look.core); circle(0, SHO + 10, 4.8); ctx.fill(); ctx.restore();
   } else if (CW) { // the prince: his scabbard, the doublet, the belts and the tabs at his hips
-    const waist = CW.PART('waist', look);
-    waist.scabbard(look, G, pose.weapon === 'rapier'); CW.PART('mail', look).torso(look, G); waist.belts(look, G);
+    const waist = CW.PART('waist', look), pel = () => CW.kit.pelvis(HIP);
+    // the pelvis stays nearer the legs than the chest does, so he bends at the waist; and as a blow starts the pelvis
+    // turns into it a beat ahead of the chest (leanLead), the torso coiling and uncoiling about the waist
+    CW.kit.setBend(clamp(-LEAN * .6 + (pose.leanLead || 0) * .5, -.7, .7));
+    const GL = YL === Y ? G : Object.assign({}, G, { Y: YL, CS: CSL, PX: PXL }); // the belts and the scabbard turn with the hips
+    ctx.save(); pel(); waist.scabbard(look, GL, pose.weapon === 'rapier'); ctx.restore();
+    CW.PART('mail', look).torso(look, G);
+    ctx.save(); pel(); waist.belts(look, GL); ctx.restore();
+    CW.kit.setBend(0);
   } else {
     const ty = SHO - 2;
     const torso = () => {
@@ -720,7 +807,7 @@ function drawHumanoid(look, pose) {
   ctx.save(); upper();
   // head
   const hy = CW ? NECK - 14 : -61 + cr; // (in the head's own frame, which headScale shrinks about the neck)
-  ctx.save(); ctx.translate(1, NECK); ctx.rotate(-LEAN * .3); ctx.translate(-1, -NECK); // the head stays level on the eyes, as a fighter's does
+  ctx.save(); ctx.translate(1, NECK); ctx.rotate(-LEAN * (CW ? .55 : .3)); ctx.translate(-1, -NECK); // the head stays level on the eyes, as a fighter's does
   if (look.robot) {
     rrect(-8, hy - 8, 17, 15, 4); ctx.fillStyle = C(look.helm); ctx.fill(); outline();
     ctx.fillStyle = C(look.visor); ctx.fillRect(1, hy - 3, 8, 3.5);
@@ -773,10 +860,10 @@ function drawHumanoid(look, pose) {
   const ex = reach * .53, ey = 1.6 - (pose.ext || 0) * 1.2;
   if (pose.elbow) { // a bent elbow: the upper arm hangs, the forearm comes forward from it
     const eb = -pose.elbow, hx = 10 * AS + Math.cos(eb) * 9 * AS, hy = Math.sin(eb) * 9 * AS;
-    if (arms) { arms.sleeve(look, 0, 0, 10 * AS, 0, BACK); arms.fore(look, 10 * AS, 0, hx, hy, BACK); }
+    if (arms) CW.arm(look, 0, 0, 10 * AS, 0, hx, hy, BACK);
     else { seg(0, 0, 10, 0, 8.6, 6.6, sleeve, 1.4); seg(10, 0, hx, hy, 6.6, 5, sleeve, .9); }
     ctx.translate(hx, hy); ctx.rotate(eb); ctx.translate(-15, 0);
-  } else if (arms) { arms.sleeve(look, 0, 0, ex, ey, BACK); arms.fore(look, ex, ey, reach, 0, BACK); }
+  } else if (arms) CW.arm(look, 0, 0, ex, ey, reach, 0, BACK);
   else { seg(0, 0, ex, ey, 8.6, 6.6, sleeve, 1.4); seg(ex, ey, reach, 0, 6.6, 5, sleeve, .9); }
   pose.glove = look.glove;
   if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); }

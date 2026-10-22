@@ -139,8 +139,10 @@
   };
 
   // ================================================= legs =================================================
-  const thighSeg = (ax, ay, bx, by, col, far, s) => seg(ax, ay, bx, by, 8.6 * s, 6.6 * s, dk(col, far, -.16), 1);
-  const shinSeg = (ax, ay, bx, by, col, far, s) => seg(ax, ay, bx, by, 6.9 * s, 5.4 * s, dk(col, far, -.16), .9);
+  // the legs are skinned by CORWIN.legSkin (one outline hip to ankle, thigh color above the knee and shin color below,
+  // from skin()); thigh() and shin() only lay the set's own pieces over it
+  const thighSeg = () => {}, shinSeg = () => {};
+  const legSkin = (a, b) => function (L, far) { return [dk(L[a], far, -.16), dk(L[b], far, -.16)]; };
   // a boot's foot (toe toward +x, the sole on y=0): toe 'round' (a worn shoe-boot), 'square', 'point' (a sabaton)
   function footShape(x, toe) {
     ctx.beginPath(); ctx.moveTo(x - 3.2, -8.4); ctx.lineTo(x - 3.8, -2.4); ctx.lineTo(x - 4.4, 0);
@@ -156,6 +158,7 @@
   }
   const kneeFrame = (x, y, ux, uy, s, fn) => { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(-ux, uy)); ctx.scale(s, s); fn(); ctx.restore(); }; // +y down the leg, +x out the front of the knee
   const wayfarerLegs = {
+    skin: legSkin('p_a', 'p_b'),
     thigh(L, ax, ay, bx, by, far, s = 1) { thighSeg(ax, ay, bx, by, L.p_a, far, s); },
     shin(L, ax, ay, bx, by, far, s = 1) { shinSeg(ax, ay, bx, by, L.p_b, far, s); },
     shinDetail(L, ax, ay, bx, by, far, s = 1) { // wool puttees wound round the shin
@@ -168,6 +171,7 @@
     foot(L, x, far) { footBase(x, dk(L.p_boot, far), 'round'); ctx.strokeStyle = C(L.p_d); ctx.lineWidth = .5; ctx.beginPath(); for (const k of [0, 1.4, 2.8]) { ctx.moveTo(x + .2 + k * .5, -7 + k); ctx.lineTo(x + 2.4 + k * .5, -6.4 + k); } ctx.stroke(); },
   };
   const corsairLegs = {
+    skin: legSkin('p_a', 'p_b'),
     thigh(L, ax, ay, bx, by, far, s = 1) { thighSeg(ax, ay, bx, by, L.p_a, far, s); // a cream stripe down the outside of the leg
       ctx.save(); const len = along(ax, ay, bx, by); ctx.strokeStyle = C(dk(L.p_d, far)); ctx.lineWidth = .9 * s; ctx.beginPath(); ctx.moveTo(1, -.6 * s); ctx.lineTo(len - 1, -.4 * s); ctx.stroke(); ctx.restore(); },
     shin(L, ax, ay, bx, by, far, s = 1) { shinSeg(ax, ay, bx, by, L.p_b, far, s); },
@@ -183,6 +187,7 @@
     foot(L, x, far) { footBase(x, dk(L.p_boot, far), 'square'); ctx.fillStyle = C(dk(L.p_c, far)); ctx.fillRect(x + .6, -6, 2.2, 2.2); ctx.fillStyle = C(shade(L.p_boot, -.4)); ctx.fillRect(x - 4.4, -2.9, 3.6, 1.4); },
   };
   const prismLegs = {
+    skin: legSkin('p_a', 'p_b'),
     thigh(L, ax, ay, bx, by, far, s = 1) { thighSeg(ax, ay, bx, by, L.p_a, far, s); },
     shin(L, ax, ay, bx, by, far, s = 1) { // a faceted crystal greave
       ctx.save(); const len = along(ax, ay, bx, by); ctx.scale(1, s); const col = dk(L.p_b, far);
@@ -200,6 +205,7 @@
     foot(L, x, far) { footBase(x, dk(L.p_boot, far), 'square'); poly([x + 2.4, -4.4, x + 5.4, -4, x + 7, 0, x + 2.6, 0]); fill(dk(L.p_c, far)); outline(.6); },
   };
   const chaosLegs = {
+    skin: legSkin('p_a', 'p_b'),
     thigh(L, ax, ay, bx, by, far, s = 1) { thighSeg(ax, ay, bx, by, L.p_a, far, s); // red-lacquered lames across the thigh
       ctx.save(); const len = along(ax, ay, bx, by); ctx.scale(1, s);
       for (const k of [.3, .62]) { rrect(len * k - 1.3, -4.4, 2.6, 8.8, .8); fill(dk(L.p_c, far)); outline(.5); }
@@ -218,6 +224,7 @@
     foot(L, x, far) { footBase(x, dk(L.p_boot, far), 'point', true); poly([x - 2.8, -8, x + 2.2, -8, x + 3.6, -4.2, x - 3.2, -3.6]); fill(dk(L.p_c, far)); outline(.6); },
   };
   const moonLegs = {
+    skin: legSkin('p_a', 'p_b'),
     thigh(L, ax, ay, bx, by, far, s = 1) { thighSeg(ax, ay, bx, by, L.p_a, far, s); // fine mail: rows of little rings
       if (!FINE()) return; ctx.save(); const len = along(ax, ay, bx, by); ctx.scale(1, s); ctx.strokeStyle = shade(L.p_a, far ? .05 : .3); ctx.lineWidth = .35;
       for (let x = 1.5; x < len - 1; x += 1.7) for (let y = -3; y <= 3; y += 1.6) { ctx.beginPath(); ctx.arc(x + (y % 3.2 ? .8 : 0), y, .55, 0, Math.PI); ctx.stroke(); }
@@ -246,11 +253,15 @@
     fill(isMetal ? metal(0, -3.1, 0, 3.1, col) : (() => { const g = ctx.createLinearGradient(0, -3.1, 0, 3.1); g.addColorStop(0, C(shade(col, .25))); g.addColorStop(.5, C(col)); g.addColorStop(1, C(shade(col, -.3))); return g; })()); outline(1);
     return len;
   }
-  const elbowPuff = (ax, ay, col, far) => { ell(ax, ay, 2.6, 2.3); fill(dk(shade(col, -.08), far, -.3)); outline(.7); };
-  const sleeveSeg = (L, ax, ay, bx, by, far, wa = 7.4, wb = 6.2) => { const col = dk(L.g_sleeve, far, -.24); seg(ax, ay, bx, by, wa, wb, col, 1.8);
+  // the arms are skinned by CORWIN.arm (one sleeve from shoulder to wrist, in skin()'s color); sleeve() lays its folds
+  // on it and fore() the set's bracer down the forearm. The shirt gathers at the elbow in a fold, not a ball.
+  const elbowPuff = (ax, ay, col, far) => { if (FINE()) { ctx.strokeStyle = shade(dk(col, far, -.24), -.35); ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(ax, ay, 2.2, 0, Math.PI * .9); ctx.stroke(); } };
+  const armSkin = function (L, far) { return dk(L.g_sleeve, far, -.24); }, W = CORWIN.ARMW, wide = (k) => W.map((v, i) => i === 3 || i === 6 ? v : v * k); // (3 and 6 are where the swells sit)
+  const sleeveSeg = (L, ax, ay, bx, by, far) => { const col = dk(L.g_sleeve, far, -.24);
     if (FINE()) { ctx.save(); const len = along(ax, ay, bx, by); ctx.strokeStyle = shade(col, -.3); ctx.lineWidth = .6; ctx.beginPath(); for (const k of [.35, .62]) { ctx.moveTo(len * k, -3.6); ctx.quadraticCurveTo(len * k + 1.6, 0, len * k - .4, 3.6); } ctx.stroke(); ctx.restore(); } };
   const pauldronFrame = (x, y, ang, s, fn) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s); fn(); ctx.restore(); };
   const wayfarerArms = {
+    skin: armSkin,
     sleeve(L, ax, ay, bx, by, far) { sleeveSeg(L, ax, ay, bx, by, far); },
     fore(L, ax, ay, bx, by, far) { // a laced leather bracer, cloth wound at the wrist
       ctx.save(); const len = bracer(ax, ay, bx, by, dk(L.g_a, far, -.22));
@@ -264,7 +275,9 @@
       if (DET()) { ctx.save(); ctx.setLineDash([.9, 1]); ctx.strokeStyle = shade(col, .5); ctx.lineWidth = .5; ctx.beginPath(); ctx.ellipse(0, 1, 5, 3.4, 0, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.restore(); } }); },
   };
   const corsairArms = {
-    sleeve(L, ax, ay, bx, by, far) { sleeveSeg(L, ax, ay, bx, by, far, 8.2, 7); }, // a full cream shirt sleeve
+    skin: armSkin,
+    armW: wide(1.1),
+    sleeve(L, ax, ay, bx, by, far) { sleeveSeg(L, ax, ay, bx, by, far); }, // a full cream shirt sleeve
     fore(L, ax, ay, bx, by, far) { // a leather gauntlet with a flared brass cuff and studs
       ctx.save(); const len = bracer(ax, ay, bx, by, dk(L.g_a, far, -.22));
       ctx.fillStyle = C(dk(L.g_c, far)); for (const x of [4, 7, 10]) if (x < len - 4) { circle(x, -1.2, .55); ctx.fill(); circle(x + 1.4, 1.2, .55); ctx.fill(); }
@@ -278,6 +291,7 @@
       for (const [px, py] of [[-5, -.4], [-2.4, -3.6], [1.4, -4.2], [4.6, -2.2]]) rivet(px, py, .6); }); },
   };
   const prismArms = {
+    skin: armSkin,
     sleeve(L, ax, ay, bx, by, far) { sleeveSeg(L, ax, ay, bx, by, far); },
     fore(L, ax, ay, bx, by, far) { // a vambrace cut from violet crystal, a cyan ridge of light along it
       ctx.save(); const len = along(ax, ay, bx, by), col = dk(L.g_a, far, -.22);
@@ -292,7 +306,8 @@
       ctx.save(); glowOn(L.g_c, 3); ctx.strokeStyle = C(L.g_c); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(.6, -6.2); ctx.lineTo(5.2, -3.2); ctx.stroke(); ctx.restore(); }); },
   };
   const chaosArms = {
-    sleeve(L, ax, ay, bx, by, far) { sleeveSeg(L, ax, ay, bx, by, far, 7.2, 6); },
+    skin: armSkin,
+    sleeve(L, ax, ay, bx, by, far) { sleeveSeg(L, ax, ay, bx, by, far); },
     fore(L, ax, ay, bx, by, far) { // a black talon-gauntlet: red plates, a fin standing off the forearm, an ember seam
       ctx.save(); const len = bracer(ax, ay, bx, by, dk(L.g_a, far, -.22), true);
       poly([len * .3, -3, len * .5, -6.6, len * .72, -2.8]); fill(dk(L.g_c, far)); outline(.7);
@@ -308,7 +323,8 @@
       ctx.fillStyle = C(L.g_c); ctx.fillRect(-5, 1.2, 10, 1.4); }); },
   };
   const moonArms = {
-    sleeve(L, ax, ay, bx, by, far) { const col = dk(L.g_sleeve, far, -.24); seg(ax, ay, bx, by, 7.2, 6, col, 1.4); // fine mail
+    skin: armSkin,
+    sleeve(L, ax, ay, bx, by, far) { const col = dk(L.g_sleeve, far, -.24); // fine mail
       if (FINE()) { ctx.save(); const len = along(ax, ay, bx, by); ctx.strokeStyle = shade(col, .32); ctx.lineWidth = .35; for (let x = 1.5; x < len - 1; x += 1.6) for (let y = -2.6; y <= 2.6; y += 1.5) { ctx.beginPath(); ctx.arc(x, y, .5, 0, Math.PI); ctx.stroke(); } ctx.restore(); } },
     fore(L, ax, ay, bx, by, far) { // a moon-silver vambrace chased with a leaf
       ctx.save(); const len = bracer(ax, ay, bx, by, dk(L.g_a, far, -.22), true);
@@ -445,7 +461,7 @@ function drawGearPiece(it) {
   else if (it.slot === 'pants') { ctx.scale(1.55, 1.55); ctx.translate(-1, 15.5);
     for (const [x, f, far] of [[-4, -4, true], [4, 4, false]]) CW.leg(L, x, -30, x + f * .5 + 1, -15, x + f - .6, -8, x + f, 0, 0, 1, far, 1); }
   else { ctx.rotate(-.55); ctx.scale(1.5, 1.5); ctx.translate(-14, 2); // gauntlet: shoulder guard, sleeve, forearm and fist
-    part.sleeve(L, -6, 0, 3, 0, false); part.fore(L, 3, 0, 18, 0, false);
+    CW.arm(L, -6, 0, 3, .4, 18, 0, false);
     HAND_PLATE = !!L.gauntPlate; ctx.save(); ctx.translate(18 - 13, 0); drawHand(L.glove, false); ctx.restore(); HAND_PLATE = false;
     part.pauldron(L, -6, -1.4, 0, false, .7); }
   ctx.restore();

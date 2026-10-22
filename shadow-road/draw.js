@@ -5,13 +5,16 @@ const ease = (k) => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
 // lunge with the free arm thrown back for balance, and a held finish that settles back into stance.
 // Each style has its own finish: overhead smashes drop into a deep wide squat, thrusts a long fencing lunge,
 // level sweeps a wide twisting base.
+// Each stance also says where his weight is (shift: the hips carried toward the front foot, or back over the rear one),
+// how far the rear heel comes up off the street as the back leg drives (heel), and how far the chest is coiled away
+// from the target or turned through it (twist, a turn added to his yaw; the hips lead it, see playerPose).
 const STANCES = {
-  load:   { f: 4, b: -13, fk: 1, bk: 10, sink: 5, lean: -.34, back: .1 },  // weight back, coiled, the chest turned away
-  rear:   { f: 2, b: -9, fk: 0, bk: 3, sink: -1, lean: -.5, back: -.4 },   // up tall and arched back before an overhead smash
-  smash:  { f: 13, b: -12, fk: 9, bk: 1, sink: 9, lean: .75, back: 2.6 },  // folded over at the waist into a deep wide squat at impact
-  thrust: { f: 15, b: -14, fk: 8, bk: 0, sink: 5, lean: .5, back: 2.9 },   // a long fencing lunge, the chest driven over the knee
-  sweep:  { f: 11, b: -11, fk: 6, bk: 4, sink: 6, lean: .26, back: 2.2 },  // a wide, braced base
-  swing:  { f: 11, b: -10, fk: 7, bk: 2, sink: 5, lean: .45, back: 2.4 },  // any other committed swing, the body following through
+  load:   { f: 4, b: -13, fk: 1, bk: 10, sink: 5, lean: -.34, back: .1, shift: -2.6, heel: 0, twist: -.2 },  // weight back, coiled, the chest turned away
+  rear:   { f: 2, b: -9, fk: 0, bk: 3, sink: -1, lean: -.5, back: -.4, shift: -1.5, heel: 0, twist: -.12 },  // up tall and arched back before an overhead smash
+  smash:  { f: 13, b: -12, fk: 9, bk: 1, sink: 9, lean: .75, back: 2.6, shift: 2.4, heel: .35, twist: .1 },  // folded over at the waist into a deep wide squat at impact
+  thrust: { f: 15, b: -14, fk: 8, bk: 0, sink: 5, lean: .5, back: 2.9, shift: 3.6, heel: .75, twist: .16 },  // a long lunge, the chest driven over the knee, the back leg straight and pushing
+  sweep:  { f: 11, b: -11, fk: 6, bk: 4, sink: 6, lean: .26, back: 2.2, shift: 1.8, heel: .45, twist: .14 }, // a wide, braced base
+  swing:  { f: 11, b: -10, fk: 7, bk: 2, sink: 5, lean: .45, back: 2.4, shift: 2.8, heel: .6, twist: .14 },  // any other committed swing, the body following through
 };
 function attackStance(pose, m, k) {
   const h0 = m.h[0], h1 = m.h[1];
@@ -21,10 +24,16 @@ function attackStance(pose, m, k) {
   if (k < h0) { from = null; to = kind === 'smash' ? STANCES.rear : load; q = ease(k / Math.max(.05, h0) * 1.4); } // winding up
   else if (k < h1 + .08) { from = kind === 'smash' ? STANCES.rear : load; to = end; q = ease((k - h0) / Math.max(.05, h1 + .08 - h0) * 1.6); } // the strike, snapping into the finish
   else { from = end; to = null; q = clamp((k - h1 - .08) / .35, 0, 1) * .8; } // holding the finish, then easing out
-  const base = { f: 7, b: -7, fk: 3, bk: 2, sink: 0, lean: 0, back: 1.2 };
+  const base = { f: 7, b: -7, fk: 3, bk: 2, sink: 0, lean: 0, back: 1.2, shift: 0, heel: 0, twist: 0 };
   const A = from || base, B = to || base, mix = (key) => lerp(A[key], B[key], clamp(q, 0, 1));
-  pose.legs = { f: mix('f') * light + base.f * (1 - light), b: mix('b') * light + base.b * (1 - light), fk: mix('fk'), bk: mix('bk') };
-  pose.sink = mix('sink') * light; pose.lean = (pose.lean || 0) * .4 + mix('lean') * light; pose.backArm = mix('back');
+  // the front foot steps: it comes up off the street as it travels and plants again before the blow lands
+  const stepK = k >= h0 && k < h1 + .08 ? clamp(q, 0, 1) : -1, step = Math.abs(B.f - A.f) * light;
+  const fl = stepK >= 0 && step > 4 ? Math.sin(Math.PI * Math.min(1, stepK * 1.25)) * Math.min(3.2, step * .3) : 0;
+  pose.legs = { f: mix('f') * light + base.f * (1 - light), b: mix('b') * light + base.b * (1 - light), fk: mix('fk'), bk: mix('bk'), fl, bh: mix('heel') * light };
+  // the knees take the blow: a small extra dip just after it lands, then he rises back out of it
+  const absorb = k > h1 ? Math.sin(Math.PI * clamp((k - h1) / .28, 0, 1)) * 1.6 * light : 0;
+  pose.sink = mix('sink') * light + absorb; pose.lean = (pose.lean || 0) * .4 + mix('lean') * light; pose.backArm = mix('back');
+  pose.shift = mix('shift') * light; if (pose.yaw === undefined) pose.yaw = mix('twist') * light;
   pose.walk = 0;
 }
 const BOXING = { L: 'jab', LL: 'cross', LLL: 'hook', A: 'jab', R: 'slip' };
@@ -75,7 +84,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     if (m.twirl) { pose.grip = (pose.grip || 0) + TAU * m.twirl * ease(clamp(kk, 0, 1)); pose.trail = 0; } // the staff spun in the hand like a baton, both ends sweeping
     if (m.dodgeLunge && P.z <= 2) { // out of the dodge: still low, a long lunge behind the strike, the back leg straight
       const e2 = k < m.h[0] ? ease(k / m.h[0]) * .3 : k < m.h[1] ? .3 + .7 * Math.min(1, (k - m.h[0]) / ((m.h[1] - m.h[0]) * .4)) : Math.max(0, 1 - (k - m.h[1]) / (1 - m.h[1]));
-      pose.lean = .3 + .3 * e2; pose.sink = 6 - 2 * e2; pose.legs = { f: 12 + 5 * e2, b: -14 - 5 * e2, fk: 8, bk: 0 }; pose.yaw = .2 * e2; pose.backArm = lerp(1.4, 2.6, e2); pose.flow = 14 * e2;
+      pose.lean = .3 + .3 * e2; pose.sink = 6 - 2 * e2; pose.legs = { f: 12 + 5 * e2, b: -14 - 5 * e2, fk: 8, bk: 0, bh: P.w === 'rapier' ? 0 : .6 * e2 }; pose.shift = 2.6 * e2; pose.yaw = .2 * e2; pose.backArm = lerp(1.4, 2.6, e2); pose.flow = 14 * e2;
       pose.arm = (m.arc ? m.arc[0] : 0) - pose.lean * .9; pose.ext = e2;
     }
     if (m.weave) { pose.arm = lerp(-1.2, .9, Math.abs(Math.sin(kk * Math.PI * 2.5))); }
@@ -92,6 +101,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     if (m.style === 'thrust' && !(P.w === 'fists' && BOXING[m.key])) pose.arm = arc[0] - (pose.lean || 0) * .9; // a thrust stays level with the target, however far he leans in
     if (P.w === 'rapier' && !m.kick && !m.around && !m.spin) { // the fencer's free hand: up and back behind him, curled over, balancing every stroke and lunge
       const e = Math.sin(Math.PI * clamp(k / .9, 0, 1)); pose.backArm = 3.0 + .18 * e; pose.backElbow = -.45 - .15 * e; pose.openHand = 1; // out behind, a little above the shoulder
+      if (pose.legs) pose.legs.bh = 0; // a fencer's lunge: the rear leg straight, the rear foot kept flat on the street
     }
     if (m.slide && P.z <= 2) { // the sliding kick: laid back low and streamlined like the forward dodge, both feet driven out ahead
       const q = ease(Math.min(1, k / .2)), out = k > .78 ? 1 - ease((k - .78) / .22) : 1;
@@ -106,21 +116,21 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
       pose.arm = 1; pose.elbow = 1.9; pose.backArm = 1.3; pose.backElbow = 2; // both fists up by the chin
       if (kind === 'jab') { // the lead hand snaps out; a short step in on the front foot
         pose.arm = lerp(1, -.06 - pose.lean, e); pose.elbow = lerp(1.9, .05, e); pose.yaw = -.12 * e;
-        pose.legs = { f: 8 + 4 * e, b: -8, fk: 2 + 3 * e, bk: 3 }; pose.sink = 2;
+        pose.legs = { f: 8 + 4 * e, b: -8, fk: 2 + 3 * e, bk: 3, bh: .25 * e, fl: 1.6 * Math.sin(Math.PI * Math.min(1, e)) * (k < h1 ? 1 : 0) }; pose.sink = 2; pose.shift = 1.4 * e - .8 * load;
         if (e > .5) pose.streak = { len: 14, a: .55 * (k < h1 ? 1 : e), col: 'rgba(255,255,255,.8)' };
       } else if (kind === 'cross') { // the rear hand, thrown with the hips: the back heel turns and the chest comes round to us
         pose.backArm = lerp(1.3 + .2 * load, -.06 - pose.lean, e); pose.backElbow = lerp(2, .05, e); pose.backReach = .35 * e; pose.yaw = .55 * e - .1 * load;
-        pose.legs = { f: 9, b: -9 - 2 * e, fk: 2 + 4 * e, bk: 1 }; pose.sink = 2 + e; pose.lean += .06 * e;
+        pose.legs = { f: 9, b: -9 - 2 * e, fk: 2 + 4 * e, bk: 1, bh: .85 * e }; pose.sink = 2 + e; pose.lean += .06 * e; pose.shift = 2.6 * e - 1.2 * load; // the rear heel turns up and out as the hip drives through
       } else if (kind === 'slip') { // out of the dodge: still low from it, he springs in behind a long rear-hand punch, the back leg straight
         const g = k < h0 ? load : 1; pose.lean = lerp(.35, .55, e) * g + .2 * (1 - g); pose.sink = 6 - 2 * e;
         pose.backArm = lerp(1.5, -.1 - pose.lean, e); pose.backElbow = lerp(2.1, .05, e); pose.backReach = .45 * e; pose.yaw = .2 + .4 * e;
         pose.arm = .95; pose.elbow = 2; // the lead hand tucked up by the chin
-        pose.legs = { f: 12 + 5 * e, b: -14 - 5 * e, fk: 8, bk: 0 };
+        pose.legs = { f: 12 + 5 * e, b: -14 - 5 * e, fk: 8, bk: 0, bh: .7 * e }; pose.shift = 2.4 * e;
         if (e > .5) pose.flow = 14;
       } else { // the hook: elbow up and bent, the whole body turning through it from the back foot
         const sw = k < h0 ? 0 : clamp((k - h0) / (h1 - h0), 0, 1);
         pose.arm = lerp(.9, .15 - pose.lean, Math.min(1, e * 1.4)); pose.elbow = lerp(1.9, .15, e); pose.yaw = lerp(-.35, .2, ease(sw)) * (k < h0 ? load : 1);
-        pose.legs = { f: 9, b: -9, fk: 4 + 2 * e, bk: 3 }; pose.sink = 3; pose.lean = .1 + .12 * e;
+        pose.legs = { f: 9, b: -9, fk: 4 + 2 * e, bk: 3, bh: .45 * e }; pose.sink = 3; pose.lean = .1 + .12 * e; pose.shift = 1.6 * e - .6 * load; // pivoting on the balls of the feet
       }
     }
     if (m.prep && (P.z <= 6 || k < m.h[0])) { // an uppercut is loaded from the legs: sink into the knees, then drive up through them
@@ -143,7 +153,10 @@ function playerPose() {
     // blow and the weapon arrives last (left out for flips and spins, which turn the whole body as one)
     if (CHAIN.on && P.z <= 2 && !m.rot && !m.spin && !m.kick && !m.around && !m.blink && !m.dodgeLunge) {
       const q = { walk: 0, weapon: w.look, tier: pose.tier }; atkPose(q, w, m, Math.min(1, k + Math.min(.1, CHAIN.lead / m.dur)));
-      for (const f of m.style === 'thrust' ? ['legs', 'sink'] : ['legs', 'sink', 'lean', 'yaw']) if (q[f] !== undefined) pose[f] = q[f];
+      for (const f of m.style === 'thrust' ? ['legs', 'sink', 'shift'] : ['legs', 'sink', 'lean', 'yaw', 'shift']) if (q[f] !== undefined) pose[f] = q[f];
+      // and the hips lead the chest further still: they turn and tip into the blow first, the shoulders come after
+      const q2 = { walk: 0, weapon: w.look, tier: pose.tier }; atkPose(q2, w, m, Math.min(1, k + Math.min(.2, CHAIN.lead * 2.6 / m.dur)));
+      pose.hipLead = clamp((q2.yaw ?? 0) - (pose.yaw ?? 0), -.45, .45); pose.leanLead = clamp((q2.lean ?? 0) - (pose.lean ?? 0), -.5, .5);
     }
     goldify(pose);
   } else if (P.state === 'charge') {
@@ -151,7 +164,15 @@ function playerPose() {
     pose.glow = ['', '#D8AA55', '#FFE9A0', '#C8607A', '#FFD27A'][P.clvl] || '';
     if (P.clvl && Math.sin(performance.now() / 45) > 0) pose.glow = '#FFFFFF';
   } else if (P.state === 'run') { pose.run = 1; pose.lean = .36; pose.flow = 8; if (P.w === 'fists') { pose.arm = 1.35; pose.elbow = 1.45; pose.backArm = 1.5; } else { pose.arm = 1.9; pose.backArm = 1.75; pose.backElbow = -1.2; } } // bare-handed he pumps his arms; armed, the weapon trails and the free arm drives, bent, close at his side
-  else if (P.state === 'jump') { pose.crouch = 1; pose.arm = .2; pose.rot = P.vz < 0 ? 0 : 0; pose.flow = 4; }
+  else if (P.state === 'jump') { // as in the strip: going up, the lead knee driven high and the other leg trailing long beneath
+    // him, fists tucked at the chest; at the top both knees fold up; coming down the legs open and reach for the street
+    const up = clamp((P.vz || 0) / 380, -1, 1), r = Math.max(0, up), f = Math.max(0, -up), mid = 1 - Math.abs(up);
+    pose.legs = { f: 9 * r + 6 * mid + 6 * f, b: -8 * r - 3 * mid - 6 * f, fk: 11 * r + 12 * mid + 4 * f, bk: 1.5 * r + 10 * mid + 3 * f, fl: 9 * r + 8 * mid + 1.5 * f, bl: 6 * mid };
+    pose.sink = 0; pose.lean = .1 + .12 * r - .04 * f; pose.flow = 4;
+    if (P.w === 'fists') { pose.arm = .95 - .15 * r; pose.elbow = 1.75; pose.backArm = 1.1 + .4 * r; pose.backElbow = 1.95; }
+    else if (P.w === 'sword' || P.w === 'hammer') { pose.arm = 1.05; pose.elbow = 1.15; pose.grip = P.w === 'sword' ? -.85 : -1.1; pose.twoHand = 1; } // both hands on it, carried up across him
+    else { pose.arm = .7; pose.elbow = .9; pose.grip = -.35; pose.backArm = 1.2 + .4 * r; pose.backElbow = 1.7; pose.openHand = P.w === 'rapier' ? 1 : 0; }
+  }
   else if (P.state === 'dodge') {
     const k = 1 - P.t / (P.dodgeDur || .34);
     if (P.dk === 'fwd') { pose.crouch = 1; pose.run = 1; pose.walk = 1.5; pose.lean = .85; pose.arm = 2.7; pose.backArm = 3; pose.flow = 16; pose.stretch = 1.18; } // flat out, body almost level, arms flung back
@@ -169,7 +190,12 @@ function playerPose() {
     pose.legs = { f: 9, b: -11, fk: 2, bk: 6 }; pose.sink = 3;
     if (P.t < .28) pose.glow = 'rgba(232,236,255,.6)';
   }
-  else if (P.state === 'hurt') { pose.arm = -1; pose.lean = -.3; }
+  else if (P.state === 'hurt') { // as in the strip: struck, he braces wide and low, chest thrown open toward us, the arms
+    // flung out from his sides and the head snapped back, then he gathers himself
+    const hk = clamp(1 - P.t / (P.knocked ? .45 : .3), 0, 1), j = 1 - ease(hk);
+    pose.yaw = .72; pose.legs = { f: -9, b: 11, fk: 7 + 2 * j, bk: 7 + 2 * j, w: 1.8 }; // (turned to us, the far foot ahead and the near one back read as a wide, square base, as in the idle) pose.sink = 5 + 3 * Math.sin(Math.PI * hk);
+    pose.lean = -.3 * j - .06; pose.arm = lerp(2.3, 1.95, hk); pose.elbow = lerp(.45, .75, hk); pose.backArm = lerp(1.0, 1.2, hk); pose.backElbow = lerp(-.25, -.45, hk); pose.openHand = 0; pose.flow = -6 * j; // both fists low and out from his sides
+  }
   else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
   // at rest each weapon sits the way its wielder would carry it
   else if (P.w === 'rapier') { // en garde while he moves: point toward the enemy, the free hand raised behind. Standing still he
@@ -199,11 +225,18 @@ function playerPose() {
   if (P.state === 'idle' && !pose.legs) { pose.legs = { f: -11, b: 13, fk: 1.6, bk: 1.2, w: 1.5 }; pose.sink = .6; } // standing tall in a wide A: legs nearly straight, the far foot ahead, the near one planted behind
   // every great-sword heavy, its charge and its charged blows are cut with both hands on the hilt; the chest squares
   // into the blow as it lands
+  // the great sword is a two-handed blade: every blow with it, light or heavy, is cut with both hands on the hilt, as in the
+  // reference strips (the free arm no longer flung out behind like a marionette's)
+  if (P.w === 'sword' && (P.state === 'atk' || P.state === 'air') && P.move && !P.move.dive) pose.twoHand = 1;
   if (P.w === 'sword' && (P.state === 'charge' || ((P.state === 'atk' || P.state === 'air') && P.move && /H/.test(P.move.key || '')))) {
     pose.twoHand = 1;
     const m = P.move; if (P.state !== 'charge' && !m.spin && !m.rot) { const kk = clamp((P.t / m.dur - m.h[0]) / (m.h[1] - m.h[0]), 0, 1); pose.yaw = (pose.yaw ?? 0) + .28 * Math.sin(Math.PI * kk); }
   }
   if (P.w === 'hammer' && ['atk', 'air', 'charge'].includes(P.state)) pose.twoHand = 1; // every hammer blow is swung with both hands on the haft
+  // a bowstaff is driven with both hands, the rear one well back down the staff like a spear's: its thrusts, cuts and
+  // lunges (twirled in the fingers, spun round him or flipped over, it is held in one hand)
+  if (P.w === 'staff' && (P.state === 'atk' || P.state === 'air') && P.move) { const m = P.move;
+    if (!m.twirl && !m.around && !m.spin && !m.rot && !m.slide && !m.hover && !m.dive && !m.kick && P.move.key !== 'DH' && P.move.key !== 'HC') { pose.twoHand = 1; pose.gripGap = 13; pose.openHand = 0; } }
   // proportions per pose, as in the reference frames: a long, stretched stride in the run and the dash, a longer reach
   // in a thrust or a lunge (drawn only: hitboxes are untouched)
   if (P.state === 'run') pose.legX = 1.1;
@@ -247,6 +280,7 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
   // his turn (yaw) plus any spin in progress: past a quarter turn he is seen facing the other way
   const yaw = Math.asin(clamp(pose.yaw || 0, -1, 1)), ang = yaw + (pose.spin || 0), c = Math.cos(ang);
   pose.Y = Math.sin(ang); if (c < 0) facing = -facing;
+  if (pose.hipLead) { const aL = Math.asin(clamp((pose.yaw || 0) + pose.hipLead, -1, 1)) + (pose.spin || 0); pose.YL = Math.cos(aL) * c < 0 ? pose.Y : Math.sin(aL); } else pose.YL = undefined; // the hips' own turn, a beat ahead of the chest
   // his head can keep looking where he faces while his chest turns to us (pose.look: 0 turns with the chest, 1 straight ahead)
   const hAng = yaw * (1 - (pose.look || 0)) + (pose.spin || 0); pose.HY = Math.cos(hAng) * c < 0 ? pose.Y : Math.sin(hAng);
   // the head swaps between its profile drawing and its turned drawing with a deadband, so it never flickers

@@ -374,9 +374,9 @@ function movePoseKey(m) { return P.w === 'sword' && m.lvl === 7 ? 'sword:J7' : P
 // Only the live, on-screen prince is blended (draw.js). Each joint eases toward where this frame's pose wants it with
 // its own time constant: the weapon arm quick, the torso and legs a little slower, the back arm and head slowest, so
 // a change of move flows instead of snapping. Spins, flips, hit frames and falls are left exact.
-const BLEND_TAU = { legX: .08, armS: .07, arm: .055, elbow: .06, grip: .06, ext: .05, backArm: .11, backElbow: .1, backReach: .09, lean: .085, yaw: .1, crouchK: .08, flow: .16 };
+const BLEND_TAU = { legX: .08, armS: .07, arm: .055, elbow: .06, grip: .06, ext: .05, backArm: .11, backElbow: .1, backReach: .09, lean: .085, yaw: .1, crouchK: .08, flow: .16, shift: .08, hipLead: .06, leanLead: .07 };
 const BLEND_ANG = { arm: 1, backArm: 1, grip: 1 };
-const BLEND_DEF = { legX: 1, armS: 1, arm: 1.1, elbow: 0, grip: 0, ext: 0, backArm: 1.25, backElbow: -.25, backReach: 0, lean: 0, yaw: 0, flow: 0 };
+const BLEND_DEF = { legX: 1, armS: 1, arm: 1.1, elbow: 0, grip: 0, ext: 0, backArm: 1.25, backElbow: -.25, backReach: 0, lean: 0, yaw: 0, flow: 0, shift: 0, hipLead: 0, leanLead: 0 };
 const BL = { prev: null, at: 0, off: false };
 const CHAIN = { on: true, lead: .04 }; // seconds the body leads the weapon arm by (draw.js)
 function blendPose(pose) {
@@ -402,6 +402,7 @@ function blendPose(pose) {
     if (prev.legs && tl && pose.kickK === undefined) {
       const a = 1 - Math.exp(-dt / .075), L = {};
       for (const j of ['f', 'b', 'fk', 'bk']) L[j] = prev.legs[j] + (tl[j] - prev.legs[j]) * a;
+      for (const j of ['fl', 'bl', 'bh']) { const v = (prev.legs[j] || 0) + ((tl[j] || 0) - (prev.legs[j] || 0)) * a; if (Math.abs(v) > .01) L[j] = v; } // a lifted foot, a raised heel
       L.w = (prev.legs.w || 1) + ((tl.w || 1) - (prev.legs.w || 1)) * a; // how wide the feet are set
       if (pose.legs || Math.abs(L.f - tl.f) + Math.abs(L.b - tl.b) + Math.abs(L.fk - tl.fk) > .6) pose.legs = L;
     }

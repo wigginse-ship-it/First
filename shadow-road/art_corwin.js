@@ -28,8 +28,8 @@ const CORWIN = (() => {
 
   // ======================================================== legs ========================================================
   const trousers = {
-    thigh(L, ax, ay, bx, by, far, s = 1) { seg(ax, ay, bx, by, 8.6 * s, 6.6 * s, far ? shade(L.legs, -.16) : L.legs, 1); },
-    shin(L, ax, ay, bx, by, far, s = 1) { seg(ax, ay, bx, by, 6.9 * s, 5.4 * s, far ? shade(L.boots, -.16) : L.boots, .9); }, // the shaft of a tall riding boot
+    skin(L, far) { return [far ? shade(L.legs, -.16) : L.legs, far ? shade(L.boots, -.16) : L.boots]; }, // trousers above the knee, the shaft of a tall riding boot below
+    thigh() {}, shin() {}, // (nothing laid over the skinned leg but the boot's cuff, straps and the knee cop)
     shinDetail(L, ax, ay, bx, by, far, s = 1) { // the boot's turned-down cuff under the knee and two buckled straps
       ctx.save(); const len = along(ax, ay, bx, by); ctx.scale(1, s);
       const cuff = far ? shade(L.cuff, -.16) : L.cuff;
@@ -63,22 +63,47 @@ const CORWIN = (() => {
       if (DET()) { ctx.fillStyle = 'rgba(255,240,220,.38)'; ell(x + 4.6, -2.5, 1.7, .7, -.3); ctx.fill(); }
     },
   };
-  // a whole leg: hip to knee to ankle, the foot set at (fx, fy) and turned by rot; the nearer leg passes far=false
+  // A whole leg, skinned (art.js skinLimb): one outline from hip to knee to ankle, the trouser and the boot shaft one
+  // limb, then what the slot lays over it (stripes, plates, greaves), the foot set at (fx, fy) and turned by rot, the
+  // boot's cuff and straps, and the knee cop. The nearer leg passes far=false.
+  // width profiles: [root, upper swell, joint, where the upper swell sits (0..1), lower swell, end, where it sits]
+  // legs: the hip wide to blend into the seat, the thigh full, a narrower knee, the calf, the ankle
+  // arms: the deltoid out of the shoulder, the bicep, a narrow elbow, the forearm's swell near it, the wrist
+  const LEGW = [9.6, 8.9, 6.3, .3, 7.1, 5.1, .32], ARMW = [8.4, 7.5, 5.6, .42, 6.3, 4.5, .3];
+  function legSkin(L, hx, hy, kx, ky, ax, ay, far, s = 1, kit = PART('pants', L)) {
+    const [c1, c2] = kit.skin ? kit.skin(L, far) : [far ? shade(L.legs, -.16) : L.legs, far ? shade(L.boots, -.16) : L.boots];
+    skinLimb(hx, hy, kx, ky, ax, ay, kit.legW || LEGW, s, c1, c2 === c1 ? null : c2, .6);
+    kit.thigh(L, hx, hy, kx, ky, far, s); kit.shin(L, kx, ky, ax, ay, far, s);
+  }
   function leg(L, hx, hy, kx, ky, ax, ay, fx, fy, rot, bsc, far, s = 1) {
     const kit = PART('pants', L);
-    kit.thigh(L, hx, hy, kx, ky, far, s);
-    kit.shin(L, kx, ky, ax, ay, far, s);
+    legSkin(L, hx, hy, kx, ky, ax, ay, far, s, kit);
     ctx.save(); ctx.translate(fx, fy); if (rot) ctx.rotate(rot); if (bsc !== 1) ctx.scale(bsc, 1); kit.foot(L, 0, far); ctx.restore();
     kit.shinDetail(L, kx, ky, ax, ay, far, s);
     const tx = kx - hx, ty = ky - hy, sx = ax - kx, sy = ay - ky, tl = Math.hypot(tx, ty) || 1, sl = Math.hypot(sx, sy) || 1;
     kit.knee(L, kx, ky, tx / tl + sx / sl, ty / tl + sy / sl, far, s);
   }
+  // the seat: the trousers between the tops of the two thighs, so they grow out of one pelvis instead of two pins
+  // (drawn after the far leg and before the near one, whose un-inked root melts into it). In the legs' own frame.
+  function seat(L, x0, x1, hy, s = 1, sink = 0) {
+    const kit = PART('pants', L), col = (kit.skin ? kit.skin(L, false) : [L.legs])[0], a = Math.min(x0, x1) - 3.6 * s, b = Math.max(x0, x1) + 3.6 * s, m = (a + b) / 2, d = (4.2 + sink * .12) * s;
+    ctx.beginPath(); ctx.moveTo(a, hy - 2.6); ctx.lineTo(b, hy - 2.6); ctx.quadraticCurveTo(b + .6, hy + d * .7, m + (b - m) * .35, hy + d); ctx.quadraticCurveTo(m, hy + d * 1.12, m - (m - a) * .35, hy + d); ctx.quadraticCurveTo(a - .6, hy + d * .7, a, hy - 2.6); ctx.closePath();
+    ctx.fillStyle = C(col); ctx.fill();
+    if (FINE()) { ctx.strokeStyle = 'rgba(12,6,16,.4)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(m - (m - a) * .3, hy + d * .95); ctx.quadraticCurveTo(m, hy + d * 1.05, m + (b - m) * .3, hy + d * .95); ctx.stroke(); } // the fork of the seat
+  }
+  // A whole arm, skinned: shoulder to elbow to wrist as one sleeve, the deltoid swelling out of the shoulder, then what
+  // the slot lays over it (folds, the vambrace or bracer down the forearm)
+  function arm(L, ax, ay, bx, by, cx, cy, far) {
+    const kit = PART('gauntlets', L), col = kit.skin ? kit.skin(L, far) : (far ? shade(L.shirt, -.24) : L.shirt);
+    skinLimb(ax, ay, bx, by, cx, cy, kit.armW || ARMW, 1, col, null);
+    kit.sleeve(L, ax, ay, bx, by, far); kit.fore(L, bx, by, cx, cy, far);
+  }
 
   // ===================================================== arms =====================================================
   const vambrace = {
-    sleeve(L, ax, ay, bx, by, far) { // the white shirt sleeve, full and loose
+    skin(L, far) { return far ? shade(L.shirt, -.24) : L.shirt; }, // the white shirt sleeve, full and loose, down to the wrist
+    sleeve(L, ax, ay, bx, by, far) { // its folds
       const col = far ? shade(L.shirt, -.24) : L.shirt;
-      seg(ax, ay, bx, by, 7.4, 6.2, col, 1.8);
       if (FINE()) { ctx.save(); const len = along(ax, ay, bx, by); ctx.strokeStyle = shade(col, -.3); ctx.lineWidth = .6; ctx.beginPath(); for (const k of [.35, .62]) { ctx.moveTo(len * k, -3.6); ctx.quadraticCurveTo(len * k + 1.6, 0, len * k - .4, 3.6); } ctx.stroke(); ctx.restore(); } // folds
     },
     fore(L, ax, ay, bx, by, far) { // a steel vambrace strapped over the sleeve, the shirt bunched at the elbow above it
@@ -89,7 +114,7 @@ const CORWIN = (() => {
       for (const k of [.36, .76]) { const x = len * k; ctx.fillStyle = C(far ? shade(L.leather, -.2) : L.leather); ctx.fillRect(x - .7, -3.2, 1.4, 6.4); ctx.fillStyle = C(shade(col, .2)); ctx.fillRect(x - .9, -3.4, 1.8, 1.4); }
       if (DET()) { ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(3, -1.9); ctx.lineTo(len - 2, -1.5); ctx.stroke(); }
       ctx.restore();
-      ell(ax, ay, 2.6, 2.3); ctx.fillStyle = C(far ? shade(L.shirt, -.3) : shade(L.shirt, -.08)); ctx.fill(); outline(.7); // the shirt gathered at the elbow
+      if (FINE()) { ctx.strokeStyle = shade(far ? shade(L.shirt, -.24) : L.shirt, -.35); ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(ax, ay, 2.2, 0, Math.PI * .9); ctx.stroke(); } // the shirt gathering at the elbow, a fold, not a ball
     },
     pauldron(L, x, y, ang, far, s = 1) { // layered steel lames over the shoulder, riveted, the cap on top
       const col = far ? shade(L.pauldron, -.24) : L.pauldron;
@@ -106,13 +131,21 @@ const CORWIN = (() => {
 
   // ===================================================== torso =====================================================
   let TW = 1; // how wide the chest reads: full face on, slimmer turned side-on (a chest is deeper than it is wide only in cartoons)
+  // The torso bends at the waist in two parts: the chest goes with the lean (the upper body's frame), the pelvis turns
+  // back by BEND toward the legs, and every point between is turned by a smooth share of it, so the sides flex in one
+  // curve (the front creasing as he folds forward, the back arching as he rears) and the belts ride with the pelvis.
+  let BEND = 0, BH = 0;
+  const bendW = (y) => sstep((y - (BH - 14)) / 13);
+  const BP = (x, y) => { const a = BEND * bendW(y); if (!a) return [x, y]; const c = Math.cos(a), s = Math.sin(a), dy = y - BH; return [x * c - dy * s, BH + x * s + dy * c]; };
   const torsoPath = (ty, HIP) => {
     // shoulders over a chest that tapers to a narrow waist; the front is a flat plane, no pigeon breast
-    const w = TW;
-    ctx.beginPath(); ctx.moveTo(-9.4 * w, ty + 2.2); ctx.quadraticCurveTo(0, ty - 1.6, 9.4 * w, ty + 2.2);
-    ctx.lineTo(8.8 * w, ty + 9); ctx.quadraticCurveTo(7.2 * w, ty + 14, 6 * w, ty + 16.5); ctx.quadraticCurveTo(5.2 * w, HIP - 4, 6 * w, HIP + 1.5);
-    ctx.lineTo(-6 * w, HIP + 1.5); ctx.quadraticCurveTo(-5.2 * w, HIP - 4, -6 * w, ty + 16.5); ctx.quadraticCurveTo(-7.2 * w, ty + 14, -8.8 * w, ty + 9); ctx.lineTo(-9.4 * w, ty + 2.2); ctx.closePath();
+    const w = TW; BH = HIP;
+    const mv = (x, y) => { const p = BP(x, y); ctx.moveTo(p[0], p[1]); }, ln = (x, y) => { const p = BP(x, y); ctx.lineTo(p[0], p[1]); }, qc = (x1, y1, x, y) => { const a = BP(x1, y1), b = BP(x, y); ctx.quadraticCurveTo(a[0], a[1], b[0], b[1]); };
+    ctx.beginPath(); mv(-9.4 * w, ty + 2.2); qc(0, ty - 1.6, 9.4 * w, ty + 2.2);
+    ln(8.8 * w, ty + 9); qc(7.2 * w, ty + 14, 6 * w, ty + 16.5); qc(5.4 * w, HIP - 5.2, 5.6 * w, HIP - 3); qc(5.8 * w, HIP - .8, 6 * w, HIP + 1.5);
+    ln(-6 * w, HIP + 1.5); qc(-5.8 * w, HIP - .8, -5.6 * w, HIP - 3); qc(-5.4 * w, HIP - 5.2, -6 * w, ty + 16.5); qc(-7.2 * w, ty + 14, -8.8 * w, ty + 9); ln(-9.4 * w, ty + 2.2); ctx.closePath();
   };
+  const pelvis = (HIP) => { if (!BEND) return; ctx.translate(0, HIP); ctx.rotate(BEND); ctx.translate(0, -HIP); }; // the belts' frame
   const doublet = {
     torso(L, g) {
       const { HIP, SHO, CS, Y, BACK } = g, ty = SHO - 2, body = L.body;
@@ -259,6 +292,11 @@ const CORWIN = (() => {
     const flow = clamp(pose.flow || 0, -12, 20), down = pose.down ? 1 : 0;
     const still = 0, stream = 0, trail = 6.5 + flow * 1.05 + (gait ? (pose.run ? 7 : 2 + Math.abs(sw) * 1.6) : 0);
     const br = pose.breath || 0, air = Math.sin(t * 1.1);
+    // a wind off the road while he stands: slow gusts that never quite die away (three slow sines, so it never
+    // repeats or flickers), and a billow running down the cloth from the shoulders to the hem with each gust
+    const wk = pose.stance && !walk ? 1 : gait ? .3 : pose.down ? 0 : .55;
+    const nearK = clamp(Y / .35, 0, 1) * .22; // turned to us, the far half is held behind him: the near half spreads a little wider to keep the cloak as full
+    const gust = wk * clamp(.5 + .28 * Math.sin(t * .41) + .18 * Math.sin(t * 1.03 + 1.3) + .1 * Math.sin(t * 2.2 + .4), .05, 1.1);
     for (let i = 0; i < S; i++) {
       const phi = (i / (S - 1) * 2 - 1) * PHIMAX, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp);
       const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 11.2 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
@@ -268,7 +306,9 @@ const CORWIN = (() => {
         const o = ix(i, j); if (!j) { tgt[o] = ax; tgt[o + 1] = ay; continue; }
         const v = j / M, vf = Math.pow(v, .85);
         const sway = (Math.sin(walk * .5 + i * .9 - v * 1.6) * (gait ? 2.6 : 0) + (air * 1.1 + br * .4) * Math.sin(i * 1.7 + v * 2.2 + t * .7)) * v; // it drifts on the air even standing
-        const ofx = -Math.max(0, cp) * 1.15 * fl * vf + front * (.3 + .45 * still) * fl * vf - trail * Math.pow(v, 1.5) - front * 6.5 * v + sway, olz = sp * fl * vf;
+        const bil = Math.sin(t * 2.05 - v * 3.1 + i * .75) * (.6 + .4 * Math.sin(t * .7 + i)); // the billow, travelling down the cloth
+        const ofx = -Math.max(0, cp) * 1.15 * fl * vf + front * (.3 + .45 * still) * fl * vf - trail * Math.pow(v, 1.5) - front * 6.5 * v + sway
+          - gust * (3.4 * Math.pow(v, 1.3) + 1.8 * bil * v), olz = sp * fl * vf * (1 + gust * .14 * bil * v + (sp > 0 ? nearK : 0));
         let dyy = 0; const L3 = len * v, hz = Math.min(L3 * .94, Math.hypot(ofx, olz)), dy = Math.sqrt(L3 * L3 - hz * hz) + br * .35 * v; // it keeps its length: streaming out, it rises
         let dx = ofx * CS - olz * Y, a = LEAN * (1 - .8 * v), ca = Math.cos(a), sa = Math.sin(a);
         if (down) { // knocked flat: the near half lies over him like a shroud down to his boots, the rest spreads on the street past his head
@@ -345,6 +385,22 @@ const CORWIN = (() => {
     for (let k = 0; k < NP; k++) { s[k * 2] = SIM.pts[k * 2] * SIM.f; s[k * 2 + 1] = SIM.pts[k * 2 + 1]; }
     return s;
   }
+  // The cloak always hangs behind him: turned toward us, no part of it may stand out past his body on the side away
+  // from us (the far side is toward +x then). Every point is held inside the edge of his torso (in the upper body's
+  // frame, so it follows a lean), and below the waist inside the line of his hips, with a soft limit that eases the
+  // cloth up to the edge rather than creasing it there. Seen side-on or from behind it is left free; flips, spins and
+  // falls too.
+  function behind(g) {
+    const { Y, HX, HIP, SHO, LEAN, pose } = g; if (pose.down || pose.rot || pose.spin || Y <= 0) return;
+    const on = clamp(Y / .35, 0, 1), TWc = .62 + .38 * Math.abs(Y), slack = (1 - on) * 40, cl = Math.cos(LEAN), sl = Math.sin(LEAN), S0 = 2.4;
+    const edge = (yu) => { const d = yu - SHO; return (d < 7 ? lerp(9.4, 8.8, d / 7) : d < 14.5 ? lerp(8.8, 6, (d - 7) / 7.5) : d < 19 ? lerp(6, 5.6, (d - 14.5) / 4.5) : 5.8) * TWc - 1.2; };
+    for (let k = 0; k < NP; k++) {
+      const x = loc[k * 2] - HX, y = loc[k * 2 + 1] - HIP, xu = x * cl + y * sl, yu = -x * sl + y * cl + HIP; // into the upper body's frame
+      const lim = edge(Math.max(SHO, yu)) + slack, a = lim - S0; if (xu <= a) continue;
+      const xn = a + S0 * (1 - Math.exp(-(xu - a) / S0)), dx = xn - xu; // eased up to the edge, never past it
+      loc[k * 2] += dx * cl; loc[k * 2 + 1] += dx * sl;
+    }
+  }
   // work out where the cloak is this frame; returns the points in his drawing frame
   function begin(L, g) {
     CLOAK_GEO = g; targets(L, g);
@@ -352,6 +408,7 @@ const CORWIN = (() => {
     if (CD && CD.live && !g.pose.noSim) simulate(g, CD);
     else if (CD && (CD.live || g.pose.cloakS)) { const Mrel = CD.Binv.multiply(ctx.getTransform()); if (CD.live && SIM.ok) toLocal(Mrel, SIM.pts, 1); else toLocal(Mrel, g.pose.cloakS, CD.facing); }
     else { loc.set(tgt); if (!g.pose.rot && !g.pose.down) { const gr = (CD ? CD.z : 0) - .5; for (let k = 0; k < NP; k++) if (loc[k * 2 + 1] > gr) loc[k * 2 + 1] = gr; } }
+    behind(g);
     return loc;
   }
   // a point on the cloth: u across it (0 the far front edge .. 1 the near one), v down it (1 the hem; beyond it extends)
@@ -434,6 +491,6 @@ const CORWIN = (() => {
   const DEF = { mail: 'doublet', pants: 'trousers', gauntlets: 'vambrace', waist: 'swordbelt' };
   const PART = (slot, L) => parts[slot][L[slot]] || parts[slot][DEF[slot]];
   // the drawing helpers the armor sets share (art_gear.js): TW is set here the way the doublet sets it
-  const kit = { DET, FINE, metal, rivet, along, ring, torsoPath, setTW(Y) { TW = .62 + .38 * Math.abs(Y); return TW; }, get TW() { return TW; } };
-  return { parts, PART, DEF, leg, cloak, roseClasp, kit, get geo() { return CLOAK_GEO; } };
+  const kit = { DET, FINE, metal, rivet, along, ring, torsoPath, pelvis, setTW(Y) { TW = .62 + .38 * Math.abs(Y); return TW; }, get TW() { return TW; }, setBend(b) { BEND = b; } };
+  return { parts, PART, DEF, leg, legSkin, seat, arm, cloak, roseClasp, kit, LEGW, ARMW, get geo() { return CLOAK_GEO; } };
 })();
