@@ -219,7 +219,7 @@ function playerPose() {
   }
   else { // hands low at his sides but loaded: elbows bent, fists forward at the waist, swaying with his breath
     const b = Math.sin(performance.now() / 420) * .03;
-    pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; pose.openHand = 1; // arms hanging loose at his sides, just off the body
+    pose.arm = 1.42 + b; pose.elbow = .22; pose.backArm = 1.5 - b; pose.lean = .03; pose.openHand = 0; // arms hanging loose at his sides, just off the body
   }
   if (['idle', 'walk'].includes(P.state)) { pose.breath = Math.sin(performance.now() / 420); pose.stance = 1; }
   if (P.state === 'idle' && !pose.legs) { pose.legs = { f: -11, b: 13, fk: 1.6, bk: 1.2, w: 1.5 }; pose.sink = .6; } // standing tall in a wide A: legs nearly straight, the far foot ahead, the near one planted behind
@@ -286,6 +286,7 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
   // the head swaps between its profile drawing and its turned drawing with a deadband, so it never flickers
   // back and forth while he walks at a slant
   if (pose.live) { const a = Math.abs(pose.HY); headTurned = headTurned ? a > .3 : a > .55; pose.headTurn = headTurned; }
+  heroInk(x, y - z, () => { // (painted on his own layer within the figure layer: paint.js)
   ctx.save(); ctx.globalAlpha = alpha;
   ctx.translate(x, y - z);
   CLOAK_DRAW = { Binv: ctx.getTransform().inverse(), facing, z, wx: x, wy: y - z, live: !!pose.live }; // the frame his cloak moves in (art_corwin.js)
@@ -295,6 +296,7 @@ function drawPlayerAt(x, y, z, facing, pose, alpha) {
   drawHumanoid(heroLook(), pose);
   CLOAK_DRAW = null;
   ctx.restore();
+  });
 }
 function drawEnemy(e, t) {
   if (e.state === 'dying' && e.death && e.death !== 'pop') { drawDeath(e, t); return; }

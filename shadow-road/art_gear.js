@@ -58,7 +58,7 @@
       clipTorso(f, () => {
         ctx.save(); ctx.scale(f.TW, 1);
         const x0 = f.front ? -10 : 10, x1 = f.front ? 7 : -7; // the bandolier, studded with brass, over the near shoulder
-        ctx.lineCap = 'butt'; ctx.strokeStyle = C(OUT); ctx.lineWidth = 4.4; ctx.beginPath(); ctx.moveTo(x0, f.ty + 1); ctx.lineTo(x1, f.HIP); ctx.stroke();
+        ctx.lineCap = 'butt'; ctx.strokeStyle = C(INK); ctx.lineWidth = 3 + 1.4 * OUTK; ctx.beginPath(); ctx.moveTo(x0, f.ty + 1); ctx.lineTo(x1, f.HIP); ctx.stroke();
         ctx.strokeStyle = C(L.m_b); ctx.lineWidth = 3; ctx.stroke();
         ctx.fillStyle = C(L.m_c); for (const k of [.1, .26, .42, .58, .74, .9]) { circle(lerp(x0, x1, k), lerp(f.ty + 1, f.HIP, k), .62); ctx.fill(); }
         if (DET()) { ctx.strokeStyle = shade(L.m_a, -.4); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(-9, f.HIP - 4.5); ctx.quadraticCurveTo(0, f.HIP - 3, 9, f.HIP - 4.5); ctx.stroke(); } // the coat's waist seam
@@ -349,7 +349,7 @@
     for (let i = 0; i <= 10; i++) { const th = a0 - Math.PI / 2 + Math.PI * i / 10, [x] = ring(g, r, th); pts.push([x, yOf(th)]); }
     const path = () => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
     ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
-    path(); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = w + 1.8; ctx.stroke();
+    path(); ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.lineWidth = w + 1.8 * OUTK; ctx.stroke();
     path(); ctx.strokeStyle = C(col); ctx.lineWidth = w; ctx.stroke();
     if (DET()) { ctx.save(); ctx.translate(0, -w * .3); path(); ctx.strokeStyle = shade(col, .3); ctx.lineWidth = .6; ctx.stroke(); ctx.restore(); }
     if (deco) for (let i = 0; i < pts.length - 1; i++) deco(pts[i], pts[i + 1], i);

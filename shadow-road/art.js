@@ -4,14 +4,16 @@ const OUT = '#2A1B2C';          // warm dark ink used for every outline
 let FLASH = false;              // when true, every color helper returns white (hit flash)
 let TINT = null;                // when set, every color helper returns this one color (shadow afterimages)
 const C = (c) => FLASH ? '#FFFFFF' : TINT || c;
-function outline(w = 1.6) { ctx.lineWidth = w; ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.stroke(); }
+let OUTK = 1, INK = OUT;
+const FINE_OK = () => !FLASH && !TINT && (typeof PAINT_Q === 'undefined' || PAINT_Q > 0);        // the prince is inked finer, in a deeper brown-black (set while he is drawn)
+function outline(w = 1.6) { ctx.lineWidth = w * OUTK; ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); }
 function ell(x, y, rx, ry, rot = 0) { ctx.beginPath(); ctx.ellipse(x, y, Math.max(.1, rx), Math.max(.1, ry), rot, 0, TAU); }
 function limb(pts, col, w) { // a thick round-capped limb with an outline
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
-  ctx.strokeStyle = FLASH ? '#fff' : OUT; ctx.lineWidth = w + 2.2; ctx.stroke();
+  ctx.strokeStyle = FLASH ? '#fff' : INK; ctx.lineWidth = w + 2.2 * OUTK; ctx.stroke();
   ctx.strokeStyle = C(col); ctx.lineWidth = w; ctx.stroke();
 }
 function shade(hex, amt) { // lighten (amt > 0) or darken (amt < 0) a #rrggbb color, for painted light and shadow
@@ -74,15 +76,16 @@ function drawCorwinHead(look, hy) {
   // pointed ends at the nape lying on the collar (with the same locks as the turned head, so the turn is seamless)
   const hair = look.hair, hl = look.hairLt || shade(hair, .4), hd = look.hairDk || shade(hair, -.5);
   ctx.save(); ctx.globalCompositeOperation = 'destination-over'; hairLocks(look, hy, 0, .6, 'back', true); ctx.restore();
-  ctx.beginPath();
-  ctx.moveTo(10.2, hy - 5.8);
-  ctx.lineTo(9.3, hy - 3); ctx.lineTo(8.4, hy - 5.2); ctx.lineTo(7, hy - 2.4); ctx.lineTo(6.2, hy - 5.3); ctx.lineTo(4.4, hy - 3); ctx.lineTo(3.6, hy - 5.6); // the fringe
-  ctx.lineTo(1.9, hy - 3.6); ctx.lineTo(1.3, hy + 3.8); ctx.lineTo(.2, hy + 1.2); ctx.lineTo(-.9, hy + .2); ctx.lineTo(-1.4, hy + 4.8); ctx.lineTo(-2.4, hy + 3.2); // a sideburn, a lock over the ear
-  ctx.lineTo(-3, hy + 7); ctx.lineTo(-4.2, hy + 4.6); ctx.lineTo(-5.4, hy + 7.6); ctx.lineTo(-6.2, hy + 4.2); ctx.lineTo(-8, hy + 5.6); ctx.lineTo(-7.6, hy + 1.8); // ends at the nape
-  ctx.quadraticCurveTo(-8.8, hy - 2.6, -8, hy - 7); ctx.lineTo(-9.4, hy - 8.4); ctx.lineTo(-7.4, hy - 9.4); // tousled at the back
-  ctx.quadraticCurveTo(-6, hy - 12.4, -2.4, hy - 12.6); ctx.lineTo(-2.2, hy - 13.4); ctx.lineTo(-.2, hy - 12.8);
-  ctx.quadraticCurveTo(3.6, hy - 13.8, 6.6, hy - 12); ctx.lineTo(7.4, hy - 12.4); ctx.lineTo(8.2, hy - 11.2);
-  ctx.quadraticCurveTo(11, hy - 9.6, 10.8, hy - 7.4); ctx.closePath();
+  ctx.beginPath(); // a full mop: the fringe falling over the brow, a sideburn, a lock over the ear, ragged ends on the collar
+  ctx.moveTo(10.6, hy - 6.4);
+  ctx.lineTo(9.7, hy - 3.4); ctx.lineTo(8.8, hy - 5.4); ctx.lineTo(7.7, hy - 2.4); ctx.lineTo(6.6, hy - 4.8); ctx.lineTo(5.3, hy - 2); ctx.lineTo(4.3, hy - 4.4); ctx.lineTo(3, hy - 1.6); // the fringe
+  ctx.lineTo(2.2, hy - 3.2); ctx.lineTo(1.6, hy + 3); ctx.lineTo(.5, hy + 1); // the sideburn
+  ctx.lineTo(-.3, hy + 5.6); ctx.lineTo(-1.4, hy + 2.8); ctx.lineTo(-2.3, hy + 7); // a lock over the ear
+  ctx.lineTo(-3.6, hy + 4.6); ctx.lineTo(-4.4, hy + 9.8); ctx.lineTo(-5.6, hy + 6.2); ctx.lineTo(-6.8, hy + 10.4); ctx.lineTo(-7.6, hy + 6); ctx.lineTo(-9.4, hy + 8.6); ctx.lineTo(-9.2, hy + 3.4); // ends on the collar
+  ctx.quadraticCurveTo(-10.6, hy - 1.6, -10.4, hy - 5.4); ctx.lineTo(-11.4, hy - 7.4); ctx.lineTo(-9.8, hy - 9.4); // full at the back
+  ctx.quadraticCurveTo(-7.6, hy - 14.6, -2.2, hy - 14.6); ctx.lineTo(-.8, hy - 15.4); ctx.lineTo(.6, hy - 14.6);
+  ctx.quadraticCurveTo(5.2, hy - 14.8, 8.6, hy - 12.2); ctx.lineTo(10.2, hy - 12); ctx.lineTo(10, hy - 10.8);
+  ctx.quadraticCurveTo(12.2, hy - 9, 10.6, hy - 6.4); ctx.closePath();
   ctx.fillStyle = C(hair); ctx.fill(); outline(1.05);
   if (!FLASH && !TINT) {
     ctx.save(); ctx.clip(); ctx.lineCap = 'round';
@@ -92,9 +95,9 @@ function drawCorwinHead(look, hy) {
     ctx.moveTo(6, hy - 7.4); ctx.quadraticCurveTo(1.6, hy - 8, -2.2, hy - 4.6); ctx.quadraticCurveTo(-3.6, hy - 1, -3.2, hy + 7);
     ctx.moveTo(9.6, hy - 7.4); ctx.quadraticCurveTo(8, hy - 6, 7.2, hy - 3.2); ctx.moveTo(5.2, hy - 6.8); ctx.quadraticCurveTo(4.6, hy - 5, 4.6, hy - 3.4);
     ctx.stroke();
-    ctx.strokeStyle = hl; ctx.lineWidth = .8; ctx.beginPath(); // light catching the top
-    ctx.moveTo(8.4, hy - 11); ctx.quadraticCurveTo(3.6, hy - 13, -2.4, hy - 11.6); ctx.moveTo(9.8, hy - 8.4); ctx.quadraticCurveTo(7.4, hy - 9.4, 5, hy - 9);
-    ctx.moveTo(2.2, hy - 11.6); ctx.quadraticCurveTo(-1.6, hy - 11.2, -4.6, hy - 9.2); ctx.stroke();
+    ctx.strokeStyle = hl; ctx.lineWidth = .7; ctx.beginPath(); // warm light catching the top of the mop
+    ctx.moveTo(9, hy - 11.4); ctx.quadraticCurveTo(3.6, hy - 14, -2.6, hy - 13); ctx.moveTo(10.2, hy - 8.4); ctx.quadraticCurveTo(7.4, hy - 10.2, 4.6, hy - 9.8);
+    ctx.moveTo(2.4, hy - 12.8); ctx.quadraticCurveTo(-2, hy - 12.4, -5.6, hy - 10.4); ctx.moveTo(6.2, hy - 7.2); ctx.quadraticCurveTo(4.4, hy - 8.6, 2.6, hy - 6.6); ctx.stroke();
     ctx.restore();
   }
   hairLocks(look, hy, 0, .6, 'front', true);
@@ -106,13 +109,16 @@ function drawCorwinHead(look, hy) {
 // side; locks fall over the ears; jagged ends lie on the nape; a few strands fall over the brow.
 let HAIR_SWAY = [0, 0];
 const HAIR_LOCKS = (() => {
-  // base (phi, e) on the skull, tip (phi + dp, te) at radius R + out, base half-width w (radians); k: which group
+  // base (phi, e) on the skull, tip (phi + dp, te) at radius R + out, base half-width w (radians); k: which group.
+  // A full, shaggy mop as in the sheet: locks falling from the crown over the brow, the ears and down to the collar
   const L = [], h = (i) => { const v = Math.sin(i * 91.7 + 7.3) * 43758.5; return v - Math.floor(v); };
-  for (let i = 0; i < 8; i++) { const phi = -2.9 + i * .78 + h(i) * .2, back = Math.sign(phi || 1); // tufts off the crown, swept up and back
-    L.push({ phi, e: .5 + h(i + 1) * .16, dp: Math.abs(phi) < .5 ? .7 : back * .6, te: .78 + h(i + 2) * .22, out: 2.4 + h(i + 3) * 1.6, w: .46, k: 'crown' }); }
-  for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) L.push({ phi: sd * (1.25 + i * .5), e: .28 - i * .08, dp: sd * .12, te: -.5 - h(i + 11 + sd) * .3, out: 2 + h(i + 13) * 1.3, w: .34, k: 'side' }); // over the ears
-  for (let i = 0; i < 6; i++) L.push({ phi: Math.PI + (i - 2.5) * .42, e: .2, dp: (i - 2.5) * .07, te: -1 - [.2, .05, .28, .1, .22, .02][i], out: 2.2 + [1.2, .4, 1.5, .6, 1, .3][i], w: .36, k: 'nape' }); // jagged ends at the nape
-  for (let i = 0; i < 3; i++) L.push({ phi: -.36 + i * .36, e: .66, dp: .16, te: .22 + h(i + 40) * .14, out: .3, w: .17, k: 'fringe' }); // strands over the brow
+  for (let i = 0; i < 10; i++) { const phi = -Math.PI + (i + .5) * TAU / 10 + (h(i) - .5) * .25; // the crown falling outward every way, fullest over the brow
+    L.push({ phi, e: 1.02 + h(i + 1) * .12, dp: (h(i + 2) - .5) * .5, te: .42 + h(i + 3) * .2 - (Math.abs(phi) > 2 ? .25 : 0), out: 2.8 + h(i + 4) * 1.6, w: .5, k: 'crown' }); }
+  for (let i = 0; i < 9; i++) { const phi = -Math.PI + (i + .1) * TAU / 9 + (h(i + 70) - .5) * .3; // a second, lower layer: messy volume standing out round the head
+    if (Math.abs(phi) < .5) continue; L.push({ phi, e: .72 + h(i + 71) * .1, dp: (h(i + 72) - .5) * .4, te: .02 + h(i + 73) * .22, out: 3.2 + h(i + 74) * 1.6, w: .42, k: 'crown' }); }
+  for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) L.push({ phi: sd * (1.25 + i * .42), e: .62 - i * .04, dp: sd * (.1 + h(i + 21) * .1), te: -.48 - h(i + 11 + sd) * .3, out: 2.9 + h(i + 13) * 1.2, w: .34, k: 'side' }); // over the ears
+  for (let i = 0; i < 7; i++) L.push({ phi: Math.PI + (i - 3) * .36, e: .55, dp: (i - 3) * .06, te: -1.12 - [.2, .05, .28, .12, .24, .02, .16][i], out: 2.4 + [1.1, .5, 1.4, .7, 1.1, .4, .9][i], w: .3, k: 'nape' }); // ragged ends down to the collar
+  for (let i = 0; i < 5; i++) L.push({ phi: -.62 + i * .31, e: .86, dp: (i % 2 ? .1 : -.06) + .06, te: .2 + h(i + 40) * .16, out: .7 + h(i + 44) * .5, w: .2, k: 'fringe' }); // locks falling over the brow
   return L;
 })();
 function hairLocks(look, hy, Y, cx, which, profile) {
@@ -138,7 +144,7 @@ function hairLocks(look, hy, Y, cx, which, profile) {
     ctx.quadraticCurveTo(mx + ax * .45 + nx * bw * sgn, my + ay * .45 + ny * bw * sgn, tx, ty);
     ctx.quadraticCurveTo(mx + ax * .45 - nx * bw * sgn * .8, my + ay * .45 - ny * bw * sgn * .8, b[0], b[1]); ctx.closePath();
     ctx.fillStyle = C(back ? hd : hair); ctx.fill(); outline(back ? .8 : .7);
-    if (!back && !FLASH && !TINT && d > .15) { ctx.strokeStyle = hl; ctx.lineWidth = .6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(mx + ax * .15 + nx * bw * .3, my + ay * .15 + ny * bw * .3); ctx.quadraticCurveTo(mx + ax * .5 + nx * bw * .4, my + ay * .5 + ny * bw * .4, mx + ax * .8, my + ay * .8); ctx.stroke(); }
+    if (!back && !FLASH && !TINT) { const sh = l.phi * 7.3 % 1; ctx.strokeStyle = d > .1 && Math.abs(sh) < .55 ? hl : hd; const ga = ctx.globalAlpha; ctx.globalAlpha = ga * .7; ctx.lineWidth = .45; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(mx + ax * .15 + nx * bw * .3, my + ay * .15 + ny * bw * .3); ctx.quadraticCurveTo(mx + ax * .5 + nx * bw * .4, my + ay * .5 + ny * bw * .4, mx + ax * .8, my + ay * .8); ctx.stroke(); ctx.globalAlpha = ga; }
   }
 }
 // The same head turned away from profile, for his 3/4, front and back views. The head is treated as a solid: every
@@ -148,7 +154,7 @@ function drawCorwinHeadTurn(look, hy, Y) {
   const sk = look.skin, mid = shade(sk, -.16), dark = shade(sk, -.34), ink = '#141016';
   const CS = Math.sqrt(Math.max(0, 1 - Y * Y)), th = Math.atan2(Y, CS), cx = 1.4;
   const P = (phi, r) => cx + r * Math.cos(phi + th), D = (phi) => Math.sin(phi + th);
-  ctx.fillStyle = C(shade(sk, -.4)); ctx.fillRect(cx - 2.8, hy + 5, 5.6, 7); // neck
+  if (Y > -.4) { ctx.fillStyle = C(shade(sk, -.4)); ctx.fillRect(cx - 2.8, hy + 5, 5.6, 7); } // neck (from behind, the hood and the hair hide it)
   const skull = () => { ell(cx, hy - 1.6, 7.3, 8.4); };
   const jaw = () => { // cheeks down to the jaw's corners and the chin, wherever they face the viewer
     ctx.beginPath(); const pts = [[-1.35, 7.2, 1.6], [-1.02, 6.8, 6.8], [-.42, 5.4, 9.2], [0, 5.6, 10], [.42, 5.4, 9.2], [1.02, 6.8, 6.8], [1.35, 7.2, 1.6]];
@@ -161,12 +167,14 @@ function drawCorwinHeadTurn(look, hy, Y) {
   if (look.corwin) hairLocks(look, hy, Y, cx, 'back'); else backLocks(false);
   // outline the two shapes, then fill them again so only their joined edge keeps its line
   const shapes = Y < -.4 ? [skull] : [skull, jaw]; // (from behind, the jaw is hidden by the back of the head)
-  for (const f of shapes) { f(); ctx.lineWidth = 2.1; ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.stroke(); }
+  for (const f of shapes) { f(); ctx.lineWidth = 2.1 * OUTK; ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.stroke(); }
   for (const f of shapes) { f(); ctx.fillStyle = C(sk); ctx.fill(); }
   if (!FLASH && !TINT) { // light from the upper right: the far side of the head turns into shadow
     ctx.save(); skull(); ctx.clip(); const g = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g.addColorStop(0, 'rgba(70,40,40,.32)'); g.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 9, hy - 12, 18, 24); ctx.restore();
     ctx.save(); jaw(); ctx.clip(); const g2 = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g2.addColorStop(0, 'rgba(70,40,40,.32)'); g2.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g2; ctx.fillRect(cx - 9, hy - 2, 18, 14);
-    ctx.fillStyle = 'rgba(40,28,34,.17)'; ctx.fillRect(cx - 9, hy + 4.2, 18, 8); ctx.restore(); // stubble along the jaw
+    const sg = ctx.createLinearGradient(0, hy + 2.6, 0, hy + 7); sg.addColorStop(0, 'rgba(40,28,34,0)'); sg.addColorStop(1, 'rgba(40,28,34,.26)'); ctx.fillStyle = sg; ctx.fillRect(cx - 9, hy + 2.6, 18, 9); // stubble along the jaw
+    if (FINE_OK()) { ctx.fillStyle = 'rgba(30,20,24,.45)'; for (let i = 0; i < 26; i++) { const u = (Math.sin(i * 12.9) * 43758.5) % 1, v = (Math.sin(i * 78.2) * 43758.5) % 1; ctx.fillRect(cx + (Math.abs(u) - .5) * 11, hy + 5 + Math.abs(v) * 4.4, .3, .3); } }
+    ctx.restore();
   }
   if (Y > -.25) { // the face
     for (const sd of [-1, 1]) { // the cheekbones' hollows
@@ -199,13 +207,14 @@ function drawCorwinHeadTurn(look, hy, Y) {
   }
   // the hair: a cap fixed to the skull (it turns with him, it does not reshape), cut away for the face, with a ragged
   // fringe over the brow and locks over the ears
-  const hairShape = () => ell(cx - .4, hy - 3.2, 8.4, 8.8);
-  ctx.save(); hairShape(); ctx.clip(); ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, Y > -.25 ? 18 : 19); ctx.clip();
-  ctx.beginPath(); ctx.rect(cx - 12, hy - 14, 24, 30);
-  if (Y > -.25) { const fv = clamp((Y + .25) / .55, 0, 1); const fx0 = cx + 4 * CS, frx = (3.9 + 2.1 * Math.max(0, Y)) * (.6 + .4 * fv); ctx.moveTo(fx0 + frx, hy + 2.2); ctx.ellipse(fx0, hy + 2.2, frx, 9.9, 0, 0, TAU); } // the face, cut out of the hair
-  ctx.fillStyle = C(hair); ctx.fill('evenodd');
+  const hairShape = () => ell(cx - .3, hy - 3.6, 9.9, 9.7);
+  ctx.save(); hairShape(); ctx.clip(); ctx.beginPath(); ctx.rect(cx - 13, hy - 15, 26, Y > -.25 ? 19.4 : 21); ctx.clip();
+  ctx.beginPath(); ctx.rect(cx - 13, hy - 15, 26, 32);
+  if (Y > -.25) { const fv = clamp((Y + .25) / .55, 0, 1); const fx0 = cx + 4 * CS, frx = (3.9 + 2.1 * Math.max(0, Y)) * (.6 + .4 * fv); ctx.moveTo(fx0 + frx, hy + 3.4); ctx.ellipse(fx0, hy + 3.4, frx, 9.6, 0, 0, TAU); } // the face, cut out of the hair
+  const hg = ctx.createLinearGradient(cx + 6, hy - 13, cx - 6, hy + 4); hg.addColorStop(0, C(shade(hair, .25))); hg.addColorStop(.45, C(hair)); hg.addColorStop(1, C(hd));
+  ctx.fillStyle = hg; ctx.fill('evenodd');
   ctx.restore();
-  ctx.beginPath(); ctx.ellipse(cx - .4, hy - 3.2, 8.6, 9, 0, Math.PI * .9, Math.PI * (Y > -.25 ? 1.76 : 2.1)); outline(1.05); // the crown's edge, kept off the face
+  ctx.beginPath(); ctx.ellipse(cx - .3, hy - 3.6, 10, 9.8, 0, Math.PI * .9, Math.PI * (Y > -.25 ? 1.76 : 2.1)); outline(1.05); // the crown's edge, kept off the face
   hairLocks(look, hy, Y, cx, 'front'); // the locks over it: the crown, over the ears, the nape, strands over the brow
   if (!FLASH && !TINT) {
     ctx.strokeStyle = hd; ctx.lineWidth = .6; ctx.lineCap = 'round'; ctx.beginPath(); // locks combed back by hand
@@ -214,8 +223,8 @@ function drawCorwinHeadTurn(look, hy, Y) {
       else if (o) { ctx.moveTo(cx + o * .5, hy - 9.6); ctx.quadraticCurveTo(cx + o * .9, hy - 5, cx + o * .9, hy + 1.6); }
     }
     ctx.stroke();
-    ctx.strokeStyle = hl; ctx.lineWidth = .8; ctx.beginPath(); // light catching the top
-    ctx.moveTo(cx + 5.6, hy - 9.8); ctx.quadraticCurveTo(cx, hy - 12.2, cx - 5.4, hy - 9.6); ctx.moveTo(cx + 3, hy - 8.6); ctx.quadraticCurveTo(cx - .6, hy - 10, cx - 3.6, hy - 8.6); ctx.stroke();
+    ctx.strokeStyle = hl; ctx.lineWidth = .7; ctx.beginPath(); // warm light catching the top of the mop
+    ctx.moveTo(cx + 6, hy - 10.6); ctx.quadraticCurveTo(cx + 1, hy - 13.4, cx - 5, hy - 11); ctx.moveTo(cx + 3.6, hy - 9.4); ctx.quadraticCurveTo(cx, hy - 11.2, cx - 3.4, hy - 10); ctx.moveTo(cx + 7.4, hy - 8); ctx.quadraticCurveTo(cx + 5.4, hy - 10.6, cx + 2, hy - 12.2); ctx.stroke();
   }
 }
 
@@ -226,12 +235,12 @@ function drawHand(g, open) {
   if (HAND_S !== 1) { ctx.save(); ctx.translate(14, 0); ctx.scale(HAND_S, HAND_S); ctx.translate(-14, 0); const s = HAND_S; HAND_S = 1; drawHand(g, open); HAND_S = s; ctx.restore(); return; }
   if (open) {
     const fin = (y0, len, curl) => { const f = () => { ctx.beginPath(); ctx.moveTo(18.4, y0); ctx.quadraticCurveTo(18.4 + len * .7, y0 + curl * .3, 18.4 + len, y0 + curl); }; ctx.lineCap = 'round';
-      f(); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = 3.1; ctx.stroke(); f(); ctx.strokeStyle = C(g); ctx.lineWidth = 1.7; ctx.stroke(); };
+      f(); ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.lineWidth = 1.7 + 1.4 * OUTK; ctx.stroke(); f(); ctx.strokeStyle = C(g); ctx.lineWidth = 1.7; ctx.stroke(); };
     for (const [y, l, c] of [[2.2, 3.6, 1.8], [.75, 4.6, 2], [-.75, 4.9, 1.8], [-2.2, 4.4, 1.5]]) fin(y, l, c); // little finger to index
     rrect(12.8, -3.2, 6.4, 6.4, 2.2); ctx.fillStyle = C(g); ctx.fill(); outline(1.1); // the palm and back of the hand
     if (!FLASH && !TINT) { ctx.fillStyle = shade(g, -.25); ctx.fillRect(13.2, 1.2, 6.2, 2.2); }
     const th = () => { ctx.beginPath(); ctx.moveTo(15, -3.4); ctx.quadraticCurveTo(18, -5.6, 20.6, -4.6); }; ctx.lineCap = 'round';
-    th(); ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = 3.4; ctx.stroke(); th(); ctx.strokeStyle = C(g); ctx.lineWidth = 2; ctx.stroke(); // the thumb
+    th(); ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.lineWidth = 2 + 1.4 * OUTK; ctx.stroke(); th(); ctx.strokeStyle = C(g); ctx.lineWidth = 2; ctx.stroke(); // the thumb
     if (HAND_PLATE) handPlates(g, true);
     return;
   }
@@ -489,8 +498,12 @@ function skinLimb(ax, ay, bx, by, cx, cy, W, s, col, col2, split = .5) {
     }
     if (det) {
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const fine = OUTK < 1; // (the prince: a rounder form, a soft core shadow and a reflected light inside it)
+      if (fine) { ctx.strokeStyle = 'rgba(12,6,16,.2)'; ctx.lineWidth = (W[1] + W[4]) * s * .62; ctx.beginPath(); skTrace(SKL, false, true); ctx.stroke(); }
       ctx.strokeStyle = 'rgba(12,6,16,.34)'; ctx.lineWidth = (W[1] + W[4]) * s * .3; ctx.beginPath(); skTrace(SKL, false, true); ctx.stroke(); // the shadowed side
-      ctx.strokeStyle = 'rgba(255,248,236,.3)'; ctx.lineWidth = 1.7; ctx.beginPath(); skTrace(SKR, false, true); ctx.stroke(); // light along the other
+      if (fine) { ctx.strokeStyle = 'rgba(150,120,100,.14)'; ctx.lineWidth = .9; ctx.beginPath(); skTrace(SKL, false, true); ctx.stroke(); }
+      ctx.strokeStyle = fine ? 'rgba(255,248,236,.16)' : 'rgba(255,248,236,.3)'; ctx.lineWidth = fine ? 2.6 : 1.7; ctx.beginPath(); skTrace(SKR, false, true); ctx.stroke(); // light along the other
+      if (fine) { ctx.strokeStyle = 'rgba(255,248,236,.22)'; ctx.lineWidth = .8; ctx.beginPath(); skTrace(SKR, false, true); ctx.stroke(); }
       if (g.th > .45) { // the crease on the inside of the bend
         const sd = g.cr > 0 ? 1 : -1; let nx = -g.d1y - g.d2y, ny = g.d1x + g.d2x; const nl = Math.hypot(nx, ny) || 1; nx = nx / nl * sd; ny = ny / nl * sd;
         const r = g.j * Math.min(1.1, .9 / Math.max(.3, Math.cos(g.th / 2)));
@@ -588,6 +601,8 @@ function twoHandGrip(pose, PX, SHO, sw, armSw, ASX, AS = 1, SWL = 9.5) {
 }
 // Figures are built heroic: long legs, a broad V of shoulders over a narrow waist, and a head about a sixth of their height.
 // Feet at y=0, hips at -30, shoulders at -49, head at -61. +x is the facing direction.
+const WAIST_UP = 7.6; // how far above his hip joint the prince's belt is worn
+const LEG_A = 10.4, LEG_B = 12.6; // the prince's thigh and shin (legs' frame): a long shin, the knee high, as in the sheet
 function drawHumanoid(look, pose) {
   const walk = pose.walk || 0, sw = Math.sin(walk);
   // the prince can turn: Y is how far he has turned from profile toward the viewer (+1, chest to us) or away (-1, his back)
@@ -598,10 +613,11 @@ function drawHumanoid(look, pose) {
   const ASX = Math.max(.32, CS); // arms swinging fore and aft foreshorten as he turns
   const CW = look.corwin ? CORWIN : null, arms = CW ? CW.PART('gauntlets', look) : null; // the prince's own costume and cloak (art_corwin.js)
   HAND_PLATE = !!(CW && look.gauntPlate);
+  if (CW) { OUTK = .55; INK = '#170D0C'; } // the prince is inked with a fine pen
   // the prince is built as a heroic adult, about seven heads tall at the same overall height: a smaller head on a
   // defined neck, broad shoulders over a long torso, legs half his height (drawn at LS about the feet) and long arms (AS)
   // per-pose proportion touches, eased by blendPose: legX stretches a stride fore and aft (never taller), armS lengthens a reach
-  const LS = CW ? 1.24 : 1, AS = CW ? 1.3 * (pose.armS || 1) : 1, SWL = CW ? 9.4 : 9.5, LX = CW ? (pose.legX || 1) : 1; HAND_S = CW ? .72 : 1;
+  const LS = CW ? 1.3 : 1, AS = CW ? 1.3 * (pose.armS || 1) : 1, SWL = CW ? 9.4 : 9.5, LX = CW ? (pose.legX || 1) : 1; HAND_S = CW ? .66 : 1;
   ctx.save();
   if (pose.oy) ctx.translate(0, pose.oy); // the whole figure dropped (a slide)
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
@@ -612,7 +628,7 @@ function drawHumanoid(look, pose) {
   const bob = gait ? (pose.run ? (1 - Math.abs(sw)) * 3 : Math.abs(sw) * 1.6) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
   const br = pose.breath ? (pose.breath + 1) * .45 : 0; // breathing settles the body over planted feet
   const cr = (pose.crouchK ?? (pose.crouch ? 8 : (pose.sink || 0))) + bob + br, HIPL = -30 + cr; // sink: how far the hips drop into a stance
-  const HIP = HIPL * LS, SHO = CW ? HIP - 22 : -49 + cr, NECK = CW ? SHO - 3.6 : -53 + cr; // (HIPL: the hips in the legs' own, unscaled frame)
+  const HIP = HIPL * LS, SHO = CW ? HIP - 22 : -49 + cr, NECK = CW ? SHO - 2.6 : -53 + cr; // (HIPL: the hips in the legs' own, unscaled frame)
   const skin = look.skin || '#C9A07E', sleeve = look.sleeve || look.body;
   // the whole upper body bends at the waist; as it tips forward the hips slide back to keep his weight over his feet,
   // and as it arches back they push forward
@@ -631,7 +647,7 @@ function drawHumanoid(look, pose) {
     ctx.beginPath(); ctx.moveTo(-4, SHO); ctx.quadraticCurveTo(-20 - flow, SHO + 18, -18 - flow * 1.4, -8 + Math.sin(walk * .5) * 3);
     ctx.lineTo(-4, HIP + 14); ctx.closePath(); ctx.fillStyle = C(look.cape); ctx.fill(); outline(1.8);
   }
-  const hs = look.corwin ? .52 : .9, headScale = () => { ctx.translate(1, NECK); ctx.scale(hs, hs); ctx.translate(-1, -NECK); };
+  const hs = look.corwin ? .5 : .9, headScale = () => { ctx.translate(1, NECK); ctx.scale(hs, hs); ctx.translate(-1, -NECK); };
   if (look.longHair) {
     ctx.save(); headScale();
     const flow = (pose.flow || 0) * .8 + Math.abs(sw) * 2;
@@ -676,7 +692,7 @@ function drawHumanoid(look, pose) {
   const farHand = () => { ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(bha); ctx.translate(-13, 0); drawHand(shade(look.glove || skin, -.18), pose.twoHand ? 0 : pose.openHand); ctx.restore(); }; // the far hand
   if (!across) farArm();
   const bpA = clamp((ba - 1.25) * .3, -.5, .5); // his far shoulder guard: hidden by his chest in profile, over the cloak when he faces us
-  if (arms && Y < .3 && !across) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .54);
+  if (arms && Y < .3 && !across) arms.pauldron(look, bsx, bsy - 1, bpA, true, .5);
   ctx.restore();
   if (CP && !BACK && !pose.down) CW.cloak.half(look, CP, false);
   // legs: thighs and calves with a swell, pants tucked into boots (the prince's drawn at LS about his feet, so they are long)
@@ -711,13 +727,19 @@ function drawHumanoid(look, pose) {
     const leg = (x, lz, f, k, col, bc, lift, kl = 0) => {
       const hx0 = PX(x, lz * .8) + HX; let kx = PX(x + f * .5 + k + lift * .5 + kl * .4, lz * (.9 + (W - 1) * .8)) + HX * .5, kyy = ky - lift * (pose.run ? .55 : .35) - kl * .6 - (x < 0 && pose.legs ? pose.legs.bku || 0 : 0); const fx = PX(x + f - lift * .4, lz * W);
       lift += kl;
-      if (CW) {
-        let ax = fx - .6 * CS, ay = -8 - lift, rot = lift ? lift * .03 : 0, ox = fx, oy = -lift;
+      if (CW) { // worked out in his own facing plane (F forward, y up), then turned to the screen: a two-bone leg of
+        // fixed thigh and shin, so it stands straight when the hips are high and bends only as they sink or a foot lifts
+        const lzH = lz * .8, lzK = lz * (.9 + (W - 1) * .8), lzF = lz * W;
+        const footF = x + f - (lift - kl) * .4; let aF = footF - .6, aY = -7.2 - lift, oF = footF, oy = -lift, rot = lift ? lift * .03 : 0;
         if (x < 0 && heel > .01) { // the rear heel comes up: the foot rolls over its toe, the ankle and knee rising with it
-          const a = heel * .62, tx = fx + 5.6 * bsc * LW, ca = Math.cos(a), sa = Math.sin(a), dx = ax - tx;
-          ax = tx + dx * ca + 8 * sa; ay = -lift + dx * sa - 8 * ca; ox = tx + (fx - tx) * ca; oy = -lift + (fx - tx) * sa; rot += a; kyy -= heel * 1.6; kx += heel * 1.2;
+          const a = heel * .62, tF = footF + 5.6 * LW, ca = Math.cos(a), sa = Math.sin(a), dx = aF - tF;
+          aF = tF + dx * ca + 8 * sa; aY = -lift + dx * sa - 8 * ca; oF = tF + (footF - tF) * ca; oy = -lift + (footF - tF) * sa; rot += a;
         }
-        CW.leg(look, hx0, HIP, kx, kyy, ax, ay, ox, oy, rot, bsc * LW, col !== legs, LW); return; }
+        let ux = aF - x, uy = aY - HIP; const d = Math.hypot(ux, uy) || 1e-3; ux /= d; uy /= d;
+        const TH = LEG_A, SH = LEG_B, al = d >= TH + SH ? d * TH / (TH + SH) : (TH * TH - SH * SH + d * d) / (2 * d), hk = d >= TH + SH ? 0 : Math.sqrt(Math.max(0, TH * TH - al * al));
+        const bend = hk + k * .35 + kl * .25; // (and a little give of its own: a loose knee, or one driven up)
+        const kF = x + ux * al + uy * bend, kY = HIP + uy * al - ux * bend - (x < 0 && pose.legs ? pose.legs.bku || 0 : 0) - heel * 1.2;
+        CW.leg(look, PX(x, lzH) + HX, HIP, PX(kF, lzK) + HX * .5, kY, PX(aF, lzF), aY, PX(oF, lzF), oy, rot, bsc * LW, col !== legs, LW); return; }
       seg(hx0, HIP, kx, kyy, 8.4, 6.2, col, .9); seg(kx, kyy, fx - .6 * CS, -8 - lift, 6.2, 4.6, col, 1);
       ctx.save(); ctx.translate(fx, -lift); if (lift) ctx.rotate(lift * .03); ctx.scale(bsc, 1); boot(0, bc); ctx.restore();
     };
@@ -746,7 +768,9 @@ function drawHumanoid(look, pose) {
     // the pelvis stays nearer the legs than the chest does, so he bends at the waist; and as a blow starts the pelvis
     // turns into it a beat ahead of the chest (leanLead), the torso coiling and uncoiling about the waist
     CW.kit.setBend(clamp(-LEAN * .6 + (pose.leanLead || 0) * .5, -.7, .7));
-    const GL = YL === Y ? G : Object.assign({}, G, { Y: YL, CS: CSL, PX: PXL }); // the belts and the scabbard turn with the hips
+    // the belts and the scabbard turn with the hips, and are worn at the waist, well above the hip joint (the doublet's
+    // skirt falls from them over the tops of his thighs); HIPJ: the hip joint, for whatever hangs to it
+    const GL = Object.assign({}, G, { Y: YL, CS: CSL, PX: PXL, HIP: HIP - WAIST_UP, HIPJ: HIP });
     ctx.save(); pel(); waist.scabbard(look, GL, pose.weapon === 'rapier'); ctx.restore();
     CW.PART('mail', look).torso(look, G);
     ctx.save(); pel(); waist.belts(look, GL); ctx.restore();
@@ -801,7 +825,7 @@ function drawHumanoid(look, pose) {
     if (BACK && CP) { CW.cloak.half(look, CP, true); CW.cloak.half(look, CP, false); }
     ctx.save(); upper();
     if (BACK) { CW.PART('mail', look).neck(look, G); if (CP) CW.cloak.hood(look, G, true); }
-    else { if (CP) CW.cloak.mantle(look, G); if (arms && Y >= .3 && !across) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .54); CW.PART('mail', look).neck(look, G); }
+    else { if (CP) CW.cloak.mantle(look, G); if (arms && Y >= .3 && !across) arms.pauldron(look, bsx, bsy - 1, bpA, true, .5); CW.PART('mail', look).neck(look, G); }
     ctx.restore();
   }
   ctx.save(); upper();
@@ -844,7 +868,7 @@ function drawHumanoid(look, pose) {
   }
   ctx.restore();
   if (BACK && atkVis) frontArm(); // (still in the upper body's frame)
-  if (across) { farArm(); if (arms) arms.pauldron(look, bsx, bsy - 1.2, bpA, true, .54); } // (still in the upper body's frame here)
+  if (across) { farArm(); if (arms) arms.pauldron(look, bsx, bsy - 1, bpA, true, .5); } // (still in the upper body's frame here)
   if (!BACK) frontArm();
   if (across) farHand(); // its hand closed on the hilt over the grip, beside the weapon hand
   // front arm + weapon: shoulder, a bent elbow, forearm, hand
@@ -871,7 +895,7 @@ function drawHumanoid(look, pose) {
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   drawWeapon(pose.weapon || look.weapon, pose);
   ctx.restore();
-  if (arms) arms.pauldron(look, PX(1, SWL), SHO + .2, clamp((arm - 1.1) * .3, -.45, .45), BACK, .59);
+  if (arms) arms.pauldron(look, PX(1, SWL), SHO + .4, clamp((arm - 1.1) * .3, -.45, .45), BACK, .54);
   else if (look.pauldron) { ctx.save(); ctx.translate(PX(1, 9.5) - 1, 0);
     ctx.beginPath(); ctx.ellipse(1, SHO + 1, 8.6, 6.4, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); ctx.fillStyle = C(look.pauldron); ctx.fill();
     if (!FLASH && !TINT) { ctx.fillStyle = shade(look.pauldron, .35); ell(4, SHO - 2.4, 3, 1.2, -.3); ctx.fill(); }
@@ -880,7 +904,7 @@ function drawHumanoid(look, pose) {
   }
   ctx.restore();
   ctx.restore();
-  HAND_S = 1; HAND_PLATE = false;
+  HAND_S = 1; HAND_PLATE = false; OUTK = 1; INK = OUT;
 }
 // swing trails are dry-brush strokes of light: many thin bristle lines instead of one solid band.
 // They are painted straight onto the page so the ink pass does not outline them.
@@ -909,11 +933,11 @@ function drawTrail(cx, cy, pose) {
 // and a great black cloak brushed with slate and grey. Every color is a flat string, so a greyed copy greys all of it.
 // mail / pants / gauntlets / waist name the piece drawn for each slot (art_corwin.js), so gear can swap them later.
 const HERO = { corwin: 1, mail: 'doublet', pants: 'trousers', gauntlets: 'vambrace', waist: 'swordbelt',
-  skin: '#D8AC88', glove: '#D8AC88', hair: '#2E2017', hairLt: '#654936', hairDk: '#140D09', eye: '#3FA08A',
+  skin: '#D2A480', glove: '#C89A76', hair: '#33231A', hairLt: '#7E5A3A', hairDk: '#140D09', eye: '#3FA08A',
   body: '#1E1C24', lattice: '#43404F', button: '#BDB6A6', trim: '#BC9440', shirt: '#E9E3D5', sleeve: '#E9E3D5',
-  steel: '#AEB4C0', pauldron: '#AEB4C0', leather: '#6A4228', brass: '#CBA251', scab: '#5A3822',
+  steel: '#A4A4A8', pauldron: '#A4A4A8', leather: '#6A4228', brass: '#CBA251', scab: '#5A3822',
   legs: '#2B2832', boots: '#3E2C22', cuff: '#5C4231',
-  cloak: '#16151B', cloakSlate: '#4A566E', cloakGrey: '#62646F', cloakLt: '#9198A8' };
+  cloak: '#121116', cloakSlate: '#4A566E', cloakGrey: '#62646F', cloakLt: '#9198A8' };
 // his look comes from the armor he wears (gear.js): each slot he fills swaps that part of his costume for the set's
 // own piece; an empty slot keeps his traveller's costume above
 function heroLook() {

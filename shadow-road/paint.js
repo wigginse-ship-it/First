@@ -75,7 +75,15 @@ function paintTextures() {
     vd.data[i] = 252 - d * .7; vd.data[i + 1] = 240 - d; vd.data[i + 2] = 212 - d * 1.3; vd.data[i + 3] = 255;
   }
   vg.putImageData(vd, 0, 0);
-  TEX = { brush, sky, hatch: hc, crack: qc, varnish: vc };
+  // dry brush for the prince: long, thin, nearly vertical drags of dark and pale paint, and a scatter of fine specks
+  const [dc, dg] = texCanvas(96, 160), dr = mulberry(77); dg.lineCap = 'round';
+  for (let i = 0; i < 300; i++) {
+    const x = dr() * 96, y = dr() * 160, l = 6 + dr() * 24, a = Math.PI / 2 + (dr() - .5) * .26, dark = dr() < .6;
+    const col = dark ? `rgba(10,6,8,${.1 + dr() * .2})` : `rgba(255,240,214,${.05 + dr() * .08})`, lw = .4 + dr() * 1.1;
+    wrapDraw(96, 160, (ox, oy) => { dg.strokeStyle = col; dg.lineWidth = lw; dg.beginPath(); dg.moveTo(x + ox, y + oy); dg.lineTo(x + ox + Math.cos(a) * l, y + oy + Math.sin(a) * l); dg.stroke(); });
+  }
+  for (let i = 0; i < 90; i++) { const x = dr() * 96, y = dr() * 160; dg.fillStyle = dr() < .5 ? 'rgba(12,8,8,.3)' : 'rgba(255,236,200,.16)'; dg.fillRect(x, y, .8 + dr() * .7, .8 + dr() * .7); }
+  TEX = { brush, sky, hatch: hc, crack: qc, varnish: vc, dry: dc };
   return TEX;
 }
 function texPat(g, name) { // patterns belong to a context, so cache one per context
@@ -128,6 +136,52 @@ function paintPerf(rawDt) {
   if (avg > 1 / 42 && PAINT_Q > 0) { PAINT_Q--; perfPrev = avg; perfSkip = 30; }
 }
 const IB = { x: 0, y: 0, w: 0, h: 0 }; // the screen box the figures occupy; all the work stays inside it
+// The prince is painted on a layer of his own inside the figure layer, after the reference sheet: a fine dark ink line
+// instead of the thick contour, no pale rim, and his own brushwork (dry, mostly vertical strokes, a few specks, umber
+// modelling on the side away from the light). His box on screen is HB; inkEnd leaves him out of its contour and rim.
+const HB = { x: 0, y: 0, w: 0, h: 0, on: false };
+let heroC = null, heroG = null, heroSC = null, heroSG = null, HERO_HATCHED = false;
+function heroInk(cx, cy, fn) {
+  if (PAINT_Q === 0 || ctx !== inkG || HB.on || TINT || FLASH) { fn(); return; }
+  const m = ctx.getTransform(); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const [px, py] of [[cx - 135, cy - 150], [cx + 135, cy - 150], [cx - 135, cy + 18], [cx + 135, cy + 18]]) { const X = m.a * px + m.c * py + m.e, Y = m.b * px + m.d * py + m.f; x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); }
+  x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(inkC.width, Math.ceil(x1)); y1 = Math.min(inkC.height, Math.ceil(y1));
+  const w = x1 - x0, h = y1 - y0; if (w < 4 || h < 4) { fn(); return; }
+  if (!heroC || heroC.width < w || heroC.height < h) { retire(heroC); retire(heroSC); [heroC, heroG] = texCanvas(w + 64, h + 64); [heroSC, heroSG] = texCanvas(w + 64, h + 64); }
+  Object.assign(HB, { x: x0, y: y0, w, h, on: true });
+  heroG.setTransform(1, 0, 0, 1, 0, 0); heroG.globalCompositeOperation = 'source-over'; heroG.globalAlpha = 1; heroG.clearRect(0, 0, w + 2, h + 2);
+  heroG.setTransform(m.a, m.b, m.c, m.d, m.e - x0, m.f - y0);
+  const prev = ctx; ctx = heroG;
+  try { fn(); heroPaint(cx, cy); } finally { ctx = prev; }
+  // the ink line: his own silhouette, a fine stroke's width all round, laid under him on his layer
+  const r = .5 * K;
+  heroSG.setTransform(1, 0, 0, 1, 0, 0); heroSG.globalCompositeOperation = 'copy'; heroSG.drawImage(heroC, 0, 0, w, h, 0, 0, w, h);
+  heroSG.globalCompositeOperation = 'source-in'; heroSG.fillStyle = '#120A08'; heroSG.fillRect(0, 0, w, h);
+  heroG.save(); heroG.setTransform(1, 0, 0, 1, 0, 0); heroG.globalCompositeOperation = 'destination-over'; heroG.globalAlpha = .92;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [.7, .7], [-.7, .7], [.7, -.7], [-.7, -.7]]) heroG.drawImage(heroSC, 0, 0, w, h, dx * r, dy * r, w, h);
+  heroG.restore();
+  inkG.save(); inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.globalCompositeOperation = 'source-over'; inkG.globalAlpha = 1; inkG.drawImage(heroC, 0, 0, w, h, x0, y0, w, h); inkG.restore();
+  // his mask for inkEnd: his layer, ink line and all, with even its faintest brush marks made solid
+  heroSG.globalCompositeOperation = 'copy'; heroSG.drawImage(heroC, 0, 0, w, h, 0, 0, w, h);
+  heroSG.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) heroSG.drawImage(heroSC, 0, 0, w, h, 0, 0, w, h);
+  HERO_HATCHED = true;
+}
+// his brushwork, on his own layer only (in world units about his feet at cx, cy)
+function heroPaint(x, y) {
+  if (!DETAIL_OK()) return;
+  const hw = 14, hh = 52, R = 56;
+  ctx.save(); ctx.globalCompositeOperation = 'source-atop';
+  const lg = ctx.createRadialGradient(x + 8, y - 64, 0, x + 8, y - 64, 46); // light from the upper right
+  lg.addColorStop(0, 'rgba(255,236,206,.13)'); lg.addColorStop(1, 'rgba(255,236,206,0)'); ctx.fillStyle = lg; ctx.fillRect(x - R, y - 120, R * 2, 140);
+  const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.22)'); ctx.fillStyle = dg; ctx.fillRect(x - R * 2, y - 30, R * 4, 34); // the legs settle into shadow toward the street
+  ctx.translate(x, y); ctx.scale(.5, .5);
+  ctx.globalAlpha = .8; ctx.fillStyle = texPat(ctx, 'dry'); ctx.fillRect(-R * 5, -(hh + R) * 2.4, R * 10, (hh + R) * 2.4 + 40);
+  ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'brush'); ctx.fillRect(-R * 5, -(hh + R) * 2.4, R * 10, (hh + R) * 2.4 + 40);
+  ctx.fillStyle = texPat(ctx, 'hatch');
+  for (let i = 0; i < 2; i++) { const k = 1 - i * .3; ctx.globalAlpha = .2 * (.6 + i * .3); ell((-hw * .9 - i * hw * .2) * 2, (-hh * .35 + i * hh * .08) * 2, hw * 1.7 * k * 2, hh * .85 * k * 2); ctx.fill(); }
+  ctx.restore();
+}
+const DETAIL_OK = () => !FLASH && !TINT;
 // boxes: [x0, y0, x1, y1] in world units around everything about to be painted
 function inkBegin(boxes) {
   mainCtx = ctx; if (PAINT_Q === 0) return;
@@ -137,7 +191,7 @@ function inkBegin(boxes) {
   const pad = 8 * K;
   IB.x = Math.max(0, Math.floor(x0 * m.a + m.e - pad)); IB.y = Math.max(0, Math.floor(y0 * m.d + m.f - pad));
   IB.w = Math.max(0, Math.min(cv.width, Math.ceil(x1 * m.a + m.e + pad)) - IB.x); IB.h = Math.max(0, Math.min(cv.height, Math.ceil(y1 * m.d + m.f + pad)) - IB.y);
-  inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.clearRect(0, 0, inkC.width, inkC.height);
+  inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.clearRect(0, 0, inkC.width, inkC.height); HB.on = false; HERO_HATCHED = false;
   inkG.setTransform(m);
   ctx = inkG;
 }
@@ -145,6 +199,7 @@ function onMain(fn) { const c = ctx; ctx = mainCtx; ctx.save(); ctx.setTransform
 // brushwork and modelling on one figure: the strokes are anchored to the figure, so they travel with it.
 // Light comes from the upper right; fine umber strokes build up the shadow on the lower left.
 function hatchActor(x, y, hw, hh, a = .26) {
+  if (HERO_HATCHED) { HERO_HATCHED = false; return; } // (the prince was painted on his own layer)
   if (FLASH || ctx !== inkG) return;
   const R = Math.max(hw, hh);
   ctx.save(); ctx.globalCompositeOperation = 'source-atop';
@@ -173,8 +228,10 @@ function inkEnd() {
     rimG.setTransform(1, 0, 0, 1, 0, 0); rimG.globalCompositeOperation = 'copy'; blit(rimG, silC, 0, 0);
     rimG.globalCompositeOperation = 'destination-out'; blit(rimG, silC, dx * K, dy * K);
     rimG.globalCompositeOperation = 'source-in'; rimG.fillStyle = col; rimG.fillRect(x, y, w, h);
+    if (HB.on) { rimG.globalCompositeOperation = 'destination-out'; rimG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x, HB.y, HB.w, HB.h); } // (none on the prince)
     inkG.save(); inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.globalCompositeOperation = 'source-atop'; inkG.globalAlpha = al; blit(inkG, rimC, 0, 0); inkG.restore();
   }
+  if (HB.on) { silG.globalCompositeOperation = 'destination-out'; for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) silG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x + dx, HB.y + dy, HB.w, HB.h); silG.globalCompositeOperation = 'source-over'; } // he carries his own fine line (the mask spread a pixel, so no fringe of his edge is left to be contoured)
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   // a firm, steady contour all the way round, the way figures were outlined before the paint went on
   ctx.globalAlpha = .95; for (const [dx, dy] of CONTOUR) blit(ctx, silC, dx * K, dy * K);
