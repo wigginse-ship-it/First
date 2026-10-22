@@ -23,7 +23,7 @@ function shade(hex, amt) { // lighten (amt > 0) or darken (amt < 0) a #rrggbb co
 }
 function shadow(x, y, rx) { // cast on the floor, so it is painted under the inked figures
   const f = () => { ctx.fillStyle = 'rgba(40,20,60,.3)'; ell(x, y, rx, rx * .28); ctx.fill(); };
-  if (inkG && ctx === inkG) onMain(f); else f();
+  if (inkG && (ctx === inkG || ctx === heroG)) onMain(f); else f();
 }
 
 // the hero's face, drawn in more detail than anyone else, in a comic-cover style: a three-quarter view with flat
@@ -115,6 +115,7 @@ const HAIR_LOCKS = (() => {
     L.push({ phi, e: 1.02 + h(i + 1) * .12, dp: (h(i + 2) - .5) * .5, te: .42 + h(i + 3) * .2 - (Math.abs(phi) > 2 ? .25 : 0), out: 2.8 + h(i + 4) * 1.6, w: .5, k: 'crown' }); }
   for (let i = 0; i < 9; i++) { const phi = -Math.PI + (i + .1) * TAU / 9 + (h(i + 70) - .5) * .3; // a second, lower layer: messy volume standing out round the head
     if (Math.abs(phi) < .5) continue; L.push({ phi, e: .72 + h(i + 71) * .1, dp: (h(i + 72) - .5) * .4, te: .02 + h(i + 73) * .22, out: 3.2 + h(i + 74) * 1.6, w: .42, k: 'crown' }); }
+  for (let i = 0; i < 7; i++) L.push({ phi: -2.7 + i * .9 + (h(i + 90) - .5) * .3, e: .9, dp: (h(i + 91) - .5) * .5, te: 1.02 + h(i + 92) * .2, out: 2.2 + h(i + 93) * 1.1, w: .34, k: 'crown' }); // ragged tufts over the top
   for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) L.push({ phi: sd * (1.25 + i * .42), e: .62 - i * .04, dp: sd * (.1 + h(i + 21) * .1), te: -.48 - h(i + 11 + sd) * .3, out: 2.9 + h(i + 13) * 1.2, w: .34, k: 'side' }); // over the ears
   for (let i = 0; i < 7; i++) L.push({ phi: Math.PI + (i - 3) * .36, e: .55, dp: (i - 3) * .06, te: -1.12 - [.2, .05, .28, .12, .24, .02, .16][i], out: 2.4 + [1.1, .5, 1.4, .7, 1.1, .4, .9][i], w: .3, k: 'nape' }); // ragged ends down to the collar
   for (let i = 0; i < 5; i++) L.push({ phi: -.62 + i * .31, e: .86, dp: (i % 2 ? .1 : -.06) + .06, te: .2 + h(i + 40) * .16, out: .7 + h(i + 44) * .5, w: .2, k: 'fringe' }); // locks falling over the brow
@@ -172,7 +173,7 @@ function drawCorwinHeadTurn(look, hy, Y) {
     ctx.save(); skull(); ctx.clip(); const g = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g.addColorStop(0, 'rgba(70,40,40,.32)'); g.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 9, hy - 12, 18, 24); ctx.restore();
     ctx.save(); jaw(); ctx.clip(); const g2 = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g2.addColorStop(0, 'rgba(70,40,40,.32)'); g2.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g2; ctx.fillRect(cx - 9, hy - 2, 18, 14);
     const sg = ctx.createLinearGradient(0, hy + 2.6, 0, hy + 7); sg.addColorStop(0, 'rgba(40,28,34,0)'); sg.addColorStop(1, 'rgba(40,28,34,.26)'); ctx.fillStyle = sg; ctx.fillRect(cx - 9, hy + 2.6, 18, 9); // stubble along the jaw
-    if (FINE_OK()) { ctx.fillStyle = 'rgba(30,20,24,.45)'; for (let i = 0; i < 26; i++) { const u = (Math.sin(i * 12.9) * 43758.5) % 1, v = (Math.sin(i * 78.2) * 43758.5) % 1; ctx.fillRect(cx + (Math.abs(u) - .5) * 11, hy + 5 + Math.abs(v) * 4.4, .3, .3); } }
+    if (FINE_OK()) { ctx.fillStyle = 'rgba(30,20,24,.45)'; ctx.beginPath(); for (let i = 0; i < 26; i++) { const u = (Math.sin(i * 12.9) * 43758.5) % 1, v = (Math.sin(i * 78.2) * 43758.5) % 1; ctx.rect(cx + (Math.abs(u) - .5) * 11, hy + 5 + Math.abs(v) * 4.4, .3, .3); } ctx.fill(); }
     ctx.restore();
   }
   if (Y > -.25) { // the face
@@ -222,8 +223,8 @@ function drawCorwinHeadTurn(look, hy, Y) {
       else if (o) { ctx.moveTo(cx + o * .5, hy - 9.6); ctx.quadraticCurveTo(cx + o * .9, hy - 5, cx + o * .9, hy + 1.6); }
     }
     ctx.stroke();
-    ctx.strokeStyle = hl; ctx.lineWidth = .7; ctx.beginPath(); // warm light catching the top of the mop
-    ctx.moveTo(cx + 6, hy - 10.6); ctx.quadraticCurveTo(cx + 1, hy - 13.4, cx - 5, hy - 11); ctx.moveTo(cx + 3.6, hy - 9.4); ctx.quadraticCurveTo(cx, hy - 11.2, cx - 3.4, hy - 10); ctx.moveTo(cx + 7.4, hy - 8); ctx.quadraticCurveTo(cx + 5.4, hy - 10.6, cx + 2, hy - 12.2); ctx.stroke();
+    ctx.strokeStyle = hl; ctx.lineWidth = .6; ctx.globalAlpha *= .8; ctx.beginPath(); // warm light catching the top of the mop
+    ctx.moveTo(cx + 6, hy - 10.6); ctx.quadraticCurveTo(cx + 1, hy - 13.4, cx - 5, hy - 11); ctx.stroke(); ctx.globalAlpha /= .8;
   }
 }
 
@@ -929,7 +930,7 @@ function brushArc(path, col, w, a) {
   }
   ctx.restore();
 }
-function onPage(f) { if (inkG && ctx === inkG) onMain(f); else f(); }
+function onPage(f) { if (inkG && (ctx === inkG || ctx === heroG)) onMain(f); else f(); }
 function drawFlatTrail(cx, cy, f) { // the trail of a horizontal swing: a flattened arc around the waist
   onPage(() => brushArc((o, h) => { const r = f.r + o; ctx.beginPath(); ctx.ellipse(cx, cy + 6, Math.max(1, r), Math.max(1, r * .3), 0, f.rev ? Math.PI * (1 - f.k * (.85 + h * .15)) : 0, f.rev ? Math.PI : Math.PI * f.k * (.85 + h * .15), false); }, f.col, f.w, .8));
 }

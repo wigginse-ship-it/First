@@ -199,7 +199,7 @@ function playerPose() {
     pose.yaw = .42; pose.arm = lerp(.05, .55, hk); pose.elbow = lerp(.25, .6, hk); pose.backArm = lerp(3.55, 3.1, hk); pose.backElbow = lerp(-.35, -.15, hk);
     if (P.w === 'sword' || P.w === 'hammer') pose.grip = lerp(.5, .3, hk); // (a heavy weapon swung out with the arm, not dropped)
   }
-  else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
+  else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) { pose.down = 1; pose.arm = 1.62; pose.elbow = .1; pose.grip = -.04; pose.backArm = 1.7; pose.backElbow = .2; pose.openHand = P.w === 'fists' ? 1 : 0; } // flat on his back, arms down at his sides, the blade lying on the street by his hand
   // at rest each weapon sits the way its wielder would carry it
   else if (P.w === 'rapier') { // en garde while he moves: point toward the enemy, the free hand raised behind. Standing still he
     // eases out of it: the point drops low and forward, and the free hand comes down to hang a little behind him for balance

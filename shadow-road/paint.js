@@ -163,7 +163,7 @@ function heroInk(cx, cy, fn) {
   inkG.save(); inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.globalCompositeOperation = 'source-over'; inkG.globalAlpha = 1; inkG.drawImage(heroC, 0, 0, w, h, x0, y0, w, h); inkG.restore();
   // his mask for inkEnd: his layer, ink line and all, with even its faintest brush marks made solid
   heroSG.globalCompositeOperation = 'copy'; heroSG.drawImage(heroC, 0, 0, w, h, 0, 0, w, h);
-  heroSG.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) heroSG.drawImage(heroSC, 0, 0, w, h, 0, 0, w, h);
+  heroSG.globalCompositeOperation = 'lighter'; for (let i = 0; i < 2; i++) heroSG.drawImage(heroSC, 0, 0, w, h, 0, 0, w, h);
   HERO_HATCHED = true;
 }
 // his brushwork, on his own layer only (in world units about his feet at cx, cy)
@@ -172,11 +172,11 @@ function heroPaint(x, y) {
   const hw = 14, hh = 52, R = 56;
   ctx.save(); ctx.globalCompositeOperation = 'source-atop';
   const lg = ctx.createRadialGradient(x + 8, y - 64, 0, x + 8, y - 64, 46); // light from the upper right
-  lg.addColorStop(0, 'rgba(255,236,206,.13)'); lg.addColorStop(1, 'rgba(255,236,206,0)'); ctx.fillStyle = lg; ctx.fillRect(x - R, y - 120, R * 2, 140);
-  const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.22)'); ctx.fillStyle = dg; ctx.fillRect(x - R * 2, y - 30, R * 4, 34); // the legs settle into shadow toward the street
+  lg.addColorStop(0, 'rgba(255,236,206,.13)'); lg.addColorStop(1, 'rgba(255,236,206,0)'); ctx.fillStyle = lg; ctx.fillRect(x - 50, y - 112, 100, 70);
+  const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.22)'); ctx.fillStyle = dg; ctx.fillRect(x - 75, y - 30, 150, 34); // the legs settle into shadow toward the street
   ctx.translate(x, y); ctx.scale(.5, .5);
-  ctx.globalAlpha = 1; ctx.fillStyle = texPat(ctx, 'dry'); ctx.fillRect(-R * 5, -(hh + R) * 2.4, R * 10, (hh + R) * 2.4 + 40);
-  ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'brush'); ctx.fillRect(-R * 5, -(hh + R) * 2.4, R * 10, (hh + R) * 2.4 + 40);
+  ctx.globalAlpha = 1; ctx.fillStyle = texPat(ctx, 'dry'); ctx.fillRect(-150, -210, 300, 222); // (about his figure only: the texture costs by area)
+  ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'brush'); ctx.fillRect(-150, -210, 300, 222);
   ctx.fillStyle = texPat(ctx, 'hatch');
   for (let i = 0; i < 2; i++) { const k = 1 - i * .3; ctx.globalAlpha = .2 * (.6 + i * .3); ell((-hw * .9 - i * hw * .2) * 2, (-hh * .35 + i * hh * .08) * 2, hw * 1.7 * k * 2, hh * .85 * k * 2); ctx.fill(); }
   ctx.restore();
@@ -195,7 +195,8 @@ function inkBegin(boxes) {
   inkG.setTransform(m);
   ctx = inkG;
 }
-function onMain(fn) { const c = ctx; ctx = mainCtx; ctx.save(); ctx.setTransform(c.getTransform()); fn(); ctx.restore(); ctx = c; }
+function onMain(fn) { const c = ctx, t = c.getTransform(); if (c === heroG && heroG) { t.e += HB.x; t.f += HB.y; } // (his own layer is offset to his box)
+  ctx = mainCtx; ctx.save(); ctx.setTransform(t); fn(); ctx.restore(); ctx = c; }
 // brushwork and modelling on one figure: the strokes are anchored to the figure, so they travel with it.
 // Light comes from the upper right; fine umber strokes build up the shadow on the lower left.
 function hatchActor(x, y, hw, hh, a = .26) {
@@ -231,7 +232,7 @@ function inkEnd() {
     if (HB.on) { rimG.globalCompositeOperation = 'destination-out'; rimG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x, HB.y, HB.w, HB.h); } // (none on the prince)
     inkG.save(); inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.globalCompositeOperation = 'source-atop'; inkG.globalAlpha = al; blit(inkG, rimC, 0, 0); inkG.restore();
   }
-  if (HB.on) { silG.globalCompositeOperation = 'destination-out'; for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) silG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x + dx, HB.y + dy, HB.w, HB.h); silG.globalCompositeOperation = 'source-over'; } // he carries his own fine line (the mask spread a pixel, so no fringe of his edge is left to be contoured)
+  if (HB.on) { silG.globalCompositeOperation = 'destination-out'; silG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x, HB.y, HB.w, HB.h); silG.globalCompositeOperation = 'source-over'; } // he carries his own fine line (the mask is made solid, so no fringe of his edge is left to be contoured)
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   // a firm, steady contour all the way round, the way figures were outlined before the paint went on
   ctx.globalAlpha = .95; for (const [dx, dy] of CONTOUR) blit(ctx, silC, dx * K, dy * K);

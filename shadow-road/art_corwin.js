@@ -195,8 +195,9 @@ const CORWIN = (() => {
           for (let k = -18; k <= 24; k += 4.2) { ctx.moveTo(k + ph - 8, ty); ctx.lineTo(k + ph + 8, ty + h); ctx.moveTo(k + ph + 8, ty); ctx.lineTo(k + ph - 8, ty + h); }
           ctx.stroke();
           const n = Math.round(h / 4.2 * 1.9);
-          for (let r = 0; r < n; r++) for (let k = -18; k <= 24; k += 4.2) { const y = ty + r * 2.1, x = k + ph + (r % 2 ? 2.1 : 0);
-            ctx.fillStyle = (r + Math.round(k)) % 3 ? 'rgba(214,176,92,.7)' : 'rgba(246,216,142,.92)'; ctx.fillRect(x - .25, y - .25, .5, .5); }
+          for (const lit of [0, 1]) { ctx.beginPath(); // (batched: one path per tone)
+            for (let r = 0; r < n; r++) for (let k = -18; k <= 24; k += 4.2) { if (((r + Math.round(k)) % 3 === 0) !== !!lit) continue; ctx.rect(k + ph + (r % 2 ? 2.1 : 0) - .25, ty + r * 2.1 - .25, .5, .5); }
+            ctx.fillStyle = lit ? 'rgba(246,216,142,.92)' : 'rgba(214,176,92,.7)'; ctx.fill(); }
         }
         ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.beginPath(); ctx.moveTo(-11, ty); ctx.lineTo(-3.4, ty); ctx.quadraticCurveTo(-6, ty + 12, -3.8, HIP + 2); ctx.lineTo(-11, HIP + 2); ctx.closePath(); ctx.fill(); // the side away from the light
         ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(-12, ty - 1, 24, 3.4); // the cowl's shadow across the shoulders
@@ -495,7 +496,8 @@ const CORWIN = (() => {
         for (const f of FOLDS) { const u = f.u + off; if (u < lo0 || u > hi0) continue; for (let q = 0; q <= 5; q++) { uv(Pt, u + f.du * q / 5, lerp(f.v0, f.v1, q / 5)); q ? ctx.lineTo(UX, UY) : ctx.moveTo(UX, UY); } }
         ctx.stroke(); ctx.globalAlpha = ga;
       }
-      for (const sp of SPECKS) { if (sp.u < lo0 || sp.u > hi0) continue; uv(Pt, sp.u, sp.v); ctx.fillStyle = sp.g ? 'rgba(206,168,96,.75)' : 'rgba(150,152,164,.5)'; ctx.fillRect(UX - .22, UY - .22, .44, .44); }
+      for (const gold of [true, false]) { ctx.beginPath(); for (const sp of SPECKS) { if (sp.g !== gold || sp.u < lo0 || sp.u > hi0) continue; uv(Pt, sp.u, sp.v); ctx.rect(UX - .22, UY - .22, .44, .44); }
+        ctx.fillStyle = gold ? 'rgba(206,168,96,.75)' : 'rgba(150,152,164,.5)'; ctx.fill(); }
     }
     ctx.beginPath(); ctx.moveTo(Pt[ix(i0, M)], Pt[ix(i0, M) + 1]); // ink only along the front edge: the hem is left to the brush
     for (let j = M - 1; j >= 0; j--) ctx.lineTo(Pt[ix(i0, j)], Pt[ix(i0, j) + 1]);
@@ -557,8 +559,8 @@ const CORWIN = (() => {
       for (const k of [2, 4, 6, 8, 10, 12]) { ctx.moveTo((inn[k][0] * 3 + out[k][0]) / 4, (inn[k][1] * 3 + out[k][1]) / 4); ctx.quadraticCurveTo((inn[k + 1][0] + out[k][0]) / 2, (inn[k + 1][1] + out[k][1]) / 2 + .6, out[k][0], out[k][1] + .4); } ctx.stroke();
       ctx.strokeStyle = L.cloakSlate; ctx.lineWidth = .55; ctx.beginPath();
       for (const k of [3, 5, 9, 11]) { ctx.moveTo((inn[k][0] * 2 + out[k][0]) / 3, (inn[k][1] * 2 + out[k][1]) / 3); ctx.lineTo((inn[k][0] + out[k][0] * 3) / 4, (inn[k][1] + out[k][1] * 3) / 4); } ctx.stroke();
-      for (const [u, v, gold] of COWL_SPECK) { const k = Math.floor(u * 13.99), q = u * 14 - k, ox = lerp(out[k][0], out[k + 1][0], q), oy = lerp(out[k][1], out[k + 1][1], q), ix = lerp(inn[k][0], inn[k + 1][0], q), iy = lerp(inn[k][1], inn[k + 1][1], q);
-        ctx.fillStyle = gold ? 'rgba(214,176,100,.8)' : 'rgba(150,150,160,.55)'; ctx.fillRect(lerp(ix, ox, .2 + v * .7) - .2, lerp(iy, oy, .2 + v * .7) - .2, .4, .4); }
+      for (const g0 of [true, false]) { ctx.beginPath(); for (const [u, v, gold] of COWL_SPECK) { if (gold !== g0) continue; const k = Math.floor(u * 13.99), q = u * 14 - k, ox = lerp(out[k][0], out[k + 1][0], q), oy = lerp(out[k][1], out[k + 1][1], q), ix = lerp(inn[k][0], inn[k + 1][0], q), iy = lerp(inn[k][1], inn[k + 1][1], q);
+        ctx.rect(lerp(ix, ox, .2 + v * .7) - .2, lerp(iy, oy, .2 + v * .7) - .2, .4, .4); } ctx.fillStyle = g0 ? 'rgba(214,176,100,.8)' : 'rgba(150,150,160,.55)'; ctx.fill(); }
       ctx.restore(); }
   }
   const cloak = { begin, half, hood, mantle, snapshot, sim: SIM };
