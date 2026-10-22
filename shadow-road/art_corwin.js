@@ -331,10 +331,10 @@ const CORWIN = (() => {
   { // dry-brush streaks down the cloth: slate-blue and grey dragged through the black, a few lighter catches of the light
     const cols = ['s', 't', 'g', 'd', 's', 'g', 'l', 'd', 't'];
     // the long folds hanging straight down the cloth: deep black troughs, a cold catch of light on each ridge
-    for (let k = 0; k < 9; k++) FOLDS.push({ u: (k + .3 + hsh(k + 501) * .4) / 9, du: (hsh(k + 507) - .5) * .05, v0: .04 + hsh(k + 511) * .12, v1: .88 + hsh(k + 517) * .14 });
+    for (let k = 0; k < 6; k++) FOLDS.push({ u: (k + .3 + hsh(k + 501) * .4) / 6, du: (hsh(k + 507) - .5) * .08, v0: .06 + hsh(k + 511) * .22, v1: .55 + hsh(k + 517) * .4 }); // (a few, of uneven length, so they read as folds, not stripes)
     // specks of gold and grey flecked through the black (CLOAK TEXTURE in the sheet)
     for (let k = 0; k < 64; k++) SPECKS.push({ u: hsh(k + 601), v: .06 + hsh(k + 643) * .9, g: hsh(k + 687) < .45 });
-    for (let k = 0; k < 44; k++) { const u = .03 + .94 * hsh(k + 3), v0 = .08 + hsh(k + 9) * .5; STREAKS.push({ u, du: (hsh(k + 17) - .5) * .06, v0, v1: Math.min(1.04, v0 + .25 + hsh(k + 21) * .5), c: cols[k % cols.length], w: .35 + hsh(k + 31) * .9 }); }
+    for (let k = 0; k < 30; k++) { const u = .03 + .94 * hsh(k + 3), v0 = .08 + hsh(k + 9) * .5; STREAKS.push({ u, du: (hsh(k + 17) - .5) * .06, v0, v1: Math.min(1.04, v0 + .25 + hsh(k + 21) * .5), c: cols[k % cols.length], w: .35 + hsh(k + 31) * .9 }); }
     for (let k = 0; k < 34; k++) { const u = (k + hsh(k + 51) * .8) / 34; BRISTLES.push({ u, du: (hsh(k + 57) - .5) * .05, v0: .86 + hsh(k + 61) * .08, v1: 1.02 + hsh(k + 67) * .13, c: k % 4 === 0 ? 's' : k % 7 === 0 ? 'g' : 'b', w: .5 + hsh(k + 71) * 1.1 }); }
     for (let k = 0; k < 12; k++) BRISTLES.push({ trail: 1, v: .25 + .7 * k / 11, len: 2.5 + hsh(k + 81) * 4.5, c: k % 2 ? 's' : 'b', w: .5 + hsh(k + 83) * .9 });
   }
@@ -352,7 +352,8 @@ const CORWIN = (() => {
       const phi = (i / (S - 1) * 2 - 1) * PHIMAX, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp);
       const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 11.2 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
       const ax0 = fxa * CS - lza * Y, ax = HX + ax0 * cl - (ya - HIP) * sl, ay = HIP + ax0 * sl + (ya - HIP) * cl;
-      const len = (45 + 3.5 * cp - 6 * front) * (1 - down * .1), fl = 18 + .32 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
+      const len = (45 + 3.5 * cp - 6 * front) * 1.12 * (1 - down * .1), // (a little longer: to the calf)
+         fl = 18 + .32 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
       for (let j = 0; j <= M; j++) {
         const o = ix(i, j); if (!j) { tgt[o] = ax; tgt[o + 1] = ay; continue; }
         const v = j / M, vf = Math.pow(v, .85);
@@ -491,7 +492,7 @@ const CORWIN = (() => {
     ctx.closePath(); ctx.fillStyle = C(base); ctx.fill();
     if (FINE()) { // the folds and the specks, laid in before the dry-brush strokes
       const lo0 = Math.min(u0, u1), hi0 = Math.max(u0, u1); ctx.lineCap = 'round';
-      for (const [col, w, off, a] of [['#030205', 3.2, 0, .8], [L.cloakSlate, .7, .045, .45]]) {
+      for (const [col, w, off, a] of [['#030205', 2.6, 0, .45], [L.cloakSlate, .6, .045, .25]]) {
         ctx.strokeStyle = col; ctx.lineWidth = w; const ga = ctx.globalAlpha; ctx.globalAlpha = ga * a * (far ? .7 : 1); ctx.beginPath();
         for (const f of FOLDS) { const u = f.u + off; if (u < lo0 || u > hi0) continue; for (let q = 0; q <= 5; q++) { uv(Pt, u + f.du * q / 5, lerp(f.v0, f.v1, q / 5)); q ? ctx.lineTo(UX, UY) : ctx.moveTo(UX, UY); } }
         ctx.stroke(); ctx.globalAlpha = ga;

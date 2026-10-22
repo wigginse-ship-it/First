@@ -5,6 +5,7 @@ let FLASH = false;              // when true, every color helper returns white (
 let TINT = null;                // when set, every color helper returns this one color (shadow afterimages)
 const C = (c) => FLASH ? '#FFFFFF' : TINT || c;
 let OUTK = 1, INK = OUT;
+let HEAD_MASK = null; // where the prince's head was drawn this frame (its transform and hy), so the paint layer can leave it smooth (paint.js)
 const FINE_OK = () => !FLASH && !TINT && (typeof PAINT_Q === 'undefined' || PAINT_Q > 0);        // the prince is inked finer, in a deeper brown-black (set while he is drawn)
 function outline(w = 1.6) { ctx.lineWidth = w * OUTK; ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.stroke(); }
 function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
@@ -31,7 +32,7 @@ function shadow(x, y, rx) { // cast on the floor, so it is painted under the ink
 // over deep-set green eyes; a long straight nose; stubble; and dark, wavy hair with volume, swept back over the ears.
 function drawCorwinHead(look, hy) {
   const sk = look.skin, mid = shade(sk, -.16), dark = shade(sk, -.34), ink = '#141016';
-  ctx.fillStyle = C(shade(sk, -.4)); ctx.fillRect(-.6, hy + 5, 5, 7); // neck, in the jaw's shadow
+  ctx.fillStyle = C(shade(sk, -.2)); ctx.fillRect(-.6, hy + 5, 5, 7); // neck, a little in the jaw's shadow
   const head = () => {
     ctx.beginPath(); ctx.moveTo(-5.6, hy - 8);
     ctx.quadraticCurveTo(.4, hy - 11.2, 5.6, hy - 9.6); ctx.quadraticCurveTo(9, hy - 8, 9.2, hy - 3.8); // crown and brow
@@ -42,15 +43,10 @@ function drawCorwinHead(look, hy) {
   };
   head(); ctx.fillStyle = C(sk); ctx.fill();
   ctx.save(); head(); ctx.clip();
-  ctx.fillStyle = C(mid); // the side of the head, turned from the light
-  ctx.beginPath(); ctx.moveTo(-10, hy - 12); ctx.lineTo(1.8, hy - 12); ctx.quadraticCurveTo(.6, hy - 2, 1.6, hy + 3); ctx.lineTo(2.8, hy + 7.4); ctx.lineTo(-10, hy + 12); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = C(dark);
-  ctx.beginPath(); ctx.moveTo(2.2, hy + 2); ctx.lineTo(6.8, hy + 2.8); ctx.lineTo(3.4, hy + 4.4); ctx.closePath(); ctx.fill(); // hollow under the cheekbone
-  ctx.beginPath(); ctx.moveTo(1, hy + 7.4); ctx.lineTo(6.6, hy + 10.4); ctx.lineTo(9.6, hy + 9.2); ctx.lineTo(9.6, hy + 12); ctx.lineTo(0, hy + 12); ctx.closePath(); ctx.fill(); // under the jaw
-  ctx.beginPath(); ctx.moveTo(3.6, hy - 2.8); ctx.lineTo(9.6, hy - 2.6); ctx.lineTo(8.6, hy - 1.4); ctx.lineTo(6.2, hy - 1.7); ctx.lineTo(4.2, hy - 1.2); ctx.closePath(); ctx.fill(); // deep-set eyes in the brow's shadow
-  ctx.beginPath(); ctx.moveTo(8.4, hy - 1.2); ctx.lineTo(9.2, hy + 2.8); ctx.lineTo(8, hy + 3.2); ctx.closePath(); ctx.fill(); // the side of the nose
-  ctx.fillStyle = 'rgba(40,28,34,.17)'; // stubble over the jaw, chin and upper lip
-  ctx.beginPath(); ctx.moveTo(1.4, hy + 4); ctx.quadraticCurveTo(5, hy + 4.8, 7.6, hy + 3.8); ctx.lineTo(10, hy + 3.6); ctx.lineTo(10, hy + 10); ctx.lineTo(1.4, hy + 8.4); ctx.lineTo(-1.4, hy + 5.4); ctx.closePath(); ctx.fill();
+  if (!FLASH && !TINT) { // one even skin tone, modelled only by a soft gradient: the back of the head turns gently from the light
+    const g = ctx.createLinearGradient(-6, 0, 4, 0); g.addColorStop(0, 'rgba(70,40,40,.2)'); g.addColorStop(1, 'rgba(70,40,40,0)'); ctx.fillStyle = g; ctx.fillRect(-10, hy - 12, 20, 24);
+    const sg = ctx.createLinearGradient(0, hy + 4, 0, hy + 10); sg.addColorStop(0, 'rgba(40,28,34,0)'); sg.addColorStop(1, 'rgba(40,28,34,.1)'); ctx.fillStyle = sg; ctx.fillRect(-2, hy + 4, 13, 8); // a very light, even stubble on the jaw
+  }
   ctx.restore();
   head(); outline(1.05);
   ctx.strokeStyle = C(shade(sk, -.5)); ctx.lineWidth = .55; ctx.beginPath();
@@ -58,7 +54,7 @@ function drawCorwinHead(look, hy) {
   ctx.moveTo(9.3, hy + 8); ctx.lineTo(9.6, hy + 9); // a hint of a cleft in the chin
   ctx.stroke();
   ctx.fillStyle = C(dark); ctx.beginPath(); ctx.moveTo(9.4, hy + 3.1); ctx.lineTo(10.2, hy + 3); ctx.lineTo(9.6, hy + 3.5); ctx.fill(); // nostril
-  ctx.fillStyle = C(shade(sk, -.42)); ell(-2.2, hy + 1.6, 1.4, 2.2); ctx.fill(); // ear
+  ctx.fillStyle = C(shade(sk, -.2)); ell(-2.2, hy + 1.6, 1.4, 2.2); ctx.fill(); // ear
   // eyes: whites, green irises toward the front, a heavy upper lid
   ctx.fillStyle = C('#EDE6DC'); ctx.beginPath(); ctx.moveTo(4.4, hy - 1); ctx.lineTo(7.4, hy - 1.3); ctx.lineTo(7.1, hy + .3); ctx.lineTo(4.9, hy + .2); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(8.6, hy - 1.2); ctx.lineTo(9.6, hy - 1.3); ctx.lineTo(9.5, hy + .2); ctx.lineTo(8.7, hy + .2); ctx.closePath(); ctx.fill();
@@ -154,7 +150,7 @@ function drawCorwinHeadTurn(look, hy, Y) {
   const sk = look.skin, mid = shade(sk, -.16), dark = shade(sk, -.34), ink = '#141016';
   const CS = Math.sqrt(Math.max(0, 1 - Y * Y)), th = Math.atan2(Y, CS), cx = 1.4;
   const P = (phi, r) => cx + r * Math.cos(phi + th), D = (phi) => Math.sin(phi + th);
-  if (Y > -.4) { ctx.fillStyle = C(shade(sk, -.4)); ctx.fillRect(cx - 2.8, hy + 5, 5.6, 7); } // neck (from behind, the hood and the hair hide it)
+  if (Y > -.4) { ctx.fillStyle = C(shade(sk, -.2)); ctx.fillRect(cx - 2.8, hy + 5, 5.6, 7); } // neck (from behind, the hood and the hair hide it)
   const skull = () => { ell(cx, hy - 1.6, 7.3, 8.4); };
   const jaw = () => { // cheeks down to the jaw's corners and the chin, wherever they face the viewer
     ctx.beginPath(); const pts = [[-1.35, 7.2, 1.6], [-1.02, 6.8, 6.8], [-.42, 5.4, 9.2], [0, 5.6, 10], [.42, 5.4, 9.2], [1.02, 6.8, 6.8], [1.35, 7.2, 1.6]];
@@ -170,21 +166,20 @@ function drawCorwinHeadTurn(look, hy, Y) {
   for (const f of shapes) { f(); ctx.lineWidth = 2.1 * OUTK; ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.stroke(); }
   for (const f of shapes) { f(); ctx.fillStyle = C(sk); ctx.fill(); }
   if (!FLASH && !TINT) { // light from the upper right: the far side of the head turns into shadow
-    ctx.save(); skull(); ctx.clip(); const g = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g.addColorStop(0, 'rgba(70,40,40,.32)'); g.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 9, hy - 12, 18, 24); ctx.restore();
-    ctx.save(); jaw(); ctx.clip(); const g2 = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g2.addColorStop(0, 'rgba(70,40,40,.32)'); g2.addColorStop(.55, 'rgba(70,40,40,0)'); ctx.fillStyle = g2; ctx.fillRect(cx - 9, hy - 2, 18, 14);
-    const sg = ctx.createLinearGradient(0, hy + 2.6, 0, hy + 7); sg.addColorStop(0, 'rgba(40,28,34,0)'); sg.addColorStop(1, 'rgba(40,28,34,.26)'); ctx.fillStyle = sg; ctx.fillRect(cx - 9, hy + 2.6, 18, 9); // stubble along the jaw
-    if (FINE_OK()) { ctx.fillStyle = 'rgba(30,20,24,.45)'; ctx.beginPath(); for (let i = 0; i < 26; i++) { const u = (Math.sin(i * 12.9) * 43758.5) % 1, v = (Math.sin(i * 78.2) * 43758.5) % 1; ctx.rect(cx + (Math.abs(u) - .5) * 11, hy + 5 + Math.abs(v) * 4.4, .3, .3); } ctx.fill(); }
+    const face = new Path2D(); face.ellipse(cx, hy - 1.6, 7.3, 8.4, 0, 0, TAU);
+    if (Y >= -.4) { // the jaw joined to it, wound the same way round as the skull so the two make one shape
+      const jp = new Path2D(), q = [[-1.35, 7.2, 1.6], [-1.02, 6.8, 6.8], [-.42, 5.4, 9.2], [0, 5.6, 10], [.42, 5.4, 9.2], [1.02, 6.8, 6.8], [1.35, 7.2, 1.6]].map(([phi, r, dy]) => [P(phi, r), hy + dy]);
+      let ar = 0; q.forEach(([x, y], i) => { const [x2, y2] = q[(i + 1) % q.length]; ar += x * y2 - x2 * y; }); if (ar < 0) q.reverse();
+      q.forEach(([x, y], i) => i ? jp.lineTo(x, y) : jp.moveTo(x, y)); jp.closePath(); face.addPath(jp); }
+    ctx.save(); ctx.clip(face); // one even skin tone, modelled by a single soft gradient across the whole head
+    const g = ctx.createLinearGradient(cx - 7, 0, cx + 7, 0); g.addColorStop(0, 'rgba(70,40,40,.2)'); g.addColorStop(.6, 'rgba(70,40,40,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 9, hy - 12, 18, 24);
+    const sg = ctx.createLinearGradient(0, hy + 2.6, 0, hy + 7); sg.addColorStop(0, 'rgba(40,28,34,0)'); sg.addColorStop(1, 'rgba(40,28,34,.1)'); ctx.fillStyle = sg; ctx.fillRect(cx - 9, hy + 2.6, 18, 9); // a very light, even stubble along the jaw
     ctx.restore();
   }
   if (Y > -.25) { // the face
-    for (const sd of [-1, 1]) { // the cheekbones' hollows
-      const phi = sd * .8, d = D(phi); if (d < .15) continue;
-      ctx.fillStyle = C(mid); ctx.beginPath(); ctx.moveTo(P(phi, 6.9), hy + 2.2); ctx.lineTo(P(sd * .45, 6.4), hy + 3); ctx.lineTo(P(phi, 6.6), hy + 4.2); ctx.closePath(); ctx.fill();
-    }
     for (const sd of [-1, 1]) { // deep-set eyes under heavy brows, green irises looking where he faces
       const phi = sd * .42, d = D(phi); if (d < .12) continue;
       const ex = P(phi, 6.6), ew = 1.5 * Math.pow(d, .7);
-      ctx.fillStyle = C(dark); ell(ex, hy - 1.1, ew + .5, 1.5); ctx.fill(); // the socket's shadow
       ctx.fillStyle = C('#EDE6DC'); ell(ex, hy - .5, ew, .75); ctx.fill();
       const ix = ex + .45 * CS * Math.sign(Math.cos(th) || 1); ctx.fillStyle = C(look.eye); ell(ix, hy - .55, .8 * Math.max(.5, d), .72); ctx.fill();
       ctx.fillStyle = C(ink); ell(ix, hy - .55, .38 * Math.max(.5, d), .4); ctx.fill();
@@ -194,7 +189,7 @@ function drawCorwinHeadTurn(look, hy, Y) {
       ctx.beginPath(); ctx.moveTo(bi, hy - 2.5); ctx.lineTo(bo, hy - 3.9); ctx.lineTo(bo, hy - 3); ctx.lineTo(bi, hy - 1.7); ctx.closePath(); ctx.fill();
     }
     const nb = P(0, 7.2), nt = P(0, 8.9); // a long straight nose; its shadow falls on the side away from the light
-    ctx.fillStyle = C(dark); ctx.beginPath(); ctx.moveTo(nb, hy - 1.6); ctx.lineTo(nt, hy + 3); ctx.lineTo(nt - 1.8, hy + 3.4); ctx.lineTo(nb - .7, hy); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = C(shade(sk, -.32)); ctx.lineWidth = .5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(nb - .5, hy - .6); ctx.lineTo(nt - .2, hy + 3); ctx.lineTo(nt - 1.4, hy + 3.4); ctx.stroke(); // its edge, a single soft line
     ctx.strokeStyle = C(shade(sk, .12)); ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(nb + .3, hy - 1.4); ctx.lineTo(nt + .2, hy + 2.6); ctx.stroke();
     ctx.fillStyle = C(shade(sk, -.5)); for (const sd of [-1, 1]) if (D(sd * .2) > .2) { ell(P(sd * .2, 8.1), hy + 3.3, .45, .3); ctx.fill(); } // nostrils
     const m0 = D(-.34) > 0 ? P(-.34, 6.6) : P(-Math.PI / 2 - th, 6.6), m1 = D(.34) > 0 ? P(.34, 6.6) : P(Math.PI / 2 - th, 6.6); // a set mouth
@@ -203,7 +198,7 @@ function drawCorwinHeadTurn(look, hy, Y) {
   }
   for (const sd of [-1, 1]) { // ears, at the sides of the head
     const phi = sd * 1.62, d = D(phi); if (d < -.3) continue;
-    ctx.fillStyle = C(shade(sk, -.3)); ell(P(phi, 7), hy + 1.4, .6 + .6 * Math.abs(Math.cos(phi + th)), 1.9); ctx.fill(); outline(.6);
+    ctx.fillStyle = C(shade(sk, -.18)); ell(P(phi, 7), hy + 1.4, .6 + .6 * Math.abs(Math.cos(phi + th)), 1.9); ctx.fill(); outline(.6);
   }
   // the hair: a cap fixed to the skull (it turns with him, it does not reshape), cut away for the face, with a ragged
   // fringe over the brow and locks over the ears
@@ -634,7 +629,7 @@ function drawHumanoid(look, pose) {
   // a walking or running body carries its weight: the hips dip as each foot lands and rise as the legs pass,
   // and each arm swings against its own leg
   const gait = walk && !pose.legs && !pose.kick && pose.kickK === undefined && !pose.down && !pose.crouch;
-  const bob = gait ? (pose.run ? (1 - Math.abs(sw)) * 3 : Math.abs(sw) * (CW ? 5.2 : 1.6)) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
+  const bob = gait ? (pose.run ? (1 - Math.abs(sw)) * 3 : Math.abs(sw) * 1.6) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
   const br = pose.breath ? (pose.breath + 1) * .45 : 0; // breathing settles the body over planted feet
   // the prince fights from wide, low lunges, as in the sheet's attack strips: a planted stance (legs, sink) is set wider and lower
   const LUNGE = CW && pose.legs && !pose.stance && pose.kickK === undefined ? clamp((pose.sink || 0) / 7, 0, 1) : 0;
@@ -682,11 +677,11 @@ function drawHumanoid(look, pose) {
   if (!BACK) drawCoat();
   // back arm, a shade darker for being further away
   ctx.save(); upper();
-  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .42 : .3) * (gait ? 1 : 0), bsx = PX(-3, -SWL), bsy = SHO + 1.5;
+  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .42 : .3) * (gait && !pose.backHold ? 1 : 0), bsx = PX(-3, -SWL), bsy = SHO + 1.5;
   const bb = pose.backElbow !== undefined ? -pose.backElbow : .25; // how far the forearm folds up from the upper arm
   const bl = 1 + (pose.backReach || 0); // a thrown rear hand reaches further, the shoulder driven through
   let bex = bsx + Math.cos(ba) * 10 * AS * bl * ASX, bey = bsy + Math.sin(ba) * 10 * AS * bl, bwx = bex + Math.cos(ba + bb) * 9 * AS * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * AS * bl;
-  let bha = Math.atan2(Math.sin(ba + bb), Math.cos(ba + bb) * ASX); // the far hand's angle
+  let bha = Math.atan2(Math.sin(ba + bb), Math.cos(ba + bb) * ASX) + (pose.backWrist || 0); // the far hand's angle (backWrist: the wrist curled over)
   if (pose.twoHand) { // both hands on the grip: the far hand is solved onto the hilt, just below the weapon hand, every frame
     const g = twoHandGrip(pose, PX, SHO, sw, armSw, ASX, AS, SWL), gap = pose.gripGap || 4.5 * HAND_S, wx = g.x - Math.cos(g.ang) * gap, wy = g.y - Math.sin(g.ang) * gap; // (a staff is held with the hands apart)
     const dx = wx - bsx, dy = wy - bsy, d = Math.hypot(dx, dy) || 1e-3, k = Math.max(1, d / (18.6 * AS)), L1 = 10 * AS * k, L2 = 9 * AS * k; // a long reach stretches the shoulder through
@@ -701,11 +696,13 @@ function drawHumanoid(look, pose) {
   if (!across) farHand();
   };
   const farHand = () => { ctx.save(); ctx.translate(bwx, bwy); ctx.rotate(bha); ctx.translate(-13, 0); drawHand(shade(look.glove || skin, -.18), pose.twoHand ? 0 : pose.openHand); ctx.restore(); }; // the far hand
-  if (!across) farArm();
+  const overCloak = pose.backOver && !across && !BACK; // the fencer's free arm is shown over his cloak: raised behind, thrown back, or the hand in the small of his back
+  if (!across && !overCloak) farArm();
   const bpA = clamp((ba - 1.25) * .3, -.5, .5); // his far shoulder guard: hidden by his chest in profile, over the cloak when he faces us
   if (arms && Y < .3 && !across) farPauldron(() => arms.pauldron(look, bsx, bsy - 1, bpA, true, .5), Y >= 0 ? Y : 1);
   ctx.restore();
   if (CP && !BACK && !pose.down) CW.cloak.half(look, CP, false);
+  if (overCloak) { ctx.save(); upper(); farArm(); ctx.restore(); }
   // legs: thighs and calves with a swell, pants tucked into boots (the prince's drawn at LS about his feet, so they are long)
   const legs = look.legs, LW = 1 / LS;
   ctx.save(); if (LS !== 1 || LX !== 1) ctx.scale(LS * LX, LS);
@@ -724,8 +721,8 @@ function drawHumanoid(look, pose) {
     else { seg(-2, HIP, -4, -13, 8, 6, legs, .6); seg(-4, -13, -6, -6, 6, 4.6, legs, .6); seg(2, HIP, 6, -13, 8, 6, legs, .6); seg(6, -13, 8, -6, 6, 4.6, legs, .6); }
   } else {
     const run = pose.run ? 1.95 : 1.15, st = pose.stance && !walk; // a fighting stance at rest: feet apart, knees loose
-    const SA = CW && !pose.run ? 17 : 10 * run; // the prince walks with a long, upright stride, as in the sheet
-    let f1 = st ? -7 : sw * SA, f2 = st ? 7 : -sw * SA;
+    let f1 = st ? -7 : sw * 10 * run, f2 = st ? 7 : -sw * 10 * run;
+    const WALK = CW && gait && !pose.run; // his ordinary walk keeps its own stride: knees placed by the gait, not the straight-leg solver
     let k1 = gait ? 1.5 : cr ? 9 : st ? 2 : Math.max(0, sw) * 6, k2 = gait ? 1.5 : cr ? 9 : st ? 3 : Math.max(0, -sw) * 6; // in a stride the knees stay long; the bend comes from the lifting leg
     if (pose.legs) { // an attack stance: where each foot plants and how far each knee bends
       const L = pose.legs, WX = 1 + .4 * LUNGE; f1 = L.b * WX; f2 = L.f * WX; k1 = L.bk; k2 = L.fk;
@@ -739,6 +736,9 @@ function drawHumanoid(look, pose) {
     const leg = (x, lz, f, k, col, bc, lift, kl = 0) => {
       const hx0 = PX(x, lz * .8) + HX; let kx = PX(x + f * .5 + k + lift * .5 + kl * .4, lz * (.9 + (W - 1) * .8)) + HX * .5, kyy = ky - lift * (pose.run ? .55 : .35) - kl * .6 - (x < 0 && pose.legs ? pose.legs.bku || 0 : 0); const fx = PX(x + f - lift * .4, lz * W);
       lift += kl;
+      if (WALK) {
+        const ax = fx - .6 * CS, ay = -8 - lift, rot = lift ? lift * .03 : 0;
+        CW.leg(look, hx0, HIP, kx, kyy, ax, ay, fx, -lift, rot, bsc * LW, col !== legs, LW); return; }
       if (CW) { // worked out in his own facing plane (F forward, y up), then turned to the screen: a two-bone leg of
         // fixed thigh and shin, so it stands straight when the hips are high and bends only as they sink or a foot lifts
         const lzH = lz * .8, lzK = lz * (.9 + (W - 1) * .8), lzF = lz * W;
@@ -853,7 +853,7 @@ function drawHumanoid(look, pose) {
     HAIR_SWAY = [clamp(-(pose.flow || 0) * .1 - (gait ? (pose.run ? 1.4 : .4) : 0) + Math.sin(walk * 2) * (gait ? .35 : 0) + Math.sin(performance.now() / 900) * .15, -2.6, 1.2),
       clamp((gait ? Math.cos(walk * 2) * (pose.run ? .5 : .2) : 0) - (pose.crouch && !gait ? .4 : 0), -1, 1)];
     const HY = pose.HY ?? Y; // his head can stay turned toward what is in front of him while his chest is turned to us
-    ctx.save(); headScale(); if (!(pose.headTurn ?? Math.abs(HY) >= .3)) drawCorwinHead(look, hy); else drawCorwinHeadTurn(look, hy, HY); ctx.restore();
+    ctx.save(); headScale(); HEAD_MASK = { m: ctx.getTransform(), hy }; if (!(pose.headTurn ?? Math.abs(HY) >= .3)) drawCorwinHead(look, hy); else drawCorwinHeadTurn(look, hy, HY); ctx.restore();
   } else {
     ctx.save(); headScale();
     ctx.fillStyle = C(shade(skin, -.22)); ctx.fillRect(-1.5, hy + 5, 5, 6); // neck

@@ -152,6 +152,7 @@ function heroInk(cx, cy, fn) {
   heroG.setTransform(1, 0, 0, 1, 0, 0); heroG.globalCompositeOperation = 'source-over'; heroG.globalAlpha = 1; heroG.clearRect(0, 0, w + 2, h + 2);
   heroG.setTransform(m.a, m.b, m.c, m.d, m.e - x0, m.f - y0);
   const prev = ctx; ctx = heroG;
+  HEAD_MASK = null;
   try { fn(); heroPaint(cx, cy); } finally { ctx = prev; }
   // the ink line: his own silhouette, a fine stroke's width all round, laid under him on his layer
   const r = .5 * K;
@@ -171,11 +172,16 @@ function heroPaint(x, y) {
   if (!DETAIL_OK()) return;
   const hw = 14, hh = 52, R = 56;
   ctx.save(); ctx.globalCompositeOperation = 'source-atop';
+  if (HEAD_MASK) { // his face, neck and hair keep their own smooth paint: the brushwork is clipped away from the head
+    const m = ctx.getTransform(), clip = new Path2D(), hd = new Path2D(), y = HEAD_MASK.hy;
+    clip.rect(-1e4, -1e4, 2e4, 2e4);
+    hd.ellipse(.6, y - 3, 12.4, 13.4, 0, 0, TAU); hd.rect(-1.4, y + 4, 6.4, 8.4); // (head space: the head and hair, and the neck below)
+    ctx.setTransform(1, 0, 0, 1, 0, 0); const all = new Path2D(); all.addPath(clip); all.addPath(hd, HEAD_MASK.m); ctx.clip(all, 'evenodd'); ctx.setTransform(m);
+  }
   const lg = ctx.createRadialGradient(x + 8, y - 64, 0, x + 8, y - 64, 46); // light from the upper right
   lg.addColorStop(0, 'rgba(255,236,206,.13)'); lg.addColorStop(1, 'rgba(255,236,206,0)'); ctx.fillStyle = lg; ctx.fillRect(x - 50, y - 112, 100, 70);
   const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.22)'); ctx.fillStyle = dg; ctx.fillRect(x - 75, y - 30, 150, 34); // the legs settle into shadow toward the street
   ctx.translate(x, y); ctx.scale(.5, .5);
-  ctx.globalAlpha = 1; ctx.fillStyle = texPat(ctx, 'dry'); ctx.fillRect(-150, -210, 300, 222); // (about his figure only: the texture costs by area)
   ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'brush'); ctx.fillRect(-150, -210, 300, 222);
   ctx.fillStyle = texPat(ctx, 'hatch');
   for (let i = 0; i < 2; i++) { const k = 1 - i * .3; ctx.globalAlpha = .2 * (.6 + i * .3); ell((-hw * .9 - i * hw * .2) * 2, (-hh * .35 + i * hh * .08) * 2, hw * 1.7 * k * 2, hh * .85 * k * 2); ctx.fill(); }

@@ -359,13 +359,13 @@ const MOVE_POSE = {
   'rapier:DA'(pose, m, k) {
     const h0 = m.h[0], e = k < h0 ? -.3 * ease(k / h0) : k < m.h[1] ? Math.min(1, (k - h0) / ((m.h[1] - h0) * .35)) : 1 - span(k, m.h[1], 1) * .7;
     pose.rot = .28 * (k < h0 ? ease(k / h0) : 1); pose.lean = .3; pose.ext = e; pose.arm = .18 - pose.rot; pose.elbow = 0; pose.grip = 0;
-    pose.backArm = 3.6; pose.backElbow = -.88; pose.legs = { f: 3, b: -16, fk: 10, bk: 2 }; pose.sink = 2; pose.flow = 16;
+    rapierOffHand(pose, 'guard', clamp(e, 0, 1)); pose.legs = { f: 3, b: -16, fk: 10, bk: 2 }; pose.sink = 2; pose.flow = 16;
   },
   'rapier:HC'(pose, m, k) { // Hellride: a lunge at every one of them, each from a new side
     const n = (P.blinkList && P.blinkList.length) || 1, slot = (m.h[1] - m.h[0]) / n, ph = k < m.h[0] ? -1 : ((k - m.h[0]) / slot) % 1;
     const e = ph < 0 ? -.4 * ease(k / m.h[0]) : ph < .35 ? ease(ph / .35) : 1 - .7 * ease((ph - .35) / .65), p = Math.max(0, e);
     pose.ext = e; pose.legs = { f: lerp(7, 17, p), b: lerp(-9, -17, p), fk: lerp(3, 10, p), bk: lerp(4, 0, p) }; pose.sink = lerp(3, 7, p); pose.lean = lerp(.05, .45, p);
-    pose.arm = .03 - pose.lean * .9; pose.elbow = 0; pose.backArm = 3.6; pose.backElbow = -.88; pose.glow = 'rgba(160,140,255,.5)';
+    pose.arm = .03 - pose.lean * .9; pose.elbow = 0; rapierOffHand(pose, 'guard', p); pose.glow = 'rgba(160,140,255,.5)';
   },
 };
 function movePoseKey(m) { return P.w === 'sword' && m.lvl === 7 ? 'sword:J7' : P.w + ':' + m.key; }
@@ -374,9 +374,9 @@ function movePoseKey(m) { return P.w === 'sword' && m.lvl === 7 ? 'sword:J7' : P
 // Only the live, on-screen prince is blended (draw.js). Each joint eases toward where this frame's pose wants it with
 // its own time constant: the weapon arm quick, the torso and legs a little slower, the back arm and head slowest, so
 // a change of move flows instead of snapping. Spins, flips, hit frames and falls are left exact.
-const BLEND_TAU = { legX: .08, armS: .07, arm: .055, elbow: .06, grip: .06, ext: .05, backArm: .11, backElbow: .1, backReach: .09, lean: .085, yaw: .1, crouchK: .08, flow: .16, shift: .08, hipLead: .06, leanLead: .07 };
+const BLEND_TAU = { legX: .08, armS: .07, arm: .055, elbow: .06, grip: .06, ext: .05, backArm: .11, backElbow: .1, backWrist: .1, backReach: .09, lean: .085, yaw: .1, crouchK: .08, flow: .16, shift: .08, hipLead: .06, leanLead: .07 };
 const BLEND_ANG = { arm: 1, backArm: 1, grip: 1 };
-const BLEND_DEF = { legX: 1, armS: 1, arm: 1.1, elbow: 0, grip: 0, ext: 0, backArm: 1.25, backElbow: -.25, backReach: 0, lean: 0, yaw: 0, flow: 0, shift: 0, hipLead: 0, leanLead: 0 };
+const BLEND_DEF = { legX: 1, armS: 1, arm: 1.1, elbow: 0, grip: 0, ext: 0, backArm: 1.25, backElbow: -.25, backWrist: 0, backReach: 0, lean: 0, yaw: 0, flow: 0, shift: 0, hipLead: 0, leanLead: 0 };
 const BL = { prev: null, at: 0, off: false };
 const CHAIN = { on: true, lead: .04 }; // seconds the body leads the weapon arm by (draw.js)
 function blendPose(pose) {
