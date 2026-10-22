@@ -50,7 +50,7 @@ const CORWIN = (() => {
       const cg = ctx.createLinearGradient(0, -4.6, 0, 4.6); cg.addColorStop(0, C(shade(cuff, .3))); cg.addColorStop(.45, C(cuff)); cg.addColorStop(1, C(shade(cuff, -.4))); ctx.fillStyle = cg; ctx.fill(); outline(.7);
       if (DET()) { ctx.strokeStyle = shade(cuff, -.45); ctx.lineWidth = .4; ctx.beginPath(); ctx.moveTo(2.2, -3.4); ctx.lineTo(4.4, -3.2); ctx.moveTo(2.4, 2.6); ctx.lineTo(4.4, 3.4); ctx.stroke(); }
       for (const k of [.5, .78]) { const x = len * k; ctx.fillStyle = C(shade(L.leather, far ? -.45 : -.3)); ctx.fillRect(x - .8, -3.6, 1.6, 7.2);
-        ctx.fillStyle = C(far ? shade(L.brass, -.25) : L.brass); ctx.fillRect(x - 1.1, -3.9, 2.2, 2); ctx.fillStyle = C(shade(L.leather, -.5)); ctx.fillRect(x - .5, -3.5, 1, 1.2); }
+        ctx.strokeStyle = C(far ? shade(L.brass, -.35) : shade(L.brass, -.1)); ctx.lineWidth = .4; ctx.strokeRect(x - .8, -3.7, 1.6, 1.5); }
       if (DET()) { ctx.strokeStyle = shade(bt, .5); ctx.lineWidth = .65; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(6.6, -2.4); ctx.lineTo(len - 1.6, -1.8); ctx.stroke(); // the shine down the polished shaft
         atop(() => { ctx.fillStyle = 'rgba(8,4,4,.4)'; ctx.fillRect(5, 1.2, len, 3.4); }); }
       ctx.restore();
@@ -76,7 +76,7 @@ const CORWIN = (() => {
       ctx.fillStyle = bg; ctx.fill(); outline(.9);
       ctx.fillStyle = C(shade(bc, -.62)); ctx.fillRect(x - 4.4, -1.4, 11.6, 1.4); ctx.fillRect(x - 4.4, -2.7, 3.4, 1.4); // sole and heel
       ctx.strokeStyle = C(shade(L.leather, -.3)); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x + .2, -6.2); ctx.lineTo(x + 3.8, -3.6); ctx.stroke();
-      ctx.fillStyle = C(far ? shade(L.brass, -.25) : L.brass); ctx.fillRect(x + 1, -5.9, 1.9, 1.7);
+      ctx.strokeStyle = C(far ? shade(L.brass, -.35) : shade(L.brass, -.1)); ctx.lineWidth = .4; ctx.strokeRect(x + 1.2, -5.7, 1.5, 1.3);
       if (DET()) { ctx.fillStyle = 'rgba(255,240,220,.5)'; ell(x + 4.8, -2.6, 1.8, .6, -.3); ctx.fill(); }
     },
   };
@@ -96,7 +96,7 @@ const CORWIN = (() => {
   function leg(L, hx, hy, kx, ky, ax, ay, fx, fy, rot, bsc, far, s = 1) {
     const kit = PART('pants', L);
     legSkin(L, hx, hy, kx, ky, ax, ay, far, s, kit);
-    ctx.save(); ctx.translate(fx, fy); if (rot) ctx.rotate(rot); ctx.scale(bsc, FOOT_SY); kit.foot(L, 0, far); ctx.restore(); // (the foot kept its own height: the legs' frame is drawn tall)
+    ctx.save(); ctx.translate(fx, fy); if (rot) ctx.rotate(rot); ctx.scale(bsc * .88, FOOT_SY); kit.foot(L, 0, far); ctx.restore(); // (the foot kept its own height: the legs' frame is drawn tall)
     kit.shinDetail(L, kx, ky, ax, ay, far, s);
     const tx = kx - hx, ty = ky - hy, sx = ax - kx, sy = ay - ky, tl = Math.hypot(tx, ty) || 1, sl = Math.hypot(sx, sy) || 1;
     kit.knee(L, kx, ky, tx / tl + sx / sl, ty / tl + sy / sl, far, s);
@@ -287,7 +287,7 @@ const CORWIN = (() => {
       const sling = (th) => HIP + 3.4 - 3 * Math.sin(th);
       band(sling, 8.9, 2.3, shade(L.leather, -.14));
       band(() => HIP - .4, 8.1, 3.4, L.leather);
-      buckle(0, 8.1, HIP - .4, 2); buckle(.55, 8.9, sling(.55), 1.4);
+      buckle(0, 8.1, HIP - .4, 1.55); buckle(.55, 8.9, sling(.55), 1.1);
     },
     scabbard(L, g, drawn) { // brown leather and brass at his left hip, hanging back; his own sword in it unless it is in his hand
       const { HIP, CS, Y } = g, th = -1.85, fx = 7 * Math.cos(th), lz = 9.2 * Math.sin(th);

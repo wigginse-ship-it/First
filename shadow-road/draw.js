@@ -167,7 +167,7 @@ function playerPose() {
   else if (P.state === 'jump') { // as in the strip: going up, the lead knee driven high and the other leg trailing long beneath
     // him, fists tucked at the chest; at the top both knees fold up; coming down the legs open and reach for the street
     const up = clamp((P.vz || 0) / 380, -1, 1), r = Math.max(0, up), f = Math.max(0, -up), mid = 1 - Math.abs(up);
-    pose.legs = { f: 9 * r + 6 * mid + 6 * f, b: -8 * r - 3 * mid - 6 * f, fk: 11 * r + 12 * mid + 4 * f, bk: 1.5 * r + 10 * mid + 3 * f, fl: 9 * r + 8 * mid + 1.5 * f, bl: 6 * mid };
+    pose.legs = { f: 7 * r + 6 * mid + 6 * f, b: -10 * r - 3 * mid - 6 * f, fk: 11 * r + 12 * mid + 4 * f, bk: 10 * mid + 3 * f, fl: 17 * r + 12 * mid + 1.5 * f, bl: 7 * mid }; // (the lead knee tucked up high, the other leg trailing long)
     pose.sink = 0; pose.lean = .1 + .12 * r - .04 * f; pose.flow = 4;
     if (P.w === 'fists') { pose.arm = .95 - .15 * r; pose.elbow = 1.75; pose.backArm = 1.1 + .4 * r; pose.backElbow = 1.95; }
     else if (P.w === 'sword' || P.w === 'hammer') { pose.arm = 1.05; pose.elbow = 1.15; pose.grip = P.w === 'sword' ? -.85 : -1.1; pose.twoHand = 1; } // both hands on it, carried up across him
@@ -193,8 +193,11 @@ function playerPose() {
   else if (P.state === 'hurt') { // as in the strip: struck, he braces wide and low, chest thrown open toward us, the arms
     // flung out from his sides and the head snapped back, then he gathers himself
     const hk = clamp(1 - P.t / (P.knocked ? .45 : .3), 0, 1), j = 1 - ease(hk);
-    pose.yaw = .72; pose.legs = { f: -9, b: 11, fk: 7 + 2 * j, bk: 7 + 2 * j, w: 1.8 }; // (turned to us, the far foot ahead and the near one back read as a wide, square base, as in the idle) pose.sink = 5 + 3 * Math.sin(Math.PI * hk);
-    pose.lean = -.3 * j - .06; pose.arm = lerp(2.3, 1.95, hk); pose.elbow = lerp(.45, .75, hk); pose.backArm = lerp(1.0, 1.2, hk); pose.backElbow = lerp(-.25, -.45, hk); pose.openHand = 0; pose.flow = -6 * j; // both fists low and out from his sides
+    pose.yaw = .72; pose.legs = { f: -12, b: 13, fk: 7 + 2 * j, bk: 7 + 2 * j, w: 1.8 }; // (turned to us, the far foot ahead and the near one back read as a wide, square base, as in the idle) pose.sink = 5 + 3 * Math.sin(Math.PI * hk);
+    pose.lean = -.3 * j - .06; pose.openHand = 0; pose.flow = -6 * j;
+    // the arms flung wide by the blow, as in the sheet: turned less far to us, so one arm is thrown out ahead and up, the other out behind
+    pose.yaw = .42; pose.arm = lerp(.05, .55, hk); pose.elbow = lerp(.25, .6, hk); pose.backArm = lerp(3.55, 3.1, hk); pose.backElbow = lerp(-.35, -.15, hk);
+    if (P.w === 'sword' || P.w === 'hammer') pose.grip = lerp(.5, .3, hk); // (a heavy weapon swung out with the arm, not dropped)
   }
   else if (P.state === 'down' || (P.state === 'dead' && P.z <= 0)) pose.down = 1;
   // at rest each weapon sits the way its wielder would carry it
@@ -206,10 +209,9 @@ function playerPose() {
     if (r > .5) pose.openHand = 1;
     if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 1.6, r), bk: lerp(4, 1.2, r), w: lerp(1, 1.5, r) }; pose.sink = lerp(2, .6, r); }
   }
-  else if (P.w === 'sword') { // walking, a low guard with the point lowered toward the ground ahead; standing, both hands on the
-    // grip at his waist and the blade angled up across his body toward the foe, as in the paint-over
-    if (P.state === 'idle') { pose.arm = 1.18; pose.elbow = 1.12; pose.grip = -.62; pose.backArm = .9; pose.backElbow = 1.05; pose.twoHand = 1; } // both hands on the hilt
-    else { pose.arm = .8; pose.grip = -.08; }
+  else if (P.w === 'sword') { // walking or standing, the great sword hangs low in his hand
+    // as in the sheet: the blade carried low in one hand at his side, its point lowered toward the street ahead
+    pose.arm = 1.32; pose.elbow = .5; pose.grip = -.48; pose.backArm = 1.5; pose.backElbow = .25;
   }
   else if (P.w === 'hammer') { pose.arm = 1.95; pose.grip = .28; pose.backArm = .9; } // dragged behind him, its head resting on the ground
   else if (P.w === 'staff') { // a fighting guard: the staff held low and level across the body, point toward the enemy,

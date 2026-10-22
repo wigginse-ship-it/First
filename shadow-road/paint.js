@@ -79,7 +79,7 @@ function paintTextures() {
   const [dc, dg] = texCanvas(96, 160), dr = mulberry(77); dg.lineCap = 'round';
   for (let i = 0; i < 300; i++) {
     const x = dr() * 96, y = dr() * 160, l = 6 + dr() * 24, a = Math.PI / 2 + (dr() - .5) * .26, dark = dr() < .6;
-    const col = dark ? `rgba(10,6,8,${.1 + dr() * .2})` : `rgba(255,240,214,${.05 + dr() * .08})`, lw = .4 + dr() * 1.1;
+    const col = dark ? `rgba(10,6,8,${.14 + dr() * .22})` : `rgba(255,240,214,${.08 + dr() * .11})`, lw = .4 + dr() * 1.1;
     wrapDraw(96, 160, (ox, oy) => { dg.strokeStyle = col; dg.lineWidth = lw; dg.beginPath(); dg.moveTo(x + ox, y + oy); dg.lineTo(x + ox + Math.cos(a) * l, y + oy + Math.sin(a) * l); dg.stroke(); });
   }
   for (let i = 0; i < 90; i++) { const x = dr() * 96, y = dr() * 160; dg.fillStyle = dr() < .5 ? 'rgba(12,8,8,.3)' : 'rgba(255,236,200,.16)'; dg.fillRect(x, y, .8 + dr() * .7, .8 + dr() * .7); }
@@ -175,7 +175,7 @@ function heroPaint(x, y) {
   lg.addColorStop(0, 'rgba(255,236,206,.13)'); lg.addColorStop(1, 'rgba(255,236,206,0)'); ctx.fillStyle = lg; ctx.fillRect(x - R, y - 120, R * 2, 140);
   const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.22)'); ctx.fillStyle = dg; ctx.fillRect(x - R * 2, y - 30, R * 4, 34); // the legs settle into shadow toward the street
   ctx.translate(x, y); ctx.scale(.5, .5);
-  ctx.globalAlpha = .8; ctx.fillStyle = texPat(ctx, 'dry'); ctx.fillRect(-R * 5, -(hh + R) * 2.4, R * 10, (hh + R) * 2.4 + 40);
+  ctx.globalAlpha = 1; ctx.fillStyle = texPat(ctx, 'dry'); ctx.fillRect(-R * 5, -(hh + R) * 2.4, R * 10, (hh + R) * 2.4 + 40);
   ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'brush'); ctx.fillRect(-R * 5, -(hh + R) * 2.4, R * 10, (hh + R) * 2.4 + 40);
   ctx.fillStyle = texPat(ctx, 'hatch');
   for (let i = 0; i < 2; i++) { const k = 1 - i * .3; ctx.globalAlpha = .2 * (.6 + i * .3); ell((-hw * .9 - i * hw * .2) * 2, (-hh * .35 + i * hh * .08) * 2, hw * 1.7 * k * 2, hh * .85 * k * 2); ctx.fill(); }
