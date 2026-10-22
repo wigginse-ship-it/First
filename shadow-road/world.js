@@ -37,12 +37,15 @@ const WORLD_DIFF = [{ hp: 1, boss: 1, dmg: 1, cd: 1 }, { hp: 1.4, boss: 1.2, dmg
 const worldDiff = () => WORLD_DIFF[Math.min(stageIdx || 0, WORLD_DIFF.length - 1)];
 // worlds 2 and 3 field armored elites: a gold guard soaks up light hits until a heavy, launcher or slam breaks it
 // a champion: a bigger, tougher, armored version of a wave's own foe, announced by name, and it pays well
+const EARLY = () => stageIdx <= 1; // the first two worlds: no armored foes, and gentler champions
 function makeChampion(e) {
-  if (!e.elite) makeElite(e);
-  e.champ = true; e.hp = e.maxHp = Math.round(e.maxHp * 2.4); e.guard = e.guardMax = e.guardMax + (stageIdx ? 2 : 1); e.hw *= 1.3; e.hh *= 1.3; e.dmg = Math.round(e.dmg * 1.25);
+  if (EARLY()) { e.champ = true; e.hp = e.maxHp = Math.round(e.maxHp * 1.6); e.guard = e.guardMax = 0; e.hw *= 1.3; e.hh *= 1.3; e.dmg = Math.round(e.dmg * 1.1); }
+  else { if (!e.elite) makeElite(e);
+  e.champ = true; e.hp = e.maxHp = Math.round(e.maxHp * 2.4); e.guard = e.guardMax = e.guardMax + (stageIdx ? 2 : 1); e.hw *= 1.3; e.hh *= 1.3; e.dmg = Math.round(e.dmg * 1.25); }
   floatText(e.x, e.y, e.hh + 30, 'CHAMPION ' + e.def.name.toUpperCase(), '#EED48A', 15); sfx('growl');
 }
 function makeElite(e) {
+  if (EARLY()) return; // no armored foes in the first two worlds
   e.elite = true; e.guardMax = e.guard = stageIdx >= 2 ? 4 : 3;
   e.hp = e.maxHp = Math.round(e.hp * 1.5); e.dmg = Math.round(e.dmg * 1.15);
 }
