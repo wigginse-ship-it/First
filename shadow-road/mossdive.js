@@ -2,8 +2,30 @@
 // Only the tree on his back shows above the surface, gliding toward you like a fin with a wake behind it. It follows
 // you for a while (faster than you walk: run, or wait for it to stop), stops and churns, and a heartbeat later he
 // bursts up out of the water right there and throws whoever is standing on the spot into the air.
-// Get off the churning water. While he is under you can't hit him.
-const SUB = { dive: .45, hunt: 1.6, churn: .8, rise: .35, speed: 140, R: 50 };
+// Get off the churning water. While he is under you can't hit him. The burst throws out a ring-shaped wall of water
+// that rolls across the whole floor and hits hard: jump over it or dodge through it.
+const SUB = { dive: .45, hunt: 1.6, churn: .8, rise: .35, speed: 140, R: 50, wave: 270, waveMax: 620 };
+HAZARD_FX.tidewave = {
+  update(h, dt) {
+    if (h.delay > 0) { h.delay -= dt; h.t += dt; return; }
+    h.r += SUB.wave * dt; if (h.r > SUB.waveMax) h.t = -1;
+    const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2);
+    if (!h.hit && Math.abs(d - h.r) < 16 && P.z < 20) { h.hit = true; playerDamage(h.dmg, h.x, true); if (P.state === 'hurt') { P.vz = 260; P.vx = Math.sign(P.x - h.x || 1) * 220; } }
+    if (Math.random() < dt * 40) { const a = rand(0, TAU); parts.push({ x: h.x + Math.cos(a) * h.r, y: h.y + Math.sin(a) * h.r / 2.2, z: rand(10, 24), vx: Math.cos(a) * 40, vy: 0, vz: rand(30, 90), life: .4, max: .4, col: 'rgba(225,245,240,.8)', size: rand(2, 4), shape: 'blob' }); }
+  },
+  draw(h, t) {
+    if (h.delay > 0) return;
+    const fade = Math.min(1, (SUB.waveMax - h.r) / 120), r = h.r, ry = r / 2.2, H = 24;
+    ctx.save(); ctx.globalAlpha = Math.max(0, fade);
+    ctx.fillStyle = 'rgba(40,90,90,.35)'; ctx.beginPath(); ctx.ellipse(h.x, h.y, r + 10, ry + 5, 0, 0, TAU); ctx.ellipse(h.x, h.y, Math.max(1, r - 10), Math.max(1, ry - 5), 0, 0, TAU); ctx.fill('evenodd'); // the trough
+    ctx.fillStyle = 'rgba(120,190,185,.75)'; ctx.strokeStyle = 'rgba(235,250,246,.95)'; ctx.lineWidth = 2.2;
+    for (const half of [[Math.PI, TAU], [0, Math.PI]]) { // the wall of water: its far side first, then its near side
+      ctx.beginPath(); ctx.ellipse(h.x, h.y, r, ry, 0, half[0], half[1]); ctx.ellipse(h.x, h.y - H, r, ry, 0, half[1], half[0], true); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); for (let a = half[0]; a <= half[1] + .001; a += .08) { const px = h.x + Math.cos(a) * r, py = h.y - H + Math.sin(a) * ry + Math.sin(a * 14 + t * 12) * 2; a === half[0] ? ctx.moveTo(px, py) : ctx.lineTo(px, py); } ctx.stroke(); // the foam crest
+    }
+    ctx.restore();
+  },
+};
 PLAN_FX.submerge = (e) => {
   e.sub = { t: 0, x0: e.x, y0: e.y }; e.state = 'recover'; e.t = SUB.dive + SUB.hunt + SUB.churn + SUB.rise + .5; e.plan = 'submerge';
   sfx('whoosh'); for (let i = 0; i < 18; i++) parts.push({ x: e.x + rand(-40, 40), y: e.y + rand(-6, 6), z: rand(4, 30), vx: rand(-80, 80), vy: 0, vz: rand(90, 220), life: .7, max: .7, col: 'rgba(200,232,226,.8)', size: rand(3, 6), shape: 'blob' });
@@ -29,6 +51,7 @@ TELL_FX.submerge = (e, t, k) => { // he hunches and draws in a breath: water rin
     if (s.t >= t3 && !s.burst) { s.burst = true; // up he comes
       e.x = s.bx; e.y = s.by; e.vz = 380; e.air = false; shakeMag = 12; sfx('slam'); flashT = Math.max(flashT, .05);
       for (let i = 0; i < 40; i++) { const a = rand(0, TAU); parts.push({ x: e.x + Math.cos(a) * rand(0, 40), y: e.y + Math.sin(a) * rand(0, 14), z: rand(2, 30), vx: Math.cos(a) * rand(40, 200), vy: 0, vz: rand(160, 380), life: .9, max: .9, col: pick(['rgba(210,240,232,.85)', 'rgba(150,200,190,.8)', 'rgba(90,120,60,.8)']), size: rand(3, 7), shape: 'blob' }); }
+      hazards.push({ kind: 'tidewave', x: e.x, y: e.y, r: SUB.R * .6, delay: .08, dmg: Math.round(edmg(e) * 1.7), t: 9, max: 9 }); // the wave he throws out
       if (Math.hypot(P.x - e.x, (P.y - e.y) * 2) < SUB.R && P.z < 30) { playerDamage(Math.round(edmg(e) * 1.2), e.x, true); if (P.state === 'hurt') { P.vz = 340; P.vx = Math.sign(P.x - e.x || 1) * 160; } }
     }
     if (s.t >= t4) { e.sub = null; e.state = 'recover'; e.t = .6; } // spent, on the surface: your opening
