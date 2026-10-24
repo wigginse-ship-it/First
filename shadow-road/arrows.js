@@ -11,7 +11,7 @@ const ARROW_TIERS = [
   { name: 'Starfall Arrows', dmg: 116, crit: .28, pierce: 2, blast: 60, desc: 'Fletched with light: each one falls like a star and goes through three.' },
 ];
 const aTier = () => ARROW_TIERS[Math.min(ARROW_TIERS.length, save.alv || 1) - 1];
-const arrowCost = (lvl) => ({ s: Math.round([0, 420, 850, 1450, 2300][lvl] * (1 + .5 * (save.cycle || 0))), g: Math.round([0, 6, 10, 15, 22][lvl] * (1 + .5 * (save.cycle || 0))) }); // a better arrow is a luxury
+const arrowCost = (lvl) => ({ s: Math.round([0, 200, 400, 700, 1100][lvl] * (1 + .5 * (save.cycle || 0))), g: Math.round([0, 3, 5, 8, 12][lvl] * (1 + .5 * (save.cycle || 0))) }); // a better arrow is dear, but within reach
 function maybeDropArrow(e) {
   if (!e.def.ranged || e.boss || (save.arrows || 0) + loot.filter(k => k.kind === 'arrow').length >= ARROW_MAX) return;
   if (Math.random() < (e.elite || e.champ ? .25 : .08)) loot.push(makeLoot('arrow', e.x, e.y, 1));
