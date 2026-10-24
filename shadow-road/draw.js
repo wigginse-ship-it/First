@@ -42,12 +42,12 @@ function attackStance(pose, m, k) {
 //    and the recovery from it);
 //  lunge: at full extension of a lunge or thrust it swings down and straight back along the rear leg, the palm open, and
 //    comes back up as he recovers (x: 0 guard .. 1 lunge);
-//  tuck: tucked into the small of his back (the advance en garde, the parry and riposte, and the second cut of the light
-//    chain, so it shows now and then and always on the same strokes).
-const RAPIER_TUCK = { LL: 1, M: 1, RIP: 1 };
+//  tuck: tucked into the small of his back (the parry and riposte, the second cut of the light chain, the advancing cuts,
+//    and Thousand Needles, the duelist's insolent one-handed flurry: so it shows now and then and always on the same strokes).
+const RAPIER_TUCK = { LL: 1, M: 1, RIP: 1, LLH: 1 };
 function rapierOffHand(pose, mode, x = 0, wind = 0) {
   pose.backOver = 1; // (drawn over the cloak, so it reads)
-  if (mode === 'tuck') { pose.backArm = 2.5; pose.backElbow = 1.75; pose.backWrist = .35; pose.openHand = 0; pose.backHold = 1; return; } // the elbow out behind, the forearm folded down and in across the small of his back
+  if (mode === 'tuck') { pose.backArm = 2.7; pose.backElbow = 2.3; pose.backWrist = .35; pose.openHand = 0; pose.backHold = 1; return; } // the elbow out behind, the forearm folded down and in across the small of his back
   const down = 2.42 - (pose.lean || 0) * .2; // (the arm is drawn in the leaning chest's frame: down the line of the rear leg on the street)
   pose.backArm = lerp(3.32 + .1 * wind, down, x); pose.backElbow = lerp(-1.22 - .08 * wind, .06, x); pose.backWrist = lerp(.95, -.2, x); pose.openHand = 1; pose.backHold = 1;
 }
@@ -122,6 +122,11 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     if (P.w === 'rapier' && !m.kick && !m.around && (!m.spin || k >= (m.spinEnd || 1))) { // the fencer's free hand (see rapierOffHand)
       if (RAPIER_TUCK[m.key]) rapierOffHand(pose, 'tuck');
       else rapierOffHand(pose, 'guard', lungeK(m, k), k < m.h[0] ? ease(k / m.h[0]) : 0);
+      if (m.key === 'LLH' && P.z <= 2) { // Thousand Needles: upright and side-on, chin up, the free hand at his back, the feet in a narrow fencer's line, only the sword arm moving
+        const q = ease(Math.min(1, k / .15)) * (k > .85 ? 1 - ease((k - .85) / .15) : 1);
+        pose.lean = lerp(pose.lean || 0, -.07, q); pose.yaw = lerp(pose.yaw || 0, -.15, q); pose.arm = lerp(pose.arm, -.06, q);
+        pose.legs = { f: 11, b: -13, fk: 2.5, bk: 3.5, bh: 0 }; pose.sink = lerp(pose.sink || 0, 2.5, q);
+      }
       if (pose.legs) pose.legs.bh = 0; // a fencer's lunge: the rear leg straight, the rear foot kept flat on the street
     }
     if (m.slide && P.z <= 2) { // the sliding kick: laid back low and streamlined like the forward dodge, both feet driven out ahead
@@ -228,8 +233,7 @@ function playerPose() {
     // At rest his chest turns to us (see IDLE_Y below), the blade held low across his body, its point up toward the foe
     const r = ease(P.restK || 0);
     pose.arm = lerp(.35, .95, r); pose.elbow = lerp(.5, .35, r); pose.grip = lerp(-.1, .1, r); pose.lean = lerp(.04, 0, r);
-    if (P.state === 'walk') rapierOffHand(pose, 'tuck'); // the advance en garde: the free hand in the small of his back
-    else { rapierOffHand(pose, 'guard'); pose.backArm = lerp(pose.backArm, 1.62, r); pose.backElbow = lerp(pose.backElbow, .3, r); pose.backWrist = lerp(pose.backWrist, 0, r); pose.backHold = r < .5 ? 1 : 0; } // en garde the free hand is up behind him; at ease it comes down
+    { rapierOffHand(pose, 'guard'); pose.backArm = lerp(pose.backArm, 1.62, r); pose.backElbow = lerp(pose.backElbow, .3, r); pose.backWrist = lerp(pose.backWrist, 0, r); pose.backHold = r < .5 ? 1 : 0; } // en garde the free hand is up behind him; at ease it comes down
     if (r > .5) pose.openHand = 1;
     if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 1.6, r), bk: lerp(4, 1.2, r), w: lerp(1, 1.5, r) }; pose.sink = lerp(2, .6, r); }
   }

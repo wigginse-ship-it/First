@@ -91,13 +91,17 @@
     border: 2px solid var(--ring); display: grid; place-items: center; text-shadow: 0 1px 2px rgba(0,0,0,.8); cursor: pointer; opacity: .45; transition: opacity .12s;
     background: radial-gradient(circle at 35% 28%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%); box-shadow: inset 0 0 10px var(--tint); }
   .btn.on { transform: scale(.9); opacity: .9; background: radial-gradient(circle at 35% 28%, rgba(255,255,255,.16), var(--tint) 55%, rgba(15,10,22,.5)); }
-  .b-light { width: 80px; height: 80px; font-size: 13px; --ring: #C8485A; --tint: rgba(160,50,70,.6); right: max(26px, env(safe-area-inset-right, 0px)); bottom: 22px; }
-  .b-heavy { width: 66px; height: 66px; --ring: #D8AA55; --tint: rgba(150,110,40,.6); right: calc(max(26px, env(safe-area-inset-right, 0px)) + 90px); bottom: 12px; }
-  .b-jump  { width: 60px; height: 60px; --ring: #8FB8D8; --tint: rgba(60,100,140,.6); right: calc(max(26px, env(safe-area-inset-right, 0px)) + 10px); bottom: 112px; }
-  .b-dodge { width: 56px; height: 56px; --ring: #9A86C8; --tint: rgba(80,60,130,.6); right: calc(max(26px, env(safe-area-inset-right, 0px)) + 86px); bottom: 90px; }
-  .b-shoot { width: 48px; height: 60px; border-radius: 8px; --ring: #A88A5E; --tint: rgba(60,44,30,.7); color: #E8D8B0; font-size: 9px; right: calc(max(26px, env(safe-area-inset-right, 0px)) + 216px); bottom: 26px; }
-  .b-swap  { width: 48px; height: 60px; border-radius: 8px; --ring: #D8AA55; --tint: rgba(46,36,68,.7); color: var(--gold); font-size: 9px; right: calc(max(26px, env(safe-area-inset-right, 0px)) + 160px); bottom: 26px; }
-  .b-trump { width: 52px; height: 66px; border-radius: 8px; --ring: #C8607A; --tint: rgba(90,40,70,.7); color: #E8A0B0; font-size: 9px; right: calc(max(26px, env(safe-area-inset-right, 0px)) + 154px); bottom: 98px; }
+  /* the right hand is a gamepad: four face buttons in a diamond (jump below, attack left, heavy above, dodge right),
+     the bow in the middle of them, and the swap and card buttons just off to the left of the diamond */
+  #controls { --pr: max(26px, env(safe-area-inset-right, 0px)); }
+  .b-jump, .b-light, .b-heavy, .b-dodge { width: 58px; height: 58px; font-size: 10px; }
+  .b-jump  { --ring: #8FB8D8; --tint: rgba(60,100,140,.6); right: calc(var(--pr) + 71px); bottom: 13px; }
+  .b-light { --ring: #C8485A; --tint: rgba(160,50,70,.6); right: calc(var(--pr) + 137px); bottom: 79px; }
+  .b-heavy { --ring: #D8AA55; --tint: rgba(150,110,40,.6); right: calc(var(--pr) + 71px); bottom: 145px; }
+  .b-dodge { --ring: #9A86C8; --tint: rgba(80,60,130,.6); right: calc(var(--pr) + 5px); bottom: 79px; }
+  .b-shoot { width: 44px; height: 44px; --ring: #A88A5E; --tint: rgba(60,44,30,.7); color: #E8D8B0; font-size: 8px; line-height: 1.05; text-align: center; right: calc(var(--pr) + 78px); bottom: 86px; }
+  .b-swap  { width: 46px; height: 56px; border-radius: 8px; --ring: #D8AA55; --tint: rgba(46,36,68,.7); color: var(--gold); font-size: 9px; right: calc(var(--pr) + 210px); bottom: 16px; }
+  .b-trump { width: 46px; height: 62px; border-radius: 8px; --ring: #C8607A; --tint: rgba(90,40,70,.7); color: #E8A0B0; font-size: 9px; right: calc(var(--pr) + 210px); bottom: 84px; }
   .b-trump.ready { opacity: .9; color: #fff; border-color: var(--gold); box-shadow: 0 0 16px var(--petal), 0 0 28px var(--gold); animation: glow 1s ease-in-out infinite alternate; }
   @keyframes glow { to { box-shadow: 0 0 8px var(--petal), 0 0 14px var(--gold); } }
   #app.nocontrols #controls, #app.port #controls { display: none; }
@@ -396,7 +400,7 @@
     <button type="button" class="btn b-dodge" data-k="dodge">DODGE</button>
     <button type="button" class="btn b-swap" data-k="swap">SWAP</button>
     <button type="button" class="btn b-shoot" data-k="shoot" id="shootBtn" hidden>BOW</button>
-    <button type="button" class="btn b-trump" data-k="trump" id="trumpBtn" hidden>TRUMP</button>
+    <button type="button" class="btn b-trump" data-k="trump" id="trumpBtn" hidden>CARD</button>
   </div>
 
   <div class="ov" id="titleOv">
@@ -417,7 +421,7 @@
       </div>
       <div class="howto">
         <div class="face t-touch"><b>MOVE &amp; RUN</b>Joystick to walk. Flick it twice in a direction to run.</div>
-        <div class="face t-kbd keys"><b>KEYBOARD</b><kbd>←→↑↓</kbd> or <kbd>WASD</kbd> move · tap a direction twice to run<br><kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge<br><kbd>Q</kbd> Swap weapon · <kbd>E</kbd> Trump card · <kbd>Esc</kbd> Pause · <kbd>Enter</kbd> Start</div>
+        <div class="face t-kbd keys"><b>KEYBOARD</b><kbd>←→↑↓</kbd> or <kbd>WASD</kbd> move · tap a direction twice to run<br><kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge<br><kbd>Q</kbd> Swap weapon · <kbd>E</kbd> Play card · <kbd>Esc</kbd> Pause · <kbd>Enter</kbd> Start</div>
         <div class="face"><b>MIX YOUR COMBOS</b>Attack and Heavy chain together: try Attack, Attack, Heavy. Each weapon has its own combos.</div>
         <div class="face"><b>LAUNCH &amp; JUGGLE</b>Hold Attack to launch an enemy, tap Jump to follow them up, then Attack up to three times in the air.</div>
         <div class="face"><b>DASH ATTACKS</b>Attack or Heavy while running.</div>
@@ -425,7 +429,7 @@
         <div class="face"><b>WEAPONS</b>Defeated enemies sometimes drop a new weapon. Tap Swap to change weapons.</div>
         <div class="face"><b>ARMORED FOES</b>Enemies glowing gold shrug off light hits. Break their guard with Heavy attacks or launchers, then they're open. They often drop sigils.</div>
         <div class="face"><b>CRITICAL HITS</b>Hit enemies from behind, or while they're staggered, knocked down or airborne, for a much better chance of a critical.</div>
-        <div class="face"><b>TRUMP CARDS</b>Buy them at the forge with sigils. Land hits to charge your card, then tap Trump to play it.</div>
+        <div class="face"><b>CARDS</b>Buy them at the forge with sigils. Land hits to charge your card, then tap Card to play it.</div>
       </div>
       <p class="small t-touch">Best played with your phone held sideways.</p>
     </div>
@@ -443,8 +447,8 @@
       <h3 class="h3">Weapons</h3>
       <p class="small">Spend shards to level up a weapon: each level adds damage and teaches a new move.</p>
       <div class="cards" id="forgeCards"></div>
-      <h3 class="h3">Trump Cards</h3>
-      <p class="small">Spend sigils on a Trump card and take it into battle. Land hits to charge it, then tap Trump to play it.</p>
+      <h3 class="h3">Cards</h3>
+      <p class="small">Spend sigils on a card and take it into battle. Land hits to charge it, then tap Card to play it.</p>
       <div class="cards" id="trumpCards"></div>
       <div class="row forge-foot">
         <button class="cta" id="walkBtn" type="button">Walk on</button>
@@ -470,7 +474,7 @@
       </div>
       <div class="face moves-card dealt">
         <h3 class="h3" id="moveTitle">Moves</h3>
-        <p class="small t-kbd keys"><kbd>←→↑↓</kbd>/<kbd>WASD</kbd> move · <kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge · <kbd>Q</kbd> Swap · <kbd>E</kbd> Trump · <kbd>Esc</kbd> Resume</p>
+        <p class="small t-kbd keys"><kbd>←→↑↓</kbd>/<kbd>WASD</kbd> move · <kbd>J</kbd> Attack · <kbd>K</kbd> Heavy · <kbd>Space</kbd> Jump · <kbd>L</kbd> Dodge · <kbd>Q</kbd> Swap · <kbd>E</kbd> Play card · <kbd>Esc</kbd> Resume</p>
         <div id="moveList" class="movebox"></div>
       </div>
     </div>

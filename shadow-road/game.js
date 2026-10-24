@@ -501,7 +501,7 @@ function playTrump() {
   if (trySecret()) return; // played at a Trump gate, the card opens a way instead
   trumpCharge = 0; flashT = .2; sfx('trump'); zoom = .06;
   const card = TRUMPS[save.trump];
-  banner(card.name, 'TRUMP PLAYED', 1.4);
+  banner(card.name, 'CARD PLAYED', 1.4);
   const lv = TL(save.trump);
   if (save.trump === 'stag') { // a lane each; at III the last one turns round at the far side and runs back
     const lanes = [P.y, clamp(P.y + (P.y > 290 ? -40 : 40), FLOOR_TOP + 8, FLOOR_BOT), clamp(P.y + (P.y > 290 ? 40 : -40), FLOOR_TOP + 8, FLOOR_BOT)];

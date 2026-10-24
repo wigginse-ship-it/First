@@ -81,7 +81,7 @@ const AFFIXES = {
   leech:   { v: [.015, .02, .025, .03, .04], pct: 1, txt: 'of damage dealt heals you', suf: 'of Thirst', pre: 'Thirsting' },
   thorns:  { v: [.1, .14, .18, .24, .3], pct: 1, txt: 'of a blow struck back at the striker', suf: 'of Thorns', pre: 'Thorned' },
   speed:   { v: [.03, .04, .05, .06, .08], pct: 1, txt: 'move speed', suf: 'of the Hellride', pre: 'Swift' },
-  trump:   { v: [.08, .12, .16, .2, .25], pct: 1, txt: 'Trump charge from hits', suf: 'of Dworkin', pre: 'Inked' },
+  trump:   { v: [.08, .12, .16, .2, .25], pct: 1, txt: 'Card charge from hits', suf: 'of Dworkin', pre: 'Inked' },
   shards:  { v: [.08, .12, .16, .2, .25], pct: 1, txt: 'shards from foes', suf: 'of the Gilded Hand', pre: 'Gilded' },
   iframes: { v: [.03, .04, .05, .06, .08], sec: 1, txt: 'longer dodge safety', suf: 'of Shadow-Step', pre: 'Fleeting' },
   arrow:   { v: [.1, .14, .18, .22, .28], pct: 1, txt: 'arrow damage', suf: "of Julian's Hunt", pre: 'Fletched' },

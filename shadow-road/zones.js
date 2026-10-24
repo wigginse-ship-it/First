@@ -178,10 +178,11 @@ function mechStart() {
   if (mech.kind === 'echo') { mech.rec = []; mech.clock = 0; mech.hit = new Map(); mech.cur = null; }
 }
 function puff(s) { // a toadstool lets go a cloud of glittering spores
-  s.puff = .5; s.flash = .12; s.cd = rand(4.5, 6.5);
-  mech.clouds.push({ x: s.x, y: s.y, r: 10, R: 62, t: 3.4 });
-  sfx('hit-goo', .5);
-  for (let i = 0; i < 18; i++) parts.push({ x: s.x + rand(-10, 10), y: s.y + rand(-6, 6), z: rand(20, 40), vx: rand(-90, 90), vy: rand(-20, 20), vz: rand(20, 90), life: 1.2, max: 1.2, col: pick(['#D8A0F0', '#F0D0FF', '#B880E0']), size: rand(2, 3.5), shape: 'star', rot: 0, vr: 4 });
+  s.puff = .5; s.flash = .12; s.cd = rand(3.2, 4.6);
+  mech.clouds.push({ x: s.x, y: s.y, r: 20, R: 135, t: 3.8 }); // it bursts: a big cloud, wide enough to catch the whole lane around it
+  sfx('hit-goo', .8); sfx('whoosh', .5); shakeMag = Math.max(shakeMag, 4);
+  fx.push({ kind: 'ring', x: s.x, y: s.y, z: 2, t: .45, max: .45, r: 150, col: '#E0B0FF', flat: 1 });
+  for (let i = 0; i < 44; i++) { const a = rand(0, TAU), v = rand(60, 260); parts.push({ x: s.x + rand(-10, 10), y: s.y + rand(-6, 6), z: rand(20, 50), vx: Math.cos(a) * v, vy: Math.sin(a) * v * .4, vz: rand(20, 140), life: 1.4, max: 1.4, col: pick(['#D8A0F0', '#F0D0FF', '#B880E0']), size: rand(2, 4), shape: 'star', rot: 0, vr: 4 }); }
 }
 function updateMech(dt) {
   if (!mech) return;
@@ -190,14 +191,14 @@ function updateMech(dt) {
     const k = P.state === 'atk' && P.move ? P.t / P.move.dur : -1;
     for (const s of mech.shrooms) {
       s.puff = Math.max(0, s.puff - dt); s.flash = Math.max(0, s.flash - dt); s.cd -= dt;
-      const near = Math.abs(P.x - s.x) < 160 || enemies.some(e => !e.dead && Math.abs(e.x - s.x) < 120);
+      const near = Math.abs(P.x - s.x) < 250 || enemies.some(e => !e.dead && Math.abs(e.x - s.x) < 200); // they go off at a fair distance: on this road you will be shrunk often
       if (s.cd <= 0 && near) puff(s);
       if (k >= 0 && k >= P.move.h[0] && k <= P.move.h[1] && Math.abs(P.y - s.y) < 26 && (s.x - P.x) * P.facing > -10 && (s.x - P.x) * P.facing < P.move.x1 + 20 && s.cd < 3.5) puff(s); // smack one and it goes off
     }
     for (const c of mech.clouds) {
-      c.t -= dt; c.r += (c.R - c.r) * Math.min(1, dt * 4);
+      c.t -= dt; c.r += (c.R - c.r) * Math.min(1, dt * 7);
       const inside = (x, y) => Math.hypot(x - c.x, (y - c.y) * 2.2) < c.r;
-      if (inside(P.x, P.y) && P.z < 60) { if (!(P.shrinkT > 0)) floatText(P.x, P.y, 60, 'TINY!', '#E0B0FF', 14); P.shrinkT = 7; }
+      if (inside(P.x, P.y) && P.z < 80) { if (!(P.shrinkT > 0)) floatText(P.x, P.y, 60, 'TINY!', '#E0B0FF', 14); P.shrinkT = 7; }
       for (const e of enemies) if (!e.dead && !e.boss && inside(e.x, e.y)) { if (!(e.shrinkT > 0)) floatText(e.x, e.y, e.hh + 20, 'tiny!', '#E0B0FF', 12); e.shrinkT = 7; }
     }
     mech.clouds = mech.clouds.filter(c => c.t > 0);

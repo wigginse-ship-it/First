@@ -60,7 +60,7 @@ function statsHtml() {
   let h = `<div class="inv-totals">${rows.join(' · ')}</div>`;
   if (lines.length) h += `<div class="inv-aff">${lines.map(esc).join(' · ')}</div>`;
   h += sets.length ? sets.map(id => `<ul class="inv-set"><li class="hd" style="color:${GEAR_SETS[id].col}">${esc(GEAR_SETS[id].name)} · ${n[id]}/4</li>${setLine(+id, n[id], n[id])}</ul>`).join('')
-    : '<p class="small">No armor yet: he walks in his traveller\'s clothes. Armor drops from foes, more often from glowing elites, champions and bosses, and from the rooms behind the Trump gates.</p>';
+    : '<p class="small">No armor yet: he walks in his traveller\'s clothes. Armor drops from foes, more often from glowing elites, champions and bosses, and from the rooms behind the card gates.</p>';
   return h;
 }
 

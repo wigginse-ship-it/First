@@ -12,7 +12,7 @@ function refreshHud(full) {
     $('#wlv').textContent = 'LV' + save.wl[P.w];
     drawIcon($('#wcardCv'), P.w, .8);
     $('#tbarWrap').hidden = !save.trump; trumpBtn.hidden = !save.trump;
-    if (save.trump) trumpBtn.textContent = 'TRUMP';
+    if (save.trump) trumpBtn.textContent = 'CARD';
   }
 }
 let lastCombo = 0;
@@ -64,7 +64,7 @@ function stageClear() {
   save.stage += 1; persist();
   if (save.stage >= STAGES.length) {
     mode = 'win';
-    $('#winText').textContent = 'Every shadow is behind you. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and Trump cards come with you.';
+    $('#winText').textContent = 'Every shadow is behind you. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and cards come with you.';
     showOnly('winOv'); playMusic('title');
   } else openForge(`WORLD CLEARED: +${runShards} SHARDS, +${runSigils} SIGILS`);
 }

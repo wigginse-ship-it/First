@@ -21,7 +21,7 @@ const SECRET_KINDS = ['hall', 'grove', 'vault', 'duel'];
 const SECRET_BUILD = {
   hall() { // the Hall of Trumps: armored foes and two champions, and a rich reward
     const w = baseStage.waves[1].map(t => t.replace('*', '')), champ = baseStage.waves[2].map(t => t.replace('*', '')).filter(t => EDEF[t] && EDEF[t].move !== 'fly');
-    return { title: 'The Hall of Trumps', sub: `${TRUMPS[secretKey()].name.toUpperCase()} OPENED THE WAY · CHAMPIONS WAIT`, theme: 'trumpRealm', len: 1100, pods: [760],
+    return { title: 'The Hall of Cards', sub: `${TRUMPS[secretKey()].name.toUpperCase()} OPENED THE WAY · CHAMPIONS WAIT`, theme: 'trumpRealm', len: 1100, pods: [760],
       rawWaves: [[...w.slice(0, 4).map(t => t + '*'), pick(champ) + '!', pick(champ) + '!']] };
   },
   grove() { // the Unicorn's Grove: no fight at all; she offers three gifts and you may take one
@@ -53,7 +53,7 @@ const BOONS = {
   heart: { name: 'Heart of the Unicorn', sub: () => `AN ENCHANTED PIECE OF ${GEAR_SETS[worldTier()].short.toUpperCase()} ARMOR`, ok: () => true, // armor of this world, always enchanted, always with more health
     give() { const it = makeGearItem(worldTier(), pick(GEAR_SLOTS), { ench: ['hp', ...(worldTier() >= 3 ? [pick(AFFIX_IDS.filter(k => k !== 'hp'))] : [])] }); if (!pickGear({ item: it })) loot.push(Object.assign(makeLoot('gear', P.x + 30, P.y, 0), { item: it })); P.hp = maxHp(); } },
   quiver: { name: 'Quiver of Starlight', sub: () => save.alv < 5 ? `A FULL QUIVER · ${ARROW_TIERS[save.alv].name.toUpperCase()}` : 'A FULL QUIVER', ok: () => true, give() { save.arrows = ARROW_MAX; if (save.alv < 5) save.alv++; refreshArrows(); } },
-  card: { name: 'A Trump, Freshly Drawn', sub: () => { const id = TRUMP_ORDER.find(k => !save.trumps[k]); return id ? `THE ${TRUMPS[id].name.toUpperCase()}` : 'ONE OF YOUR CARDS, INSCRIBED DEEPER'; },
+  card: { name: 'A Card, Freshly Drawn', sub: () => { const id = TRUMP_ORDER.find(k => !save.trumps[k]); return id ? `THE ${TRUMPS[id].name.toUpperCase()}` : 'ONE OF YOUR CARDS, INSCRIBED DEEPER'; },
     ok: () => TRUMP_ORDER.some(k => !save.trumps[k] || TL(k) < 3),
     give() { const id = TRUMP_ORDER.find(k => !save.trumps[k]); if (id) { save.trumps[id] = true; if (!save.trump) save.trump = id; } else { const k = pick(TRUMP_ORDER.filter(k => TL(k) < 3)); save.tlv[k] = TL(k) + 1; } } },
   hoard: { name: "The Unicorn's Hoard", sub: () => `${hoardN()} SHARDS`, ok: () => true, give() { const n = hoardN(); save.shards += n; runShards += n; } },
@@ -67,7 +67,7 @@ function dealBoons() {
 }
 function updateSecret(dt) {
   const g = secretGate();
-  if (g && gateOpen() && !secretHint && Math.abs(P.x - g.x) < 140) { secretHint = true; floatText(g.x, g.y, 110, `A TRUMP GATE · PLAY ${TRUMPS[secretKey()].name.toUpperCase()}`, '#EED48A', 13); }
+  if (g && gateOpen() && !secretHint && Math.abs(P.x - g.x) < 140) { secretHint = true; floatText(g.x, g.y, 110, `A CARD GATE · PLAY ${TRUMPS[secretKey()].name.toUpperCase()}`, '#EED48A', 13); }
   if (!stage.secret || !stage.room) return;
   const R = stage.room; R.t += dt;
   if (R.kind === 'grove' && !R.chosen && !zoneTrans) for (const o of R.offers) {
@@ -89,7 +89,7 @@ function updateSecret(dt) {
   if ((R.kind === 'hall' || R.kind === 'duel') && gateOpen() && !stage.rewarded) { // the reward for the fight
     stage.rewarded = true; const x = P.x + 60, y = P.y;
     if (R.kind === 'hall') {
-      banner('THE TRUMP’S REWARD', 'SHARDS, SIGILS, ARROWS AND ARMOR', 2);
+      banner('THE CARD’S REWARD', 'SHARDS, SIGILS, ARROWS AND ARMOR', 2);
       for (let i = 0; i < 10; i++) loot.push(makeLoot('shard', x, y, 6 + stageIdx * 4));
       for (let i = 0; i < 2 + (stageIdx >= 2 ? 1 : 0); i++) loot.push(makeLoot('sigil', x, y, 1));
       for (let i = 0; i < 2; i++) loot.push(makeLoot('arrow', x, y, 1));
@@ -141,7 +141,7 @@ TRANS_FX.trumpgate = (T, p, c, inP, t) => {
 };
 
 // ---------- the Hall of Trumps: painted like the inside of a card ----------
-THEMES.trumpRealm = { name: 'the hall of trumps', sky: ['#3A2440', '#7A5A6A', '#D8B888', '#F4E2B8'], sun: [.5, .3, '255,236,190'], haze: '240,220,180', skyKind: 'none',
+THEMES.trumpRealm = { name: 'the hall of cards', sky: ['#3A2440', '#7A5A6A', '#D8B888', '#F4E2B8'], sun: [.5, .3, '255,236,190'], haze: '240,220,180', skyKind: 'none',
   floorA: '#C8B48A', floorB: '#6A5438', path: '#E8D8B0', grade: { desat: .1, top: 'rgba(120,80,140,.35)', bot: 'rgba(240,190,120,.35)', vig: 'rgba(40,20,40,.55)' } };
 AW_FAR.trumpRealm = (rnd, th, f) => {
   const g = ctx.createLinearGradient(0, 0, 0, FLOOR_TOP); g.addColorStop(0, '#3A2440'); g.addColorStop(.6, '#B89070'); g.addColorStop(1, '#F0DCB0'); ctx.fillStyle = g; ctx.fillRect(0, 0, AW_W + 1, FLOOR_TOP);

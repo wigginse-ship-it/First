@@ -1158,7 +1158,7 @@
       if (P.state === 'dodge' || P.state === 'dead' || h.el > 4.2) { // shaken off (or tired of it)
         e.state = 'hurt'; e.t = .6; e.vx = -P.facing * 220; e.cd = 1.4; sfx('whoosh'); mist(e.x, e.y, e.z, 6); return true; }
       h.tick = (h.tick || 0) + dt;
-      if (save.trump && trumpCharge > 0) { trumpCharge = Math.max(0, trumpCharge - 50 * dt); if (h.tick > .8) { h.tick = 0; floatText(P.x, P.y, 90, 'IT DRINKS YOUR TRUMP', '#C8D4EC', 11); } }
+      if (save.trump && trumpCharge > 0) { trumpCharge = Math.max(0, trumpCharge - 50 * dt); if (h.tick > .8) { h.tick = 0; floatText(P.x, P.y, 90, 'IT DRINKS YOUR CARD', '#C8D4EC', 11); } }
       else if (h.tick > .6) { h.tick = 0; const d = Math.max(1, Math.round(maxHp() * .012)); if (P.hp - d <= 0) hitP(d, e.x, false); else { P.hp -= d; floatText(P.x, P.y, 76, '-' + d, '#C8D4EC', 12); hurtFlash = .1; } }
       return false;
     }).uy = P.y + .3;
@@ -1435,7 +1435,7 @@
   const RIDDLES = [
     ['What walks on four legs in the morning, on two at noon, and on three in the evening?', 'A man', 'The moon', 'A unicorn'],
     ['The more of me there is, the less you see. What am I?', 'Darkness', 'Moonlight', 'A mirror'],
-    ['I am drawn, but never pulled. I am cold to the touch. I am a face, and I am a door. What am I?', 'A Trump', 'A sword', 'A ghost'],
+    ['I am drawn, but never pulled. I am cold to the touch. I am a face, and I am a door. What am I?', 'A card', 'A sword', 'A ghost'],
     ['Walk me once and you are made anew. I lie beneath the true city, and the one who stops on me dies. What am I?', 'The Pattern', 'The Black Road', 'The moon-stair'],
     ['I have a mouth but never speak, a bed but never sleep, and I run but never walk. What am I?', 'A river', 'A road', 'A hound'],
     ['What can fill a hall to its rafters and yet take up no room at all?', 'Light', 'Water', 'A crowd'],
@@ -1819,7 +1819,7 @@
     sc();
     if (mode === 'win') { // the win card, rewritten for the true end of the road
       const k = $('#winOv .kicker'), h2 = $('#winOv .h2'); if (k) k.textContent = 'THE NIGHT IS OVER'; if (h2) h2.textContent = 'You came down from the moon';
-      $('#winText').textContent = "Tir-na Nog'th faded with the dawn, and every shadow of the road is behind you. You carried the Phantom's silver arm down the stair, and your hand is silver now. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and Trump cards come with you.";
+      $('#winText').textContent = "Tir-na Nog'th faded with the dawn, and every shadow of the road is behind you. You carried the Phantom's silver arm down the stair, and your hand is silver now. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and cards come with you.";
       const row = $('#winOv .row'); if (row && !$('#w5TitleBtn')) { const b = document.createElement('button'); b.className = 'cta alt'; b.id = 'w5TitleBtn'; b.type = 'button'; b.textContent = 'Title screen'; b.addEventListener('click', () => { mode = 'title'; refreshTitle(); showOnly('titleOv'); playMusic('title'); }); row.appendChild(b); }
     }
   }

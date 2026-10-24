@@ -130,5 +130,5 @@ function refreshArrows() {
   const n = save.arrows || 0; arrowHudEl.hidden = n <= 0;
   const icon = '<svg width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="3" y1="5" x2="17" y2="5" stroke="#E8D8B0" stroke-width="1.6"/><path d="M15 1.6 L21 5 L15 8.4 Z" fill="#C8CEDA" stroke="#2A1B2C" stroke-width=".6"/><path d="M1 1.6 L5 5 L1 8.4 M3.4 1.6 L7.4 5 L3.4 8.4" fill="none" stroke="#D8AA55" stroke-width="1.1"/></svg>';
   arrowHudEl.innerHTML = icon.repeat(n);
-  const b = document.getElementById('shootBtn'); if (b) { b.hidden = false; b.textContent = 'BOW ' + n; b.style.filter = n ? '' : 'grayscale(1) brightness(.6)'; } // always there, so you know it exists; dim when the quiver is empty
+  const b = document.getElementById('shootBtn'); if (b) { b.hidden = false; b.innerHTML = '<span>BOW<br>' + n + '</span>'; b.style.filter = n ? '' : 'grayscale(1) brightness(.6)'; } // always there, so you know it exists; dim when the quiver is empty
 }
