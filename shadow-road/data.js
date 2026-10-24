@@ -133,7 +133,7 @@ const WEAPONS = {
       H:    { name: 'Lunge', dur: .42, h: [.36, .62], x0: 0, x1: 100, dmg: 13, kb: 195, arc: [.04, .04], lunge: 301, power: 1, wall: 1 },
       HH:   { name: 'Balestra', dur: .5, h: [.42, .66], x0: 0, x1: 96, dmg: 14, kb: 225, arc: [.02, .02], hop: 170, lunge: 182, power: 2 }, // a little jump forward into the thrust
       HHH:  { name: 'Starfall Flurry', dur: .72, h: [.14, .82], x0: 0, x1: 88, dmg: 4, kb: 60, arc: [.04, .04], multi: .055, lunge: 63, power: 1, flurry: 1 }, // a storm of thrusts, each a point of light
-      LH:   { name: 'Crescent Flick', spin: .5, spinEnd: .5, dur: .42, h: [.25, .55], x0: 0, x1: 68, dmg: 10, kb: 45, launch: 430, arc: [1.4, -2.1], hop: 120, power: 1 },
+      LH:   { name: 'Crescent Flick', spin: 1, spinEnd: .5, dur: .42, h: [.25, .55], x0: 0, x1: 68, dmg: 10, kb: 45, launch: 430, arc: [1.4, -2.1], hop: 120, power: 1 },
       HL:   { name: 'Moulinet', spin: 1, dur: .56, h: [.14, .86], x0: 0, x1: 68, dmg: 4, kb: 68, arc: [-P_, 3 * P_], around: 1, multi: .07, power: 1 }, // the wrist spins the blade in wheels on both sides
       LLH:  { name: 'Thousand Needles', dur: .6, h: [.12, .82], x0: 0, x1: 80, dmg: 3, kb: 30, arc: [.04, .04], multi: .045, lunge: 49, power: 1, flurry: 1 },
       X:    { name: 'Rising Moon', dur: .5, h: [.34, .58], prep: 1, x0: 0, x1: 66, dmg: 9, kb: 30, launch: 580, arc: [1.6, -2.2], launcher: 1, power: 1 },

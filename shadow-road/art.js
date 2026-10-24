@@ -650,7 +650,11 @@ function drawHumanoid(look, pose) {
   const PX = (fx, lz) => fx * CS - lz * Y; // where a point lands as he turns: fx along his facing, lz out to his near side
   // his hips can lead his chest round (YL: the turn of the hips and legs; the hips start each blow, the shoulders follow)
   const YL = look.corwin ? clamp(pose.YL ?? Y, -1, 1) : Y, CSL = Math.sqrt(1 - YL * YL), PXL = (fx, lz) => fx * CSL - lz * YL;
-  const ASX = Math.max(.32, CS); // arms swinging fore and aft foreshorten as he turns
+  // lead: the hands swapped for a blow struck chest-to-us (the rapier's thrusts): the weapon arm hangs from the shoulder that
+  // has come round to lead (screen-forward), the free arm from the one that went back, so nothing crosses his body; an arm
+  // reaching fore or aft then lies across the picture, so it no longer foreshortens
+  const SG = pose.lead ? -1 : 1;
+  const ASX = pose.lead ? 1 : Math.max(.32, CS); // arms swinging fore and aft foreshorten as he turns
   const CW = look.corwin ? CORWIN : null, arms = CW ? CW.PART('gauntlets', look) : null; // the prince's own costume and cloak (art_corwin.js)
   HAND_PLATE = !!(CW && look.gauntPlate);
   if (CW) { OUTK = .55; INK = '#170D0C'; } // the prince is inked with a fine pen
@@ -713,7 +717,7 @@ function drawHumanoid(look, pose) {
   if (!BACK) drawCoat();
   // back arm, a shade darker for being further away
   ctx.save(); upper();
-  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .42 : .3) * (gait && !pose.backHold ? 1 : 0), bsx = PX(-3, -SWL), bsy = SHO + 1.5;
+  const ba = (pose.backArm ?? 1.25) + sw * (pose.run ? .42 : .3) * (gait && !pose.backHold ? 1 : 0), bsx = PX(-3, -SG * SWL), bsy = SHO + 1.5;
   const bb = pose.backElbow !== undefined ? -pose.backElbow : .25; // how far the forearm folds up from the upper arm
   const bl = 1 + (pose.backReach || 0); // a thrown rear hand reaches further, the shoulder driven through
   let bex = bsx + Math.cos(ba) * 10 * AS * bl * ASX, bey = bsy + Math.sin(ba) * 10 * AS * bl, bwx = bex + Math.cos(ba + bb) * 9 * AS * bl * ASX, bwy = bey + Math.sin(ba + bb) * 9 * AS * bl;
@@ -930,7 +934,7 @@ function drawHumanoid(look, pose) {
   const ARX = 19 * (AS - 1); // longer arms carry the weapon further out: its trails follow
   if (pose.trail) drawTrail(0, SHO + 2, ARX ? Object.assign({}, pose, { trail: pose.trail + ARX }) : pose);
   if (pose.flat) drawFlatTrail(1, SHO + 2, ARX ? Object.assign({}, pose.flat, { r: pose.flat.r + ARX }) : pose.flat);
-  ctx.save(); ctx.translate(PX(1, SWL), SHO + 2);
+  ctx.save(); ctx.translate(PX(1, SG * SWL), SHO + 2);
   { const ca = Math.cos(arm) * ASX, sa = Math.sin(arm); ctx.rotate(Math.atan2(sa, ca)); ctx.scale(Math.hypot(ca, sa), 1); } // turned, the arm only shortens along its length: it never gets thinner
   if (pose.sweep !== undefined) ctx.scale(Math.sign(pose.sweep || 1) * Math.max(.14, Math.abs(pose.sweep)), 1); // a horizontal swing: the weapon comes around the body
   const reach = 19 * AS + (pose.ext || 0) * 12; // a thrust drives the arm out
@@ -951,7 +955,7 @@ function drawHumanoid(look, pose) {
     drawWeapon(kind, pose); // (its last stroke closes the fingers over the handle: gripHand)
     GRIP.back = false; GRIP.cx = 17.1; GRIP.rot = 0; }
   ctx.restore();
-  if (arms) farPauldron(() => arms.pauldron(look, PX(1, SWL), SHO + .4, clamp((arm - 1.1) * .3, -.45, .45), BACK, .54), Y >= 0 ? 1 : -Y); // (his back to us, this is the far shoulder)
+  if (arms) farPauldron(() => arms.pauldron(look, PX(1, SG * SWL), SHO + .4, clamp((arm - 1.1) * .3, -.45, .45), BACK, .54), Y >= 0 ? 1 : -Y); // (his back to us, this is the far shoulder)
   else if (look.pauldron) { ctx.save(); ctx.translate(PX(1, 9.5) - 1, 0);
     ctx.beginPath(); ctx.ellipse(1, SHO + 1, 8.6, 6.4, -.3, Math.PI * .9, Math.PI * 2.1); ctx.closePath(); ctx.fillStyle = C(look.pauldron); ctx.fill();
     if (!FLASH && !TINT) { ctx.fillStyle = shade(look.pauldron, .35); ell(4, SHO - 2.4, 3, 1.2, -.3); ctx.fill(); }

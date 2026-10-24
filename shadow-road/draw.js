@@ -287,6 +287,17 @@ function playerPose() {
   const dtv = Math.min(.05, (now - (P.yawAt || now)) / 1000); P.yawAt = now;
   P.yawV = (P.yawV || 0) + (tY - (P.yawV || 0)) * Math.min(1, dtv * (loco ? 9 : 20)); // out of the stance into a blow, he squares up fast
   P.lookV = (P.lookV || 0) + ((P.state === 'idle' ? 1 : 0) - (P.lookV || 0)) * Math.min(1, dtv * 9);
+  // the rapier fights chest-to-us: on a thrust or cut the blade is in the hand that leads (left when he faces right, right
+  // when he faces left), the free arm trailing, nothing struck across his body. Walking, running and standing he carries it
+  // in the near hand; the hands swap in an instant as a blow begins (and back once he has turned side-on again). Spins,
+  // flourishes and kicks keep the near hand
+  if (P.w === 'rapier' && !pose.down) {
+    const m = P.move, k = m ? P.t / m.dur : 0, live = (P.state === 'atk' || P.state === 'air') && m;
+    const struck = P.state === 'charge' || (live && !m.kick && !m.around && !m.rot && !(m.spin && k < (m.spinEnd || 1)));
+    if (struck) { pose.lead = 1; pose.yaw = .6 + .25 * clamp(pose.yaw ?? 0, -.4, .4); P.leadHold = true; }
+    else if (P.leadHold && !live && ['idle', 'walk', 'run', 'parry'].includes(P.state) && BL.prev && BL.prev.yaw > .34) pose.lead = 1;
+    else P.leadHold = false;
+  }
   if (pose.yaw === undefined) pose.yaw = P.yawV;
   const tt = (now - (P.turnAt || 0)) / 170;
   if (loco && tt < 1 && !pose.spin) pose.spin = P.turnDir * Math.PI * (1 - ease(tt));
