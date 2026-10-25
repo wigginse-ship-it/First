@@ -712,6 +712,12 @@ function drawProj(p, t) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(230,220,255,.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - d * 8, y - 2); ctx.quadraticCurveTo(x + d * 24, y - 40, x + d * 6, y - 80); ctx.stroke(); ctx.restore(); // the bright cutting edge
     for (let i = 0; i < 4; i++) { const k = (tt * 1.6 + i / 4) % 1; ctx.globalAlpha = a * (1 - k) * .7; ctx.fillStyle = '#7A5AB8'; ell(x - d * (6 + i * 5), y - 20 - k * 60, 3 + k * 4, 2 + k * 3); ctx.fill(); } // wisps of shadow rising off it
     ctx.restore();
+  } else if (p.fire) { // a ball of the wyrm's fire: a white-hot heart in a roiling orange flame, its tail licking back along its flight
+    shadow(p.x, p.y, 8); const d = Math.atan2(p.vy || 0, p.vx || 1), fl = Math.sin(t * 30 + p.x * .1);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y); ctx.rotate(d);
+    for (let i = 3; i >= 0; i--) { const r = 15 - i * 3, g = ctx.createRadialGradient(-i * 6, 0, 1, -i * 6, 0, r); g.addColorStop(0, i ? 'rgba(255,170,70,.55)' : 'rgba(255,250,220,1)'); g.addColorStop(.5, 'rgba(255,110,40,.5)'); g.addColorStop(1, 'rgba(160,30,10,0)'); ctx.fillStyle = g; ell(-i * 7, fl * i * .8, r * (1 + i * .25), r * .7); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,200,110,.5)'; for (let i = 0; i < 3; i++) { const a = t * 18 + i * 2.1; ctx.beginPath(); ctx.moveTo(4, 0); ctx.quadraticCurveTo(-10, Math.sin(a) * 8, -24 - i * 4, Math.sin(a + 1) * 6); ctx.quadraticCurveTo(-10, Math.sin(a) * 3, 4, 0); ctx.fill(); } // flame tongues
+    ctx.restore();
   } else {
     shadow(p.x, p.y, 6);
     const g = ctx.createRadialGradient(x, y, 1, x, y, 12); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.4, p.col); g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -791,7 +797,8 @@ function drawHazard(h, t) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       const g = ctx.createLinearGradient(0, h.y - z - 60, 0, h.y - z); g.addColorStop(0, `rgba(${h.col},0)`); g.addColorStop(1, 'rgba(255,255,255,.95)');
       ctx.strokeStyle = g; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(h.x, h.y - z - 60); ctx.lineTo(h.x, h.y - z); ctx.stroke(); ctx.restore();
-      ctx.fillStyle = `rgb(${h.col})`; circle(h.x, h.y - z, 7); ctx.fill(); outline(1.5);
+      if (h.fire) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 4; i++) { const g = ctx.createRadialGradient(h.x, h.y - z - i * 12, 1, h.x, h.y - z - i * 12, 16 - i * 3); g.addColorStop(0, i ? 'rgba(255,150,60,.5)' : 'rgba(255,245,210,1)'); g.addColorStop(1, 'rgba(200,40,10,0)'); ctx.fillStyle = g; circle(h.x, h.y - z - i * 12, 16 - i * 3); ctx.fill(); } ctx.restore(); } // a falling meteor of fire
+      else { ctx.fillStyle = `rgb(${h.col})`; circle(h.x, h.y - z, 7); ctx.fill(); outline(1.5); }
     }
   } else if (h.kind === 'spike') { // spikes burst out of the ground
     const up = Math.min(1, -h.t / .07), fade = 1 + h.t / .4;

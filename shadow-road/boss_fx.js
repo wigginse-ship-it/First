@@ -98,8 +98,8 @@ function updateBossRoom(dt) {
   if (kind === 'colossus') { // the furnaces boil over
     for (let i = 0; i < ph; i++) hazards.push({ kind: 'fall', x: clamp(P.x + rand(-120, 120), camX + 30, camX + VW - 30), y: clamp(P.y + rand(-30, 30), FLOOR_TOP + 8, FLOOR_BOT), r: 26, t: .9 + i * .2, max: .9 + i * .2, dmg: Math.round(edmg(boss) * .6), col: '255,150,70' });
     sfx('charge');
-  } else if (kind === 'wyrm' && ph >= 3) { // shards break from the ribs overhead
-    for (let i = 0; i < 3; i++) hazards.push({ kind: 'fall', x: clamp(P.x + rand(-140, 140), camX + 30, camX + VW - 30), y: clamp(P.y + rand(-34, 34), FLOOR_TOP + 8, FLOOR_BOT), r: 24, t: .9 + i * .15, max: .9 + i * .15, dmg: Math.round(edmg(boss) * .55), col: '210,180,255' });
+  } else if (kind === 'wyrm' && ph >= 3) { // burning cinders rain from the ribs overhead
+    for (let i = 0; i < 3; i++) hazards.push({ kind: 'fall', x: clamp(P.x + rand(-140, 140), camX + 30, camX + VW - 30), y: clamp(P.y + rand(-34, 34), FLOOR_TOP + 8, FLOOR_BOT), r: 24, t: .9 + i * .15, max: .9 + i * .15, dmg: Math.round(edmg(boss) * .55), col: '255,140,60', fire: 1 });
   }
 }
 function drawBossRoom(t) { // the rising water in the Sunken Grove

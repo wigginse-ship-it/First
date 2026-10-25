@@ -262,7 +262,7 @@ function execute(e) {
   }
   else if (p === 'rain') {
     const n = 3 + e.phase * 2;
-    for (let i = 0; i < n; i++) hazards.push({ kind: 'fall', x: P.x + rand(-130, 130) * (i ? 1 : 0), y: clamp(P.y + rand(-34, 34) * (i ? 1 : 0), FLOOR_TOP + 8, FLOOR_BOT), r: 28, t: .85 + i * .16, max: .85 + i * .16, dmg: Math.round(edmg(e) * .8), col: e.def.mat === 'metal' ? '232,106,128' : e.def.mat === 'crystal' ? '216,160,232' : '216,186,120' });
+    for (let i = 0; i < n; i++) hazards.push({ kind: 'fall', x: P.x + rand(-130, 130) * (i ? 1 : 0), y: clamp(P.y + rand(-34, 34) * (i ? 1 : 0), FLOOR_TOP + 8, FLOOR_BOT), r: 28, t: .85 + i * .16, max: .85 + i * .16, dmg: Math.round(edmg(e) * .8), fire: fiery(e) ? 1 : 0, col: fiery(e) ? '255,140,60' : e.def.mat === 'metal' ? '232,106,128' : e.def.mat === 'crystal' ? '216,160,232' : '216,186,120' });
     recover(e, .9);
   }
   else if (p === 'beam') { if (e.phase === 3) hazards.push({ kind: 'beam', y: clamp(P.y + (P.y > 290 ? -46 : 46), FLOOR_TOP + 8, FLOOR_BOT), t: 1.25, max: 1.25, dmg: Math.round(edmg(e) * 1.4), col: '255,170,120', hit: false }); hazards.push({ kind: 'beam', y: P.y, t: 1.25, max: 1.25, dmg: Math.round(edmg(e) * 1.4), col: e.def.mat === 'metal' ? '255,120,140' : '200,170,255', hit: false }); sfx('charge', 2); recover(e, 1.4); }
@@ -292,7 +292,7 @@ function execute(e) {
   else if (p === 'magnet') { e.state = 'pull'; e.t = 1.2; sfx('charge', 2); }
   else if (p === 'dive') { e.state = 'dive'; e.t = .5; e.struck = false; e.dx0 = e.x; e.dy0 = e.y; e.dz0 = e.z; e.tx = e.tx ?? P.x; e.ty = e.ty ?? P.y; sfx('whoosh'); }
   else if (p === 'orbit') { // shards circle the wyrm, then burst outward
-    for (let i = 0; i < 8; i++) projs.push({ owner: 'e', orbit: e, ang: i / 8 * TAU, rad: 20, otime: 1.1, x: e.x, y: e.y, z: e.z + 20, vx: 0, vy: 0, dmg: Math.round(edmg(e) * .7), life: 5, col: '#D8A0E8' });
+    for (let i = 0; i < 8; i++) projs.push({ owner: 'e', orbit: e, ang: i / 8 * TAU, rad: 20, otime: 1.1, x: e.x, y: e.y, z: e.z + 20, vx: 0, vy: 0, dmg: Math.round(edmg(e) * .7), life: 5, col: fiery(e) ? '#FF8A3A' : '#D8A0E8', fire: fiery(e) ? 1 : 0 }); // (the wyrm's: a wheel of fireballs)
     sfx('charge'); recover(e, 1.3);
   }
   else if (p === 'prismwall') { // a crystal wall sweeps across the arena with a single gap
@@ -317,10 +317,11 @@ function slamLand(e) {
   if (Math.hypot(P.x - e.x, (P.y - e.y) * 2) < 95 && P.z < 16) hitPlayer({ kind: 'melee', e }, Math.round(edmg(e) * 1.3), e.x, true);
   recover(e, .9);
 }
+const fiery = (e) => e.def.draw === 'wyrm'; // the Kaleidoscope Wyrm breathes fire: every shot of its is a ball of flame
 function bolt(e, y) {
-  projs.push({ owner: 'e', x: e.x + e.facing * (e.hw + 6), y, z: Math.max(24, e.z + e.hh * .5), vx: e.facing * (e.boss ? 230 : 200), dmg: edmg(e), life: 3.5,
-    col: e.def.mat === 'metal' ? '#D04A62' : e.def.mat === 'crystal' || e.def.mat === 'goo' ? '#8FE9FF' : '#EED48A' });
-  sfx('shoot');
+  projs.push({ owner: 'e', x: e.x + e.facing * (e.hw + 6), y, z: Math.max(24, e.z + e.hh * .5), vx: e.facing * (e.boss ? 230 : 200), dmg: edmg(e), life: 3.5, fire: fiery(e) ? 1 : 0,
+    col: fiery(e) ? '#FF8A3A' : e.def.mat === 'metal' ? '#D04A62' : e.def.mat === 'crystal' || e.def.mat === 'goo' ? '#8FE9FF' : '#EED48A' });
+  sfx(fiery(e) ? 'whoosh' : 'shoot');
 }
 
 // ---------- loot ----------
@@ -424,6 +425,7 @@ function updateWorld(dt) {
       else { p.orbit = null; p.vx = Math.cos(p.ang) * 230; p.vy = Math.sin(p.ang) * 70; }
     }
     p.x += p.vx * dt; p.y = clamp(p.y + (p.vy || 0) * dt, FLOOR_TOP + 4, FLOOR_BOT); p.life -= dt; if (p.vz) p.z += p.vz * dt;
+    if (p.fire && Math.random() < dt * 40) parts.push({ x: p.x + rand(-4, 4), y: p.y, z: p.z + rand(-4, 4), vx: -(p.vx || 0) * .15 + rand(-20, 20), vy: 0, vz: rand(20, 70), life: .45, max: .45, col: pick(['#FFD27A', '#FF8A3A', '#E84A2A', '#7A3A2A']), size: rand(2, 4), shape: 'puff' }); // a fireball sheds flame and embers
     if (p.owner === 'e') {
       if (p.ground && Math.random() < .7) dust(p.x, p.y, 1);
       if (Math.abs(p.x - P.x) < (p.ground ? 16 : 12) && Math.abs(p.y - P.y) < (p.ground ? 16 : 12) && P.z < (p.ground ? 14 : 40) && P.state !== 'dead') { hitPlayer({ kind: 'proj', p }, p.dmg, p.x - p.vx, false); if (p.owner === 'e') p.life = 0; }
