@@ -1,7 +1,7 @@
 // ---------- each boss's own close-range burst, and boss rooms that change as the fight goes on ----------
 // Old Mossback: brambles erupt in rings that spread out from him, one after another — jump them or get clear.
 // The Brass Colossus: its vents blast jets of steam out along the floor to either side, hurling you away.
-// The Kaleidoscope Wyrm: it draws you in with a pull of light, then bursts into a ring of crystal shards.
+// The Kaleidoscope Wyrm: it draws you in toward its heat, then bursts into a ring of fireballs.
 PLAN_FX.bramble = (e) => {
   const gap = e.thornGap ?? Math.atan2((P.y - e.y) * 2.2, P.x - e.x) + rand(-1.2, 1.2); e.thornGap = undefined; // one narrow gap runs through all three rings: find it
   for (let i = 0; i < 3; i++) hazards.push({ kind: 'thornring', gap: gap + rand(-.12, .12), x: e.x, y: e.y, r: 20, R: 70 + i * 50, delay: i * .28, t: 1.6, max: 1.6, dmg: Math.round(edmg(e) * .9), hit: false });
@@ -27,8 +27,8 @@ TELL_FX.bramble = (e, t, k) => { // the ground cracks in rings around him
 TELL_FX.vent = (e, t, k) => { // pressure building: the vents glow and shudder
   for (const d of [-1, 1]) { const x0 = e.x + d * e.hw * .6; const g = ctx.createLinearGradient(x0, 0, x0 + d * 230, 0); g.addColorStop(0, `rgba(255,226,192,${.4 * k + .1})`); g.addColorStop(1, 'rgba(255,226,192,0)'); ctx.fillStyle = g; ctx.fillRect(Math.min(x0, x0 + d * 230), e.y - 14, 230, 28); }
 };
-TELL_FX.coil = (e, t, k) => { // light spirals in toward it
-  ctx.strokeStyle = `rgba(200,160,255,${.3 + .5 * k})`; ctx.lineWidth = 2;
+TELL_FX.coil = (e, t, k) => { // light spirals in toward it (the wyrm's: flame)
+  ctx.strokeStyle = e.def.draw === 'wyrm' ? `rgba(255,140,60,${.3 + .5 * k})` : `rgba(200,160,255,${.3 + .5 * k})`; ctx.lineWidth = 2;
   for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + t * 3, r = 120 * (1 - k * .6); ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * r, e.y - e.z * .3 + Math.sin(a) * r * .45); ctx.lineTo(e.x + Math.cos(a + .5) * r * .5, e.y - e.z * .3 + Math.sin(a + .5) * r * .22); ctx.stroke(); }
 };
 HAZARD_FX.thornring = {
@@ -69,16 +69,17 @@ HAZARD_FX.prismpull = {
   update(h, dt) {
     if (!h.fired) { // the pull: light draws you toward it
       const dx = h.x - P.x; if (Math.abs(dx) < 260 && !['dodge', 'dead'].includes(P.state)) P.x += Math.sign(dx) * 110 * dt;
-      if (h.t < .2) { h.fired = true; // then it bursts: a ring of crystal shards flies out
-        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; projs.push({ owner: 'e', x: h.x, y: clamp(h.y + Math.sin(a) * 10, FLOOR_TOP + 6, FLOOR_BOT), z: 30, vx: Math.cos(a) * 260, vy: Math.sin(a) * 90, dmg: Math.round(h.dmg * .8), life: 1.4, col: '#E0C8FF' }); }
-        burst(h.x, h.y, 40, ['#E0C8FF', '#9FD8E0', '#FFFFFF'], 24, 'crystal', 0, true); sfx('hit-crystal'); shakeMag = 8; flashT = .08;
+      if (h.t < .2) { h.fired = true; // then it bursts: a ring of fireballs blasts out from the heart of the inferno
+        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; projs.push({ owner: 'e', x: h.x, y: clamp(h.y + Math.sin(a) * 10, FLOOR_TOP + 6, FLOOR_BOT), z: 30, vx: Math.cos(a) * 260, vy: Math.sin(a) * 90, dmg: Math.round(h.dmg * .8), life: 1.4, col: '#FF8A3A', fire: 1 }); }
+        burst(h.x, h.y, 40, ['#FFD27A', '#FF8A3A', '#E84A2A', '#FFFFFF'], 30, 'spark', 0, true); fx.push({ kind: 'ring', x: h.x, y: h.y, z: 4, t: .45, max: .45, r: 150, col: '#FF8A3A', flat: 1 }); sfx('slam'); shakeMag = 9; flashT = .08;
       }
     }
   },
   draw(h, t) {
     if (h.fired) return;
     const k = 1 - h.t / h.max; ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 3; i++) { const r = 140 * (1 - ((k * 2 + i / 3) % 1)); ctx.strokeStyle = `rgba(210,180,255,${.5 * (1 - r / 140)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(h.x, h.y, r, r / 2.2, 0, 0, TAU); ctx.stroke(); }
+    for (let i = 0; i < 3; i++) { const r = 140 * (1 - ((k * 2 + i / 3) % 1)); ctx.strokeStyle = `rgba(255,140,60,${.55 * (1 - r / 140)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(h.x, h.y, r, r / 2.2, 0, 0, TAU); ctx.stroke(); } // the air drawn in toward its heat
+    const g = ctx.createRadialGradient(h.x, h.y - 30, 2, h.x, h.y - 30, 40 + 30 * k); g.addColorStop(0, `rgba(255,240,200,${.7 * k})`); g.addColorStop(.5, `rgba(255,120,40,${.45 * k})`); g.addColorStop(1, 'rgba(200,40,10,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h.x, h.y - 30, 40 + 30 * k, 0, TAU); ctx.fill(); // the fire swelling at its heart
     ctx.restore();
   },
 };
