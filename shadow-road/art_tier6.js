@@ -1,7 +1,7 @@
 'use strict';
 // ---------- Level-6 weapon art: the hero's weapons in their final, legendary forms ----------
-// Drawn in hand space like every weapon (the hand at (16,0), the weapon pointing along +x). Any level of 6 or more
-// (NG+ can push levels higher) draws the level-6 form; everything else falls through to the original drawWeapon.
+// Drawn in hand space like every weapon (the hand at (16,0), the weapon pointing along +x). Level 6 draws these forms
+// (level 7 and up draws art_tier7.js's forms, which hook drawWeapon after this); lower levels fall through to the original drawWeapon.
 //   hammer  the Starfall Maul: a meteorite head with a captured star for a core, molten cracks and glowing runes
 //   staff   the Moonwood Staff: living silverwood wound with silver, floating rings, a crescent moon cradling a moonstone
 //   sword   the Eclipse Blade: a broad blade of sun-gold with a channel of starry night, an eclipsed sun for a guard
@@ -254,6 +254,7 @@ function t6Sword(pose) {
   t6Add(() => { const a = -.9 + now * .05; ctx.strokeStyle = 'rgba(255,240,200,.9)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(ex, 0, er, a - .7, a + .7); ctx.stroke(); ctx.fillStyle = '#FFFFFF'; gbStar(ex + Math.cos(a) * er, Math.sin(a) * er, 3.2 + pulse, .95); });
   t6SwingGlow(pose, 16, len + 18, 22);
   if (sc !== 1) ctx.restore();
+  if (!pose.noHand) gripHand(pose.glove || '#FFF1E0'); // his fingers closed over the grip
 }
 
 // ======================================================================================================
