@@ -408,7 +408,7 @@ function killEnemy(e, dir, m) {
     e.air = false; e.spin = 0; e.rotA = 0; e.vz = 0; e.dmax = e.t = e.death === 'splat' ? 2.4 : 2;
     e.vx = dir * (e.death === 'crumple' ? 170 : e.death === 'slice' ? 40 : 0) * (e.boss ? .3 : 1);
     if (e.death === 'pierce') { // run through: they stiffen, points of light open where the blade went in, then they fold and fall, and a silver rose is left on them
-      e.dmax = e.t = 1.6; e.vx = 0; e.wounds = [0, 1, 2].slice(0, 2 + (Math.random() < .5 ? 1 : 0)).map((_, i) => ({ x: rand(-.3, .4), y: [.48, .7, .32][i] + rand(-.05, .05), r: rand(.8, 1.15), s: rand(0, TAU) }));
+      e.dmax = e.t = 1.6; e.vx = 0; e.wounds = [0, 1, 2].slice(0, 2 + (Math.random() < .5 ? 1 : 0)).map((_, i) => { const edge = i === 0 || Math.random() < .6; return { x: edge ? (Math.random() < .5 ? -1 : 1) * rand(.8, 1) : rand(-.3, .3), y: [.6, .36, .82][i] + rand(-.04, .04), r: rand(.85, 1.2), s: rand(0, TAU) }; }); // (most bitten from the edge of the body, spaced apart)
       for (let i = 0; i < 8; i++) parts.push({ x: e.x + dir * 6, y: e.y + rand(-4, 4), z: e.z + e.hh * .55, vx: dir * rand(40, 140), vy: rand(-10, 10), vz: rand(20, 110), life: rand(.6, 1), max: 1, col: pick(cols), size: rand(1.6, 2.6), shape: 'blob' }); // a few flecks out the far side
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .55, ang: 0, t: .3, max: .3, size: 30 + e.hw, col: '#E8ECFF' }); sfx('slice');
     }

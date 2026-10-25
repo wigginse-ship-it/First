@@ -482,16 +482,18 @@ function drawDeath(e, t) {
       if (el > .3 && el < .6) { const q = (el - .3) / .3; ctx.strokeStyle = `rgba(232,236,255,${1 - q})`; ctx.lineWidth = 2.4; ctx.beginPath(); const r = e.hw * 1.2; ctx.moveTo(-r, -e.hh * .75); ctx.lineTo(r, -e.hh * .25); ctx.moveTo(r, -e.hh * .75); ctx.lineTo(-r, -e.hh * .25); ctx.stroke(); }
       ctx.restore();
     }
-    if (el > .25) { // the wounds stay: big round chunks bitten clean out of them, the street showing through, a dark lip round each
+    if (el > .25) { // the wounds stay: round chunks bitten out of them, most taken from the edge of the body, the street showing through
       const base = MAT_COL[e.def.mat][0], g = ease(Math.min(1, (el - .25) / .14)); // (each one opens in a quick chomp)
-      const bite = (w) => { const x = w.x * e.hw, y = -w.y * e.hh, R = clamp(e.hw * .62, 8.5, 21) * (w.r || 1) * g, path = new Path2D();
-        for (let i = 0; i <= 28; i++) { const a = i / 28 * TAU, sc = 1 + .1 * Math.cos(a * 7 + (w.s || 0)) - .05 * Math.cos(a * 3); path.lineTo(x + Math.cos(a) * R * sc, y + Math.sin(a) * R * sc * .92); } // scalloped, like teeth marks
+      const bite = (w) => { const x = w.x * e.hw, y = -w.y * e.hh, R = clamp(e.hw * .3, 3.6, 8.5) * (w.r || 1) * g, path = new Path2D();
+        for (let i = 0; i <= 24; i++) { const a = i / 24 * TAU, sc = 1 + .09 * Math.cos(a * 6 + (w.s || 0)); path.lineTo(x + Math.cos(a) * R * sc, y + Math.sin(a) * R * sc * .94); } // scalloped, like teeth marks
         path.closePath(); return [path, x, y, R]; };
       ctx.save(); ctx.globalCompositeOperation = 'destination-out'; for (const w of e.wounds || []) ctx.fill(bite(w)[0]); ctx.restore(); // cut through
-      if (!FLASH && !TINT) for (const w of e.wounds || []) { const [path, x, y, R] = bite(w); if (R < 1) continue;
-        ctx.strokeStyle = shade(base, -.7); ctx.lineWidth = 2.2; ctx.stroke(path); // the dark, bruised lip
-        ctx.strokeStyle = shade(base, .15); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, R * .96, .5, 2.3); ctx.stroke(); // the raw edge catching the light along its lower side
-        ctx.fillStyle = shade(base, -.6); for (let i = 0; i < 2; i++) { const a = 1.2 + i * .9 + (w.s || 0) * .1; ell(x + Math.cos(a) * R, y + Math.sin(a) * R + 2.5 * g, 1.1, 2.4 * g); ctx.fill(); } } // a drip or two from the lip
+      if (!FLASH && !TINT) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; // (the lip and drips only where the body is left: nothing hangs in the air)
+        for (const w of e.wounds || []) { const [path, x, y, R] = bite(w); if (R < 1) continue;
+          ctx.strokeStyle = shade(base, -.7); ctx.lineWidth = 1.8; ctx.stroke(path); // the dark, bruised lip
+          ctx.strokeStyle = shade(base, .15); ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(x, y, R * 1.12, .5, 2.3); ctx.stroke(); // the raw edge catching the light along its lower side
+          ctx.fillStyle = shade(base, -.6); const a = 1.5 + (w.s || 0) * .05; ell(x + Math.cos(a) * R * 1.05, y + Math.sin(a) * R + 2 * g, .9, 2 * g); ctx.fill(); } // a drip from the lip
+        ctx.restore(); }
     }
   } else { // splat
     const c = Math.min(1, el / .07), settle = Math.sin(el * 32) * .05 * Math.exp(-el * 6);
