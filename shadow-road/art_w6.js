@@ -1282,7 +1282,8 @@
   function anchorAt(e, i) { const [ax, ay] = W6.ANCH[i], s = e.size || 1.15, S = e.w6S || {}, hs = W6.HS; return [e.x + ax * s, e.y - e.z + (ay + (ay + 60 * hs) * (S.sag || 0) * .35) * s]; }
   function plantCrutch(e, i, hpK, grow) {
     const [fx, fy] = CRUTCH_FEET[i], c = spawnEnemy('w6crutch', 1, false);
-    c.x = clamp(e.x + fx, leftWall() + 20, rightWall() - 20); c.y = FLOOR_TOP + fy; c.z = 0; c.facing = 1; c.w6i = i; c.hp = c.maxHp = Math.round(c.maxHp * hpK);
+    c.x = clamp(e.x + fx, leftWall() + 20, rightWall() - 20); c.y = FLOOR_TOP + fy; c.z = 0; c.facing = 1; c.w6i = i; c.elite = false; c.guard = c.guardMax = 0;
+    c.hp = c.maxHp = Math.round(c.def.hp * (1 + .5 * save.cycle) * worldDiff().hp * hpK); // (never armored: these are props, not fighters)
     if (!grow) { c.ent = null; c.state = 'w6crutch'; } else { c.ent = { kind: 'w6sprout', t: 0, max: 1.1 }; c.state = 'enter'; }
     const [ax, ay] = anchorAt(e, i); c.w6top = [ax - c.x, ay - c.y]; B.crutches.push(c); return c;
   }
@@ -1439,8 +1440,8 @@
         } else if (B.mode === 'down') {
           B.vuln = true; B.gz = 0; S.mood = -.3; S.eyes = 0; S.mouth = .3; S.drool = Math.min(1, B.t / 3);
           if (e.hp <= e.maxHp * .67) toPhase(e, 2);
-          else if (B.t > 7.5) { B.mode = 'rise'; B.t = 0; B.regrows++; S.sag = Math.max(.2, S.sag - .5); S.drool = 0; floatText(e.x, e.y, 150, 'IT PROPS ITSELF UP AGAIN', '#F4E6C8', 14);
-            const pick3 = [0, 1, 2, 3].sort(() => Math.random() - .5).slice(0, B.regrows > 1 ? 2 : 3); B.broken = 4 - pick3.length; for (const i of pick3) plantCrutch(e, i, .7, true); }
+          else if (B.t > 9) { B.mode = 'rise'; B.t = 0; B.regrows++; S.sag = Math.max(.2, S.sag - .5); S.drool = 0; floatText(e.x, e.y, 150, 'IT PROPS ITSELF UP AGAIN', '#F4E6C8', 14);
+            const pick3 = [0, 1, 2, 3].sort(() => Math.random() - .5).slice(0, B.regrows > 1 ? 2 : 3); B.broken = 4 - pick3.length; for (const i of pick3) plantCrutch(e, i, .6, true); }
         } else if (B.mode === 'rise') {
           B.vuln = false; B.gz = 62 * sm(B.t / 1.1) - S.sag * 14;
           if (B.t > 1.1) { B.mode = 'asleep'; B.t = 0; B.dreamT = 2; }
@@ -1466,7 +1467,7 @@
           B.vuln = true; S.eyes = 1; S.mood = -.3 + Math.sin(t * 3) * .2; S.mouth = .25 + W6.mouth * .7; S.look = clamp((P.x - e.x) / 200, -1, 1);
           const I = B.iris; I.r = Math.max(118, I.r - dt * (I.r > 300 ? 22 : 13));
           if (I.r <= 118) { I.minT = (I.minT || 0) + dt; if (I.minT > 1.2) { I.minT = 0; I.r = 340; wakeAttack(e, 'alarm'); floatText(e.x, e.y - e.z, 140, 'IT STIRS', '#FFE6B0', 16); } } else I.minT = 0;
-          B.moveT -= dt; if (B.moveT <= 0) { B.moveT = 2.4; const cx = homeX(); B.gx = clamp(cx + rand(-120, 120), leftWall() + 90, rightWall() - 90); B.gy = FLOOR_TOP + rand(16, 50); }
+          B.moveT -= dt; if (B.moveT <= 0) { B.moveT = 2.4; const cx = homeX(); B.gx = clamp(cx + rand(-80, 80), leftWall() + 90, rightWall() - 90); B.gy = FLOOR_TOP + rand(16, 46); }
           B.gz = 26 + Math.sin(t * 1.6) * 5;
           B.castT -= dt; if (B.castT <= 0) { B.cast++; wakeAttack(e, ['gaze', 'tears', 'gaze', 'alarm'][B.cast % 4]); B.castT = 2.5; }
         }
@@ -1632,7 +1633,7 @@
   updateEnemy = function (e, dt) {
     const decay = () => { e.flash = Math.max(0, e.flash - dt); e.jit = Math.max(0, e.jit - dt); e.flinch = Math.max(0, (e.flinch || 0) - dt); e.sqx += (1 - e.sqx) * Math.min(1, dt * 8); e.sqy += (1 - e.sqy) * Math.min(1, dt * 8); };
     if (e.def === BOSSES.sleeper) { if (e.dead) return _upd(e, dt); decay(); e.state = 'w6act'; e.vx = 0; e.vz = 0; e.air = false; e.plan = null; e.rageT = 0; e.enraged = false; return; } // (the 'w6sleep' rule moves it)
-    if (e.type === 'w6crutch') { if (e.dead) return _upd(e, dt); decay(); if (e.state !== 'enter') e.state = 'w6crutch'; e.vx = 0; e.z = 0; return; }
+    if (e.type === 'w6crutch') { if (e.dead || e.state === 'enter') return _upd(e, dt); decay(); e.state = 'w6crutch'; e.vx = 0; e.z = 0; return; }
     if (e.dead) return _upd(e, dt);
     if (e.type === 'w6mannequin' && e.state === 'w6apart') { decay(); e.t -= dt; e.w6apartK = 1 - e.t / 2.8; if (e.t <= 0) { e.state = 'idle'; e.hp = Math.round(e.maxHp * .35); e.cd = .6; floatText(e.x, e.y, e.hh + 20, 'PUT TOGETHER AGAIN', '#F4E6C8', 12); sfx('hit-metal', .4); } return; }
     if (e.type === 'w6elephant') {
@@ -1691,7 +1692,7 @@
       const B = W6.B || {};
       if (!B.vuln) { if (!(e.w6softMsg > performance.now())) { e.w6softMsg = performance.now() + 700; floatText(e.x, e.y - e.z + 20, 80, B.mode === 'asleep' || B.mode === 'rise' ? 'SOFT · STRIKE ITS CRUTCHES' : 'SOFT', '#F4E6C8', 12); }
         sfx('hit-goo', .3); e.sqx = 1.08; e.sqy = .94; burst(P.x + dir * 30, P.y, P.z + 40, ['#F4E2C8', '#E8C49C'], 4, 'goo', -dir); return; }
-      if (B.mode === 'down') base *= 1.6;
+      if (B.mode === 'down') base *= 2.2; // (a face on the quilt is tender)
       const fl = e.phase === 1 ? .665 : e.phase === 2 ? .335 : 0, buf = fl ? 1e7 : 0; // (no single blow carries it through a dream: each must be lived through)
       e.hp += buf; let r; try { r = _strike(e, base, dir, m, echo); } finally { e.hp -= buf; }
       if (!e.dead && fl && e.hp < e.maxHp * fl) e.hp = Math.ceil(e.maxHp * fl);
