@@ -191,7 +191,7 @@ function updateMech(dt) {
     const k = P.state === 'atk' && P.move ? P.t / P.move.dur : -1;
     for (const s of mech.shrooms) {
       s.puff = Math.max(0, s.puff - dt); s.flash = Math.max(0, s.flash - dt); s.cd -= dt;
-      const near = Math.abs(P.x - s.x) < 250 || enemies.some(e => !e.dead && Math.abs(e.x - s.x) < 200); // they go off at a fair distance: on this road you will be shrunk often
+      const near = Math.abs(P.x - s.x) < 195 || enemies.some(e => !e.dead && Math.abs(e.x - s.x) < 150); // they go off at a fair distance: on this road you will be shrunk often
       if (s.cd <= 0 && near) puff(s);
       if (k >= 0 && k >= P.move.h[0] && k <= P.move.h[1] && Math.abs(P.y - s.y) < 26 && (s.x - P.x) * P.facing > -10 && (s.x - P.x) * P.facing < P.move.x1 + 20 && s.cd < 3.5) puff(s); // smack one and it goes off
     }
