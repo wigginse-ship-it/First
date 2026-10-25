@@ -430,7 +430,7 @@
   const W6E = {
     theme2: 'moon', seed: 251, d0: 4.4, d1: 5.8, dir: 1, bannerAt: 5, dur: 11, music: 'moon', still: 1.4,
     title: 'And the Dreamer Woke', sub: 'AND ALL IT HAD DREAMED WENT OUT, BUT THE MOON, AND A CITY THAT IS ONLY THERE BY ITS LIGHT',
-    setup(E) { E.x0 = P.x; },
+    setup(E) { E.hx = P.x - camX; },
     update(E, T, dt) { if (T > .3 && !E.chime) { E.chime = 1; sfx('learned'); } if (T > 1.3 && !E.chime2) { E.chime2 = 1; sfx('trump'); } },
     over(E, T, t) { // the dream unpaints itself from the edges in, the colour draining first; he is left on bare paper
       const k = sm((T - 1) / 2.6), dr = sm((T - .6) / 1.6);
@@ -448,7 +448,7 @@
       ctx.fillStyle = PAPER; view();
       withSet(B, () => paintWorld('moon', { cam }, t));
       P.state = 'walk'; P.facing = 1; P.walk += dt * 40 / 10.2;
-      ctx.save(); ctx.translate(-cam, 0); inkHero(cam + VW * .2 + 40 * u, FLOOR_TOP + 60, 1, 1, poseAs('walk'), 1, true); ctx.restore();
+      ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.hx + 40 * u, P.y, 1, 1, poseAs('walk'), 1, true); ctx.restore();
       gradeFrame('moon'); cycleTint();
     },
   };

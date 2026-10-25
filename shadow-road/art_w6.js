@@ -1485,7 +1485,7 @@
         const x = stage.len - VW / 2, y = FLOOR_TOP + 16, z = 62, s = 1.15, fake = { x, y, z, size: s, w6S: { sag: 0 } };
         list.push([y, () => { shadow(x, y, 120); ctx.save(); ctx.translate(x, y - z); ctx.scale(s * W6.HS, s * W6.HS); sleeperHead({ t, mouth: .12 + Math.max(0, Math.sin(t * 1.3)) * .12 }); ctx.restore(); }]);
         for (let i = 0; i < 4; i++) { const [fx, fy] = CRUTCH_FEET[i], cx = x + fx, cy = FLOOR_TOP + fy, [ax, ay] = anchorAt(fake, i);
-          list.push([cy, () => { ctx.save(); ctx.translate(cx, cy); CREATURES.w6crutch({ w6top: [ax - cx, ay - cy], hp: 1, maxHp: 1, flash: 0, slot: i }, { t }); ctx.restore(); }]); }
+          list.push([cy, () => { ctx.save(); ctx.translate(cx, cy); CREATURES.w6crutch({ w6top: [ax - cx, ay - cy], hp: 1, maxHp: 1, flash: 0, slot: i }, { t }); W6.skipHatch = false; ctx.restore(); }]); }
         list.push([y + .1, () => onMain(() => snoreZs(x + 30, y - z - 20, t, 1, 1.4))]);
         return;
       }
@@ -1740,14 +1740,14 @@
 
   // ---------------- the landmarks at the end of each area ----------------
   if (typeof THRESH !== 'undefined') {
-    W6.EASEL = { cx: 8, top: FLOOR_TOP - 152, bot: FLOOR_TOP - 64, w: 118 };
+    W6.EASEL = { cx: 8, top: FLOOR_TOP - 122, bot: FLOOR_TOP - 40, w: 112 };
     // the Piazza -> the Shore: an easel stands at the end of the square, its canvas a painting of the shore ahead so exact
     // that where the shore itself has begun to show behind it you cannot tell picture from place. Asleep it is only primed
     // and sketched; awake, the paint goes on, stroke by stroke
     THRESH.w6easel = {
       edge: (y) => y < 170 ? -330 + (y - 84) * .4 : lerp(-296, -170, thCl((y - 170) / 70)), feather: 130,
       hazeB: [-260, 70, 240, VH], haze(r) { for (let i = 0; i < 10; i++) softDab(-60 + r() * 200, 150 + r() * 90, 30 + r() * 40, i % 2 ? '255,226,170' : '230,190,140', .2); },
-      backB: [-120, FLOOR_TOP - 176, 140, FLOOR_TOP + 16], back(r) {
+      backB: [-120, FLOOR_TOP - 150, 140, FLOOR_TOP + 16], back(r) {
         const E = W6.EASEL, x0 = E.cx - E.w / 2, x1 = E.cx + E.w / 2, T = FLOOR_TOP;
         ctx.lineCap = 'round'; ctx.strokeStyle = '#4A2E1A'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(E.cx, E.top - 16); ctx.lineTo(E.cx + 30, T + 8); ctx.stroke(); // the back leg
         ctx.strokeStyle = '#2A1A10'; ctx.lineWidth = 2; ctx.strokeRect(x0 - 2, E.top - 2, E.w + 4, E.bot - E.top + 4); // the stretcher's edge
@@ -1766,21 +1766,21 @@
     };
     // the Shore -> the Bed: a great curtained bed stands at the end of the shore, its covers turned down. Asleep its
     // curtains are drawn; awake, they part, and soft Z's rise from the pillow: lie down, and sleep
-    W6.BED = { x0: -70, x1: 130, top: FLOOR_TOP - 150, mat: FLOOR_TOP - 34 };
+    W6.BED = { x0: -70, x1: 130, top: FLOOR_TOP - 124, mat: FLOOR_TOP - 30 };
     THRESH.w6bed = {
       edge: (y) => y < 170 ? -340 + (y - 84) * .4 : lerp(-306, -190, thCl((y - 170) / 70)), feather: 140,
       hazeB: [-260, 70, 260, VH], haze(r) { for (let i = 0; i < 12; i++) softDab(-40 + r() * 220, 140 + r() * 100, 30 + r() * 40, i % 2 ? '200,210,240' : '150,160,210', .2); },
-      backB: [-120, FLOOR_TOP - 176, 180, FLOOR_TOP + 24], back(r) {
+      backB: [-120, FLOOR_TOP - 150, 180, FLOOR_TOP + 24], back(r) {
         const D = W6.BED, T = FLOOR_TOP;
         const post = (x, h) => { ctx.fillStyle = '#3A2018'; ctx.fillRect(x - 3.5, T + 4 - h, 7, h); ctx.fillStyle = '#7A4A30'; ctx.fillRect(x - 3.5, T + 4 - h, 2.4, h); ctx.fillStyle = '#C8A060'; circle(x, T + 1 - h, 5); ctx.fill(); ctx.fillStyle = '#FFE6A8'; circle(x - 1.5, T - h, 1.6); ctx.fill(); };
-        post(D.x0 + 6, 156); post(D.x1 - 6, 150); // the posts at its head
-        ctx.fillStyle = '#4A2A1E'; ctx.beginPath(); ctx.moveTo(D.x0 + 6, D.mat); ctx.lineTo(D.x0 + 6, D.mat - 50); ctx.quadraticCurveTo((D.x0 + D.x1) / 2, D.mat - 86, D.x1 - 6, D.mat - 50); ctx.lineTo(D.x1 - 6, D.mat); ctx.fill(); // the headboard
-        ctx.strokeStyle = '#C8A060'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(D.x0 + 14, D.mat - 46); ctx.quadraticCurveTo((D.x0 + D.x1) / 2, D.mat - 78, D.x1 - 14, D.mat - 46); ctx.stroke();
+        post(D.x0 + 6, 128); post(D.x1 - 6, 124); // the posts at its head
+        ctx.fillStyle = '#4A2A1E'; ctx.beginPath(); ctx.moveTo(D.x0 + 6, D.mat); ctx.lineTo(D.x0 + 6, D.mat - 44); ctx.quadraticCurveTo((D.x0 + D.x1) / 2, D.mat - 76, D.x1 - 6, D.mat - 44); ctx.lineTo(D.x1 - 6, D.mat); ctx.fill(); // the headboard
+        ctx.strokeStyle = '#C8A060'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(D.x0 + 14, D.mat - 40); ctx.quadraticCurveTo((D.x0 + D.x1) / 2, D.mat - 68, D.x1 - 14, D.mat - 40); ctx.stroke();
         ctx.fillStyle = '#E8E4F0'; ctx.fillRect(D.x0, D.mat - 2, D.x1 - D.x0, 22); ctx.fillStyle = '#B8B4CC'; ctx.fillRect(D.x0, D.mat + 14, D.x1 - D.x0, 6); // the mattress
         for (const px of [D.x0 + 34, D.x1 - 46]) { ctx.fillStyle = '#F8F6FC'; ell(px, D.mat - 6, 24, 10); ctx.fill(); ctx.fillStyle = 'rgba(150,150,190,.4)'; ell(px + 4, D.mat - 2, 20, 5); ctx.fill(); } // pillows
         ctx.fillStyle = '#C8C4DA'; poly([D.x0 + 60, D.mat + 2, D.x1, D.mat + 2, D.x1 + 8, T + 26, D.x0 + 40, T + 26]); ctx.fill(); ctx.fillStyle = '#F2F0F8'; poly([D.x0 + 60, D.mat + 2, D.x0 + 96, D.mat - 4, D.x0 + 80, D.mat + 10]); ctx.fill(); // the quilt, turned down
         ctx.strokeStyle = 'rgba(80,80,130,.4)'; ctx.lineWidth = .8; ctx.setLineDash([2, 2]); for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(D.x0 + 60 + i * 30, D.mat + 4); ctx.lineTo(D.x0 + 44 + i * 36, T + 24); ctx.stroke(); } ctx.setLineDash([]);
-        post(D.x0 - 4, 170); post(D.x1 + 12, 164); // the posts at its foot
+        post(D.x0 - 4, 136); post(D.x1 + 12, 132); // the posts at its foot
         ctx.fillStyle = '#3A2018'; ctx.fillRect(D.x0 - 8, D.top - 20, D.x1 - D.x0 + 24, 8); ctx.fillStyle = '#C8A060'; ctx.fillRect(D.x0 - 8, D.top - 20, D.x1 - D.x0 + 24, 2); // the tester rail
       },
       live(x, k, t) { const D = W6.BED, o = thSm(k * 1.2), T = FLOOR_TOP;

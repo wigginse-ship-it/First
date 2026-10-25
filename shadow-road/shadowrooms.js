@@ -816,7 +816,7 @@ function srShadowDef() { // the prince's own shadow, stepped out of a mirror: a 
 }
 
 // ---------------- dealing a room ----------------
-const SR_KIND_W = { hall: 1.1, grove: .7, vault: .7, duel: .6, arena: 1.3, horde: 1, mirror: .9, champion: .9, gauntlet: 1, shrine: .9, merchant: 1, gamble: 1, puzzle: 1, hunt: 1 };
+const SR_KIND_W = { hall: 1.1, grove: .55, vault: .55, duel: .6, arena: 1.3, horde: 1, mirror: .9, champion: .9, gauntlet: 1, shrine: .9, merchant: 1, gamble: 1, puzzle: 1, hunt: 1 };
 const SR_CLASSIC = ['hall', 'grove', 'vault', 'duel'];
 { const q = /[?&]room=(\d+)(?::(\w+))?/.exec(location.search); if (q) { window.__roomSeed = +q[1]; if (q[2]) window.__forceRoom = q[2]; } }
 function srDeal() {
@@ -828,7 +828,7 @@ function srDeal() {
   const K = SR_KINDS[kind];
   if (!G.classic) { G.build = K.build(G); srScene(G); srName(G); }
   else { // the old rooms keep their names (their rules show in the subtitle); the hall and the duel are mostly held somewhere new
-    if ((kind === 'hall' || kind === 'duel') && r.chance(.7)) srScene(G);
+    if ((kind === 'hall' || kind === 'duel') && r.chance(.85)) srScene(G);
     G.title = null; G.sub = null; }
   if (G.mods.includes('blessed')) G.blessPow = pick(POWER_ORDER);
   G.mult = Math.max(.6, 1 + G.mods.reduce((s, m) => s + SR_MODS[m].risk, 0));

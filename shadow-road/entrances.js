@@ -14,7 +14,7 @@ const ENTRY = {
 };
 // ---------- cover along the road: what they hide behind ----------
 let covers = [];
-const coverKind = (th) => /^(bloom|unicorn)/.test(th) ? ['tree', 'bush', 'tree'] : /^sky/.test(th) ? ['crates'] : /^prism/.test(th) ? ['crystal'] : /^chaos/.test(th) ? ['pillar'] : [];
+const coverKind = (th) => /^(bloom|unicorn)/.test(th) ? ['tree', 'bush', 'tree'] : /^sky/.test(th) ? ['crates'] : /^prism/.test(th) ? ['crystal'] : /^chaos/.test(th) ? ['pillar'] : th === 'dream' ? ['w6plinth'] : th === 'dream2' ? ['w6olive', 'w6slab'] : []; // (the dream's cover is painted in art_w6.js)
 function placeCovers() {
   covers = []; const kinds = coverKind(stage.theme); if (!kinds.length || stage.bossRoom || (stage.room && stage.room.kind !== 'grove')) return;
   const r = mulberry(stageIdx * 131 + zoneIdx * 17 + 5);
