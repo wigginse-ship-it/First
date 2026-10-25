@@ -482,14 +482,16 @@ function drawDeath(e, t) {
       if (el > .3 && el < .6) { const q = (el - .3) / .3; ctx.strokeStyle = `rgba(232,236,255,${1 - q})`; ctx.lineWidth = 2.4; ctx.beginPath(); const r = e.hw * 1.2; ctx.moveTo(-r, -e.hh * .75); ctx.lineTo(r, -e.hh * .25); ctx.moveTo(r, -e.hh * .75); ctx.lineTo(-r, -e.hh * .25); ctx.stroke(); }
       ctx.restore();
     }
-    if (el > .25) { // the wounds stay: small dark punctures sunk into them, rimmed in their own color
-      const base = MAT_COL[e.def.mat][0], a2 = Math.min(1, (el - .25) / .2);
-      ctx.save(); ctx.globalAlpha *= a2;
-      for (const w of e.wounds || []) { const x = w.x * e.hw, y = -w.y * e.hh;
-        ctx.fillStyle = shade(base, -.35); ell(x, y, 2.6, 2, .4); ctx.fill(); // the bruised rim
-        ctx.fillStyle = shade(base, -.75); ell(x + .2, y + .2, 1.6, 1.2, .4); ctx.fill(); // the hole itself
-        ctx.fillStyle = 'rgba(255,255,255,.35)'; ell(x - .9, y - .8, .7, .4, .4); ctx.fill(); } // a wet catch of light on the lip
-      ctx.restore();
+    if (el > .25) { // the wounds stay: big round chunks bitten clean out of them, the street showing through, a dark lip round each
+      const base = MAT_COL[e.def.mat][0], g = ease(Math.min(1, (el - .25) / .14)); // (each one opens in a quick chomp)
+      const bite = (w) => { const x = w.x * e.hw, y = -w.y * e.hh, R = clamp(e.hw * .62, 8.5, 21) * (w.r || 1) * g, path = new Path2D();
+        for (let i = 0; i <= 28; i++) { const a = i / 28 * TAU, sc = 1 + .1 * Math.cos(a * 7 + (w.s || 0)) - .05 * Math.cos(a * 3); path.lineTo(x + Math.cos(a) * R * sc, y + Math.sin(a) * R * sc * .92); } // scalloped, like teeth marks
+        path.closePath(); return [path, x, y, R]; };
+      ctx.save(); ctx.globalCompositeOperation = 'destination-out'; for (const w of e.wounds || []) ctx.fill(bite(w)[0]); ctx.restore(); // cut through
+      if (!FLASH && !TINT) for (const w of e.wounds || []) { const [path, x, y, R] = bite(w); if (R < 1) continue;
+        ctx.strokeStyle = shade(base, -.7); ctx.lineWidth = 2.2; ctx.stroke(path); // the dark, bruised lip
+        ctx.strokeStyle = shade(base, .15); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, R * .96, .5, 2.3); ctx.stroke(); // the raw edge catching the light along its lower side
+        ctx.fillStyle = shade(base, -.6); for (let i = 0; i < 2; i++) { const a = 1.2 + i * .9 + (w.s || 0) * .1; ell(x + Math.cos(a) * R, y + Math.sin(a) * R + 2.5 * g, 1.1, 2.4 * g); ctx.fill(); } } // a drip or two from the lip
     }
   } else { // splat
     const c = Math.min(1, el / .07), settle = Math.sin(el * 32) * .05 * Math.exp(-el * 6);
