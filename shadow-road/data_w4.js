@@ -32,11 +32,11 @@
     get move() { return FORM[tyPhase()].move; }, get hover() { return FORM[tyPhase()].hover; },
     get tail() { return FORM[tyPhase()].tail; }, get reachDown() { return FORM[tyPhase()].reachDown; },
     get reach() { const p = typeof boss !== 'undefined' && boss && boss.def === BOSSES.tyiga ? boss.plan : null; return STANDOFF[p] || 70; },
-    hp: 1150, spd: 64, hw: 50, hh: 66, dmg: 20, wind: .6, cd: [.6, 1.2], weight: .3, poise: 10, ranged: 1,
+    hp: 1450, spd: 64, hw: 50, hh: 66, dmg: 23, wind: .6, cd: [.45, .95], weight: .3, poise: 10, ranged: 1,
     // each form has its own attacks; the Howl of Many Shapes follows it from body to body, its pack growing with every shape it has worn
-    p1: ['w4rake', 'w4howl', 'w4rake'],
-    p2: ['w4swoop', 'w4flame', 'w4howl', 'w4gust', 'w4swoop', 'w4flame'],
-    p3: ['w4clap', 'w4faces', 'w4howl', 'w4clap', 'w4faces'],
+    p1: ['w4rake', 'w4leap', 'w4howl', 'w4rake', 'w4leap'],
+    p2: ['w4swoop', 'w4sweep', 'w4flame', 'w4howl', 'w4gust', 'w4sweep', 'w4leap'],
+    p3: ['w4clap', 'w4gaze', 'w4faces', 'w4howl', 'w4clap', 'w4gaze', 'w4sweep'],
   };
 
   STAGES.push({ name: 'The Courts of Chaos', sub: 'THE END OF THE BLACK ROAD', theme: 'chaos', len: 2900,

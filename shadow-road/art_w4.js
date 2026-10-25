@@ -1217,7 +1217,8 @@
     eyeRow([[-8, -46, .9], [10, -38, 1], [2, -52, .7], [-12, -32, .6]], true, false);
   }
   const FORMS = { 1: tyWolf, 2: tyDrake, 3: tyMask };
-  CREATURES.tyiga = function (e, a) {
+  CREATURES.tyiga = function (e, a) { // (w4vis: it can leave sight, as in the Hunting Leap)
+    const v = e.w4vis ?? 1; if (v <= .02) return; if (v < 1) { ctx.save(); ctx.globalAlpha *= v; const sv = e.w4vis; e.w4vis = 1; CREATURES.tyiga(e, a); e.w4vis = sv; ctx.restore(); return; }
     a = a || {}; const t = a.t || 0, ph = Math.min(3, Math.max(1, e.phase || 1));
     const sh = e.w4shift || 0; // 1 -> 0 while it changes
     if (sh > 0 && !e.dead) {
@@ -1598,6 +1599,73 @@
         const r = h.R * (1 - .25 * Math.min(1, k / .3)), x = h.x + Math.cos(a) * r, y = h.y + Math.sin(a) * r / 3.1, L = 30 * up;
         if (L > 1) horn(x - Math.cos(a) * 3, y, x - Math.cos(a) * 8, y - L * .7, x - Math.cos(a) * 16, y - L, 8, .5, '#E4D8BC', 1.1, '#8E806A'); } }]); },
     box(h, box) { box(h.x, h.y, 0, h.R + 20, 70); },
+  });
+
+  // ---------------- the Ty'iga's harder shapes of its attacks ----------------
+  Object.assign(BOSS_WIND, { w4leap: .8, w4sweep: .9, w4gaze: .85 });
+  // HUNTING LEAP (wolf): it leaps out of sight; a shadow hunts you across the floor, stops, and it comes down there like a falling star. Two or three times
+  TELL_FX.w4leap = (e, t, k) => { ctx.save(); ctx.fillStyle = tellCol(k); ell(e.x, e.y, 30 + 20 * k, 9 + 6 * k); ctx.fill(); ctx.restore(); }; // it gathers itself
+  PLAN_FX.w4leap = (e) => {
+    const n = e.phase >= 2 ? 3 : 2; sfx('whoosh'); dust(e.x, e.y, 14); e.w4T = null;
+    act(e, 'leap', (h, dt, e) => {
+      const L = 1.25, i = Math.floor(h.el / L), k = (h.el % L) / L;
+      if (i >= n) { e.w4vis = 1; recover(e, 1.0); return true; }
+      if (h.i !== i) { h.i = i; h.hit = false; h.lock = null; h.tx = P.x; h.ty = P.y; }
+      if (k < .14) { e.w4vis = 1 - k / .14; }
+      else if (k < .66) { e.w4vis = 0; if (k < .54) { h.tx += (P.x - h.tx) * Math.min(1, dt * 7); h.ty += (P.y - h.ty) * Math.min(1, dt * 7); } else if (!h.lock) { h.lock = 1; sfx('charge', 1); } } // the shadow hunts you, then stops
+      else { if (!h.hit) { h.hit = true; e.x = xClamp(h.tx); e.y = yClamp(h.ty); e.w4vis = 1; shakeMag = Math.max(shakeMag, 12); sfx('slam'); hitstop = Math.max(hitstop, .05);
+          burst(e.x, e.y, 8, ['#2A1A36', '#FF9A50', '#FFFFFF'], 22, 'rock', 0, true); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 120, col: '#FF9A50', flat: 1 });
+          if (inEll(P.x, P.y, e.x, e.y, 78) && P.z < 40) hitP(Math.round(edmg(e) * 1.35), e.x, true); } }
+      return false;
+    }, { i: -1 }).draw = (h, t) => { if (h.hit || h.i < 0) return; const k = ((h.el % 1.25) / 1.25); if (k < .14) return; const lock = k >= .54;
+      ctx.save(); ctx.fillStyle = `rgba(20,8,24,${lock ? .55 : .3})`; ell(h.tx, h.ty, 60, 19); ctx.fill(); ctx.strokeStyle = lock ? `rgba(255,120,90,${.6 + .4 * Math.sin(t * 40)})` : 'rgba(255,130,110,.45)'; ctx.lineWidth = lock ? 2.6 : 1.6; ell(h.tx, h.ty, 78, 78 / 2.2); ctx.stroke(); ctx.restore(); };
+  };
+  // BURNING SWEEP (drake): walls of fire roll across the arena one after another, each with a single lane left clear, a different one each time
+  const sweepT = (e) => targets(e, () => { const dir = P.x < e.x ? -1 : 1, gaps = []; let g = laneOf(P.y);
+    for (let i = 0; i < 3; i++) { const opts = [0, 1, 2, 3].filter(l => l !== g && Math.abs(l - g) <= 2); g = pick(opts); gaps.push(g); } return { dir: -dir, gaps }; }); // (never the lane you stand in, never too far to reach)
+  TELL_FX.w4sweep = (e, t, k) => { const T = sweepT(e), g = T.gaps[0]; ctx.save();
+    for (let l = 0; l < LANES; l++) { ctx.fillStyle = l === g ? `rgba(120,230,170,${.12 + .2 * k})` : tellCol(k, .7); ctx.fillRect(camX, laneY(l) - laneH * .45, VW, laneH * .9); }
+    ctx.restore(); };
+  PLAN_FX.w4sweep = (e) => {
+    const T = sweepT(e); e.w4T = null; sfx('roar'); shakeMag = 8;
+    T.gaps.forEach((g, i) => hazards.push({ kind: 'w4firewall', gap: g, next: T.gaps[i + 1], dir: T.dir, x: T.dir > 0 ? camX - 40 : camX + VW + 40, delay: i * .95, sp: 300, dmg: Math.round(edmg(e) * 1.1), hit: false, t: 9, max: 9 }));
+    act(e, 'sweep', (h, dt, e) => { if (h.el > 1.2) { recover(e, 1.6); return true; } return false; });
+  };
+  reg('w4firewall', {
+    update(h, dt) { if (h.delay > 0) { h.delay -= dt; return; } h.x += h.dir * h.sp * dt;
+      if (!h.hit && Math.abs(P.x - h.x) < 18 && laneOf(P.y) !== h.gap && P.z < 70) { h.hit = true; hitP(h.dmg, h.x - h.dir * 10, true); }
+      if (Math.random() < .9) parts.push({ x: h.x + rand(-8, 8), y: rand(FLOOR_TOP + 6, FLOOR_BOT), z: rand(0, 40), vx: h.dir * rand(20, 80), vy: 0, vz: rand(40, 120), life: .5, max: .5, col: pick(['#FFD27A', '#FF8A3A', '#E84A2A']), size: rand(2, 4), shape: 'puff' });
+      if (h.dir > 0 ? h.x > camX + VW + 60 : h.x < camX - 60) h.t = -1; },
+    draw(h, t) { if (h.delay > 0) { if (h.delay < .7) { const k = 1 - h.delay / .7; ctx.save(); ctx.fillStyle = `rgba(120,230,170,${.25 * k})`; ctx.fillRect(camX, laneY(h.gap) - laneH * .45, VW, laneH * .9); ctx.restore(); } return; } // the next wall's clear lane shows before it comes
+      ctx.save(); ctx.fillStyle = 'rgba(120,230,170,.18)'; ctx.fillRect(camX, laneY(h.gap) - laneH * .45, VW, laneH * .9); ctx.restore(); },
+    ups(h, list, t) { if (h.delay > 0) return; for (let l = 0; l < LANES; l++) { if (l === h.gap) continue; const y = laneY(l);
+      list.push([y + 2, () => { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 4; i++) { const hh = 46 + 18 * Math.sin(t * 14 + i * 1.7 + l), x = h.x + (i - 1.5) * 7, g = ctx.createLinearGradient(0, y - hh, 0, y); g.addColorStop(0, 'rgba(255,90,30,0)'); g.addColorStop(.5, 'rgba(255,140,50,.55)'); g.addColorStop(1, 'rgba(255,230,160,.85)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 9, y + 3); ctx.quadraticCurveTo(x - 6 + Math.sin(t * 20 + i) * 4, y - hh * .5, x + Math.sin(t * 9 + i) * 5, y - hh); ctx.quadraticCurveTo(x + 6, y - hh * .5, x + 9, y + 3); ctx.closePath(); ctx.fill(); }
+        ctx.restore(); }]); } },
+    box(h, box) { box(h.x, (FLOOR_TOP + FLOOR_BOT) / 2, 0, 40, 120); },
+  });
+  // GAZE OF A THOUSAND FACES (mask): its faces open their eyes one after another; each line of sight follows you, holds, and burns. They overlap: keep moving
+  TELL_FX.w4gaze = (e, t, k) => { ctx.save(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + t; ctx.beginPath(); ctx.moveTo(e.x, e.y - e.z * .3 - 60); ctx.lineTo(e.x + Math.cos(a) * 90 * k, e.y - 60 + Math.sin(a) * 40 * k); ctx.stroke(); } ctx.restore(); };
+  PLAN_FX.w4gaze = (e) => {
+    const n = 6; e.w4T = null; sfx('charge', 2);
+    for (let i = 0; i < n; i++) hazards.push({ kind: 'w4gazebeam', delay: i * .34, a: rand(-.9, .9) + (i % 2 ? Math.PI : 0), track: .6, hold: .26, burn: .16, x: P.x, y: P.y, dmg: Math.round(edmg(e) * .85), hit: false, t: 9, max: 9 });
+    act(e, 'gaze', (h, dt, e) => { if (h.el > n * .34 + 1.1) { recover(e, 1.3); return true; } return false; });
+  };
+  reg('w4gazebeam', {
+    update(h, dt) { if (h.delay > 0) { h.delay -= dt; h.x = P.x; h.y = P.y; return; } h.el = (h.el || 0) + dt;
+      if (h.el < h.track) { h.x += (P.x - h.x) * Math.min(1, dt * 9); h.y += (P.y - h.y) * Math.min(1, dt * 9); }
+      else if (h.el >= h.track + h.hold && h.el < h.track + h.hold + h.burn) { if (!h.fired) { h.fired = true; sfx('shoot'); shakeMag = Math.max(shakeMag, 4); }
+        const c = Math.cos(h.a), s = Math.sin(h.a) * .35, dx = P.x - h.x, dy = P.y - h.y, d = Math.abs(dx * s - dy * c) / Math.hypot(c, s);
+        if (!h.hit && d < 13 && P.z < 60) { h.hit = true; hitP(h.dmg, h.x - c * 40, true); } }
+      else if (h.el >= h.track + h.hold + h.burn) h.t = -1; },
+    draw(h, t) { if (h.delay > 0 || !h.el) return; const c = Math.cos(h.a), s = Math.sin(h.a) * .35, L = 700, lock = h.el >= h.track, fire = h.el >= h.track + h.hold;
+      ctx.save(); ctx.lineCap = 'round';
+      if (!fire) { ctx.strokeStyle = lock ? `rgba(255,120,110,${.55 + .45 * Math.sin(t * 50)})` : 'rgba(255,140,120,.35)'; ctx.lineWidth = lock ? 2.4 : 1.2; ctx.setLineDash(lock ? [] : [8, 6]); }
+      else { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(220,170,255,.9)'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(h.x - c * L, h.y - s * L); ctx.lineTo(h.x + c * L, h.y + s * L); ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 5; }
+      ctx.beginPath(); ctx.moveTo(h.x - c * L, h.y - s * L); ctx.lineTo(h.x + c * L, h.y + s * L); ctx.stroke();
+      if (!fire) { ctx.setLineDash([]); ctx.strokeStyle = 'rgba(255,140,120,.6)'; ctx.lineWidth = 1.4; ell(h.x, h.y, 14, 6); ctx.stroke(); }
+      ctx.restore(); },
   });
 
   // ======================================================================================================
