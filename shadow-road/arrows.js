@@ -41,13 +41,29 @@ function updateShoot(dt) {
   P.t += dt;
   if (P.t >= .22) P.state = P.z > 0 ? 'jump' : 'idle';
 }
+// the bow's eye: the foe the arrow is loosed at. Ahead of him in his lane; if he is aiming up or down, the one nearest that line
+function arrowTarget(z0) {
+  let best = null, bs = 1e9;
+  for (const e of enemies) { if (e.dead || e.state === 'dying' || e.state === 'enter') continue; // (not one still on its way in)
+    const dx = (e.x - P.x) * P.facing; if (dx < 8 || dx > 640 || Math.abs(e.y - P.y) > 44 + e.hw * .3) continue;
+    const off = Math.abs(Math.atan2(e.z + e.hh * .5 - z0, dx) - P.aim); if (Math.abs(P.aim) > .12 && off > .45) continue; // aimed: only what lies near the line
+    const s = Math.abs(P.aim) > .12 ? off * 400 + dx * .2 : dx + Math.abs(e.y - P.y) * 3; if (s < bs) { bs = s; best = e; } }
+  return best;
+}
+// in flight the arrow bends gently onto its foe: up to a flier's body, down to a crab or a slime, across into its lane
+function steerArrow(p, dt) {
+  const e = p.tgt; if (!e || e.dead) return;
+  const dx = (e.x - p.x) * Math.sign(p.vx); if (dx < -e.hw) { p.tgt = null; return; } // gone past it
+  const t = Math.max(.04, (dx + 4) / Math.abs(p.vx)), k = Math.min(1, dt * 14);
+  p.vz += ((Math.max(0, e.z) + e.hh * .5 - p.z) / t - p.vz) * k; p.vy = (p.vy || 0) + (clamp((e.y - p.y) / t, -260, 260) - (p.vy || 0)) * k;
+}
 function loose() {
   P.drawing = false; P.t = 0; save.arrows--; persist(); refreshArrows();
   const T = aTier(), lvl = Math.min(5, save.alv || 1), k = P.charge, sp = 520 + 320 * k;
   const perfect = P.full && P.sinceFull < .12; // let go the instant the draw is full: a perfect release always crits
   if (perfect) { floatText(P.x, P.y, 96, 'PERFECT', '#FFE08A', 15); flashT = .06; burst(P.x + P.facing * 28, P.y, P.z + 40, ['#FFE08A', '#FFFFFF'], 14, 'spark', P.facing, true); }
   projs.push({ owner: 'p', arrow: lvl, x: P.x + P.facing * 22, y: P.y, z: Math.max(30, P.z + 40), vx: P.facing * sp * Math.cos(P.aim), vz: sp * Math.sin(P.aim),
-    dmg: Math.round(T.dmg * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1) * (1 + gearStat('arrow'))), perfect, life: 1.3, hit: new Set(), pierce: k >= 1 ? T.pierce : 0, crit: T.crit + (k >= 1 ? .1 : 0), blast: k >= 1 ? T.blast : T.blast * .5, full: k >= 1 });
+    dmg: Math.round(T.dmg * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1) * (1 + gearStat('arrow'))), perfect, life: 1.3, hit: new Set(), tgt: arrowTarget(Math.max(30, P.z + 40)), pierce: k >= 1 ? T.pierce : 0, crit: T.crit + (k >= 1 ? .1 : 0), blast: k >= 1 ? T.blast : T.blast * .5, full: k >= 1 });
   sfx('shoot'); P.vx = -P.facing * (40 + 60 * k);
 }
 // while drawn: a faint line along the shot, brightening to gold at full strength
@@ -65,11 +81,11 @@ function arrowHit(p) {
   for (const e of enemies) {
     if (e.dead || p.hit.has(e)) continue;
     const dx = (e.x - p.x) * Math.sign(p.vx);
-    if (dx < -e.hw - 6 || dx > e.hw + 16 || Math.abs(e.y - p.y) > 20 + e.hw * .2 || p.z < e.z - 6 || p.z > e.z + e.hh + 10) continue;
+    if (dx < -e.hw - 6 || dx > e.hw + 16 || Math.abs(e.y - p.y) > 24 + e.hw * .3 || p.z < e.z - 12 || p.z > e.z + e.hh + 16) continue; // (a little forgiving: an arrow that grazes a foe takes it)
     if (dx < bd) { bd = dx; best = e; }
   }
   if (!best) return false;
-  p.hit.add(best);
+  p.hit.add(best); if (best === p.tgt) p.tgt = null;
   strike(best, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .08 + p.crit * .7 });
   burst(best.x, best.y, p.z, ['#FFFFFF', '#E8D8B0'], 8, 'spark', Math.sign(p.vx));
   if (p.blast) { // rune and starfall arrows burst where they land
