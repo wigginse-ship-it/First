@@ -730,11 +730,11 @@ const SR_KINDS = {
     build(G) { const r = G.r; G.merchant = `${r.pick(['Grimbald', 'Old Tessaly', 'Mother Quill', 'Hobb', 'Cassius Fen', 'Lirien', 'Sorrowmint', 'Bartholomew Nine', 'Nell of the Ninety Pockets'])}, ${r.pick(['Pedlar of Shadow', 'Dealer in Small Wonders', 'Purveyor of Lost Things', 'Factor of the Black Road', 'Who Sells Doors'])}`;
       G.wares = r.shuffle(Object.keys(SR_WARES)).filter(k => SR_WARES[k].ok()).slice(0, 4); return { len: 1300, rawWaves: [] }; },
     start(R) { R.pads = R.gen.wares.map((id, i) => ({ id, x: 440 + i * 128, y: FLOOR_TOP + 50, p: 0, price: SR_WARES[id].price() })); R.greet = false; },
-    update(R, dt) { if (!R.greet && P.x > 330) { R.greet = true; floatText(1000, FLOOR_TOP + 30, 130, pick(['WARES FROM A HUNDRED SHADOWS', 'NO REFUNDS IN SHADOW, PRINCE', 'STAND A WHILE AND IT IS YOURS', 'EVERYTHING HAS A PRICE. THESE ARE CHEAP']), '#EED48A', 13); }
+    update(R, dt) { if (!R.greet && P.x > 330) { R.greet = true; floatText(930, FLOOR_TOP + 30, 130, pick(['WARES FROM A HUNDRED SHADOWS', 'NO REFUNDS IN SHADOW, PRINCE', 'STAND A WHILE AND IT IS YOURS', 'EVERYTHING HAS A PRICE. THESE ARE CHEAP']), '#EED48A', 13); }
       srPads(R, dt, .6, (pd) => { const W = SR_WARES[pd.id], [n, cur] = pd.price;
         if (save[cur] < n) { floatText(pd.x, pd.y, 110, `NOT ENOUGH ${cur.toUpperCase()}`, '#FF9A8A', 13); return; }
         save[cur] -= n; pd.done = true; W.give(R, pd); persist(); refreshHud(true); sfx('buy'); burst(pd.x, pd.y, 50, ['#FFFFFF', '#EED48A'], 20, 'spark', 0, true); floatText(pd.x, pd.y, 100, W.name.toUpperCase(), '#EED48A', 14); }); },
-    list(R, list, t) { srStall(R, list, t); }, boxes(R, box) { for (const pd of R.pads) box(pd.x, pd.y, 0, 50, 110); box(1000, FLOOR_TOP + 30, 0, 90, 150); } },
+    list(R, list, t) { srStall(R, list, t); }, boxes(R, box) { for (const pd of R.pads) box(pd.x, pd.y, 0, 50, 110); box(930, FLOOR_TOP + 30, 0, 90, 150); } },
   gamble: { place: ['Gaming House', 'Table', 'Wager', 'Card Room'], sub: () => 'THREE CARDS · ONE FORTUNE',
     build(G) { G.deal = G.r.shuffle(['fortune', 'plain', 'ambush']); G.pool = srRoster(G).filter(k => EDEF[k].hp < 130); return { len: 1300, rawWaves: [] }; },
     start(R) { R.pads = R.gen.deal.map((id, i) => ({ id, x: 500 + i * 150, y: FLOOR_TOP + 44, p: 0, flip: 0 })); },
@@ -1012,7 +1012,7 @@ function srAltars(R, list, t) {
   }
 }
 function srStall(R, list, t) {
-  const p = R.gen.pal, mx = 1000, my = FLOOR_TOP + 30;
+  const p = R.gen.pal, mx = 930, my = FLOOR_TOP + 30;
   list.push([my, () => { const sp = propSprite('srstall', 150, 140, 75, 128, () => { // a pedlar's stall: a striped awning, a cloth-hung table, and the pedlar hooded behind it
       ctx.fillStyle = '#3A2A20'; ctx.fillRect(-58, -112, 5, 112); ctx.fillRect(53, -112, 5, 112);
       ctx.fillStyle = '#2A1E2A'; ctx.beginPath(); ctx.moveTo(-18, -38); ctx.quadraticCurveTo(-22, -84, 0, -92); ctx.quadraticCurveTo(22, -84, 18, -38); ctx.closePath(); ctx.fill(); // the pedlar, hooded
@@ -1074,7 +1074,7 @@ function srOverlay() {
     if (R.chest) hole(R.chest.x, R.chest.y - 20, 90);
     for (const pd of R.pads || []) hole(pd.x, pd.y - 40, 70, .8);
     for (const s of R.stones || []) if (s.f > 0 || R.phase === 'input') hole(s.x, s.y, 50, .5 + .5 * s.f);
-    if (R.kind === 'merchant') hole(1041, FLOOR_TOP - 44, 110);
+    if (R.kind === 'merchant') hole(971, FLOOR_TOP - 44, 110);
     ctx.save(); ctx.setTransform(ctx.getTransform()); ctx.imageSmoothingEnabled = true; ctx.drawImage(srDarkC, 0, 0, w * S, h * S); ctx.restore();
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; // eyes in the dark: you can always tell where they are
     for (const e of enemies) { if (e.dead) continue; const x = e.x - camX, y = e.y - e.z - e.hh * (e.srScale || 1) * .8, f = e.facing || 1;

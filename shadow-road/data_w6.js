@@ -22,12 +22,12 @@
     w6skybird:   { name: 'Bird of Daylight', draw: 'w6skybird', mat: 'dream', move: 'fly', hover: 62, hp: 36, spd: 90, hw: 20, hh: 20, dmg: 10, plans: ['w6stoop', 'w6shower', 'w6stoop'], wind: .65, cd: [1.4, 2.4], ranged: 1, reach: 140, weight: 1.15, shards: [5, 8], kind: 'creature' },
     w6elephant:  { name: 'Stilt Elephant', draw: 'w6elephant', mat: 'dream', move: 'ground', hp: 170, spd: 34, hw: 26, hh: 132, dmg: 17, plans: ['w6stomp', 'w6obelisk', 'w6stomp'], wind: .8, cd: [1.6, 2.6], reach: 60, weight: .4, poise: 4, shards: [12, 16], sigil: .5 },
     // the crutches the Sleeper leans on (part of its fight; never sent anywhere else)
-    w6crutch:    { name: 'Crutch', noRandom: 1, draw: 'w6crutch', mat: 'dream', move: 'ground', hp: 70, spd: 0, hw: 15, hh: 120, dmg: 0, plans: ['w6none'], wind: 1, cd: [9, 9], reach: 0, weight: 0, shards: [3, 5] },
+    w6crutch:    { name: 'Crutch', noRandom: 1, draw: 'w6crutch', mat: 'dream', move: 'ground', hp: 70, spd: 0, hw: 15, hh: 60, dmg: 0, plans: ['w6none'], wind: 1, cd: [9, 9], reach: 0, weight: 0, shards: [3, 5] },
   });
 
   BOSSES.sleeper = {
     close: 'w6none', name: 'The Sleeper', title: 'IT IS DREAMING ALL OF THIS', draw: 'w6sleeper', mat: 'dream', move: 'fly', hover: 60,
-    hp: 1250, spd: 60, hw: 74, hh: 132, dmg: 20, wind: .6, cd: [.8, 1.3], weight: 0, poise: 0, ranged: 1, reach: 80,
+    hp: 1250, spd: 60, hw: 60, hh: 104, dmg: 20, wind: .6, cd: [.8, 1.3], weight: 0, poise: 0, ranged: 1, reach: 80,
     // (its whole fight is run by the 'w6sleep' rule: these are only the dreams each phase can send)
     p1: ['w6golconda', 'w6train', 'w6golconda'], p2: ['w6rook', 'w6bishop', 'w6knight'], p3: ['w6alarm', 'w6gaze', 'w6tears'],
   };

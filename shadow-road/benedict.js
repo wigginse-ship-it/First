@@ -94,7 +94,8 @@
   hurtEnemy = function (e, dmg, dir, m, crit) {
     if (isBen(e) && !e.dead) {
       if (e.state === 'w5morph') return;
-      const ph = shapeOf(e); if (ph < 4) { const floor = ENDS[ph + 1] * e.maxHp - 1; dmg = Math.max(0, Math.min(dmg, Math.ceil(e.hp - floor))); }
+      const ph = shapeOf(e); if (ph < 4) { const floor = ENDS[ph + 1] * e.maxHp - 1; dmg = Math.max(1, Math.min(dmg, Math.ceil(e.hp - floor)));
+        const r = _hurt(e, dmg, dir, m, crit); if (!e.dead && e.hp <= floor + 1) startMorph(e, ph + 1); return r; } // the blow that ends a shape starts the next
     }
     return _hurt(e, dmg, dir, m, crit);
   };

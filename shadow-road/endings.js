@@ -1,10 +1,10 @@
 'use strict';
 // ---------- the end of each world: a short painted vignette after its boss falls ----------
-// Worlds 1-4 each close on a few seconds of their own before the rewards and the forge: the boss room settles (Act I,
+// Worlds 1-5 each close on a few seconds of their own before the rewards and the forge: the boss room settles (Act I,
 // the live scene with this file's touches laid into it), then a second panel shows the road going on (Act II, painted
 // from the next stretch of that world's own backgrounds). A line of narration comes up in the banner. Tap, click,
 // Enter, Space or any game button skips it; on a new cycle of the road it runs faster and can be skipped at once.
-// World 5 keeps its own, longer ending (art_w5.js), which wraps stageClear outside this one and is left untouched.
+// The last world, Tir-na Nog'th, keeps its own, longer ending (art_w5.js), which wraps stageClear outside this one and is left untouched.
 // Everything here hooks in by wrapping: stageClear, drawScene, drawBossRoom, mechBoxes and mechList.
 (() => {
   const cl01 = (k) => clamp(k, 0, 1), sm = (k) => { k = cl01(k); return k * k * (3 - 2 * k); };
@@ -350,11 +350,12 @@
 
   // ======================================================================================================
   // WORLD 4, THE COURTS OF CHAOS: the faces the Ty'iga wore fall silent, the Abyss goes still, and he draws a Trump: the
-  // moon over a ghostly city. It comes alive in his hand, and he steps through it, toward Tir-na Nog'th
+  // long-shadowed square of a stranger's dream. It comes alive in his hand, and he steps through it, into the Dreaming Shadow
+  // (the card shows whichever world comes next: theme2)
   // ======================================================================================================
   const W4 = {
-    theme2: 'moon', seed: 241, d0: 7, d1: 7, noCells: 1, bannerAt: 6.1, dur: 10, music: 'chaos', still: 1.2,
-    title: 'A Thousand Faces, Silent', sub: 'HE DREW A CARD FROM THE DECK, AND THE MOON WAS ON IT',
+    theme2: 'dream', seed: 241, d0: 7, d1: 7, noCells: 1, bannerAt: 6.1, dur: 10, music: 'chaos', still: 1.2,
+    title: 'A Thousand Faces, Silent', sub: 'HE DREW A CARD FROM THE DECK, AND ON IT AN AFTERNOON THAT NO ONE HAD EVER PAINTED', label: 'THE DREAMING SHADOW',
     setup(E) {
       const b = E.boss; E.masks = []; E.halo0 = b ? (b.w4halo ?? 1) : 1;
       if (b) for (let i = 0; i < 7; i++) E.masks.push({ x: b.x + (i - 3) * 20 * (b.size || 1) + rand(-5, 5), y: b.y + rand(-22, 16), z0: 70 + hsh(i + 3) * 60, at: .2 + i * .17 + hsh(i) * .08, rot: rand(-.5, .5), lr: rand(-1.2, 1.2), s: rand(.9, 1.25) });
@@ -367,7 +368,7 @@
       if (T > 2.4 && !E.drew) { E.drew = 1; sfx('trump'); }
       if (T > 4.6) { const tx = E.cardX + camX - E.side * 4; if (!E.inCard) walkTo(E, dt, tx, 70); }
       E.heroA = 1 - sm((T - 5.2) / .5); if (E.heroA <= 0 && !E.inCard) { E.inCard = 1; sfx('whoosh'); }
-      if (T > 5.8 && !E.moon) { E.moon = 1; if (TRACKS.moon) playMusic('moon'); }
+      if (T > 5.8 && !E.moon) { E.moon = 1; if (TRACKS[this.theme2]) playMusic(this.theme2); }
     },
     pose(E, pose) { // the card held up before him, at arm's length
       const T = E.t, q = sm((T - 2.1) / .45) * (1 - sm((T - 3.6) / .5));
@@ -395,10 +396,10 @@
       ctx.save(); rrect(cx - w / 2, cy - h / 2, w, h, 4 * (1 - zoom)); ctx.clip();
       ctx.translate(px, py); ctx.scale(sc, sc); ctx.translate(-S1[0], -S1[1]);
       const camM = 280 + (T - 3) * 6 * alive, tm = 1000 + (T - 3) * alive;
-      withSet(B, () => paintWorld('moon', { cam: camM }, tm));
+      withSet(B, () => paintWorld(this.theme2, { cam: camM }, tm));
       if (E.inCard || T > 5.2) { const k = sm((T - 5.2) / .6), mt = Math.max(0, T - 5.6); // and he is in it, walking on toward the city
         ctx.save(); ctx.translate(-camM, 0); inkHero(camM + VW * .4 + mt * 34, FLOOR_TOP + 62, 1, 1, poseAs('walk', 5 + mt * 3.4), k, E.inCard); ctx.restore(); }
-      gradeFrame('moon');
+      gradeFrame(this.theme2);
       if (alive < 1) { ctx.fillStyle = `rgba(200,210,235,${.5 * (1 - alive)})`; view(); } // still only a painting, misted with silver
       ctx.restore();
       if (zoom < 1) { // the frame, which opens out past the edges as he goes through
@@ -408,7 +409,7 @@
         ctx.strokeStyle = OUT; ctx.lineWidth = 1.1; ctx.strokeRect(cx - w / 2 - b, cy - h / 2 - b, w + b * 2, h + b * 2); ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
         if (hc > 60) { ctx.fillStyle = 'rgba(40,48,80,.55)'; for (let i = 0; i < 22; i++) { const q = i / 21; circle(cx - w / 2 - b / 2 + q * (w + b), cy - h / 2 - b / 2, .8); ctx.fill(); circle(cx - w / 2 - b / 2 + q * (w + b), cy + h / 2 + b / 2, .8); ctx.fill(); }
           for (const [px, py] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) silverRose(cx + px * (w / 2 + b / 2), cy + py * (h / 2 + b / 2), b * .3, false);
-          ctx.globalAlpha *= cl01((hc - 60) / 40) * (1 - zoom); ctx.fillStyle = 'rgba(8,12,30,.85)'; rrect(cx - w * .4, cy + h / 2 - 20, w * .8, 14, 3); ctx.fill(); ctx.fillStyle = '#E8EEF8'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText("TIR-NA NOG'TH", cx, cy + h / 2 - 10.5); }
+          ctx.globalAlpha *= cl01((hc - 60) / 40) * (1 - zoom); ctx.fillStyle = 'rgba(8,12,30,.85)'; rrect(cx - w * .4, cy + h / 2 - 20, w * .8, 14, 3); ctx.fill(); ctx.fillStyle = '#E8EEF8'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(this.label, cx, cy + h / 2 - 10.5); }
         ctx.restore();
       }
       ctx.restore();
@@ -420,7 +421,38 @@
     },
     act2(E, T, dt, t) { this.card(E, T, t); cycleTint(); },
   };
-  const WORLDS = { bloom: W1, sky: W2, prism: W3, chaos: W4 };
+  // ======================================================================================================
+  // THE DREAMING SHADOW: the Sleeper wakes, and what it dreamed goes out, colour first and then line, until there is
+  // only the bare ground of the panel and the prince standing on it; then a new picture is painted in round him, stroke
+  // by stroke: night, the full moon, and a stair of moonlight going up to a city in the sky. He walks on toward it
+  // ======================================================================================================
+  const PAPER = '#EFE6D2';
+  const W6E = {
+    theme2: 'moon', seed: 251, d0: 4.4, d1: 5.8, dir: 1, bannerAt: 5, dur: 11, music: 'moon', still: 1.4,
+    title: 'And the Dreamer Woke', sub: 'AND ALL IT HAD DREAMED WENT OUT, BUT THE MOON, AND A CITY THAT IS ONLY THERE BY ITS LIGHT',
+    setup(E) { E.x0 = P.x; },
+    update(E, T, dt) { if (T > .3 && !E.chime) { E.chime = 1; sfx('learned'); } if (T > 1.3 && !E.chime2) { E.chime2 = 1; sfx('trump'); } },
+    over(E, T, t) { // the dream unpaints itself from the edges in, the colour draining first; he is left on bare paper
+      const k = sm((T - 1) / 2.6), dr = sm((T - .6) / 1.6);
+      if (dr > 0) { ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${.85 * dr})`; view(); ctx.restore(); }
+      if (k > 0) { const cx = P.x - camX, cy = P.y - 40, R = lerp(VW * 1.2, 70, k);
+        ctx.save(); const g = ctx.createRadialGradient(cx, cy, R * .55, cx, cy, R); g.addColorStop(0, 'rgba(239,230,210,0)'); g.addColorStop(1, PAPER); ctx.fillStyle = g; view();
+        ctx.beginPath(); ctx.rect(0, Y_OFF, VW, VIEW_H); ctx.arc(cx, cy, R, 0, TAU, true); ctx.fillStyle = PAPER; ctx.fill('evenodd');
+        ctx.strokeStyle = `rgba(80,70,60,${.35 * (1 - k * .5)})`; ctx.lineWidth = .8; // what is left of the dream: the pencil lines under the paint
+        for (let i = 0; i < 26; i++) { const x = hsh(i) * VW, y = Y_OFF + hsh(i + 5) * VIEW_H, d = Math.hypot(x - cx, y - cy); if (d < R * .7) continue; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 20 + hsh(i + 9) * 40, y + (hsh(i + 11) - .5) * 20); ctx.stroke(); }
+        ctx.restore();
+        ctx.save(); ctx.translate(-camX, 0); inkHero(P.x, P.y, 1, P.facing, poseAs('idle'), 1, true); ctx.restore(); }
+    },
+    act2(E, T, dt, t) { // the next panel, painted in over the bare ground: the stair of moonlight, and he walks toward it
+      const u = T - this.d0, B = freshAlt(E), cam = 300 + 14 * u;
+      ctx.fillStyle = PAPER; view();
+      withSet(B, () => paintWorld('moon', { cam }, t));
+      P.state = 'walk'; P.facing = 1; P.walk += dt * 40 / 10.2;
+      ctx.save(); ctx.translate(-cam, 0); inkHero(cam + VW * .2 + 40 * u, FLOOR_TOP + 60, 1, 1, poseAs('walk'), 1, true); ctx.restore();
+      gradeFrame('moon'); cycleTint();
+    },
+  };
+  const WORLDS = { bloom: W1, sky: W2, prism: W3, chaos: W4, dream: W6E };
 
   // ---------------- running it ----------------
   function render(t) {

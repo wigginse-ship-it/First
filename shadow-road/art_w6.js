@@ -897,7 +897,7 @@
   // ---------------- a CRUTCH of the Sleeper: a great forked prop planted in the quilt, holding up part of its face ----------------
   CREATURES.w6crutch = function (e, a) {
     a = a || {}; const t = a.t || 0, top = e.w6top || [0, -120], hpK = e.hp / e.maxHp, sh = (e.flash > 0 ? Math.sin(t * 80) * 1.5 : 0) + Math.sin(t * 1.3 + (e.slot || 0)) * .6;
-    const [dx, dy] = top;
+    const [dx, dy] = top; W6.skipHatch = true;
     ctx.save(); ctx.translate(sh * .3, 0);
     crutchShape(0, 0, dx + sh, dy, 7, 16);
     if (DET()) { // cracks open as it is battered, and splinters stick out
@@ -914,7 +914,8 @@
   // spiralling, when it wakes). Drawn about the lowest point of its jowls; o: { eyes 0..1, sag 0..1, mouth 0..1, mood
   // -1 (pained) .. 1 (pleased), look -1..1, snore 0..1, t }
   // ======================================================================================================
-  const SLEEP_ANCHORS = [[-86, -26], [86, -26], [-30, 2], [34, 4]]; // where the crutches hold it up (local, before its size)
+  const HS = .74; // (it is drawn at this fraction of its painted size)
+  const SLEEP_ANCHORS = [[-86, -26], [86, -26], [-30, 2], [34, 4]].map(([x, y]) => [x * HS, y * HS]); // where the crutches hold it up (local, before its size)
   function sleeperHead(o) {
     const t = o.t || 0, sag = o.sag || 0, eyes = o.eyes || 0, mo = o.mouth || 0, mood = o.mood || 0, look = o.look || 0, br = Math.sin(t * 1.1) * (1 - eyes * .6);
     const S = (x, y) => [x, y + (y > -60 ? (y + 60) * sag * .35 : 0)]; // the sag stretches its lower half downward
@@ -987,10 +988,10 @@
   }
   CREATURES.w6sleeper = function (e, a) {
     a = a || {}; const t = a.t || 0;
-    const S = e.w6S || {};
+    const S = e.w6S || {}; ctx.scale(HS, HS); if (e.state === 'w6act' && e.flash <= 0) W6.skipHatch = true;
     sleeperHead({ t, sag: S.sag || 0, eyes: S.eyes || 0, mouth: S.mouth || 0, mood: (S.mood || 0) + (a.hurt ? -.6 : 0), look: S.look || 0, flush: S.flush || 0, drool: S.drool || 0 });
   };
-  W6.sleeperHead = sleeperHead; W6.snoreZs = snoreZs; W6.ANCH = SLEEP_ANCHORS;
+  W6.sleeperHead = sleeperHead; W6.HS = HS; W6.snoreZs = snoreZs; W6.ANCH = SLEEP_ANCHORS;
 
   // the attacks, rules and passages plug into world.js and zones.js, which load after this file: data_w6.js calls this once they exist
   const late = () => {
@@ -1278,7 +1279,7 @@
     return { L, R, nc, nr: 4, cw, y0, rh, cx: (c) => L + (c + .5) * cw, cy: (r) => y0 + (r + .5) * rh, col: (x) => clamp(Math.floor((x - L) / cw), 0, nc - 1), row: (y) => clamp(Math.floor((y - y0) / rh), 0, 3) }; };
   W6.BOARD = BOARD;
   const CRUTCH_FEET = [[-200, 40], [200, 44], [-100, 86], [110, 90]];
-  function anchorAt(e, i) { const [ax, ay] = W6.ANCH[i], s = e.size || 1.15, S = e.w6S || {}; return [e.x + ax * s, e.y - e.z + (ay + (ay + 60) * (S.sag || 0) * .35) * s]; }
+  function anchorAt(e, i) { const [ax, ay] = W6.ANCH[i], s = e.size || 1.15, S = e.w6S || {}, hs = W6.HS; return [e.x + ax * s, e.y - e.z + (ay + (ay + 60 * hs) * (S.sag || 0) * .35) * s]; }
   function plantCrutch(e, i, hpK, grow) {
     const [fx, fy] = CRUTCH_FEET[i], c = spawnEnemy('w6crutch', 1, false);
     c.x = clamp(e.x + fx, leftWall() + 20, rightWall() - 20); c.y = FLOOR_TOP + fy; c.z = 0; c.facing = 1; c.w6i = i; c.hp = c.maxHp = Math.round(c.maxHp * hpK);
@@ -1286,16 +1287,18 @@
     const [ax, ay] = anchorAt(e, i); c.w6top = [ax - c.x, ay - c.y]; B.crutches.push(c); return c;
   }
   function initSleeper(e) {
-    e.w6init = 1; e.x = homeX(); e.y = FLOOR_TOP + 16; e.z = 74; e.facing = 1; e.state = 'w6act'; e.w6a = 'sleep'; e.plan = null;
+    e.w6init = 1; e.x = homeX(); e.y = FLOOR_TOP + 16; e.z = 62; e.facing = 1; e.state = 'w6act'; e.w6a = 'sleep'; e.plan = null;
     e.w6S = { sag: 0, eyes: 0, mouth: .15, mood: 0, look: 0 };
-    B = W6.B = { mode: 'asleep', t: 0, dreamT: 3.2, dreamN: 0, crutches: [], broken: 0, regrows: 0, vuln: false, boardK: 0, iris: null, castT: 2, moveT: 1, cast: 0, gx: e.x, gy: e.y, gz: 74 };
+    B = W6.B = { mode: 'asleep', t: 0, dreamT: 3.2, dreamN: 0, crutches: [], broken: 0, regrows: 0, vuln: false, boardK: 0, iris: null, castT: 2, moveT: 1, cast: 0, gx: e.x, gy: e.y, gz: 62 };
     for (let i = 0; i < 4; i++) plantCrutch(e, i, 1, false);
     banner(e.def.name, 'IT IS DREAMING ALL OF THIS · KNOCK AWAY ITS CRUTCHES', 2.6);
   }
+  const puffAt = (x, y) => { for (let i = 0; i < 8; i++) parts.push({ x: x + rand(-20, 20), y, z: rand(0, 40), vx: rand(-30, 30), vy: 0, vz: rand(20, 60), life: .8, max: .8, col: 'rgba(240,236,250,.7)', size: rand(5, 9), shape: 'puff', rot: 0, vr: 0 }); };
   function toPhase(e, n) {
     phaseDrop(e); e.phase = n; e.dmg = Math.round(e.baseDmg * [1, 1.12, 1.25][n - 1]);
     for (const c of B.crutches) if (!c.dead) { c.dead = true; c.w6counted = 1; c.state = 'dying'; c.death = 'w6snap'; c.t = c.dmax = 1.2; c.vx = 0; c.deadAt = performance.now() / 1000; c.dir = Math.sign(c.x - e.x) || 1; }
     hazards = hazards.filter(h => !['w6man', 'w6train', 'w6piece'].includes(h.kind));
+    for (const c of corpses) if (c.type === 'w6crutch') { c.remove2 = 1; puffAt(c.x, c.y); } corpses = corpses.filter(c => !c.remove2);
     shakeMag = 14; flashT = .2; sfx('roar'); zoom = .06;
     if (n === 2) { B.mode = 'turn'; B.t = 0; banner('The Dream of the Board', 'IT PLAYS AGAINST YOU · STAY OFF THE SQUARES IT LIGHTS', 2.8); }
     if (n === 3) { B.mode = 'wake'; B.t = 0; banner('It Is Waking', 'THE DREAM IS CLOSING · EVERY BLOW HOLDS IT OPEN', 2.8); }
@@ -1394,7 +1397,7 @@
     ups(h, list, t) { const Bd = BOARD(); if (h.el < h.wait * .5) return; const pos = h.el < h.wait ? 0 : Math.min(h.path.length - 1, (h.el - h.wait) * h.sp), i = Math.floor(pos), f = pos - i, a = h.path[i], b = h.path[Math.min(h.path.length - 1, i + 1)];
       const x = lerp(Bd.cx(a[0]), Bd.cx(b[0]), h.hop ? sm(f) : f), y = lerp(Bd.cy(a[1]), Bd.cy(b[1]), h.hop ? sm(f) : f), z = h.hop ? Math.sin(f * Math.PI) * 60 : 0;
       const al = h.el < h.wait ? (h.el / h.wait - .5) * 2 : h.endT ? 1 - (h.el - h.endT) / .35 : 1;
-      list.push([y, () => { shadow(x, y, 12); ctx.save(); ctx.globalAlpha = Math.max(0, al); ctx.translate(x, y - z); ctx.scale(1.2, 1.2); PIECE_DRAW[h.type](h.white ? '#EEE6D6' : '#2A2228'); if (DET() && h.white) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(-7, -30, 2.4, 22); } ctx.restore(); }]); },
+      list.push([y, () => { shadow(x, y, 12); ctx.save(); ctx.globalAlpha = Math.max(0, al); ctx.translate(x, y - z); ctx.scale(1.7, 1.7); PIECE_DRAW[h.type](h.white ? '#EEE6D6' : '#2A2228'); if (DET() && h.white) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(-7, -30, 2.4, 22); } ctx.restore(); }]); },
     box(h, box) { box(camX + VW / 2, FLOOR_BOT, 0, VW / 2 + 20, 160); },
   });
   // ---------------- its waking: tears, its gaze, its alarm ----------------
@@ -1425,12 +1428,12 @@
       B.crutches = B.crutches.filter(c => !c.remove);
       if (ph === 1) {
         if (B.mode === 'asleep') {
-          B.vuln = false; B.gz = 74 - S.sag * 18; S.eyes = 0; S.mouth = .12 + Math.max(0, Math.sin(t * 1.3)) * .12 + W6.mouth * .5; S.mood = 0;
+          B.vuln = false; B.gz = 62 - S.sag * 14; S.eyes = 0; S.mouth = .12 + Math.max(0, Math.sin(t * 1.3)) * .12 + W6.mouth * .5; S.mood = 0;
           B.dreamT -= dt;
           if (B.dreamT <= 0) { B.dreamN++; B.dreamT = 3.6 - Math.min(1, B.broken * .25); if (B.dreamN % 2) dreamGolconda(e); else dreamTrain(e, B.broken >= 2 || B.regrows > 0 ? 2 : 1); }
           if (!B.crutches.some(c => !c.dead)) { B.mode = 'collapse'; B.t = 0; sfx('roar'); }
         } else if (B.mode === 'collapse') {
-          B.gz = Math.max(0, 74 * (1 - sm(B.t / .45)));
+          B.gz = Math.max(0, 62 * (1 - sm(B.t / .45)));
           if (B.t >= .45) { B.mode = 'down'; B.t = 0; e.sqx = 1.25; e.sqy = .78; shakeMag = 15; sfx('slam'); hitstop = Math.max(hitstop, .08); dust(e.x - 60, e.y + 6, 10); dust(e.x + 60, e.y + 6, 10); fx.push({ kind: 'ring', x: e.x, y: e.y + 10, z: 2, t: .5, max: .5, r: 170, col: '#F4E6C8', flat: 1 });
             floatText(e.x, e.y, 150, 'ITS FACE IS ON THE QUILT · STRIKE!', '#FFE6B0', 15); }
         } else if (B.mode === 'down') {
@@ -1439,7 +1442,7 @@
           else if (B.t > 7.5) { B.mode = 'rise'; B.t = 0; B.regrows++; S.sag = Math.max(.2, S.sag - .5); S.drool = 0; floatText(e.x, e.y, 150, 'IT PROPS ITSELF UP AGAIN', '#F4E6C8', 14);
             const pick3 = [0, 1, 2, 3].sort(() => Math.random() - .5).slice(0, B.regrows > 1 ? 2 : 3); B.broken = 4 - pick3.length; for (const i of pick3) plantCrutch(e, i, .7, true); }
         } else if (B.mode === 'rise') {
-          B.vuln = false; B.gz = 74 * sm(B.t / 1.1) - S.sag * 18;
+          B.vuln = false; B.gz = 62 * sm(B.t / 1.1) - S.sag * 14;
           if (B.t > 1.1) { B.mode = 'asleep'; B.t = 0; B.dreamT = 2; }
         }
       } else if (ph === 2) {
@@ -1457,12 +1460,12 @@
         }
       } else {
         if (B.mode === 'wake') { B.vuln = false; B.boardK = Math.max(0, 1 - B.t / 1.4); S.eyes = .5 + .5 * sm(B.t / 1.4); S.mouth = .7; S.mood = -.4; S.flush = 1; B.gz = 30;
-          if (!B.iris) B.iris = { r: 640, outT: 0 };
+          if (!B.iris) B.iris = { r: 380, outT: 0 };
           if (B.t > 1.8) { B.mode = 'waking'; B.t = 0; B.castT = 1.4; B.moveT = 0; } }
         else if (B.mode === 'waking') {
           B.vuln = true; S.eyes = 1; S.mood = -.3 + Math.sin(t * 3) * .2; S.mouth = .25 + W6.mouth * .7; S.look = clamp((P.x - e.x) / 200, -1, 1);
-          const I = B.iris; I.r = Math.max(118, I.r - dt * (I.r > 400 ? 30 : 11));
-          if (I.r <= 118) { I.minT = (I.minT || 0) + dt; if (I.minT > 1.2) { I.minT = 0; I.r = 420; wakeAttack(e, 'alarm'); floatText(e.x, e.y - e.z, 140, 'IT STIRS', '#FFE6B0', 16); } } else I.minT = 0;
+          const I = B.iris; I.r = Math.max(118, I.r - dt * (I.r > 300 ? 22 : 13));
+          if (I.r <= 118) { I.minT = (I.minT || 0) + dt; if (I.minT > 1.2) { I.minT = 0; I.r = 340; wakeAttack(e, 'alarm'); floatText(e.x, e.y - e.z, 140, 'IT STIRS', '#FFE6B0', 16); } } else I.minT = 0;
           B.moveT -= dt; if (B.moveT <= 0) { B.moveT = 2.4; const cx = homeX(); B.gx = clamp(cx + rand(-120, 120), leftWall() + 90, rightWall() - 90); B.gy = FLOOR_TOP + rand(16, 50); }
           B.gz = 26 + Math.sin(t * 1.6) * 5;
           B.castT -= dt; if (B.castT <= 0) { B.cast++; wakeAttack(e, ['gaze', 'tears', 'gaze', 'alarm'][B.cast % 4]); B.castT = 2.5; }
@@ -1475,12 +1478,12 @@
       if (B.iris && !B.dead && ph === 3) { const I = B.iris, sx = P.x - homeX(), sy = (P.y - P.z - 30) - (FLOOR_TOP + 40);
         if (Math.hypot(sx, sy) > I.r - 6 && P.state !== 'dead') { I.outT += dt; if (I.outT > .6) { I.outT = 0; hitP(Math.max(3, Math.round(edmg(e) * .3)), homeX(), false); floatText(P.x, P.y, 80, 'FORGOTTEN', '#C8D0F0', 13); } } else I.outT = 0; }
     },
-    boxes(m, box) { const e = SB(); if (!e) box(stage.len - VW / 2, FLOOR_TOP + 16, 74, 340, 300); },
+    boxes(m, box) { const e = SB(); if (!e) box(stage.len - VW / 2, FLOOR_TOP + 16, 62, 300, 240); },
     list(m, list, t) {
       const e = SB();
       if (!e && stage.bossRoom) { // before it is woken into the fight: it is already there, asleep on its crutches, snoring
-        const x = stage.len - VW / 2, y = FLOOR_TOP + 16, z = 74, s = 1.15, fake = { x, y, z, size: s, w6S: { sag: 0 } };
-        list.push([y, () => { shadow(x, y, 120); ctx.save(); ctx.translate(x, y - z); ctx.scale(s, s); sleeperHead({ t, mouth: .12 + Math.max(0, Math.sin(t * 1.3)) * .12 }); ctx.restore(); }]);
+        const x = stage.len - VW / 2, y = FLOOR_TOP + 16, z = 62, s = 1.15, fake = { x, y, z, size: s, w6S: { sag: 0 } };
+        list.push([y, () => { shadow(x, y, 120); ctx.save(); ctx.translate(x, y - z); ctx.scale(s * W6.HS, s * W6.HS); sleeperHead({ t, mouth: .12 + Math.max(0, Math.sin(t * 1.3)) * .12 }); ctx.restore(); }]);
         for (let i = 0; i < 4; i++) { const [fx, fy] = CRUTCH_FEET[i], cx = x + fx, cy = FLOOR_TOP + fy, [ax, ay] = anchorAt(fake, i);
           list.push([cy, () => { ctx.save(); ctx.translate(cx, cy); CREATURES.w6crutch({ w6top: [ax - cx, ay - cy], hp: 1, maxHp: 1, flash: 0, slot: i }, { t }); ctx.restore(); }]); }
         list.push([y + .1, () => onMain(() => snoreZs(x + 30, y - z - 20, t, 1, 1.4))]);
@@ -1658,7 +1661,7 @@
     ctx.save(); ctx.globalAlpha = e.fade !== undefined ? e.fade : 1;
     if (d === 'w6wake') { // the Sleeper wakes: its eyes fly open, and it is gone like a soap bubble, leaving the paint it was made of
       const S = e.w6S || {}; S.eyes = 1; S.mouth = 1 - k * .4; S.mood = .2;
-      if (k < .999) { ctx.save(); ctx.translate(e.x, e.y - e.z - k * 40); ctx.scale(e.size * (1 + k * .15), e.size * (1 + k * .15)); ctx.globalAlpha *= 1 - sm((k - .35) / .65); sleeperHead({ t, eyes: 1, mouth: S.mouth, mood: .1, flush: 1 }); ctx.restore();
+      if (k < .999) { ctx.save(); ctx.translate(e.x, e.y - e.z - k * 40); ctx.scale(e.size * W6.HS * (1 + k * .15), e.size * W6.HS * (1 + k * .15)); ctx.globalAlpha *= 1 - sm((k - .35) / .65); sleeperHead({ t, eyes: 1, mouth: S.mouth, mood: .1, flush: 1 }); ctx.restore();
         onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 40; i++) { const u = hsh(i), life = cl01(k * 1.6 - u * .6), x = e.x + (hsh(i + 3) - .5) * 220 * (1 + life), y = e.y - e.z - 80 - life * 160 + (hsh(i + 7) - .5) * 120;
           ctx.fillStyle = `rgba(${['255,236,200', '200,220,255', '255,200,170'][i % 3]},${.7 * Math.sin(life * Math.PI)})`; ctx.save(); ctx.translate(x, y); ctx.rotate(hsh(i + 9) * 3); ctx.fillRect(-6, -1.4, 12, 2.8); ctx.restore(); } ctx.restore(); }); }
     } else if (d === 'w6melt') { // the clock melts into a puddle of gold, its numbers floating on it
@@ -1678,6 +1681,8 @@
     }
     ctx.restore();
   };
+  // the crutches and the sleeping face keep their own smooth paint (the brushwork modelling of a figure would cover the whole arena)
+  { const _ha = hatchActor; hatchActor = function (...a) { if (W6.skipHatch) { W6.skipHatch = false; return; } return _ha(...a); }; }
   // blows: sinking into a sleeping head; landing harder on a fallen elephant; the Sleeper's waking held open by every hit
   const _strike = strike;
   strike = function (e, base, dir, m, echo) {
