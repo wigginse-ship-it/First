@@ -245,6 +245,6 @@ function drawWeaponPickup(k, t) {
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < 6; i++) { ctx.save(); ctx.translate(0, bob); ctx.rotate(t + i / 6 * TAU); ctx.fillStyle = 'rgba(255,220,120,.35)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(50, -6); ctx.lineTo(50, 6); ctx.closePath(); ctx.fill(); ctx.restore(); }
   ctx.restore();
-  ctx.save(); ctx.translate(-30, bob); ctx.rotate(-.5 + Math.sin(t * 2) * .15); drawWeapon(k.weapon, { noHand: 1 }); ctx.restore();
+  ctx.save(); ctx.translate(-30, bob); ctx.rotate(-.5 + Math.sin(t * 2) * .15); drawWeapon(k.weapon, { noHand: 1, tier: k.lvl || 1 }); // (drawn as the level it comes at) ctx.restore();
   ctx.restore();
 }

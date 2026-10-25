@@ -58,7 +58,7 @@ const BOONS = {
     give() { const id = TRUMP_ORDER.find(k => !save.trumps[k]); if (id) { save.trumps[id] = true; if (!save.trump) save.trump = id; } else { const k = pick(TRUMP_ORDER.filter(k => TL(k) < 3)); save.tlv[k] = TL(k) + 1; } } },
   hoard: { name: "The Unicorn's Hoard", sub: () => `${hoardN()} SHARDS`, ok: () => true, give() { const n = hoardN(); save.shards += n; runShards += n; } },
   ink: { name: 'The Inkwell of Dworkin', sub: () => `${5 + stageIdx} SIGILS`, ok: () => true, give() { save.sigils += 5 + stageIdx; runSigils += 5 + stageIdx; } },
-  blade: { name: 'A Blade from Shadow', sub: () => 'A WEAPON YOU HAVE NOT FOUND', ok: () => WEAPON_ORDER.some(id => id !== 'fists' && !save.owned[id]), give() { gainWeapon(pick(WEAPON_ORDER.filter(id => id !== 'fists' && !save.owned[id]))); } },
+  blade: { name: 'A Blade from Shadow', sub: () => 'A WEAPON YOU HAVE NOT FOUND', ok: () => WEAPON_ORDER.some(id => id !== 'fists' && !save.owned[id]), give() { gainWeapon(pick(WEAPON_ORDER.filter(id => id !== 'fists' && !save.owned[id])), foundLvl()); } },
 };
 const hoardN = () => Math.round(110 * (1 + stageIdx * .8) * (1 + .5 * save.cycle));
 function dealBoons() {

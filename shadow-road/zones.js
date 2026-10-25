@@ -25,7 +25,7 @@ function enterZone(z, Zs) { // Zs: a place outside the usual three (a hidden Tru
   for (const k of loot) { // whatever was left lying in the last place comes along
     if (k.kind === 'shard') { save.shards += k.val; runShards += k.val; }
     else if (k.kind === 'sigil') { save.sigils += k.val; runSigils += k.val; }
-    else if (k.kind === 'weapon' && !save.owned[k.weapon]) gainWeapon(k.weapon);
+    else if (k.kind === 'weapon' && !save.owned[k.weapon]) gainWeapon(k.weapon, k.lvl);
     else if (k.kind === 'gear') sweepGear(k); // armor left lying: into the bag, or salvaged if it is full
   }
   P.moonSaved = false; // a new place: moon-silver's refusal is ready again

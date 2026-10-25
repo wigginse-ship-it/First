@@ -451,8 +451,10 @@ function dropLoot(e) {
   if (Math.random() < (e.boss ? 1 : .15)) loot.push(makeLoot('heal', e.x, e.y, e.boss ? 50 : 25));
   if (e.dropWeapon && !save.owned[e.dropWeapon]) loot.push(makeLoot('weapon', e.x, e.y, 0, e.dropWeapon));
 }
+// a weapon found further down the road comes already worked: level 1 in the first world, rising to level 4 in the last
+const foundLvl = () => Math.min(4, 1 + Math.round(stageIdx * 3 / Math.max(1, STAGES.length - 1)));
 function makeLoot(kind, x, y, val, weapon) {
-  return { kind, val, weapon, x: x + rand(-14, 14), y: clamp(y + rand(-10, 10), FLOOR_TOP + 8, FLOOR_BOT), z: 14, vz: rand(160, 260), vx: rand(-60, 60), t: 0 };
+  return { kind, val, weapon, lvl: kind === 'weapon' ? foundLvl() : 0, x: x + rand(-14, 14), y: clamp(y + rand(-10, 10), FLOOR_TOP + 8, FLOOR_BOT), z: 14, vz: rand(160, 260), vx: rand(-60, 60), t: 0 };
 }
 function shockwave(x, y, r, m) {
   P.shocked = true; sfx('slam'); shakeMag = Math.max(shakeMag, 8); zoom = Math.max(zoom, .04);

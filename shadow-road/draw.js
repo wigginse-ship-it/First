@@ -38,8 +38,8 @@ function attackStance(pose, m, k) {
 }
 // The fencer's free hand (rapier), after the fencing references. Three carriages, blended from frame to frame by blendPose:
 //  guard: the classic counterbalance: the upper arm out level behind him at the shoulder, the elbow bent so the forearm
-//    points up, the hand above his head with the wrist relaxed and curled over (en garde, the wind-up of every stroke,
-//    and the recovery from it);
+//    points up, the hand above his head with the wrist relaxed and curled over (reached in the wind-up and the
+//    strike of each stroke; between blows, walking and standing, the arm hangs easy instead: rapierRelax);
 //  lunge: at full extension of a lunge or thrust it swings down and straight back along the rear leg, the palm open, and
 //    comes back up as he recovers (x: 0 guard .. 1 lunge);
 //  tuck: tucked into the small of his back (the parry and riposte, the second cut of the light chain, the advancing cuts,
@@ -51,6 +51,12 @@ function rapierOffHand(pose, mode, x = 0, wind = 0) {
   const down = 2.42 - (pose.lean || 0) * .2; // (the arm is drawn in the leaning chest's frame: down the line of the rear leg on the street)
   pose.backArm = lerp(3.32 + .1 * wind, down, x); pose.backElbow = lerp(-1.22 - .08 * wind, .06, x); pose.backWrist = lerp(.95, -.2, x); pose.openHand = 1; pose.backHold = 1;
 }
+function rapierRelax(pose, r, arm = 1.75) { // the free arm let down to hang easy (r 0..1): between blows, walking, standing
+  if (r <= 0) return;
+  pose.backArm = lerp(pose.backArm, arm, r); pose.backElbow = lerp(pose.backElbow, .35, r); pose.backWrist = lerp(pose.backWrist || 0, 0, r);
+  if (r > .5) { pose.openHand = 1; pose.backHold = 0; }
+}
+const relaxK = (m, k) => k < m.h[0] ? 1 - ease(clamp(k / (m.h[0] * .8), 0, 1)) : k > m.h[1] ? ease(clamp((k - m.h[1]) / Math.max(.1, (1 - m.h[1]) * .9), 0, 1)) : 0; // it rises through the wind-up, and settles in the recovery
 function lungeK(m, k) { // how far into the lunge's full extension the free arm is: 0 in the guard, 1 at full extension
   if (k < m.h[0]) return 0;
   const strike = k <= m.h[1] ? sstep((k - m.h[0]) / Math.max(.05, (m.h[1] - m.h[0]) * .45)) : 1;
@@ -121,7 +127,7 @@ function atkPose(pose, w, m, k) { // a move's pose at progress k (0..1)
     if (m.style === 'thrust' && !(P.w === 'fists' && BOXING[m.key])) pose.arm = arc[0] - (pose.lean || 0) * .9; // a thrust stays level with the target, however far he leans in
     if (P.w === 'rapier' && !m.kick && !m.around && (!m.spin || k >= (m.spinEnd || 1))) { // the fencer's free hand (see rapierOffHand)
       if (RAPIER_TUCK[m.key]) rapierOffHand(pose, 'tuck');
-      else rapierOffHand(pose, 'guard', lungeK(m, k), k < m.h[0] ? ease(k / m.h[0]) : 0);
+      else { rapierOffHand(pose, 'guard', lungeK(m, k), k < m.h[0] ? ease(k / m.h[0]) : 0); rapierRelax(pose, relaxK(m, k)); }
       if (m.key === 'LLH' && P.z <= 2) { // Thousand Needles: upright and side-on, chin up, the free hand at his back, the feet in a narrow fencer's line, only the sword arm moving
         const q = ease(Math.min(1, k / .15)) * (k > .85 ? 1 - ease((k - .85) / .15) : 1);
         pose.lean = lerp(pose.lean || 0, -.07, q); pose.yaw = lerp(pose.yaw || 0, -.15, q); pose.arm = lerp(pose.arm, -.06, q);
@@ -233,8 +239,7 @@ function playerPose() {
     // At rest his chest turns to us (see IDLE_Y below), the blade held low across his body, its point up toward the foe
     const r = ease(P.restK || 0);
     pose.arm = lerp(.35, .95, r); pose.elbow = lerp(.5, .35, r); pose.grip = lerp(-.1, .1, r); pose.lean = lerp(.04, 0, r);
-    { rapierOffHand(pose, 'guard'); pose.backArm = lerp(pose.backArm, 1.62, r); pose.backElbow = lerp(pose.backElbow, .3, r); pose.backWrist = lerp(pose.backWrist, 0, r); pose.backHold = r < .5 ? 1 : 0; } // en garde the free hand is up behind him; at ease it comes down
-    if (r > .5) pose.openHand = 1;
+    rapierOffHand(pose, 'guard'); rapierRelax(pose, 1, lerp(1.78, 1.62, r)); // walking or standing the free hand hangs easy, a little behind him, and swings as he walks: it goes up only to fight
     if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 1.6, r), bk: lerp(4, 1.2, r), w: lerp(1, 1.5, r) }; pose.sink = lerp(2, .6, r); }
   }
   else if (P.w === 'sword') { // walking or standing, the great sword hangs low in his hand
