@@ -482,17 +482,23 @@ function drawDeath(e, t) {
       if (el > .3 && el < .6) { const q = (el - .3) / .3; ctx.strokeStyle = `rgba(232,236,255,${1 - q})`; ctx.lineWidth = 2.4; ctx.beginPath(); const r = e.hw * 1.2; ctx.moveTo(-r, -e.hh * .75); ctx.lineTo(r, -e.hh * .25); ctx.moveTo(r, -e.hh * .75); ctx.lineTo(-r, -e.hh * .25); ctx.stroke(); }
       ctx.restore();
     }
-    if (el > .25) { // the wounds stay: round chunks bitten out of them, most taken from the edge of the body, the street showing through
-      const base = MAT_COL[e.def.mat][0], g = ease(Math.min(1, (el - .25) / .14)); // (each one opens in a quick chomp)
-      const bite = (w) => { const x = w.x * e.hw, y = -w.y * e.hh, R = clamp(e.hw * .3, 3.6, 8.5) * (w.r || 1) * g, path = new Path2D();
-        for (let i = 0; i <= 24; i++) { const a = i / 24 * TAU, sc = 1 + .09 * Math.cos(a * 6 + (w.s || 0)); path.lineTo(x + Math.cos(a) * R * sc, y + Math.sin(a) * R * sc * .94); } // scalloped, like teeth marks
-        path.closePath(); return [path, x, y, R]; };
-      ctx.save(); ctx.globalCompositeOperation = 'destination-out'; for (const w of e.wounds || []) ctx.fill(bite(w)[0]); ctx.restore(); // cut through
-      if (!FLASH && !TINT) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; // (the lip and drips only where the body is left: nothing hangs in the air)
-        for (const w of e.wounds || []) { const [path, x, y, R] = bite(w); if (R < 1) continue;
-          ctx.strokeStyle = shade(base, -.7); ctx.lineWidth = 1.8; ctx.stroke(path); // the dark, bruised lip
-          ctx.strokeStyle = shade(base, .15); ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(x, y, R * 1.12, .5, 2.3); ctx.stroke(); // the raw edge catching the light along its lower side
-          ctx.fillStyle = shade(base, -.6); const a = 1.5 + (w.s || 0) * .05; ell(x + Math.cos(a) * R * 1.05, y + Math.sin(a) * R + 2 * g, .9, 2 * g); ctx.fill(); } // a drip from the lip
+    if (el > .25) { // the wounds stay: round holes punched clean through, most taken from the edge of the body, the street showing through
+      const mat = e.def.mat, base = (MAT_COL[mat] || MAT_COL.fur)[0], g = ease(Math.min(1, (el - .25) / .14)); // (each opens in a quick punch)
+      const kind = { fur: 'blood', flesh: 'blood', metal: 'oil', goo: 'ooze', rock: 'sunk', crystal: 'sunk', china: 'sunk', spark: 'glow', ghost: 'glow', dream: 'glow' }[mat] || 'blood';
+      const geo = (w) => [w.x * e.hw, -w.y * e.hh, clamp(e.hw * .3, 3.6, 8.5) * (w.r || 1) * g];
+      ctx.save(); ctx.globalCompositeOperation = 'destination-out'; for (const w of e.wounds || []) { const [x, y, R] = geo(w); circle(x, y, R); ctx.fill(); } ctx.restore(); // cut through: perfectly round
+      if (!FLASH && !TINT) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; // (the rim only where the body is left: nothing hangs in the air)
+        for (const w of e.wounds || []) { const [x, y, R] = geo(w); if (R < 1) continue; const h = (k) => { const v = Math.sin((w.s || 1) * 91.3 + k * 12.9898) * 43758.5; return v - Math.floor(v); }; // (its own rough edge, the same every frame)
+          const rough = (col, n, d0, d1, s0, s1) => { ctx.fillStyle = col; for (let i = 0; i < n; i++) { const a = h(i) * TAU, d = R + d0 + h(i + 40) * (d1 - d0), r = s0 + h(i + 80) * (s1 - s0); circle(x + Math.cos(a) * d, y + Math.sin(a) * d, r); ctx.fill(); } };
+          const drip = (col, n, len) => { ctx.fillStyle = col; for (let i = 0; i < n; i++) { const a = .9 + h(i + 120) * 1.3, px = x + Math.cos(a) * R, py = y + Math.sin(a) * R, l = len * (.5 + h(i + 130)) * g; ell(px, py + l / 2, .9 + h(i + 140) * .6, l / 2 + .6); ctx.fill(); circle(px, py + l, 1.2); ctx.fill(); } };
+          ctx.lineWidth = 2;
+          if (kind === 'blood') { ctx.strokeStyle = '#4A060C'; circle(x, y, R + .8); ctx.stroke(); rough('#7A0E16', 16, -.2, 3.6, 1, 2.4); rough('#B01E28', 9, .4, 2.8, .5, 1.3); drip('#7A0E16', 2, 8); }
+          else if (kind === 'oil') { ctx.strokeStyle = '#0C0A10'; ctx.lineWidth = 2.6; circle(x, y, R + .9); ctx.stroke(); rough('#141018', 15, 0, 3.6, 1, 2.4); ctx.strokeStyle = 'rgba(150,120,230,.55)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.arc(x, y, R + 1.6, 3.6, 4.6); ctx.stroke(); ctx.strokeStyle = 'rgba(110,200,190,.45)'; ctx.beginPath(); ctx.arc(x, y, R + 1.6, 4.6, 5.4); ctx.stroke(); drip('#141018', 2, 9); } // black oil with a rainbow sheen
+          else if (kind === 'ooze') { ctx.strokeStyle = shade(base, -.4); circle(x, y, R + .7); ctx.stroke(); rough(shade(base, -.15), 14, -.3, 3.4, 1, 2.5); rough(shade(base, .45), 7, 0, 1.6, .4, .9); drip(shade(base, -.2), 3, 8); } // glossy, gloopy
+          else if (kind === 'glow') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,240,200,${.7 * g})`; circle(x, y, R + .6); ctx.stroke(); rough('rgba(255,220,160,.35)', 8, 0, 3, .6, 1.4); ctx.restore(); } // the hole rimmed in its own light
+          else { ctx.strokeStyle = shade(base, -.65); ctx.lineWidth = 3.6; circle(x, y, R + 1.4); ctx.stroke(); ctx.strokeStyle = shade(base, .35); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y, R + 3.4, .3, 2.6); ctx.stroke(); // sunken: a shadowed bore and a lit lip
+            ctx.strokeStyle = shade(base, -.6); ctx.lineWidth = 1.2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const a = h(i + 200) * TAU, l = R * (.7 + h(i + 210) * .8); ctx.moveTo(x + Math.cos(a) * (R + 1), y + Math.sin(a) * (R + 1)); ctx.lineTo(x + Math.cos(a + .15) * (R + l * .5), y + Math.sin(a + .15) * (R + l * .5)); ctx.lineTo(x + Math.cos(a - .05) * (R + l), y + Math.sin(a - .05) * (R + l)); } ctx.stroke(); rough(shade(base, -.45), 9, .5, 3.5, .6, 1.5); } // and cracks running out from it
+        }
         ctx.restore(); }
     }
   } else { // splat
