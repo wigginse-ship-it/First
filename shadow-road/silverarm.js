@@ -113,7 +113,6 @@
       if (!o.back) { o.x += o.dir * sp * dt; o.d += sp * dt; o.z += ((P.z + 44) - o.z) * Math.min(1, dt * 6);
         if (o.d >= o.out || o.x < leftWall() - 10 || o.x > rightWall() + 10) { o.back = true; if (o.x < leftWall() || o.x > rightWall()) { sfx('hit-metal', .5); silverBurst(o.x, o.y, o.z, 8); } } }
       else { const wx = P.x + P.facing * 20, wz = P.z + 44, dx = wx - o.x, dz = wz - o.z, d = Math.hypot(dx, dz, (P.y - o.y)); const v = Math.min(d, sp * dt);
-        if (o.grab && o.grab.boss === undefined) {}
         o.x += dx / (d || 1) * v; o.z += dz / (d || 1) * v; o.y += (P.y - o.y) * Math.min(1, dt * 10);
         if (o.held && !o.held.dead) { const e = o.held; e.x = o.x + o.dir * (e.hw * .6); e.y += (P.y - e.y) * Math.min(1, dt * 10); e.state = 'hurt'; e.t = Math.max(e.t, .45); e.vx = 0; e.air = false; e.z = 0; }
         if (d < 18) { o.gone = true; sfx('hit-metal', .3);

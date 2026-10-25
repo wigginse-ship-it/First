@@ -1462,7 +1462,7 @@
       const target = e.dead ? 1 : [0, 0, .25, 0, .8][ph]; W5.dawnK += (target - W5.dawnK) * Math.min(1, dt * .6); // the stars put the dawn back; the Hand brings it on
       if (stillT > 0) return;
       // in his last shape, the dawn has come to both ends of the hall
-      m.edge += ((ph >= 4 && !e.dead ? 58 : 0) - m.edge) * Math.min(1, dt * 1.2);
+      m.edge += ((ph >= 4 && !e.dead && e.state !== 'w5morph' ? 58 : 0) - m.edge) * Math.min(1, dt * 1.2);
       if (m.edge > 8 && P.state !== 'dead') { const L = leftWall() + m.edge, R = rightWall() - m.edge;
         if ((P.x < L || P.x > R) && P.z < 10) { m.tick -= dt; if (m.tick <= 0) { m.tick = .5; hitP(Math.max(4, Math.round(maxHp() * .045)), P.x < L ? P.x - 50 : P.x + 50, false); if (P.state === 'hurt') P.vx = P.x < L ? 260 : -260; floatText(P.x, P.y, 90, 'THE DAWN BURNS', '#FFD8C0', 13); } } }
       if (e.dead && !m.arm && e.w5armDrop) m.arm = e.w5armDrop; // the silver arm, left lying where he fell (benedict.js lays it down)
@@ -1617,8 +1617,8 @@
   let END = null;
   const isLastWorld = () => typeof baseStage !== 'undefined' && baseStage && baseStage.theme === 'moon' && stageIdx === STAGES.length - 1;
   const LINES = ['Dawn came, and Tir-na Nog\'th went out like a lamp, and its stair with it.', 'What the city of the moon shows you may never be,', 'but the silver arm he carried down out of the sky was real,', 'and it did not fade.'];
-  const CREDITS = [['SHADOW ROAD', 22], ['five shadows walked', 9], ['', 6], ['BLOOMWILD VALE · THE CLOCKWORK SKYPORT · THE PRISM RIM', 8], ['THE COURTS OF CHAOS · TIR-NA NOG\'TH', 8], ['', 10],
-    ['after Roger Zelazny\'s The Chronicles of Amber', 10], ['', 8], ['CORWIN', 11], ['Prince of Amber, Prince of Shadow', 8], ['', 6], ['BENEDICT', 11], ['his phantom, by moonlight', 8], ['', 6], ['THE SPHINX', 11], ['who would still like an answer', 8], ['', 10],
+  const CREDITS = [['SHADOW ROAD', 22], ['six shadows walked', 9], ['', 6], ['BLOOMWILD VALE · THE CLOCKWORK SKYPORT · THE PRISM RIM', 8], ['THE COURTS OF CHAOS · THE DREAMING SHADOW · TIR-NA NOG\'TH', 8], ['', 10],
+    ['after Roger Zelazny\'s The Chronicles of Amber', 10], ['', 8], ['CORWIN', 11], ['Prince of Amber, Prince of Shadow', 8], ['', 6], ['BENEDICT', 11], ['his phantom, by moonlight', 8], ['', 6], ['THE SPHINX', 11], ['who would still like an answer', 8], ['', 6], ['THE SLEEPER', 11], ['who dreamed one of them, and woke', 8], ['', 10],
     ['painted in ink and silver leaf', 9], ['', 14], ['Thank you for walking the road.', 12]];
   // the dawn sky over the sea of cloud, with the true Amber far below on Kolvir, catching the first light
   function dawnSky(k, t) {
@@ -1643,8 +1643,8 @@
     ctx.restore();
     const [x, y] = at(walkU), s = lerp(.7, 1.15, walkU);
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    shadow(0, 0, 12); drawHumanoid(heroLook(), { walk: t * 7, weapon: 'fists', arm: 1.2 });
-    ctx.translate(-6, -44); ctx.rotate(.9); silverArm(0, 0, 1.4, 0, 0, .8, t); // the silver arm, carried over his shoulder
+    shadow(0, 0, 12); drawHumanoid(heroLook(), { walk: t * 7, weapon: 'fists', arm: 1.45, elbow: .2, openHand: 0, armSwing: 0 }); // (the carrying arm held still: it's heavy)
+    silverArm(9, -36, 1.75, 0, 0, .85, t); // the silver arm, held in his fist by its shoulder and hanging at his side
     ctx.restore();
   }
   // his own Trump: the Prince of Shadow, black and silver, the silver rose, the moon and its stair behind him, in a frame of silver leaf
