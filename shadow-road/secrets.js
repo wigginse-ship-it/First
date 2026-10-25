@@ -1,7 +1,7 @@
 // ---------- hidden Trump rooms: one in each world's approach, behind a gate that only one card opens ----------
 // Once the approach is clear, a ghostly Trump stands near its end. Play the right card beside it and the card opens
 // a way into the Hall of Trumps: a room of champions, and a rich reward, and from there the road goes on to the boss.
-const SECRET_KEY = ['stag', 'brand', 'mirror', 'stillness', 'phoenix'];
+const SECRET_KEY = ['stag', 'brand', 'mirror', 'stillness', 'mirror', 'phoenix']; // (the Dreaming Shadow's gate wants the Mirror Twin: a dream is a reflection)
 let SECRET_ROOM = null, secretHint = false;
 const secretKey = () => SECRET_KEY[stageIdx % SECRET_KEY.length];
 function secretGate() {
