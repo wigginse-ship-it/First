@@ -352,7 +352,7 @@ function gainWeapon(id, lvl = 1) {
   save.owned[id] = true; save.weapon = id; P.w = id; P.seq = ''; persist();
   sfx('weapon'); flashT = .15; zoom = .05; slowmo = .4;
   burst(P.x, P.y, 50, ['#EED48A', '#FFFFFF', '#D08AB0'], 30, 'spark', 0, true);
-  banner(WEAPONS[id].name + ' found', (lvl > 1 ? `LEVEL ${lvl} · ` : '') + 'NEW WEAPON · SWAP TO CHANGE · LEVEL IT AT THE FORGE', 2.6);
+  banner(WEAPONS[id].name + ' found', 'NEW WEAPON · SWAP TO CHANGE · LEVEL IT AT THE FORGE', 2.6);
   refreshHud(true);
 }
 
