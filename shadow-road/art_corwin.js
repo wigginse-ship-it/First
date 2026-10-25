@@ -566,8 +566,8 @@ const CORWIN = (() => {
     for (let i = Math.floor(u0 * (S - 1)); i < Math.ceil(u1 * (S - 1) - 1e-3); i++) { const a = Math.max(u0, i / (S - 1)), b = Math.min(u1, (i + 1) / (S - 1)); if (b - a > 1e-3) strips.push(piece(new Path2D(), a, b)); }
     // the cloth itself: lit at the shoulders, falling into shadow toward the hem; the inside a cold, deep grey
     uv(Pt, (u0 + u1) / 2, 0); const gx0 = UX, gy0 = UY; uv(Pt, (u0 + u1) / 2, 1);
-    const base = lining ? (L.cloakLining || '#141318') : L.cloak, gr = ctx.createLinearGradient(gx0, gy0, UX, UY);
-    gr.addColorStop(0, C(shade(base, frontPart ? .22 : .14))); gr.addColorStop(.45, C(base)); gr.addColorStop(1, C(shade(base, -.45)));
+    const base = lining ? (L.cloakLining || '#0B0A0E') : L.cloak, gr = ctx.createLinearGradient(gx0, gy0, UX, UY);
+    gr.addColorStop(0, C(shade(base, frontPart ? .08 : .05))); gr.addColorStop(.45, C(base)); gr.addColorStop(1, C(shade(base, -.45)));
     ctx.fillStyle = gr; for (const p of strips) ctx.fill(p);
     if (!det) return;
     const lo = u0 - .02, hi = u1 + .02;
@@ -581,7 +581,7 @@ const CORWIN = (() => {
         ribbon(Pt, u, .06 + hsh(k + 521) * .2, (hsh(k + 507) - .5) * .1, .35 + hsh(k + 527) * .4, 0, 1, 0, 0, 1, 1); }
       ctx.fillStyle = L.cloakSlate; ctx.globalAlpha = b0 * .32; ctx.fill(); ctx.globalAlpha = b0;
       for (const gold of [true, false]) { ctx.beginPath(); for (const s of SPECKS) { if (s.g !== gold || s.u < lo || s.u > hi) continue; uv(Pt, s.u, s.v); ctx.rect(UX - .22, UY - .22, .44, .44); }
-        ctx.fillStyle = 'rgba(34,32,40,.6)'; ctx.fill(); } // (only a fleck of a deeper or lighter black: no grey, no gold)
+        ctx.fillStyle = 'rgba(20,19,24,.5)'; ctx.fill(); } // (only a fleck of a deeper or lighter black: no grey, no gold)
     }
     // the living brushwork, batched by color so it costs a handful of fills
     const ga = ctx.globalAlpha;
@@ -621,7 +621,7 @@ const CORWIN = (() => {
           if (ox * (bx - cx) + oy * (by - cy) < 0) { ox = -ox; oy = -oy; } if (ox * nx + oy * ny < -.1) continue;
           let dx = ox * .5 + nx * 1.2, dy = oy * .5 + ny * 1.2; const dl = Math.hypot(dx, dy) || 1; flick(bx - ox * .8, by - oy * .8, dx / dl, dy / dl, (2.5 + hsh(sd + 1) * 6) * sp, .5 + hsh(sd + 3) * 1.2); }
       }
-      ctx.fillStyle = c === 's' ? L.cloakSlate : C(lining ? (L.cloakLining || '#141318') : L.cloak); ctx.globalAlpha = ga * (c === 's' ? .55 : 1); ctx.fill();
+      ctx.fillStyle = c === 's' ? L.cloakSlate : C(lining ? (L.cloakLining || '#0B0A0E') : L.cloak); ctx.globalAlpha = ga * (c === 's' ? .55 : 1); ctx.fill();
     }
     ctx.globalAlpha = ga;
   }
@@ -653,7 +653,7 @@ const CORWIN = (() => {
       if (back) { ctx.moveTo(P(-2, 10.5), SHO + 2.6); ctx.quadraticCurveTo(P(-4, 9), NECK - 4.6, P(-3, 0), NECK - 5.6); ctx.quadraticCurveTo(P(-4, -9), NECK - 4.6, P(-2, -10.5), SHO + 2.6);
         ctx.quadraticCurveTo(P(-6, -7), SHO + 10, P(-7, 0), SHO + 17); ctx.quadraticCurveTo(P(-6, 7), SHO + 10, P(-2, 10.5), SHO + 2.6); }
       else { const x = P(-5.4, 0); ctx.moveTo(x + 5, NECK + 2.4); ctx.quadraticCurveTo(x + 3, NECK - 6.6, x - 3.6, NECK - 3.6); ctx.quadraticCurveTo(x - 8.4, SHO - 1, x - 6, SHO + 7); ctx.lineTo(x + 3.6, SHO + 5); ctx.closePath(); } };
-    path(); const hg = ctx.createLinearGradient(P(0, 0) + 6, NECK - 6, P(0, 0) - 6, SHO + 12); hg.addColorStop(0, C(shade(L.cloak, .22))); hg.addColorStop(.5, C(L.cloak)); hg.addColorStop(1, C(shade(L.cloak, -.4)));
+    path(); const hg = ctx.createLinearGradient(P(0, 0) + 6, NECK - 6, P(0, 0) - 6, SHO + 12); hg.addColorStop(0, C(shade(L.cloak, .08))); hg.addColorStop(.5, C(L.cloak)); hg.addColorStop(1, C(shade(L.cloak, -.4)));
     ctx.fillStyle = hg; ctx.fill(); outline(.9);
     if (DET()) { ctx.save(); path(); ctx.clip(); ctx.lineCap = 'round'; const x = P(-5.4, 0);
       ctx.strokeStyle = 'rgba(2,2,4,.7)'; ctx.lineWidth = 1.1; ctx.beginPath(); // the deep folds
@@ -675,7 +675,7 @@ const CORWIN = (() => {
       inn.push([P(ri * c + 1.2, ri * s), NECK + 1.4 + .8 * c - 3.2 * Math.max(0, -c)]); // rising behind the neck
     }
     const path = () => { ctx.beginPath(); out.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); for (let i = inn.length - 1; i >= 0; i--) ctx.lineTo(inn[i][0], inn[i][1]); ctx.closePath(); };
-    path(); const mg = ctx.createLinearGradient(P(0, -8), NECK - 4, P(0, 8), SHO + 8); mg.addColorStop(0, C(shade(L.cloak, .2))); mg.addColorStop(.6, C(L.cloak)); mg.addColorStop(1, C(shade(L.cloak, -.4)));
+    path(); const mg = ctx.createLinearGradient(P(0, -8), NECK - 4, P(0, 8), SHO + 8); mg.addColorStop(0, C(shade(L.cloak, .08))); mg.addColorStop(.6, C(L.cloak)); mg.addColorStop(1, C(shade(L.cloak, -.4)));
     ctx.fillStyle = mg; ctx.fill(); outline(.9);
     if (FINE()) { ctx.save(); path(); ctx.clip(); ctx.lineCap = 'round';
       ctx.strokeStyle = 'rgba(2,2,4,.75)'; ctx.lineWidth = 1; ctx.beginPath(); // deep folds bunched round the neck
@@ -683,7 +683,7 @@ const CORWIN = (() => {
       ctx.strokeStyle = L.cloakSlate; ctx.lineWidth = .55; ctx.beginPath();
       for (const k of [3, 5, 9, 11]) { ctx.moveTo((inn[k][0] * 2 + out[k][0]) / 3, (inn[k][1] * 2 + out[k][1]) / 3); ctx.lineTo((inn[k][0] + out[k][0] * 3) / 4, (inn[k][1] + out[k][1] * 3) / 4); } ctx.stroke();
       for (const g0 of [true, false]) { ctx.beginPath(); for (const [u, v, gold] of COWL_SPECK) { if (gold !== g0) continue; const k = Math.floor(u * 13.99), q = u * 14 - k, ox = lerp(out[k][0], out[k + 1][0], q), oy = lerp(out[k][1], out[k + 1][1], q), ix = lerp(inn[k][0], inn[k + 1][0], q), iy = lerp(inn[k][1], inn[k + 1][1], q);
-        ctx.rect(lerp(ix, ox, .2 + v * .7) - .2, lerp(iy, oy, .2 + v * .7) - .2, .4, .4); } ctx.fillStyle = 'rgba(34,32,40,.6)'; ctx.fill(); }
+        ctx.rect(lerp(ix, ox, .2 + v * .7) - .2, lerp(iy, oy, .2 + v * .7) - .2, .4, .4); } ctx.fillStyle = 'rgba(20,19,24,.5)'; ctx.fill(); }
       ctx.restore(); }
   }
   const cloak = { begin, half, front, hood, mantle, snapshot, sim: SIM };

@@ -140,7 +140,7 @@ const IB = { x: 0, y: 0, w: 0, h: 0 }; // the screen box the figures occupy; all
 // instead of the thick contour, no pale rim, and his own brushwork (dry, mostly vertical strokes, a few specks, umber
 // modelling on the side away from the light). His box on screen is HB; inkEnd leaves him out of its contour and rim.
 const HB = { x: 0, y: 0, w: 0, h: 0, on: false };
-let heroC = null, heroG = null, heroSC = null, heroSG = null, HERO_HATCHED = false;
+let heroC = null, heroG = null, heroSC = null, heroSG = null, heroBC = null, heroBG = null, HERO_HATCHED = false;
 function heroInk(cx, cy, fn) {
   if (PAINT_Q === 0 || ctx !== inkG || HB.on || TINT || FLASH) { fn(); return; }
   const m = ctx.getTransform(); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
@@ -182,7 +182,14 @@ function heroPaint(x, y) {
   lg.addColorStop(0, 'rgba(255,236,206,.13)'); lg.addColorStop(1, 'rgba(255,236,206,0)'); ctx.fillStyle = lg; ctx.fillRect(x - 50, y - 112, 100, 70);
   const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.22)'); ctx.fillStyle = dg; ctx.fillRect(x - 75, y - 30, 150, 34); // the legs settle into shadow toward the street
   ctx.translate(x, y); ctx.scale(.5, .5);
-  ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'brush'); ctx.fillRect(-150, -210, 300, 222);
+  { // the brush grain, soft-lit onto him: it works into his steel, leather and skin but leaves his blacks black (the cloak above all)
+    const L = ctx.canvas, m = ctx.getTransform();
+    if (!heroBC || heroBC.width !== L.width || heroBC.height !== L.height) { retire(heroBC); [heroBC, heroBG] = texCanvas(L.width, L.height); }
+    heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'source-over'; heroBG.globalAlpha = 1; heroBG.clearRect(0, 0, L.width, L.height);
+    heroBG.setTransform(m); heroBG.fillStyle = texPat(heroBG, 'brush'); heroBG.fillRect(-150, -210, 300, 222);
+    heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'destination-in'; heroBG.drawImage(L, 0, 0);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = .9; ctx.drawImage(heroBC, 0, 0); ctx.restore();
+  }
   ctx.fillStyle = texPat(ctx, 'hatch');
   for (let i = 0; i < 2; i++) { const k = 1 - i * .3; ctx.globalAlpha = .2 * (.6 + i * .3); ell((-hw * .9 - i * hw * .2) * 2, (-hh * .35 + i * hh * .08) * 2, hw * 1.7 * k * 2, hh * .85 * k * 2); ctx.fill(); }
   ctx.restore();
@@ -347,7 +354,7 @@ function skyWash(camX) { // the sky is laid in with long, nearly level strokes t
 function paperFrame() {
   buildFrame();
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.drawImage(frameC, 0, 0);
+  ctx.globalCompositeOperation = 'soft-light'; ctx.drawImage(frameC, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .3; ctx.drawImage(frameC, 0, 0); // (mostly soft-lit: the varnish warms the paint but never lifts its blacks)
   ctx.restore();
 }
 

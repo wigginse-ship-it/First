@@ -997,7 +997,7 @@ const HERO = { corwin: 1, mail: 'doublet', pants: 'trousers', gauntlets: 'vambra
   body: '#1E1C24', lattice: '#43404F', button: '#BDB6A6', trim: '#BC9440', shirt: '#E9E3D5', sleeve: '#E9E3D5',
   steel: '#A4A4A8', pauldron: '#A4A4A8', leather: '#6A4228', brass: '#CBA251', scab: '#5A3822',
   legs: '#2B2832', boots: '#3E2C22', cuff: '#5C4231',
-  cloak: '#121116', cloakSlate: '#1E1D25', cloakGrey: '#1A191F', cloakLt: '#25242C' }; // all off-blacks: the cloak is black through and through, its brushwork only a shade apart
+  cloak: '#09080B', cloakSlate: '#111015', cloakGrey: '#0E0D12', cloakLt: '#141318' }; // all off-blacks: the cloak is black through and through, its brushwork only a shade apart
 // his look comes from the armor he wears (gear.js): each slot he fills swaps that part of his costume for the set's
 // own piece; an empty slot keeps his traveller's costume above
 function heroLook() {
