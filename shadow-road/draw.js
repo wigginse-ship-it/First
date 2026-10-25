@@ -249,7 +249,7 @@ function playerPose() {
     pose.arm = .5 + Math.sin(now * 1.6) * .05; pose.grip = -.02 + Math.sin(now * 1.6 + 1) * .07 + twirl; pose.backArm = 1.4; pose.backElbow = .35; pose.openHand = 1; pose.lean = .08; // the free hand hangs easy at his side
     if (P.state === 'walk') { // walking, the bo's one-handed carry: held at its middle in the hanging hand, angled down
       // at his side with the front end dipped toward the road, and swung fore and aft with the arm as he goes
-      pose.arm = 1.3; pose.elbow = .3; pose.grip = -.58; pose.armSwing = .95; pose.lean = .04;
+      pose.arm = 1.3; pose.elbow = .3; pose.grip = -.32; pose.armSwing = .95; pose.lean = .04;
     }
   }
   else { // hands low at his sides but loaded: elbows bent, fists forward at the waist, swaying with his breath
