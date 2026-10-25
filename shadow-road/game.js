@@ -60,7 +60,7 @@ function updatePlayer(dt) {
     P.z += P.vz * dt;
     if (P.z <= 0) { P.z = 0; P.vz = 0; onLand(); }
   }
-  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink < .8 ? 1.35 : 1) * (pw('haste') ? 1.3 : 1) * (1 + gearStat('speed')) * roomSlow; // tiny, he scurries (and some armor is light on its feet)
+  const mx = input.mx, my = input.my, sp = (W_SPEED[P.w] || 1) * (P.shrink || 1) * (pw('haste') ? 1.3 : 1) * (1 + gearStat('speed')) * roomSlow; // tiny, he covers ground in proportion to his size: a small man takes small steps (and some armor is light on its feet)
   if (pressed.trump && !['dead', 'down'].includes(P.state)) playTrump(); // the card can be played whatever else he is doing
   switch (P.state) {
     case 'idle': case 'walk': case 'run': {
@@ -74,14 +74,14 @@ function updatePlayer(dt) {
       if (pressed.heavy) { begin(running ? (unlocked(w.tree.DH) ? w.tree.DH : w.tree.D) : nextMove('H')); break; }
       P.seq = '';
       if (running) {
-        P.state = 'run'; P.facing = Math.sign(mx); P.x += P.facing * RUN * sp * dt; P.y += my * SPY * sp * .6 * dt; P.walk += dt * 13 * sp; // long, loping strides: fewer steps for the same ground
+        P.state = 'run'; P.facing = Math.sign(mx); P.x += P.facing * RUN * sp * dt; P.y += my * SPY * sp * .6 * dt; P.walk += dt * 13 * sp / Math.sqrt(P.shrink || 1); // long, loping strides: fewer steps for the same ground
         P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .05; addGhost(); }
         if (Math.random() < dt * 14) dust(P.x - P.facing * 8, P.y, 1);
       } else {
         const moving = mx !== 0 || my !== 0;
         P.x += mx * SPX * sp * dt; P.y += my * SPY * sp * dt;
         if (Math.abs(mx) > 0.1) P.facing = Math.sign(mx);
-        P.state = moving ? 'walk' : 'idle'; P.walk = moving ? P.walk + dt * 11 : 0;
+        P.state = moving ? 'walk' : 'idle'; P.walk = moving ? P.walk + dt * 11 * Math.sqrt(P.shrink || 1) : 0; // (a little man's steps quicken only a touch: he still crosses the ground slowly)
       }
       break;
     }
@@ -242,7 +242,7 @@ function startDodge() {
   if (WEAPONS[P.w].parry && P.z <= 0 && Math.abs(dy) <= Math.abs(dx) * 1.2 && Math.sign(dx) !== P.facing) { startParry(); return; } // a fencer parries instead
   const d = Math.hypot(dx, dy) || 1;
   const quick = 1 - gearStat('dodgeFast'); // the wayfarer's set: the same dodge, over sooner
-  P.state = 'dodge'; P.dodgeDur = P.t = .34 * quick; P.dq = false; P.dvx = dx / d * 300 / quick; P.dvy = dy / d * 150 / quick; P.inv = Math.max(P.inv, .36 + gearStat('iframes')); P.seq = '';
+  P.state = 'dodge'; P.dodgeDur = P.t = .34 * quick; P.dq = false; const tiny = Math.sqrt(P.shrink || 1); P.dvx = dx / d * 300 / quick * tiny; P.dvy = dy / d * 150 / quick * tiny; // (shrunk, his dodge carries him a shorter way) P.inv = Math.max(P.inv, .36 + gearStat('iframes')); P.seq = '';
   // the dash depends on its direction: a low lunge forward, a hopping backstep that keeps you facing the enemy,
   // or a quick sidestep up or down the street
   P.dk = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'side' : Math.sign(dx) === P.facing ? 'fwd' : 'back';
