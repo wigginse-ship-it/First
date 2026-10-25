@@ -566,7 +566,7 @@ const CORWIN = (() => {
     for (let i = Math.floor(u0 * (S - 1)); i < Math.ceil(u1 * (S - 1) - 1e-3); i++) { const a = Math.max(u0, i / (S - 1)), b = Math.min(u1, (i + 1) / (S - 1)); if (b - a > 1e-3) strips.push(piece(new Path2D(), a, b)); }
     // the cloth itself: lit at the shoulders, falling into shadow toward the hem; the inside a cold, deep grey
     uv(Pt, (u0 + u1) / 2, 0); const gx0 = UX, gy0 = UY; uv(Pt, (u0 + u1) / 2, 1);
-    const base = lining ? (L.cloakLining || '#1E2029') : L.cloak, gr = ctx.createLinearGradient(gx0, gy0, UX, UY);
+    const base = lining ? (L.cloakLining || '#141318') : L.cloak, gr = ctx.createLinearGradient(gx0, gy0, UX, UY);
     gr.addColorStop(0, C(shade(base, frontPart ? .22 : .14))); gr.addColorStop(.45, C(base)); gr.addColorStop(1, C(shade(base, -.45)));
     ctx.fillStyle = gr; for (const p of strips) ctx.fill(p);
     if (!det) return;
@@ -581,7 +581,7 @@ const CORWIN = (() => {
         ribbon(Pt, u, .06 + hsh(k + 521) * .2, (hsh(k + 507) - .5) * .1, .35 + hsh(k + 527) * .4, 0, 1, 0, 0, 1, 1); }
       ctx.fillStyle = L.cloakSlate; ctx.globalAlpha = b0 * .32; ctx.fill(); ctx.globalAlpha = b0;
       for (const gold of [true, false]) { ctx.beginPath(); for (const s of SPECKS) { if (s.g !== gold || s.u < lo || s.u > hi) continue; uv(Pt, s.u, s.v); ctx.rect(UX - .22, UY - .22, .44, .44); }
-        ctx.fillStyle = gold ? 'rgba(206,168,96,.75)' : 'rgba(150,152,164,.5)'; ctx.fill(); }
+        ctx.fillStyle = 'rgba(34,32,40,.6)'; ctx.fill(); } // (only a fleck of a deeper or lighter black: no grey, no gold)
     }
     // the living brushwork, batched by color so it costs a handful of fills
     const ga = ctx.globalAlpha;
@@ -621,7 +621,7 @@ const CORWIN = (() => {
           if (ox * (bx - cx) + oy * (by - cy) < 0) { ox = -ox; oy = -oy; } if (ox * nx + oy * ny < -.1) continue;
           let dx = ox * .5 + nx * 1.2, dy = oy * .5 + ny * 1.2; const dl = Math.hypot(dx, dy) || 1; flick(bx - ox * .8, by - oy * .8, dx / dl, dy / dl, (2.5 + hsh(sd + 1) * 6) * sp, .5 + hsh(sd + 3) * 1.2); }
       }
-      ctx.fillStyle = c === 's' ? L.cloakSlate : C(lining ? (L.cloakLining || '#1E2029') : L.cloak); ctx.globalAlpha = ga * (c === 's' ? .55 : 1); ctx.fill();
+      ctx.fillStyle = c === 's' ? L.cloakSlate : C(lining ? (L.cloakLining || '#141318') : L.cloak); ctx.globalAlpha = ga * (c === 's' ? .55 : 1); ctx.fill();
     }
     ctx.globalAlpha = ga;
   }
@@ -683,7 +683,7 @@ const CORWIN = (() => {
       ctx.strokeStyle = L.cloakSlate; ctx.lineWidth = .55; ctx.beginPath();
       for (const k of [3, 5, 9, 11]) { ctx.moveTo((inn[k][0] * 2 + out[k][0]) / 3, (inn[k][1] * 2 + out[k][1]) / 3); ctx.lineTo((inn[k][0] + out[k][0] * 3) / 4, (inn[k][1] + out[k][1] * 3) / 4); } ctx.stroke();
       for (const g0 of [true, false]) { ctx.beginPath(); for (const [u, v, gold] of COWL_SPECK) { if (gold !== g0) continue; const k = Math.floor(u * 13.99), q = u * 14 - k, ox = lerp(out[k][0], out[k + 1][0], q), oy = lerp(out[k][1], out[k + 1][1], q), ix = lerp(inn[k][0], inn[k + 1][0], q), iy = lerp(inn[k][1], inn[k + 1][1], q);
-        ctx.rect(lerp(ix, ox, .2 + v * .7) - .2, lerp(iy, oy, .2 + v * .7) - .2, .4, .4); } ctx.fillStyle = g0 ? 'rgba(214,176,100,.8)' : 'rgba(150,150,160,.55)'; ctx.fill(); }
+        ctx.rect(lerp(ix, ox, .2 + v * .7) - .2, lerp(iy, oy, .2 + v * .7) - .2, .4, .4); } ctx.fillStyle = 'rgba(34,32,40,.6)'; ctx.fill(); }
       ctx.restore(); }
   }
   const cloak = { begin, half, front, hood, mantle, snapshot, sim: SIM };
