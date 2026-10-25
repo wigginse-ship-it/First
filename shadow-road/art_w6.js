@@ -46,7 +46,7 @@
     if (ow) { trace(s.L, s.R); outline(ow); }
     return s;
   }
-  const BIGR = () => ctx.rect(-900, -900, 1800, 1800);
+  const BIGR = () => ctx.rect(-240, -240, 480, 480); // (big enough for any one part: a smaller rect is much cheaper to fill)
   function cel(path, col, o = {}) {
     const d = o.d ?? 3, r = o.r ?? 1.1, w = o.w ?? 1.6;
     path(0, 0); ctx.fillStyle = C(col); ctx.fill();
