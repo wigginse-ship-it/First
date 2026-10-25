@@ -669,7 +669,7 @@ function drawHumanoid(look, pose) {
   // a walking or running body carries its weight: the hips dip as each foot lands and rise as the legs pass,
   // and each arm swings against its own leg
   const gait = walk && !pose.legs && !pose.kick && pose.kickK === undefined && !pose.down && !pose.crouch;
-  const bob = gait ? (pose.run ? (1 - Math.abs(sw)) * 3 : Math.abs(sw) * 1.6) : 0, armSw = gait ? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4) : 0;
+  const bob = gait ? (pose.run ? (1 - Math.abs(sw)) * 3 : Math.abs(sw) * 1.6) : 0, armSw = gait ? (pose.armSwing ?? (pose.weapon === 'fists' || !pose.weapon ? 1 : .4)) : 0; // (armSwing: a carry that swings more freely, like the bo's)
   const br = pose.breath ? (pose.breath + 1) * .45 : 0; // breathing settles the body over planted feet
   // the prince fights from wide, low lunges, as in the sheet's attack strips: a planted stance (legs, sink) is set wider and lower
   const LUNGE = CW && pose.legs && !pose.stance && pose.kickK === undefined ? clamp((pose.sink || 0) / 7, 0, 1) : 0;

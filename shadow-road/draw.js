@@ -247,6 +247,10 @@ function playerPose() {
     // swaying with his breath, and every few seconds he twirls it once through his fingers
     const now = performance.now() / 1000, c = now % 4.2, twirl = P.state === 'idle' && c < .55 ? ease(c / .55) * TAU : 0;
     pose.arm = .5 + Math.sin(now * 1.6) * .05; pose.grip = -.02 + Math.sin(now * 1.6 + 1) * .07 + twirl; pose.backArm = 1.4; pose.backElbow = .35; pose.openHand = 1; pose.lean = .08; // the free hand hangs easy at his side
+    if (P.state === 'walk') { // walking, the bo's one-handed carry: held at its middle in the hanging hand, lying near level at
+      // his side with the front end dipped a touch, and swung fore and aft with the arm as he goes
+      pose.arm = 1.3; pose.elbow = .3; pose.grip = -.82; pose.armSwing = .95; pose.lean = .04;
+    }
   }
   else { // hands low at his sides but loaded: elbows bent, fists forward at the waist, swaying with his breath
     const b = Math.sin(performance.now() / 420) * .03;
