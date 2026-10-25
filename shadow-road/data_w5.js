@@ -4,10 +4,13 @@
 // moonlight; at dawn it fades, and so does the stair. This is the last world of the road.
 //   moon      - The Stair of Moonlight (waves 1-2; the dawn comes up behind you: rule 'w5dawn')
 //   moon2     - The Streets of Tir-na Nog'th (wave 3, then the Sphinx and her riddle; cloud shadows: rule 'w5cloud')
-//   moonBoss  - The Moon Throne: the Phantom of Benedict (the one-armed master, the Silver Arm, the Phantom unbound)
+//   moonBoss  - The Moon Throne: the Phantom of Benedict (the one-armed master, the Host, the Swordsman in the Stars, the Silver Hand)
 (() => {
-  // the Phantom's three shapes fight at different distances: how close he closes before each attack
-  const STANDOFF = { w5lunge: 230, w5feint: 70, w5guard: 96, w5grip: 220, w5cross: 140, w5steps: 170, w5blades: 160, w5wheel: 50 };
+  // the Phantom's shapes fight at different distances: how close he closes before each attack (the later shapes: benedict.js)
+  const STANDOFF = { w5lunge: 230, w5feint: 70, w5guard: 96, w5wheel: 50,
+    w5phalanx: 40, w5volley: 40, w5cavalry: 40, w5standard: 70, w5shieldwall: 40, // (his later shapes fill the hall with their
+    w5web: 40, w5zodiac: 40, w5meteor: 40, w5nova: 40,                             // attacks, so they come right up to you:
+    w5janken: 40, w5drum: 50, w5snatch: 40, w5flick: 60, w5snap: 40 };             // stand your ground and hit back)
   const benPlan = () => (typeof boss !== 'undefined' && boss && boss.def === BOSSES.benedict ? boss.plan : null);
   // the ghosts of the city bleed silver when they are cut
   MAT_COL.ghost = ['#C8D4EC', '#EEF2FA', '#8A9AC8']; MAT_SFX.ghost = 'hit-crystal';
@@ -25,14 +28,22 @@
     w5sphinx:   { name: 'The Sphinx', noRandom: 1, draw: 'w5sphinx', mat: 'rock', move: 'ground', hp: 320, spd: 80, hw: 34, hh: 56, dmg: 17, plans: ['pounce', 'w5wings', 'w5glyphs', 'pounce'], wind: .6, cd: [.9, 1.6], reach: 70, weight: .4, poise: 7, shards: [26, 34], sigil: 1, kind: 'creature' },
   });
 
+  // he wears four shapes, one after another as he is hurt (benedict.js keeps his shape in e.bph; world.js only ever
+  // sees phases 1-3, so the third list answers for both the third and the fourth shape)
+  const benShape = () => (typeof boss !== 'undefined' && boss && boss.def === BOSSES.benedict ? boss.bph || 1 : 1);
+  const SHAPES = {
+    1: ['w5lunge', 'w5feint', 'w5guard', 'w5lunge', 'w5feint'],                              // Benedict, master of arms
+    2: ['w5phalanx', 'w5volley', 'w5cavalry', 'w5standard', 'w5volley', 'w5cavalry', 'w5phalanx'], // the Host of Benedict
+    3: ['w5web', 'w5zodiac', 'w5meteor', 'w5zodiac', 'w5web', 'w5zodiac'],                    // the Swordsman in the Stars
+    4: ['w5janken', 'w5drum', 'w5snatch', 'w5flick', 'w5janken', 'w5drum', 'w5snatch'],       // the Silver Hand
+  };
+  const CLOSE = { 1: 'w5wheel', 2: 'w5shieldwall', 3: 'w5nova', 4: 'w5snap' };
   BOSSES.benedict = {
-    close: 'w5wheel', name: 'The Phantom of Benedict', title: 'MASTER OF ARMS OF AMBER', draw: 'w5benedict', mat: 'ghost', move: 'ground',
+    get close() { return CLOSE[benShape()]; }, name: 'The Phantom of Benedict', title: 'MASTER OF ARMS OF AMBER', draw: 'w5benedict', mat: 'ghost', move: 'ground',
     get reach() { return STANDOFF[benPlan()] || 70; },
-    hp: 1300, spd: 72, hw: 24, hh: 84, dmg: 21, wind: .6, cd: [.6, 1.1], weight: .3, poise: 10, ranged: 1,
-    // one shape after another: the master as he is, the Silver Arm, the Phantom unbound as the dawn takes him
-    p1: ['w5lunge', 'w5feint', 'w5guard', 'w5lunge', 'w5feint'],
-    p2: ['w5grip', 'w5cross', 'w5lunge', 'w5guard', 'w5grip', 'w5cross'],
-    p3: ['w5steps', 'w5blades', 'w5cross', 'w5grip', 'w5steps', 'w5blades', 'w5lunge'],
+    hp: 1150, spd: 72, hw: 24, hh: 84, dmg: 21, wind: .6, cd: [.6, 1.1], weight: .3, poise: 10, ranged: 1,
+    p1: SHAPES[1], p2: SHAPES[2], get p3() { return SHAPES[Math.max(3, benShape())]; },
+    shapes: SHAPES,
   };
 
   // the last world is harder again, and pays better (see the matching entries in world.js and game.js)

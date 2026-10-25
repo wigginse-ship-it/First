@@ -34,17 +34,20 @@ const SECRET_BUILD = {
     return { title: 'A Duel in Shadow', sub: 'ERIC OF AMBER WILL NOT STEP ASIDE', theme: 'trumpRealm', len: 1000, pods: [], rawWaves: [['eric!']] };
   },
 };
-function enterSecret() {
-  const kind = window.__forceRoom || pick(SECRET_KINDS.filter(k => k !== save.lastSecret)); save.lastSecret = kind; persist();
-  SECRET_ROOM = SECRET_BUILD[kind](); SECRET_ROOM.kind = kind;
+function enterSecret() { // the room is dealt from a seed (shadowrooms.js): one of the old four, or a new one made up on the spot
+  const G = srDeal(), kind = G.kind; save.lastSecret = kind; persist();
+  if (G.classic) { SECRET_ROOM = SECRET_BUILD[kind](); if (G.theme && kind !== 'grove' && kind !== 'vault') SECRET_ROOM.theme = G.theme; srDressClassic(SECRET_ROOM, G); }
+  else SECRET_ROOM = srRoom(G);
+  SECRET_ROOM.kind = kind;
   enterZone(1, SECRET_ROOM); mech = null; secretHint = false;
-  stage.room = { kind, t: 0 };
+  stage.room = { kind, t: 0, gen: G };
   if (kind === 'grove') stage.room.offers = dealBoons();
   if (kind === 'vault') { stage.room.left = 20; stage.room.started = false;
     const xs = []; for (let i = 0; i < 14; i++) xs.push(240 + i * 58 + rand(-14, 14));
     const gold = Math.floor(rand(3, 14)), mimic = (gold + 4 + Math.floor(rand(0, 6))) % 14;
     props = xs.map((x, i) => ({ kind: 'pod', urn: true, gold: i === gold, mimic: i === mimic && i !== gold, x, y: FLOOR_TOP + 22 + ((i * 37) % 5) * 16, hp: i === gold ? 4 : 2, theme: 'vault' }));
   }
+  srStart(stage.room);
 }
 // ---------- the Unicorn's gifts ----------
 const boonW = () => [save.weapon, ...WEAPON_ORDER].find(id => id !== 'fists' && save.owned[id] && save.wl[id] < WMAX());
@@ -103,9 +106,11 @@ function updateSecret(dt) {
     }
     loot.push(Object.assign(makeLoot('power', x, y, 0), { power: pick(POWER_ORDER) }));
     burst(x, y, 40, ['#EED48A', '#FFFFFF', '#C8607A'], 40, 'spark', 0, true); sfx('weapon');
+    if (R.gen) srBonus(x, y, R.gen.mult - 1); // hard rules pay a little over
   }
+  if (R.gen) srUpdate(R, dt);
 }
-function secretBoxes(box) { const g = secretGate(); if (g) box(g.x, g.y, 0, 50, 100); const R = stage && stage.room; if (R && R.offers) { for (const o of R.offers) box(o.x, o.y, 0, 70, 120); box(980, FLOOR_TOP + 30, 0, 90, 140); } }
+function secretBoxes(box) { const g = secretGate(); if (g) box(g.x, g.y, 0, 50, 100); const R = stage && stage.room; if (R && R.gen) srBoxes(R, box); if (R && R.offers) { for (const o of R.offers) box(o.x, o.y, 0, 70, 120); box(980, FLOOR_TOP + 30, 0, 90, 140); } }
 function secretList(list, t) {
   roomList(list, t);
   const g = secretGate(); if (!g) return;
@@ -177,6 +182,7 @@ AW_FLOOR.trumpRealm = (rnd, th) => {
 // ---------- what the rooms show ----------
 function roomList(list, t) {
   const R = stage && stage.secret && stage.room; if (!R) return;
+  if (R.gen) srList(R, list, t);
   if (R.kind === 'grove') {
     list.push([FLOOR_TOP + 30, () => drawUnicorn(980, FLOOR_TOP + 30, t)]);
     for (const o of R.offers) { if (R.chosen && R.chosen !== o.id) continue; if (R.chosen && R.t > 9) continue;

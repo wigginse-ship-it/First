@@ -9,7 +9,7 @@
 //   moonBoss  - The Moon Throne: an open hall at the top of the city, an empty throne of mist against the moon, a ghost of
 //               the Pattern inlaid in the floor. The Phantom of Benedict guards it (rule 'w5throne': the night ends as the fight does)
 // Enemies: Lantern Courtier, Weeping Watcher, Colorless Reflection, Moonmoth, Hound of the Wild Hunt, Knave of Moons,
-// the Sphinx. Boss: the Phantom of Benedict (the one-armed master, the Silver Arm, the Phantom unbound).
+// the Sphinx. Boss: the Phantom of Benedict (the one-armed master here; his later shapes are in benedict.js).
 // Passages: 'w5moonpath' (a stair of light unrolls up to the moon) and 'w5mist' (the picture flakes away like silver leaf).
 // Everything lives inside this closure so nothing collides with the other files; the late parts are handed to data_w5.js.
 (() => {
@@ -893,11 +893,10 @@
   };
 
   // ======================================================================================================
-  // THE PHANTOM OF BENEDICT: what Tir-na Nog'th makes of Amber's master of arms. It wears three shapes:
-  //   phase 1  Benedict as he is: tall, gaunt, plainly dressed, his right sleeve empty and pinned; he fights left-handed
-  //   phase 2  The Silver Arm: an arm of silver, plated and jointed and gilded at the joints, unfolds from the empty sleeve
-  //   phase 3  The Phantom unbound: dawn is coming and he is coming apart: his legs go to mist, and behind him a mandorla
-  //            of phantom swords stands open like the halo of a saint in a panel painting
+  // THE PHANTOM OF BENEDICT: what Tir-na Nog'th makes of Amber's master of arms. Here, his first shape:
+  //   Benedict as he is: tall, gaunt, plainly dressed, his right sleeve empty and pinned; he fights left-handed.
+  // What the city makes of him after that (the Host, the Swordsman in the Stars, the Silver Hand) is in benedict.js,
+  // which also uses his silver arm (silverArm below: plated, jointed, gilded at the joints) for the arm he leaves behind.
   // He faces right, so the near side is his right: the empty sleeve, then the silver arm. The sword is in his far hand.
   // ======================================================================================================
   const BN = { skin: '#B6C2D8', skinDk: '#6E7A98', skinLt: '#E6ECF6', hair: '#2A3048', coat: '#34446E', coatDk: '#161E3C', coatLt: '#6A7EB0', cloak: '#222C52', cloakDk: '#0C1230', cloakLt: '#4E5E92',
@@ -912,9 +911,6 @@
       else { p.sink = 3 + 8 * q; p.lean = -.12 * q; p.ff = 16; p.fb = -20; p.fk = 4 + 4 * q; p.swA = -.05; p.swExt = .2 + .2 * (1 - q); p.siA = 2.4; p.glint = q; } }
     if (W('w5feint') || act === 'feint') { const q = act ? 1 : W('w5feint'); p.swA = act ? lerp(-2.2, 1.05, k) : -2.2 * q; p.swExt = .9; p.lean = act ? lerp(-.1, .3, k) : -.1 * q; p.sink = act ? 6 : 3 + 3 * q; p.ff = act ? 22 : 14; p.flow = act ? 8 : 2; }
     if (W('w5guard') || act === 'guard') { const q = act ? 1 : W('w5guard'); p.swA = lerp(.3, -1.15, q); p.swExt = lerp(.62, .55, q); p.swRot = -1.25 * q; p.sink = 4 + 2 * q; p.lean = -.06; p.glint = act ? 1 : q; p.ff = 10; p.fb = -14; }
-    if (W('w5grip') || act === 'grip') { const q = act ? 1 : W('w5grip'); p.siA = act ? (e.w5siA ?? 0) : lerp(1.2, -2.5, q); p.siExt = act ? (e.w5reach || 0) : 0; p.siOpen = act ? (e.w5caught ? 0 : 1) : q; p.lean = act ? .18 : -.12 * q; p.sink = 5; p.swA = .7; }
-    if (W('w5cross') || act === 'cross') { const q = act ? 1 : W('w5cross'); p.swA = act ? lerp(-2.4, 1.3, cl01(k * 2)) : -2.4 * q; p.siA = act ? lerp(-2.0, 1.1, cl01(k * 2 - .5)) : -2.0 * q; p.swExt = .95; p.lean = act ? .25 : -.15 * q; p.sink = act ? 8 : 3 + 4 * q; p.ff = act ? 20 : 14; p.flow = act ? 8 : 2; }
-    if (W('w5steps') || W('w5blades') || act === 'steps' || act === 'blades') { const q = act ? 1 : Math.max(W('w5steps'), W('w5blades')); p.swA = lerp(.3, -2.7, q); p.swRot = -.2 * q; p.siA = lerp(1.2, -2.3, q); p.siOpen = q; p.lean = -.12 * q; p.sink = 2; p.glint = q; }
     if (W('w5wheel') || act === 'wheel') { const q = act ? 1 : W('w5wheel'); p.sink = 6 + 4 * q; p.swA = act ? 0 : lerp(.3, 2.2, q); p.siA = act ? 0 : lerp(1.2, 2.2, q); p.swExt = 1.1; p.siExt = act ? 4 : 0; p.spin = act ? k * TAU * 2 : 0; p.lean = act ? 0 : .2 * q; p.flow = act ? 12 : 0; }
     if (st === 'wind' && plan === 'roar') { p.swA = -.6; p.siA = -.4; p.siOpen = 1; p.lean = -.2 * w; }
     if (st === 'down' || a.hurt && st !== 'hurt') { p.sink = 14; p.lean = .45; p.ff = 16; p.fb = -6; p.fk = 10; p.bk = 12; p.swA = 1.45; p.swExt = .8; p.siA = 1.5; }
@@ -957,27 +953,16 @@
     glowAt(H[0], H[1], 12, '225,235,255', open ? .35 : .2);
     return H;
   }
-  // the mandorla: an almond of silver leaf behind him, and the phantom swords standing in it
-  function mandorla(cx, cy, k, n, t) {
-    if (k <= .02) return;
-    ctx.save(); ctx.globalAlpha *= k;
-    add(() => { const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 80); g.addColorStop(0, 'rgba(210,225,255,.35)'); g.addColorStop(1, 'rgba(210,225,255,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 80, cy - 80, 160, 160); });
-    ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 1.35); leafLine(() => { ctx.ellipse(0, -6, 42, 52, 0, 0, TAU); }, 1.6, .75); ctx.restore();
-    for (let i = 0; i < 11; i++) { if (i >= n) continue; const an = -Math.PI / 2 + (i - 5) * .27 + Math.sin(t * .4 + i) * .02, L = 44 + (i % 2) * 10;
-      ctx.save(); ctx.translate(cx + Math.cos(an) * 14, cy + Math.sin(an) * 14); ctx.rotate(an); ctx.globalAlpha *= .7; benSword(L, 0); ctx.restore(); }
-    ctx.restore();
-  }
   function benedict(e, a, t) {
     const ph = Math.min(3, Math.max(1, e.phase || 1)), p = benPose(e, a, t), dead = e.dead;
     const shiftK = e.w5shift > 0 ? 1 - e.w5shift : 1; // the change as each new shape comes on
-    const silverK = ph >= 2 ? (ph === 2 ? sm(shiftK) : 1) : 0, mist = ph >= 3 ? sm(shiftK) : 0, haloK = ph >= 3 ? sm(shiftK) * (e.w5halo ?? 1) : 0;
+    const silverK = ph >= 2 ? (ph === 2 ? sm(shiftK) : 1) : 0, mist = ph >= 3 ? sm(shiftK) : 0;
     const bob = mist * (Math.sin(t * 1.3) * 2 - 6);
     const HIP = -38 + p.sink + bob, SHO = -60 + p.sink + bob, NECK = -64 + p.sink + bob, HY = -72 + p.sink + bob;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     if (!dead) ctx.globalAlpha *= .94; // a ghost: very nearly there
     if (e.w5vis !== undefined) ctx.globalAlpha *= cl01(e.w5vis); // stepping through the air in his feint
     if (p.spin) { const c = Math.cos(p.spin); ctx.scale(Math.max(.2, Math.abs(c)), 1); if (c < 0) ctx.scale(-1, 1); }
-    mandorla(-4, SHO - 10, haloK, e.w5blades ?? 11, t);
     const upper = (fn) => { ctx.save(); ctx.translate(0, HIP); ctx.rotate(p.lean); ctx.translate(0, -HIP); fn(); ctx.restore(); };
     // the cloak, thrown back off the shoulders, its hem going to mist
     upper(() => {
@@ -1088,6 +1073,7 @@
   }
   const mist = (x, y, z, n = 10) => { for (let i = 0; i < n; i++) parts.push({ x: x + rand(-10, 10), y: y + rand(-4, 4), z: z + rand(0, 40), vx: rand(-40, 40), vy: rand(-5, 5), vz: rand(10, 50), life: .7, max: .7, col: pick(['rgba(200,214,245,.7)', 'rgba(150,170,220,.6)', 'rgba(235,242,255,.6)']), size: rand(4, 8), shape: 'puff', rot: 0, vr: 0 }); };
   const silverBurst = (x, y, z, n = 12) => burst(x, y, z, ['#EEF2FA', '#C8D4EC', '#8A9AC8'], n, 'spark', 0, true);
+  W5.akit = { act, endAct, targets, reg, HZ, hitP, tellCol, tellLine, guardCol, guardLine, label, inEll, yClamp, xClamp, mist, silverBurst }; // (benedict.js)
 
   // ---------------- LANTERN COURTIER: MOONFIRE, a ball of cold fire lobbed out of its lantern onto where you stand ----------------
   PLAN_FX.w5moonfire = (e) => {
@@ -1230,7 +1216,7 @@
   // ======================================================================================================
   // THE PHANTOM OF BENEDICT
   // ======================================================================================================
-  Object.assign(BOSS_WIND, { w5lunge: 1.0, w5feint: .85, w5guard: .7, w5grip: 1.05, w5cross: 1.0, w5steps: .95, w5blades: 1.0, w5wheel: 1.05 });
+  Object.assign(BOSS_WIND, { w5lunge: 1.0, w5feint: .85, w5guard: .7, w5wheel: 1.05 }); // (his later shapes' attacks: benedict.js)
   const isBen = (e) => e && e.def === BOSSES.benedict;
   // THE LONG LUNGE: down your lane, from one end of the hall to the other; with the silver arm he comes back down another
   const lungeT = (e) => targets(e, () => ({ y: yClamp(P.y), d: Math.sign(P.x - e.x) || e.facing }));
@@ -1293,83 +1279,6 @@
     e.w5guarding = false; e.state = 'down'; e.t = 1.5; e.plan = null; floatText(e.x, e.y, e.hh * e.size + 24, 'GUARD BROKEN', '#FFE2A0', 17); sfx('break'); hitstop = Math.max(hitstop, .12); shakeMag = Math.max(shakeMag, 8);
     return 'crit';
   };
-  // THE SILVER ARM REACHES: the hand comes out on its chain of moonlight to where you stand; caught, you are drawn in to the blade
-  W5.gripT = (e) => e.w5G || { x: P.x, y: yClamp(P.y) };
-  TELL_FX.w5grip = (e, t, k) => { const G = W5.gripT(e), lock = k > .7, r = 34; ctx.fillStyle = tellCol(lock ? k : k * .5); ell(G.x, G.y, r, r / 2.2); ctx.fill(); if (!lock) ctx.setLineDash([4, 4]); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(G.x, G.y, r, r / 2.2); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = `rgba(255,220,220,${.4 + .4 * k})`; for (let i = 0; i < 4; i++) { ell(G.x + 8 + i * 3, G.y - 6 + i * 3.4, 6, 1.2, .2); ctx.fill(); } ell(G.x - 6, G.y, 7, 4); ctx.fill(); // an open hand on the floor
-    if (lock) label(G.x, G.y - r / 2.2 - 4, 'LOCKED', .5 + .4 * k); };
-  PLAN_FX.w5grip = (e) => {
-    const G = Object.assign({}, W5.gripT(e)); e.w5G = null; sfx('charge', 1);
-    const local = () => { const s = e.size, lx = (G.x - e.x) * e.facing / s - 4, ly = (G.y - e.y) / s - (-58 + 5); return [lx, ly]; }; // from his shoulder, in his own space
-    act(e, 'grip', (h, dt, e) => {
-      const [lx, ly] = local(), d = Math.hypot(lx, ly), A = Math.atan2(ly, lx), full = Math.max(0, d - 23); e.w5siA = A;
-      if (h.el < .32) { e.w5reach = full * sm(h.el / .32); return false; }
-      if (!h.slam) { h.slam = true; e.w5reach = full; sfx('slam'); shakeMag = Math.max(shakeMag, 5); silverBurst(G.x, G.y, 4, 10);
-        if (inEll(P.x, P.y, G.x, G.y, 36) && P.z < 30 && P.state !== 'dodge' && P.inv <= 0) { h.caught = true; e.w5caught = 1; floatText(P.x, P.y, 96, 'CAUGHT', '#E8EEF8', 15); } }
-      if (h.caught) { // drawn in on the chain, then the cut
-        const u = cl01((h.el - .32) / .38), tx = e.x + e.facing * 44; P.state = 'hurt'; P.t = Math.max(P.t, .2); P.vx = 0; P.x = lerp(G.x, tx, sm(u)); P.y = lerp(G.y, e.y, sm(u)); e.w5reach = full * (1 - sm(u)) + 2;
-        if (u >= 1 && !h.cut) { h.cut = true; sfx('slice'); hitP(Math.round(edmg(e) * 1.2), e.x, true); fx.push({ kind: 'slash', x: tx, y: e.y, z: 40, ang: -.4, t: .25, max: .25, size: 56, col: '#E8EEF8' }); }
-        if (h.el > .85) { recover(e, .8); return true; } return false;
-      }
-      e.w5reach = full * (1 - sm(cl01((h.el - .5) / .35))); // it missed: the arm comes home, slowly
-      if (h.el > .9) { recover(e, 1.15); return true; } return false; // and he is open while it does
-    });
-  };
-  // CROSSED BLADES: the sword and the silver hand cut an X through where you stand, one stroke after the other
-  const crossT = (e) => targets(e, () => ({ x: clamp(P.x, leftWall() + 60, rightWall() - 60), y: yClamp(P.y) }));
-  const crossSeg = (T, i) => { const dx = 170, dy = 52, s = i ? -1 : 1; return [T.x - dx, T.y - dy * s, T.x + dx, T.y + dy * s]; };
-  const segDist = (px, py, s) => { const [x0, y0, x1, y1] = s, vx = x1 - x0, vy = y1 - y0, u = cl01(((px - x0) * vx + (py - y0) * vy) / (vx * vx + vy * vy)); return Math.hypot(px - (x0 + vx * u), py - (y0 + vy * u)); };
-  function crossBand(s, k, n, live) { const [x0, y0, x1, y1] = s, a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0);
-    ctx.save(); ctx.translate(x0, y0); ctx.rotate(a); ctx.fillStyle = live ? tellCol(k) : tellCol(k * .5); ctx.fillRect(0, -11, L, 22); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; ctx.strokeRect(0, -11, L, 22); ctx.restore(); label(x0 + (x1 - x0) * .1, y0 + (y1 - y0) * .1 - 6, String(n), .5 + .4 * k); }
-  TELL_FX.w5cross = (e, t, k) => { const T = crossT(e); crossBand(crossSeg(T, 0), k, 1, true); crossBand(crossSeg(T, 1), k, 2, false); };
-  PLAN_FX.w5cross = (e) => {
-    const T = crossT(e); e.w5T = null; sfx('whoosh');
-    act(e, 'cross', (h, dt, e) => { e.w5k = cl01(h.el / .5);
-      for (const [i, at] of [[0, .12], [1, .34]]) if (h.el > at && !h['c' + i]) { h['c' + i] = true; sfx('slice'); shakeMag = Math.max(shakeMag, 5); const s = crossSeg(T, i); h.flash.push({ s, t: .3 });
-        if (!h.hit && segDist(P.x, P.y, s) < 15 && P.z < 44) { h.hit = true; hitP(Math.round(edmg(e) * 1.05), e.x, true); } }
-      for (const f of h.flash) f.t -= dt;
-      if (h.el > .75) { recover(e, 1.0); return true; } return false;
-    }, { flash: [] }).draw = (h, t) => { if (!h.c1) crossBand(crossSeg(T, 1), 1, 2, true); for (const f of h.flash) if (f.t > 0) { const [x0, y0, x1, y1] = f.s; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(235,242,255,${f.t * 3})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.restore(); } };
-  };
-  // ECHO OF YOUR STEPS: the city remembers where you walked. A ghost blade falls on each footprint, oldest first: don't go back
-  W5.trail = [];
-  TELL_FX.w5steps = (e, t, k) => { for (let i = 0; i < W5.trail.length; i++) { const p = W5.trail[i]; footprint(p.x, p.y, k * (.4 + .6 * i / W5.trail.length), false); } };
-  function footprint(x, y, k, next) { ctx.fillStyle = next ? tellCol(1) : `rgba(225,235,255,${.25 + .45 * k})`; ell(x - 3, y - 2, 4, 1.8, -.2); ctx.fill(); ell(x + 3, y + 2, 4, 1.8, -.2); ctx.fill(); if (next) { ctx.strokeStyle = tellLine(1); ctx.lineWidth = 1.4; ell(x, y, 22, 10); ctx.stroke(); } }
-  PLAN_FX.w5steps = (e) => {
-    const marks = W5.trail.map((p, i) => ({ x: p.x, y: p.y, at: .55 + i * .13, done: false })); sfx('charge', 2);
-    if (!marks.length) marks.push({ x: P.x, y: P.y, at: .6, done: false });
-    hazards.push({ kind: 'w5steps', marks, el: 0, t: 9, max: 9, dmg: edmg(e), hit: false });
-    act(e, 'steps', (h, dt, e) => { if (h.el > .7) { recover(e, .9); return true; } return false; });
-  };
-  reg('w5steps', {
-    update(h, dt) { h.el += dt; let left = 0;
-      for (const m of h.marks) { if (m.done) continue; left++; if (h.el >= m.at) { m.done = true; m.f = .4; sfx('slice'); if (!h.hit && inEll(P.x, P.y, m.x, m.y, 26) && P.z < 36) { h.hit = true; hitP(h.dmg, m.x, true); } } }
-      for (const m of h.marks) if (m.f > 0) m.f -= dt;
-      if (!left && h.marks.every(m => !(m.f > 0))) h.t = -1; },
-    draw(h, t) { const next = h.marks.find(m => !m.done); for (const m of h.marks) if (!m.done) footprint(m.x, m.y, 1, m === next); },
-    ups(h, list, t) { for (const m of h.marks) { if (m.done && !(m.f > 0)) continue; const z = m.done ? 0 : Math.max(0, (m.at - h.el) / .3) * 120; if (!m.done && z > 110) continue;
-      list.push([m.y, () => onMain(() => { ctx.save(); ctx.globalAlpha = m.done ? m.f / .4 : .8; ctx.translate(m.x, m.y - 4 - z); ctx.rotate(Math.PI / 2); benSword(40, 0); ctx.restore(); })]); } },
-    box(h, box) { for (const m of h.marks) box(m.x, m.y, 0, 30, 140); },
-  });
-  // MOONFALL OF BLADES: the swords of his mandorla fall across the hall in a sweeping wave, one rank after another; one gap runs through them
-  PLAN_FX.w5blades = (e) => {
-    const n = 9, x0 = leftWall() + 6, x1 = rightWall() - 6, w = (x1 - x0) / n, dir = e.x < (x0 + x1) / 2 ? 1 : -1, cols = [];
-    let gy = yClamp(P.y + (P.y > (FLOOR_TOP + FLOOR_BOT) / 2 ? -1 : 1) * rand(46, 70)); for (let i = 0; i < n; i++) { const ci = dir > 0 ? i : n - 1 - i; gy = clamp(gy + rand(-26, 26), FLOOR_TOP + 22, FLOOR_BOT - 14); cols.push({ x: x0 + (ci + .5) * w, w, gy, at: .85 + i * .2, done: false }); }
-    hazards.push({ kind: 'w5blades', cols, el: 0, t: 9, max: 9, dmg: edmg(e), hit: false }); e.w5halo = 0; sfx('charge', 2);
-    act(e, 'blades', (h, dt, e) => { if (h.el > .9) { recover(e, 1.0); return true; } return false; });
-  };
-  reg('w5blades', {
-    update(h, dt) { h.el += dt; let left = 0;
-      for (const c of h.cols) { if (c.done) { c.f -= dt; continue; } left++; if (h.el >= c.at) { c.done = true; c.f = .45; sfx('slice'); shakeMag = Math.max(shakeMag, 3);
-        if (!h.hit && Math.abs(P.x - c.x) < c.w / 2 + 4 && Math.abs(P.y - c.gy) > 20 && P.z < 60) { h.hit = true; hitP(h.dmg, c.x, true); } } }
-      if (!left && h.cols.every(c => c.f <= 0)) h.t = -1; },
-    draw(h, t) { for (const c of h.cols) { if (c.done) continue; const k = cl01(1 - (c.at - h.el) / .9);
-      ctx.fillStyle = tellCol(k * .8); ctx.fillRect(c.x - c.w / 2 + 2, FLOOR_TOP + 6, c.w - 4, c.gy - 20 - FLOOR_TOP - 6); ctx.fillRect(c.x - c.w / 2 + 2, c.gy + 20, c.w - 4, FLOOR_BOT + 6 - c.gy - 20);
-      ctx.strokeStyle = 'rgba(200,225,255,.7)'; ctx.lineWidth = 1.4; ell(c.x, c.gy, c.w / 2 - 2, 9); ctx.stroke(); } }, // the gap, left clear
-    ups(h, list, t) { for (const c of h.cols) { const pre = (c.at - h.el); if (c.done ? c.f <= 0 : pre > .3) continue; const z = c.done ? 0 : pre / .3 * 140, a = c.done ? c.f / .45 : 1;
-      for (let j = 0; j < 4; j++) { const y = FLOOR_TOP + 14 + j * 26 + (j > 1 ? 8 : 0); if (Math.abs(y - c.gy) < 20) continue; list.push([y, () => onMain(() => { ctx.save(); ctx.globalAlpha = a * .85; ctx.translate(c.x + (j % 2) * 6 - 3, y - z - 2); ctx.rotate(Math.PI / 2); benSword(38, 0); ctx.restore(); })]); } } },
-    box(h, box) { for (const c of h.cols) box(c.x, FLOOR_BOT, 0, c.w, 260); },
-  });
   // THE SILVER WHEEL (his close-range answer): blade and silver hand together in a full turn, a wheel of light round him
   const wheelR = (e) => e.hw + 84;
   TELL_FX.w5wheel = (e, t, k) => { const R = wheelR(e); ctx.fillStyle = tellCol(k); ell(e.x, e.y, R * (.4 + .6 * k), R * (.4 + .6 * k) / 2.2); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(e.x, e.y, R, R / 2.2); ctx.stroke();
@@ -1543,26 +1452,20 @@
 
   // ---------------- THE MOON THRONE: the night ends as the fight does ----------------
   // As the Phantom changes the moon goes down and the east pales; in his last shape the dawn has reached the edges of
-  // the hall, and the floor is not there at either end. The city remembers where you have walked (his Echo of Your Steps).
+  // the hall, and the floor is not there at either end (benedict.js stages the shapes themselves).
   MECH_FX.w5throne = {
-    start(m) { m.ph = 1; m.rec = 0; W5.trail = []; W5.dawnK = 0; m.edge = 0; m.tick = 0; m.arm = null; },
+    start(m) { W5.dawnK = 0; m.edge = 0; m.tick = 0; m.arm = null; },
     update(m, dt) {
       const e = boss && isBen(boss) ? boss : null;
       if (!e) { W5.dawnK = 0; return; }
-      if (e.phase !== m.ph && !e.dead) { m.ph = e.phase; e.w5shift = 1; e.w5T = null; mist(e.x, e.y, 30, 24); sfx('trump');
-        floatText(e.x, e.y, e.hh * e.size + 40, e.phase === 2 ? 'THE SILVER ARM' : 'THE PHANTOM UNBOUND', '#EEF2FA', 17); }
-      if (e.w5shift > 0) e.w5shift = Math.max(0, e.w5shift - dt / 1.4);
-      e.w5halo = Math.min(1, (e.w5halo ?? 1) + dt * (e.state === 'w5act' && e.w5a === 'blades' ? 0 : .35));
-      if (e.state !== 'w5act' || e.w5a !== 'blades') e.w5blades = Math.round(11 * e.w5halo);
-      const target = e.dead ? 1 : [0, 0, .35, .75][e.phase]; W5.dawnK += (target - W5.dawnK) * Math.min(1, dt * .6);
-      if (e.state === 'wind' && e.plan === 'w5grip' && 1 - e.t / e.windMax < .7) e.w5G = { x: P.x, y: yClamp(P.y) }; // the hand follows you, then fixes
+      const ph = e.bph || e.phase; // his shape (benedict.js: the man, the Host, the Swordsman in the Stars, the Silver Hand)
+      const target = e.dead ? 1 : [0, 0, .25, 0, .8][ph]; W5.dawnK += (target - W5.dawnK) * Math.min(1, dt * .6); // the stars put the dawn back; the Hand brings it on
       if (stillT > 0) return;
-      m.rec -= dt; if (m.rec <= 0) { m.rec = .2; W5.trail.push({ x: P.x, y: P.y }); if (W5.trail.length > 15) W5.trail.shift(); } // the city remembers where you walked
       // in his last shape, the dawn has come to both ends of the hall
-      m.edge += ((e.phase >= 3 && !e.dead ? 58 : 0) - m.edge) * Math.min(1, dt * 1.2);
+      m.edge += ((ph >= 4 && !e.dead ? 58 : 0) - m.edge) * Math.min(1, dt * 1.2);
       if (m.edge > 8 && P.state !== 'dead') { const L = leftWall() + m.edge, R = rightWall() - m.edge;
         if ((P.x < L || P.x > R) && P.z < 10) { m.tick -= dt; if (m.tick <= 0) { m.tick = .5; hitP(Math.max(4, Math.round(maxHp() * .045)), P.x < L ? P.x - 50 : P.x + 50, false); if (P.state === 'hurt') P.vx = P.x < L ? 260 : -260; floatText(P.x, P.y, 90, 'THE DAWN BURNS', '#FFD8C0', 13); } } }
-      if (e.dead && !m.arm) m.arm = { x: e.x - e.facing * 8, y: e.y + 2 }; // the silver arm, left lying where he fell
+      if (e.dead && !m.arm && e.w5armDrop) m.arm = e.w5armDrop; // the silver arm, left lying where he fell (benedict.js lays it down)
       for (const p of parts) if (!p.w5 && p.shape === 'star' && p.max === 1.6 && (p.col === '#D8A0E8' || p.col === '#9FD8E0' || p.col === '#FFF0C0')) { p.w5 = 1; p.col = pick(['#EEF2FA', '#C8D4EC', '#9AAAD0']); } // the arena's weather, silver here
     },
     boxes(m, box) { if (m.arm) box(m.arm.x, m.arm.y, 0, 40, 40); },
@@ -1859,6 +1762,8 @@
                'F#5 - - - A5 - - - D6 - - - F#6 - - -', 'E6 - - - D6 - - - B5 - - - G5 - - -', 'A5 - - - - - - - C#6 - - - E6 - - -', 'D6 - - - - - - - - - - - . . . .'] },
     });
   }
+  // the drawing kit, the Phantom's first shape and his silver arm, for the later shapes and the silver arm's wearer (benedict.js, silverarm.js)
+  W5.kit = { DET, add, addB, poly, fillPoly, glowAt, glowM, hsh, sm, cl01, taper, trace, horn, cel, PB, PP, PE, stripPath, leafLine, mistTongue, ghostHand, benedict, benPose, benSword, silverArm, BN, PALE, MOONRGB };
   window.w5Late = late;
   window.w5Dom = dom;
 
