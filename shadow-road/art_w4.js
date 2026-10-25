@@ -571,6 +571,7 @@
     liveFloor(camX, t) { liveSeams(rimSeams, camX, t, '255,170,90', .22, .2); liveEmbers(camX, t, 70, T - 40, T + 100, '255,160,90'); },
   };
   AW_FAR.chaosBoss = rimFar; AW_MID.chaosBoss = rimMid; AW_FLOOR.chaosBoss = rimFloor;
+  window.W4_ART = { spire, isle, stairs, chain, banner4, crag, thornTree, shard, OBS }; // (the end of each area paints with these: thresholds.js)
 
   // ======================================================================================================
   // THE HUMANS OF THE COURTS: their looks for drawHumanoid, and their weapons

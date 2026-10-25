@@ -46,11 +46,12 @@ function coverPaint(kind, v) { // v: which of three versions of it
     for (let i = 0; i < 7; i++) { const x = (r() - .5) * 52, y = -14 - r() * 18; dab(x, y, 1.8 + r() * 1.2, pal[2], .85); dab(x + s * .6, y - .6, .9, '#FFF0E8', .7); } // blossom
   }, { foot: 14, seed: 11 + v });
   if (kind === 'crates') return propSprite('crates' + v, 96, 92, 50, 80, (th, s) => {
-    const wood = ['#7A5636', '#86603A', '#704E32'][v], box = (x, y, w, h, k) => { // one crate: planked faces, a lit top, the shadow side darker, a brace, brass at the corners
+    const wood = ['#6A4A2E', '#765234', '#62442A'][v], box = (x, y, w, h, k) => { // one crate: planked faces, a lit top, the shadow side darker, a brace, brass at the corners
       const body = shade(wood, (k - 1) * .06), top = 4.5;
       ctx.fillStyle = body; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = shade(body, .32); awPath([x, y, x + w, y, x + w + s * 3, y - top, x + s * 3, y - top]); ctx.fill(); // the lid catching the light
-      ctx.fillStyle = shade(body, -.38); s > 0 ? ctx.fillRect(x - 3, y - top * .5, 3, h + top * .5) : ctx.fillRect(x + w, y - top * .5, 3, h + top * .5); // the shadowed end
+      ctx.fillStyle = shade(body, .26); awPath([x, y, x + w, y, x + w + s * 3, y - top, x + s * 3, y - top]); ctx.fill(); // the lid catching the light
+      ctx.fillStyle = shade(body, -.5); ctx.fillRect(x, y + h - 2.2, w, 2.2); // its seat, dark where it rests
+      ctx.fillStyle = shade(body, -.5); s > 0 ? ctx.fillRect(x - 3.5, y - top * .5, 3.5, h + top * .5) : ctx.fillRect(x + w, y - top * .5, 3.5, h + top * .5); // the shadowed end
       for (let k2 = 1; k2 < 4; k2++) { const py = y + h * k2 / 4; ctx.fillStyle = shade(body, -.3); ctx.fillRect(x + 1, py - .4, w - 2, .9); ctx.fillStyle = shade(body, .2); ctx.globalAlpha = .6; ctx.fillRect(x + 1, py + .6, w - 2, .6); ctx.globalAlpha = 1; } // plank seams
       for (let i = 0; i < 14; i++) dab(x + 2 + r() * (w - 4), y + 2 + r() * (h - 4), 1.4 + r() * 2.4, r() < .5 ? shade(body, .16) : shade(body, -.2), .45); // weathering
       ctx.strokeStyle = shade(body, -.42); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + 3, y + h - 3); ctx.lineTo(x + w - 3, y + 3); ctx.stroke(); // the brace
@@ -59,7 +60,7 @@ function coverPaint(kind, v) { // v: which of three versions of it
     };
     if (v === 2) { box(-34, -28, 28, 28, 0); box(-4, -30, 30, 30, 1); box(-20, -56, 24, 24, 2); }
     else { box(-30, -30, 30, 30, 0); box(0, -26, 26, 26, 1); if (v === 0) box(-18, -56, 26, 26, 2); else { box(-26, -54, 22, 22, 2); } }
-  }, { foot: 10, seed: 13 + v, haze: .06, warm: .1, line: .7 });
+  }, { foot: 12, seed: 13 + v, haze: .04, warm: .08, line: .85, lw: .9 });
   if (kind === 'crystal') return propSprite('crystal' + v, 170, 150, 85, 132, (th, s) => {
     const hue = [190, 280, 320][v];
     awCluster(0, -3, 76 + v * 6, hue, r, 54);

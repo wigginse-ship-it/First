@@ -531,4 +531,5 @@
   };
   AW_FAR.prism2 = galleryFar; AW_MID.prism2 = galleryMid; AW_FLOOR.prism2 = galleryFloor;
   AW_FAR.prismBoss = nestFar; AW_MID.prismBoss = nestMid; AW_FLOOR.prismBoss = nestFloor;
+  window.ZP_ART = { zColumn, zRib, zScale, MARBLE, BONE, BONE_FAR }; // (the end of each area paints with these: thresholds.js)
 })();

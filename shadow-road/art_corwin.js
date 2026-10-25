@@ -523,7 +523,7 @@ const CORWIN = (() => {
       if (hsh(sd + 2) < .2) { s.dv = .03 + hsh(sd + 3) * .08; s.du = (hsh(sd + 4) < .5 ? -1 : 1) * (.1 + hsh(sd + 5) * .14); } // a few dragged across the grain
       else { s.dv = (.1 + hsh(sd + 3) * .4) * (1 + sp * .45); s.du = (hsh(sd + 4) - .5) * .18; }
       s.bd = (hsh(sd + 6) - .5) * .14; s.w = 1.4 + Math.pow(hsh(sd + 7), 1.4) * 5.4; s.dry = hsh(sd + 8) < .5 && s.w > 2.6;
-      const r = hsh(sd + 9); s.c = r < .33 ? 'd' : r < .6 ? 's' : r < .74 ? 'g' : r < .85 ? 'l' : 'b';
+      const r = hsh(sd + 9); s.c = r < .33 ? 'd' : r < .6 ? 's' : r < .74 ? 'g' : r < .85 ? (s.v < .55 ? 'l' : 's') : 'b'; // (the silver catches of light high on the cloth)
       s.sm = sp * (2 + hsh(sd + 10) * 7); // smeared along its flight
     }
   }
@@ -532,7 +532,7 @@ const CORWIN = (() => {
   const RX = new Float32Array(4), RY = new Float32Array(4), NX = new Float32Array(4), NY = new Float32Array(4), RW = [.8, 1, .8, .22];
   function ribbon(Pt, u, v, du, dv, bd, w, sm, off, wf, qe) {
     const ln = Math.hypot(LVX, LVY) || 1, nx = -LVX / ln, ny = -LVY / ln;
-    for (let q = 0; q < 4; q++) { const f = q / 3 * qe; uv(Pt, u + du * f + bd * Math.sin(Math.PI * f), v + dv * f); RX[q] = UX + nx * sm * f; RY[q] = UY + ny * sm * f; }
+    for (let q = 0; q < 4; q++) { const f = q / 3 * qe; uv(Pt, u + du * f + bd * Math.sin(Math.PI * f), Math.min(.985, v + dv * f)); /* (kept above the torn hem) */ RX[q] = UX + nx * sm * f; RY[q] = UY + ny * sm * f; }
     for (let q = 0; q < 4; q++) { const a = Math.max(0, q - 1), b = Math.min(3, q + 1), tx = RX[b] - RX[a], ty = RY[b] - RY[a], tl = Math.hypot(tx, ty) || 1; NX[q] = -ty / tl; NY[q] = tx / tl; }
     const o = w * off;
     for (let q = 0; q < 4; q++) { const h = w * RW[q] * wf * .5; q ? ctx.lineTo(RX[q] + NX[q] * (o + h), RY[q] + NY[q] * (o + h)) : ctx.moveTo(RX[q] + NX[q] * (o + h), RY[q] + NY[q] * (o + h)); }
@@ -540,31 +540,38 @@ const CORWIN = (() => {
     ctx.closePath();
   }
   const CCOL = (L, c) => c === 's' ? L.cloakSlate : c === 'g' ? L.cloakGrey : c === 'l' ? L.cloakLt : c === 'd' ? '#050407' : L.cloak;
-  const CALPHA = { d: .75, s: .5, g: .3, l: .36, b: .9 };
+  const CALPHA = { d: .85, s: .46, g: .28, l: .5, b: .9 };
   const FOLDS = 5;
   // a piece of the cloak, from u0 to u1 across it: lining (the inside of the far side, seen past him), the back of the
   // cloak (behind him), or the part wrapped round his front
   function sheet(L, Pt, u0, u1, lining, frontPart) {
     if (u1 - u0 < .01) return;
     const t = CLOAK_GEO.t, det = DET(), fine = FINE(), sp = clamp(SPD / 160, 0, 1.6);
-    const path = new Path2D(), n0 = Math.ceil(u0 * (S - 1) + 1e-3), n1 = Math.floor(u1 * (S - 1) - 1e-3);
-    uv(Pt, u0, 0); path.moveTo(UX, UY);
-    for (let i = n0; i <= n1; i++) { uv(Pt, i / (S - 1), 0); path.lineTo(UX, UY); } // across the shoulders
-    const side = (u, down) => { for (let k = 1; k <= M; k++) { const j = down ? k : M - k; uv(Pt, u, j / M); const x0 = UX, y0 = UY; uv(Pt, u, (down ? j + 1 : j - 1) / M); // down (or up) one edge, smoothed
-        if ((down && j < M) || (!down && j > 0)) path.quadraticCurveTo(x0, y0, (x0 + UX) / 2, (y0 + UY) / 2); else path.lineTo(x0, y0); } };
-    uv(Pt, u1, 0); path.lineTo(UX, UY); side(u1, true);
-    const nj = Math.max(2, Math.ceil((u1 - u0) * JN)); // the torn hem
-    for (let k = 0; k <= nj; k++) { const u = u1 - (u1 - u0) * k / nj; uv(Pt, u, 1); const hx = UX, hy = UY; uv(Pt, u, .8); let ux = UX - hx, uy = UY - hy; const ul = Math.hypot(ux, uy) || 1;
-      const jg = JAG[Math.round(u * JN)] * (k % 2 ? 1 : .35); path.lineTo(hx + ux / ul * jg, hy + uy / ul * jg); }
-    side(u0, false); path.closePath();
+    // its outline: across the shoulders, down one edge, along the torn hem, up the other. The cloth is a curved sheet, so
+    // its strands can bulge out past its own edges (seen from behind, the flare of the hem): it is filled strip by strip
+    // (between each pair of strands), so every bulge is filled however it is seen
+    const piece = (path, a, b) => {
+      const n0 = Math.ceil(a * (S - 1) + 1e-3), n1 = Math.floor(b * (S - 1) - 1e-3);
+      uv(Pt, a, 0); path.moveTo(UX, UY);
+      for (let i = n0; i <= n1; i++) { uv(Pt, i / (S - 1), 0); path.lineTo(UX, UY); } // across the shoulders
+      const side = (u, down) => { for (let k = 1; k <= M; k++) { const j = down ? k : M - k; uv(Pt, u, j / M); const x0 = UX, y0 = UY; uv(Pt, u, (down ? j + 1 : j - 1) / M); // down (or up) one edge, smoothed
+          if ((down && j < M) || (!down && j > 0)) path.quadraticCurveTo(x0, y0, (x0 + UX) / 2, (y0 + UY) / 2); else path.lineTo(x0, y0); } };
+      uv(Pt, b, 0); path.lineTo(UX, UY); side(b, true);
+      const nj = Math.max(2, Math.ceil((b - a) * JN)); // the torn hem
+      for (let k = 0; k <= nj; k++) { const u = b - (b - a) * k / nj; uv(Pt, u, 1); const hx = UX, hy = UY; uv(Pt, u, .8); let ux = UX - hx, uy = UY - hy; const ul = Math.hypot(ux, uy) || 1;
+        const jg = JAG[Math.round(u * JN)] * (Math.round(u * JN) % 2 ? 1 : .35); path.lineTo(hx + ux / ul * jg, hy + uy / ul * jg); }
+      side(a, false); path.closePath(); return path;
+    };
+    const path = piece(new Path2D(), u0, u1), strips = [];
+    for (let i = Math.floor(u0 * (S - 1)); i < Math.ceil(u1 * (S - 1) - 1e-3); i++) { const a = Math.max(u0, i / (S - 1)), b = Math.min(u1, (i + 1) / (S - 1)); if (b - a > 1e-3) strips.push(piece(new Path2D(), a, b)); }
     // the cloth itself: lit at the shoulders, falling into shadow toward the hem; the inside a cold, deep grey
     uv(Pt, (u0 + u1) / 2, 0); const gx0 = UX, gy0 = UY; uv(Pt, (u0 + u1) / 2, 1);
     const base = lining ? (L.cloakLining || '#1E2029') : L.cloak, gr = ctx.createLinearGradient(gx0, gy0, UX, UY);
     gr.addColorStop(0, C(shade(base, frontPart ? .22 : .14))); gr.addColorStop(.45, C(base)); gr.addColorStop(1, C(shade(base, -.45)));
-    ctx.fillStyle = gr; ctx.fill(path);
+    ctx.fillStyle = gr; for (const p of strips) ctx.fill(p);
     if (!det) return;
     const lo = u0 - .02, hi = u1 + .02;
-    ctx.save(); ctx.clip(path); ctx.lineCap = 'round';
+    ctx.save(); if (frontPart) ctx.clip(path); ctx.lineCap = 'round'; // (round his front, the paint keeps to the cloth: past its edge is his body)
     if (fine) { // the folds: deep troughs and a cold light on each ridge, drifting as the cloth moves, swinging wider as it flies
       ctx.beginPath(); const b0 = ctx.globalAlpha;
       for (let k = 0; k < FOLDS; k++) { const u = (k + .2 + hsh(k + 77) * .6) / FOLDS + .03 * Math.sin(t * .5 + k * 1.7) + FO * .05 * Math.sin(t * 2.6 + k * 2.3); if (u < lo || u > hi) continue;

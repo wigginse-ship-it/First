@@ -537,6 +537,7 @@
     },
   };
   AW_FAR.moonBoss = throneFar; AW_MID.moonBoss = throneMid; AW_FLOOR.moonBoss = throneFloor;
+  window.W5_ART = { ghostHouse, unicornBanner, mistPillar, coldLamp, flight, cloudIsle }; // (the end of each area paints with these: thresholds.js)
 
   // the breakable pods of this world: a cluster of selenite, moonstone grown in blades, glowing from within
   const podDraw = drawPod;
@@ -1654,29 +1655,7 @@
       update(e, n, dt) { const k = sm(cl01(n.t / 2)); e.z = n.z0 * (1 - k); if (n.t > 2 && !n.l) { n.l = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 8); dust(e.x, e.y, 14); } return n.t >= n.max; },
       draw(e, n, t, inner) { inner(); } },
   });
-  // ---------------- the landmarks at the end of each area ----------------
-  if (typeof THRESH !== 'undefined') {
-    // the Stair of Moonlight -> the Streets: the foot of a stair of light, climbing up out of sight into the sky
-    THRESH.w5moonpath = (x, y, k, t) => {
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 22; i++) { const u = i / 22, sx = x - 40 + u * 120, sy = y + 30 - u * (y + 30 - Y_OFF + 20), w = 70 - u * 30;
-        ctx.fillStyle = `rgba(225,235,255,${(.25 + .45 * k) * (1 - u * .5)})`; ctx.fillRect(sx - w / 2, sy, w, 4); ctx.fillStyle = `rgba(140,160,215,${.18 + .15 * k})`; ctx.fillRect(sx - w / 2, sy + 4, w, 6); }
-      ctx.restore();
-      for (const s of [-1, 1]) { ctx.fillStyle = C('#9AAAC8'); ctx.fillRect(x - 40 + s * 38 - 3, y - 14, 6, 44); ctx.beginPath(); ctx.rect(x - 40 + s * 38 - 3, y - 14, 6, 44); outline(1.2); ctx.fillStyle = C('#E8EEF8'); circle(x - 40 + s * 38, y - 17, 4.4); ctx.fill(); outline(1); glowM(x - 40 + s * 38, y - 17, 16, PALE, .2 + .4 * k); } // newel posts, silver-capped
-      glowM(x, y - 20, 90, '210,225,255', .15 + .25 * k);
-    };
-    // the Streets -> the Moon Throne: the doors of the ghost palace, the unicorn on each leaf; they open as the way clears
-    THRESH.w5mist = (x, y, k, t) => {
-      const w = 46, h = 110, top = y - h + 30, open = sm(k);
-      ctx.fillStyle = 'rgba(4,6,16,.92)'; ctx.beginPath(); ctx.moveTo(x - w, y + 30); ctx.lineTo(x - w, top + 30); ctx.quadraticCurveTo(x - w, top - 14, x, top - 22); ctx.quadraticCurveTo(x + w, top - 14, x + w, top + 30); ctx.lineTo(x + w, y + 30); ctx.fill();
-      glowM(x, y - 20, 70, '225,235,255', .15 + .45 * open);
-      for (const s of [-1, 1]) { const lw = w * (1 - open * .82); ctx.save(); ctx.translate(x + s * w, 0); ctx.scale(s, 1); // each leaf swings back on its hinge
-        ctx.fillStyle = C('#2A3866'); ctx.beginPath(); ctx.moveTo(0, y + 30); ctx.lineTo(0, top + 30); ctx.quadraticCurveTo(0, top - 10, lw, top - 18 + (1 - open) * 0); ctx.lineTo(lw, y + 30); ctx.closePath(); ctx.fill(); outline(1.4);
-        ctx.strokeStyle = C('#C8D2E4'); ctx.lineWidth = 1; ctx.beginPath(); const ux = lw * .5, uy = y - 30; ctx.moveTo(ux - 6, uy + 18); ctx.quadraticCurveTo(ux - 8, uy + 4, ux - 2, uy - 2); ctx.lineTo(ux + 5, uy); ctx.lineTo(ux + 2, uy + 4); ctx.quadraticCurveTo(ux, uy + 10, ux + 4, uy + 18); ctx.moveTo(ux - 2, uy - 2); ctx.lineTo(ux + 3, uy - 13); ctx.stroke(); ctx.restore(); } // the unicorn
-      ctx.strokeStyle = C('#C8D2E4'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - w - 4, y + 30); ctx.lineTo(x - w - 4, top + 30); ctx.quadraticCurveTo(x - w - 4, top - 18, x, top - 27); ctx.quadraticCurveTo(x + w + 4, top - 18, x + w + 4, top + 30); ctx.lineTo(x + w + 4, y + 30); ctx.stroke(); // the arch, silver leaf
-      for (let i = 0; i < 4; i++) softDab(x + (i - 1.5) * 30, y + 26, 30, '200,214,245', .2); // mist on the threshold
-    };
-  }
+  // (the landmarks at the end of each area, THRESH.w5moonpath and THRESH.w5mist, are painted in thresholds.js)
   // ---------------- what each of them does every frame ----------------
   // the weeping watcher moves only while he is not looking at it; the knave turns edge-on; the reflection carries his weapon;
   // the sphinx keeps perfectly still while she waits for her answer

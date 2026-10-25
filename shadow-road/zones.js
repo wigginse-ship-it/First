@@ -65,7 +65,7 @@ function updateZoneTrans(dt) {
       snapC.width = cv.width; snapC.height = cv.height; snapC.getContext('2d').drawImage(cv, 0, 0);
     }
     if (T.secret) enterSecret(); else enterZone(zoneIdx + 1); P.x = 40; P.inv = 9;
-    if (T.kind === 'roots') { for (let i = 0; i < 14; i++) parts.push({ x: P.x + rand(-30, 30), y: P.y, z: 1, vx: rand(-90, 90), vy: rand(-10, 10), vz: rand(80, 200), life: .8, max: .8, col: 'rgba(170,200,190,.75)', size: rand(2, 4), shape: 'blob' }); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .5, max: .5, r: 60, col: '#BFE0D0', flat: 1 }); sfx('slam'); }
+    if (T.kind === 'roots') { for (let i = 0; i < 14; i++) parts.push({ x: P.x + rand(-30, 30), y: P.y, z: 1, vx: rand(-90, 90), vy: rand(-10, 10), vz: rand(80, 200), life: .8, max: .8, col: 'rgba(170,200,190,.75)', size: rand(2, 4), shape: 'blob' }); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .5, max: .5, r: 60, col: '#BFE0D0', flat: 1 }); sfx('hit-goo', .7); } // he steps down off the last root into the shallows
     if (T.kind === 'invert') { flashT = .15; }
   }
   if (T.t >= T.dur) {
@@ -74,91 +74,9 @@ function updateZoneTrans(dt) {
   }
 }
 const hash1 = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
-function drawZoneTrans(t) {
+function drawZoneTrans(t) { // (each passage is painted by TRANS_FX[kind]: thresholds.js for the ten between areas, secrets.js for the card gate)
   const T = zoneTrans, p = T.t / T.dur, inP = p < .5, c = inP ? ease(p * 2) : 1 - ease((p - .5) * 2);
-  const X0 = 0, X1 = VW, Y0 = Y_OFF, Y1 = VH, H = Y1 - Y0;
-  ctx.save();
-  if (TRANS_FX[T.kind]) TRANS_FX[T.kind](T, p, c, inP, t);
-  else if (T.kind === 'canopy') { // the forest closes over the road: a wall of leaves sweeps in, then parts onto the hollow
-    const L = inP ? X1 * (1.1 - 1.2 * c) : -60, R = inP ? X1 + 60 : X1 * (1.1 - 1.2 * (1 - c));
-    const edge = (x0, y, s) => x0 + Math.sin(y * .05 + s) * 16 + Math.sin(y * .13 + s * 2) * 7;
-    ctx.beginPath(); ctx.moveTo(edge(L, Y0, 1), Y0);
-    for (let y = Y0; y <= Y1; y += 8) ctx.lineTo(edge(L, y, 1), y);
-    for (let y = Y1; y >= Y0; y -= 8) ctx.lineTo(edge(R, y, 4), y);
-    ctx.closePath(); const g = ctx.createLinearGradient(0, Y0, 0, Y1); g.addColorStop(0, '#15241A'); g.addColorStop(1, '#2A3A1E'); ctx.fillStyle = g; ctx.fill();
-    for (let i = 0; i < 70; i++) { // leaves massed along the edges and scattered over the wall
-      const yy = Y0 + hash1(i) * H, onEdge = i < 46, ex = onEdge ? (i % 2 ? edge(L, yy, 1) : edge(R, yy, 4)) : L + hash1(i + 9) * (R - L);
-      if (ex < L - 30 || ex > R + 30) continue;
-      inkDab(ex + (hash1(i + 3) - .5) * 26, yy, 9 + hash1(i + 5) * 12, ['#2E4A26', '#4E7A3A', '#3A5A2C', '#6E8A40'][i % 4]);
-    }
-  } else if (T.kind === 'roots') { // hanging roots come down like a curtain as the ground gives way beneath him
-    const B = Y0 + (H + 70) * c;
-    ctx.fillStyle = '#1A140E'; ctx.fillRect(X0, Y0, X1, B - Y0);
-    ctx.lineCap = 'round';
-    for (let i = 0; i < X1 / 11; i++) {
-      const x = i * 11 + hash1(i) * 8, len = 22 + hash1(i + 2) * 60, w = 2.5 + hash1(i + 4) * 4;
-      ctx.strokeStyle = i % 3 ? '#2E2216' : '#3E3020'; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x, B - 4); ctx.quadraticCurveTo(x + Math.sin(i + t) * 5, B + len * .5, x + (hash1(i + 6) - .5) * 10, B + len); ctx.stroke();
-      if (i % 2) dab(x, B + len * .4, 4 + hash1(i + 8) * 4, '#4E6A34', .9); // moss
-    }
-  } else if (T.kind === 'clouds') { // up through the clouds to the galleon: a bank rises over everything and streams away above
-    const top = inP ? Y1 - (H + 90) * c : Y0 - 90, bot = inP ? Y1 + 60 : Y0 + (H + 90) * c;
-    ctx.fillStyle = 'rgb(246,232,214)'; ctx.fillRect(X0, top + 30, X1, Math.max(0, bot - top - 60));
-    for (let i = 0; i < 24; i++) { const x = (i / 23) * X1, s = 34 + hash1(i) * 26; softDab(x, top + 30 + hash1(i + 1) * 20, s, '252,238,220', .95); softDab(x + 14, bot - 30 - hash1(i + 2) * 20, s, '240,214,190', .95); }
-    if (p > .3 && p < .7) { // a galleon slides across the cloud
-      const k = (p - .3) / .4, sx = X1 + 100 - k * (X1 + 200), sy = Y0 + H * .4;
-      ctx.fillStyle = 'rgba(70,50,60,.55)'; ell(sx, sy - 22, 46, 16); ctx.fill(); ctx.beginPath(); ctx.moveTo(sx - 40, sy); ctx.lineTo(sx + 44, sy); ctx.lineTo(sx + 30, sy + 14); ctx.lineTo(sx - 30, sy + 14); ctx.closePath(); ctx.fill();
-    }
-  } else if (T.kind === 'lift') { // iron shutters slam shut on the deck, the lift grinds, and they open on the foundry
-    const w = (X1 / 2 + 14) * c;
-    for (const side of [0, 1]) {
-      const x = side ? X1 - w : 0, g = ctx.createLinearGradient(x, 0, x + w, 0);
-      g.addColorStop(0, '#2E2A2C'); g.addColorStop(.5, '#4E4644'); g.addColorStop(1, '#2A2426'); ctx.fillStyle = g; ctx.fillRect(x, Y0, w, H);
-      ctx.fillStyle = '#9A7A48'; for (let y = Y0 + 14; y < Y1; y += 22) for (let rx = 10; rx < w; rx += 30) { circle(side ? X1 - rx : rx, y, 1.6); ctx.fill(); }
-      ctx.strokeStyle = '#1A1416'; ctx.lineWidth = 2; ctx.beginPath(); for (let y = Y0 + 60; y < Y1; y += 60) { ctx.moveTo(x, y); ctx.lineTo(x + w, y); } ctx.stroke();
-    }
-    if (c > .05) { // half a gear on each shutter, turning
-      const gx = X1 / 2, gy = Y0 + H / 2, rot = p * 6;
-      for (const side of [-1, 1]) {
-        ctx.save(); ctx.beginPath(); ctx.rect(side < 0 ? w - 60 : X1 - w, Y0, 60, H); ctx.clip();
-        ctx.translate(side < 0 ? w : X1 - w, gy); ctx.rotate(rot * side);
-        ctx.fillStyle = '#B8904A'; ctx.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * TAU, r = i % 2 ? 34 : 42; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); outline(1.5);
-        ctx.fillStyle = '#5A4224'; circle(0, 0, 12); ctx.fill(); ctx.restore();
-      }
-    }
-  } else if (T.kind === 'shatter') { // the world cracks like a mirror, then the old picture falls away in shards
-    if (inP) {
-      ctx.globalCompositeOperation = 'lighter'; const ox = P.x - camX, oy = P.y - 40;
-      for (let i = 0; i < 16; i++) {
-        const a = hash1(i) * TAU, len = (120 + hash1(i + 1) * 380) * c;
-        ctx.strokeStyle = `hsla(${180 + i * 25},80%,80%,${.6 * c + .2})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(ox, oy);
-        for (let s = 1; s <= 4; s++) ctx.lineTo(ox + Math.cos(a + (hash1(i * 4 + s) - .5) * .5) * len * s / 4, oy + Math.sin(a + (hash1(i * 4 + s) - .5) * .5) * len * s / 4);
-        ctx.stroke();
-      }
-    } else if (snapC) {
-      const q = (p - .5) * 2, cols = 8, rows = 5, cw = snapC.width / cols, ch = snapC.height / rows;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      for (let r = 0; r < rows; r++) for (let cI = 0; cI < cols; cI++) for (const tri of [0, 1]) {
-        const id = (r * cols + cI) * 2 + tri, x = cI * cw, y = r * ch;
-        const pts = tri ? [[x, y], [x + cw, y], [x, y + ch]] : [[x + cw, y], [x + cw, y + ch], [x, y + ch]];
-        const mx = (pts[0][0] + pts[1][0] + pts[2][0]) / 3, my = (pts[0][1] + pts[1][1] + pts[2][1]) / 3;
-        const dx = (hash1(id) - .5) * 300 * K * q, dy = (700 * q * q + hash1(id + 7) * 160 * q) * K, rot = (hash1(id + 3) - .5) * 5 * q;
-        ctx.save(); ctx.globalAlpha = 1 - q * .4;
-        ctx.translate(mx + dx, my + dy); ctx.rotate(rot); ctx.translate(-mx, -my);
-        ctx.beginPath(); ctx.moveTo(...pts[0]); ctx.lineTo(...pts[1]); ctx.lineTo(...pts[2]); ctx.closePath(); ctx.clip();
-        ctx.drawImage(snapC, x, y, cw, ch, x, y, cw, ch);
-        ctx.strokeStyle = 'rgba(230,250,255,.8)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.restore();
-      }
-    }
-  } else if (T.kind === 'invert') { // the world turns over and a kaleidoscope iris closes, then opens on the nest
-    const cx = X1 / 2, cy = Y0 + H / 2, R = Math.hypot(X1, H) * .62 * (1 - c), rot = p * Math.PI;
-    ctx.beginPath(); ctx.rect(X0 - 10, Y0 - 10, X1 + 20, H + 20);
-    for (let i = 0; i <= 16; i++) { const a = rot + i / 16 * TAU, r = i % 2 ? R * .55 : R; i ? ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r) : ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
-    ctx.closePath(); const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, X1 * .7); g.addColorStop(0, '#3A2266'); g.addColorStop(1, '#0E0820'); ctx.fillStyle = g; ctx.fill('evenodd');
-    ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 8; i++) { const a = rot + i / 8 * TAU; ctx.strokeStyle = `hsla(${200 + i * 40},80%,70%,${.35 * c})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.lineTo(cx + Math.cos(a) * (R + 260), cy + Math.sin(a) * (R + 260)); ctx.stroke(); }
-  }
-  ctx.restore();
+  ctx.save(); if (TRANS_FX[T.kind]) TRANS_FX[T.kind](T, p, c, inP, t); ctx.restore();
 }
 // the 'invert' passage turns the whole view over as it goes
 function zoneViewTurn() {
