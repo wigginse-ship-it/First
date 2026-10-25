@@ -21,6 +21,7 @@ function trimArea() { // after the last wave the way on is close by
 function threshKind() { if (stage.bossRoom || stage.secret && stage.room && !stage.room.kind) return null; const T = ZONES[stageIdx]; return T && T.trans ? T.trans[zoneIdx] : null; }
 const threshX = () => stage.trimmed || stage.endX == null ? exitX() : stage.endX; // where the way on stands
 const glowAt = (x, y, r, col, a) => { if (a <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 2, x, y, r); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; circle(x, y, r); ctx.fill(); ctx.restore(); };
+const MX0_TH = -820; // how far back from the way on the next place can show
 const thCl = (k) => clamp(k, 0, 1), thSm = (k) => { k = thCl(k); return k * k * (3 - 2 * k); };
 const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 {
@@ -65,7 +66,7 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
   }
   const drawSpr = (kind, T, part, L) => { if (!T[part]) return; const c = sprite(kind, part, T), b = c.b; ctx.drawImage(c, L + b[0], b[1], b[2] - b[0], b[3] - b[1]); };
   // ---------------- the next place, showing through ----------------
-  const MS = .25, MX0 = -820, MX1 = 220; // the mask is soft, so it is kept small
+  const MS = .25, MX0 = MX0_TH, MX1 = 220; // the mask is soft, so it is kept small
   let mkC = null, mkKey = '', nwC = null, nwG = null;
   function edgeMask(T) { // the next place shows right of a ragged, brushed edge: T.edge(y) is where it is half there, T.feather how soft
     const f = T.feather || 110, r = mulberry(11), at = (y) => T.edge(y) + Math.sin(y * .05 + 1) * 16 + Math.sin(y * .13 + 2) * 8 + Math.sin(y * .31) * 4;
@@ -76,7 +77,7 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
     if (mkKey === kind && mkC) return mkC;
     if (!mkC) [mkC] = texCanvas(Math.ceil((MX1 - MX0) * MS), Math.ceil(VH * MS));
     const g = mkC.getContext('2d'), old = ctx; ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, mkC.width, mkC.height); g.setTransform(MS, 0, 0, MS, -MX0 * MS, 0);
-    try { T.mask ? T.mask() : edgeMask(T); } finally { ctx = old; }
+    try { T.mask ? T.mask(edgeMask) : edgeMask(T); } finally { ctx = old; }
     mkKey = kind; return mkC;
   }
   function drawNext(kind, T, L, t) {
@@ -177,6 +178,64 @@ TRANS_FX.canopy = (T, p, c, inP, t) => { // into the wood: its dark comes over h
   thSweep(x0, x1, () => { const g = ctx.createLinearGradient(0, Y_OFF, 0, VH); g.addColorStop(0, '#08100C'); g.addColorStop(.6, '#121C14'); g.addColorStop(1, '#1C2616'); ctx.fillStyle = g; ctx.fill(); ctx.clip();
     for (let i = 0; i < 4; i++) thShaft(x0 + 60 + i * 170, Y_OFF, VH, 10 + i * 3, -60, '255,206,140', .12);
     thFlies(Math.max(0, x0), Y_OFF + 40, Math.min(VW, x1) - Math.max(0, x0), VIEW_H - 60, 16, .9, t); }, ['12,20,14', '#1A2A1C', '#2A4026', '#46623A', '#5E7A44'], 1);
+};
+
+// the same, as a band across the view between y0 (its top) and y1, for the moves that go up or down
+function thSweepV(y0, y1, fill, dabs, s = 1) {
+  const edge = (y, x, k) => y + Math.sin(x * .03 + k) * 12 + Math.sin(x * .085 + k * 2) * 6;
+  if (y1 - y0 < 1) return;
+  ctx.save(); ctx.beginPath(); ctx.moveTo(-20, edge(y0, -20, s)); for (let x = -20; x <= VW + 20; x += 10) ctx.lineTo(x, edge(y0, x, s)); for (let x = VW + 20; x >= -20; x -= 10) ctx.lineTo(x, edge(y1, x, s + 3)); ctx.closePath();
+  fill(); ctx.restore();
+  for (let i = 0; i < 60; i++) { const x = thHash(i + s * 5) * VW, side = i % 2, y = side ? edge(y1, x, s + 3) : edge(y0, x, s); if (y < Y_OFF - 60 || y > VH + 60) continue;
+    softDab(x, y + (thHash(i + 3) - .5) * 24, 24 + thHash(i + 5) * 26, dabs[0], .8); if (i % 3 === 0) dab(x + (thHash(i + 9) - .5) * 30, y + (side ? 1 : -1) * (5 + thHash(i + 8) * 10), 2.5 + thHash(i + 6) * 4, dabs[1 + i % (dabs.length - 1)], .7); }
+}
+// the Thornwood → the Sunken Grove: the hollow opens ahead under a last great root, and the path comes to a lip where the
+// ground falls away: below, the grove's misty water and standing stones (its own layers, set lower), roots coiling down
+// the drop like steps. Asleep, a thick mist fills it; awake, the mist sinks, the water glints and glowing caps light the
+// root steps one by one down into it
+THRESH.roots = {
+  nextDY: 34,
+  edge: (y) => y >= FLOOR_TOP ? lerp(-60, -22, (y - FLOOR_TOP) / (VH - FLOOR_TOP)) : -250, feather: 60,
+  mask(edgeMask) { edgeMask(this); ctx.save(); ctx.globalCompositeOperation = 'destination-out'; const g = ctx.createLinearGradient(0, 70, 0, 150); g.addColorStop(0, '#fff'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(MX0_TH, 0, 1200, 150); ctx.restore(); }, // the canopy stays overhead
+  hazeB: [-420, 74, 260, VH], haze(r) {
+    const T = FLOOR_TOP;
+    for (let i = 0; i < 22; i++) { const x = -40 + r() * 280, y = T - 30 + r() * (VH - T + 30); softDab(x, y, 30 + r() * 40, '214,222,206', .22); } // mist lying in the drop
+    for (let i = 0; i < 8; i++) softDab(-220 + i * 50, T - 70 + r() * 40, 50 + r() * 30, '214,222,206', .16); // and the grove's light hazing the opening
+  },
+  backB: [-460, 60, 280, VH + 6], back(r) {
+    const Z = window.ZB_ART, T = FLOOR_TOP, bark = Z.TH_BARK;
+    Z.giantTrunk(-350, T + 2, 24, r, bark, { shelves: [[160, 1, 10]], glow: 2 }); // the last of the hollow's trunks
+    Z.rootArch(-300, 250, T + 4, 98, 17, r, bark, { hang: .65, hangL: 40 }); // a last great root, framing the way down
+    for (let i = 0; i < 10; i++) awLeaves(-420 + i * 70 + (r() - .5) * 20, 80 + r() * 16, 22 + r() * 14, r, ['#0E1812', '#1A2A20', '#3A5236', '#A8A86A'], .7);
+    const lip = (u) => [lerp(-62, -24, u), lerp(T - 2, VH + 4, u)]; // the lip: a ragged bank of loam and leaf litter
+    ctx.fillStyle = '#2A2418'; ctx.beginPath(); for (let u = 0; u <= 1.001; u += .05) { const [x, y] = lip(u); ctx.lineTo(x + 6 + Math.sin(u * 23) * 3, y); } for (let u = 1; u >= -.001; u -= .05) { const [x, y] = lip(u); ctx.lineTo(x - 14 - u * 8, y); } ctx.closePath(); ctx.fill();
+    for (let u = 0; u < 1; u += .03) { const [x, y] = lip(u); dab(x + (r() - .5) * 6, y, 2 + r() * 3, ['#5A3A20', '#7E5428', '#4A3A22', '#3E5230'][Math.floor(r() * 4)], .9); } // leaves on the edge
+    for (const [y0, x1, y1, w] of [[T + 8, 110, T + 30, 9], [T + 36, 150, T + 76, 12], [T + 66, 190, VH - 6, 14], [T + 96, 260, VH + 20, 16]]) { // roots coiling down the drop: the steps
+      const [lx] = lip((y0 - T) / (VH - T)); Z.tube(Z.wiggle(Z.bez([lx - 10, y0], [lx + 30, y0 - 6], [x1 - 50, y1 - 14], [x1, y1], 14), 3, r), (t) => w * (1 - t * .4), Object.assign({ furrow: bark.furrow, dabs: 1, moss: .55, mossC: bark.moss }, bark), r); }
+    for (let i = 0; i < 6; i++) { const [x, y] = lip(r()); Z.tube(Z.bez([x, y], [x + 8, y + 10], [x + 4, y + 24], [x + 10 + r() * 10, y + 30 + r() * 20], 8), (t) => 4 * (1 - t * .7), Object.assign({ furrow: bark.furrow, mossC: bark.moss }, bark), r); } // rootlets over the edge
+    for (const [x, y] of [[-60, T + 50], [30, T + 30], [80, T + 64], [150, T + 100]]) Z.reeds(x + 80, y + 20, 8, 20, r, ['#4E5E34', '#6A7A40', '#8E9A52']); // the first reeds of the bog below
+  },
+  frontB: [-420, 74, 260, VH + 6], front(r) {
+    const Z = window.ZB_ART, bark = Z.TH_BARK;
+    for (let i = 0; i < 7; i++) { const x = -260 + i * 62 + (r() - .5) * 20, l = 40 + r() * 70; Z.tube(Z.wiggle(Z.bez([x, 70], [x + 4, 70 + l * .4], [x - 6, 70 + l * .7], [x + (r() - .5) * 10, 70 + l], 10), 2, r), (t) => 5 * (1 - t * .6), Object.assign({ furrow: bark.furrow, mossC: bark.moss, hang: .5, hangL: 14 }, bark), r); } // roots hanging from the canopy
+    awBush(-170, VH + 8, 90, 26, r, ['#0C140E', '#18261A', '#2E4630', '#7E8A50']); awFern(-120, VH + 2, 16, '#1A2A1C', '#6E8A4A');
+  },
+  live(x, k, t) {
+    const T = FLOOR_TOP;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,244,214,${.08 + .3 * k})`; ctx.lineWidth = .9; ctx.beginPath(); // the water below catching the light
+    for (let i = 0; i < 9; i++) { const px = x + 10 + thHash(i) * 220, py = T + 50 + thHash(i + 3) * 60, l = 8 + thHash(i + 5) * 20, s = Math.sin(t * 1.3 + i * 2); ctx.moveTo(px + s * 3, py); ctx.lineTo(px + l + s * 3, py); } ctx.stroke(); ctx.restore();
+    for (let i = 0; i < 4; i++) { const on = thSm((k - i * .18) * 3), [px, py] = [[x - 4, T + 14], [x + 60, T + 46], [x + 120, T + 80], [x + 180, VH - 8]][i]; if (on <= 0) continue; // glowing caps along the root steps, lighting one by one
+      glowAt(px, py - 4, 18, '160,245,215', .4 * on); ctx.fillStyle = `rgba(200,255,230,${on})`; ctx.beginPath(); ctx.ellipse(px, py - 4, 2.6, 1.6, 0, Math.PI, 0); ctx.fill(); ctx.beginPath(); ctx.ellipse(px + 5, py - 2, 1.8, 1.1, 0, Math.PI, 0); ctx.fill(); }
+    for (let i = 0; i < 5; i++) { const ph = thHash(i + 20) * TAU, px = x + 20 + thHash(i + 21) * 200 + Math.sin(t * .3 + ph) * 12, py = T + 70 - ((t * 9 + thHash(i + 22) * 120) % 140), a = .5 * k * Math.sin(Math.PI * (((t * 9 + thHash(i + 22) * 120) % 140) / 140));
+      ctx.fillStyle = `rgba(210,255,190,${a * .3})`; circle(px, py, 4); ctx.fill(); ctx.fillStyle = `rgba(240,255,220,${a})`; circle(px, py, 1); ctx.fill(); } // marsh-lights drifting up out of the hollow
+    for (let i = 0; i < 7; i++) { const dx = ((t * 6 + i * 40) % 280) - 40; softDab(x - 20 + dx, T + 10 + (i % 4) * 26 - k * 30, 46 + (i % 3) * 12, '226,230,214', .5 * (1 - k * .85)); } // the mist that hid the way down, sinking away
+  },
+};
+TRANS_FX.roots = (T, p, c, inP, t) => { // down the roots into the mist: it rises past him, thick, and lifts away above onto the grove
+  const y0 = inP ? lerp(VH + 70, Y_OFF - 70, c) : Y_OFF - 300, y1 = inP ? VH + 300 : lerp(Y_OFF - 70, VH + 70, c);
+  thSweepV(y0, y1, () => { const g = ctx.createLinearGradient(0, Y_OFF, 0, VH); g.addColorStop(0, '#C4CCBC'); g.addColorStop(.5, '#AEB8AA'); g.addColorStop(1, '#8E9A8C'); ctx.fillStyle = g; ctx.fill(); ctx.clip();
+    for (let i = 0; i < 9; i++) { const x = thHash(i) * VW, yy = Y_OFF + ((thHash(i + 1) * 400 - p * 900) % 400 + 400) % 400 - 40; ctx.strokeStyle = `rgba(60,52,40,${.35 + thHash(i + 2) * .3})`; ctx.lineWidth = 3 + thHash(i + 3) * 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, yy - 60); ctx.quadraticCurveTo(x + 10, yy, x - 4, yy + 60); ctx.stroke(); } // roots slipping up past him
+    for (let i = 0; i < 12; i++) softDab(thHash(i + 30) * VW, Y_OFF + thHash(i + 31) * VIEW_H, 60 + thHash(i + 32) * 50, '236,240,226', .45); }, ['226,232,218', '#9AA690', '#C8D0BC'], 2);
 };
 
 // ---------- a staggered boss is stunned: it reels on the spot with stars and a ring of dizziness circling its head ----------

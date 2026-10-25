@@ -522,14 +522,14 @@ const CORWIN = (() => {
       s.u = -.02 + hsh(sd) * 1.04 + .015 * Math.sin(t * .8 + k); s.v = .02 + hsh(sd + 1) * .86;
       if (hsh(sd + 2) < .2) { s.dv = .03 + hsh(sd + 3) * .08; s.du = (hsh(sd + 4) < .5 ? -1 : 1) * (.1 + hsh(sd + 5) * .14); } // a few dragged across the grain
       else { s.dv = (.1 + hsh(sd + 3) * .4) * (1 + sp * .45); s.du = (hsh(sd + 4) - .5) * .18; }
-      s.bd = (hsh(sd + 6) - .5) * .14; s.w = 1 + Math.pow(hsh(sd + 7), 1.6) * 5.2; s.dry = hsh(sd + 8) < .45 && s.w > 2.2;
+      s.bd = (hsh(sd + 6) - .5) * .14; s.w = 1.4 + Math.pow(hsh(sd + 7), 1.4) * 5.4; s.dry = hsh(sd + 8) < .5 && s.w > 2.6;
       const r = hsh(sd + 9); s.c = r < .33 ? 'd' : r < .6 ? 's' : r < .74 ? 'g' : r < .85 ? 'l' : 'b';
       s.sm = sp * (2 + hsh(sd + 10) * 7); // smeared along its flight
     }
   }
   // one brushstroke as a filled ribbon: loaded at the start, tapering to a dry tail; off: a sideways offset (in widths),
   // wf: its width, qe: how much of its length (the bristles of a dry stroke break off at different lengths)
-  const RX = new Float32Array(4), RY = new Float32Array(4), NX = new Float32Array(4), NY = new Float32Array(4), RW = [.75, 1, .72, .12];
+  const RX = new Float32Array(4), RY = new Float32Array(4), NX = new Float32Array(4), NY = new Float32Array(4), RW = [.8, 1, .8, .22];
   function ribbon(Pt, u, v, du, dv, bd, w, sm, off, wf, qe) {
     const ln = Math.hypot(LVX, LVY) || 1, nx = -LVX / ln, ny = -LVY / ln;
     for (let q = 0; q < 4; q++) { const f = q / 3 * qe; uv(Pt, u + du * f + bd * Math.sin(Math.PI * f), v + dv * f); RX[q] = UX + nx * sm * f; RY[q] = UY + ny * sm * f; }
@@ -540,8 +540,8 @@ const CORWIN = (() => {
     ctx.closePath();
   }
   const CCOL = (L, c) => c === 's' ? L.cloakSlate : c === 'g' ? L.cloakGrey : c === 'l' ? L.cloakLt : c === 'd' ? '#050407' : L.cloak;
-  const CALPHA = { d: .72, s: .5, g: .36, l: .42, b: .9 };
-  const FOLDS = 7;
+  const CALPHA = { d: .75, s: .5, g: .3, l: .36, b: .9 };
+  const FOLDS = 5;
   // a piece of the cloak, from u0 to u1 across it: lining (the inside of the far side, seen past him), the back of the
   // cloak (behind him), or the part wrapped round his front
   function sheet(L, Pt, u0, u1, lining, frontPart) {
@@ -560,17 +560,17 @@ const CORWIN = (() => {
     // the cloth itself: lit at the shoulders, falling into shadow toward the hem; the inside a cold, deep grey
     uv(Pt, (u0 + u1) / 2, 0); const gx0 = UX, gy0 = UY; uv(Pt, (u0 + u1) / 2, 1);
     const base = lining ? (L.cloakLining || '#1E2029') : L.cloak, gr = ctx.createLinearGradient(gx0, gy0, UX, UY);
-    gr.addColorStop(0, C(shade(base, frontPart ? .3 : .16))); gr.addColorStop(.45, C(base)); gr.addColorStop(1, C(shade(base, -.45)));
+    gr.addColorStop(0, C(shade(base, frontPart ? .22 : .14))); gr.addColorStop(.45, C(base)); gr.addColorStop(1, C(shade(base, -.45)));
     ctx.fillStyle = gr; ctx.fill(path);
     if (!det) return;
     const lo = u0 - .02, hi = u1 + .02;
     ctx.save(); ctx.clip(path); ctx.lineCap = 'round';
     if (fine) { // the folds: deep troughs and a cold light on each ridge, drifting as the cloth moves, swinging wider as it flies
       ctx.beginPath(); const b0 = ctx.globalAlpha;
-      for (let k = 0; k < FOLDS; k++) { const u = (k + .5) / FOLDS + .03 * Math.sin(t * .5 + k * 1.7) + FO * .05 * Math.sin(t * 2.6 + k * 2.3); if (u < lo || u > hi) continue;
-        ribbon(Pt, u, .03 + hsh(k + 511) * .2, (hsh(k + 507) - .5) * .1, .55 + hsh(k + 517) * .4, (hsh(k + 3) - .5) * .06, 2.8 + 1.4 * hsh(k + 5), 0, 0, 1, 1); }
+      for (let k = 0; k < FOLDS; k++) { const u = (k + .2 + hsh(k + 77) * .6) / FOLDS + .03 * Math.sin(t * .5 + k * 1.7) + FO * .05 * Math.sin(t * 2.6 + k * 2.3); if (u < lo || u > hi) continue;
+        ribbon(Pt, u, .03 + hsh(k + 511) * .2, (hsh(k + 507) - .5) * .2, .45 + hsh(k + 517) * .5, (hsh(k + 3) - .5) * .16, 2.4 + 2.6 * hsh(k + 5), 0, 0, 1, 1); }
       ctx.fillStyle = '#030205'; ctx.globalAlpha = b0 * .5; ctx.fill();
-      ctx.beginPath(); for (let k = 0; k < FOLDS; k++) { const u = (k + .5) / FOLDS + .045 + .03 * Math.sin(t * .5 + k * 1.7) + FO * .05 * Math.sin(t * 2.6 + k * 2.3); if (u < lo || u > hi) continue;
+      ctx.beginPath(); for (let k = 0; k < FOLDS; k++) { if (k % 2) continue; const u = (k + .2 + hsh(k + 77) * .6) / FOLDS + .045 + .03 * Math.sin(t * .5 + k * 1.7) + FO * .05 * Math.sin(t * 2.6 + k * 2.3); if (u < lo || u > hi) continue;
         ribbon(Pt, u, .06 + hsh(k + 521) * .2, (hsh(k + 507) - .5) * .1, .35 + hsh(k + 527) * .4, 0, 1, 0, 0, 1, 1); }
       ctx.fillStyle = L.cloakSlate; ctx.globalAlpha = b0 * .32; ctx.fill(); ctx.globalAlpha = b0;
       for (const gold of [true, false]) { ctx.beginPath(); for (const s of SPECKS) { if (s.g !== gold || s.u < lo || s.u > hi) continue; uv(Pt, s.u, s.v); ctx.rect(UX - .22, UY - .22, .44, .44); }
@@ -582,7 +582,7 @@ const CORWIN = (() => {
       if (!fine && (c === 'l' || c === 'g')) continue;
       ctx.beginPath(); let any = false;
       for (const s of STK) { if (s.c !== c || s.u < lo || s.u > hi || s.e < .06) continue; const w = s.w * Math.sqrt(s.e) * (lining ? .8 : 1);
-        if (s.dry) for (const [o, wf, qe] of [[-.55, .32, .62 + .3 * hsh(s.u * 97)], [0, .4, 1], [.6, .26, .45 + .4 * hsh(s.v * 89)]]) ribbon(Pt, s.u, s.v, s.du, s.dv, s.bd, w, s.sm, o, wf, qe); // a dry brush: its bristles break apart
+        if (s.dry) for (const [o, wf, qe] of [[-.42, .5, .55 + .4 * hsh(s.u * 97)], [0, .55, 1], [.48, .42, .4 + .5 * hsh(s.v * 89)]]) ribbon(Pt, s.u, s.v, s.du, s.dv, s.bd, w, s.sm, o, wf, qe); // a dry brush: its bristles break apart
         else ribbon(Pt, s.u, s.v, s.du, s.dv, s.bd, w, s.sm, 0, 1, 1);
         any = true; }
       if (any) { ctx.fillStyle = CCOL(L, c); ctx.globalAlpha = ga * CALPHA[c] * (lining && c !== 'd' ? .7 : 1); ctx.fill(); }

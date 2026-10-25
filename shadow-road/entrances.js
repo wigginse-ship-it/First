@@ -22,6 +22,7 @@ function placeCovers() {
     const kind = kinds[Math.floor(r() * kinds.length)];
     covers.push({ kind, x, y: FLOOR_TOP + 6 + r() * 10, s: .85 + r() * .3, seed: r(), shake: 0 });
   }
+  for (const c of covers) coverPaint(c.kind, Math.floor(c.seed * 3)); // painted now, while the place is being set up, rather than mid-fight
 }
 function coverNear(e, kinds) { // a piece of cover in view, not right beside him
   const ok = covers.filter(c => (!kinds || kinds.includes(c.kind)) && c.x > camX + 40 && c.x < camX + VW - 40 && Math.abs(c.x - P.x) > 80);
