@@ -73,8 +73,8 @@ function drawInvFigure(look) {
     g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(40, 103, 20, 3.4, 0, 0, TAU); g.fill();
     g.translate(42, 102); g.scale(1.12, 1.12);
     if (look.enchanted) { g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createRadialGradient(0, -42, 6, 0, -42, 50); gr.addColorStop(0, 'rgba(232,192,96,.22)'); gr.addColorStop(1, 'rgba(184,140,255,0)'); g.fillStyle = gr; g.fillRect(-50, -100, 100, 100); g.restore(); }
-    const w = save.owned[save.weapon] ? save.weapon : 'fists';
-    drawHumanoid(look, { weapon: WEAPONS[w].look, tier: w === 'fists' ? 1 : Math.min(7, save.wl[w]), arm: .5, Y: .5, breath: 0, stance: 1 });
+    // facing us, empty-handed, arms easy at his sides: the armor is what's on show
+    drawHumanoid(look, { weapon: 'fists', arm: 1.45, elbow: .2, backArm: 1.65, backElbow: .2, openHand: 1, Y: .98, look: 0, breath: 0, legs: { f: -4, b: 4, fk: .8, bk: .8, w: 1.7 } });
   } finally { ctx = old; }
   paintCard(cvf, cvf.width / 80 * .6);
 }
