@@ -344,8 +344,19 @@
 
   // ---- the dissolve: the old drawing gives way to the new ----
   let seen = { key: null, age: -1, last: 0 };
-  const bufs = [null, null, null];
+  const bufs = [];
   function buf(i, w, h) { let b = bufs[i]; if (!b || b[0].width < w || b[0].height < h) { if (b) retire(b[0]); b = bufs[i] = texCanvas(Math.max(w, b ? b[0].width : 0), Math.max(h, b ? b[0].height : 0)); } return b; }
+  function finish(src, i, w, h) { // the figure layer's finish on one figure alone: a dark contour all round, light on its upper right edges (paint.js inkEnd)
+    const [o, og] = buf(i, w, h), [sc, sg] = buf(5, w, h), [rc, rg] = buf(6, w, h);
+    for (const g of [og, sg, rg]) { g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, w, h); }
+    sg.drawImage(src, 0, 0, w, h, 0, 0, w, h); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = '#1A100C'; sg.fillRect(0, 0, w, h); sg.globalCompositeOperation = 'source-over';
+    rg.drawImage(sc, 0, 0, w, h, 0, 0, w, h); rg.globalCompositeOperation = 'destination-out'; rg.drawImage(sc, 0, 0, w, h, -1.4 * K, 1.4 * K, w, h);
+    rg.globalCompositeOperation = 'source-in'; rg.fillStyle = '#FFF0D2'; rg.fillRect(0, 0, w, h); rg.globalCompositeOperation = 'source-over';
+    og.drawImage(src, 0, 0, w, h, 0, 0, w, h); og.globalCompositeOperation = 'source-atop'; og.globalAlpha = .55; og.drawImage(rc, 0, 0, w, h, 0, 0, w, h);
+    og.globalCompositeOperation = 'destination-over'; og.globalAlpha = .95; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) og.drawImage(sc, 0, 0, w, h, dx * 1.15 * K, dy * 1.15 * K, w, h);
+    og.globalCompositeOperation = 'source-over'; og.globalAlpha = 1;
+    return o;
+  }
   function blend(x, y, t, k) { // both drawings painted apart at the page's own resolution, then mixed by k and laid down as one figure
     const m = ctx.getTransform(), cv0 = ctx.canvas, xs = [], ys = [];
     for (const [px, py] of [[x - 100, y - 140], [x + 100, y - 140], [x - 100, y + 14], [x + 100, y + 14]]) { xs.push(m.a * px + m.c * py + m.e); ys.push(m.b * px + m.d * py + m.f); }
@@ -360,10 +371,15 @@
     shadow = () => {}; // (the old drawing's own shadow is laid down above, faded)
     let a, b; try { a = paint(0, () => OLD(x, y, t)); } finally { shadow = sh; }
     let mo; b = paint(1, () => { mo = drawNew(x, y, t, { shadow: false }); });
+    const inked = inkG && old === inkG && PAINT_Q > 0;
+    if (inked) { a = finish(a, 3, w, h); b = finish(b, 4, w, h); } // each finished as the figure layer finishes its figures, then mixed
     const [mc, mg] = buf(2, w, h); mg.setTransform(1, 0, 0, 1, 0, 0); mg.globalAlpha = 1; mg.globalCompositeOperation = 'copy'; mg.clearRect(0, 0, w, h);
     mg.globalCompositeOperation = 'source-over'; mg.globalAlpha = 1 - k; mg.drawImage(a, 0, 0, w, h, 0, 0, w, h);
     mg.globalCompositeOperation = 'lighter'; mg.globalAlpha = k; mg.drawImage(b, 0, 0, w, h, 0, 0, w, h); mg.globalCompositeOperation = 'source-over'; mg.globalAlpha = 1;
-    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(mc, 0, 0, w, h, bx, by, w, h); ctx.restore();
+    const put = () => { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(mc, 0, 0, w, h, bx, by, w, h); ctx.restore(); };
+    if (inked) { // half of each is see-through, so the mix goes down on the page already inked, and is cut out of whatever stands behind it
+      onMain(put); ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'destination-out'; ctx.drawImage(mc, 0, 0, w, h, bx, by, w, h); ctx.restore();
+    } else put();
     return mo;
   }
   function glow(t, k, m) { // a little light about the point of her horn, on the page
