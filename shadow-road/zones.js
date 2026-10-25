@@ -124,11 +124,12 @@ function updateMech(dt) {
   if (mech.kind === 'tilt') {
     mech.t -= dt;
     if (mech.t <= 0) {
-      if (mech.phase === 'calm') { mech.phase = 'warn'; mech.t = 1.3; mech.dir = Math.random() < .5 ? -1 : 1; floatText(P.x, P.y, 110, mech.dir > 0 ? 'HARD TO STARBOARD!' : 'HARD TO PORT!', '#F2C99C', 16); sfx('charge', 1); }
+      if (mech.phase === 'calm') { mech.phase = 'warn'; mech.t = 1.5; mech.dir = Math.random() < .5 ? -1 : 1; mech.lanes = tiltLanes(); floatText(P.x, P.y, 110, mech.dir > 0 ? 'HARD TO STARBOARD!' : 'HARD TO PORT!', '#F2C99C', 16); sfx('charge', 1); }
       else if (mech.phase === 'warn') { // the deck heels over, and the cargo breaks loose
         mech.phase = 'bank'; mech.t = 3.4; shakeMag = 6;
-        const x = mech.dir > 0 ? leftWall() + 10 : rightWall() - 10;
-        mech.crates.push({ x, y: rand(FLOOR_TOP + 20, FLOOR_BOT - 10), vx: mech.dir * 40, rot: 0, hit: new Set(), done: false });
+        const x = mech.dir > 0 ? camX - 40 : camX + VW + 40; sfx('break'); // (it rolls in from out of sight, so there's a moment to see it coming) // the lashings snap: heavy cargo comes down the marked lanes
+        for (const [i, y] of (mech.lanes || [rand(FLOOR_TOP + 20, FLOOR_BOT - 10)]).entries()) mech.crates.push({ x: x - mech.dir * i * 60, y, vx: mech.dir * 60, rot: 0, hit: new Set(), done: false, s: 1.45 });
+        mech.lanes = null;
       } else { mech.phase = 'calm'; mech.t = rand(4.5, 6.5); }
     }
     const target = mech.phase === 'bank' ? mech.dir * .14 : 0;
@@ -148,11 +149,11 @@ function updateMech(dt) {
       }
     }
     for (const cr of mech.crates) { // a loose crate slides down the deck and flattens whoever is in its way
-      cr.vx += mech.dir * 520 * dt * Math.max(.2, Math.abs(k)); cr.vx = clamp(cr.vx, -340, 340); cr.x += cr.vx * dt; cr.rot = Math.sin(cr.x * .05) * .08;
+      cr.vx += mech.dir * 640 * dt * Math.max(.25, Math.abs(k)); cr.vx = clamp(cr.vx, -400, 400); cr.x += cr.vx * dt; cr.rot = Math.sin(cr.x * .05) * .08;
       if (Math.random() < .5) dust(cr.x - Math.sign(cr.vx) * 14, cr.y, 1);
-      if (!cr.hitP && Math.abs(P.x - cr.x) < 18 && Math.abs(P.y - cr.y) < 14 && P.z < 22) { cr.hitP = true; playerDamage(Math.round(8 * worldDiff().dmg), cr.x, true); }
-      for (const e of enemies) if (!e.dead && !e.boss && !cr.hit.has(e) && Math.abs(e.x - cr.x) < 20 + e.hw && Math.abs(e.y - cr.y) < 16) { cr.hit.add(e); strike(e, 28, Math.sign(cr.vx), { dmg: 28, kb: 420, launch: 260, power: 2, trump: 1 }); }
-      if (cr.x < leftWall() - 4 || cr.x > rightWall() + 4) { cr.done = true; burst(cr.x, cr.y, 14, ['#8A6A44', '#C9A06A', '#5A4028'], 16, 'chunk', -Math.sign(cr.vx), true); sfx('break'); shakeMag = Math.max(shakeMag, 5); }
+      if (!cr.hitP && Math.abs(P.x - cr.x) < 24 && Math.abs(P.y - cr.y) < 15 && P.z < 26) { cr.hitP = true; playerDamage(Math.round(maxHp() * .3), cr.x, true); shakeMag = Math.max(shakeMag, 9); } // a crushing blow: a third of your health (jump it, or keep out of the marked lanes)
+      for (const e of enemies) if (!e.dead && !e.boss && !cr.hit.has(e) && Math.abs(e.x - cr.x) < 24 + e.hw && Math.abs(e.y - cr.y) < 18 && e.z < 26) { cr.hit.add(e); const d = Math.round(e.maxHp * .45 + 30); strike(e, d, Math.sign(cr.vx), { dmg: d, kb: 520, launch: 320, power: 2, trump: 1 }); }
+      if ((cr.vx < 0 && cr.x < leftWall() - 4) || (cr.vx > 0 && cr.x > rightWall() + 4)) { cr.done = true; burst(cr.x, cr.y, 14, ['#8A6A44', '#C9A06A', '#5A4028'], 16, 'chunk', -Math.sign(cr.vx), true); sfx('break'); shakeMag = Math.max(shakeMag, 5); }
     }
     mech.crates = mech.crates.filter(c => !c.done);
   }
@@ -197,7 +198,7 @@ function mechList(list, t) {
       ctx.restore();
     })]);
   }
-  if (mech.kind === 'tilt') for (const c of mech.crates) list.push([c.y, () => drawCrate(c)]);
+  if (mech.kind === 'tilt') { list.push([FLOOR_TOP - 2, () => drawTiltLanes(t)]); for (const c of mech.crates) list.push([c.y, () => drawCrate(c)]); }
   if (mech.kind === 'echo' && mech.cur) { const r = mech.cur; list.push([r.y - .05, () => onMain(() => { // your echo: a glassy, prismatic double
     ctx.save(); TINT = '#7FD8E8'; drawPlayerAt(r.x, r.y, r.z, r.f, Object.assign({}, r.pose), .38); TINT = null;
     ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(r.x + 2, r.y, r.z, r.f, Object.assign({}, r.pose), .22); ctx.restore();
@@ -245,6 +246,22 @@ function crateSprite() { // a cargo crate, iron-banded, painted like the deck's 
   }, { foot: 8, seed: 29, haze: .06, line: .8 });
 }
 function drawCrate(c) { // it slides and tumbles, so it stays in the figure layer like the other things that can hit you
-  const sp = crateSprite();
-  shadow(c.x, c.y, 18); ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h); ctx.restore();
+  const sp = crateSprite(), s = c.s || 1;
+  shadow(c.x, c.y, 18 * s); ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.scale(s, s); ctx.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h); ctx.restore();
+}
+function tiltLanes() { // where the cargo will come down: two or three lanes across the deck, always with room between them to stand
+  const n = Math.random() < .45 ? 3 : 2, top = FLOOR_TOP + 18, bot = FLOOR_BOT - 8, ys = [];
+  for (let tries = 0; ys.length < n && tries < 60; tries++) { const y = rand(top, bot); if (ys.every(o => Math.abs(o - y) > 36)) ys.push(y); }
+  return ys.sort((a, b) => a - b);
+}
+function drawTiltLanes(t) { // chalked warnings along the marked lanes: red chevrons flashing the way the cargo will slide
+  if (mech.phase !== 'warn' || !mech.lanes) return; const k = 1 - mech.t / 1.5, on = .45 + .55 * Math.abs(Math.sin(t * (6 + 10 * k)));
+  onMain(() => { ctx.save();
+    for (const y of mech.lanes) {
+      const g = ctx.createLinearGradient(0, y - 14, 0, y + 14); g.addColorStop(0, 'rgba(232,76,61,0)'); g.addColorStop(.5, `rgba(232,76,61,${.36 * on})`); g.addColorStop(1, 'rgba(232,76,61,0)');
+      ctx.fillStyle = g; ctx.fillRect(camX - 20, y - 14, VW + 40, 28);
+      ctx.strokeStyle = `rgba(255,110,80,${.9 * on})`; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+      for (let x = camX - 40 + ((t * 140 * mech.dir) % 60 + 60) % 60; x < camX + VW + 40; x += 60) { ctx.beginPath(); ctx.moveTo(x - mech.dir * 6, y - 6); ctx.lineTo(x + mech.dir * 4, y); ctx.lineTo(x - mech.dir * 6, y + 6); ctx.stroke(); }
+    }
+    ctx.restore(); });
 }
