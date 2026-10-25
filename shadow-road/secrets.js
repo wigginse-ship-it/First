@@ -263,14 +263,16 @@ const ericDef = () => Object.assign({}, EDEF.chknight || EDEF.bandit, { name: 'E
   const _pod = drawPod;
   drawPod = function (p, t) {
     if (!p.urn) return _pod(p, t);
-    ctx.save(); ctx.translate(p.x, p.y); shadow(0, 0, 14);
-    const body = p.gold ? '#D8AA55' : p.mimic ? '#6E9A90' : '#6E9A90', dark = p.gold ? '#8A6A2A' : '#3E5E58';
-    if (p.mimic && Math.sin(t * 9 + p.x) > .93) ctx.translate(rand(-1, 1), 0); // the faintest shiver
-    ctx.fillStyle = C(body); ctx.beginPath(); ctx.moveTo(-6, -38); ctx.quadraticCurveTo(-16, -30, -14, -16); ctx.quadraticCurveTo(-12, -2, -5, 0); ctx.lineTo(5, 0); ctx.quadraticCurveTo(12, -2, 14, -16); ctx.quadraticCurveTo(16, -30, 6, -38); ctx.closePath(); ctx.fill(); outline(1.6);
-    ctx.fillStyle = C(dark); ctx.fillRect(-7, -42, 14, 5); ctx.strokeStyle = C(dark); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-11, -32, 5, 1.5, 4.6); ctx.moveTo(11, -37); ctx.arc(11, -32, 5, -1.5, 1.6); ctx.stroke();
-    ctx.strokeStyle = C(p.gold ? '#FFF0C0' : '#A8D0C8'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-13, -20); ctx.quadraticCurveTo(0, -16, 13, -20); ctx.moveTo(-12, -14); ctx.quadraticCurveTo(0, -10, 12, -14); ctx.stroke();
-    if (p.gold) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,220,140,${.12 + .08 * Math.sin(t * 3)})`; ell(0, -20, 22, 26); ctx.fill(); ctx.restore(); }
-    ctx.restore();
+    const sp = propSprite(p.gold ? 'urn-gold' : 'urn', 50, 60, 25, 52, (th, s) => { // painted like the vault around it (paint.js propSprite)
+      const body = p.gold ? '#C89A4A' : '#5E8A80', dark = p.gold ? '#7A5A22' : '#2E4E48', lit = p.gold ? '#FFF0C0' : '#B8DCD0';
+      const pot = () => { ctx.beginPath(); ctx.moveTo(-6, -38); ctx.quadraticCurveTo(-16, -30, -14, -16); ctx.quadraticCurveTo(-12, -2, -5, 0); ctx.lineTo(5, 0); ctx.quadraticCurveTo(12, -2, 14, -16); ctx.quadraticCurveTo(16, -30, 6, -38); ctx.closePath(); };
+      pot(); ctx.fillStyle = body; ctx.fill();
+      ctx.save(); pot(); ctx.clip(); for (let i = 0; i < 10; i++) dab(-s * (5 + (i % 4) * 2.4), -4 - (i * 3.7) % 32, 4 + (i % 3), dark, .45); for (let i = 0; i < 7; i++) dab(s * (3 + (i % 3) * 2.5), -12 - (i * 4.1) % 22, 2.4 + (i % 2) * 2, lit, .4); ctx.restore(); // rounded by the light
+      ctx.fillStyle = dark; ctx.fillRect(-7, -42, 14, 5); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-11, -32, 5, 1.5, 4.6); ctx.moveTo(11, -37); ctx.arc(11, -32, 5, -1.5, 1.6); ctx.stroke();
+      ctx.strokeStyle = lit; ctx.globalAlpha = .7; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-13, -20); ctx.quadraticCurveTo(0, -16, 13, -20); ctx.moveTo(-12, -14); ctx.quadraticCurveTo(0, -10, 12, -14); ctx.stroke(); ctx.globalAlpha = 1;
+    }, { foot: 8, seed: 43, haze: .06, line: .75 });
+    propDraw(sp, p.x + (p.mimic && Math.sin(t * 9 + p.x) > .93 ? rand(-1, 1) : 0), p.y, { sh: 18, flash: FLASH }); // (a mimic gives the faintest shiver)
+    if (p.gold) onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; softDab(p.x, p.y - 20, 26, '255,220,140', .14 + .08 * Math.sin(t * 3)); ctx.restore(); });
   };
 }
 // the rooms' painted places: a moonlit Vale for the grove, and a hall of Rebma under the sea for the vault

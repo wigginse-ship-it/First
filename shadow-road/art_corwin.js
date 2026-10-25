@@ -312,59 +312,89 @@ const CORWIN = (() => {
   };
 
   // ===================================================== the cloak =====================================================
-  // Seven strands hang from a ring round his shoulders, from the far front edge, across his back, to the near front
-  // edge; each strand is five points. Where each point wants to be (its target) comes from the pose: the drape, a flare
-  // at the hem, a trail behind him as he moves, a sway with each stride, a slow stir of air. For the live prince those
-  // targets are springs: every point keeps its place in the world and is pulled toward its target, the hem softest, so
-  // the cloth lags, overshoots and settles; air drag streams it out behind a run and lifts it as he falls; it lies on the
-  // street when he goes down. Anything else that draws him (afterimages, menus, portraits) uses a snapshot or the targets.
-  const S = 7, M = 4, NP = S * (M + 1), PHIMAX = Math.PI * .62;
-  const KJ = [0, 260, 165, 105, 66];          // spring stiffness down a strand (1/s^2)
-  const GRAVITY = 230, DRAG_X = 2.9, DRAG_Y = 2.7, DAMP = 1.7, H = 1 / 120;
-  const tgt = new Float32Array(NP * 2), loc = new Float32Array(NP * 2), rest = new Float32Array(NP);
+  // A great cloak worn round him, not a cape off his back: nine strands hang from a ring round his shoulders, from the
+  // far front edge (pinned near the rose at his throat), over the far shoulder, across his back, over the near shoulder to
+  // the near front edge; each strand is six points. How far round his front the ring reaches is the cloak's wrap (WR):
+  // standing, it closes round him, the front edges falling over his shoulders and down his chest; walking it loosens;
+  // running, lunging, leaping and spinning it is thrown open and streams behind, and as he stops it swings back round him.
+  // Where each point wants to be (its target) comes from the pose: the drape, a flare at the hem, a trail behind him as he
+  // moves, a sway with each stride, a slow stir of air. For the live prince those targets are springs: every point keeps
+  // its place in the world and is pulled toward its target, the hem softest, so the cloth lags, overshoots and settles; air
+  // drag streams it out behind a run and lifts it as he falls; it lies on the street when he goes down. Anything else that
+  // draws him (afterimages, menus, portraits) uses a snapshot or the targets.
+  // The cloak is a character of its own: two springs of its own (the wrap, and a flare that every burst of speed kicks and
+  // that overshoots as it settles) exaggerate his movements, and its paint is alive: rough brushstrokes that come and go,
+  // drifting over the cloth, faster the faster it moves, smeared along its motion, and flung off its edges as ragged
+  // dry-brush flicks when it whips.
+  const S = 9, M = 5, NP = S * (M + 1), MID = (S - 1) / 2;
+  const KJ = [0, 280, 190, 128, 84, 52];     // spring stiffness down a strand (1/s^2): the hem softest, so it whips
+  const GRAVITY = 230, DRAG_X = 2.7, DRAG_Y = 2.5, DAMP = 1.15, H = 1 / 120;
+  const tgt = new Float32Array(NP * 2), loc = new Float32Array(NP * 2), rest = new Float32Array(NP), DEP = new Float32Array(S);
   const ix = (i, j) => (i * (M + 1) + j) * 2;
-  const SIM = { pts: new Float32Array(NP * 2), sp: new Float32Array((M + 1) * 2), sq: new Float32Array((M + 1) * 2), dA: new Float32Array(M + 1), ok: false, wx: 0, wy: 0, at: 0, acc: 0, f: 1 };
-  let CLOAK_GEO = null;
-  // the hem is torn: teeth and notches along it, and bristle marks splaying past it, fixed once so they never shimmer
-  const JAG = []; for (let k = 0; k < (S - 1) * 3; k++) JAG.push(k % 3 === 1 ? 2.2 + hsh(k) * 2.6 : hsh(k + 40) * .9);
-  const STREAKS = [], BRISTLES = [], FOLDS = [], SPECKS = [];
-  { // dry-brush streaks down the cloth: slate-blue and grey dragged through the black, a few lighter catches of the light
-    const cols = ['s', 't', 'g', 'd', 's', 'g', 'l', 'd', 't'];
-    // the long folds hanging straight down the cloth: deep black troughs, a cold catch of light on each ridge
-    for (let k = 0; k < 6; k++) FOLDS.push({ u: (k + .3 + hsh(k + 501) * .4) / 6, du: (hsh(k + 507) - .5) * .08, v0: .06 + hsh(k + 511) * .22, v1: .55 + hsh(k + 517) * .4 }); // (a few, of uneven length, so they read as folds, not stripes)
-    // specks of gold and grey flecked through the black (CLOAK TEXTURE in the sheet)
-    for (let k = 0; k < 64; k++) SPECKS.push({ u: hsh(k + 601), v: .06 + hsh(k + 643) * .9, g: hsh(k + 687) < .45 });
-    for (let k = 0; k < 30; k++) { const u = .03 + .94 * hsh(k + 3), v0 = .08 + hsh(k + 9) * .5; STREAKS.push({ u, du: (hsh(k + 17) - .5) * .06, v0, v1: Math.min(1.04, v0 + .25 + hsh(k + 21) * .5), c: cols[k % cols.length], w: .35 + hsh(k + 31) * .9 }); }
-    for (let k = 0; k < 34; k++) { const u = (k + hsh(k + 51) * .8) / 34; BRISTLES.push({ u, du: (hsh(k + 57) - .5) * .05, v0: .86 + hsh(k + 61) * .08, v1: 1.02 + hsh(k + 67) * .13, c: k % 4 === 0 ? 's' : k % 7 === 0 ? 'g' : 'b', w: .5 + hsh(k + 71) * 1.1 }); }
-    for (let k = 0; k < 12; k++) BRISTLES.push({ trail: 1, v: .25 + .7 * k / 11, len: 2.5 + hsh(k + 81) * 4.5, c: k % 2 ? 's' : 'b', w: .5 + hsh(k + 83) * .9 });
+  const SIM = { pts: new Float32Array(NP * 2), sp: new Float32Array((M + 1) * 2), sq: new Float32Array((M + 1) * 2), dA: new Float32Array(M + 1), ok: false, wx: 0, wy: 0, at: 0, acc: 0, f: 1,
+    dt: 0, mwx: 0, mwy: 0, bvx: 0, bvy: 0, fo: 0, fv: 0, wr: 1, wv: 0, spin: 0, vx: 0, vy: 0, spd: 0, pc: 0 };
+  let CLOAK_GEO = null, WR = 1, FO = 0, SPD = 0, LVX = 0, LVY = 0, CUTF = -1, CUTN = 2;
+  // the hem is torn: teeth and notches along it, fixed once so they never shimmer (JN of them across the cloth)
+  const JN = 48, JAG = []; for (let k = 0; k <= JN; k++) JAG.push(k % 3 === 1 ? 2.2 + hsh(k) * 3 : k % 5 === 3 ? -1.2 - hsh(k + 9) : hsh(k + 40) * .9);
+  const SPECKS = []; for (let k = 0; k < 80; k++) SPECKS.push({ u: hsh(k + 601), v: .06 + hsh(k + 643) * .9, g: hsh(k + 687) < .4 }); // specks of gold and grey flecked through the black (CLOAK TEXTURE in the sheet)
+  // the living brushstrokes: each is reborn somewhere new on the cloth every so often (on its own clock, faster as the
+  // cloak moves), and swells and fades over its life, so the paint is never quite the same twice
+  const NS = 70, STK = []; for (let k = 0; k < NS; k++) STK.push({ ph: hsh(k + 901), rt: .55 + hsh(k + 907) * .9, u: 0, v: 0, du: 0, dv: 0, bd: 0, w: 0, c: 'd', e: 0, sm: 0, dry: 0 });
+  const wrapAim = (g, z, speed) => { // how closed round him the cloak wants to be (1: wrapped, 0: thrown wide open)
+    const p = g.pose; let w = .94;
+    if (g.gait) w = p.run ? .22 : .7;
+    if (p.trail || p.flat || p.sweep !== undefined || (p.ext || 0) > 0 || p.kickK !== undefined || p.kick || p.lead) w = Math.min(w, .36);
+    if (p.spin || p.rot) w = Math.min(w, .25);
+    if (z > 3) w = Math.min(w, .42);
+    return clamp(w - clamp(Math.abs(p.flow || 0) / 40, 0, .45) - clamp(speed / 520, 0, .5), 0, 1);
+  };
+  // the cloak's moods, once a frame for the live prince: its wrap and its flare (two springs, each overshooting as it
+  // settles), and the clock its paint lives by
+  function motion(g, CD) {
+    const now = (typeof BL !== 'undefined' && BL.clock) ? BL.clock() : performance.now();
+    let dt = Math.min(.05, Math.max(0, (now - SIM.at) / 1000)); SIM.at = now;
+    const frozen = (typeof hitstop !== 'undefined' && hitstop > 0) || (typeof mode !== 'undefined' && mode !== 'play' && mode !== 'title');
+    if (frozen) dt = 0; else if (typeof slowmo !== 'undefined' && slowmo > 0) dt *= .3;
+    SIM.dt = dt; let mx = CD.wx - SIM.mwx, my = CD.wy - SIM.mwy; SIM.mwx = CD.wx; SIM.mwy = CD.wy;
+    if (!dt) return; if (Math.abs(mx) > 60 || Math.abs(my) > 60 || !(now - SIM.seen < 400)) mx = my = 0; // moved somewhere at once
+    const q = Math.min(1, dt * 14), ox = SIM.bvx, oy = SIM.bvy; SIM.bvx += (mx / dt - SIM.bvx) * q; SIM.bvy += (my / dt - SIM.bvy) * q;
+    const sv = ((g.pose.spin || 0) - SIM.spin) / dt; SIM.spin = g.pose.spin || 0;
+    const sp = Math.hypot(SIM.bvx, SIM.bvy), fa = clamp(Math.hypot(SIM.bvx * .0036, SIM.bvy * .0026) + Math.min(.8, Math.abs(sv) * .03), 0, 1.3);
+    SIM.fv += Math.min(14, Math.hypot(SIM.bvx - ox, SIM.bvy - oy) * .022); // every burst of speed (a lunge, a dodge, a leap, a landing) kicks it out
+    SIM.fv += (55 * (fa - SIM.fo) - 7 * SIM.fv) * dt; SIM.fo = clamp(SIM.fo + SIM.fv * dt, -.3, 1.8);
+    SIM.wv += (34 * (wrapAim(g, CD.z, sp) - SIM.wr) - 7.5 * SIM.wv) * dt; SIM.wr = clamp(SIM.wr + SIM.wv * dt, -.15, 1.1);
+    SIM.pc += dt * (.3 + Math.min(SIM.spd, 320) / 48); // its paint stirs slowly while it hangs still, and boils as it flies
   }
   function targets(L, g) {
     const { Y, CS, HIP, SHO, HX, LEAN, walk, sw, pose, gait, t } = g, cl = Math.cos(LEAN), sl = Math.sin(LEAN);
     const flow = clamp(pose.flow || 0, -12, 20), down = pose.down ? 1 : 0;
-    const still = 0, stream = 0, trail = 6.5 + flow * 1.05 + (gait ? (pose.run ? 7 : 2 + Math.abs(sw) * 1.6) : 0);
+    const trail = 6.5 + flow * 1.05 + (gait ? (pose.run ? 7 : 2 + Math.abs(sw) * 1.6) : 0) + FO * 9;
     const br = pose.breath || 0, air = Math.sin(t * 1.1);
     // a wind off the road while he stands: slow gusts that never quite die away (three slow sines, so it never
     // repeats or flickers), and a billow running down the cloth from the shoulders to the hem with each gust
-    const wk = pose.stance && !walk ? 1 : gait ? .3 : pose.down ? 0 : .55;
+    const wk = pose.stance && !walk ? 1 : gait ? .3 : pose.down ? 0 : .6;
     const nearK = clamp(Y / .35, 0, 1) * .22; // turned to us, the far half is held behind him: the near half spreads a little wider to keep the cloak as full
     const gust = wk * clamp(.5 + .28 * Math.sin(t * .41) + .18 * Math.sin(t * 1.03 + 1.3) + .1 * Math.sin(t * 2.2 + .4), .05, 1.1);
+    const PE = Math.PI * lerp(.56, .8, clamp(WR, 0, 1.1)); // how far round his front the cloak reaches, each side
     for (let i = 0; i < S; i++) {
-      const phi = (i / (S - 1) * 2 - 1) * PHIMAX, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp);
-      const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 11.2 * sp, ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8;
+      const phi = (i / (S - 1) * 2 - 1) * PE, sp = Math.sin(phi), cp = Math.cos(phi), front = Math.max(0, -cp), back = Math.max(0, cp);
+      const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 11.2 * sp * (1 - front * .22), ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8 - front * 1.8; // (round the front, the edges come in toward the throat)
+      DEP[i] = fxa * Y + lza * CS; // how far toward us this strand hangs from (> 0: in front of his body)
       const ax0 = fxa * CS - lza * Y, ax = HX + ax0 * cl - (ya - HIP) * sl, ay = HIP + ax0 * sl + (ya - HIP) * cl;
-      const len = (45 + 3.5 * cp - 6 * front) * 1.12 * (1 - down * .1), // (a little longer: to the calf)
-         fl = 18 + .32 * Math.abs(flow) + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him
+      const len = (45 + 3.5 * cp - 5 * front) * 1.24 * (1 - down * .1), // (longer again: to the ankle)
+         fl = 21 + .36 * Math.abs(flow) + FO * 13 + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him; every burst of speed flares it
       for (let j = 0; j <= M; j++) {
         const o = ix(i, j); if (!j) { tgt[o] = ax; tgt[o + 1] = ay; continue; }
         const v = j / M, vf = Math.pow(v, .85);
-        const sway = (Math.sin(walk * .5 + i * .9 - v * 1.6) * (gait ? 2.6 : 0) + (air * 1.1 + br * .4) * Math.sin(i * 1.7 + v * 2.2 + t * .7)) * v; // it drifts on the air even standing
+        const sway = (Math.sin(walk * .5 + i * .9 - v * 1.6) * (gait ? 3 : 0) + (air * 1.2 + br * .4) * Math.sin(i * 1.7 + v * 2.2 + t * .7)) * v; // it drifts on the air even standing
         const bil = Math.sin(t * 2.05 - v * 3.1 + i * .75) * (.6 + .4 * Math.sin(t * .7 + i)); // the billow, travelling down the cloth
-        const ofx = -Math.max(0, cp) * 1.15 * fl * vf + front * (.3 + .45 * still) * fl * vf - trail * Math.pow(v, 1.5) - front * 6.5 * v + sway
-          - gust * (3.4 * Math.pow(v, 1.3) + 1.8 * bil * v), olz = sp * fl * vf * (1 + gust * .14 * bil * v + (sp > 0 ? nearK : 0));
+        const sweep = front * (7 + 13 * (1 - clamp(WR, 0, 1))) * Math.pow(v, 1.1); // the front edges fall away behind his arm, the more the more it is thrown open
+        const ofx = -back * 1.15 * fl * vf + front * .3 * fl * vf - sweep - trail * Math.pow(v, 1.5) + sway
+          - gust * (3.8 * Math.pow(v, 1.3) + 2.2 * bil * v), olz = sp * vf * (fl * (1 - front * .92) + front * 1.5) * (1 + gust * .16 * bil * v + FO * .12 + (sp > 0 ? nearK : 0));
         let dyy = 0; const L3 = len * v, hz = Math.min(L3 * .94, Math.hypot(ofx, olz)), dy = Math.sqrt(L3 * L3 - hz * hz) + br * .35 * v; // it keeps its length: streaming out, it rises
         let dx = ofx * CS - olz * Y, a = LEAN * (1 - .8 * v), ca = Math.cos(a), sa = Math.sin(a);
         if (down) { // knocked flat: the near half lies over him like a shroud down to his boots, the rest spreads on the street past his head
-          if (i >= (S - 1) / 2) { const q = (i - (S - 1) / 2) / ((S - 1) / 2); dx = lerp(1.5, 7.5, q) * Math.min(1, v * 3); dyy = L3 * .92; } else { dx = -2 - olz * .3 - 3 * v; dyy = -L3 * .7; } }
+          if (i >= MID) { const q = (i - MID) / MID; dx = lerp(1.5, 7.5, q) * Math.min(1, v * 3); dyy = L3 * .92; } else { dx = -2 - olz * .3 - 3 * v; dyy = -L3 * .7; } }
         const dy2 = down ? dyy : dy;
         tgt[o] = ax + dx * ca - dy2 * sa; tgt[o + 1] = ay + dx * sa + dy2 * ca;
       }
@@ -375,23 +405,20 @@ const CORWIN = (() => {
   // pose wants it, the hem softest, against air drag, so it lags, overshoots and settles. How far the spine is thrown
   // off its target is then laid on every strand (most at the back, less at the front edges) and each strand is pulled
   // back to its own length, so the cloth keeps its sweep and spread however hard it is thrown.
-  const SP = (M + 1) * 2, spT = new Float32Array(SP), WGT = []; for (let i = 0; i < S; i++) WGT.push(.55 + .45 * (1 - Math.abs(i - (S - 1) / 2) / ((S - 1) / 2)));
+  const SP = (M + 1) * 2, spT = new Float32Array(SP), WGT = []; for (let i = 0; i < S; i++) WGT.push(.5 + .5 * (1 - Math.abs(i - MID) / MID));
   function simulate(g, CD) {
     const Mrel = CD.Binv.multiply(ctx.getTransform()), a = Mrel.a, b = Mrel.b, c = Mrel.c, d = Mrel.d, e = Mrel.e, f = Mrel.f;
     const tb = loc; // targets in B
     for (let k = 0; k < NP; k++) { const x = tgt[k * 2], y = tgt[k * 2 + 1]; tb[k * 2] = a * x + c * y + e; tb[k * 2 + 1] = b * x + d * y + f; }
     for (let i = 0; i < S; i++) for (let j = 1; j <= M; j++) { const o = ix(i, j), p = ix(i, j - 1); rest[o / 2] = Math.hypot(tb[o] - tb[p], tb[o + 1] - tb[p + 1]); }
-    const mid = (S - 1) / 2; for (let j = 0; j <= M; j++) { spT[j * 2] = tb[ix(mid, j)]; spT[j * 2 + 1] = tb[ix(mid, j) + 1]; }
-    const now = (typeof BL !== 'undefined' && BL.clock) ? BL.clock() : performance.now();
-    let dt = Math.min(.05, Math.max(0, (now - SIM.at) / 1000)); SIM.at = now;
-    const frozen = (typeof hitstop !== 'undefined' && hitstop > 0) || (typeof mode !== 'undefined' && mode !== 'play' && mode !== 'title');
-    if (frozen) dt = 0; else if (typeof slowmo !== 'undefined' && slowmo > 0) dt *= .3;
+    for (let j = 0; j <= M; j++) { spT[j * 2] = tb[ix(MID, j)]; spT[j * 2 + 1] = tb[ix(MID, j) + 1]; }
+    const now = SIM.at, dt = SIM.dt;
     const P = SIM.sp, Q = SIM.sq, mx = CD.wx - SIM.wx, my = CD.wy - SIM.wy;
-    if (!SIM.ok || Math.abs(mx) > 60 || Math.abs(my) > 60 || !(now - SIM.seen < 400)) { P.set(spT); Q.set(spT); SIM.ok = true; SIM.acc = 0; } // a fresh start, or he was moved somewhere at once
+    if (!SIM.ok || Math.abs(mx) > 60 || Math.abs(my) > 60 || !(now - SIM.seen < 400)) { P.set(spT); Q.set(spT); SIM.ok = true; SIM.acc = 0; SIM.fo = SIM.fv = SIM.wv = 0; SIM.spd = 0; } // a fresh start, or he was moved somewhere at once
     else if (mx || my) for (let j = 0; j <= M; j++) { P[j * 2] -= mx; P[j * 2 + 1] -= my; Q[j * 2] -= mx; Q[j * 2 + 1] -= my; } // the cloth stays where it was in the world
     SIM.wx = CD.wx; SIM.wy = CD.wy; SIM.seen = now; SIM.f = CD.facing;
     const pose = g.pose, free = pose.down || pose.rot || pose.spin, soft = pose.down ? .55 : free ? .5 : 1, ground = CD.z - .4;
-    SIM.acc += dt; let n = 0;
+    SIM.acc += dt; let n = 0; const hx = P[M * 2], hy = P[M * 2 + 1];
     if (pose.down) SIM.acc = 0; // (knocked flat: no swing, see below)
     while (SIM.acc >= H && n < 7) {
       SIM.acc -= H; n++;
@@ -404,29 +431,31 @@ const CORWIN = (() => {
         Q[o] = x; Q[o + 1] = y; P[o] = x + vx + ax * H * H; P[o + 1] = y + vy + ay * H * H;
       }
       for (let j = 1; j <= M; j++) { // each point stays within reach of the one above it
-        const o = j * 2, p = o - 2, dx = P[o] - P[p], dy = P[o + 1] - P[p + 1], l = Math.hypot(dx, dy) || 1e-4, r = rest[ix(mid, j) / 2];
+        const o = j * 2, p = o - 2, dx = P[o] - P[p], dy = P[o + 1] - P[p + 1], l = Math.hypot(dx, dy) || 1e-4, r = rest[ix(MID, j) / 2];
         const want = l > r * 1.06 ? r * 1.06 : l < r * .6 ? r * .6 : l; if (want !== l) { P[o] = P[p] + dx * want / l; P[o + 1] = P[p + 1] + dy * want / l; }
         if (P[o + 1] > ground) { P[o + 1] = ground; Q[o] = P[o] - (P[o] - Q[o]) * .4; } // it lies on the street, dragging
       }
     }
     if (n === 7) SIM.acc = 0;
+    if (dt > 0) { const vx = (P[M * 2] - hx) / dt, vy = (P[M * 2 + 1] - hy) / dt, q = Math.min(1, dt * 10); SIM.vx += (vx - SIM.vx) * q; SIM.vy += (vy - SIM.vy) * q; SIM.spd = Math.hypot(SIM.vx, SIM.vy); } // how fast the hem flies through the air
     if (pose.down) { const q = 1 - Math.exp(-dt * 3.5); P[0] = Q[0] = spT[0]; P[1] = Q[1] = spT[1]; for (let k = 2; k < SP; k++) { P[k] += (spT[k] - P[k]) * q; Q[k] = P[k]; } } // knocked flat, it settles over him rather than swinging
     // lay the spine's throw on every strand as a turn of each of its segments (most at the back, less at the front
     // edges), so the strands fan out from one another however far the cloth is thrown, and keep their lengths
     const out = SIM.pts, dA = SIM.dA;
-    let acc = 0; for (let j = 1; j <= M; j++) { const o = j * 2, p = o - 2;
-      let d = Math.atan2(P[o + 1] - P[p + 1], P[o] - P[p]) - Math.atan2(spT[o + 1] - spT[p + 1], spT[o] - spT[p]); d = Math.atan2(Math.sin(d), Math.cos(d)); acc = d; dA[j] = acc; }
+    for (let j = 1; j <= M; j++) { const o = j * 2, p = o - 2;
+      let d = Math.atan2(P[o + 1] - P[p + 1], P[o] - P[p]) - Math.atan2(spT[o + 1] - spT[p + 1], spT[o] - spT[p]); d = Math.atan2(Math.sin(d), Math.cos(d)); dA[j] = d; }
     for (let i = 0; i < S; i++) {
       const w = WGT[i], o0 = ix(i, 0); out[o0] = tb[o0]; out[o0 + 1] = tb[o0 + 1];
       for (let j = 1; j <= M; j++) {
         const o = ix(i, j), p = ix(i, j - 1), r = rest[o / 2], ta = Math.atan2(tb[o + 1] - tb[p + 1], tb[o] - tb[p]) + dA[j] * w;
         let x = out[p] + Math.cos(ta) * r, y = out[p + 1] + Math.sin(ta) * r;
-        if (!free && y < out[o0 + 1] + j * 2.5) y = out[o0 + 1] + j * 2.5; // never thrown up over his own shoulders
+        if (!free && y < out[o0 + 1] + j * 2) y = out[o0 + 1] + j * 2; // never thrown up over his own shoulders
         if (y > ground) y = ground;
         out[o] = x; out[o + 1] = y;
       }
     }
     toLocal(Mrel, out, 1);
+    const iv = Mrel.inverse(); LVX = iv.a * SIM.vx + iv.c * SIM.vy; LVY = iv.b * SIM.vx + iv.d * SIM.vy; SPD = SIM.spd; // its flight, in his own frame
   }
   function toLocal(Mrel, src, fx) { // B frame -> his own drawing frame
     const iv = Mrel.inverse(), a = iv.a, b = iv.b, c = iv.c, d = iv.d, e = iv.e, f = iv.f;
@@ -437,16 +466,18 @@ const CORWIN = (() => {
     for (let k = 0; k < NP; k++) { s[k * 2] = SIM.pts[k * 2] * SIM.f; s[k * 2 + 1] = SIM.pts[k * 2 + 1]; }
     return s;
   }
-  // The cloak always hangs behind him: turned toward us, no part of it may stand out past his body on the side away
-  // from us (the far side is toward +x then). Every point is held inside the edge of his torso (in the upper body's
-  // frame, so it follows a lean), and below the waist inside the line of his hips, with a soft limit that eases the
-  // cloth up to the edge rather than creasing it there. Seen side-on or from behind it is left free; flips, spins and
-  // falls too.
+  // The back of the cloak always hangs behind him: turned toward us, no strand that hangs behind his body may stand out
+  // past it on the side away from us (the far side is toward +x then). Every such point is held inside the edge of his
+  // torso (in the upper body's frame, so it follows a lean), and below the waist inside the line of his hips, with a soft
+  // limit that eases the cloth up to the edge rather than creasing it there. The strands wrapped round his front (DEP > 0)
+  // are free: they fall over his shoulders and down his chest. Seen side-on or from behind it is left free; flips, spins
+  // and falls too.
   function behind(g) {
     const { Y, HX, HIP, SHO, LEAN, pose } = g; if (pose.down || pose.rot || pose.spin || Y <= 0) return;
     const on = clamp(Y / .35, 0, 1), TWc = .62 + .38 * Math.abs(Y), slack = (1 - on) * 40, cl = Math.cos(LEAN), sl = Math.sin(LEAN), S0 = 2.4;
     const edge = (yu) => { const d = yu - SHO; return (d < 7 ? lerp(9.4, 8.8, d / 7) : d < 14.5 ? lerp(8.8, 6, (d - 7) / 7.5) : d < 19 ? lerp(6, 5.6, (d - 14.5) / 4.5) : 5.8) * TWc - 1.2; };
     for (let k = 0; k < NP; k++) {
+      if (DEP[Math.floor(k / (M + 1))] > 0) continue;
       const x = loc[k * 2] - HX, y = loc[k * 2 + 1] - HIP, xu = x * cl + y * sl, yu = -x * sl + y * cl + HIP; // into the upper body's frame
       const lim = edge(Math.max(SHO, yu)) + slack, a = lim - S0; if (xu <= a) continue;
       const xn = a + S0 * (1 - Math.exp(-(xu - a) / S0)), dx = xn - xu; // eased up to the edge, never past it
@@ -455,12 +486,23 @@ const CORWIN = (() => {
   }
   // work out where the cloak is this frame; returns the points in his drawing frame
   function begin(L, g) {
-    CLOAK_GEO = g; targets(L, g);
-    const CD = CLOAK_DRAW;
-    if (CD && CD.live && !g.pose.noSim) simulate(g, CD);
+    CLOAK_GEO = g; const CD = CLOAK_DRAW, live = CD && CD.live && !g.pose.noSim;
+    if (live) { motion(g, CD); WR = SIM.wr; FO = SIM.fo; }
+    else if (CD && CD.live && SIM.ok) { WR = SIM.wr; FO = SIM.fo; }
+    else { WR = wrapAim(g, CD ? CD.z : 0, 0); FO = clamp(Math.abs(g.pose.flow || 0) / 22, 0, 1); SPD = 0; LVX = LVY = 0; }
+    targets(L, g);
+    if (live) simulate(g, CD);
     else if (CD && (CD.live || g.pose.cloakS)) { const Mrel = CD.Binv.multiply(ctx.getTransform()); if (CD.live && SIM.ok) toLocal(Mrel, SIM.pts, 1); else toLocal(Mrel, g.pose.cloakS, CD.facing); }
     else { loc.set(tgt); if (!g.pose.rot && !g.pose.down) { const gr = (CD ? CD.z : 0) - .5; for (let k = 0; k < NP; k++) if (loc[k * 2 + 1] > gr) loc[k * 2 + 1] = gr; } }
     behind(g);
+    // where the cloth crosses from behind him to in front of him, on each side (in u, across the cloth): the parts round
+    // his front are drawn over his body (after his torso, under the weapon arm), the rest behind him
+    CUTF = -1; CUTN = 2; const thr = 2.5;
+    if (!g.BACK && !g.pose.down) {
+      if (DEP[0] > thr) { let i = 0; while (i < MID && DEP[i + 1] > thr) i++; CUTF = (i + (DEP[i] - thr) / Math.max(1e-3, DEP[i] - DEP[i + 1])) / (S - 1); }
+      if (DEP[S - 1] > thr) { let i = S - 1; while (i > MID && DEP[i - 1] > thr) i--; CUTN = (i - (DEP[i] - thr) / Math.max(1e-3, DEP[i] - DEP[i - 1])) / (S - 1); }
+    }
+    brushes(g.t);
     return loc;
   }
   // a point on the cloth: u across it (0 the far front edge .. 1 the near one), v down it (1 the hem; beyond it extends)
@@ -471,58 +513,130 @@ const CORWIN = (() => {
     UX = (Pt[p00] * (1 - a) + Pt[p10] * a) * (1 - b) + (Pt[p01] * (1 - a) + Pt[p11] * a) * b;
     UY = (Pt[p00 + 1] * (1 - a) + Pt[p10 + 1] * a) * (1 - b) + (Pt[p01 + 1] * (1 - a) + Pt[p11 + 1] * a) * b;
   }
-  const CCOL = (L, c) => c === 't' ? (L.cloakTan || '#6E5E48') : c === 's' ? L.cloakSlate : c === 'g' ? L.cloakGrey : c === 'l' ? L.cloakLt : c === 'd' ? '#08080C' : L.cloak;
-  // one half of the cloak, from strand i0 (a front edge) to the back strand
-  function half(L, Pt, far) {
-    const i0 = far ? 0 : S - 1, i1 = (S - 1) / 2, st = far ? 1 : -1, u0 = i0 / (S - 1), u1 = .5;
-    const base = far ? shade(L.cloak, -.25) : L.cloak;
-    ctx.beginPath(); ctx.moveTo(Pt[ix(i0, 0)], Pt[ix(i0, 0) + 1]);
-    for (let i = i0 + st; i !== i1 + st; i += st) ctx.lineTo(Pt[ix(i, 0)], Pt[ix(i, 0) + 1]); // across the shoulders
-    for (let j = 1; j < M; j++) { const o = ix(i1, j), q = ix(i1, j + 1); ctx.quadraticCurveTo(Pt[o], Pt[o + 1], (Pt[o] + Pt[q]) / 2, (Pt[o + 1] + Pt[q + 1]) / 2); } // down the back
-    ctx.lineTo(Pt[ix(i1, M)], Pt[ix(i1, M) + 1]);
-    for (let i = i1; i !== i0; i -= st) { // the torn hem
-      const a = ix(i, M), b = ix(i - st, M), a2 = ix(i, M - 1), b2 = ix(i - st, M - 1), gap = Math.min(i, i - st);
-      for (let s = 1; s <= 3; s++) {
-        const q = s / 3, x = lerp(Pt[a], Pt[b], q), y = lerp(Pt[a + 1], Pt[b + 1], q), ux = lerp(Pt[a2], Pt[b2], q) - x, uy = lerp(Pt[a2 + 1], Pt[b2 + 1], q) - y, ul = Math.hypot(ux, uy) || 1;
-        const jg = s === 3 ? JAG[gap * 3] * .4 : JAG[gap * 3 + (st > 0 ? 3 - s : s)];
-        ctx.lineTo(x + ux / ul * jg, y + uy / ul * jg);
-      }
+  // this frame's living strokes: each one reborn at a new place when its clock turns over, swelling and fading over its life
+  function brushes(t) {
+    const pc = SIM.pc, sp = clamp(SPD / 160, 0, 1.6);
+    for (let k = 0; k < NS; k++) {
+      const s = STK[k], cyc = pc * s.rt + s.ph, gen = Math.floor(cyc), life = cyc - gen, sd = k * 13.7 + gen * 71.3;
+      s.e = Math.sin(Math.PI * life);
+      s.u = -.02 + hsh(sd) * 1.04 + .015 * Math.sin(t * .8 + k); s.v = .02 + hsh(sd + 1) * .86;
+      if (hsh(sd + 2) < .2) { s.dv = .03 + hsh(sd + 3) * .08; s.du = (hsh(sd + 4) < .5 ? -1 : 1) * (.1 + hsh(sd + 5) * .14); } // a few dragged across the grain
+      else { s.dv = (.1 + hsh(sd + 3) * .4) * (1 + sp * .45); s.du = (hsh(sd + 4) - .5) * .18; }
+      s.bd = (hsh(sd + 6) - .5) * .14; s.w = 1 + Math.pow(hsh(sd + 7), 1.6) * 5.2; s.dry = hsh(sd + 8) < .45 && s.w > 2.2;
+      const r = hsh(sd + 9); s.c = r < .33 ? 'd' : r < .6 ? 's' : r < .74 ? 'g' : r < .85 ? 'l' : 'b';
+      s.sm = sp * (2 + hsh(sd + 10) * 7); // smeared along its flight
     }
-    for (let j = M - 1; j >= 1; j--) { const o = ix(i0, j), q = ix(i0, j - 1); ctx.quadraticCurveTo(Pt[o], Pt[o + 1], (Pt[o] + Pt[q]) / 2, (Pt[o + 1] + Pt[q + 1]) / 2); } // up the front edge
-    ctx.closePath(); ctx.fillStyle = C(base); ctx.fill();
-    if (FINE()) { // the folds and the specks, laid in before the dry-brush strokes
-      const lo0 = Math.min(u0, u1), hi0 = Math.max(u0, u1); ctx.lineCap = 'round';
-      for (const [col, w, off, a] of [['#030205', 2.6, 0, .45], [L.cloakSlate, .6, .045, .25]]) {
-        ctx.strokeStyle = col; ctx.lineWidth = w; const ga = ctx.globalAlpha; ctx.globalAlpha = ga * a * (far ? .7 : 1); ctx.beginPath();
-        for (const f of FOLDS) { const u = f.u + off; if (u < lo0 || u > hi0) continue; for (let q = 0; q <= 5; q++) { uv(Pt, u + f.du * q / 5, lerp(f.v0, f.v1, q / 5)); q ? ctx.lineTo(UX, UY) : ctx.moveTo(UX, UY); } }
-        ctx.stroke(); ctx.globalAlpha = ga;
-      }
-      for (const gold of [true, false]) { ctx.beginPath(); for (const sp of SPECKS) { if (sp.g !== gold || sp.u < lo0 || sp.u > hi0) continue; uv(Pt, sp.u, sp.v); ctx.rect(UX - .22, UY - .22, .44, .44); }
+  }
+  // one brushstroke as a filled ribbon: loaded at the start, tapering to a dry tail; off: a sideways offset (in widths),
+  // wf: its width, qe: how much of its length (the bristles of a dry stroke break off at different lengths)
+  const RX = new Float32Array(4), RY = new Float32Array(4), NX = new Float32Array(4), NY = new Float32Array(4), RW = [.75, 1, .72, .12];
+  function ribbon(Pt, u, v, du, dv, bd, w, sm, off, wf, qe) {
+    const ln = Math.hypot(LVX, LVY) || 1, nx = -LVX / ln, ny = -LVY / ln;
+    for (let q = 0; q < 4; q++) { const f = q / 3 * qe; uv(Pt, u + du * f + bd * Math.sin(Math.PI * f), v + dv * f); RX[q] = UX + nx * sm * f; RY[q] = UY + ny * sm * f; }
+    for (let q = 0; q < 4; q++) { const a = Math.max(0, q - 1), b = Math.min(3, q + 1), tx = RX[b] - RX[a], ty = RY[b] - RY[a], tl = Math.hypot(tx, ty) || 1; NX[q] = -ty / tl; NY[q] = tx / tl; }
+    const o = w * off;
+    for (let q = 0; q < 4; q++) { const h = w * RW[q] * wf * .5; q ? ctx.lineTo(RX[q] + NX[q] * (o + h), RY[q] + NY[q] * (o + h)) : ctx.moveTo(RX[q] + NX[q] * (o + h), RY[q] + NY[q] * (o + h)); }
+    for (let q = 3; q >= 0; q--) { const h = w * RW[q] * wf * .5; ctx.lineTo(RX[q] + NX[q] * (o - h), RY[q] + NY[q] * (o - h)); }
+    ctx.closePath();
+  }
+  const CCOL = (L, c) => c === 's' ? L.cloakSlate : c === 'g' ? L.cloakGrey : c === 'l' ? L.cloakLt : c === 'd' ? '#050407' : L.cloak;
+  const CALPHA = { d: .72, s: .5, g: .36, l: .42, b: .9 };
+  const FOLDS = 7;
+  // a piece of the cloak, from u0 to u1 across it: lining (the inside of the far side, seen past him), the back of the
+  // cloak (behind him), or the part wrapped round his front
+  function sheet(L, Pt, u0, u1, lining, frontPart) {
+    if (u1 - u0 < .01) return;
+    const t = CLOAK_GEO.t, det = DET(), fine = FINE(), sp = clamp(SPD / 160, 0, 1.6);
+    const path = new Path2D(), n0 = Math.ceil(u0 * (S - 1) + 1e-3), n1 = Math.floor(u1 * (S - 1) - 1e-3);
+    uv(Pt, u0, 0); path.moveTo(UX, UY);
+    for (let i = n0; i <= n1; i++) { uv(Pt, i / (S - 1), 0); path.lineTo(UX, UY); } // across the shoulders
+    const side = (u, down) => { for (let k = 1; k <= M; k++) { const j = down ? k : M - k; uv(Pt, u, j / M); const x0 = UX, y0 = UY; uv(Pt, u, (down ? j + 1 : j - 1) / M); // down (or up) one edge, smoothed
+        if ((down && j < M) || (!down && j > 0)) path.quadraticCurveTo(x0, y0, (x0 + UX) / 2, (y0 + UY) / 2); else path.lineTo(x0, y0); } };
+    uv(Pt, u1, 0); path.lineTo(UX, UY); side(u1, true);
+    const nj = Math.max(2, Math.ceil((u1 - u0) * JN)); // the torn hem
+    for (let k = 0; k <= nj; k++) { const u = u1 - (u1 - u0) * k / nj; uv(Pt, u, 1); const hx = UX, hy = UY; uv(Pt, u, .8); let ux = UX - hx, uy = UY - hy; const ul = Math.hypot(ux, uy) || 1;
+      const jg = JAG[Math.round(u * JN)] * (k % 2 ? 1 : .35); path.lineTo(hx + ux / ul * jg, hy + uy / ul * jg); }
+    side(u0, false); path.closePath();
+    // the cloth itself: lit at the shoulders, falling into shadow toward the hem; the inside a cold, deep grey
+    uv(Pt, (u0 + u1) / 2, 0); const gx0 = UX, gy0 = UY; uv(Pt, (u0 + u1) / 2, 1);
+    const base = lining ? (L.cloakLining || '#1E2029') : L.cloak, gr = ctx.createLinearGradient(gx0, gy0, UX, UY);
+    gr.addColorStop(0, C(shade(base, frontPart ? .3 : .16))); gr.addColorStop(.45, C(base)); gr.addColorStop(1, C(shade(base, -.45)));
+    ctx.fillStyle = gr; ctx.fill(path);
+    if (!det) return;
+    const lo = u0 - .02, hi = u1 + .02;
+    ctx.save(); ctx.clip(path); ctx.lineCap = 'round';
+    if (fine) { // the folds: deep troughs and a cold light on each ridge, drifting as the cloth moves, swinging wider as it flies
+      ctx.beginPath(); const b0 = ctx.globalAlpha;
+      for (let k = 0; k < FOLDS; k++) { const u = (k + .5) / FOLDS + .03 * Math.sin(t * .5 + k * 1.7) + FO * .05 * Math.sin(t * 2.6 + k * 2.3); if (u < lo || u > hi) continue;
+        ribbon(Pt, u, .03 + hsh(k + 511) * .2, (hsh(k + 507) - .5) * .1, .55 + hsh(k + 517) * .4, (hsh(k + 3) - .5) * .06, 2.8 + 1.4 * hsh(k + 5), 0, 0, 1, 1); }
+      ctx.fillStyle = '#030205'; ctx.globalAlpha = b0 * .5; ctx.fill();
+      ctx.beginPath(); for (let k = 0; k < FOLDS; k++) { const u = (k + .5) / FOLDS + .045 + .03 * Math.sin(t * .5 + k * 1.7) + FO * .05 * Math.sin(t * 2.6 + k * 2.3); if (u < lo || u > hi) continue;
+        ribbon(Pt, u, .06 + hsh(k + 521) * .2, (hsh(k + 507) - .5) * .1, .35 + hsh(k + 527) * .4, 0, 1, 0, 0, 1, 1); }
+      ctx.fillStyle = L.cloakSlate; ctx.globalAlpha = b0 * .32; ctx.fill(); ctx.globalAlpha = b0;
+      for (const gold of [true, false]) { ctx.beginPath(); for (const s of SPECKS) { if (s.g !== gold || s.u < lo || s.u > hi) continue; uv(Pt, s.u, s.v); ctx.rect(UX - .22, UY - .22, .44, .44); }
         ctx.fillStyle = gold ? 'rgba(206,168,96,.75)' : 'rgba(150,152,164,.5)'; ctx.fill(); }
     }
-    ctx.beginPath(); ctx.moveTo(Pt[ix(i0, M)], Pt[ix(i0, M) + 1]); // ink only along the front edge: the hem is left to the brush
-    for (let j = M - 1; j >= 0; j--) ctx.lineTo(Pt[ix(i0, j)], Pt[ix(i0, j) + 1]);
-    ctx.lineJoin = 'round'; outline(1);
-    // the brushwork, batched by color so it costs a handful of strokes
-    const lo = Math.min(u0, u1), hi = Math.max(u0, u1), det = DET(), fine = FINE(), few = !fine;
-    ctx.lineCap = 'round';
-    for (const c of ['d', 's', 't', 'g', 'l', 'b']) {
-      if (!det && c !== 'b') continue;
-      ctx.strokeStyle = det ? CCOL(L, c) : C(L.cloak); ctx.globalAlpha = c === 'l' ? .13 : c === 'b' ? 1 : c === 'd' ? .75 : .26;
-      for (const wcls of [0, 1]) {
-        ctx.beginPath(); let any = false;
-        if (det && c !== 'b' && !(few && c === 'l')) for (const s of STREAKS) { if (s.c !== c || (s.w > 1.1 ? 1 : 0) !== wcls || s.u < lo || s.u > hi) continue; if (far && few) continue;
-          for (let q = 0; q <= 4; q++) { const v = lerp(s.v0, s.v1, q / 4); uv(Pt, s.u + s.du * q / 4, v); q ? ctx.lineTo(UX, UY) : ctx.moveTo(UX, UY); } any = true; }
-        for (const s of BRISTLES) { if (s.trail || (s.c === 'b' ? 'b' : s.c) !== c || (s.w > 1 ? 1 : 0) !== wcls || s.u < lo || s.u > hi) continue; if (few && (s.u * 34 | 0) % 2) continue;
-          uv(Pt, s.u, s.v0); ctx.moveTo(UX, UY); uv(Pt, s.u + s.du, s.v1); ctx.lineTo(UX, UY); any = true; }
-        if (!far) for (const s of BRISTLES) { if (!s.trail || s.c !== c || (s.w > 1 ? 1 : 0) !== wcls) continue; // splayed marks off the trailing edge
-          uv(Pt, .5, s.v); const bx = UX, by = UY; uv(Pt, .22, s.v); const sx = UX, sy = UY; uv(Pt, .78, s.v); let ox = bx - (sx + UX) / 2, oy = by - (sy + UY) / 2; const ol = Math.hypot(ox, oy); if (ol < 2.5) continue;
-          ox /= ol; oy /= ol; uv(Pt, .5, s.v + .15); let dx = UX - bx, dy = UY - by; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
-          ctx.moveTo(bx - ox * .6, by - oy * .6); ctx.lineTo(bx + (ox * .55 + dx) * s.len, by + (oy * .55 + dy) * s.len); any = true; }
-        if (any) { ctx.lineWidth = c === 'b' ? (wcls ? 1.3 : .8) : wcls ? 2 : 1.1; ctx.stroke(); } // broad, loaded strokes of paint
-      }
+    // the living brushwork, batched by color so it costs a handful of fills
+    const ga = ctx.globalAlpha;
+    for (const c of ['d', 's', 'g', 'l', 'b']) {
+      if (!fine && (c === 'l' || c === 'g')) continue;
+      ctx.beginPath(); let any = false;
+      for (const s of STK) { if (s.c !== c || s.u < lo || s.u > hi || s.e < .06) continue; const w = s.w * Math.sqrt(s.e) * (lining ? .8 : 1);
+        if (s.dry) for (const [o, wf, qe] of [[-.55, .32, .62 + .3 * hsh(s.u * 97)], [0, .4, 1], [.6, .26, .45 + .4 * hsh(s.v * 89)]]) ribbon(Pt, s.u, s.v, s.du, s.dv, s.bd, w, s.sm, o, wf, qe); // a dry brush: its bristles break apart
+        else ribbon(Pt, s.u, s.v, s.du, s.dv, s.bd, w, s.sm, 0, 1, 1);
+        any = true; }
+      if (any) { ctx.fillStyle = CCOL(L, c); ctx.globalAlpha = ga * CALPHA[c] * (lining && c !== 'd' ? .7 : 1); ctx.fill(); }
     }
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = ga; ctx.restore();
+    // its front edges: inked, with the inside of the cloth showing as a thin turned-back strip
+    for (const ue of [0, 1]) { if (ue < u0 - 1e-3 || ue > u1 + 1e-3) continue;
+      if (fine && !lining) { ctx.beginPath(); for (let k = 0; k <= M; k++) { uv(Pt, ue, k / M * .97); const x = UX, y = UY; uv(Pt, ue + (ue ? -.035 : .035), k / M * .97); const ox = (UX - x) * .45, oy = (UY - y) * .45; k ? ctx.lineTo(x + ox, y + oy) : ctx.moveTo(x + ox, y + oy); }
+        ctx.strokeStyle = L.cloakSlate; ctx.lineWidth = 1.1; const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * .55; ctx.stroke(); ctx.globalAlpha = a0; }
+      ctx.beginPath(); for (let k = M; k >= 0; k--) { uv(Pt, ue, k / M); k === M ? ctx.moveTo(UX, UY) : ctx.lineTo(UX, UY); } ctx.lineJoin = 'round'; outline(1);
+    }
+    if (fine) flicks(L, Pt, u0, u1, sp, lining);
+  }
+  // dry-brush flicks off the cloth's edges: a few short bristle tips at the hem while it hangs, ragged strokes flung off
+  // the hem and its trailing edges (away from where it flies) as it whips, longer the faster it goes
+  function flicks(L, Pt, u0, u1, sp, lining) {
+    const pc = SIM.pc, ln = Math.hypot(LVX, LVY) || 1, nx = -LVX / ln, ny = -LVY / ln, mv = Math.min(1, sp);
+    const ga = ctx.globalAlpha; uv(Pt, (u0 + u1) / 2, .5); const cx = UX, cy = UY;
+    for (const c of ['b', 's']) {
+      ctx.beginPath();
+      const nh = Math.round((u1 - u0) * (14 + sp * 22)); // off the hem
+      for (let m = 0; m < nh; m++) { const sd = m * 17.1 + Math.floor(pc * 1.3 + hsh(m + 3)) * 5.7 + (lining ? 300 : 0); if ((hsh(sd + 2) < .25) !== (c === 's')) continue;
+        const u = u0 + (u1 - u0) * hsh(sd); uv(Pt, u, .8); const ax = UX, ay = UY; uv(Pt, u, .96 + hsh(sd + 4) * .04); let dx = UX - ax, dy = UY - ay; const dl = Math.hypot(dx, dy) || 1; dx = dx / dl + nx * mv * 1.3; dy = dy / dl + ny * mv * 1.3;
+        const l2 = Math.hypot(dx, dy) || 1, L2 = (1.6 + hsh(sd + 1) * 3.4) * (1 + sp * 2.2); flick(UX, UY, dx / l2, dy / l2, L2, .5 + hsh(sd + 5) * 1.1); }
+      if (sp > .15) for (const ue of [0, .5, 1]) { if (ue < u0 - 1e-3 || ue > u1 + 1e-3) continue; // off its trailing edges
+        const ne = Math.round(sp * 7);
+        for (let m = 0; m < ne; m++) { const sd = m * 23.3 + ue * 91 + Math.floor(pc * 1.7 + hsh(m + 7)) * 3.1; if ((hsh(sd + 2) < .3) !== (c === 's')) continue;
+          const v = .2 + hsh(sd) * .78; uv(Pt, ue, v); const bx = UX, by = UY; uv(Pt, ue, v + .06); let tx = UX - bx, ty = UY - by; const tl = Math.hypot(tx, ty) || 1; let ox = -ty / tl, oy = tx / tl;
+          if (ox * (bx - cx) + oy * (by - cy) < 0) { ox = -ox; oy = -oy; } if (ox * nx + oy * ny < -.1) continue;
+          let dx = ox * .5 + nx * 1.2, dy = oy * .5 + ny * 1.2; const dl = Math.hypot(dx, dy) || 1; flick(bx - ox * .8, by - oy * .8, dx / dl, dy / dl, (2.5 + hsh(sd + 1) * 6) * sp, .5 + hsh(sd + 3) * 1.2); }
+      }
+      ctx.fillStyle = c === 's' ? L.cloakSlate : C(lining ? (L.cloakLining || '#1E2029') : L.cloak); ctx.globalAlpha = ga * (c === 's' ? .55 : 1); ctx.fill();
+    }
+    ctx.globalAlpha = ga;
+  }
+  function flick(x, y, dx, dy, len, w) { // a tapering bristle stroke, from x, y along dx, dy, bending a little as it goes
+    const px = -dy, py = dx, bend = (hsh(x * 7.1 + y) - .5) * len * .3;
+    ctx.moveTo(x + px * w, y + py * w); ctx.quadraticCurveTo(x + dx * len * .5 + px * (w * .6 + bend), y + dy * len * .5 + py * (w * .6 + bend), x + dx * len + px * bend * .6, y + dy * len + py * bend * .6);
+    ctx.quadraticCurveTo(x + dx * len * .5 - px * (w * .3 - bend), y + dy * len * .5 - py * (w * .3 - bend), x - px * w, y - py * w); ctx.closePath();
+  }
+  // one half of the cloak, from a front edge to the back strand: whatever of it hangs behind him (the parts round his
+  // front are drawn by front(), over his body); with his back to us or knocked down, all of it
+  function half(L, Pt, far) {
+    const BK = CLOAK_GEO && CLOAK_GEO.BACK;
+    if (far) sheet(L, Pt, Math.max(0, CUTF - .04), .5, !BK, false);
+    else sheet(L, Pt, .5, Math.min(1, CUTN + .04), false, false);
+  }
+  // the cloak where it wraps round his front, over his shoulders and down his chest: drawn after his torso, under his weapon arm
+  function front(L, g) {
+    if (CUTF < 0 && CUTN > 1) return;
+    ctx.save(); ctx.translate(0, g.HIP); ctx.rotate(-g.LEAN); ctx.translate(-g.HX, -g.HIP); // (out of the upper body's frame)
+    if (CUTF >= 0) sheet(L, loc, 0, Math.min(.5, CUTF), false, true);
+    if (CUTN <= 1) sheet(L, loc, Math.max(.5, CUTN), 1, false, true);
+    ctx.restore();
   }
   // folds and the cloth's specks on the cowl (precomputed, so nothing shimmers)
   const COWL_SPECK = []; for (let k = 0; k < 26; k++) COWL_SPECK.push([hsh(k + 301), hsh(k + 333), hsh(k + 377) < .35]);
@@ -546,6 +660,7 @@ const CORWIN = (() => {
       ctx.restore(); }
   }
   function mantle(L, g) { // the cloak where it lies over his shoulders: a thick, bunched cowl round the back of his neck, open at the throat
+    front(L, g); // (first, the cloak where it wraps round his front: the cowl lies over its top)
     const { SHO, NECK, CS, Y } = g, P = (fx, lz) => fx * CS - lz * Y, out = [], inn = [];
     for (let i = 0; i <= 14; i++) {
       const th = .74 + (TAU - 1.48) * i / 14, c = Math.cos(th), s = Math.sin(th), ro = 12.4 + Math.sin(th * 5) * .8, ri = 3.4;
@@ -564,7 +679,7 @@ const CORWIN = (() => {
         ctx.rect(lerp(ix, ox, .2 + v * .7) - .2, lerp(iy, oy, .2 + v * .7) - .2, .4, .4); } ctx.fillStyle = g0 ? 'rgba(214,176,100,.8)' : 'rgba(150,150,160,.55)'; ctx.fill(); }
       ctx.restore(); }
   }
-  const cloak = { begin, half, hood, mantle, snapshot, sim: SIM };
+  const cloak = { begin, half, front, hood, mantle, snapshot, sim: SIM };
 
   const parts = { mail: { doublet }, pants: { trousers }, gauntlets: { vambrace }, waist: { swordbelt } };
   const DEF = { mail: 'doublet', pants: 'trousers', gauntlets: 'vambrace', waist: 'swordbelt' };

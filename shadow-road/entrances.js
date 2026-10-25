@@ -27,43 +27,69 @@ function coverNear(e, kinds) { // a piece of cover in view, not right beside him
   const ok = covers.filter(c => (!kinds || kinds.includes(c.kind)) && c.x > camX + 40 && c.x < camX + VW - 40 && Math.abs(c.x - P.x) > 80);
   return ok.length ? pick(ok) : null;
 }
+// The cover is painted the way the background around it is (paint.js propSprite): a tree like the vale's own trees, a
+// bush of the same leaf dabs, crates of weathered planks, a crystal cluster, a standing stone of the Courts.
+const COVER_PAL = { // leaves (dark, body, lit) and a glint of blossom, by place
+  bloom: [['#2F5446', '#3D6A52', '#C9C57E'], '#F6CDB0', '#E8A0B0'], bloom2: [['#22382E', '#36523E', '#8E9A62'], '#F0C080', '#C8A0A8'],
+  unicornGrove: [['#24384A', '#3A5468', '#A8BCC8'], '#E6ECFF', '#C8C8F0'] };
+const coverPal = () => COVER_PAL[stage.theme] || COVER_PAL[/^bloom/.test(stage.theme) ? 'bloom' : 'unicornGrove'] || COVER_PAL.bloom;
+function coverPaint(kind, v) { // v: which of three versions of it
+  const r = mulberry(v * 977 + kind.length * 31 + 7), pal = coverPal();
+  if (kind === 'tree') return propSprite('tree' + v, 210, 214, 105, 198, (th, s) => {
+    paintTree(0, 0, 158 + v * 8, r, pal[0], v !== 1 ? pal[1] : null);
+    for (let i = 0; i < 9; i++) dab((r() - .5) * 30, -1 - r() * 3, 2 + r() * 3, i % 2 ? pal[0][0] : '#3A2C2A', .7); // grass and roots about its foot
+  }, { foot: 30, seed: 5 + v });
+  if (kind === 'bush') return propSprite('bush' + v, 120, 74, 60, 62, (th, s) => {
+    const g = [shade(pal[0][0], -.3), pal[0][0], pal[0][1], pal[0][2]];
+    awBush(0, 2, 62 + v * 6, 24, r, g);
+    for (let i = 0; i < 7; i++) { const x = (r() - .5) * 52, y = -14 - r() * 18; dab(x, y, 1.8 + r() * 1.2, pal[2], .85); dab(x + s * .6, y - .6, .9, '#FFF0E8', .7); } // blossom
+  }, { foot: 14, seed: 11 + v });
+  if (kind === 'crates') return propSprite('crates' + v, 96, 92, 50, 80, (th, s) => {
+    const wood = ['#7A5636', '#86603A', '#704E32'][v], box = (x, y, w, h, k) => { // one crate: planked faces, a lit top, the shadow side darker, a brace, brass at the corners
+      const body = shade(wood, (k - 1) * .06), top = 4.5;
+      ctx.fillStyle = body; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = shade(body, .32); awPath([x, y, x + w, y, x + w + s * 3, y - top, x + s * 3, y - top]); ctx.fill(); // the lid catching the light
+      ctx.fillStyle = shade(body, -.38); s > 0 ? ctx.fillRect(x - 3, y - top * .5, 3, h + top * .5) : ctx.fillRect(x + w, y - top * .5, 3, h + top * .5); // the shadowed end
+      for (let k2 = 1; k2 < 4; k2++) { const py = y + h * k2 / 4; ctx.fillStyle = shade(body, -.3); ctx.fillRect(x + 1, py - .4, w - 2, .9); ctx.fillStyle = shade(body, .2); ctx.globalAlpha = .6; ctx.fillRect(x + 1, py + .6, w - 2, .6); ctx.globalAlpha = 1; } // plank seams
+      for (let i = 0; i < 14; i++) dab(x + 2 + r() * (w - 4), y + 2 + r() * (h - 4), 1.4 + r() * 2.4, r() < .5 ? shade(body, .16) : shade(body, -.2), .45); // weathering
+      ctx.strokeStyle = shade(body, -.42); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + 3, y + h - 3); ctx.lineTo(x + w - 3, y + 3); ctx.stroke(); // the brace
+      ctx.strokeStyle = shade(body, .28); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(x + 3.5, y + h - 4.2); ctx.lineTo(x + w - 4.2, y + 3.5); ctx.stroke();
+      ctx.fillStyle = '#9A7A44'; for (const [cx, cy] of [[x, y], [x + w - 4, y], [x, y + h - 4], [x + w - 4, y + h - 4]]) { ctx.fillRect(cx, cy, 4, 4); } ctx.fillStyle = '#E8C890'; ctx.globalAlpha = .7; for (const cx of [x, x + w - 4]) ctx.fillRect(cx + (s > 0 ? 2.6 : 0), y, 1.2, 4); ctx.globalAlpha = 1;
+    };
+    if (v === 2) { box(-34, -28, 28, 28, 0); box(-4, -30, 30, 30, 1); box(-20, -56, 24, 24, 2); }
+    else { box(-30, -30, 30, 30, 0); box(0, -26, 26, 26, 1); if (v === 0) box(-18, -56, 26, 26, 2); else { box(-26, -54, 22, 22, 2); } }
+  }, { foot: 10, seed: 13 + v, haze: .06, warm: .1, line: .7 });
+  if (kind === 'crystal') return propSprite('crystal' + v, 170, 150, 85, 132, (th, s) => {
+    const hue = [190, 280, 320][v];
+    awCluster(0, -3, 76 + v * 6, hue, r, 54);
+    for (let i = 0; i < 6; i++) dab((r() - .5) * 50, -1 - r() * 3, 2 + r() * 3, '#2A2044', .7); // shards and grit about its foot
+  }, { foot: 22, seed: 17 + v, haze: .08 });
+  if (kind === 'pillar') return propSprite('pillar' + v, 70, 112, 35, 100, (th, s) => {
+    const bone = stage.theme === 'chaos2', P = bone ? { base: '#9A8274', lit: '#F2DCC0', dark: '#3E2C48', glyph: '#C9A040' } : { base: '#1E1428', lit: '#4E3A62', dark: '#08050C', glyph: '#FF8A3C' };
+    const h = 72 + v * 6, pts = [-14, 0, -13, -h + 6, -6 + v, -h - 4, 1, -h + 6 - v * 2, 7, -h + 1, 13, -h + 8, 14, 0];
+    awPath(pts); ctx.fillStyle = P.base; ctx.fill();
+    ctx.save(); awPath(pts); ctx.clip();
+    ctx.fillStyle = P.lit; ctx.globalAlpha = .75; ctx.fillRect(s > 0 ? 4 : -14, -h - 10, 10, h + 10); ctx.globalAlpha = 1; // the face toward the light
+    ctx.fillStyle = P.dark; ctx.globalAlpha = .55; ctx.fillRect(s > 0 ? -14 : 9, -h - 10, 5, h + 10); ctx.globalAlpha = 1;
+    for (let i = 0; i < 40; i++) dab((r() - .5) * 26, -r() * h, 1 + r() * 1.8, r() < .5 ? P.lit : P.dark, bone ? .14 : .22); // the stone's grain
+    ctx.strokeStyle = P.dark; ctx.lineWidth = .8; ctx.globalAlpha = .7; ctx.beginPath(); ctx.moveTo(-6 + v, -h - 2); ctx.lineTo(-3, -h + 14); ctx.lineTo(-7, -h + 24); ctx.stroke(); ctx.globalAlpha = 1; // a crack from the broken top
+    ctx.restore();
+    ctx.fillStyle = shade(P.base, -.2); ctx.fillRect(-18, -6, 36, 6); ctx.fillStyle = P.lit; ctx.globalAlpha = .6; ctx.fillRect(-18, -6, 36, 1.2); ctx.globalAlpha = 1; // its plinth
+    awGlow(P.glyph, 5, () => { ctx.strokeStyle = P.glyph; ctx.globalAlpha = .75; ctx.lineWidth = 1.1; ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(-5, -20 - i * 16); ctx.lineTo(0, -26 - i * 16); ctx.lineTo(5, -20 - i * 16); } ctx.stroke(); ctx.globalAlpha = 1; }); // the chevrons, smouldering
+    for (let i = 0; i < 6; i++) dab((r() - .5) * 40, -2 - r() * 2, 1.5 + r() * 2, P.dark, .4); // grit at its foot
+  }, { foot: 16, seed: 19 + v, haze: .1 });
+  return null;
+}
 function drawCover(c, t) {
-  const sh = c.shake > 0 ? Math.sin(t * 60) * 2.5 * Math.min(1, c.shake * 3) : 0, r = mulberry(Math.floor(c.seed * 1e6));
-  ctx.save(); ctx.translate(c.x, c.y); ctx.scale(c.s, c.s);
-  if (c.kind === 'tree') {
-    shadow(0, 2, 30);
-    ctx.fillStyle = C('#5A4030'); ctx.beginPath(); ctx.moveTo(-9, 0); ctx.quadraticCurveTo(-6, -50, -5, -96); ctx.lineTo(5, -96); ctx.quadraticCurveTo(6, -50, 10, 0); ctx.closePath(); ctx.fill(); outline(1.4);
-    ctx.strokeStyle = C('#3A2A1E'); ctx.lineWidth = 1; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(-4 + i * 2, -8 - i * 14); ctx.lineTo(-3 + i * 2, -22 - i * 14); ctx.stroke(); }
-    ctx.translate(sh, 0);
-    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU, rx = 22 + r() * 10; ctx.fillStyle = C(['#4E7A3A', '#5E8A44', '#3E6A32'][i % 3]); ell(Math.cos(a) * 26, -112 + Math.sin(a) * 16, rx, rx * .75); ctx.fill(); outline(1.2); }
-    ctx.fillStyle = C('#6E9A4E'); ell(-6, -118, 26, 18); ctx.fill(); outline(1.2);
-  } else if (c.kind === 'bush') {
-    ctx.translate(sh, 0); shadow(0, 2, 28);
-    for (let i = 0; i < 6; i++) { const x = (i - 2.5) * 10, rx = 13 + r() * 5; ctx.fillStyle = C(['#4E7A3A', '#3E6A32', '#5E8A44'][i % 3]); ell(x, -14 - (i % 2) * 6, rx, rx * .8); ctx.fill(); outline(1.2); }
-    ctx.fillStyle = C('#D98CA0'); for (let i = 0; i < 4; i++) { circle(-18 + i * 12 + r() * 4, -20 - r() * 10, 2); ctx.fill(); }
-  } else if (c.kind === 'crates') {
-    ctx.translate(sh * .4, 0); shadow(0, 2, 30);
-    const box = (x, y, w, h) => { ctx.fillStyle = C('#9A7448'); ctx.fillRect(x, y, w, h); ctx.beginPath(); ctx.rect(x, y, w, h); outline(1.3);
-      ctx.strokeStyle = C('#C8A050'); ctx.lineWidth = 2; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); ctx.strokeStyle = C('#5A4028'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + 3, y + 3); ctx.lineTo(x + w - 3, y + h - 3); ctx.stroke(); };
-    box(-30, -30, 30, 30); box(0, -26, 26, 26); box(-18, -56, 26, 26);
-  } else if (c.kind === 'crystal') {
-    ctx.translate(sh * .5, 0); shadow(0, 2, 26);
-    for (const [x, h, w, col] of [[-12, 60, 10, '#8CC8D0'], [6, 78, 12, '#C8A0E8'], [18, 42, 8, '#9FD8E0']]) {
-      ctx.fillStyle = C(col); ctx.beginPath(); ctx.moveTo(x - w, 0); ctx.lineTo(x - w * .7, -h * .8); ctx.lineTo(x, -h); ctx.lineTo(x + w * .7, -h * .8); ctx.lineTo(x + w, 0); ctx.closePath(); ctx.fill(); outline(1.2);
-      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, -h); ctx.lineTo(x - 1, -4); ctx.stroke();
-    }
-  } else if (c.kind === 'pillar') {
-    ctx.translate(sh * .3, 0); shadow(0, 2, 24);
-    ctx.fillStyle = C('#3A2A3A'); ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-13, -70); ctx.lineTo(-4, -78); ctx.lineTo(3, -66); ctx.lineTo(13, -74); ctx.lineTo(14, 0); ctx.closePath(); ctx.fill(); outline(1.4);
-    ctx.fillStyle = C('#4A3A4A'); ctx.fillRect(-18, -6, 36, 6); ctx.strokeStyle = 'rgba(190,120,230,.6)'; ctx.lineWidth = 1.2;
-    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-5, -20 - i * 16); ctx.lineTo(0, -26 - i * 16); ctx.lineTo(5, -20 - i * 16); ctx.stroke(); }
-  }
-  ctx.restore();
+  const sh = c.shake > 0 ? Math.sin(t * 60) * 2.5 * Math.min(1, c.shake * 3) : 0, s = coverPaint(c.kind, Math.floor(c.seed * 3)); if (!s) return;
+  const tree = c.kind === 'tree', o = { sx: c.s, sy: c.s, sh: { tree: 46, bush: 38, crates: 40, crystal: 40, pillar: 26 }[c.kind] };
+  if (tree) o.sk = sh * .01; // the tree sways from its foot, its crown thrashing
+  propDraw(s, c.x + (tree ? 0 : sh * (c.kind === 'bush' ? 1 : .4)), c.y, o);
 }
 function leafBurst(c, n) {
-  const leaf = c.kind === 'tree' || c.kind === 'bush', z = c.kind === 'tree' ? 100 : 20;
+  const leaf = c.kind === 'tree' || c.kind === 'bush', z = c.kind === 'tree' ? 100 : 20, pal = leaf ? coverPal()[0] : null;
   for (let i = 0; i < n; i++) parts.push({ x: c.x + rand(-26, 26), y: c.y + rand(-3, 3), z: z + rand(-14, 20), vx: rand(-60, 60), vy: 0, vz: rand(-10, 60), life: 1.2, max: 1.2,
-    col: leaf ? pick(['#4E7A3A', '#7EA460', '#5E8A44']) : c.kind === 'crystal' ? pick(['#9FD8E0', '#E0C8FF']) : pick(['#6B4A2E', '#4A3A26']), size: rand(2, 4), shape: leaf ? 'tuft' : 'chunk', rot: rand(0, 6), vr: 4 });
+    col: leaf ? pick(pal) : c.kind === 'crystal' ? pick(['#8CB8C8', '#C8B0E0']) : c.kind === 'pillar' ? pick(['#2A1E36', '#4E3A62']) : pick(['#6B4A2E', '#4A3A26']), size: rand(2, 4), shape: leaf ? 'tuft' : 'chunk', rot: rand(0, 6), vr: 4 });
 }
 
 // ---------- the entrances ----------

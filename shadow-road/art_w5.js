@@ -542,15 +542,17 @@
   const podDraw = drawPod;
   drawPod = function (p, t) {
     if (p.theme !== 'moon') { podDraw(p, t); return; }
-    ctx.save(); ctx.translate(p.x, p.y); shadow(0, 0, 15);
-    for (const [x, h, w, a] of [[-7, 24, 5, -.25], [6, 20, 4.4, .3], [0, 32, 6, 0], [-12, 14, 3.6, -.5], [11, 13, 3.4, .55]]) {
-      ctx.save(); ctx.rotate(a); fillPoly([x - w, 0, x - w * .8, -h * .8, x, -h, x + w * .8, -h * .8, x + w, 0], '#B8C6E2', 1.3);
-      if (DET()) { ctx.fillStyle = 'rgba(245,248,255,.75)'; poly([x, -h, x + w * .8, -h * .8, x + w, 0, x + w * .25, 0]); ctx.fill(); ctx.strokeStyle = 'rgba(120,140,190,.5)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(x - w * .4, -2); ctx.lineTo(x - w * .2, -h * .7); ctx.stroke(); }
-      ctx.restore();
-    }
-    fillPoly([-15, 0, -12, -5, 12, -5, 15, 0], '#2E3A64', 1.2);
-    glowAt(0, -14, 18, PALE, .3);
-    ctx.restore();
+    const sp = propSprite('pod-moon', 50, 50, 25, 42, (th, s) => { // painted like the city's own stone (paint.js propSprite)
+      for (const [x, h, w, a] of [[-7, 24, 5, -.25], [6, 20, 4.4, .3], [0, 32, 6, 0], [-12, 14, 3.6, -.5], [11, 13, 3.4, .55]]) {
+        ctx.save(); ctx.rotate(a); fillPoly([x - w, 0, x - w * .8, -h * .8, x, -h, x + w * .8, -h * .8, x + w, 0], '#8E9CC0');
+        ctx.fillStyle = 'rgba(245,248,255,.75)'; poly(s > 0 ? [x, -h, x + w * .8, -h * .8, x + w, 0, x + w * .25, 0] : [x, -h, x - w * .8, -h * .8, x - w, 0, x - w * .25, 0]); ctx.fill(); // the face the moon is on
+        ctx.strokeStyle = 'rgba(80,96,150,.55)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(x - s * w * .4, -2); ctx.lineTo(x - s * w * .2, -h * .7); ctx.stroke();
+        ctx.restore();
+      }
+      fillPoly([-15, 0, -12, -5, 12, -5, 15, 0], '#2E3A64'); for (let i = 0; i < 6; i++) dab(-12 + i * 5, -2, 2, i % 2 ? '#4A5A8A' : '#1C2648', .6); // the stone it grows from
+    }, { foot: 8, seed: 41, haze: .05, line: .75 });
+    propDraw(sp, p.x, p.y, { sh: 18, flash: FLASH });
+    onMain(() => glowAt(p.x, p.y - 14, 18, PALE, .3 + .06 * Math.sin(t * 1.6 + p.x)));
   };
 
   // ======================================================================================================

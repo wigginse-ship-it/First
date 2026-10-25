@@ -548,4 +548,5 @@
     grade: { desat: .2, top: 'rgba(70,100,140,.45)', bot: 'rgba(220,180,110,.36)', vig: 'rgba(16,24,24,.62)' } };
   AW_FAR.bloom2 = bloom2Far; AW_MID.bloom2 = bloom2Mid; AW_FLOOR.bloom2 = bloom2Floor;
   AW_FAR.bloomBoss = bloomBossFar; AW_MID.bloomBoss = bloomBossMid; AW_FLOOR.bloomBoss = bloomBossFloor;
+  window.ZB_ART = { bez, wiggle, tube, mossStrand, shaft, glowShrooms, rootArch, giantTrunk, farTrunk, toadstool, menhir, reeds, TH_BARK, TH_TOAD, SG_STONE, SG_OLD }; // (the end of each area paints with these: thresholds.js)
 })();

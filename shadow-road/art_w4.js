@@ -651,14 +651,18 @@
   const podDraw = drawPod;
   drawPod = function (p, t) {
     if (p.theme !== 'chaos') { podDraw(p, t); return; }
-    ctx.save(); ctx.translate(p.x, p.y); shadow(0, 0, 16);
-    cel(PP([-14, 0, -15, -14, -8, -27, 3, -31, 12, -22, 15, -9, 12, 0]), '#2A1E36', { d: 3, r: 1.2, w: 2, lite: '#7A5A98' });
-    if (DET()) {
-      ctx.strokeStyle = 'rgba(255,150,70,.9)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-6, -26); ctx.lineTo(-2, -17); ctx.lineTo(-7, -9); ctx.lineTo(-3, -2); ctx.moveTo(-2, -17); ctx.lineTo(5, -14); ctx.stroke();
-      glowAt(-3, -14, 14 + Math.sin(t * 1.2 + p.x) * 2, EMBER, .4);
+    const sp = propSprite('pod-chaos', 50, 50, 25, 42, (th, s) => { // painted like the road's own glass (paint.js propSprite)
+      const pts = [-14, 0, -15, -14, -8, -27, 3, -31, 12, -22, 15, -9, 12, 0];
+      poly(pts); ctx.fillStyle = '#2A1E36'; ctx.fill();
+      ctx.save(); poly(pts); ctx.clip();
+      poly(s > 0 ? [3, -31, 12, -22, 15, -9, 12, 0, 2, 0, 0, -18] : [-14, 0, -15, -14, -8, -27, 3, -31, 0, -18, 2, 0]); ctx.fillStyle = '#5A4278'; ctx.globalAlpha = .8; ctx.fill(); ctx.globalAlpha = 1; // the face toward the light
+      for (let i = 0; i < 10; i++) dab(((i * 7.3) % 26) - 13, -3 - (i * 5.9) % 26, 2 + (i % 3), i % 2 ? '#140D1A' : '#7A5A98', .35);
+      ctx.restore();
+      awGlow(`rgb(${EMBER})`, 5, () => { ctx.strokeStyle = 'rgba(255,150,70,.9)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-6, -26); ctx.lineTo(-2, -17); ctx.lineTo(-7, -9); ctx.lineTo(-3, -2); ctx.moveTo(-2, -17); ctx.lineTo(5, -14); ctx.stroke(); }); // its heart of fire showing through
       ctx.fillStyle = 'rgba(230,200,255,.5)'; poly([3, -31, 12, -22, 6, -22]); ctx.fill();
-    }
-    ctx.restore();
+    }, { foot: 8, seed: 37, haze: .06, line: .75 });
+    propDraw(sp, p.x, p.y, { sh: 20, flash: FLASH });
+    if (DET()) onMain(() => glowAt(p.x - 3, p.y - 14, 14 + Math.sin(t * 1.2 + p.x) * 2, EMBER, .4));
   };
 
   // ======================================================================================================

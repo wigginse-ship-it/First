@@ -1,101 +1,182 @@
-// ---------- the end of each area: a landmark that shows where the road goes next ----------
-// Every passage between areas has something standing at the end of the road that hints at what is past it: the mouth of
-// the Thornwood, a sinkhole hung with roots, a rope ladder up into the cloudbank, the lift cage, a great standing mirror,
-// a crystal iris... It wakes (glows, opens, stirs) once the last wave there is beaten. And once that last wave falls, the
-// road is cut short: the landmark is just ahead instead of a long walk away.
+// ---------- the end of each area: the road turns, little by little, into the next place ----------
+// Over the last stretch of every area the scenery itself changes into the place ahead. The next place's own painted
+// layers (made just after this one is entered, so moving on is instant) show through a ragged, brushed edge that creeps
+// in from the right, and a few things painted in the same hand bridge the two: the Thornwood's dark trunks closing over
+// the Vale's road, a root-bound lip above the misty grove, a galleon moored overhead with a ladder let down... At the
+// very end stands the way on itself. It stirs (light, an opening, movement) once the last wave there is beaten, and when
+// that wave falls the road is cut short so the way on is close by (at the spot the scenery was painted for, so nothing
+// jumps). Nothing here goes into the figures' ink layer, so nothing gets a figure's hard contour: it is painted onto the
+// picture behind the fighters right after the world, and (overhanging leaves, mist) a little in front of them after.
+// A passage is THRESH[kind] = { edge(y) / mask(): where the next place shows; haze, back, front: painters (cached, x
+// relative to the way on); live, liveFront(x, wake, t): what moves; next: false to keep the next place out of it }.
 const THRESH = {};
 const exitX = () => stage.len - 130;
 function trimArea() { // after the last wave the way on is close by
   if (stage.bossRoom || stage.trimmed || !stage.waves.length || waveActive || waveIdx < stage.waves.length || zoneTrans) return;
   stage.trimmed = true; stage.wake = 0;
-  const len = Math.min(stage.len, Math.max(camX + VW + 200, P.x + 340));
+  const len = Math.min(stage.len, Math.max(camX + VW + 200, P.x + 340, (stage.endX || 0) + 130));
   stage.len = len; props = props.filter(p => p.x < len - 120);
   if (typeof covers !== 'undefined') covers = covers.filter(c => c.x < len - 100);
 }
 function threshKind() { if (stage.bossRoom || stage.secret && stage.room && !stage.room.kind) return null; const T = ZONES[stageIdx]; return T && T.trans ? T.trans[zoneIdx] : null; }
+const threshX = () => stage.trimmed || stage.endX == null ? exitX() : stage.endX; // where the way on stands
+const glowAt = (x, y, r, col, a) => { if (a <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 2, x, y, r); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; circle(x, y, r); ctx.fill(); ctx.restore(); };
+const thCl = (k) => clamp(k, 0, 1), thSm = (k) => { k = thCl(k); return k * k * (3 - 2 * k); };
+const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 {
   const _sec = updateSecret;
   updateSecret = function (dt) { _sec(dt); trimArea(); if (stage.trimmed) stage.wake = Math.min(1, (stage.wake || 0) + dt * .8); };
+  // ---------------- the next place's layers, made ahead ----------------
+  let NX = null;
+  const getSet = () => ({ far: bgFar, mid: bgMid, floor: awFloorC, fkey: awFloorKey, key: bgKey, seams: awSeams, sun: AW_SUN });
+  const putSet = (s) => { bgFar = s.far; bgMid = s.mid; awFloorC = s.floor; awFloorKey = s.fkey; bgKey = s.key; awSeams = s.seams; AW_SUN = s.sun; };
+  const dropNX = () => { if (NX) { retire(NX.far); retire(NX.mid); retire(NX.floor); NX = null; } };
+  const nextSpec = () => { const k = threshKind(), z = zoneIdx + 1; return k && THRESH[k] && ZONES[stageIdx].zones[z] ? { theme: zoneTheme(z), seed: stageIdx * 97 + 13 + z * 7 } : null; }; // (as enterZone will build it)
+  const _bb = buildBackground;
+  function prepNext() {
+    if (!stage || stage.bossRoom) return null;
+    const s = nextSpec(); if (!s) return null;
+    if (NX && NX.theme === s.theme && NX.seed === s.seed && NX.K === K) return NX;
+    dropNX(); const A = getSet();
+    try { bgFar = bgMid = awFloorC = null; bgKey = ''; _bb(s.theme, s.seed); NX = Object.assign(getSet(), s, { K }); } finally { putSet(A); }
+    return NX;
+  }
+  buildBackground = function (themeId, seed) { // stepping into the next place: its layers are already painted
+    if (NX && NX.theme === themeId && NX.seed === seed && NX.K === K) { retire(bgFar); retire(bgMid); retire(awFloorC); putSet(NX); NX = null; return; }
+    _bb(themeId, seed);
+  };
   const _zone = enterZone; // a crystal pod or two left sitting past the last fight is moved into it
   enterZone = function (z, Zs) { _zone(z, Zs);
-    if (stage.waves.length && !stage.bossRoom) { const last = waveAt(stage.waves.length - 1); for (const p of props) if (p.x > last + VW * .7) p.x = last + rand(120, VW * .6); } };
-  const _mb = mechBoxes;
-  mechBoxes = function (box) { _mb(box); const k = threshKind(); if (k && THRESH[k]) box(exitX(), FLOOR_TOP + 20, 0, 170, 260); };
-  const _ml = mechList;
-  mechList = function (list, t) { _ml(list, t); const k = threshKind(); if (!k || !THRESH[k] || stage.secret) return; const x = exitX();
-    if (x > camX - 200 && x < camX + VW + 200) list.push([FLOOR_TOP + 4, () => THRESH[k](x, FLOOR_TOP + 4, stage.wake || 0, t)]); };
+    if (stage.waves.length && !stage.bossRoom) { const last = waveAt(stage.waves.length - 1); for (const p of props) if (p.x > last + VW * .7) p.x = last + rand(120, VW * .6);
+      stage.endX = Math.min(stage.len - 130, last + VW * .6 + 200); } // the last fight's view ends 200 short of the way on: the change is already creeping in at its right
+    else stage.endX = stage.len - 130;
+    setTimeout(() => { if (mode === 'play') prepNext(); }, 60); }; // (a frame after the move, so the two paint jobs don't land on one frame)
+  // ---------------- painted pieces, cached ----------------
+  const SPR = new Map(); let sprKey = '';
+  function sprite(kind, part, T) { // painted once per passage and scale, x relative to the way on; the solid parts get the layers' brushwork and fine contour
+    const KS = Math.min(K, 2.5), key = kind + KS;
+    if (sprKey !== key) { for (const c of SPR.values()) retire(c); SPR.clear(); sprKey = key; }
+    let c = SPR.get(part); if (c) return c;
+    const b = T[part + 'B'] || [-600, Y_OFF - 10, 240, VH], paint = T[part], [cv2, g] = texCanvas(Math.ceil((b[2] - b[0]) * KS), Math.ceil((b[3] - b[1]) * KS));
+    const old = ctx, sun = AW_SUN; ctx = g; g.setTransform(KS, 0, 0, KS, -b[0] * KS, -b[1] * KS); AW_SUN = 1;
+    try { paint(mulberry(kind.length * 977 + part.length * 31)); } finally { ctx = old; AW_SUN = sun; }
+    if (part !== 'haze') { const k0 = K; K = KS; try { paintLayer(cv2, { ink: '#1A100C', line: part === 'front' ? .7 : .6, lw: 1, brush: .9, hatch: .12, seed: 5 }); } finally { K = k0; releaseScratch(); } }
+    c = cv2; c.b = b; SPR.set(part, c); return c;
+  }
+  const drawSpr = (kind, T, part, L) => { if (!T[part]) return; const c = sprite(kind, part, T), b = c.b; ctx.drawImage(c, L + b[0], b[1], b[2] - b[0], b[3] - b[1]); };
+  // ---------------- the next place, showing through ----------------
+  const MS = .25, MX0 = -820, MX1 = 220; // the mask is soft, so it is kept small
+  let mkC = null, mkKey = '', nwC = null, nwG = null;
+  function edgeMask(T) { // the next place shows right of a ragged, brushed edge: T.edge(y) is where it is half there, T.feather how soft
+    const f = T.feather || 110, r = mulberry(11), at = (y) => T.edge(y) + Math.sin(y * .05 + 1) * 16 + Math.sin(y * .13 + 2) * 8 + Math.sin(y * .31) * 4;
+    for (let y = 0; y < VH; y += 3) { const x = at(y), g = ctx.createLinearGradient(x - f, 0, x + f, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, '#fff'); ctx.fillStyle = g; ctx.fillRect(x - f, y, MX1 - x + f, 3.4); }
+    for (let i = 0; i < 46; i++) { const y = r() * VH, x = at(y) - f * (.2 + r() * .7); softDab(x, y, 14 + r() * 26, '255,255,255', .45); } // blots where the brush went over the edge
+  }
+  function maskFor(kind, T) {
+    if (mkKey === kind && mkC) return mkC;
+    if (!mkC) [mkC] = texCanvas(Math.ceil((MX1 - MX0) * MS), Math.ceil(VH * MS));
+    const g = mkC.getContext('2d'), old = ctx; ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, mkC.width, mkC.height); g.setTransform(MS, 0, 0, MS, -MX0 * MS, 0);
+    try { T.mask ? T.mask() : edgeMask(T); } finally { ctx = old; }
+    mkKey = kind; return mkC;
+  }
+  function drawNext(kind, T, L, t) {
+    const B = NX && NX.K === K ? NX : prepNext(); if (!B) return;
+    const sx0 = L + MX0 - camX; if (sx0 > VW || L + MX1 - camX < 0) return;
+    if (!nwC || nwC.width !== cv.width || nwC.height !== cv.height) { retire(nwC); [nwC, nwG] = texCanvas(cv.width, cv.height); }
+    const m = ctx.getTransform(), g = nwG;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, nwC.width, nwC.height);
+    g.setTransform(m); g.save(); g.beginPath(); g.rect(Math.max(0, sx0), 0, VW, VH); g.clip(); // its world, only where it can show
+    if (T.nextDY) g.translate(0, T.nextDY);
+    const old = ctx, A = getSet(); ctx = g; putSet(B);
+    try { drawWorld(B.theme, camX + (T.nextDX || 0), t); } finally { putSet(A); ctx = old; }
+    g.restore();
+    g.save(); g.globalCompositeOperation = 'destination-in'; g.drawImage(maskFor(kind, T), L + MX0 - camX, 0, MX1 - MX0, VH); g.restore();
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(nwC, 0, 0); ctx.restore();
+  }
+  window.nextWorldInto = (g, t, o = {}) => { // the next place's world painted into g (a passage's last moments use it), or false if it isn't ready
+    const B = NX && NX.K === K ? NX : prepNext(); if (!B) return false;
+    const old = ctx, A = getSet(); ctx = g; putSet(B);
+    try { drawWorld(B.theme, o.cam || 0, t); } finally { putSet(A); ctx = old; }
+    return true;
+  };
+  // ---------------- drawn every frame ----------------
+  const active = () => { if (!stage || stage.bossRoom) return null; const k = threshKind(), T = k && THRESH[k], L = T && threshX(); return T && L - 900 < camX + VW && L + 900 > camX ? [k, T, L] : null; };
+  const _br = drawBossRoom;
+  drawBossRoom = function (t) { _br(t); const a = active(); if (!a) return; const [k, T, L] = a;
+    if (T.next !== false) drawNext(k, T, L, t);
+    ctx.save(); ctx.translate(-camX, 0); drawSpr(k, T, 'haze', L); drawSpr(k, T, 'back', L); if (T.live) T.live(L, stage.wake || 0, t); ctx.restore(); };
+  const _ga = drawGearAura;
+  drawGearAura = function (t, front) { _ga(t, front); if (!front) return; const a = active(); if (!a) return; const [k, T, L] = a; // (in front of the figures)
+    drawSpr(k, T, 'front', L); if (T.liveFront) T.liveFront(L, stage.wake || 0, t); };
 }
-const glowAt = (x, y, r, col, a) => { if (a <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 2, x, y, r); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; circle(x, y, r); ctx.fill(); ctx.restore(); };
-// the Vale → the Thornwood Hollow: two great dark trees lean together into a tunnel of thorns
-THRESH.canopy = (x, y, k, t) => {
-  const dg = ctx.createLinearGradient(0, y - 130, 0, y + 10); dg.addColorStop(0, 'rgba(14,22,16,.95)'); dg.addColorStop(1, 'rgba(30,40,26,.85)'); // the dark inside: a tunnel mouth, not a hole
-  ctx.fillStyle = dg; ctx.beginPath(); ctx.moveTo(x - 64, y + 10); ctx.quadraticCurveTo(x - 66, y - 120, x, y - 128); ctx.quadraticCurveTo(x + 66, y - 120, x + 64, y + 10); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = 'rgba(90,120,70,.35)'; ctx.lineWidth = 1; for (let i = 1; i < 4; i++) { const s = 1 - i * .2; ctx.beginPath(); ctx.moveTo(x - 64 * s, y + 10); ctx.quadraticCurveTo(x - 66 * s, y - 120 * s, x, y - 128 * s); ctx.quadraticCurveTo(x + 66 * s, y - 120 * s, x + 64 * s, y + 10); ctx.stroke(); } // the arches of the tunnel going back
-  glowAt(x + 14, y - 40, 50, '140,190,120', .18 * k * (1 + .2 * Math.sin(t * 2)));
-  for (const s of [-1, 1]) { ctx.fillStyle = C('#3E2E22'); ctx.beginPath(); ctx.moveTo(x + s * 70, y + 8); ctx.quadraticCurveTo(x + s * 76, y - 80, x + s * 10, y - 150); ctx.lineTo(x + s * 26, y - 152); ctx.quadraticCurveTo(x + s * 96, y - 80, x + s * 92, y + 8); ctx.closePath(); ctx.fill(); outline(1.5); }
-  ctx.fillStyle = C('#2E4A2A'); for (let i = 0; i < 9; i++) { const a = Math.PI + i / 8 * Math.PI; ell(x + Math.cos(a) * 80, y - 140 + Math.sin(a) * 30, 30, 20); ctx.fill(); outline(1.2); }
-  ctx.strokeStyle = C('#5A3A2A'); ctx.lineWidth = 2; for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 60, y - 60 - Math.sin(a) * 70); ctx.lineTo(x + Math.cos(a) * 68, y - 64 - Math.sin(a) * 78); ctx.stroke(); } // thorns
+// ---------- the passages: painted in the backgrounds' own hand (soft dabs, the next place's haze and light) ----------
+// a soft sweep across the view, for the moves between places: a band of something (dark wood, mist, cloud) whose edges are
+// ragged with painted dabs; x0..x1 the band in screen x, fill(y0, y1) paints its body, dabs: colors for the ragged edges
+function thSweep(x0, x1, fill, dabs, s = 1) {
+  const Y0 = Y_OFF, Y1 = VH, edge = (x, y, k) => x + Math.sin(y * .045 + k) * 18 + Math.sin(y * .11 + k * 2) * 9;
+  if (x1 - x0 < 1) return;
+  ctx.save(); ctx.beginPath(); ctx.moveTo(edge(x0, Y0, s), Y0); for (let y = Y0; y <= Y1; y += 8) ctx.lineTo(edge(x0, y, s), y); for (let y = Y1; y >= Y0; y -= 8) ctx.lineTo(edge(x1, y, s + 3), y); ctx.closePath();
+  fill(); ctx.restore();
+  for (let i = 0; i < 70; i++) { const y = Y0 + thHash(i + s * 7) * (Y1 - Y0), side = i % 2, x = side ? edge(x1, y, s + 3) : edge(x0, y, s); if (x < -60 || x > VW + 60) continue; // the edge, feathered with soft dabs and broken by small ones
+    softDab(x + (thHash(i + 3) - .5) * 30, y, 22 + thHash(i + 5) * 26, dabs[0], .8); if (i % 3 === 0) dab(x + (side ? 1 : -1) * (6 + thHash(i + 8) * 14), y, 2.5 + thHash(i + 6) * 4, dabs[1 + i % (dabs.length - 1)], .75); }
+}
+// a thorny briar: a dark cane with a lit back, hooked thorns along it
+function thBriar(ax, ay, cx, cy, ex, ey, w = 2.6) {
+  ctx.lineCap = 'round'; ctx.strokeStyle = '#1A120C'; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.stroke();
+  ctx.strokeStyle = 'rgba(120,96,64,.7)'; ctx.lineWidth = w * .35; ctx.beginPath(); ctx.moveTo(ax, ay - w * .3); ctx.quadraticCurveTo(cx, cy - w * .3, ex, ey - w * .3); ctx.stroke();
+  ctx.fillStyle = '#1A120C'; ctx.beginPath();
+  for (let u = .08; u < .95; u += .11) { const iu = 1 - u, x = iu * iu * ax + 2 * iu * u * cx + u * u * ex, y = iu * iu * ay + 2 * iu * u * cy + u * u * ey, s = (u * 9) % 2 < 1 ? 1 : -1; ctx.moveTo(x - 2, y); ctx.lineTo(x + 2, y); ctx.lineTo(x + 3, y + s * 4.5); }
+  ctx.fill();
+}
+const thFlies = (x, y, w, h, n, a, t) => { for (let i = 0; i < n; i++) { const ph = thHash(i) * TAU, px = x + thHash(i + 1) * w + Math.sin(t * .4 + ph) * 18, py = y + thHash(i + 2) * h + Math.sin(t * .6 + ph) * 9, k = a * (.45 + .55 * Math.sin(t * 1.7 + ph * 3));
+  if (k <= 0) continue; ctx.fillStyle = `rgba(190,255,170,${k * .22})`; circle(px, py, 4.5); ctx.fill(); ctx.fillStyle = `rgba(236,255,206,${k})`; circle(px, py, 1.2); ctx.fill(); } }; // fireflies
+const thShaft = (x, y0, y1, w, slant, rgb, a) => { if (a <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(.35, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - w * .3, y0); ctx.lineTo(x + w * .3, y0); ctx.lineTo(x + slant + w, y1); ctx.lineTo(x + slant - w, y1); ctx.closePath(); ctx.fill(); ctx.restore(); };
+
+// the Vale → the Thornwood Hollow: the Thornwood's dusk comes over the road from ahead (its canopy first, overhead, then
+// its trunks and its leaf-littered path); at the edge of the wood two great trunks lean together over a gate of roots,
+// barred with briars, the dark of the wood beyond. Awake: the briars draw back, and low sun and fireflies show the way in
+THRESH.canopy = {
+  edge: (y) => y < 160 ? -470 + (y - 84) * .9 : lerp(-400, -200, thCl((y - 160) / 80)), feather: 120,
+  hazeB: [-600, 74, 240, 350], haze(r) {
+    const T = FLOOR_TOP, g = ctx.createLinearGradient(-460, 0, 150, 0); g.addColorStop(0, 'rgba(10,16,12,0)'); g.addColorStop(.7, 'rgba(10,16,12,.3)'); g.addColorStop(1, 'rgba(10,16,12,.55)'); ctx.fillStyle = g; ctx.fillRect(-460, 74, 700, 276); // the shade under the trees, deepening toward the gate
+    for (let i = 0; i < 12; i++) softDab(-50 + i * 16, T - 50 + (r() - .5) * 70, 50 + r() * 40, '6,10,8', .5); // the dark inside the wood, past the gate
+    const fg = ctx.createLinearGradient(0, T, 0, VH); fg.addColorStop(0, 'rgba(8,12,8,.5)'); fg.addColorStop(1, 'rgba(8,12,8,0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(-60, T); ctx.lineTo(240, T); ctx.lineTo(240, VH); ctx.lineTo(60, VH); ctx.closePath(); ctx.fill(); // its shade reaching out over the road
+  },
+  backB: [-600, 60, 260, 300], back(r) {
+    const Z = window.ZB_ART, T = FLOOR_TOP, bark = Z.TH_BARK, lv = ['#0E1812', '#1A2A20', '#3A5236', '#A8A86A'];
+    for (const [x, w] of [[-440, 6], [-360, 9], [-318, 5]]) Z.farTrunk(x, T - 2, w, r, '#2A3A3A', '#8A8460', 40); // dim trunks where the wood begins
+    Z.giantTrunk(-250, T + 2, 18, r, bark, { shelves: [[176, 1, 9]], glow: 2 }); // one standing at the wood's edge
+    Z.giantTrunk(-112, T + 2, 22, r, bark, { shelves: [[150, -1, 11], [174, -1, 8]], glow: 3 }); // two leaning together over the gate
+    Z.giantTrunk(170, T + 2, 30, r, bark, { glow: 3 });
+    Z.rootArch(-84, 126, T + 2, 112, 15, r, bark, { hang: .55, hangL: 30 }); // a root heaving out of the road and arching over it: the gate
+    for (let i = 0; i < 17; i++) { const x = -520 + i * 44 + (r() - .5) * 20; awLeaves(x, 84 + r() * 20 + Math.max(0, -x - 200) * .05, 24 + r() * 16, r, lv, .8); } // the crowns meet overhead, low and heavy
+    for (const x of [-310, -215, -160, 46, 214]) awBush(x, T + 3, 28 + r() * 24, 9 + r() * 10, r, ['#141E16', '#22341F', '#3E5636', '#8E9658']);
+    for (const x of [-196, -138, 100]) awFern(x, T + 4, 12 + r() * 6, '#22341F', '#7E9454');
+  },
+  frontB: [-560, 70, 260, VH + 6], front(r) {
+    const Z = window.ZB_ART, lv = ['#0A120C', '#142218', '#2E4630', '#8A9058'];
+    for (let i = 0; i < 15; i++) { const x = -540 + i * 52 + (r() - .5) * 24, k = thCl((x + 540) / 600); if (r() > .3 + k) continue; awLeaves(x, 72 + r() * 10 * k, 14 + k * 20 + r() * 8, r, lv, .7); } // the canopy's lowest leaves, thickening overhead
+    for (let i = 0; i < 8; i++) Z.mossStrand(-360 + r() * 560, 82 + r() * 8, 16 + r() * 26, r, Z.TH_BARK.hangC);
+    Z.tube(Z.wiggle(Z.bez([70, VH + 14], [92, 312], [140, 262], [262, 236], 16), 4, r), (t) => 24 - t * 12, Object.assign({ furrow: Z.TH_BARK.furrow, dabs: 1, moss: .5, mossC: Z.TH_BARK.moss }, Z.TH_BARK), r); // a great root in the near ground; the road bends past it into the wood
+    awBush(170, VH + 6, 80, 24, r, ['#0C140E', '#18261A', '#2E4630', '#7E8A50']);
+  },
+  live(x, k, t) {
+    const T = FLOOR_TOP;
+    glowAt(x + 24, T - 44, 120, '255,190,110', (.05 + .2 * k) * (1 + .1 * Math.sin(t * 1.3))); // the low sun, found again past the trees
+    thShaft(x + 10, 110, T + 30, 12, -34, '255,210,150', .18 * k); thShaft(x + 62, 110, T + 30, 8, -30, '255,210,150', .13 * k);
+    thFlies(x - 70, T - 120, 180, 110, 9, .12 + .7 * k, t);
+    const o = thSm(k * 1.3); // the briars across the gate draw back to the trunks
+    for (let i = 0; i < 6; i++) { const y0 = T - 6 - i * 21, sag = 8 + thHash(i) * 12, mx = x + 18 + (thHash(i + 4) - .5) * 30;
+      for (const s of [-1, 1]) { const ax = s < 0 ? x - 80 : x + 112, ay = y0 + (thHash(i + 9 + s) - .5) * 16, ex = lerp(mx, ax - s * 14, o), ey = lerp(y0 + sag, ay + 10, o) + Math.sin(t * 1.4 + i) * 1.2;
+        thBriar(ax, ay, lerp(ax, ex, .5), lerp(ay, ey, .5) + sag * (1 - o) * .8 + 6 * o, ex, ey, 2.4 - i * .15); } }
+  },
 };
-// the Thornwood → the Sunken Grove: the road ends at a sinkhole, hung with roots, water glinting far below
-THRESH.roots = (x, y, k, t) => {
-  const yy = y + 34; ctx.fillStyle = 'rgba(8,10,10,.92)'; ell(x, yy, 80, 22); ctx.fill(); ctx.strokeStyle = C('#4A3A26'); ctx.lineWidth = 3; ctx.stroke();
-  glowAt(x, yy + 4, 60, '120,190,180', .25 * (.4 + .6 * k) * (1 + .2 * Math.sin(t * 1.5)));
-  ctx.strokeStyle = C('#5A4430'); ctx.lineWidth = 2.5; for (let i = 0; i < 8; i++) { const rx = x - 70 + i * 20; ctx.beginPath(); ctx.moveTo(rx, yy - 18 + Math.abs(i - 3.5) * 2); ctx.quadraticCurveTo(rx + Math.sin(t + i) * 3, yy - 2, rx + 2, yy + 10 + (i % 3) * 4); ctx.stroke(); }
-  ctx.fillStyle = C('#5A4A30'); ctx.fillRect(x - 96, yy - 60, 6, 60); ctx.fillRect(x - 108, yy - 52, 30, 14); ctx.beginPath(); ctx.rect(x - 108, yy - 52, 30, 14); outline(1.2); // an old signpost
-  ctx.strokeStyle = C('#E8D8B0'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - 102, yy - 45); ctx.lineTo(x - 84, yy - 45); ctx.lineTo(x - 88, yy - 40); ctx.stroke();
-};
-// the Skyport → the Gearworks Deck: a rope ladder hangs down out of a cloudbank from a galleon's keel
-THRESH.clouds = (x, y, k, t) => {
-  const top = Y_OFF + 10, sway = Math.sin(t * 1.2) * 4 * (.5 + k);
-  ctx.fillStyle = C('#5A4030'); ctx.beginPath(); ctx.moveTo(x - 120, top + 6); ctx.quadraticCurveTo(x, top + 44, x + 140, top + 6); ctx.lineTo(x + 140, top - 10); ctx.lineTo(x - 120, top - 10); ctx.closePath(); ctx.fill(); outline(1.5); // the keel
-  ctx.strokeStyle = C('#C8A050'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 100, top + 10); ctx.quadraticCurveTo(x, top + 38, x + 120, top + 10); ctx.stroke();
-  drawCloud(x - 60, top + 30, 1, t); drawCloud(x + 70, top + 26, 1, t);
-  ctx.strokeStyle = C('#6A4A30'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 10, top + 30); ctx.lineTo(x - 10 + sway, y + 30); ctx.moveTo(x + 14, top + 30); ctx.lineTo(x + 14 + sway, y + 30); ctx.stroke();
-  ctx.lineWidth = 2.5; for (let r = top + 44; r < y + 30; r += 14) { const f = (r - top) / (y + 30 - top); ctx.beginPath(); ctx.moveTo(x - 10 + sway * f, r); ctx.lineTo(x + 14 + sway * f, r); ctx.stroke(); }
-  glowAt(x + 2, top + 34, 50, '255,230,180', .3 * k);
-};
-// the Gearworks → the Foundry Crown: a lift cage on chains, furnace-light glowing up through its floor
-THRESH.lift = (x, y, k, t) => {
-  const top = Y_OFF + 4, yy = y + 30;
-  ctx.strokeStyle = C('#3A3A40'); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 40, top); ctx.lineTo(x - 40, yy - 110); ctx.moveTo(x + 40, top); ctx.lineTo(x + 40, yy - 110); ctx.stroke();
-  glowAt(x, yy - 10, 80, '255,150,70', .3 * (.4 + .6 * k) * (1 + .15 * Math.sin(t * 3)));
-  ctx.fillStyle = C('#4A3A30'); ctx.fillRect(x - 52, yy - 112, 104, 10); ctx.fillRect(x - 52, yy - 6, 104, 10); ctx.beginPath(); ctx.rect(x - 52, yy - 112, 104, 116); outline(1.5);
-  ctx.strokeStyle = C('#8A6A4A'); ctx.lineWidth = 2; for (let i = 0; i <= 6; i++) { ctx.beginPath(); ctx.moveTo(x - 50 + i * 16.6, yy - 102); ctx.lineTo(x - 50 + i * 16.6, yy - 6); ctx.stroke(); }
-  ctx.save(); ctx.translate(x, top + 14); ctx.rotate(t * .6 * (.2 + k)); ctx.fillStyle = C('#B88A48'); circle(0, 0, 16); ctx.fill(); outline(1.3); ctx.fillStyle = C('#5A4030'); for (let i = 0; i < 8; i++) { ctx.save(); ctx.rotate(i / 8 * TAU); ctx.fillRect(-3, -21, 6, 6); ctx.restore(); } circle(0, 0, 5); ctx.fill(); ctx.restore();
-};
-// the Prism road → the Inverted Gallery: a great standing mirror, and in it the world upside down
-THRESH.shatter = (x, y, k, t) => {
-  const w = 70, h = 150, y0 = y + 20;
-  ctx.fillStyle = C('#3A2A4A'); rrect(x - w / 2 - 8, y0 - h - 8, w + 16, h + 16, 10); ctx.fill(); outline(1.5);
-  const g = ctx.createLinearGradient(0, y0 - h, 0, y0); g.addColorStop(0, '#3A3060'); g.addColorStop(.5, '#8A70B0'); g.addColorStop(1, '#C8B0E8'); ctx.fillStyle = g; rrect(x - w / 2, y0 - h, w, h, 6); ctx.fill(); // the sky, upside down
-  ctx.fillStyle = 'rgba(40,30,60,.7)'; for (let i = 0; i < 5; i++) { const cx = x - 26 + i * 13; ctx.beginPath(); ctx.moveTo(cx - 5, y0 - h); ctx.lineTo(cx, y0 - h + 30 + (i % 2) * 20); ctx.lineTo(cx + 5, y0 - h); ctx.fill(); } // crystals hanging down
-  ctx.strokeStyle = `rgba(255,255,255,${.3 + .3 * k})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 20, y0 - 30); ctx.lineTo(x + 10, y0 - h + 20); ctx.stroke();
-  if (k > .5) { ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y0 - h / 2); ctx.lineTo(x - 18, y0 - h / 2 - 22); ctx.moveTo(x, y0 - h / 2); ctx.lineTo(x + 20, y0 - h / 2 + 14); ctx.moveTo(x, y0 - h / 2); ctx.lineTo(x + 6, y0 - h / 2 - 30); ctx.stroke(); } // it begins to crack
-  glowAt(x, y0 - h / 2, 70, '200,170,255', .2 * k);
-};
-// the Gallery → the Wyrm's Nest: a crystal arch with a kaleidoscope iris turning slowly in it
-THRESH.invert = (x, y, k, t) => {
-  const cy = y - 50, r = 54;
-  ctx.fillStyle = 'rgba(10,6,20,.9)'; circle(x, cy, r); ctx.fill();
-  ctx.save(); ctx.translate(x, cy); ctx.rotate(t * .25 * (.3 + k));
-  for (let i = 0; i < 8; i++) { ctx.save(); ctx.rotate(i / 8 * TAU); ctx.fillStyle = C(['#8CC8D0', '#C8A0E8'][i % 2]); ctx.beginPath(); ctx.moveTo(0, -r * .2 * (1 + k)); ctx.lineTo(r * .42, -r); ctx.lineTo(-r * .1, -r); ctx.closePath(); ctx.fill(); outline(1); ctx.restore(); }
-  ctx.restore(); glowAt(x, cy, 40, '230,220,255', .35 * k);
-  for (const s of [-1, 1]) { ctx.fillStyle = C('#9FD8E0'); ctx.beginPath(); ctx.moveTo(x + s * 60, y + 10); ctx.lineTo(x + s * 74, cy - 40); ctx.lineTo(x + s * 30, cy - 92); ctx.lineTo(x + s * 50, cy - 40); ctx.lineTo(x + s * 50, y + 10); ctx.closePath(); ctx.fill(); outline(1.3); }
-};
-// the Courts' road → the Thelbane Spires: the Logrus writhing up out of a crack in the road
-THRESH.w4logrus = (x, y, k, t) => {
-  ctx.fillStyle = 'rgba(14,4,20,.92)'; ell(x, y + 30, 70, 14); ctx.fill();
-  glowAt(x, y - 20, 70, '190,110,240', .22 * (.4 + .6 * k));
-  ctx.lineWidth = 3; for (let i = 0; i < 6; i++) { ctx.strokeStyle = C(i % 2 ? '#6A3A8A' : '#B07AD8'); ctx.beginPath(); ctx.moveTo(x - 50 + i * 20, y + 30);
-    for (let s = 1; s <= 6; s++) ctx.lineTo(x - 50 + i * 20 + Math.sin(t * (1 + k) + s + i) * 14, y + 30 - s * (18 + i * 2)); ctx.stroke(); }
-};
-// the Spires → the Rim of the Abyss: a towering Trump card standing on its edge at the brink
-THRESH.w4trump = (x, y, k, t) => {
-  const w = 70, h = 120, y0 = y + 26;
-  ctx.save(); ctx.translate(x, y0); ctx.rotate(-.05 + Math.sin(t * .8) * .01);
-  ctx.fillStyle = C('#1E1626'); rrect(-w / 2, -h, w, h, 6); ctx.fill(); ctx.strokeStyle = '#EED48A'; ctx.lineWidth = 3; ctx.stroke(); ctx.lineWidth = 1; rrect(-w / 2 + 6, -h + 6, w - 12, h - 12, 4); ctx.stroke();
-  ctx.fillStyle = `rgba(238,212,138,${.5 + .5 * k})`; drawTrumpGlyph('stillness', 0, -h / 2, 16); ctx.restore();
-  glowAt(x, y0 - h / 2, 70, '238,212,138', .25 * k);
+TRANS_FX.canopy = (T, p, c, inP, t) => { // into the wood: its dark comes over him from ahead and slides away behind him, onto the hollow
+  const x0 = inP ? lerp(VW + 90, -90, c) : -400, x1 = inP ? VW + 400 : lerp(-90, VW + 90, c);
+  thSweep(x0, x1, () => { const g = ctx.createLinearGradient(0, Y_OFF, 0, VH); g.addColorStop(0, '#08100C'); g.addColorStop(.6, '#121C14'); g.addColorStop(1, '#1C2616'); ctx.fillStyle = g; ctx.fill(); ctx.clip();
+    for (let i = 0; i < 4; i++) thShaft(x0 + 60 + i * 170, Y_OFF, VH, 10 + i * 3, -60, '255,206,140', .12);
+    thFlies(Math.max(0, x0), Y_OFF + 40, Math.min(VW, x1) - Math.max(0, x0), VIEW_H - 60, 16, .9, t); }, ['12,20,14', '#1A2A1C', '#2A4026', '#46623A', '#5E7A44'], 1);
 };
 
 // ---------- a staggered boss is stunned: it reels on the spot with stars and a ring of dizziness circling its head ----------

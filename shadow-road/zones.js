@@ -285,20 +285,48 @@ function mechList(list, t) {
     ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(r.x + 2, r.y, r.z, r.f, Object.assign({}, r.pose), .22); ctx.restore();
   })]); }
 }
-function drawShroom(s, t) { // a great toadstool, its gills glowing violet
-  const sq = 1 + s.puff * .5 * Math.sin(s.puff * 30);
-  ctx.save(); ctx.translate(s.x, s.y); shadow(0, 0, 18); FLASH = s.flash > 0;
-  ctx.fillStyle = C('#E8DCC0'); ctx.beginPath(); ctx.moveTo(-6, 0); ctx.quadraticCurveTo(-8, -18, -4, -30); ctx.lineTo(5, -30); ctx.quadraticCurveTo(8, -16, 6, 0); ctx.closePath(); ctx.fill(); outline(1.3);
-  ctx.scale(sq, 2 - sq);
-  ctx.fillStyle = C('#8A4AA8'); ctx.beginPath(); ctx.moveTo(-26, -28); ctx.quadraticCurveTo(-24, -58, 0, -60); ctx.quadraticCurveTo(24, -58, 26, -28); ctx.quadraticCurveTo(0, -22, -26, -28); ctx.closePath(); ctx.fill(); outline(1.5);
-  ctx.fillStyle = C('#C890E0'); ctx.beginPath(); ctx.moveTo(-26, -28); ctx.quadraticCurveTo(0, -22, 26, -28); ctx.quadraticCurveTo(0, -32, -26, -28); ctx.fill(); // the glowing gills
-  ctx.fillStyle = C('#F4E8D0'); for (const [x, y, r] of [[-12, -44, 4], [4, -52, 3.2], [14, -40, 3.6], [-2, -38, 2.4]]) { ell(x, y, r, r * .8); ctx.fill(); }
-  FLASH = false; ctx.restore();
+// a great toadstool, its gills glowing violet: painted like the grove's own toadstools (paint.js propSprite), with a live
+// violet glow under the cap so it still reads as the thing that lets the spores go
+function shroomPaint(v) {
+  const r = mulberry(v * 613 + 41);
+  return propSprite('shroom' + v, 84, 84, 42, 74, (th, s) => {
+    const cap = ['#7A3E98', '#86469E', '#6E3A8E'][v], stem = '#D8CCB0', w = 26 + v * 2;
+    ctx.fillStyle = shade(stem, -.25); ctx.beginPath(); ctx.moveTo(-6.5, 0); ctx.quadraticCurveTo(-8.5, -18, -4.5, -31); ctx.lineTo(5, -31); ctx.quadraticCurveTo(8.5, -16, 6.5, 0); ctx.closePath(); ctx.fill(); // the stem, in its own shade
+    ctx.fillStyle = stem; ctx.beginPath(); ctx.moveTo(s * 6.5, 0); ctx.quadraticCurveTo(s * 8.5, -16, s * 5, -31); ctx.lineTo(-s * .5, -31); ctx.quadraticCurveTo(-s * 1, -16, -s * 1.5, 0); ctx.closePath(); ctx.fill(); // and lit on the sunward side
+    for (let i = 0; i < 6; i++) dab(s * (1 + r() * 4), -4 - r() * 24, .9 + r() * 1.2, '#F6EEDA', .6); for (let i = 0; i < 5; i++) dab(-s * (2 + r() * 3), -3 - r() * 22, 1 + r() * 1.4, shade(stem, -.45), .4); // fibres
+    ctx.fillStyle = '#3E2048'; ctx.beginPath(); ctx.moveTo(-w, -28); ctx.quadraticCurveTo(0, -20, w, -28); ctx.quadraticCurveTo(0, -31, -w, -28); ctx.fill(); // under the cap
+    ctx.fillStyle = '#C890E0'; ctx.globalAlpha = .85; ctx.beginPath(); ctx.moveTo(-w + 3, -27.6); ctx.quadraticCurveTo(0, -22, w - 3, -27.6); ctx.quadraticCurveTo(0, -27, -w + 3, -27.6); ctx.fill(); ctx.globalAlpha = 1; // the glowing gills
+    const dome = () => { ctx.beginPath(); ctx.moveTo(-w, -28); ctx.quadraticCurveTo(-w + 2, -58 - v * 2, 0, -60 - v * 2); ctx.quadraticCurveTo(w - 2, -58 - v * 2, w, -28); ctx.quadraticCurveTo(0, -31, -w, -28); ctx.closePath(); };
+    dome(); ctx.fillStyle = cap; ctx.fill();
+    ctx.save(); dome(); ctx.clip();
+    const sg = ctx.createLinearGradient(-s * w, 0, s * w, 0); sg.addColorStop(0, 'rgba(30,10,40,.55)'); sg.addColorStop(.5, 'rgba(30,10,40,0)'); ctx.fillStyle = sg; ctx.fillRect(-w, -64, w * 2, 40); // round into shade away from the light
+    const bg = ctx.createLinearGradient(0, -36, 0, -26); bg.addColorStop(0, 'rgba(30,10,40,0)'); bg.addColorStop(1, 'rgba(30,10,40,.45)'); ctx.fillStyle = bg; ctx.fillRect(-w, -36, w * 2, 10); // and under the brim
+    for (let i = 0; i < 18; i++) dab(-s * (w * .2 + r() * w * .8), -30 - r() * 22, 2.5 + r() * 4, shade(cap, -.4), .5); // the cap's shadow side, dabbed
+    for (let i = 0; i < 16; i++) dab(s * (r() * w * .75), -40 - r() * 18, 2 + r() * 3.6, shade(cap, .35), .7); // and the light on its crown
+    for (let i = 0; i < 7; i++) dab(s * (w * .25 + r() * w * .45), -48 - r() * 9, 1.2 + r() * 1.8, '#F0C8F4', .75);
+    ctx.strokeStyle = `rgba(${th.sun[2]},.55)`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(0, -28, w - 1, 31 + v * 2, 0, s > 0 ? -1.35 : Math.PI + .5, s > 0 ? -.5 : Math.PI + 1.35); ctx.stroke(); // light along its sunward rim
+    ctx.restore();
+    for (const [x, y, rr] of [[-12, -44, 4], [4, -52, 3.2], [14, -40, 3.6], [-2, -38, 2.4], [-18, -35, 2]]) { dab(x, y, rr, '#E8DCC4', .85); dab(x + s * .8, y - .8, rr * .5, '#FFF6E6', .8); } // its pale warts
+    for (let i = 0; i < 8; i++) dab((r() - .5) * 26, -1 - r() * 2, 1.5 + r() * 2, '#2E2A1C', .6); // moss and leaf-litter about its foot
+  }, { foot: 10, seed: 23 + v, haze: .08 });
 }
-function drawCrate(c) { // a cargo crate, iron-banded, sliding across the deck
-  ctx.save(); ctx.translate(c.x, c.y); shadow(0, 0, 18); ctx.rotate(c.rot);
-  rrect(-15, -28, 30, 28, 2); ctx.fillStyle = C('#9A7448'); ctx.fill(); outline(1.4);
-  ctx.strokeStyle = C('#6A4A2A'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-15, -28); ctx.lineTo(15, 0); ctx.moveTo(15, -28); ctx.lineTo(-15, 0); ctx.stroke();
-  ctx.fillStyle = C('#4A4246'); ctx.fillRect(-15, -22, 30, 3); ctx.fillRect(-15, -8, 30, 3);
-  ctx.restore();
+function drawShroom(s, t) {
+  const sq = 1 + s.puff * .5 * Math.sin(s.puff * 30), v = Math.floor(s.x / 7) % 3;
+  propDraw(shroomPaint(v), s.x, s.y, { sx: sq, sy: 2 - sq, sh: 30, flash: s.flash > 0 });
+  onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; // the gills' glow, breathing
+    softDab(s.x, s.y - 26 * (2 - sq), 26, '190,110,230', .2 + .06 * Math.sin(t * 2.2 + s.x) + s.puff * .4); softDab(s.x, s.y - 2, 18, '170,100,220', .12); ctx.restore(); });
+}
+function crateSprite() { // a cargo crate, iron-banded, painted like the deck's own crates
+  return propSprite('crate', 44, 44, 22, 36, (th, s) => {
+    const body = '#7A5A3C';
+    ctx.fillStyle = body; ctx.fillRect(-15, -28, 30, 28);
+    for (let i = 0; i < 12; i++) dab(-13 + Math.abs(Math.sin(i * 7.3)) * 26, -26 + Math.abs(Math.sin(i * 3.1)) * 24, 1.6 + (i % 3), i % 2 ? shade(body, .18) : shade(body, -.22), .45); // weathering
+    ctx.fillStyle = shade(body, -.35); ctx.fillRect(s > 0 ? -15 : 11, -28, 4, 28); ctx.fillStyle = shade(body, .3); ctx.fillRect(-15, -28, 30, 2.2); // its shadowed side, its lit top edge
+    ctx.strokeStyle = shade(body, -.42); ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-12, -25); ctx.lineTo(12, -3); ctx.moveTo(12, -25); ctx.lineTo(-12, -3); ctx.stroke(); // the braces
+    for (const y of [-22, -8]) { ctx.fillStyle = '#4A4246'; ctx.fillRect(-15, y, 30, 3); ctx.fillStyle = '#A8988E'; ctx.globalAlpha = .6; ctx.fillRect(-15, y, 30, .8); ctx.globalAlpha = 1; } // iron bands, glinting
+  }, { foot: 8, seed: 29, haze: .06, line: .8 });
+}
+function drawCrate(c) { // it slides and tumbles, so it stays in the figure layer like the other things that can hit you
+  const sp = crateSprite();
+  shadow(c.x, c.y, 18); ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h); ctx.restore();
 }

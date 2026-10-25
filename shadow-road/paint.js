@@ -371,3 +371,49 @@ try {
   st.setProperty('--paper', `url(${T.varnish.toDataURL()})`); st.setProperty('--wash', `url(${T.crack.toDataURL()})`);
   document.documentElement.classList.add('paper');
 } catch (e) {}
+
+// ---------- road-side props (cover, toadstools, pods, crates), painted like the background they stand in ----------
+// Each one is painted once onto a little canvas of its own with the background's own means: brush dabs, the wobble of a
+// hand-drawn edge, brushwork and the mid layer's thin contour; lit from the side the place's sun is on, warmed by it,
+// washed toward its haze and sunk into shade at the foot. It is then laid straight onto the page, under the figure
+// layer, so it takes no heavy contour or rim; and wherever it stands in front of a figure it is cut out of the figure
+// layer, so whoever hides behind it is hidden (and steps out from behind it) all the same.
+const PROPS = { map: new Map(), theme: '', k: 0 };
+const propSun = (th) => th.sun[0] < .5 ? -1 : 1; // the side the light comes from in this place
+// key: what it is (one canvas per key per place); w, h: the canvas in world units; ox, oy: where its foot is on it
+// paint(th, sun): draws it about its foot with the background helpers (dab, awLeaves, paintTree...)
+// o: { line, lw, brush, hatch, haze, warm, foot, seed } (contour strength and width, brushwork, wash of haze and sun, shade at the foot)
+function propSprite(key, w, h, ox, oy, paint, o = {}) {
+  const id = stage ? stage.theme : 'bloom', th = THEMES[id] || THEMES.bloom;
+  if (PROPS.theme !== id || PROPS.k !== K) { for (const s of PROPS.map.values()) { retire(s.c); retire(s.m); } PROPS.map.clear(); PROPS.theme = id; PROPS.k = K; } // a new place: its props are painted afresh
+  let s = PROPS.map.get(key); if (s) return s;
+  const W = Math.ceil(w * K), H = Math.ceil(h * K), [c, g] = texCanvas(W, H), old = ctx, sun0 = AW_SUN, dx0 = DAB_X, fl = FLASH, ti = TINT, sun = propSun(th);
+  g.scale(K, K); g.translate(ox, oy); ctx = g; AW_SUN = sun; DAB_X = 0; FLASH = false; TINT = null;
+  try { paint(th, sun); } finally { ctx = old; AW_SUN = sun0; DAB_X = dx0; FLASH = fl; TINT = ti; }
+  paintLayer(c, { ink: o.ink || '#1A100C', line: o.line ?? .55, lw: o.lw ?? .8, brush: o.brush ?? 1, hatch: 0, seed: o.seed || 9 }); releaseScratch();
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop';
+  const lx = sun > 0 ? W : 0, lg = g.createLinearGradient(W - lx, 0, lx, 0); // the sunward side warmed by the place's light, the far side cooled
+  lg.addColorStop(0, `rgba(${th.haze},${(o.haze ?? .1) * 1.2})`); lg.addColorStop(.55, `rgba(${th.haze},${(o.haze ?? .1) * .6})`); lg.addColorStop(1, `rgba(${th.sun[2]},${o.warm ?? .13})`);
+  g.fillStyle = lg; g.fillRect(0, 0, W, H);
+  const fy = oy * K, fg = g.createLinearGradient(0, fy - (o.foot ?? 26) * K, 0, fy); fg.addColorStop(0, 'rgba(20,12,22,0)'); fg.addColorStop(1, 'rgba(20,12,22,.42)'); // its foot in shade where it meets the ground
+  g.fillStyle = fg; g.fillRect(0, 0, W, H);
+  g.restore();
+  // its mask: solid wherever it is mostly paint (cuts it out of the figure layer, and lights up white in a hit flash)
+  const [m, mg] = texCanvas(W, H), id2 = g.getImageData(0, 0, W, H), d = id2.data, md = mg.createImageData(W, H), e = md.data;
+  for (let i = 3; i < d.length; i += 4) if (d[i] > 110) { e[i - 3] = e[i - 2] = e[i - 1] = 255; e[i] = 255; }
+  mg.putImageData(md, 0, 0);
+  s = { c, m, ox, oy, w, h }; PROPS.map.set(key, s); return s;
+}
+// lay a prop down at (x, y): sx, sy its scale, sk a lean (the top sways that far per unit of height), sh: a soft shadow
+// cast along the ground away from the light, this wide (0 for none), flash: a hit flash
+function propDraw(s, x, y, o = {}) {
+  const sx = o.sx ?? 1, sy = o.sy ?? 1, sk = o.sk || 0, th = THEMES[stage.theme] || THEMES.bloom;
+  const put = (img, a = 1) => { ctx.save(); ctx.translate(x, y); ctx.transform(sx, 0, -sk * sy, sy, 0, 0); if (a < 1) ctx.globalAlpha *= a; ctx.drawImage(img, -s.ox, -s.oy, s.w, s.h); ctx.restore(); };
+  const page = () => {
+    if (o.sh) { const r = o.sh * sx, dx = -propSun(th) * r * .28; ctx.save(); ctx.translate(x + dx, y + 1); ctx.scale(1, .26); // the shadow, soft at its edge
+      const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, r); gr.addColorStop(0, 'rgba(22,12,26,.42)'); gr.addColorStop(.6, 'rgba(22,12,26,.22)'); gr.addColorStop(1, 'rgba(22,12,26,0)'); ctx.fillStyle = gr; ctx.fillRect(-r, -r, r * 2, r * 2); ctx.restore(); }
+    put(s.c); if (o.flash) put(s.m, .8);
+  };
+  if (PAINT_Q > 0 && inkG && ctx === inkG) { onMain(page); ctx.save(); ctx.globalCompositeOperation = 'destination-out'; put(s.m); ctx.restore(); } // on the page, and cut out of the figures behind it
+  else page();
+}

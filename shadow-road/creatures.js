@@ -218,14 +218,26 @@ function eyes(x, y, r, a, one) {
 }
 
 // ---------- props: bloom pods and weapon pickups ----------
+// the breakable pods: painted like the place around them (paint.js propSprite), with a slow glint of light that marks them out
+function podPaint(theme) {
+  return propSprite('pod-' + theme, 50, 50, 25, 42, (th, s) => {
+    const col = theme === 'sky' ? '#A87A40' : theme === 'prism' ? '#6EA8B8' : '#C87890', lit = shade(col, .38), dk = shade(col, -.4);
+    if (theme === 'bloom') for (const a of [-1, 1]) { ctx.fillStyle = a === s ? '#5E8A4E' : '#2F5446'; ell(a * 9, -3, 9, 3.2, a * -.35); ctx.fill(); } // the leaves it sits in
+    ctx.fillStyle = col; ell(0, -16, 14, 16); ctx.fill();
+    ctx.save(); ell(0, -16, 14, 16); ctx.clip();
+    for (let i = 0; i < 9; i++) dab(-s * (4 + (i % 4) * 2.4), -6 - (i * 3.7) % 24, 4 + (i % 3) * 1.5, dk, .45); // round into shadow away from the light
+    for (let i = 0; i < 7; i++) dab(s * (2 + (i % 3) * 2.6), -14 - (i * 4.3) % 14, 2.5 + (i % 2) * 2, lit, .55); // and into light toward it
+    if (theme === 'sky') for (const y of [-24, -9]) { ctx.fillStyle = '#4A3A30'; ctx.fillRect(-15, y, 30, 2.6); ctx.fillStyle = '#F0D49A'; ctx.globalAlpha = .55; ctx.fillRect(-15, y, 30, .8); ctx.globalAlpha = 1; } // brass bands
+    else if (theme === 'prism') { ctx.strokeStyle = lit; ctx.lineWidth = .8; ctx.globalAlpha = .7; ctx.beginPath(); ctx.moveTo(-14, -18); ctx.lineTo(-4, -26); ctx.lineTo(8, -20); ctx.lineTo(14, -12); ctx.moveTo(-4, -26); ctx.lineTo(-2, 0); ctx.stroke(); ctx.globalAlpha = 1; } // facets
+    else { ctx.strokeStyle = dk; ctx.lineWidth = 1.2; ctx.globalAlpha = .7; ctx.beginPath(); ctx.moveTo(0, -32); ctx.quadraticCurveTo(s * 2, -16, 0, 0); ctx.stroke(); ctx.globalAlpha = 1; } // its seam
+    ctx.restore();
+    dab(s * 5, -23, 2.6, '#FFF4E4', .7); dab(s * 6.5, -25, 1.2, '#FFFFFF', .8); // a glint
+  }, { foot: 8, seed: 31, haze: .06, line: .75 });
+}
+function podGlint(p, t, rgb = '255,236,200') { onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; softDab(p.x, p.y - 16, 20, rgb, .1 + .08 * Math.max(0, Math.sin(t * 2.4 + p.x))); ctx.restore(); }); } // a slow glint: something worth breaking
 function drawPod(p, t) {
-  ctx.save(); ctx.translate(p.x, p.y); shadow(0, 0, 16);
   const sq = 1 + Math.sin(t * 3 + p.x) * .04;
-  ctx.beginPath(); ctx.ellipse(0, -16 * sq, 14, 16 * sq, 0, 0, TAU);
-  ctx.fillStyle = C(p.theme === 'sky' ? '#B88A48' : p.theme === 'prism' ? '#8CC8D0' : '#D98CA0'); ctx.fill(); outline(2);
-  ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -32 * sq); ctx.lineTo(0, 0); ctx.stroke();
-  ctx.fillStyle = C('rgba(255,255,255,.6)'); ell(-5, -22, 3, 6); ctx.fill();
-  ctx.restore();
+  propDraw(podPaint(p.theme === 'sky' || p.theme === 'prism' ? p.theme : 'bloom'), p.x, p.y, { sy: sq, sh: 20, flash: FLASH }); podGlint(p, t);
 }
 function drawWeaponPickup(k, t) {
   ctx.save(); ctx.translate(k.x, k.y); shadow(0, 0, 18);
