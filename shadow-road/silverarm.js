@@ -62,7 +62,7 @@
   const JANKEN = { // what Rock, Paper, Scissors turns into when you let go
     rock:     { name: 'Rock!', dmg: 42, kb: 200, launch: 300, x1: 90, depth: 40, shock: 140, bounce: 1, h: [.42, .6] },
     paper:    { name: 'Paper!', dmg: 24, kb: 720, x1: 150, depth: 44, wall: 1, multi: 0, h: [.38, .62] },
-    scissors: { name: 'Scissors!', dmg: 20, kb: 160, x1: 130, depth: 30, multi: .14, crit: 1, h: [.36, .7] },
+    scissors: { name: 'Scissors!', dmg: 16, kb: 160, x1: 130, depth: 30, multi: .14, crit: 1, h: [.36, .7] },
   };
   const JK = ['rock', 'paper', 'scissors'], jkOf = (ct) => JK[Math.max(0, Math.floor((ct - .45) / .42)) % 3];
   const base = WEAPONS.fists.tree, baseName = WEAPONS.fists.name, baseDesc = WEAPONS.fists.desc;
