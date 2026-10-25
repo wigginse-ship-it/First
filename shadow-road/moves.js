@@ -28,6 +28,7 @@ function moveExtras(m, k, dt, airborne) {
       P.vaultVx = P.facing * travel / (2 * (m.hop || 300) / GRAV);
     }
     if (airborne) P.vx = P.vaultVx; else if (P.turned) P.vx *= Math.pow(.001, dt);
+    if (airborne && k < .5 && Math.random() < dt * 22) addGhost(false); // pale afterimages trace the flip
     if (!P.turned && k >= m.turnAt) { P.turned = true; if (P.vaultFoe) P.facing = -P.facing; } // nobody to vault over: he just lands facing on
   }
   if (m.tornado && !P.stormed && k >= m.h[0] + .1) { // the staff tears a whirlwind loose
@@ -298,10 +299,13 @@ const MOVE_POSE = {
   },
   'staff:RH'(pose, m, k) { // Vaulting Reversal: planted, over in a front flip, turned in the air, and a cut down across their back
     pose.trail = 0;
-    const f = sstep(span(k, .08, .44)), tuck = Math.sin(Math.PI * span(k, .06, .48));
+    // a gymnast's twisting flip: up the planted staff, upside down at the top with the legs split wide, and a full twist
+    // (and a half, over a foe, so he comes down facing them) wound into the somersault
+    const f = sstep(span(k, .08, .44)), tuck = Math.sin(Math.PI * span(k, .06, .48)), split = Math.sin(Math.PI * span(k, .16, .4));
     pose.rot = TAU * f;
-    pose.spin = k < .5 && P.vaultFoe ? -Math.PI * sstep(span(k, .36, .5)) : 0; // the turn, so the facing swaps at .5 without a jump
-    pose.legs = { f: lerp(7, 8, tuck), b: lerp(-8, 0, tuck), fk: lerp(3, 15, tuck), bk: lerp(3, 15, tuck) };
+    pose.spin = k < .5 ? -(P.vaultFoe ? 3 : 2) * Math.PI * sstep(span(k, .12, .5)) : 0; // (the facing swaps at .5, where the twist comes round)
+    pose.legs = { f: lerp(lerp(7, 8, tuck), 16, split), b: lerp(lerp(-8, 0, tuck), -17, split), fk: lerp(lerp(3, 15, tuck), 1, split), bk: lerp(lerp(3, 15, tuck), 1, split) };
+    pose.flow = 18;
     if (k < .5) { pose.arm = lerp(1.0, -.4, ease(span(k, .05, .3))); pose.grip = lerp(.45, 0, span(k, .05, .3)); pose.backArm = 2.6; pose.backElbow = .3; pose.lean = .1; }
     else { const q = ease(span(k, .56, .72)), r = span(k, .84, 1);
       pose.arm = lerp(-2.2, .55, q); pose.grip = 0; pose.backArm = lerp(2.6, 1.5, q); pose.lean = lerp(-.2, .5, q) * (1 - .7 * r);

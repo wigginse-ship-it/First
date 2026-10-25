@@ -239,6 +239,7 @@ function playerPose() {
     // At rest his chest turns to us (see IDLE_Y below), the blade held low across his body, its point up toward the foe
     const r = ease(P.restK || 0);
     pose.arm = lerp(.35, .95, r); pose.elbow = lerp(.5, .35, r); pose.grip = lerp(-.1, .1, r); pose.lean = lerp(.04, 0, r);
+    if (P.state === 'walk') { pose.arm = 1.32; pose.elbow = .28; pose.grip = -.36; pose.lean = .02; pose.armSwing = .7; } // walking, a sword master's easy carry: the blade low in a loose hand, point toward the street ahead, swinging with his stride (the guard comes only when he strikes)
     rapierOffHand(pose, 'guard'); rapierRelax(pose, 1, lerp(1.78, 1.62, r)); // walking or standing the free hand hangs easy, a little behind him, and swings as he walks: it goes up only to fight
     if (P.state === 'idle') { pose.legs = { f: lerp(8, -11, r), b: lerp(-9, 13, r), fk: lerp(3, 1.6, r), bk: lerp(4, 1.2, r), w: lerp(1, 1.5, r) }; pose.sink = lerp(2, .6, r); }
   }
