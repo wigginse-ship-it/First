@@ -115,7 +115,8 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
 }
 // ---------- the passages: painted in the backgrounds' own hand (soft dabs, the next place's haze and light) ----------
 // a soft sweep across the view, for the moves between places: a band of something (dark wood, mist, cloud) whose edges are
-// ragged with painted dabs; x0..x1 the band in screen x, fill(y0, y1) paints its body, dabs: colors for the ragged edges
+// ragged with painted dabs; x0..x1 the band in screen x, fill() paints its body (its path is current), dabs: an 'r,g,b' for
+// the soft edge, then colors for the small dabs breaking it
 function thSweep(x0, x1, fill, dabs, s = 1) {
   const Y0 = Y_OFF, Y1 = VH, edge = (x, y, k) => x + Math.sin(y * .045 + k) * 18 + Math.sin(y * .11 + k * 2) * 9;
   if (x1 - x0 < 1) return;
