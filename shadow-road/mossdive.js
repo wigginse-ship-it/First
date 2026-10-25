@@ -2,7 +2,7 @@
 // Only the tree on his back shows above the surface, gliding toward you like a fin with a wake behind it. It follows
 // you for a while (faster than you walk: run, or wait for it to stop), stops and churns, and a heartbeat later he
 // bursts up out of the water right there and throws whoever is standing on the spot into the air.
-// Get off the churning water. While he is under you can't hit him. The burst throws out a ring-shaped wall of water
+// Get off the churning water. While he is under you can only hit the tree on his back, and its branches rake you if you stand in its way. The burst throws out a ring-shaped wall of water
 // that rolls across the whole floor and hits hard: jump over it or dodge through it.
 const SUB = { dive: .45, hunt: 1.6, churn: .8, rise: .35, speed: 140, R: 50, wave: 270, waveMax: 620 };
 HAZARD_FX.tidewave = {
@@ -41,6 +41,12 @@ TELL_FX.submerge = (e, t, k) => { // he hunches and draws in a breath: water rin
     const e = boss; if (!e || e.dead || !e.sub) return;
     const s = e.sub; s.t += dt; const t1 = SUB.dive, t2 = t1 + SUB.hunt, t3 = t2 + SUB.churn, t4 = t3 + SUB.rise;
     e.state = 'recover'; e.t = Math.max(e.t, .2);
+    // while he is under, only the tree on his back is above the water: it is all you can hit, and it's a moving thicket that hurts to touch
+    const under = s.t > t1 * .6 && s.t < t3;
+    if (under && !s.box) { s.box = [e.hw, e.hh]; e.hw = 22; e.hh = 50; } else if (!under && s.box) { [e.hw, e.hh] = s.box; s.box = null; }
+    s.ram = Math.max(0, (s.ram || 0) - dt);
+    if (under && !s.ram && P.state !== 'dead' && Math.abs(P.x - e.x) < 24 && Math.abs(P.y - e.y) < 14 && P.z < 46) { s.ram = 1.1; // the branches rake you as they pass
+      playerDamage(Math.round(edmg(e) * .6), e.x, true); burst(P.x, P.y, P.z + 30, ['#4E7A3A', '#5A4030', '#D8F0E8'], 8, 'chunk', 0); }
     if (s.t > t1 && s.t < t2) { // hunting: the wake slides after you
       const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy * 1.6) || 1, v = Math.min(SUB.speed * dt, d);
       e.x += dx / d * v; e.y = clamp(e.y + dy / d * v * .7, FLOOR_TOP + 8, FLOOR_BOT); e.facing = Math.sign(dx) || e.facing;
@@ -56,8 +62,8 @@ TELL_FX.submerge = (e, t, k) => { // he hunches and draws in a breath: water rin
     }
     if (s.t >= t4) { e.sub = null; e.state = 'recover'; e.t = .6; } // spent, on the surface: your opening
   };
-  const _strike = strike; // under the water he can't be reached
-  strike = function (e, ...a) { if (e.sub && !e.sub.burst) return; return _strike(e, ...a); };
+  const _strike = strike; // under the water only the tree on his back can be reached: hitting it hurts him, though less
+  strike = function (e, base, ...a) { if (e.sub && !e.sub.burst) { if (e.sub.t < SUB.dive * .6) return; return _strike(e, base * .6, ...a); } return _strike(e, base, ...a); };
   const _draw = drawEnemy;
   drawEnemy = function (e, t) {
     const s = e.sub; if (!s || s.burst) return _draw(e, t);
