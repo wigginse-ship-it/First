@@ -11,7 +11,11 @@ const BAG_MAX = 24;
 const GEAR_DEF = { mail: [3, 8, 16, 25, 35], pants: [2, 6, 11, 17, 25], gauntlets: [2, 5, 9, 14, 20], waist: [1, 5, 9, 14, 20] }; // full sets: 8, 24, 45, 70, 100
 const GEAR_HP = [2, 4, 6, 8, 10]; // max health per piece, by tier
 const BASE_HP = 120;
-const qMul = (q) => 1 + .15 * (q || 0); // each NG+ cycle's "+1" quality
+const qMul = (q) => 1 + .15 * (q || 0); // (old saves' quality scale: kept for reference)
+// a piece's true tier: its set, plus five for every new cycle it dropped in. So a cycle's first armor (tier 6, 11...) always
+// beats the last cycle's finest (tier 5, 10...), and everything past tier 5 keeps climbing
+const effTier = (it) => it.set + 5 * (it.q || 0);
+const pastTop = (T, per) => 1 + per * Math.max(0, T - 5); // (a steady climb past the top tier, not a runaway)
 
 // the five sets. Each slot names its costume part (art_gear.js adds them to CORWIN.parts) and a flat palette whose
 // keys carry the slot's prefix (m_ mail, p_ legs, g_ gauntlets, w_ waist), so a mix of sets mixes cleanly and a greyed
@@ -86,9 +90,15 @@ const AFFIXES = {
   iframes: { v: [.03, .04, .05, .06, .08], sec: 1, txt: 'longer dodge safety', suf: 'of Shadow-Step', pre: 'Fleeting' },
   arrow:   { v: [.1, .14, .18, .22, .28], pct: 1, txt: 'arrow damage', suf: "of Julian's Hunt", pre: 'Fletched' },
   resist:  { v: [.05, .07, .09, .12, .15], pct: 1, txt: 'less harm from shots and hazards', suf: 'of Embers', pre: 'Warded' },
+  // rare enchantments, found only past the first road (min: the true tier they can first roll at), rarer and stranger the higher you go
+  twin:      { v: [.12, .12, .12, .12, .15], pct: 1, min: 6, rare: 1, txt: 'chance a blow lands again, a heartbeat later, as a shadow of itself', suf: 'of the Twinned Shadow', pre: 'Twinned' },
+  stormcall: { v: [14, 14, 14, 14, 18], min: 7, rare: 1, txt: 'lightning damage: foes you slay call it down on those near them', suf: 'of the Jewel', pre: 'Stormcalling' },
+  blink:     { v: [.08, .08, .08, .08, .1], pct: 1, min: 8, rare: 1, txt: 'chance to step through Shadow and let a blow pass through you', suf: 'of Trump-Sight', pre: 'Elusive' },
+  pattern:   { v: [7, 7, 7, 7, 7], sec: 1, inv: 1, min: 10, rare: 1, txt: 'every so often your next blow is a sure critical that bursts in Pattern-light (seconds between)', suf: 'of the Pattern', pre: 'Patterned' },
+  phoenix:   { v: [.5, .5, .5, .5, .5], pct: 1, flag: 1, min: 11, rare: 1, txt: 'health: once in each place, a killing blow sets you burning and you rise again', suf: 'of the Firebird', pre: 'Undying' },
 };
 const AFFIX_IDS = Object.keys(AFFIXES);
-const STAT_CAP = { crit: .3, speed: .3, resist: .5, leech: .1, iframes: .25, reflect: .6 };
+const STAT_CAP0 = { crit: .3, speed: .3, resist: .5, leech: .1, iframes: .25, reflect: .6, twin: .45, blink: .3 }, STAT_CAP = Object.assign({}, STAT_CAP0); // (the caps loosen a little with every cycle)
 
 // ---------- the save: what is worn and what is carried ----------
 const freshGear = () => ({ eq: { mail: null, pants: null, gauntlets: null, waist: null }, bag: [], pity: 0, uid: 1 });
@@ -116,9 +126,10 @@ function makeGearItem(set, slot, opts = {}) {
 let GEAR_V = 0, gearCache = null;
 function gearChanged() { GEAR_V++; gearCache = null; heroLookCache = null; if (typeof onGearChanged === 'function') onGearChanged(); }
 const itemTier = (it) => it.set;
-const itemDef = (it) => Math.round(GEAR_DEF[it.slot][it.set - 1] * qMul(it.q));
-const itemHp = (it) => Math.round(GEAR_HP[it.set - 1] * qMul(it.q));
-const affixVal = (it, a) => AFFIXES[a.k].v[it.set - 1] * (.8 + .4 * (a.r ?? .5)) * (1 + .1 * (it.q || 0));
+const itemDef = (it) => { const T = effTier(it); return Math.round(GEAR_DEF[it.slot][Math.min(T, 5) - 1] * pastTop(T, .3)); };
+const itemHp = (it) => { const T = effTier(it); return Math.round(GEAR_HP[Math.min(T, 5) - 1] * pastTop(T, .32)); };
+const affixVal = (it, a) => { const A = AFFIXES[a.k], T = effTier(it), base = A.v[Math.min(T, 5) - 1] * (A.flag ? 1 : .8 + .4 * (a.r ?? .5));
+  if (A.flag) return base; return A.inv ? base / (1 + .08 * Math.max(0, T - 10)) : base * (1 + .2 * Math.max(0, T - 5)); }; // (past tier 5 every enchantment keeps growing; the Pattern's wait grows shorter)
 function setCounts(eq) { const n = {}; for (const s of GEAR_SLOTS) if (eq[s]) n[eq[s].set] = (n[eq[s].set] || 0) + 1; return n; }
 function statsFor(eq) {
   const st = { def: 0, hp: 0, sets: [] };
@@ -128,14 +139,18 @@ function statsFor(eq) {
   for (const id in n) {
     const S = GEAR_SETS[id]; if (n[id] < 2) continue;
     st.sets.push({ id: +id, n: n[id] });
-    for (const k in S.b2.s) add(k, S.b2.s[k]);
-    if (n[id] >= 4) for (const k in S.b4.s) add(k, S.b4.s[k]);
+    const q = Math.min(...GEAR_SLOTS.filter(s => eq[s] && eq[s].set === +id).map(s => eq[s].q || 0)), up = 1 + .3 * q; // a set from a later cycle wakes stronger
+    const sc = (k, v) => SET_SCALES[k] ? v * up : v;
+    for (const k in S.b2.s) add(k, sc(k, S.b2.s[k]));
+    if (n[id] >= 4) for (const k in S.b4.s) add(k, sc(k, S.b4.s[k]));
   }
+  const cy = Math.min(5, save.cycle || 0); for (const k in STAT_CAP0) STAT_CAP[k] = STAT_CAP0[k] * (1 + .2 * cy);
   for (const k in STAT_CAP) if (st[k] > STAT_CAP[k]) st[k] = STAT_CAP[k];
   return st;
 }
+const SET_SCALES = { speed: 1, shards: 1, resist: 1, reflect: 1, thorns: 1, regen: 1, dodgeFast: 1 };
 function gearStat(name) { if (!gearCache) gearCache = statsFor(save.gear.eq); return gearCache[name] || 0; }
-const gearDR = (def) => def / (100 + def); // the share of a blow the armor turns aside
+const gearDR = (def) => Math.min(.8, def / (100 + def)); // the share of a blow the armor turns aside (never more than four fifths)
 const gearMaxHp = () => BASE_HP + Math.round(gearStat('hp'));
 
 // ---------- names ----------
@@ -144,14 +159,17 @@ function itemName(it) {
   let n = S.pieces[it.slot];
   if (e[0]) n += ' ' + AFFIXES[e[0].k].suf;
   if (e[1]) n = AFFIXES[e[1].k].pre + ' ' + n;
-  if (it.q) n += ' +' + it.q;
+  if (e[2]) n = AFFIXES[e[2].k].pre + ' ' + n;
+  if (it.q) n += ' ' + ['', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][Math.min(9, it.q)]; // (each cycle's pieces: a numeral)
   return n;
 }
 function affixTxt(it, a) {
   const A = AFFIXES[a.k], v = affixVal(it, a);
-  return A.pct ? `+${Math.round(v * 100)}% ${A.txt}` : A.sec ? `+${v.toFixed(2)}s ${A.txt}` : `+${Math.round(v)} ${A.txt}`;
+  if (A.flag) return `${A.rare ? '✦ ' : ''}rise at ${Math.round(v * 100)}% ${A.txt}`;
+  if (A.inv) return `✦ ${A.txt}: ${v.toFixed(1)}s`;
+  return (A.rare ? '✦ ' : '') + (A.pct ? `+${Math.round(v * 100)}% ${A.txt}` : A.sec ? `+${v.toFixed(2)}s ${A.txt}` : `+${Math.round(v)} ${A.txt}`);
 }
-const salvageValue = (it) => Math.round((8 + 10 * it.set) * (1 + .5 * (it.q || 0)) * (1 + it.ench.length) * cyc());
+const salvageValue = (it) => Math.round((24 + 30 * Math.min(effTier(it), 5)) * pastTop(effTier(it), .4) * (1 + .8 * it.ench.length + (it.ench.some(a => AFFIXES[a.k].rare) ? 1.5 : 0)) * cyc()); // (worth breaking down: more for higher tiers, enchantments and rare ones above all)
 
 // ---------- equipping ----------
 function hpAdjust(before) { // more max health is yours at once; less trims what you have
@@ -192,9 +210,13 @@ function rollTier(boss) { // mostly this world's tier, sometimes one lower, rare
   return clamp(t, 1, 5);
 }
 function rollEnchants(tier, chance, two) {
-  if (Math.random() >= chance) return [];
-  const ids = AFFIX_IDS.slice().sort(() => Math.random() - .5);
-  return ids.slice(0, tier >= 4 && Math.random() < two ? 2 : 1);
+  const q = save.cycle || 0, T = tier + 5 * q; // (later cycles: more often enchanted, more often twice, and the rare kinds come in)
+  if (Math.random() >= Math.min(.95, chance * (1 + .35 * q))) return [];
+  const rares = AFFIX_IDS.filter(k => AFFIXES[k].rare && T >= AFFIXES[k].min), common = AFFIX_IDS.filter(k => !AFFIXES[k].rare).sort(() => Math.random() - .5);
+  const n = (tier >= 4 || q > 0) && Math.random() < Math.min(.9, two * (1 + .3 * q)) ? (T >= 11 && Math.random() < .35 ? 3 : 2) : 1;
+  const out = common.slice(0, n);
+  if (rares.length && Math.random() < .25 + .08 * Math.min(5, q) + (T >= 11 ? .15 : 0)) out[0] = pick(rares); // a rare one takes the first place
+  return out;
 }
 // the odds for each kind of foe: [drop, enchanted, two affixes]
 const GEAR_ODDS = { normal: [.06, .1, .25], elite: [.22, .25, .35], champ: [.6, .4, .45], boss: [1, .55, .6] };
@@ -271,7 +293,12 @@ function thornsBack(raw) { // chaos plate: the striker takes part of the blow ba
   if (th > 0) { const d = Math.max(1, Math.round(raw * th)); strike(e, d, Math.sign(e.x - P.x) || 1, { dmg: d, kb: 60, power: 0, trump: 1, noStun: 1, thorns: 1 }, true); }
   if (gearStat('burn') && !e.dead) { e.burn = 3; e.burnBase = Math.max(3, raw * .12); burst(e.x, e.y, e.z + e.hh * .5, ['#FF7A3A', '#FFD27A'], 8, 'spark'); }
 }
-function deathSave() { // moon-silver: once in each place
+function deathSave() { // moon-silver: once in each place (or the Firebird, once in each place too)
+  if (gearStat('phoenix') && !P.phoenixUsed && P.moonSaved !== 'phoenix') { P.phoenixUsed = true; P.hp = Math.round(maxHp() * gearStat('phoenix')); P.inv = 1.4;
+    banner('THE FIREBIRD', 'YOU RISE AGAIN · ONCE IN EACH PLACE', 1.6); flashT = .2; slowmo = .5; sfx('trump'); shakeMag = 10;
+    burst(P.x, P.y, 40, ['#FFD27A', '#FF8A3A', '#E84A2A', '#FFFFFF'], 44, 'spark', 0, true); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 10, t: .6, max: .6, r: 140, col: '#FF8A3A', flat: 1 });
+    for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 140) { e.burn = 4; e.burnBase = 8; strike(e, 30, Math.sign(e.x - P.x) || 1, { dmg: 30, kb: 380, launch: 280, power: 2, trump: 1 }); } // the fire you rise in scatters them
+    return true; }
   if (!gearStat('deathSave') || P.moonSaved) return false;
   P.moonSaved = true; P.hp = Math.round(maxHp() * .4); P.inv = 1.2;
   banner('THE MOON REFUSES', 'MOON-SILVER HOLDS · ONCE IN EACH PLACE', 1.6); flashT = .2; slowmo = .5; sfx('trump');
@@ -280,3 +307,42 @@ function deathSave() { // moon-silver: once in each place
   return true;
 }
 
+
+// ---------- the rare enchantments at work (hooked in once every script has loaded) ----------
+window.addEventListener('load', () => {
+  const pHit = (m) => m && !m.trump && !m.thorns && !m.gx; // a blow of his own (not a hazard, a thorn or one of these echoes)
+  const _strike = strike;
+  strike = function (e, base, dir, m, ...rest) {
+    if (pHit(m) && gearStat('pattern') && (P.patternT || 0) <= 0) { // the Pattern: a sure critical, bursting in light
+      P.patternT = gearStat('pattern'); m = Object.assign({}, m, { crit: true });
+      fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.z + e.hh * .5, t: .5, max: .5, r: 70, col: '#BFE8FF' }); burst(e.x, e.y, e.z + e.hh * .5, ['#BFE8FF', '#FFFFFF', '#7FB8E8'], 18, 'spark', 0, true);
+      for (const o of enemies) if (o !== e && !o.dead && Math.hypot(o.x - e.x, (o.y - e.y) * 2) < 70) _strike(o, base * .5, Math.sign(o.x - e.x) || dir, { dmg: base * .5, kb: 200, power: 1, gx: 1 });
+    }
+    const r = _strike(e, base, dir, m, ...rest);
+    if (pHit(m) && gearStat('twin') && Math.random() < gearStat('twin')) setTimeout(() => { // the twinned shadow: the same blow again, a heartbeat later
+      if (e.dead) return; fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .5, ang: rand(-.6, .6), t: .25, max: .25, size: 26 + e.hw, col: '#8A6ACF' });
+      _strike(e, base * .6, dir, Object.assign({}, m, { gx: 1, kb: (m.kb || 0) * .5 }));
+    }, 110);
+    return r;
+  };
+  const _kill = killEnemy;
+  killEnemy = function (e, dir, m, ...rest) {
+    const r = _kill(e, dir, m, ...rest); const v = gearStat('stormcall');
+    if (v && !(m && m.storm)) { let n = 0; // the Jewel: lightning comes down on the ones beside it
+      for (const o of enemies) { if (o === e || o.dead || n >= 3 || Math.hypot(o.x - e.x, (o.y - e.y) * 2) > 130) continue; n++;
+        fx.push({ kind: 'bolt', x: e.x, y: e.y, z: e.z + e.hh * .6, x2: o.x, y2: o.y, z2: o.z + o.hh * .5, t: .3, max: .3, col: '#DDEBFF', seed: Math.random() * 99 }); burst(o.x, o.y, o.z + o.hh * .6, ['#FFFFFF', '#BFD8FF', '#FFE08A'], 12, 'spark', 0, true);
+        _strike(o, v * (typeof wMult === 'function' ? wMult(P.w) : 1), Math.sign(o.x - e.x) || 1, { dmg: v, kb: 160, launch: 180, power: 1, gx: 1, storm: 1 }); }
+      if (n) { sfx('shoot'); shakeMag = Math.max(shakeMag, 4); } }
+    return r;
+  };
+  const _pd = playerDamage;
+  playerDamage = function (dmg, fromX, big, ...rest) {
+    if (P.inv <= 0 && P.state !== 'dead' && P.state !== 'dodge' && gearStat('blink') && Math.random() < gearStat('blink')) { // through Shadow: the blow passes through where you were
+      if (typeof addGhost === 'function') addGhost(true); P.inv = .45; floatText(P.x, P.y, 80, 'THROUGH SHADOW', '#C8B8FF', 12); sfx('whoosh'); return; }
+    return _pd(dmg, fromX, big, ...rest);
+  };
+  const _ug = updateGear;
+  updateGear = function (dt) { _ug(dt); if (P) P.patternT = Math.max(0, (P.patternT || 0) - dt); };
+  const _ez = enterZone;
+  enterZone = function (...a) { const r = _ez(...a); if (P) P.phoenixUsed = false; return r; }; // a new place: the Firebird is ready again
+});

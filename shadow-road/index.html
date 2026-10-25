@@ -315,6 +315,9 @@
   .inv-full { color: #FF9A8A; }
   .inv-acts .cta { padding-inline: 16px; min-height: 40px; font-size: 13px; }
   .inv-acts .cta:disabled { opacity: .45; cursor: default; translate: none; }
+  .inv-many { margin-top: 6px; } .inv-many .cta { min-height: 34px; font-size: 11px; padding-inline: 12px; }
+  .inv-cell.marked { box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), 0 0 0 2px #E86A5A, 0 0 12px rgba(232,106,90,.55); }
+  .inv-cell.marked::after { content: '✕'; position: absolute; top: 2px; right: 4px; font: 700 11px var(--label); color: #FF9A8A; text-shadow: 0 1px 2px #000; }
 
   /* ----- game over and the win: one card turned up ----- */
   .solo { width: 100%; max-width: 600px; display: grid; gap: 12px; justify-items: center; padding: 26px clamp(30px, 6vw, 56px) 24px; }
@@ -503,8 +506,12 @@
           <button class="cta alt" id="invSalv" type="button">Salvage</button>
           <button class="cta alt" id="invBack" type="button">Back</button>
         </div>
-        <p class="small t-kbd keys"><kbd>←→↑↓</kbd> choose · <kbd>Enter</kbd> put on / take off · <kbd>X</kbd> salvage · <kbd>Esc</kbd> back</p>
-        <p class="small t-touch">Tap a piece to look at it, tap it again to put it on or take it off.</p>
+        <div class="row inv-acts inv-many">
+          <button class="cta alt" id="invMulti" type="button">Select several</button>
+          <button class="cta alt" id="invSalvAll" type="button">Salvage whole bag</button>
+        </div>
+        <p class="small t-kbd keys"><kbd>←→↑↓</kbd> choose · <kbd>Enter</kbd> put on / take off · <kbd>X</kbd> salvage · <kbd>M</kbd> select several · <kbd>Esc</kbd> back</p>
+        <p class="small t-touch">Tap a piece to look at it, tap it again to put it on or take it off. Select several to mark pieces and salvage them together.</p>
       </div>
     </div>
   </div>
@@ -583,6 +590,7 @@
 <script src="arrows.js"></script>
 <script src="boss_fx.js"></script>
 <script src="secrets.js"></script>
+<script src="unicorn.js"></script>
 <script src="shadowrooms.js"></script>
 <script src="draw.js"></script>
 <script src="moves.js"></script>

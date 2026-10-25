@@ -4,14 +4,14 @@
 // right card is the bag (24 places), and the chosen piece: its stats, its set, its enchantments and how it compares
 // with what he has on. Tap a piece to look at it and tap it again to put it on (or take it off); on a keyboard the
 // arrows move, Enter puts on or takes off, X salvages and Esc goes back. The game stays paused the whole time.
-let invFrom = 'pause', invSel = { k: 'eq', slot: 'mail' }, invSalvArm = null, invNote = '';
+let invFrom = 'pause', invSel = { k: 'eq', slot: 'mail' }, invSalvArm = null, invNote = '', invMulti = false, invMarked = new Set(); // (several marked at once, by piece id, for salvaging together)
 const invCols = () => { const el = $('#invBag'); const n = el ? getComputedStyle(el).gridTemplateColumns.split(' ').length : 6; return n > 1 ? n : 6; }; // 6 across, or 8 on a short screen
 const INV_SLOT_ORDER = ['mail', 'gauntlets', 'waist', 'pants'];
 const pct = (v) => Math.round(v * 100) + '%';
 const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function openInventory(from) {
-  invFrom = from || (mode === 'forge' ? 'forge' : 'pause'); mode = 'inv'; invSalvArm = null; invNote = '';
+  invFrom = from || (mode === 'forge' ? 'forge' : 'pause'); mode = 'inv'; invSalvArm = null; invNote = ''; invMulti = false; invMarked.clear();
   if (!selItem()) invSel = save.gear.bag.length ? { k: 'bag', i: 0 } : { k: 'eq', slot: 'mail' };
   $('#invOv').classList.toggle('glass', invFrom === 'pause');
   showOnly('invOv'); renderInventory(); $('#invOv').scrollTop = 0;
@@ -55,7 +55,7 @@ function itemHtml(it, where) {
 function statsHtml() {
   const st = statsFor(save.gear.eq), rows = [`<b>Defense ${st.def}</b>: blows land ${pct(gearDR(st.def))} softer`, `<b>Max health ${maxHp()}</b>`];
   const lines = [];
-  for (const k of AFFIX_IDS) if (k === 'hp' ? st.hp - (st.pieceHp || 0) > .5 : st[k]) { const A = AFFIXES[k]; if (k === 'hp') { lines.push(`+${Math.round(st.hp - st.pieceHp)} max health from enchantments`); continue; } lines.push(A.pct ? `+${pct(st[k])} ${A.txt}` : A.sec ? `+${st[k].toFixed(2)}s ${A.txt}` : `+${Math.round(st[k])} ${A.txt}`); }
+  for (const k of AFFIX_IDS) if (k === 'hp' ? st.hp - (st.pieceHp || 0) > .5 : st[k]) { const A = AFFIXES[k]; if (k === 'hp') { lines.push(`+${Math.round(st.hp - st.pieceHp)} max health from enchantments`); continue; } lines.push(A.flag ? `rise at ${pct(st[k])} ${A.txt}` : A.inv ? `${A.txt}: ${st[k].toFixed(1)}s` : A.pct ? `+${pct(st[k])} ${A.txt}` : A.sec ? `+${st[k].toFixed(2)}s ${A.txt}` : `+${Math.round(st[k])} ${A.txt}`); }
   const n = setCounts(save.gear.eq), sets = Object.keys(n).sort((a, b) => n[b] - n[a]);
   let h = `<div class="inv-totals">${rows.join(' · ')}</div>`;
   if (lines.length) h += `<div class="inv-aff">${lines.map(esc).join(' · ')}</div>`;
@@ -93,7 +93,7 @@ function renderInventory() {
   const bag = $('#invBag'); let h = '';
   for (let i = 0; i < BAG_MAX; i++) h += cellHtml(g.bag[i], `data-i="${i}"`);
   bag.innerHTML = h;
-  bag.querySelectorAll('.inv-cell').forEach(b => { const i = +b.dataset.i; drawGearIcon(b.querySelector('canvas'), g.bag[i]); b.classList.toggle('sel', invSel.k === 'bag' && invSel.i === i); b.addEventListener('click', () => invPick({ k: 'bag', i })); });
+  bag.querySelectorAll('.inv-cell').forEach(b => { const i = +b.dataset.i; drawGearIcon(b.querySelector('canvas'), g.bag[i]); b.classList.toggle('sel', invSel.k === 'bag' && invSel.i === i); b.classList.toggle('marked', !!(g.bag[i] && invMarked.has(g.bag[i].id))); b.addEventListener('click', () => invPick({ k: 'bag', i })); });
   $('#invCount').textContent = `${g.bag.length}/${BAG_MAX}`;
   $('#invFull').hidden = g.bag.length < BAG_MAX;
   $('#invStats').innerHTML = statsHtml();
@@ -101,8 +101,12 @@ function renderInventory() {
   const act = $('#invAct'), salv = $('#invSalv');
   act.disabled = !it || (invSel.k === 'eq' && g.bag.length >= BAG_MAX);
   act.textContent = !it ? 'Equip' : invSel.k === 'eq' ? (g.bag.length >= BAG_MAX ? 'Bag full' : 'Take off') : g.eq[it.slot] ? 'Swap it on' : 'Put it on';
-  salv.disabled = !it;
-  salv.textContent = it ? (invSalvArm === selKey() ? `Tap again: +${salvageValue(it)} ◆` : `Salvage · +${salvageValue(it)} ◆`) : 'Salvage';
+  for (const id of [...invMarked]) if (!g.bag.some(b => b.id === id)) invMarked.delete(id);
+  const marked = g.bag.filter(b => invMarked.has(b.id)), mv = marked.reduce((a, b) => a + salvageValue(b), 0), all = g.bag.reduce((a, b) => a + salvageValue(b), 0);
+  if (invMulti) { salv.disabled = !marked.length; salv.textContent = marked.length ? (invSalvArm === 'marked' ? `Tap again: +${mv} ◆` : `Salvage ${marked.length} · +${mv} ◆`) : 'Mark pieces in the bag'; }
+  else { salv.disabled = !it; salv.textContent = it ? (invSalvArm === selKey() ? `Tap again: +${salvageValue(it)} ◆` : `Salvage · +${salvageValue(it)} ◆`) : 'Salvage'; }
+  $('#invMulti').textContent = invMulti ? `Done selecting${marked.length ? ' · ' + marked.length : ''}` : 'Select several'; $('#invMulti').classList.toggle('on', invMulti);
+  const sa = $('#invSalvAll'); sa.disabled = !g.bag.length; sa.textContent = !g.bag.length ? 'Bag is empty' : invSalvArm === 'all' ? `Tap again: all ${g.bag.length} for +${all} ◆` : `Salvage whole bag · +${all} ◆`;
   $('#invNote').textContent = invNote;
   $('#invShards').textContent = save.shards;
 }
@@ -112,6 +116,7 @@ const selKey = () => invSel.k === 'eq' ? 'eq:' + invSel.slot : 'bag:' + invSel.i
 function invPick(sel) { // a tap: the first picks a piece, a second on the same piece puts it on or takes it off
   const same = sel.k === invSel.k && (sel.k === 'eq' ? sel.slot === invSel.slot : sel.i === invSel.i);
   invSel = sel; invSalvArm = null; invNote = '';
+  if (invMulti && sel.k === 'bag') { const it = save.gear.bag[sel.i]; if (it) { if (invMarked.has(it.id)) invMarked.delete(it.id); else invMarked.add(it.id); sfx('swing', .3); } renderInventory(); if (KBD) focusSel(); return; } // selecting several: a tap marks or unmarks
   if (same && selItem()) { invPrimary(); return; }
   sfx('swing', .3); renderInventory(); if (KBD) focusSel();
 }
@@ -123,7 +128,21 @@ function invPrimary() {
   else invNote = 'The bag is full: salvage something first.';
   renderInventory(); if (KBD) focusSel();
 }
+function salvageMany(list, what) { // break down several at once (worn pieces are never in the list)
+  const g = save.gear; let v = 0, n = 0;
+  for (const it of list) { const i = g.bag.indexOf(it); if (i >= 0) { v += salvageItem('bag', i); n++; } }
+  invMarked.clear(); invSalvArm = null; invMulti = false; invSel = g.bag.length ? { k: 'bag', i: 0 } : { k: 'eq', slot: 'mail' };
+  invNote = `${n} piece${n === 1 ? '' : 's'} ${what} salvaged for ${v} shards.`; sfx('break'); renderInventory(); if (KBD) focusSel();
+}
+function invSalvageAll() {
+  const g = save.gear; if (!g.bag.length) return;
+  if (invSalvArm !== 'all') { invSalvArm = 'all'; renderInventory(); return; } // asks once more
+  salvageMany(g.bag.slice(), 'from the bag');
+}
+function invToggleMulti() { invMulti = !invMulti; invSalvArm = null; if (!invMulti) invMarked.clear(); invNote = invMulti ? 'Tap pieces in the bag to mark them, then salvage them together.' : ''; renderInventory(); }
 function invSalvage() {
+  if (invMulti) { const marked = save.gear.bag.filter(b => invMarked.has(b.id)); if (!marked.length) return;
+    if (invSalvArm !== 'marked') { invSalvArm = 'marked'; renderInventory(); return; } salvageMany(marked, 'marked'); return; }
   const it = selItem(); if (!it) return;
   if (invSalvArm !== selKey()) { invSalvArm = selKey(); renderInventory(); if (KBD) focusSel(); return; } // asks once more
   const v = salvageItem(invSel.k, invSel.k === 'eq' ? invSel.slot : invSel.i); invSalvArm = null;
@@ -155,12 +174,15 @@ function invKey(e) {
     e.preventDefault(); invPrimary(); return true;
   }
   if (c === 'KeyX' || c === 'Delete') { e.preventDefault(); invSalvage(); return true; }
+  if (c === 'KeyM') { e.preventDefault(); invToggleMulti(); return true; }
   return true; // nothing else reaches the game while the panel is open
 }
 $('#invBtn').addEventListener('click', () => openInventory('pause'));
 $('#forgeInvBtn').addEventListener('click', () => openInventory('forge'));
 $('#invAct').addEventListener('click', invPrimary);
 $('#invSalv').addEventListener('click', invSalvage);
+$('#invMulti').addEventListener('click', invToggleMulti);
+$('#invSalvAll').addEventListener('click', invSalvageAll);
 $('#invBack').addEventListener('click', closeInventory);
 // the pause menu's button says how full the bag is
 { const _rf = renderForge; renderForge = function (note) { _rf(note); $('#forgeInvBtn').textContent = invBtnText(); }; }
