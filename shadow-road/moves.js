@@ -362,6 +362,11 @@ const MOVE_POSE = {
       if (k > .8) { const g = ease(span(k, .8, 1)); pose.arm = lerp(.55, .5, g); pose.backArm = lerp(1.5, 1.4, g); pose.backElbow = .35; }
     }
   },
+  'staff:LH'(pose, m, k) { // Rising Spiral: the corkscrew now travels, so he leans into it, the knees tucked and the cloak streaming behind
+    const up = Math.sin(Math.PI * clamp(k / .85, 0, 1));
+    pose.lean = (pose.lean || 0) + .28 * up; pose.flow = 14 * up;
+    if (P.z > 2 || k > .1) pose.legs = { f: 9, b: -6, fk: lerp(4, 13, up), bk: lerp(4, 10, up), fl: 9 * up };
+  },
   'staff:JH'(pose, m, k) { // Halo Sweep: one turn in the air, the staff level at the waist
     delete pose.sweep; pose.trail = 0;
     pose.arm = lerp(.5, .45, k); pose.grip = -.1; pose.backArm = 1.2; pose.backElbow = 1.2; pose.lean = .05;

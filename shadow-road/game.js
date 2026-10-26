@@ -299,7 +299,7 @@ function doHits() {
     if (!inReach(m, bx, e.y, e.z - down, e.hw, e.hh + down)) continue;
     P.hits.set(e, now);
     if (m.launcher) { P.chaseT = .9; P.chaseX = e.x; }
-    const dir = m.around || m.ends ? (Math.sign(e.x - P.x) || P.facing) : P.facing;
+    const dir = m.spiralFwd ? P.facing : m.around || m.ends ? (Math.sign(e.x - P.x) || P.facing) : P.facing; // (the travelling spiral carries everyone it catches along the way it is going)
     if (m.delayed) { // the Shadow Flèche: he is past them before the cut shows; a heartbeat later it lands
       echoes.push({ e, dmg: m.dmg * wMult(P.w), dir, m: Object.assign({}, m, { delayed: 0 }), t: .38 });
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .5, ang: rand(-.5, .5), t: .45, max: .45, size: 40 + e.hw, col: '#C8D0FF' });
