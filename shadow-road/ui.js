@@ -110,7 +110,7 @@ function winCard(i) {
 // on a keyboard the chips name the keys instead of the buttons
 const KEY_CHIP = { SHOOT: 'I', A: 'J', H: 'K', HOLDA: 'HOLD J', HOLD: 'HOLD K', HOLD3: 'HOLD K TO 3RD FLASH', HOLD4: 'HOLD K TO 4TH FLASH', RUNJUMP: 'RUN + SPACE', RUN: 'RUN', WALK: 'WALK', JUMP: 'SPACE', DODGE: 'L' };
 const CHIP = { SHOOT: ['BOW', 'j'], A: ['ATTACK', 'a'], H: ['HEAVY', 'h'], HOLDA: ['HOLD ATTACK', 'a'], HOLD: ['HOLD HEAVY', 'h'], HOLD3: ['HOLD HEAVY TO 3RD FLASH', 'h'], HOLD4: ['HOLD HEAVY TO 4TH FLASH', 'h'], RUNJUMP: ['RUNNING JUMP', 'j'], RUN: ['RUN', 'r'], WALK: ['WALK', 'r'], JUMP: ['JUMP', 'j'], DODGE: ['DODGE', 'd'] };
-const KEY_INPUTS = { RH: ['DODGE', '+H'], J2: ['JUMP', 'JUMP'], AX: ['JUMP', '+HOLDA'], X: ['HOLDA'], M: ['WALK', '+A'], AH: ['JUMP', '+HOLD'], JH: ['JUMP', '+H'], DA: ['RUNJUMP', '+A'], HOLD4: ['HOLD4'], HC: ['HOLD'], D: ['RUN', '+A'], DH: ['RUN', '+H'], A: ['JUMP', '+A'], R: ['DODGE', '+A'] };
+const KEY_INPUTS = { RH: ['DODGE', '+H'], J2: ['JUMP', 'JUMP'], AX: ['JUMP', '+HOLDA'], X: ['HOLDA'], M: ['WALK', '+A'], AH: ['JUMP', '+HOLD'], JH: ['JUMP', '+H'], DA: ['RUNJUMP', '+A'], HOLD4: ['HOLD4'], HC: ['HOLD'], D: ['RUN', '+A'], DH: ['RUN', '+H'], DX: ['RUN', '+H'], A: ['JUMP', '+A'], R: ['DODGE', '+A'] };
 function inputsFor(id, m) {
   if (!m.key) return ['HOLD3'];
   if (m.key === 'HOLD4') return ['HOLD4'];
@@ -129,17 +129,17 @@ const BASICS = [
   { key: 'L', name: 'Combo', desc: 'Tap Attack again and again to chain the full combo.', seq: ['A', 'A', 'A'] },
   { key: 'JH', name: 'Air heavy', desc: 'Heavy in the air: every weapon has its own big aerial move, once per jump.' },
   { key: 'DA', name: 'Running jump attack', desc: 'Jump out of a run, then Attack: a flying strike that keeps all your speed.' },
-  { key: 'X', name: 'Launcher', desc: 'Hold Attack to throw an enemy into the air. Tap Jump right after to leap up after them.' },
+  { key: 'X', name: 'Launcher', desc: 'Hold Attack to throw an enemy into the air. Tap Jump right after to leap up after them (bare-handed, the Rising Fist carries you up with them on its own).' },
   { key: 'A', name: 'Air combo', desc: 'Up to three Attacks in the air. Air hits keep enemies floating and hit harder; the third drives them into the ground.', seq: ['JUMP', '+A', 'A', 'A'] },
   { key: 'H', name: 'Heavy', desc: 'A launcher or finisher. With the Great Sword, hold to charge. Mix it into the combos below.', seq: ['H'] },
-  { key: 'D', name: 'Dash attack', desc: 'Run (flick the joystick twice, or tap a direction key twice), then attack.' },
+  { key: 'D', name: 'Dash attacks', desc: 'Run (flick the joystick twice, or tap a direction key twice), then Attack or Heavy: every weapon has its own running attack and running heavy.' },
   { key: 'R', name: 'Dodge counter', desc: 'Tap Attack during a dodge to strike out of it.' },
   { key: 'S', name: 'Arrows', desc: 'A short bow, with any weapon. Arrows are rare (shooters drop them) and you carry five at most; each one flies straight into the first foe in its way, hits hard and can crit.', seq: ['SHOOT'] },
 ];
 function moveListHtml(id) {
   const lvl = save.wl[id], tree = WEAPONS[id].tree;
   const basics = BASICS.map(b => `<li class="got"><b>${b.name}</b> ${chips(id, b)}<br><em>${b.desc}</em></li>`).join('');
-  const combos = Object.values(tree).filter(m => m.name && !m.lvl && m.key !== 'X').map(m => `<li class="got"><b>${m.name}</b> ${chips(id, m)}</li>`).join('');
+  const combos = Object.values(tree).filter(m => m.name && !m.lvl && m.key !== 'X' && !(m.key === 'DX' && tree.DH && save.wl[id] >= (tree.DH.lvl || 0))).map(m => `<li class="got"><b>${m.name}</b> ${chips(id, m)}${m.desc ? `<br><em>${m.desc}</em>` : ''}</li>`).join(''); // (a learned running heavy takes the place of the plain one)
   const learned = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${lvl >= m.lvl ? m.desc : m.lvl === lvl + 1 ? 'Next at the forge: ' + m.desc : 'Locked: ' + m.desc}</em></li>`).join('');
   return `<ul class="moves">${basics}${combos}${learned}</ul>`;
 }

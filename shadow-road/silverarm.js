@@ -13,7 +13,7 @@
 //                   chain) · Moonfall (a leap and a fist the size of a door) · Silver Lift (scooped up into the air)
 //   A AA AAA JH DA  air jabs on the chain · Meteor Fist (spike) · Moon Hook (it hooks the nearest foe and reels you in)
 //                   · Comet (the arm out ahead of a flying leap)
-//   D R RH          Rocket Ride (it fires and drags you along behind it) · Silver Crescent (out of a dodge: a palm and a
+//   D DX R RH       Rocket Ride (it fires and drags you along behind it) · Silver Haymaker (Heavy on the run) · Silver Crescent (out of a dodge: a palm and a
 //                   crescent of moonlight down the street) · The Snap (a ring of force)
 //   HC              Rock, Paper, Scissors: hold Heavy; the hand cycles ROCK, PAPER, SCISSORS; let go on the one you want
 //   AH              The Hand of the Moon: in the air, Heavy twice (or hold it): you drop, and a hand out of the sky with you
@@ -53,6 +53,7 @@
     JH:   { name: 'Moon Hook', dur: .55, h: [.36, .66], x0: 0, x1: 50, dmg: 18, kb: 320, power: 2, wall: 1, hook: 1 },
     DA:   { name: 'Comet', dur: .5, h: [.22, .64], x0: 0, x1: 86, depth: 24, dmg: 20, kb: 420, arc: [.1, .1], fly: 1, power: 2, wall: 1 },
     D:    { name: 'Rocket Ride', dur: .66, h: [.1, .82], x0: 0, x1: 54, depth: 26, dmg: 7, kb: 260, multi: .09, lunge: 640, power: 1, wall: 1, ride: 1 },
+    DX:   { name: 'Silver Haymaker', dur: .55, h: [.4, .62], prep: 1, x0: 0, x1: 80, depth: 28, dmg: 26, kb: 480, lunge: 380, hop: 150, power: 2, wall: 1 }, // Heavy off the run: the bare-handed haymaker, with a fist the size of a barrel
     R:    { name: 'Silver Crescent', dur: .42, h: [.28, .62], x0: 0, x1: 50, dmg: 17, kb: 300, lunge: 330, power: 1, crescent: 1 },
     RH:   { name: 'The Snap', dur: .5, h: [.3, .4], x0: 0, x1: 70, dmg: 18, kb: 300, around: 1, power: 2, snap: 1 },
     HC:   { name: 'Rock, Paper, Scissors', dur: .7, h: [.42, .6], x0: 0, x1: 120, depth: 34, dmg: 30, kb: 300, power: 2, janken: 1 },
@@ -235,6 +236,7 @@
     'arm:JH'(pose, m, k) { const g = k < m.h[0] ? 1 : out(m, k); pose.arm = -.1; pose.elbow = 0; pose.ext = .6; pose.armChain = P.hookE && k < m.h[0] ? Math.min(90, Math.abs(P.hookE.x - P.x) - 20) * (1 - span(k, .2, m.h[0])) : 0; pose.armShape = k < m.h[0] ? 'claw' : 'rock'; pose.armBig = 1.3 + .6 * g; pose.lean = .35; pose.legs = { f: 10, b: -16, fk: 10, bk: 4 }; pose.flow = 14; pose.trail = 0; pose.streak = null; },
     'arm:DA'(pose, m, k) { const e = out(m, k); pose.arm = -.1 - (pose.rot || 0) * .5; pose.elbow = 0; pose.ext = .8; pose.armChain = 30 * e; pose.armBig = 1.2 + .9 * e; pose.armShape = 'rock'; pose.rot = .36; pose.lean = .25; pose.legs = { f: 4, b: -19, fk: 12, bk: -2 }; pose.flow = 16; pose.trail = 0; pose.streak = null; },
     'arm:D'(pose, m, k) { const e = sst(span(k, 0, .12)) * (1 - span(k, .84, 1)); pose.arm = -.08 - .35 * e; pose.elbow = 0; pose.ext = .9; pose.armChain = 46 * e; pose.armBig = 1 + .9 * e; pose.armShape = 'rock'; pose.lean = .55 * e; pose.rot = .25 * e; pose.legs = { f: lerp(8, -2, e), b: lerp(-8, -22, e), fk: 3, bk: 2 }; pose.flow = 20; pose.backArm = 2.7; pose.trail = 0; pose.streak = null; delete pose.sweep; },
+    'arm:DX'(pose, m, k) { MOVE_POSE['fists:D'](pose, m, k); const g = sst(span(k, .1, m.h[0])) * (1 - span(k, .8, 1)); pose.armBig = 1 + 1.4 * g; pose.armShape = 'rock'; },
     'arm:R'(pose, m, k) { pose.armShape = k > m.h[0] - .05 && k < m.h[1] + .1 ? 'paper' : undefined; pose.armBig = pose.armShape ? 1.6 : 1; },
     'arm:RH'(pose, m, k) { const g = sst(span(k, 0, .25)); pose.arm = lerp(1.1, -1.2, g); pose.elbow = lerp(1.6, 1.5, g); pose.armShape = 'snap'; pose.armBig = 1 + 1.2 * g; pose.armRot = -1.2; pose.lean = -.1; pose.trail = 0; pose.streak = null; pose.flat = null; },
     'arm:HC'(pose, m, k) { const s = m.jk || 'rock', g = sst(span(k, 0, m.h[0])), r = 1 - span(k, .8, 1); pose.armShape = s; pose.armBig = (2.2 + .8 * g) * (.4 + .6 * r) + .0; pose.trail = 0; pose.streak = null; delete pose.sweep; pose.flat = null;

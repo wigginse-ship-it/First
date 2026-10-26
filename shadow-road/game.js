@@ -72,7 +72,7 @@ function updatePlayer(dt) {
       if (pressed.dodge) { startDodge(); break; }
       if (input.light && P.holdL >= .2 && !P.holdUsed) { begin(w.tree.X); break; } // hold Attack: launcher
       if (pressed.light) { const walking = Math.abs(mx) > .5 || Math.abs(my) > .5; begin(running ? w.tree.D : walking && unlocked(w.tree.M) ? w.tree.M : nextMove('L')); break; }
-      if (pressed.heavy) { begin(running ? (unlocked(w.tree.DH) ? w.tree.DH : w.tree.D) : nextMove('H')); break; }
+      if (pressed.heavy) { begin(running ? (unlocked(w.tree.DH) ? w.tree.DH : w.tree.DX || w.tree.D) : nextMove('H')); break; } // every weapon has its own running heavy (DX) until it learns DH
       P.seq = '';
       if (running) {
         P.state = 'run'; P.facing = Math.sign(mx); P.x += P.facing * RUN * sp * dt; P.y += my * SPY * sp * .6 * dt; P.walk += dt * 13 * sp / Math.sqrt(P.shrink || 1); // long, loping strides: fewer steps for the same ground
@@ -222,11 +222,11 @@ function airNext() { return WEAPONS[P.w].tree['A'.repeat((P.airN || 0) + 1)] || 
 function toAir(q, vz) { // hand him from a move to an ordinary jump, still going up: air attacks, the air heavy and the landing all as usual
   P.state = 'jump'; if (vz) P.vz = vz; P.jvy = 0; P.airN = 0; P.jhUsed = false; P.runJump = false; P.j2 = false; P.seq = ''; P.chaseQ = false; P.chaseT = 0;
   const foe = P.hits ? [...P.hits.keys()].filter(e => enemies.includes(e) && !e.dead).sort((a, b) => (b.air ? 1 : 0) - (a.air ? 1 : 0))[0] : null; // drift after whoever he just hit, an airborne one first
-  P.jvx = foe ? clamp((foe.x - P.facing * (foe.hw + 18) - P.x) / .5, -240, 240) : P.facing * 30;
+  P.jvx = foe ? clamp((foe.x + (foe.vx || 0) * .4 - P.facing * (foe.hw + 20) - P.x) / .4, -260, 260) : P.facing * 30; // (aimed at where they will be as he comes level with them)
   P.airQ = q || null; P.q = null;
 }
 function autoLeap(q) { // Heavy, Heavy: up after them off the palms
-  toAir(q, 480); sfx('jump'); dust(P.x, P.y, 8); addGhost();
+  toAir(q, 520); sfx('jump'); dust(P.x, P.y, 8); addGhost();
 }
 function chaseJump() { // leap up after a launched enemy
   P.state = 'jump'; P.vz = 540; P.jvx = clamp(((P.chaseX || P.x) - P.x) / .55, -280, 280); P.jvy = 0; P.airN = 0; P.chaseT = 0; P.jhUsed = false; P.runJump = false;

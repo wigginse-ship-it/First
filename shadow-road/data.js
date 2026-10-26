@@ -19,7 +19,7 @@ const WEAPONS = {
       LLL:  { name: 'Hook', dur: .3, h: [.3, .65], x0: 0, x1: 38, dmg: 9, kb: 160, arc: [.3, .3], lunge: 60 },
       LLLL: { name: 'Roundhouse', dur: .48, h: [.34, .66], x0: 0, x1: 42, dmg: 12, kb: 300, kick: 1, lunge: 140, spin: 1, power: 1 }, // a spinning back kick: he turns his back, then the heel comes round
       H:    { name: 'Rising Dragon', dur: .56, h: [.34, .6], prep: 1, x0: 0, x1: 34, dmg: 13, kb: 60, launch: 430, arc: [1.6, -1.8], hop: 210, lunge: 210, power: 1 },
-      HH:   { name: 'Thunder Palm', dur: .46, h: [.3, .6], x0: 0, x1: 42, dmg: 16, kb: 380, arc: [.2, .2], lunge: 200, power: 2, wall: 1, upJump: 1, desc: 'Two Heavies: both palms, and he leaps straight up after them, ready to fight on in the air. A third Heavy instead throws the Dragon Fist.' }, // both palms driven forward hard enough to bounce them off a wall; then the auto-leap (game.js, upJump)
+      HH:   { name: 'Thunder Palm', dur: .46, h: [.3, .6], x0: 0, x1: 42, dmg: 16, kb: 150, arc: [.2, .2], lunge: 200, power: 2, wall: 1, launch: 460, upJump: 1, desc: 'Two Heavies: both palms, and he leaps straight up after them, ready to fight on in the air. A third Heavy instead throws the Dragon Fist.' }, // both palms driven up and forward under them, lifting them off their feet; then the auto-leap (game.js, upJump)
       HHH:  { name: 'Dragon Fist', dur: .55, h: [.32, .6], x0: 0, x1: 46, dmg: 24, kb: 460, arc: [.1, .1], lunge: 320, power: 2, wall: 1 }, // the whole body behind one straight punch: sends them flying into the wall
       LH:   { name: 'Shoulder Bash', dur: .45, h: [.15, .7], x0: 0, x1: 38, dmg: 15, kb: 420, lunge: 460, arc: [.2, .2], power: 2, wall: 1 },
       LLH:  { name: 'Whirlwind Kick', dur: .62, h: [.15, .85], x0: 0, x1: 42, dmg: 6, kb: 220, kick: 1, around: 1, multi: .11, hop: 260, spin: 2, power: 1 },
@@ -30,7 +30,8 @@ const WEAPONS = {
       A:    { dur: .28, h: [.2, .6], x0: 0, x1: 38, dmg: 7, kb: 60, arc: [.9, -.2] },
       AA:   { dur: .3,  h: [.2, .6], x0: 0, x1: 40, dmg: 8, kb: 60, kick: 1 },
       AAA:  { dur: .4,  h: [.2, .65], x0: 0, x1: 42, dmg: 12, kb: 120, arc: [-2.4, 1.4], spike: 1, power: 1 },
-      D:    { dur: .44, h: [.18, .68], x0: 0, x1: 42, dmg: 12, kb: 300, kick: 1, lunge: 440, power: 1 }, // a stepping front kick driven in off the run
+      D:    { name: 'Running Haymaker', dur: .5, h: [.4, .62], prep: 1, x0: 0, x1: 44, dmg: 12, kb: 280, lunge: 360, hop: 180, power: 1 }, // Attack off the run: the fist cocked back behind his head, then a little hop and a big looping overhand, his weight falling in behind it
+      DX:   { name: 'Charging Front Kick', dur: .44, h: [.18, .68], x0: 0, x1: 42, dmg: 15, kb: 340, kick: 1, lunge: 440, power: 2, wall: 1 }, // Heavy off the run: a stepping front kick driven in off the run
       R:    { name: 'Slipping Cross', dur: .4, h: [.28, .62], x0: 0, x1: 46, dmg: 14, kb: 280, lunge: 330, power: 1 }, // out of the dodge he stays low and drives in behind a long rear-hand punch
       RH:   { name: 'Flying Side Kick', dur: .55, h: [.26, .66], x0: 0, x1: 50, dmg: 16, kb: 120, launch: 380, kick: 1, flyside: 1, lunge: 330, hop: 260, power: 1 }, // out of the dodge he leaps at them, the back knee tucked, the lead heel driven out flat: it launches
     } },
@@ -51,7 +52,8 @@ const WEAPONS = {
       AAA:  { dur: .5,  h: [.25, .65], x0: 0, x1: 60, dmg: 18, kb: 140, arc: [-2.6, 1.5], spike: 1, smash: 1, power: 2 },
       JH:   { name: 'Somersault Smash', dur: .7, h: [.48, .8], x0: 0, x1: 66, dmg: 24, kb: 120, launch: 300, arc: [-2.8, 1.5], hop: 250, lunge: 210, rot: TAU, slamDrop: .5, smash: 1, bounce: 1, shock: 90, power: 2 }, // Heavy in the air: up and over in a front flip, the hammer coming over with him into the street
       DA:   { name: 'Flying Wheel', dur: .55, h: [.18, .8], x0: 0, x1: 64, dmg: 7, kb: 200, arc: [.3, .3], around: 1, multi: .14, spin: 1, fly: 1, power: 1 }, // Attack in a running jump: he turns once in the air with the hammer held out flat
-      D:    { dur: .56, h: [.1, .6], x0: 0, x1: 60, dmg: 18, kb: 360, arc: [1.4, 1.4], lunge: 440, crouch: 1, power: 1 },
+      D:    { name: 'Battering Run', dur: .56, h: [.1, .6], x0: 0, x1: 60, dmg: 18, kb: 360, arc: [1.4, 1.4], lunge: 440, crouch: 1, power: 1 }, // Attack off the run: head down, the hammer carried low out in front like a ram
+      DX:   { name: 'Leaping Slam', dur: .66, h: [.5, .74], x0: 0, x1: 70, dmg: 26, kb: 180, launch: 300, arc: [-2.8, 1.5], hop: 300, lunge: 300, slamDrop: .5, smash: 1, shock: 90, bounce: 1, power: 2 }, // Heavy off the run (until Rampage is learned): up off the run with the hammer over his head and down on them
       R:    { name: 'Lunging Drive', dur: .48, h: [.3, .62], x0: 0, x1: 64, dmg: 20, kb: 340, arc: [.15, .15], lunge: 290, dodgeLunge: 1, power: 2 }, // out of the dodge he drives the hammer's head into them
       AH:   { lvl: 3, name: 'Hammer Plunge', how: 'Hold Heavy in the air', desc: 'Fall from the sky hammer-first; the landing sends a shockwave out both ways.', smash: 1, dur: .55, h: [.15, .97], x0: 0, x1: 54, dmg: 22, kb: 160, arc: [-2, 1.5], dive: 1, shock: 70, power: 2 },
       RH:   { lvl: 4, name: 'Tempest Uplift', how: 'Heavy out of a dodge', desc: 'Corkscrew out of the dodge, the hammer dragged screaming round you along the street, and whip it up in a rising swing that throws everyone around you sky-high.', dur: .92, h: [.08, .86], x0: 0, x1: 72, dmg: 7, kb: 150, multi: .13, around: 1, lunge: 150, drag: .58, power: 1,
@@ -79,6 +81,7 @@ const WEAPONS = {
       AAA:  { dur: .42, h: [.2, .65], x0: 0, x1: 68, dmg: 12, kb: 140, arc: [-2.2, 1.4], spike: 1, power: 1 },
       JH:   { name: 'Halo Sweep', dur: .5, h: [.18, .78], x0: 0, x1: 72, dmg: 4, kb: 120, arc: [.35, .35], around: 1, ends: 1, multi: .1, spin: 1, power: 1 }, // Heavy in the air: he turns once with the staff level at the waist, a ring of wood all round him
       DA:   { name: 'Flying Lance', dur: .46, h: [.22, .62], x0: 8, x1: 96, dmg: 13, kb: 320, arc: [.25, .25], fly: 1, power: 1, wall: 1 }, // Attack in a running jump: laid out behind the staff like a thrown spear
+      DX:   { name: 'Spear Rush', style: 'thrust', dur: .5, h: [.24, .6], x0: 8, x1: 104, dmg: 16, kb: 400, arc: [.15, .15], lunge: 520, power: 2, wall: 1 }, // Heavy off the run (until Vaulting Dragon is learned): both hands on the staff and the run driven down it like a spear
       D:    { name: 'Sliding Pole', dur: .62, h: [.12, .82], x0: 8, x1: 80, dmg: 4, kb: 260, multi: .18, lunge: 470, slide: 1, power: 1, depth: 22,
               fin: { at: .62, dmg: 10, kb: 60, launch: 470, multi: 0, power: 1 } }, // drops into a slide off the sprint, the staff low and level, and flicks it up under them at the end
       R:    { name: 'Darting Strike', dur: .42, h: [.28, .62], x0: 8, x1: 84, dmg: 13, kb: 260, arc: [.05, .05], lunge: 300, dodgeLunge: 1, power: 1 }, // low out of the dodge, the staff driven straight in
@@ -105,7 +108,8 @@ const WEAPONS = {
       AAA:  { dur: .5,  h: [.25, .65], x0: 0, x1: 82, dmg: 22, kb: 160, arc: [-2.6, 1.5], spike: 1, power: 2 },
       JH:   { name: 'Wheel of Steel', dur: .62, h: [.16, .76], x0: 0, x1: 86, dmg: 6, kb: 150, multi: .12, arc: [-.2, -.2], hop: 210, lunge: 120, rot: TAU, power: 1 }, // Heavy in the air: a front flip with the blade held straight out, a wheel of steel
       DA:   { name: 'Gale Cleave', dur: .5, h: [.24, .62], x0: 0, x1: 94, dmg: 18, kb: 340, arc: [.35, .35], fly: 1, power: 2, depth: 26 }, // Attack in a running jump: one great flat cut thrown from the flying body
-      D:    { dur: .55, h: [.1, .6], x0: 0, x1: 88, dmg: 22, kb: 420, arc: [.1, .1], lunge: 480, power: 1, wall: 1 },
+      D:    { name: 'Running Thrust', dur: .55, h: [.1, .6], x0: 0, x1: 88, dmg: 22, kb: 420, arc: [.1, .1], lunge: 480, power: 1, wall: 1 }, // Attack off the run: the point driven in
+      DX:   { name: 'Charging Cleave', dur: .66, h: [.38, .6], x0: 0, x1: 96, depth: 24, dmg: 30, kb: 300, launch: 220, arc: [-2.6, 1.3], lunge: 430, shock: 70, power: 2 }, // Heavy off the run (until Phantom Rush is learned): the blade swung up over his head on the run and brought down through them
       R:    { name: 'Lunging Thrust', dur: .5, h: [.3, .62], x0: 0, x1: 98, dmg: 26, kb: 320, arc: [.05, .05], lunge: 290, dodgeLunge: 1, power: 2, depth: 22 }, // low out of the dodge behind the point
       RH:   { lvl: 3, name: 'Riposte', how: 'Heavy out of a dodge', desc: 'Dodge past the attack and answer with a precise cut that always lands as a critical hit.', crit: 1, dur: .5, h: [.3, .6], x0: 0, x1: 90, dmg: 30, kb: 300, arc: [1.2, -1.8], lunge: 260, power: 2 },
       AH:   { lvl: 4, name: 'Plunging Blade', how: 'Hold Heavy in the air', desc: 'Point the blade down and drop; whatever is underneath is pinned to the ground.', dur: .55, h: [.15, .97], x0: 0, x1: 70, dmg: 24, kb: 160, arc: [-2, 1.5], dive: 1, shock: 60, bounce: 1, power: 2 },
@@ -142,6 +146,7 @@ const WEAPONS = {
       AAA:  { dur: .4, h: [.2, .65], x0: 0, x1: 64, dmg: 10, kb: 90, arc: [-2.4, 1.4], spike: 1, power: 1 },
       JH:   { name: 'Falling Petal', dur: .52, h: [.18, .8], x0: 0, x1: 68, dmg: 4, kb: 80, arc: [-2.3, 1.2], around: 1, multi: .07, spin: 1, power: 1 }, // Heavy in the air: a pirouette in the air, the point spiralling down through everyone around him
       DA:   { name: 'Flying Flèche', dur: .44, h: [.22, .62], x0: 0, x1: 98, dmg: 12, kb: 260, arc: [.25, .25], fly: 1, power: 1, wall: 1 }, // Attack in a running jump: a flèche thrown from the air
+      DX:   { name: 'Rushing Cut', dur: .5, h: [.32, .6], x0: 0, x1: 90, dmg: 16, kb: 300, arc: [-2.1, 1.1], lunge: 430, power: 2 }, // Heavy off the run (until the Shadow Flèche is learned): a long high-to-low cut thrown on the run
       D:    { name: 'Backspin Flèche', spin: 1, spinEnd: .42, dur: .55, h: [.42, .76], x0: 0, x1: 90, dmg: 11, kb: 285, arc: [.02, .02], lunge: 364, power: 1, wall: 1 },
       R:    { name: 'Low Lunge', dur: .32, h: [.22, .6], x0: 0, x1: 78, dmg: 13, kb: 200, arc: [.04, .04], lunge: 420, power: 1 }, // a fast, long lunge that runs on past whoever it stabs
       RIP:  { name: 'Parry and Riposte', seq: ['DODGE'], dur: .4, h: [.18, .55], x0: -10, x1: 92, dmg: 21, kb: 255, arc: [.02, .02], lunge: 126, crit: 1, power: 2 }, // the answer to a parried blow: always a critical

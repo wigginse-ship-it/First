@@ -189,6 +189,28 @@ const MOVE_POSE = {
       pose.arm = lerp(-.5, 1, q); pose.elbow = lerp(1.2, 1.9, q); pose.backArm = lerp(1.5, 1.3, q); pose.backElbow = lerp(2.45, 2, q);
     }
   },
+  'fists:D'(pose, m, k) { // Running Haymaker: pulled up off the run with the lead fist cocked back behind his head, then a little hop
+    // forward and one big looping overhand, the fist coming over the top and down on them with all his weight falling in behind it
+    const h0 = m.h[0], h1 = m.h[1], air = P.z > 2;
+    pose.trail = 0; pose.streak = null; delete pose.sweep; pose.spin = 0; pose.rot = 0; pose.ext = 0; delete pose.kick; delete pose.kickK;
+    if (k < h0) { const q = ease(k / h0); // the wind-up: the weight back on the rear foot, the chest turned away, the fist drawn back high
+      pose.arm = lerp(1, 3.35, q); pose.elbow = lerp(1.9, -.95, q); // the upper arm out behind at the shoulder, the forearm up: the fist cocked behind his head
+      pose.backArm = lerp(1.3, .55, q); pose.backElbow = lerp(2, 1.1, q); // the rear hand pushed out in front, measuring
+      pose.lean = lerp(.3, -.08, q); pose.yaw = -.25 * q; pose.sink = 2 + 4 * q; pose.shift = -1.6 * q;
+      pose.legs = { f: lerp(9, 13, q), b: lerp(-9, -12, q), fk: lerp(5, 7, q), bk: lerp(4, 7, q) }; pose.flow = 8;
+    } else if (k < h1 + .06) { const q = sstep((k - h0) / (h1 + .06 - h0)); // the throw: over the top in a long loop, the hips and chest turning through
+      pose.lean = lerp(-.08, .45, q); pose.yaw = lerp(-.25, .55, q); pose.sink = lerp(6, 3, q); pose.shift = lerp(-1.6, 2.6, q);
+      pose.arm = lerp(3.35, TAU - .1 - .45, q); pose.elbow = lerp(-.95, .25, q) - .35 * Math.sin(Math.PI * q); // the elbow kept bent through the loop, straightening into them
+      pose.backArm = lerp(.55, 2.5, q); pose.backElbow = lerp(1.1, .7, q); // the rear arm flung back for balance
+      pose.backReach = 0; pose.flow = 14;
+      pose.legs = air ? { f: 14, b: -15, fk: 10, bk: 6, fl: 6 * q } : { f: lerp(13, 15, q), b: lerp(-12, -15, q), fk: 8, bk: 3, bh: .7 * q };
+    } else { const q = sstep((k - h1 - .06) / (1 - h1 - .06)), r = sstep(span(k, .8, 1)); // the follow-through, landing on the front foot, then back to the guard
+      pose.lean = lerp(.45, .2, r); pose.yaw = lerp(.55, .15, r); pose.sink = lerp(3, 5, q) * (1 - r) + 2 * r; pose.shift = 2.6 * (1 - r);
+      pose.arm = lerp(TAU - .55, TAU + .2, q) * (1 - r) + (TAU + 1) * r; pose.elbow = lerp(.25, .6, q) * (1 - r) + 1.9 * r; // (TAU + 1 is the guard, gone round the long way)
+      pose.backArm = lerp(2.5, 1.3, r); pose.backElbow = lerp(.7, 2, r); pose.flow = 10 * (1 - r);
+      pose.legs = air ? { f: 14, b: -14, fk: 9, bk: 7 } : { f: lerp(15, 10, r), b: lerp(-15, -10, r), fk: lerp(8, 5, r), bk: lerp(3, 4, r), bh: .7 * (1 - r) };
+    }
+  },
   'fists:DA'(pose, m, k) { // Superman Punch: laid out in the air, the rear hand thrown long, the lead hand pulled back to the hip
     const h0 = m.h[0], h1 = m.h[1], e = k < h0 ? 0 : k < h1 ? Math.min(1, (k - h0) / ((h1 - h0) * .4)) : Math.max(0, 1 - (k - h1) / (1 - h1) * 1.2), l = k < h0 ? ease(k / h0) : 1;
     pose.trail = 0; pose.ext = 0; pose.streak = null;
@@ -264,6 +286,20 @@ const MOVE_POSE = {
       pose.backArm = lerp(3, -2.3, q); pose.backElbow = .3;
       if (k < .82) { pose.trail = 66; pose.trailFrom = 2.35; pose.trailCol = tcolOf(m); pose.trailW = 9; }
       if (k > .78) { const d = ease(r); pose.arm = lerp(-2.6, -1.9, d); }
+    }
+  },
+  'hammer:DX'(pose, m, k) { // Leaping Slam: up off the run, the hammer lifted in both hands over the front and back behind his head, then down into the street
+    pose.trail = 0; delete pose.sweep; pose.spin = 0; pose.rot = 0;
+    const h0 = m.h[0];
+    if (k < h0) { const q = sstep(k / h0);
+      pose.arm = lerp(1.2, -2.6, q); pose.backArm = pose.arm; pose.backElbow = .15; pose.lean = lerp(.25, -.35, q); pose.sink = 0;
+      pose.legs = { f: 8, b: -9, fk: lerp(4, 12, q), bk: lerp(4, 10, q), fl: 8 * q }; pose.flow = 8; // knees drawn up under him at the top
+      if (k > h0 * .5) { pose.trail = 64; pose.trailFrom = pose.arm + 1.2; pose.trailCol = tcolOf(m); pose.trailW = 6; }
+    } else { const q = ease(span(k, h0, h0 + .1)), r = span(k, .84, 1);
+      pose.arm = lerp(-2.6, 1.42, q); pose.backArm = pose.arm - .05; pose.backElbow = .15;
+      pose.lean = lerp(-.35, .75, q) * (1 - .7 * r); pose.sink = (P.z > 2 ? 0 : 12 * q) * (1 - .7 * r);
+      pose.legs = P.z > 2 ? { f: 10, b: -9, fk: 8, bk: 6 } : { f: 11, b: -11, fk: 12 * (1 - .5 * r), bk: 15 * (1 - .7 * r) }; // landing into a deep crouch behind the blow
+      if (k < h0 + .16) { pose.trail = 68; pose.trailFrom = -2.6; pose.trailCol = tcolOf(m); pose.trailW = 10; }
     }
   },
   'hammer:LLLL'(pose, m, k) { // Worldbreaker: a great wheel back over the shoulder, both hands, and down onto one knee
