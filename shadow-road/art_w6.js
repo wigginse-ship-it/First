@@ -1454,10 +1454,10 @@
       for (const s of h.sh) if (s && Math.abs(s.x - h.fx) < 900) list.push([h.y + .2, () => { shadow(s.x, h.y, 14); ctx.save(); ctx.translate(s.x, h.y - s.z); ctx.scale(h.dir * 1.35, 1.35); if (s.z > 8) ctx.rotate(-.25 * Math.sign((s.x - h.fx) * h.dir || -1)); sheepArt(s.ph, s.black); ctx.restore(); }]); },
     box(h, box) { box(camX + VW / 2, h.y, 0, VW / 2 + 40, 110); },
   });
-  // THE SNORE: it draws a long breath in (its cheeks fill, its mouth shuts) and lets it out: rings of snore roll out across
-  // the bed from under it, Z's riding on them. Jump each ring
+  // THE SNORE: it draws a long breath in (its cheeks fill, its mouth shuts) and lets it out: a ring of snore rolls out across
+  // the bed from under it, Z's riding on them. Jump it
   function dreamSnore(e) {
-    const n = 2 + (B.broken >= 3 || B.regrows > 0 ? 1 : 0); B.inhale = 1.25;
+    const n = 1; B.inhale = 1.25; // (one ring of snore: jump it)
     floatText(e.x, e.y - e.z, 150, 'hhhhnnnnk...', '#F4F0FF', 15); sfx('charge', 1);
     for (let i = 0; i < n; i++) hazards.push({ kind: 'w6snore', x: e.x, y: e.y + 6, r: 26, delay: 1.25 + i * .9, speed: 225, dmg: Math.round(edmg(e) * .8), t: 12, max: 12, first: !i });
   }
