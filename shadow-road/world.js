@@ -390,9 +390,10 @@ function updateWorld(dt) {
     waveActive = true; lockX = clamp(camX, 0, stage.len - VW); $('#go').hidden = true;
     const wave = stage.waves[waveIdx];
     wave.forEach((t, j) => spawnQ.push({ type: t, side: j % 2 ? -1 : 1, at: j * .8, drop: null }));
-    if (zoneIdx === 1 && waveIdx === 0 && !stage.secret) { // the approach's first wave brings strangers: a couple of foes from other worlds, and a champion
+    if (zoneIdx === 1 && waveIdx === 0 && !stage.secret) { // the approach's first wave brings strangers: a couple of foes from this or earlier worlds, and a champion
       boostDrop();
-      const pool = Object.keys(EDEF).filter(k => !wave.includes(k) && !EDEF[k].noRandom);
+      const firstWorld = (k) => STAGES.findIndex(st => (st.waves || []).some(w => w.some(t => t.replace(/[*!]/g, '') === k))); // the first world a foe appears in
+      const pool = Object.keys(EDEF).filter(k => !wave.includes(k) && !EDEF[k].noRandom && firstWorld(k) >= 0 && firstWorld(k) <= stageIdx); // (only foes already met on the road: none from later worlds)
       for (let j = 0; j < 2; j++) spawnQ.push({ type: pick(pool), side: j % 2 ? 1 : -1, at: 1.2 + j * 1.4, drop: null });
       spawnQ.push({ type: pick(wave.map(t => t.replace('*', '')).filter(t => EDEF[t] && EDEF[t].move !== 'fly')), side: 1, at: 3.4, drop: null, champ: true });
       spawnQ.sort((a, b) => a.at - b.at);
