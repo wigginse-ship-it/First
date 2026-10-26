@@ -161,6 +161,8 @@ function heroInk(cx, cy, fn) {
   heroG.save(); heroG.setTransform(1, 0, 0, 1, 0, 0); heroG.globalCompositeOperation = 'destination-over'; heroG.globalAlpha = .92;
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [.7, .7], [-.7, .7], [.7, -.7], [-.7, -.7]]) heroG.drawImage(heroSC, 0, 0, w, h, dx * r, dy * r, w, h);
   heroG.restore();
+  // the faint strokes off the edge of his cloak (art_corwin.js), laid in under him after the ink line so they stay faint
+  if (typeof HERO_LATE !== 'undefined' && HERO_LATE.length) { const p = ctx; ctx = heroG; try { for (const f of HERO_LATE) f(); } finally { HERO_LATE.length = 0; ctx = p; } }
   inkG.save(); inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.globalCompositeOperation = 'source-over'; inkG.globalAlpha = 1; inkG.drawImage(heroC, 0, 0, w, h, x0, y0, w, h); inkG.restore();
   // his mask for inkEnd: his layer, ink line and all, with even its faintest brush marks made solid
   heroSG.globalCompositeOperation = 'copy'; heroSG.drawImage(heroC, 0, 0, w, h, 0, 0, w, h);

@@ -13,6 +13,7 @@
 // drawHumanoid (art.js) calls these at the right moments of its own back-to-front order.
 let HAND_PLATE = false; // while set, drawHand gives his hands the plates of a silver gauntlet
 let CLOAK_DRAW = null;  // set by drawPlayerAt around his figure: the frame the cloak's motion is worked out in
+let HERO_LATE = [];     // drawn on his own layer after its ink line (paint.js heroInk): the cloak's faint outer fringe
 const CORWIN = (() => {
   const DET = () => !FLASH && !TINT;
   const FINE = () => DET() && (typeof PAINT_Q === 'undefined' || PAINT_Q > 0);
@@ -487,6 +488,7 @@ const CORWIN = (() => {
   // work out where the cloak is this frame; returns the points in his drawing frame
   function begin(L, g) {
     CLOAK_GEO = g; const CD = CLOAK_DRAW, live = CD && CD.live && !g.pose.noSim;
+    if (typeof heroG !== 'undefined' && ctx === heroG) HERO_LATE.length = 0; // (nothing left over from a figure that never finished)
     if (live) { motion(g, CD); WR = SIM.wr; FO = SIM.fo; }
     else if (CD && CD.live && SIM.ok) { WR = SIM.wr; FO = SIM.fo; }
     else { WR = wrapAim(g, CD ? CD.z : 0, 0); FO = clamp(Math.abs(g.pose.flow || 0) / 22, 0, 1); SPD = 0; LVX = LVY = 0; }
@@ -599,9 +601,63 @@ const CORWIN = (() => {
     for (const ue of [0, 1]) { if (ue < u0 - 1e-3 || ue > u1 + 1e-3) continue;
       if (fine && !lining) { ctx.beginPath(); for (let k = 0; k <= M; k++) { uv(Pt, ue, k / M * .97); const x = UX, y = UY; uv(Pt, ue + (ue ? -.035 : .035), k / M * .97); const ox = (UX - x) * .45, oy = (UY - y) * .45; k ? ctx.lineTo(x + ox, y + oy) : ctx.moveTo(x + ox, y + oy); }
         ctx.strokeStyle = L.cloakSlate; ctx.lineWidth = 1.1; const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * .55; ctx.stroke(); ctx.globalAlpha = a0; }
-      ctx.beginPath(); for (let k = M; k >= 0; k--) { uv(Pt, ue, k / M); k === M ? ctx.moveTo(UX, UY) : ctx.lineTo(UX, UY); } ctx.lineJoin = 'round'; outline(1);
+      ctx.beginPath(); for (let k = M; k >= 0; k--) { uv(Pt, ue, k / M); k === M ? ctx.moveTo(UX, UY) : ctx.lineTo(UX, UY); } ctx.lineJoin = 'round';
+      { const a0 = ctx.globalAlpha; if (!frontPart && DET()) ctx.globalAlpha = a0 * .4; outline(1); ctx.globalAlpha = a0; } // (out in the air, the fringe takes over from the ink)
     }
     if (fine) flicks(L, Pt, u0, u1, sp, lining);
+    if (det && !frontPart) fringe(L, Pt, u0, u1, lining, sp);
+  }
+  // The cloak's outer fringe, after the reference sheet: its edge is never a clean line. Long dry strokes run on past the
+  // hem and the trailing edges (down the fall of the cloth, out from it, and swept back along its flight, lagging into a
+  // curl), thinning bristle by bristle and fading out into the paper; along the street they flatten into smears. They are
+  // faint, so nothing behind him is ever hidden. Each stroke lives on its own slow clock (the cloak's paint clock), grows
+  // out, then shrinks away to be reborn somewhere else on the edge, so they stir without flickering. On his own layer
+  // (paint.js) they are laid in under him after his ink line (HERO_LATE), so they show only past his silhouette and are
+  // never inked solid; anywhere else they are drawn at once, behind him with the rest of the back of the cloak.
+  const FR_A = [1, .66, .38, .15], FR_BR = [[-.34, .44, .62], [0, .52, 1], [.38, .36, .8]]; // fade along the stroke; bristles: offset, width, reach
+  const FRX = new Float32Array(5), FRY = new Float32Array(5), FRH = new Float32Array(5), FRNX = new Float32Array(5), FRNY = new Float32Array(5);
+  function fstroke(paths, c, x, y, Dx, Dy, Ex, Ey, w) { // C(f) = (x, y) + D f + E f^2; bristles split it, each segment into its own fade bucket
+    for (const [o, wf, rch] of FR_BR) {
+      const r = rch * (.8 + .2 * hsh(x * 3.1 + y * 1.7 + o * 9));
+      for (let q = 0; q <= 4; q++) { const f = r * q / 4, tx = Dx + 2 * Ex * f, ty = Dy + 2 * Ey * f, tl = Math.hypot(tx, ty) || 1, nx = -ty / tl, ny = tx / tl, h = w * wf * .5 * Math.pow(1 - q / 4, .7), oo = o * w * (1 - f * .5);
+        FRX[q] = x + Dx * f + Ex * f * f + nx * oo; FRY[q] = y + Dy * f + Ey * f * f + ny * oo; FRH[q] = h; FRNX[q] = nx; FRNY[q] = ny; }
+      for (let q = 0; q < 4; q++) { const p = paths[c * 4 + q], a = q, b = q + 1;
+        p.moveTo(FRX[a] + FRNX[a] * FRH[a], FRY[a] + FRNY[a] * FRH[a]); p.lineTo(FRX[b] + FRNX[b] * FRH[b], FRY[b] + FRNY[b] * FRH[b]);
+        p.lineTo(FRX[b] - FRNX[b] * FRH[b], FRY[b] - FRNY[b] * FRH[b]); p.lineTo(FRX[a] - FRNX[a] * FRH[a], FRY[a] - FRNY[a] * FRH[a]); p.closePath(); }
+    }
+  }
+  function fringe(L, Pt, u0, u1, lining, sp) {
+    const CD = CLOAK_DRAW, pose = CLOAK_GEO.pose, layer = typeof heroG !== 'undefined' && heroG && ctx === heroG && typeof HERO_LATE !== 'undefined';
+    if (!layer && pose.down) return; // (knocked flat, the near half is drawn over him: off his own layer the fringe would cover him)
+    const fine = FINE(), pc = SIM.pc, mv = Math.min(1, sp), ln = Math.hypot(LVX, LVY) || 1, trx = -LVX / ln * mv, try_ = -LVY / ln * mv;
+    const gy = (CD ? CD.z : 0) + 1.5, salt = (lining ? 500 : 0) + (u0 >= .5 ? 250 : 0), paths = []; for (let k = 0; k < 8; k++) paths.push(new Path2D());
+    uv(Pt, (u0 + u1) / 2, .4); const cx = UX, cy = UY;
+    const life = (sd) => { const cyc = pc * (.22 + hsh(sd + .5) * .3) + hsh(sd + .7), gen = Math.floor(cyc); return [Math.sqrt(Math.sin(Math.PI * (cyc - gen))), sd + gen * 37.3]; };
+    const emit = (x, y, dx, dy, len, w, s) => { // a stroke from x, y along dx, dy (unit), bending, and swept back along the flight
+      let Dx = dx * len, Dy = dy * len; if (y + Dy > gy) { Dy = Math.max(gy - y, Dy * .2); Dx += Math.sign(Dx || -1) * len * .35; } // along the street it flattens into a smear
+      const bend = (hsh(s + 11) - .5) * .5 * len, lag = .45 * len;
+      fstroke(paths, hsh(s + 12) < .27 ? 1 : 0, x, y, Dx, Dy, -dy * bend + trx * lag, dx * bend + try_ * lag, w);
+    };
+    // off the hem: down the fall of the cloth and out from it
+    const nh = Math.round((u1 - u0) * (fine ? 18 : 9));
+    for (let m = 0; m < nh; m++) { const [e, sd] = life(m * 31.7 + salt); if (e < .08) continue;
+      const u = u0 + (u1 - u0) * (m + .2 + .6 * hsh(sd)) / nh, v = .8 + hsh(sd + 1) * .14; uv(Pt, u, v - .12); const ax = UX, ay = UY; uv(Pt, u, v);
+      let tx = UX - ax, ty = UY - ay; const tl = Math.hypot(tx, ty) || 1; let ox = UX - cx, oy = UY - cy; const ol = Math.hypot(ox, oy) || 1, j = (hsh(sd + 2) - .5) * .5;
+      let dx = tx / tl * .85 + ox / ol * .45 + trx * 1.2 + j, dy = ty / tl * .85 + oy / ol * .45 + try_ * 1.2 - j * .3; const dl = Math.hypot(dx, dy) || 1;
+      emit(UX, UY, dx / dl, dy / dl, (6 + hsh(sd + 3) * 13) * (1 + sp * .7) * e, 1.3 + hsh(sd + 4) * 2.6, sd); }
+    // off the outer edges, row by row down the cloth: wherever the cloth stands out past his body, out from it and down
+    const i0 = Math.ceil(u0 * (S - 1) - 1e-3), i1 = Math.floor(u1 * (S - 1) + 1e-3), per = fine ? 2 : 1;
+    for (let r = 0; r < 5; r++) { const v = .26 + r * .15; let xn = 1e9, yn = 0, xx = -1e9, yx = 0;
+      for (let i = i0 - 1; i <= i1 + 1; i++) { const u = clamp(i / (S - 1), u0, u1); uv(Pt, u, v); if (UX < xn) { xn = UX; yn = UY; } if (UX > xx) { xx = UX; yx = UY; } }
+      for (const sg of [-1, 1]) { const x = sg < 0 ? xn : xx, y = sg < 0 ? yn : yx; if (x * sg < 9) continue;
+        for (let k = 0; k < per; k++) { const [e, sd] = life(r * 13.1 + (sg + 1) * 41 + k * 7.7 + salt); if (e < .08) continue;
+          const j = (hsh(sd + 2) - .5) * .6, dy0 = .55 + hsh(sd + 5) * .5 + v * .3; let dx = sg * .8 + trx * 1.3 + j * .4, dy = dy0 + try_ * 1.3; const dl = Math.hypot(dx, dy) || 1;
+          emit(x - sg * 2.5, y + (hsh(sd + 6) - .5) * 6, dx / dl, dy / dl, (5 + hsh(sd + 3) * 11) * (.8 + v * .6) * (1 + sp * .8) * e, 1.2 + hsh(sd + 4) * 2.2, sd); } } }
+    const cols = [C(lining ? (L.cloakLining || '#0B0A0E') : L.cloak), C(L.cloakSlate)], base = [lining ? .4 : .5, .36];
+    const draw = () => { const ga = ctx.globalAlpha; for (let c = 0; c < 2; c++) { ctx.fillStyle = cols[c]; for (let q = 0; q < 4; q++) { ctx.globalAlpha = ga * base[c] * FR_A[q]; ctx.fill(paths[c * 4 + q]); } } ctx.globalAlpha = ga; };
+    if (!layer) { draw(); return; }
+    const m = ctx.getTransform(), a = ctx.globalAlpha;
+    if (HERO_LATE.length < 8) HERO_LATE.push(() => { ctx.save(); ctx.setTransform(m); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'destination-over'; draw(); ctx.restore(); });
   }
   // dry-brush flicks off the cloth's edges: a few short bristle tips at the hem while it hangs, ragged strokes flung off
   // the hem and its trailing edges (away from where it flies) as it whips, longer the faster it goes
