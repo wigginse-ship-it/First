@@ -1313,9 +1313,9 @@
       if (Math.random() < .5) bubbles(e.x - e.facing * 30, e.y, e.z + 10, 1, 10);
       if (!h.hitp && Math.abs(P.x - e.x) < 28 && Math.abs(P.y - e.y) < 15 && P.z < 50) { h.hitp = 1; hitP(edmg(e), e.x, true); }
       const out = e.facing > 0 ? e.x > rightWall() - 20 : e.x < leftWall() + 20;
-      if (out) { e.x = clamp(e.x, leftWall() + 20, rightWall() - 20); if (h.pass === 1) { h.turn = .45; } else return true; }
+      if (out) { e.x = clamp(e.x, leftWall() + 20, rightWall() - 20); if (h.pass === 1) { h.turn = .6; } else return true; }
       return false; }, { rec: .9,
-      draw(h) { if (!(h.turn > 0)) return; const k = 1 - h.turn / .45, y = yClamp(P.y); ctx.fillStyle = tellCol(k, .7); ctx.fillRect(leftWall(), y - 13, rightWall() - leftWall(), 26); ctx.strokeStyle = tellLine(k); ctx.setLineDash([4, 4]); ctx.strokeRect(leftWall(), y - 13, rightWall() - leftWall(), 26); ctx.setLineDash([]); } });
+      draw(h) { if (!(h.turn > 0)) return; const k = 1 - h.turn / .6, y = yClamp(P.y); ctx.fillStyle = tellCol(k, .7); ctx.fillRect(leftWall(), y - 13, rightWall() - leftWall(), 26); ctx.strokeStyle = tellLine(k); ctx.setLineDash([4, 4]); ctx.strokeRect(leftWall(), y - 13, rightWall() - leftWall(), 26); ctx.setLineDash([]); } });
   };
   TELLS.w7gallop = { fix: () => ({ y: yClamp(P.y) }), draw(e, T, k) { const x0 = e.facing > 0 ? e.x : leftWall(), x1 = e.facing > 0 ? rightWall() : e.x; ctx.fillStyle = tellCol(k, .7); ctx.fillRect(x0, T.y - 13, x1 - x0, 26); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.strokeRect(x0, T.y - 13, x1 - x0, 26); ctx.setLineDash([]); } };
   // THE LANCE: up, over, and down lance-first on where you stood
@@ -1462,13 +1462,13 @@
 
   // ---------------- NIXIE OF THE STAIR ----------------
   // THE NIP: a dart in and a bite, quick as a fish, back out to the shoal
-  PLAN_FX.w7nip = (e) => { const tx = xClamp(P.x), ty = yClamp(P.y), x0 = e.x, y0 = e.y;
+  PLAN_FX.w7nip = (e) => { const T = e.w7T || { x: xClamp(P.x), y: yClamp(P.y) }, tx = T.x, ty = T.y, x0 = e.x, y0 = e.y;
     act(e, 'nip', .6, (h, dt, e, k) => {
       if (k < .25) return false; const u = sm(cl01((k - .25) / .35)); e.x = lerp(x0, tx, u); e.y = lerp(y0, ty, u); e.z += (14 - e.z) * Math.min(1, dt * 8);
       if (!h.hit && Math.abs(P.x - e.x) < 16 && Math.abs(P.y - e.y) < 12 && P.z < 40) { h.hit = 1; sfx('hit-flesh', .4); hitP(edmg(e), e.x, false); }
       return false; }, { rec: .7 });
   };
-  TELLS.w7nip = { draw(e, T, k) { ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(xClamp(P.x), yClamp(P.y)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = tellCol(k); ell(xClamp(P.x), yClamp(P.y), 16, 7); ctx.fill(); } };
+  TELLS.w7nip = { fix: () => ({ x: xClamp(P.x), y: yClamp(P.y) }), draw(e, T, k) { ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(T.x, T.y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = tellCol(k); ell(T.x, T.y, 18, 8); ctx.fill(); } };
   // THE RING: it marks a ring round you and swims it, fast; the safe places are the middle and outside
   PLAN_FX.w7ring = (e) => { const cx = xClamp(P.x), cy = yClamp(P.y), a0 = Math.atan2((e.y - cy) * 2.4, e.x - cx);
     act(e, 'ring', 1.6, (h, dt, e, k) => {
