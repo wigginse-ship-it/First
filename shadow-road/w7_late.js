@@ -39,7 +39,7 @@
     if (has() && P.state === 'dodge' && R.poolCd <= 0) { const k = PW(); R.poolCd = .8; R.pools.push({ x, y, t: 0, max: .9 + .55 * k, r: 54 * Math.sqrt(k), tick: 0, hit: new Map() }); sfx('hit-goo', .4); bub(x, y, 10, 8, 50); } }; }
   { const _st = strike; strike = function (e, base, dir, m, echo) { const r = _st(e, base, dir, m, echo);
     if (has() && m && P && m === P.move && m.power === 2 && R.waveCd <= 0 && mode === 'play') { R.waveCd = WAVE_CD(); const k = PW();
-      for (const d of save.cycle > 0 ? [1, -1] : [1]) R.waves.push({ x: P.x + d * P.facing * 20, y: P.y, dir: d * P.facing, t: 0, max: .75 + .15 * k, hit: new Set(), h: 34 + 14 * k, dmg: Math.round((16 + 4 * (save.wl[P.w] || 1)) * k) });
+      for (const d of save.cycle > 0 ? [1, -1] : [1]) R.waves.push({ x: P.x + d * P.facing * 20, y: P.y, dir: d * P.facing, t: 0, max: .75 + .15 * k, hit: new Set(), h: 52 + 16 * k, dmg: Math.round((16 + 4 * (save.wl[P.w] || 1)) * k) });
       sfx('whoosh'); shakeMag = Math.max(shakeMag, 4); }
     return r; }; }
   { const _up = updatePlayer; updatePlayer = function (dt) {
@@ -66,16 +66,16 @@
   function drawPool(p, t) { const a = Math.min(1, p.t / .15, (p.max - p.t) / .3); ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 5; i++) { const r = p.r * (.3 + i * .18), s = t * (5 - i * .6); ctx.strokeStyle = `rgba(190,250,240,${.35 * a})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r / 2.4, 0, s, s + 3.6); ctx.stroke(); }
     ctx.fillStyle = `rgba(30,90,110,${.25 * a})`; ctx.globalCompositeOperation = 'source-over'; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * .5, p.r * .2, 0, 0, TAU); ctx.fill(); ctx.restore(); }
-  function drawWave(w, t) { const a = Math.min(1, w.t / .1, (w.max - w.t) / .2), x = w.x, H = w.h * 1.4, d = w.dir; ctx.save(); ctx.globalAlpha = a;
-    const g = ctx.createLinearGradient(x - d * 40, 0, x, 0); g.addColorStop(0, 'rgba(40,120,130,0)'); g.addColorStop(1, 'rgba(90,180,180,.75)'); ctx.fillStyle = g;
-    ctx.beginPath(); ctx.moveTo(x - d * 46, w.y + 10); ctx.lineTo(x - d * 40, w.y - H * .5); ctx.quadraticCurveTo(x - d * 4, w.y - H * 1.1, x + d * 12, w.y - H * .7 + Math.sin(t * 20) * 2); ctx.quadraticCurveTo(x + d * 2, w.y - H * .5, x + d * 6, w.y + 10); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(240,255,252,.95)'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - d * 30, w.y - H * .8); ctx.quadraticCurveTo(x - d * 4, w.y - H * 1.1, x + d * 12, w.y - H * .7 + Math.sin(t * 20) * 2); ctx.stroke(); // the crest of foam
+  function drawWave(w, t) { const a = Math.min(1, w.t / .08, (w.max - w.t) / .2), x = w.x, H = w.h * 1.3, d = w.dir; ctx.save(); ctx.globalAlpha = a;
+    const g = ctx.createLinearGradient(x - d * 70, 0, x, 0); g.addColorStop(0, 'rgba(40,120,130,0)'); g.addColorStop(.6, 'rgba(60,150,160,.7)'); g.addColorStop(1, 'rgba(150,230,220,.92)'); ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(x - d * 76, w.y + 10); ctx.lineTo(x - d * 60, w.y - H * .45); ctx.quadraticCurveTo(x - d * 4, w.y - H * 1.1, x + d * 12, w.y - H * .7 + Math.sin(t * 20) * 2); ctx.quadraticCurveTo(x + d * 2, w.y - H * .5, x + d * 6, w.y + 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(240,255,252,.95)'; ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - d * 30, w.y - H * .8); ctx.quadraticCurveTo(x - d * 4, w.y - H * 1.1, x + d * 12, w.y - H * .7 + Math.sin(t * 20) * 2); ctx.stroke(); // the crest of foam
     ctx.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(x + d * (8 - i * 6) + Math.sin(t * 14 + i) * 2, w.y - H * .72 - Math.abs(Math.sin(i * 1.7)) * 6, 1.6, 0, TAU); ctx.fill(); }
     ctx.restore(); }
   { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); for (const w of R.waves) box(w.x, w.y, 0, 60, w.h * 1.6 + 20); for (const p of R.pools) box(p.x, p.y, 0, p.r + 20, 40); }; }
   { const _ml = mechList; mechList = function (list, t) { _ml(list, t);
     for (const p of R.pools) list.push([p.y - .3, () => onMain(() => drawPool(p, t))]);
-    for (const w of R.waves) list.push([w.y + .4, () => onMain(() => drawWave(w, t))]); }; }
+    for (const w of R.waves) list.push([w.y + 20, () => onMain(() => drawWave(w, t))]); }; }
 
   // ---------------- where it shows: the weapon card, the forge, the move list ----------------
   function pearlIcon(g, s, k, t) { // the black pearl in a ring of gold, the ring filling as the wave gathers
@@ -147,17 +147,33 @@
   // ---------------- C: Moire on her throne of nacre ----------------
   function moire(x, y, s, t) { // the Queen of Rebma, seated: a crown of pearls, sea-green hair floating up and out, a gown of sea-silk
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    ctx.fillStyle = '#E6DCD4'; ctx.beginPath(); ctx.moveTo(-34, 0); ctx.lineTo(-30, -96); ctx.quadraticCurveTo(0, -132, 30, -96); ctx.lineTo(34, 0); ctx.closePath(); ctx.fill(); // the throne's back: a scallop of nacre
-    ctx.strokeStyle = 'rgba(150,130,170,.6)'; ctx.lineWidth = 1; for (let i = -4; i <= 4; i++) { ctx.beginPath(); ctx.moveTo(i * 2, -6); ctx.lineTo(i * 7, -112 + Math.abs(i) * 4); ctx.stroke(); }
-    ctx.fillStyle = 'rgba(200,240,230,.35)'; ctx.beginPath(); ctx.moveTo(-28, -10); ctx.lineTo(-24, -90); ctx.quadraticCurveTo(-8, -110, 0, -112); ctx.lineTo(-6, -10); ctx.closePath(); ctx.fill();
-    for (let i = 0; i < 14; i++) { const a = -Math.PI * (.15 + i / 13 * .7); ctx.strokeStyle = i % 2 ? '#2E7A62' : '#7ED0A8'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, -64); ctx.quadraticCurveTo(Math.cos(a) * 26 + Math.sin(t + i) * 4, -64 + Math.sin(a) * 26, Math.cos(a) * 44 + Math.sin(t * .8 + i) * 6, -60 + Math.sin(a) * 40); ctx.stroke(); } // her hair, floating
-    ctx.fillStyle = '#1E3A78'; ctx.beginPath(); ctx.moveTo(-12, -52); ctx.lineTo(12, -52); ctx.lineTo(22, -2); ctx.quadraticCurveTo(0, 4, -22, -2); ctx.closePath(); ctx.fill(); // the gown
-    ctx.strokeStyle = PAL_GOLD; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-22, -3); ctx.quadraticCurveTo(0, 3, 22, -3); ctx.moveTo(0, -50); ctx.lineTo(0, 0); ctx.stroke();
-    ctx.fillStyle = '#4A6AB8'; ctx.beginPath(); ctx.moveTo(-12, -52); ctx.lineTo(-4, -52); ctx.lineTo(-10, -4); ctx.lineTo(-20, -4); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#A8D8C6'; ctx.beginPath(); ctx.ellipse(0, -62, 7, 8.4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#1A2A26'; ctx.lineWidth = 1; ctx.stroke(); // her face
-    ctx.fillStyle = '#1A3A34'; ctx.fillRect(-4, -64, 2.4, 1.2); ctx.fillRect(1.6, -64, 2.4, 1.2); ctx.fillStyle = '#8A3A4A'; ctx.fillRect(-1.6, -57.5, 3.2, 1);
-    ctx.fillStyle = PAL_GOLD; ctx.fillRect(-8, -72, 16, 3); for (let i = 0; i < 5; i++) { ctx.fillStyle = '#F2EEF6'; ctx.beginPath(); ctx.arc(-6 + i * 3, -74 - (i % 2) * 2.4, 1.4, 0, TAU); ctx.fill(); } // the crown of pearls
-    ctx.strokeStyle = '#A8D8C6'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(10, -46); ctx.quadraticCurveTo(22, -40, 26, -52); ctx.stroke(); // a hand held out to him
+    // the throne: a great scallop of nacre on a gilt frame, its ribs catching the light
+    ctx.fillStyle = '#E6DCD4'; ctx.beginPath(); ctx.moveTo(-36, 0); ctx.lineTo(-32, -96); ctx.quadraticCurveTo(0, -136, 32, -96); ctx.lineTo(36, 0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = PAL_GOLD; ctx.lineWidth = 2.4; ctx.stroke();
+    for (let i = -5; i <= 5; i++) { ctx.strokeStyle = i % 2 ? 'rgba(170,150,190,.55)' : 'rgba(150,200,190,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(i * 2, -8); ctx.lineTo(i * 6, -116 + Math.abs(i) * 3.4); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.moveTo(-28, -12); ctx.lineTo(-26, -92); ctx.quadraticCurveTo(-12, -110, -4, -114); ctx.lineTo(-10, -12); ctx.closePath(); ctx.fill();
+    // her hair, long and sea-green, floating up and out about her head in the water
+    for (let i = 0; i < 26; i++) { const side = i % 2 ? 1 : -1, q = (i >> 1) / 13, a = -Math.PI / 2 + side * (.3 + q * 1.1), L = 34 + hsh(i) * 22, sw = Math.sin(t * .9 + i) * 5;
+      ctx.strokeStyle = ['#1E5A4A', '#2E7A62', '#5AB08A', '#7ED0A8'][i % 4]; ctx.lineWidth = 2.2 - q; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(side * 3, -66); ctx.bezierCurveTo(side * 10, -76, Math.cos(a) * L * .6 + sw * .5, -64 + Math.sin(a) * L * .6, Math.cos(a) * L + sw, -60 + Math.sin(a) * L * .9 + Math.cos(t + i) * 3); ctx.stroke(); }
+    // the gown: deep lapis sea-silk falling in folds to the dais, a band of pearls at the hem and down the front
+    ctx.fillStyle = '#1E3A78'; ctx.beginPath(); ctx.moveTo(-11, -52); ctx.lineTo(11, -52); ctx.quadraticCurveTo(16, -30, 24, -2); ctx.quadraticCurveTo(0, 5, -24, -2); ctx.quadraticCurveTo(-16, -30, -11, -52); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#0A1430'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(120,150,230,.6)'; ctx.lineWidth = 1.4; for (const fx of [-14, -6, 6, 14]) { ctx.beginPath(); ctx.moveTo(fx * .4, -46); ctx.quadraticCurveTo(fx * .8, -22, fx, -2); ctx.stroke(); }
+    ctx.strokeStyle = PAL_GOLD; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-24, -3); ctx.quadraticCurveTo(0, 4, 24, -3); ctx.stroke();
+    ctx.fillStyle = '#F2EEF6'; for (let i = 0; i < 13; i++) { ctx.beginPath(); ctx.arc(-22 + i * 3.7, -2 + Math.sin(i / 12 * Math.PI) * 3.4, 1.1, 0, TAU); ctx.fill(); } for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(0, -48 + i * 5, 1, 0, TAU); ctx.fill(); }
+    // her arms: one on the throne, one held out to him, palm up
+    ctx.strokeStyle = '#8ACAB6'; ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-9, -48); ctx.quadraticCurveTo(-18, -34, -24, -26); ctx.moveTo(9, -48); ctx.quadraticCurveTo(18, -40, 26, -46); ctx.stroke();
+    ctx.fillStyle = '#A8D8C6'; ctx.beginPath(); ctx.ellipse(28, -47, 3.4, 2, -.3, 0, TAU); ctx.fill();
+    // the face: pale green, grave, lidded, the gill-slits of Rebma at the throat
+    ctx.fillStyle = '#A8D8C6'; ctx.beginPath(); ctx.ellipse(0, -62, 7, 8.6, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#1A2A26'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = 'rgba(60,120,100,.35)'; ctx.beginPath(); ctx.ellipse(3, -60, 4, 7, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#F2FFF8'; for (const ex of [-3, 3]) { ctx.beginPath(); ctx.ellipse(ex, -63.6, 1.8, 1, 0, 0, TAU); ctx.fill(); } ctx.fillStyle = '#1A4A3A'; for (const ex of [-2.8, 3.2]) { ctx.beginPath(); ctx.arc(ex, -63.6, .8, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = '#2A4A3E'; ctx.lineWidth = .8; for (const ex of [-3, 3]) { ctx.beginPath(); ctx.moveTo(ex - 2, -66.4); ctx.lineTo(ex + 2, -66); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(0, -62.6); ctx.lineTo(.8, -59.6); ctx.stroke(); ctx.fillStyle = '#7A3A48'; ctx.fillRect(-1.8, -57.2, 3.6, 1.1);
+    ctx.strokeStyle = 'rgba(40,90,70,.6)'; ctx.lineWidth = .6; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-3 + i * 1.6, -53); ctx.lineTo(-2.4 + i * 1.6, -51); ctx.stroke(); }
+    // the crown of pearls
+    ctx.fillStyle = PAL_GOLD; ctx.fillRect(-8, -72, 16, 3); ctx.strokeStyle = '#6A4A18'; ctx.lineWidth = .6; ctx.strokeRect(-8, -72, 16, 3);
+    for (let i = 0; i < 5; i++) { ctx.fillStyle = '#F2EEF6'; ctx.beginPath(); ctx.arc(-6 + i * 3, -74 - (i % 2 ? 4 : 2), 1.5, 0, TAU); ctx.fill(); ctx.fillStyle = PAL_GOLD; ctx.fillRect(-6.3 + i * 3, -73.6 - (i % 2 ? 3 : 1), .6, (i % 2 ? 3 : 1)); }
     ctx.restore();
   }
   function panelMoire(T, t) {
@@ -177,8 +193,16 @@
     const g = ctx.createLinearGradient(0, Y0, 0, sea); g.addColorStop(0, '#2A3A6A'); g.addColorStop(.6, '#D89A8A'); g.addColorStop(1, '#FFE0B0'); ctx.fillStyle = g; ctx.fillRect(0, Y0, VW, sea - Y0);
     ctx.fillStyle = `rgba(255,240,200,${.8 + .2 * k})`; ctx.beginPath(); ctx.arc(VW * .82, sea - 4 - k * 12, 14, Math.PI, 0); ctx.fill(); // the sun coming up out of the sea
     const kolvir = (flip) => { ctx.save(); if (flip) { ctx.translate(0, sea * 2); ctx.scale(1, -1); ctx.globalAlpha = .45; }
-      ctx.fillStyle = flip ? '#3A5A7A' : '#4A3A5A'; ctx.beginPath(); ctx.moveTo(VW * .2, sea); ctx.lineTo(VW * .38, sea - H * .26); ctx.lineTo(VW * .46, sea - H * .3); ctx.lineTo(VW * .56, sea - H * .22); ctx.lineTo(VW * .72, sea); ctx.closePath(); ctx.fill();
-      for (let i = 0; i < 7; i++) { const x = VW * (.39 + i * .022), h = 14 + (3 - Math.abs(i - 3)) * 7; ctx.fillStyle = flip ? '#C8E4E0' : '#F2D8B0'; ctx.fillRect(x, sea - H * .3 - h + Math.abs(i - 3) * 3, 4, h); ctx.beginPath(); ctx.moveTo(x - 1, sea - H * .3 - h + Math.abs(i - 3) * 3); ctx.lineTo(x + 2, sea - H * .3 - h - 6 + Math.abs(i - 3) * 3); ctx.lineTo(x + 5, sea - H * .3 - h + Math.abs(i - 3) * 3); ctx.fill(); } // Amber's towers (Rebma's, below)
+      const kp = [VW * .2, sea, VW * .3, sea - H * .12, VW * .36, sea - H * .2, VW * .39, sea - H * .27, VW * .46, sea - H * .3, VW * .52, sea - H * .26, VW * .58, sea - H * .19, VW * .64, sea - H * .1, VW * .72, sea];
+      ctx.fillStyle = flip ? '#3A5A7A' : '#4A3A5A'; ctx.beginPath(); ctx.moveTo(kp[0], kp[1]); for (let i = 2; i < kp.length; i += 2) ctx.lineTo(kp[i], kp[i + 1]); ctx.closePath(); ctx.fill();
+      for (let i = 0; i < 14; i++) { const fx = VW * (.3 + hsh(i) * .32), fy = sea - H * (.04 + hsh(i + 3) * .2), fw = 8 + hsh(i + 5) * 14; ctx.fillStyle = flip ? 'rgba(200,230,240,.18)' : 'rgba(255,190,160,.28)'; ctx.beginPath(); ctx.moveTo(fx - fw, fy); ctx.lineTo(fx - fw * .2, fy - fw * .4); ctx.lineTo(fx + fw, fy); ctx.closePath(); ctx.fill(); } // its crags catching the dawn
+      const top = sea - H * .3, wallC = flip ? '#B8D4D4' : '#E8C8A0', shC = flip ? '#6E8A9A' : '#9A7060', roofC = flip ? '#4A7A8A' : '#5A3A4A';
+      ctx.fillStyle = wallC; ctx.fillRect(VW * .41, top - 8, VW * .1, 10); // the walls along the summit
+      for (let i = 0; i < 7; i++) { const x = VW * (.405 + i * .016), w = 5 + (i % 3) * 1.5, h = 14 + (3 - Math.abs(i - 3)) * 8 + (i % 2) * 4, y0 = top - 6 + Math.abs(i - 3) * 2;
+        ctx.fillStyle = wallC; ctx.fillRect(x, y0 - h, w, h); ctx.fillStyle = shC; ctx.fillRect(x + w * .6, y0 - h, w * .4, h);
+        ctx.fillStyle = roofC; ctx.beginPath(); ctx.moveTo(x - 1, y0 - h); ctx.lineTo(x + w / 2, y0 - h - w * 1.6); ctx.lineTo(x + w + 1, y0 - h); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = flip ? 'rgba(255,255,255,.6)' : 'rgba(255,230,160,.9)'; ctx.fillRect(x + w * .3, y0 - h * .6, 1.2, 2); }
+      // Amber's towers (Rebma's, below)
       ctx.restore(); };
     kolvir(false);
     const sg = ctx.createLinearGradient(0, sea, 0, VH); sg.addColorStop(0, '#E8B89A'); sg.addColorStop(.25, '#5A7A8A'); sg.addColorStop(1, '#1A3040'); ctx.fillStyle = sg; ctx.fillRect(0, sea, VW, VH - sea);
