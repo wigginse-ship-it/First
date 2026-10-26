@@ -29,9 +29,9 @@ function moveExtras(m, k, dt, airborne) {
     }
     if (airborne) P.vx = P.vaultVx; else if (P.turned) P.vx *= Math.pow(.001, dt);
     if (airborne && k < .5 && Math.random() < dt * 22) addGhost(false); // pale afterimages trace the flip
-    if (k > .1 && k < .46) { P.vaultChip = (P.vaultChip || 0) - dt; if (P.vaultChip <= 0) { P.vaultChip = .12; // the staff whirls through the vault: light, quick hits on whoever it passes (the hard blow still comes at the end)
-      for (const e of enemies) if (!e.dead && Math.abs(e.x - P.x) < 62 + e.hw && Math.abs(e.y - P.y) < 30 && Math.abs(e.z - P.z) < 90) { const d = 3 * wMult(P.w); strike(e, d, Math.sign(e.x - P.x) || P.facing, { dmg: d, kb: 30, launch: 0, power: 0, noStun: 1, chip: 1 }); } } }
-    else P.vaultChip = 0;
+    for (const [n, at] of [[1, .2], [2, .36]]) if (k >= at && (P.vaultChip || 0) < n) { P.vaultChip = n; // two quick hits as the staff whirls round through the vault (the big blow still comes at the end)
+      for (const e of enemies) if (!e.dead && Math.abs(e.x - P.x) < 62 + e.hw && Math.abs(e.y - P.y) < 30 && Math.abs(e.z - P.z) < 90) { const d = 4 * wMult(P.w); strike(e, d, Math.sign(e.x - P.x) || P.facing, { dmg: d, kb: 30, launch: 0, power: 0, noStun: 1, chip: 1 }); } }
+    if (k < .2) P.vaultChip = 0;
     if (!P.turned && k >= m.turnAt) { P.turned = true; if (P.vaultFoe) P.facing = -P.facing; } // nobody to vault over: he just lands facing on
   }
   if (m.tornado && !P.stormed && k >= m.h[0] + .1) { // the staff tears a whirlwind loose

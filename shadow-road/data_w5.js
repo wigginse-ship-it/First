@@ -47,7 +47,7 @@
   };
 
   // the last world is harder again, and pays better (see the matching entries in world.js and game.js)
-  WORLD_DIFF.push({ hp: 2.85, boss: 1.9, dmg: 1.55, cd: .64 });
+  WORLD_DIFF.push({ hp: 3.0, boss: 1.95, dmg: 1.9, cd: .52 });
 
   STAGES.push({ name: "Tir-na Nog'th", sub: 'THE CITY IN THE SKY · THE LAST SHADOW', theme: 'moon', len: 3000,
     pods: [760, 1700], drop: [.95, .6],

@@ -15,14 +15,14 @@
 
   Object.assign(EDEF, {
     // the people of the dream
-    w6bowler:    { name: 'Gentleman of Golconda', draw: 'w6bowler', mat: 'dream', move: 'ground', hp: 50, spd: 70, hw: 12, hh: 64, dmg: 12, plans: ['w6brolly', 'w6apple', 'w6drop', 'w6brolly'], wind: .5, cd: [1.1, 2.0], reach: 58, weight: 1, shards: [6, 9], sigil: .12, kind: 'human' },
-    w6mannequin: { name: 'Mannequin of the Muses', draw: 'w6mannequin', mat: 'china', move: 'ground', hp: 66, spd: 66, hw: 13, hh: 66, dmg: 13, plans: ['w6square', 'w6compass', 'w6square'], wind: .6, cd: [1.1, 1.9], reach: 92, weight: .9, shards: [7, 10], kind: 'human' },
-    w6fish:      { name: 'Collective Invention', draw: 'w6fish', mat: 'dream', move: 'ground', hp: 44, spd: 128, hw: 14, hh: 50, dmg: 11, plans: ['w6flop', 'w6kick', 'w6flop'], wind: .42, cd: [.8, 1.6], reach: 46, weight: 1.15, shards: [5, 8], kind: 'creature' },
+    w6bowler:    { name: 'Gentleman of Golconda', draw: 'w6bowler', mat: 'dream', move: 'ground', hp: 50, spd: 70, hw: 12, hh: 64, dmg: 14, plans: ['w6brolly', 'w6apple', 'w6drop', 'w6brolly'], wind: .5, cd: [0.88, 1.6], reach: 58, weight: 1, shards: [6, 9], sigil: .12, kind: 'human' },
+    w6mannequin: { name: 'Mannequin of the Muses', draw: 'w6mannequin', mat: 'china', move: 'ground', hp: 66, spd: 66, hw: 13, hh: 66, dmg: 16, plans: ['w6square', 'w6compass', 'w6square'], wind: .6, cd: [0.88, 1.52], reach: 92, weight: .9, shards: [7, 10], kind: 'human' },
+    w6fish:      { name: 'Collective Invention', draw: 'w6fish', mat: 'dream', move: 'ground', hp: 44, spd: 128, hw: 14, hh: 50, dmg: 13, plans: ['w6flop', 'w6kick', 'w6flop'], wind: .42, cd: [0.64, 1.28], reach: 46, weight: 1.15, shards: [5, 8], kind: 'creature' },
     // the things of the dream
-    w6clock:     { name: 'Soft Clock', draw: 'w6clock', mat: 'dream', move: 'ground', hp: 40, spd: 52, hw: 18, hh: 30, dmg: 10, plans: ['w6hands', 'w6rewind', 'w6hands'], wind: .7, cd: [1.6, 2.6], ranged: 1, reach: 160, weight: 1.1, shards: [5, 8], sigil: .2, kind: 'creature' },
-    w6lobster:   { name: 'Lobster Telephone', draw: 'w6lobster', mat: 'china', move: 'ground', hp: 58, spd: 92, hw: 20, hh: 30, dmg: 12, plans: ['w6pinch', 'w6ring', 'w6pinch'], wind: .55, cd: [1.1, 2.0], reach: 48, weight: 1, shards: [6, 9], sigil: .2, kind: 'creature' },
-    w6skybird:   { name: 'Bird of Daylight', draw: 'w6skybird', mat: 'dream', move: 'fly', hover: 62, hp: 36, spd: 90, hw: 20, hh: 20, dmg: 10, plans: ['w6stoop', 'w6shower', 'w6stoop'], wind: .65, cd: [1.4, 2.4], ranged: 1, reach: 140, weight: 1.15, shards: [5, 8], kind: 'creature' },
-    w6elephant:  { name: 'Stilt Elephant', draw: 'w6elephant', mat: 'dream', move: 'ground', hp: 170, spd: 34, hw: 26, hh: 132, dmg: 17, plans: ['w6stomp', 'w6obelisk', 'w6stomp'], wind: .8, cd: [1.6, 2.6], reach: 60, weight: .4, poise: 4, shards: [12, 16], sigil: .5 },
+    w6clock:     { name: 'Soft Clock', draw: 'w6clock', mat: 'dream', move: 'ground', hp: 40, spd: 52, hw: 18, hh: 30, dmg: 12, plans: ['w6hands', 'w6rewind', 'w6hands'], wind: .7, cd: [1.28, 2.08], ranged: 1, reach: 160, weight: 1.1, shards: [5, 8], sigil: .2, kind: 'creature' },
+    w6lobster:   { name: 'Lobster Telephone', draw: 'w6lobster', mat: 'china', move: 'ground', hp: 58, spd: 92, hw: 20, hh: 30, dmg: 14, plans: ['w6pinch', 'w6ring', 'w6pinch'], wind: .55, cd: [0.88, 1.6], reach: 48, weight: 1, shards: [6, 9], sigil: .2, kind: 'creature' },
+    w6skybird:   { name: 'Bird of Daylight', draw: 'w6skybird', mat: 'dream', move: 'fly', hover: 62, hp: 36, spd: 90, hw: 20, hh: 20, dmg: 12, plans: ['w6stoop', 'w6shower', 'w6stoop'], wind: .65, cd: [1.12, 1.92], ranged: 1, reach: 140, weight: 1.15, shards: [5, 8], kind: 'creature' },
+    w6elephant:  { name: 'Stilt Elephant', draw: 'w6elephant', mat: 'dream', move: 'ground', hp: 170, spd: 34, hw: 26, hh: 132, dmg: 20, plans: ['w6stomp', 'w6obelisk', 'w6stomp'], wind: .8, cd: [1.28, 2.08], reach: 60, weight: .4, poise: 4, shards: [12, 16], sigil: .5 },
     // the crutches the Sleeper leans on (part of its fight; never sent anywhere else)
     w6crutch:    { name: 'Crutch', noRandom: 1, draw: 'w6crutch', mat: 'dream', move: 'ground', hp: 70, spd: 0, hw: 15, hh: 60, dmg: 0, plans: ['w6none'], wind: 1, cd: [9, 9], reach: 0, weight: 0, shards: [3, 5] },
   });
@@ -35,7 +35,7 @@
   };
 
   // a little harder than the Courts, a little easier than the last world (see the matching entries in world.js and game.js)
-  WORLD_DIFF.push({ hp: 2.6, boss: 1.78, dmg: 1.48, cd: .67 });
+  WORLD_DIFF.push({ hp: 2.75, boss: 1.85, dmg: 1.75, cd: .56 }); // (the dream is a clear step past the Courts: its foes hit hard and often)
 
   STAGES.push({ name: 'The Dreaming Shadow', sub: 'DREAMED BY WHAT SLEEPS BENEATH THE ABYSS', theme: 'dream', len: 2950,
     pods: [720, 1680], drop: [.92, .55],
