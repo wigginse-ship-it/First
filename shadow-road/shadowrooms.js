@@ -747,15 +747,18 @@ const SR_KINDS = {
     list(R, list, t) { srCards(R, list, t); }, boxes(R, box) { for (const pd of R.pads) box(pd.x, pd.y, 0, 50, 130); } },
   puzzle: { place: ['Pattern', 'Riddle', 'Maze of Stones', 'Cipher', 'Singing Stones'], sub: () => 'WATCH THE STONES · WALK THEIR ORDER',
     build(G) { const r = G.r, n = 4 + (stageIdx >= 2 ? 1 : 0) + (r.chance(.3) ? 1 : 0), L = Math.min(7, 3 + Math.floor(stageIdx / 2) + (r.chance(.4) ? 1 : 0));
-      G.stones = []; for (let i = 0; i < n; i++) G.stones.push({ x: 420 + i * (460 / (n - 1)) + r.n(-12, 12), y: i % 2 ? FLOOR_TOP + 30 + r.n(0, 14) : FLOOR_BOT - 26 - r.n(0, 14), f: 0, glyph: i });
+      G.stones = []; for (let i = 0; i < n; i++) G.stones.push({ x: 480 + i * (300 / (n - 1)) + r.n(-6, 6), y: i % 2 ? FLOOR_TOP + 30 + r.n(0, 14) : FLOOR_BOT - 26 - r.n(0, 14), f: 0, glyph: i });
       const pent = [0, 2, 4, 7, 9, 12, 14], base = 330 * Math.pow(2, r.i(0, 5) / 12); G.stones.forEach((s, i) => s.hz = base * Math.pow(2, pent[i % 7] / 12));
       G.seq = []; for (let i = 0; i < L; i++) { let k; do k = r.i(0, n - 1); while (k === G.seq[i - 1]); G.seq.push(k); }
       G.pool = srRoster(G).filter(k => EDEF[k].hp < 130); return { len: 1500, rawWaves: [] }; },
     start(R) { R.phase = 'wait'; R.stones = R.gen.stones.map(s => Object.assign({}, s, { p: 0 })); },
     update(R, dt) { const G = R.gen;
       for (const s of R.stones) s.f = Math.max(0, s.f - dt * 1.6);
-      if (R.phase === 'wait' && P.x > 400) { R.phase = 'show'; R.k = -1; R.st = .9; lockX = 300; floatText(P.x, P.y, 110, 'WATCH THE STONES', '#EED48A', 15); }
-      if (R.phase === 'show') { R.st -= dt; if (R.st <= 0) { R.k++; if (R.k >= G.seq.length) { R.phase = 'input'; R.pos = 0; floatText(P.x, P.y, 110, 'NOW WALK THEIR ORDER', '#EED48A', 15); return; } const s = R.stones[G.seq[R.k]]; s.f = 1; srTone(s.hz); R.st = Math.max(.5, .85 - stageIdx * .05); } return; }
+      // the stones are shown only once every one of them is on screen: the view settles round them first
+      const xs = R.stones.map(s => s.x), lo = Math.min(...xs), hi = Math.max(...xs);
+      if (R.phase === 'wait' && P.x > 400) { R.phase = 'frame'; lockX = clamp((lo + hi) / 2 - VW / 2, 0, Math.max(0, stage.len - VW)); }
+      if (R.phase === 'frame' && camX <= lo - 30 && camX + VW >= hi + 30) { R.phase = 'show'; R.k = -1; R.st = .9; floatText((lo + hi) / 2, P.y, 110, 'WATCH THE STONES', '#EED48A', 15); }
+      if (R.phase === 'show') { R.st -= dt; if (R.st <= 0) { R.k++; if (R.k >= G.seq.length) { R.phase = 'input'; R.pos = 0; const xs2 = R.stones.map(s => s.x); floatText((Math.min(...xs2) + Math.max(...xs2)) / 2, P.y, 110, 'NOW WALK THEIR ORDER', '#EED48A', 15); return; } const s = R.stones[G.seq[R.k]]; s.f = 1; srTone(s.hz); R.st = Math.max(.5, .85 - stageIdx * .05); } return; }
       if (R.phase === 'input') srPads({ pads: R.stones }, dt, .28, (s) => { s.f = 1;
         if (R.stones.indexOf(s) === G.seq[R.pos]) { srTone(s.hz); R.pos++; floatText(s.x, s.y, 50, `${R.pos} / ${G.seq.length}`, '#EED48A', 13);
           if (R.pos >= G.seq.length) { R.phase = 'won'; lockX = null; banner('THE STONES SING', 'YOU WALKED THEIR ORDER TRUE', 2); sfx('weapon'); for (const q of R.stones) q.f = 1; srChest(R, 1.6); } }
