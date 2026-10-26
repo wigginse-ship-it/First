@@ -7,7 +7,7 @@
 (() => {
   const BACKUP = 'shadowroad-devbackup', OPTS = 'shadowroad-devopts';
   const DEV = window.DEV = { god: false };
-  let opts = { god: false, arsenal: false, arm: false, pearl: false, horn: false, cycle: 0 };
+  let opts = { god: false, arsenal: false, arm: false, pearl: false, horn: false, cycle: 0, card: '', clv: 1 };
   try { Object.assign(opts, JSON.parse(localStorage.getItem(OPTS) || '{}')); } catch (e) {}
   if (opts.relics) { opts.arm = opts.pearl = opts.horn = true; delete opts.relics; } // (the old single switch)
   const keepOpts = () => { try { localStorage.setItem(OPTS, JSON.stringify(opts)); } catch (e) {} };
@@ -29,6 +29,7 @@
     // the three relics of the road's ends: a ticked one is given (an unticked one is left as the save has it)
     if (opts.arm) save.silverArm = true; if (opts.pearl) save.w7relic = true; if (opts.horn) save.w8relic = true;
     if (opts.arm) { save.owned.fists = true; save.weapon = 'fists'; } // (the arm is worn bare-handed)
+    if (opts.card && TRUMPS[opts.card]) { save.trumps[opts.card] = true; save.trump = opts.card; save.tlv[opts.card] = clamp(opts.clv | 0, 1, 3); }
   }
   function go(i, zone) {
     backup(); applyOpts(); close();
@@ -68,6 +69,8 @@
         <label><input type="checkbox" data-o="arm"> Silver arm (equipped)</label>
         <label><input type="checkbox" data-o="pearl"> Pearl of Judgement</label>
         <label><input type="checkbox" data-o="horn"> Horn of Lorraine</label>
+        <label>Card <select data-o="card"><option value="">(as saved)</option>${TRUMP_ORDER.map(k => `<option value="${k}">${TRUMPS[k].name}</option>`).join('')}</select></label>
+        <label>Card level <select data-o="clv">${[1, 2, 3].map(l => `<option value="${l}">${['I', 'II', 'III'][l - 1]}</option>`).join('')}</select></label>
         <label>Cycle <select data-o="cycle">${[0, 1, 2, 3].map(c => `<option value="${c}">${c ? 'NG+' + c : 'first'}</option>`).join('')}</select></label>
       </div>
       <div class="list"></div>
@@ -81,8 +84,8 @@
       if (i === 4 && window.BRANCH) { const r2 = document.createElement('div'); r2.className = 'w'; r2.innerHTML = `<b>Trump choice</b><button data-a="choice">The deck on the Rim (after the dream)</button>`; list.appendChild(r2); }
     });
     for (const c of el.querySelectorAll('[data-o]')) {
-      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = String(opts[k] | 0);
-      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : +c.value; DEV.god = !!opts.god; keepOpts(); });
+      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'card' ? String(opts[k] || '') : String(opts[k] | 0);
+      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' ? c.value : +c.value; DEV.god = !!opts.god; keepOpts(); });
     }
     el.addEventListener('click', (ev) => {
       const b = ev.target.closest('button'); if (!b) { if (ev.target === el) close(); return; }
