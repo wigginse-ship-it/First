@@ -367,10 +367,10 @@ function drawArrowTrail(p) {
 function drawStarShard(p) { // a falling star broken off a starfall arrow: a small gold star and a short tapering streak
   const x = p.x, y = p.y - p.z, d = Math.sign(p.vx), t = performance.now() / 1000;
   ctx.save(); ctx.translate(x, y); ctx.scale(d, 1); ctx.rotate(-Math.atan2(p.vy || 0, Math.abs(p.vx)) * .35);
-  if (!FLASH && !TINT) { ctx.beginPath(); ctx.moveTo(-2, -1.3); ctx.lineTo(-26, 0); ctx.lineTo(-2, 1.3); ctx.closePath();
-    const g = ctx.createLinearGradient(0, 0, -26, 0); g.addColorStop(0, 'rgba(255,224,138,.85)'); g.addColorStop(.5, 'rgba(255,120,200,.45)'); g.addColorStop(1, 'rgba(140,100,255,0)'); ctx.fillStyle = g; ctx.fill(); }
-  arrowStar(0, 0, 3.6, 1.2, 4, t * 9); ctx.fillStyle = C('#FFD86A'); ctx.fill(); outline(.5);
-  arrowStar(0, 0, 1.8, .7, 4, t * 9 + TAU / 8); ctx.fillStyle = C('#FFF6D8'); ctx.fill();
+  if (!FLASH && !TINT) { ctx.beginPath(); ctx.moveTo(-2, -1.8); ctx.lineTo(-34, 0); ctx.lineTo(-2, 1.8); ctx.closePath();
+    const g = ctx.createLinearGradient(0, 0, -34, 0); g.addColorStop(0, 'rgba(255,224,138,.85)'); g.addColorStop(.5, 'rgba(255,120,200,.45)'); g.addColorStop(1, 'rgba(140,100,255,0)'); ctx.fillStyle = g; ctx.fill(); }
+  arrowStar(0, 0, 5, 1.6, 4, t * 9); ctx.fillStyle = C('#FFD86A'); ctx.fill(); outline(.6);
+  arrowStar(0, 0, 2.6, .9, 4, t * 9 + TAU / 8); ctx.fillStyle = C('#FFF6D8'); ctx.fill();
   ctx.restore();
 }
 function drawArrowProj(p) {
