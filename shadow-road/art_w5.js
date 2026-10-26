@@ -930,7 +930,7 @@
   }
   // the silver arm: plates of silver over a jointed frame, the joints set in silver-gilt; it can reach out on a chain of moonlight
   function silverArm(sx, sy, A, ext, open, s, t) {
-    const L1 = 12 * s, L2 = 11 * s, E = [sx + Math.cos(A) * L1, sy + Math.sin(A) * L1], fa = A - .25 + (ext > 0 ? .25 : 0);
+    const L1 = 12 * s, L2 = 11 * s, E = [sx + Math.cos(A) * L1, sy + Math.sin(A) * L1], fa = A - (silverArm.bend ?? .25) + (ext > 0 ? .25 : 0);
     const seg1 = (x0, y0, x1, y1, w0, w1) => { const st = taper(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2, x1, y1, w0, w1, 4); cel(stripPath(st), BN.silver, { d: 1.6, r: .8, w: 1.3, dark: BN.silverDk, lite: BN.silverLt, tex: () => {
       ctx.strokeStyle = 'rgba(60,70,100,.6)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 1; i < 4; i++) { const q = i / 4; ctx.moveTo(st.L[0] + (st.L[st.L.length - 2] - st.L[0]) * q, st.L[1] + (st.L[st.L.length - 1] - st.L[1]) * q); ctx.lineTo(st.R[0] + (st.R[st.R.length - 2] - st.R[0]) * q, st.R[1] + (st.R[st.R.length - 1] - st.R[1]) * q); } ctx.stroke(); // the lames of the plate
     } }); };
@@ -950,7 +950,7 @@
     for (let i = 0; i < 4; i++) { const by = (-2.2 + i * 1.45) * s, c = open ? .15 : 1.2, L = [5.6, 6.6, 6.2, 5][i] * s; horn(4.6 * s, by, 4.6 * s + L * .55, by + c * 1.4, 4.6 * s + L, by + c * 3.4, 1.8 * s, .9 * s, BN.silver, .8, BN.silverDk); }
     horn(2 * s, -2.6 * s, 4 * s, -5.4 * s + (open ? 0 : 2.6), 6.4 * s, -5.8 * s + (open ? 0 : 3.6), 2 * s, 1 * s, BN.silver, .8, BN.silverDk);
     ctx.restore();
-    glowAt(H[0], H[1], 12, '225,235,255', open ? .35 : .2);
+    if (!silverArm.quiet) glowAt(H[0], H[1], 12, '225,235,255', open ? .35 : .2);
     return H;
   }
   function benedict(e, a, t) {
@@ -1643,10 +1643,14 @@
     ctx.restore();
     const [x, y] = at(walkU), s = lerp(.7, 1.15, walkU);
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    shadow(0, 0, 12); drawHumanoid(heroLook(), { walk: t * 7, weapon: 'fists', arm: 1.45, elbow: .2, openHand: 0, armSwing: 0 }); // (the carrying arm held still: it's heavy)
-    silverArm(9, -36, 1.75, 0, 0, .85, t); // the silver arm, held in his fist by its shoulder and hanging at his side
+    shadow(0, 0, 12); drawHumanoid(_look(), { walk: t * 7, weapon: 'benArm', arm: .9, grip: -.6, armA: 2.6, armBend: 1.6, armSwing: .8 }); // (he carries it like a weapon, swinging with his stride; his own hands are not silver yet)
     ctx.restore();
   }
+  // Benedict's silver arm carried like a weapon: gripped by the shoulder in his fist, the rest of it running out along the
+  // line a blade would take (drawn in the hand's own frame, so it follows every movement of his arm)
+  { const _dw = drawWeapon; drawWeapon = function (kind, pose) { if (kind !== 'benArm') return _dw(kind, pose);
+      const s = .95, A = pose.armA ?? 1.9, L1 = 12 * s; // (held by the elbow, in the middle: the upper arm one way, the forearm bent back the other)
+      silverArm.quiet = true; silverArm.bend = pose.armBend ?? 1.5; silverArm(16 - Math.cos(A) * L1, -Math.sin(A) * L1, A, 0, 0, s, performance.now() / 1000); silverArm.quiet = false; silverArm.bend = undefined; _dw('fists', pose); }; }
   // his own Trump: the Prince of Shadow, black and silver, the silver rose, the moon and its stair behind him, in a frame of silver leaf
   function princeTrump(cx, cy, h, a, t) {
     const w = h * .62, x = cx - w / 2, y = cy - h / 2;
