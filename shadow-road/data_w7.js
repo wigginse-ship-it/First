@@ -37,7 +37,7 @@
   // (his whole fight is run by the 'w7glass' rule: these lists only name what each of his shapes can do)
   BOSSES.w7king = {
     close: 'w7none', name: 'The King in the Glass', title: "OBERON'S REFLECTION · KING OF NOTHING", draw: 'w7king', mat: 'w7glass', move: 'fly', hover: 30,
-    hp: 1300, spd: 60, hw: 34, hh: 120, dmg: 21, wind: .6, cd: [.8, 1.3], weight: 0, poise: 0, ranged: 1, reach: 80,
+    hp: 1050, spd: 60, hw: 34, hh: 120, dmg: 21, wind: .6, cd: [.8, 1.3], weight: 0, poise: 0, ranged: 1, reach: 80,
     p1: ['w7tines', 'w7undertow', 'w7anchors', 'w7sweep'], p2: ['w7spout', 'w7whirl', 'w7drain'], p3: ['w7mirror', 'w7shards', 'w7unwind', 'w7breaker'],
   };
 

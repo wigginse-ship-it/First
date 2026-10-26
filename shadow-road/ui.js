@@ -90,7 +90,9 @@ function stageClear() {
   }
 }
 // the win card, for whichever road was walked (a world's own ending may write over it after: art_w5.js does)
+let winAt = 0;
 function winCard(i) {
+  winAt = performance.now(); // (the key that skips the last of an ending must not also start a new cycle: onKeyMenu)
   const c = window.BRANCH && BRANCH.card(i), W = (c && c.win) || {}, relic = c && c.relic;
   const k = $('#winOv .kicker'), h2 = $('#winOv .h2');
   if (k) k.textContent = W.kicker || 'THE ROAD IS WALKED'; if (h2) h2.textContent = W.title || `${STAGES[i].name} is behind you`;
@@ -274,6 +276,7 @@ $('#cycleBtn').addEventListener('click', () => { // a new cycle: the road from t
 });
 onKeyMenu = (e) => {
   if (mode === 'inv') return invKey(e); // the inventory has its own keys (inventory.js)
+  if (mode === 'win' && performance.now() - winAt < 900 && (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space')) { e.preventDefault(); return true; } // (fresh from an ending's skip)
   if (e.code === 'Enter' || e.code === 'NumpadEnter') { // Enter takes the main choice on any menu
     const btn = { title: $('#contBtn').hidden ? $('#newBtn') : $('#contBtn'), forge: $('#walkBtn'), pause: $('#resumeBtn'), over: document.querySelector('#overOv .cta'), win: document.querySelector('#winOv .cta') }[mode];
     if (btn && document.activeElement?.tagName !== 'BUTTON') { btn.click(); return true; }
