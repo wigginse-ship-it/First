@@ -112,7 +112,7 @@ function moveListHtml(id) {
 const cyc = () => 1 + .5 * (save.cycle || 0);
 const WMAX = () => save.cycle > 0 ? WLEARN + 6 : WLEARN; // past level 7 (new cycles only) each level is a plain damage bump
 // tuned so a world pays for one or two upgrades, no more
-const wCost = (lvl) => lvl < WLEARN ? { s: Math.round([0, 90, 190, 330, 520, 760, 1050][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) } : { s: Math.round((1150 + 120 * (lvl - WLEARN)) * cyc()), g: Math.round((10 + 2 * (lvl - WLEARN)) * cyc()) }; // level 7, the last move, is a step dearer than 6
+const wCost = (lvl) => lvl < WLEARN ? { s: Math.round([0, 90, 190, 330, 520, 760, 1050][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) } : { s: Math.round((1150 + 120 * (lvl - WLEARN)) * cyc()), g: Math.round((4 + (lvl - WLEARN)) * cyc()) }; // level 7, the last move, is a step dearer than 6
 const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
