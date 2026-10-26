@@ -272,15 +272,155 @@ function drawArrowLoot(k, t) { // an arrow stuck in the ground, a glint winking 
     arrowStar(tip, 0, 1.6 + 1.8 * a, .35, 4, 1.1 + t * .6); ctx.fill(); }
   ctx.restore();
 }
-// the short bow, drawn in his hand while he looses
-function drawShortBow(pose) {
-  const k = pose.draw || 0;
-  ctx.save(); ctx.translate(-9.5, 0); // (the riser sits in his fist)
-  ctx.strokeStyle = C('#5A3A22'); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(10, 0, 15, -1.2, 1.2); ctx.stroke(); outline(.1);
-  ctx.strokeStyle = C('#E8E0D0'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(10 + Math.cos(-1.2) * 15, Math.sin(-1.2) * 15); ctx.lineTo(10 - k * 10, 0); ctx.lineTo(10 + Math.cos(1.2) * 15, Math.sin(1.2) * 15); ctx.stroke();
-  if (k > 0 && k < 1) { ctx.save(); ctx.translate(26, 0); drawArrowShape(Math.min(5, save.alv || 1), 18 + k * 8); ctx.restore(); }
+// ---------- the bow: one for each tier of arrow, made to match it, and longer and grander as the arrows get finer ----------
+// 1 a little ash self-bow lashed with red thread, horn-nocked, a barred goose feather tied at the grip; 2 a walnut
+// recurve, crimson-wrapped, banded in steel, its tips capped in steel swept back into barbs, black-and-crimson
+// silencers on the string; 3 a longer sapphire composite with a silver riser, a gold ridge down its back, gold rings
+// and little vented silver broadheads for tips; 4 a big ebony rune bow, its cut runes pulsing cyan, banded in gold and
+// teal, tipped with faceted crystals; 5 the starfall longbow, midnight wound with gold wire and set with twinkling
+// stars, a gold riser, gold star-spike finials and a plume of shifting violet, rose and gold at the grip.
+// Each is drawn along its centreline from one tip (u -1) through the riser in his fist (u 0) to the other (u 1), in
+// hand space (the arm along +x, the bow across it). The light in them is small and crisp, and left off under FLASH or TINT.
+const BOW_R = 15.5; // the riser's centre in hand space: where his fist closes (gripCX 'shortbow')
+const BOW_TIERS = [ // H half-length; d the limbs' sweep back at rest, p its curve, fx how much more at full draw; rc the tips' recurve
+  // forward, from rs along the limb; g the riser's half-length; wr, wl, wt thickness at the riser, the limbs and the tips
+  { H: 12, d: 6, p: 1.6, fx: 3.4, rc: 0, rs: .7, g: 3.4, wr: 2.9, wl: 2.5, wt: 1.3, col: ['#B8945E', '#E6CC98', '#8A6A40'], str: '#EDE4D0' },
+  { H: 14.5, d: 6.2, p: 2.1, fx: 3.6, rc: 5.6, rs: .6, g: 3.8, wr: 3.4, wl: 2.7, wt: 1.4, col: ['#5E3C2A', '#9A6A4E', '#3A2416'], str: '#D8D4CC' },
+  { H: 17.5, d: 6.4, p: 1.8, fx: 4.2, rc: 2.6, rs: .72, g: 4.4, wr: 3.6, wl: 2.7, wt: 1.3, col: ['#24398A', '#6A88E0', '#16245E'], str: '#F2F4FA' },
+  { H: 20.5, d: 6.4, p: 1.15, fx: 4.2, rc: 0, rs: .78, g: 4.8, wr: 4.2, wl: 3.1, wt: 1.6, col: ['#211A2E', '#54426E', '#110C1A'], str: '#BFF8FF' },
+  { H: 24, d: 9, p: 2, fx: 4.6, rc: 4.6, rs: .68, g: 5.2, wr: 4, wl: 3.2, wt: 1.3, col: ['#1C1848', '#5650B0', '#0E0A2C'], str: '#FFE8A8' },
+];
+function bowPos(B, u, k) {
+  const a = Math.abs(u), g = B.g / B.H, s = Math.max(0, (a - g) / (1 - g)), q = Math.max(0, (s - B.rs) / (1 - B.rs));
+  return [BOW_R - (B.d + B.fx * k) * Math.pow(s, B.p) + B.rc * (1 - .45 * k) * q * q, (u < 0 ? -1 : 1) * a * B.H * (1 - .04 * k), s];
+}
+function bowFrame(B, u, k) { // a point on the centreline: where, its tangent (t) and normal (n, toward the back), its thickness, and how far out along the limb (s)
+  const [x, y, s] = bowPos(B, u, k), p0 = bowPos(B, u - .004, k), p1 = bowPos(B, u + .004, k);
+  let tx = p1[0] - p0[0], ty = p1[1] - p0[1]; const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l;
+  const w = s <= 0 ? B.wr : s < .14 ? lerp(B.wr, B.wl, s / .14) : lerp(B.wl, B.wt, Math.pow((s - .14) / .86, 1.3));
+  return { x, y, tx, ty, nx: ty, ny: -tx, w, s, u };
+}
+const bowU = (B, s) => B.g / B.H + (1 - B.g / B.H) * s; // u at a fraction s along the limb
+function bowStrip(F, o0, o1) { // the band between offsets o0 and o1 across the bow (fractions of its thickness, + toward its back)
+  ctx.beginPath(); for (const p of F) ctx.lineTo(p.x + p.nx * p.w * o1, p.y + p.ny * p.w * o1);
+  for (let i = F.length - 1; i >= 0; i--) { const p = F[i]; ctx.lineTo(p.x + p.nx * p.w * o0, p.y + p.ny * p.w * o0); } ctx.closePath();
+}
+function bowLine(F, o) { ctx.beginPath(); for (const p of F) ctx.lineTo(p.x + p.nx * p.w * o, p.y + p.ny * p.w * o); }
+function bowLocal(f, fn, out = 0) { // into a frame at f: x along the limb (outward, toward its tip, if out is set), y toward the back
+  const sg = out ? (f.u < 0 ? -1 : 1) : 1; ctx.save(); ctx.translate(f.x, f.y); ctx.transform(sg * f.tx, sg * f.ty, f.nx, f.ny, 0, 0); fn(); ctx.restore();
+}
+function bowBand(f, len, col, over = .3) { bowLocal(f, () => { ctx.beginPath(); ctx.rect(-len / 2, -f.w / 2 - over, len, f.w + over * 2); ctx.fillStyle = C(col); ctx.fill(); outline(.35); }); }
+function bowTwin(B, u, k, fn) { for (const sg of [-1, 1]) fn(bowFrame(B, sg * u, k), sg); } // the same on both limbs
+function bowPlume(f, dir, fn) { // something hung from the bow at f, swinging back toward him and out along the limb
+  const sg = f.u < 0 ? -1 : 1, dx = -f.nx + dir * sg * f.tx, dy = -f.ny + dir * sg * f.ty;
+  ctx.save(); ctx.translate(f.x - f.nx * f.w * .5, f.y - f.ny * f.w * .5); ctx.rotate(Math.atan2(dy, dx) + Math.PI); fn(); ctx.restore(); // (it hangs along local -x)
+}
+function drawBow(lvl, k, nockArrow) {
+  lvl = Math.max(1, Math.min(5, lvl | 0 || 1));
+  const B = BOW_TIERS[lvl - 1], fine = !FLASH && !TINT, t = performance.now() / 1000, g = B.g / B.H;
+  // the centreline, sampled more finely toward the tips
+  const us = [0, g * .5, g], n = Math.round(8 + B.H * .5); for (let i = 1; i <= n; i++) us.push(bowU(B, Math.pow(i / n, .85)));
+  const F = []; for (let i = us.length - 1; i > 0; i--) F.push(bowFrame(B, -us[i], k)); for (const u of us) F.push(bowFrame(B, u, k));
+  const R = F.filter(p => p.s <= 0); // the riser
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // the string, from tip to tip, drawn back to his cheek
+  const ta = bowFrame(B, -1, k), tb = bowFrame(B, 1, k), sa = [ta.x - ta.nx * ta.w * .3, ta.y - ta.ny * ta.w * .3], sb = [tb.x - tb.nx * tb.w * .3, tb.y - tb.ny * tb.w * .3];
+  const rest = (sa[0] + sb[0]) / 2, nk = k > 0 ? Math.min(rest, .5 - 10 * k) : rest; // (the same path his drawing hand takes)
+  const str = () => { ctx.beginPath(); ctx.moveTo(sa[0], sa[1]); ctx.lineTo(nk, 0); ctx.lineTo(sb[0], sb[1]); };
+  str(); ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.lineWidth = .75 + 1 * OUTK; ctx.stroke(); str(); ctx.strokeStyle = C(B.str); ctx.lineWidth = .75; ctx.stroke();
+  if (lvl === 2) for (const [x, y] of [sa, sb]) { const px = lerp(x, nk, .24), py = lerp(y, 0, .24); // black-and-crimson silencers
+    ell(px, py, 1.3, .9); ctx.fillStyle = C('#2A2630'); ctx.fill(); outline(.4); ctx.fillStyle = C('#C8303A'); circle(px - .3, py, .45); ctx.fill(); }
+  // hung below the grip, behind the limbs
+  if (lvl === 1) { // a barred goose feather on a red thread
+    bowPlume(bowFrame(B, g + .02, k), .9, () => {
+      ctx.strokeStyle = C('#B4382C'); ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-1.6, 0); ctx.stroke();
+      for (const s of [-1, 1]) { arrowVane(-8, -1.6, s, 1.5); ctx.fillStyle = C('#DCD3C2'); ctx.fill();
+        if (fine) { ctx.save(); ctx.clip(); ctx.strokeStyle = '#7A6048'; ctx.lineWidth = .7; ctx.beginPath(); for (const x of [-6.6, -4.8, -3]) { ctx.moveTo(x, 0); ctx.lineTo(x - 1, s * 2); } ctx.stroke(); ctx.restore(); }
+        arrowVane(-8, -1.6, s, 1.5); outline(.4); }
+    });
+  } else if (lvl === 5) { // a plume of three, its colours slowly turning
+    const sw = fine ? Math.sin(t * 1.8) * 18 : 0;
+    const cols = fine ? [`hsl(${262 + sw},82%,62%)`, `hsl(${320 + sw},85%,68%)`, `hsl(${44 + sw * .5},100%,70%)`] : ['#7C4CF0', '#F068C0', '#FFD266'];
+    bowPlume(bowFrame(B, g, k), .75, () => {
+      for (const s of [-1, 1]) { arrowVane(-9, -1, s, 2.6); ctx.fillStyle = C(cols[0]); ctx.fill(); outline(.45);
+        arrowVane(-7.6, -1, s, 1.8); ctx.fillStyle = C(cols[1]); ctx.fill(); outline(.35);
+        arrowVane(-6, -1, s, 1.1); ctx.fillStyle = C(cols[2]); ctx.fill(); outline(.3); }
+      ctx.fillStyle = C('#E8B84A'); ctx.fillRect(-2, -.7, 2, 1.4); // its gold cap
+    });
+  }
+  // the bow itself: the wood, its belly in shadow, a lit edge down its back
+  bowStrip(F, -.5, .5); ctx.fillStyle = C(B.col[0]); ctx.fill();
+  bowStrip(F, -.5, -.12); ctx.fillStyle = C(B.col[2]); ctx.fill();
+  if (fine) { bowLine(F, .24); ctx.strokeStyle = B.col[1]; ctx.lineWidth = .5; ctx.stroke(); }
+  // what is set in it
+  if (lvl === 1) {
+    if (fine) { bowLine(F, -.02); ctx.strokeStyle = '#9C7A4A'; ctx.lineWidth = .3; ctx.stroke(); } // the grain
+    bowTwin(B, g + .05, k, f => bowBand(f, 1.7, '#B4382C', .25)); // red thread lashing either side of his fist
+    bowTwin(B, .95, k, f => bowBand(f, 1.6, '#4A3222', .2)); // horn nocks
+  } else if (lvl === 2) {
+    bowStrip(R, -.55, .55); ctx.fillStyle = C('#C8303A'); ctx.fill(); outline(.4); // the crimson grip
+    bowTwin(B, g + .03, k, f => bowBand(f, .9, '#A8AEBA')); bowTwin(B, g + .1, k, f => bowBand(f, .9, '#A8AEBA'));
+    bowTwin(B, .9, k, (f, sg) => { bowBand(f, 1.2, '#A8AEBA', .25); });
+    for (const sg of [-1, 1]) bowLocal(bowFrame(B, sg * .97, k), () => { // the steel cap, swept back into a barb
+      ctx.beginPath(); ctx.moveTo(2.4, 0); ctx.lineTo(.6, 1.2); ctx.lineTo(-2.6, 3.4); ctx.lineTo(-.9, .9); ctx.lineTo(-1.2, -.9); ctx.lineTo(.6, -1); ctx.closePath();
+      ctx.fillStyle = C('#B4BAC6'); ctx.fill(); outline(.45);
+      if (fine) { ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = .4; ctx.beginPath(); ctx.moveTo(1.9, .1); ctx.lineTo(.4, 1.2); ctx.lineTo(-1.8, 2.8); ctx.stroke(); }
+    }, 1);
+  } else if (lvl === 3) {
+    bowStrip(R, -.56, .56); ctx.fillStyle = C('#D8DEE8'); ctx.fill(); outline(.4); // the silver riser
+    if (fine) { bowLine(R, .3); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = .45; ctx.stroke(); }
+    bowLine(F.filter(p => p.s > 0 && p.u < 0), .3); ctx.strokeStyle = C('#E8C060'); ctx.lineWidth = .6; ctx.stroke(); // the gold ridge down its back
+    bowLine(F.filter(p => p.s > 0 && p.u > 0), .3); ctx.stroke();
+    for (const s of [0, .45, .8]) bowTwin(B, bowU(B, s) + .015, k, f => { bowBand(f, 1, '#E8C060', .3); if (fine) bowLocal(f, () => { ctx.fillStyle = '#FFF6D8'; ctx.fillRect(-.25, f.w * .1, .5, .55); }); });
+    for (const sg of [-1, 1]) bowLocal(bowFrame(B, sg, k), () => { // a little vented silver broadhead for a tip
+      ctx.scale(.42, .42); ctx.translate(1.5, 0);
+      arrowHead([11, 0, 6, 2.6, 1.8, 4.5, -.9, 4.9, 1, 1.4, -1.6, 1.2], '#EEF1F7', '#A4ACC0');
+      ctx.fillStyle = C('#2A2440'); for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(5.6, s * .95); ctx.lineTo(2.7, s * 2.6); ctx.lineTo(2.5, s * .95); ctx.closePath(); ctx.fill(); }
+      ctx.strokeStyle = C('#E8C060'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-1.4, 0); ctx.lineTo(9.6, 0); ctx.stroke();
+    }, 1);
+  } else if (lvl === 4) {
+    bowStrip(R, -.55, .55); ctx.fillStyle = C('#6C48D0'); ctx.fill(); outline(.4); // a violet grip
+    if (fine) { ctx.fillStyle = '#9A78F0'; bowStrip(R, .1, .4); ctx.fill(); }
+    bowTwin(B, g + .01, k, f => bowBand(f, .8, '#22A8B8', .3)); bowTwin(B, g + .055, k, f => bowBand(f, 1.3, '#C89A3A', .35)); bowTwin(B, bowU(B, .52), k, f => bowBand(f, 1.3, '#C89A3A', .3));
+    let i = 0; for (const s of [.13, .26, .39, .66, .8]) bowTwin(B, bowU(B, s), k, (f, sg) => { const j = i++; // runes cut down each limb, their light running out from the grip
+      bowLocal(f, () => { ctx.scale(.8, .8); runePath(0, (j >> 1) % 4); ctx.strokeStyle = C('#4FC8DC'); ctx.lineWidth = .8; ctx.stroke();
+        if (fine) { const b = .5 + .5 * Math.sin(t * 7 - (j >> 1) * 1.2); if (b > .45) { ctx.globalAlpha = Math.min(1, (b - .45) * 2.2); ctx.strokeStyle = '#E8FFFF'; ctx.lineWidth = .55; ctx.stroke(); ctx.globalAlpha = 1; } } }, 1); });
+    for (const sg of [-1, 1]) bowLocal(bowFrame(B, sg * .985, k), () => { // a faceted crystal for a tip, in a gold collar
+      ctx.beginPath(); ctx.rect(-1.2, -1.2, 1.4, 2.4); ctx.fillStyle = C('#C89A3A'); ctx.fill(); outline(.35);
+      ctx.scale(.55, .55); ctx.translate(1.6, 0);
+      const P4 = [11.5, 0, 6, 2.9, .6, 2.5, -1.4, 0];
+      ctx.beginPath(); ctx.moveTo(11.5, 0); ctx.lineTo(6, -2.9); ctx.lineTo(.6, -2.5); ctx.lineTo(-1.4, 0); ctx.closePath(); ctx.fillStyle = C('#BFF8FF'); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(11.5, 0); ctx.lineTo(6, 2.9); ctx.lineTo(.6, 2.5); ctx.lineTo(-1.4, 0); ctx.closePath(); ctx.fillStyle = C('#2E98B8'); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(11.5, 0); ctx.lineTo(6, -.9); ctx.lineTo(.6, -.8); ctx.lineTo(-1.4, 0); ctx.lineTo(.6, .8); ctx.lineTo(6, .9); ctx.closePath(); ctx.fillStyle = C('#6FDCEE'); ctx.fill();
+      ctx.beginPath(); for (let i = 0; i < P4.length; i += 2) ctx.lineTo(P4[i], -P4[i + 1]); for (let i = P4.length - 4; i >= 2; i -= 2) ctx.lineTo(P4[i], P4[i + 1]); ctx.closePath(); outline(.8);
+      if (fine) { const u = (t * .9 + (sg > 0 ? .8 : 0)) % 1.6; if (u < 1) { const x = .8 + u * 9.5, h = x < 6 ? 2.5 + (x - .6) / 5.4 * .4 : 2.9 * (11.5 - x) / 5.5; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - .3, -.9); ctx.lineTo(x + .4, -h * .85); ctx.stroke(); } }
+    }, 1);
+  } else {
+    bowStrip(R, -.56, .56); ctx.fillStyle = C('#E8B84A'); ctx.fill(); outline(.4); // the gold riser
+    if (fine) { bowLine(R, .3); ctx.strokeStyle = '#FFF2C0'; ctx.lineWidth = .45; ctx.stroke();
+      for (const sg of [-1, 1]) { const f = bowFrame(B, sg * g * .86, k); ctx.fillStyle = '#B48CFF'; ctx.beginPath(); ctx.moveTo(f.x, f.y - .9); ctx.lineTo(f.x + .7, f.y); ctx.lineTo(f.x, f.y + .9); ctx.lineTo(f.x - .7, f.y); ctx.fill(); } } // violet stones above and below his fist
+    ctx.beginPath(); // gold wire wound round the limbs
+    for (let i = 1; i <= 9; i++) for (const sg of [-1, 1]) { const f = bowFrame(B, sg * bowU(B, .02 + i * .095), k), h = f.w * .5;
+      ctx.moveTo(f.x - f.nx * h - f.tx * .7, f.y - f.ny * h - f.ty * .7); ctx.lineTo(f.x + f.nx * h + f.tx * .7, f.y + f.ny * h + f.ty * .7); }
+    ctx.strokeStyle = C('#F0C860'); ctx.lineWidth = .5; ctx.lineCap = 'butt'; ctx.stroke(); ctx.lineCap = 'round';
+    bowTwin(B, g + .02, k, f => bowBand(f, 1.4, '#E8B84A', .35));
+    if (fine) { let i = 0; for (const s of [.31, .59, .78]) bowTwin(B, bowU(B, s), k, f => { const b = .55 + .45 * Math.sin(t * 5 + i++ * 2.1); ctx.globalAlpha = b; ctx.fillStyle = '#FFFFFF'; arrowStar(f.x, f.y, .9 + .6 * b, .25); ctx.fill(); ctx.globalAlpha = 1; }); } // stars set between the turns
+    for (const sg of [-1, 1]) bowLocal(bowFrame(B, sg * .98, k), () => { // a gold star with a spike rising from it, for a tip
+      arrowHead([6.2, 0, 2, .8, .6, .6], '#FFF2C0', '#E0A840');
+      arrowStar(1, 0, 3.2, .9, 4); ctx.fillStyle = C('#FFD86A'); ctx.fill(); outline(.45);
+      arrowStar(1, 0, 1.8, .6, 4, TAU / 8); ctx.fillStyle = C('#FFF6D8'); ctx.fill();
+      if (fine) { const q = Math.pow(Math.max(0, Math.sin(t * 3.4 + sg * 1.7)), 6); if (q > .05) { ctx.globalAlpha = q; ctx.fillStyle = '#FFFFFF'; arrowStar(6.2, 0, .8 + 2 * q, .25, 4, t * .8); ctx.fill(); ctx.globalAlpha = 1; } }
+    }, 1);
+  }
+  bowStrip(F, -.5, .5); outline(.6); // its outline, last, so the bands sit inside it
+  // an arrow of the tier he has, nocked on the string
+  if (nockArrow && k > 0) { ctx.save(); ctx.translate(nk + 27.6, 0); drawArrowShape(lvl, 26); ctx.restore(); }
   ctx.restore();
-  gripHand(pose.glove || '#2E2C36'); // (its fingers wrapped round the riser: GRIP is turned across for the bow)
+}
+// the bow in his hand while he draws and looses: its riser in his fist, his fingers closing over it last
+function drawShortBow(pose) {
+  drawBow(pose.bowTier || Math.min(5, save.alv || 1), pose.draw || 0, true);
+  gripHand(pose.glove || '#2E2C36'); // (GRIP is turned across for the bow)
 }
 // the quiver count on the HUD, and the BOW button on touch screens
 let arrowHudEl = null;
