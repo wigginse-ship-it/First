@@ -1150,7 +1150,10 @@
     ctx.fillStyle = C(PAL.goldL); ctx.fillRect(2, cy - 26, 1.8, 9); ctx.fillRect(-.8, cy - 23, 7.4, 1.8); // the cross on top
     for (const px of [-10, 12]) for (let i = 0; i < 4; i++) { ctx.fillStyle = C('#F2EEF6'); circle(px + Math.sin(t * 1.6 + i) * .6, cy + 4 + i * 3.4, 1.4); ctx.fill(); if (!DET()) continue; ctx.strokeStyle = 'rgba(40,40,60,.5)'; ctx.lineWidth = .4; ctx.stroke(); }
     if (!e.w7nopearl) { ctx.fillStyle = C('#14121E'); circle(5, cy - 6, 3.6); ctx.fill(); outline(.9);
-      if (DET()) { ctx.save(); ctx.beginPath(); ctx.arc(5, cy - 6, 3.2, 0, TAU); ctx.clip(); ctx.strokeStyle = '#5A84D8'; ctx.lineWidth = .5; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(5, cy - 6, .8 + i * .9, t * (i % 2 ? 2 : -2), t * (i % 2 ? 2 : -2) + 4.4); ctx.stroke(); } ctx.restore(); ctx.fillStyle = 'rgba(255,255,255,.8)'; circle(3.8, cy - 7.4, .7); ctx.fill(); } }
+      if (DET()) { ctx.save(); ctx.beginPath(); ctx.arc(5, cy - 6, 3.2, 0, TAU); ctx.clip(); ctx.strokeStyle = '#5A84D8'; ctx.lineWidth = .5; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(5, cy - 6, .8 + i * .9, t * (i % 2 ? 2 : -2), t * (i % 2 ? 2 : -2) + 4.4); ctx.stroke(); } ctx.restore(); ctx.fillStyle = 'rgba(255,255,255,.8)'; circle(3.8, cy - 7.4, .7); ctx.fill(); } 
+      const fl = e.w7flare || 0; if (fl > .02 && DET()) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const pul = .6 + .4 * Math.sin(t * 22); // the Pearl flares as he gathers himself: sharp short rays, not a halo
+        ctx.strokeStyle = `rgba(150,190,255,${.9 * fl * pul})`; ctx.lineWidth = 1.2; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * 2, r0 = 4.4, r1 = 5 + fl * (i % 2 ? 6 : 10); ctx.beginPath(); ctx.moveTo(5 + Math.cos(a) * r0, cy - 6 + Math.sin(a) * r0); ctx.lineTo(5 + Math.cos(a) * r1, cy - 6 + Math.sin(a) * r1); ctx.stroke(); }
+        ctx.fillStyle = `rgba(200,220,255,${.8 * fl})`; circle(5, cy - 6, 2.2 + fl); ctx.fill(); ctx.restore(); } }
     // the near arm and the trident
     const ra = seg2(14, SY + 4, rA, 18, rA - rL, 16, 9, 7.5, KG.robe, { col2: KG.skin, lit: KG.robeL, lit2: KG.skinL });
     if (!e.w7noTrident) { ctx.save(); ctx.translate(ra.ex, ra.ey); ctx.rotate(tridA); kingTrident(70, pk === 'raise' ? u : pk === 'thrust' ? 1 : 0); ctx.restore(); }
@@ -1624,6 +1627,18 @@
   const fin = (e) => e.phase === 1 ? .665 : e.phase === 2 ? .335 : 0;
   W7.kingVuln = (e) => G.vuln && !G.trans;
   // ---------------- his attacks: each a little object that runs for a while and draws its own tells ----------------
+  // a ring he is about to send out, shown before it goes: the floor round him shivers with its path, dashed rings running
+  // out ahead of it, the water drawing in to the centre, and the middle filling as the moment comes; then the ring itself
+  reg('w7ringwarn', {
+    update(h, dt) { h.el += dt; if (Math.random() < dt * 30) bubbles(h.x + rand(-60, 60), h.y + rand(-14, 14), 4, 1, 10);
+      if (!h.s) { h.s = 1; if (sfxOn && actx) { tone(220, h.dur, 'sine', .05, 160); } }
+      if (h.el >= h.dur) { h.t = -1; hazards.push({ kind: 'ring', x: h.x, y: h.y, r: 20, delay: 0, speed: h.speed, dmg: h.dmg, t: 9, max: 9 }); sfx('slam', .6); shakeMag = Math.max(shakeMag, 6); } },
+    draw(h, t) { const k = cl01(h.el / h.dur); ctx.save();
+      for (let i = 0; i < 3; i++) { const q = ((h.el * 1.2 + i / 3) % 1), r = 20 + q * 300; ctx.strokeStyle = `rgba(255,150,120,${(.25 + .4 * k) * (1 - q)})`; ctx.lineWidth = 2; ctx.setLineDash([6, 5]); ell(h.x, h.y, r, r / 2.2); ctx.stroke(); }
+      ctx.setLineDash([]); ctx.fillStyle = tellCol(k); ell(h.x, h.y, 20 + 30 * k, (20 + 30 * k) / 2.2); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2.4; ell(h.x, h.y, 52, 52 / 2.2); ctx.stroke(); ctx.restore(); },
+  });
+  const warnRing = (x, y, dur, speed, dmg) => hazards.push({ kind: 'w7ringwarn', x, y, el: 0, dur, speed, dmg, t: 99, max: 99 });
+  const flare = (e, v) => { e.w7flare = Math.max(e.w7flare || 0, v); };
   const KA = {};
   KA.tines = (e, both) => { // lanes of the floor lit, then the tines driven down them as spears of water, wall to wall
     const S = SLOTS(), ps = slotOf(P.y);
@@ -1631,7 +1646,7 @@
     if (both) { const free = [0, 1, 2, 3].filter(i => i !== ps); const skip = pick(free); lanes = [0, 1, 2, 3].filter(i => i !== skip).map(i => S[i]); }
     else { const other = pick([0, 1, 2, 3].filter(i => Math.abs(i - ps) >= 2)); lanes = [S[ps], S[other]]; }
     return { k: 'raise', dur: 1.75, fire: 1.1, lanes, hit: false,
-      step(o, dt, T) { e.w7pose = T < o.fire ? { k: 'raise', u: T / o.fire } : { k: 'thrust', u: 1 };
+      step(o, dt, T) { e.w7pose = T < o.fire ? { k: 'raise', u: T / o.fire } : { k: 'thrust', u: 1 }; if (T < o.fire) flare(e, T / o.fire); if (!o.s) { o.s = 1; if (sfxOn && actx) tone(392, o.fire, 'triangle', .03, 200); }
         if (T >= o.fire && !o.fired) { o.fired = 1; sfx('shoot'); sfx('whoosh'); shakeMag = Math.max(shakeMag, 7); }
         if (o.fired && !o.hit) { const A = arena(), q = (T - o.fire) / .35; if (q <= 1) { const reachL = e.x - (e.x - A.L) * q, reachR = e.x + (A.R - e.x) * q;
           if (P.x > reachL - 10 && P.x < reachR + 10 && o.lanes.some(y => Math.abs(P.y - y) < 13) && P.z < 46) { o.hit = true; hitP(edmg(e), e.x, true); } } } },
@@ -1642,17 +1657,18 @@
       up(o, T) { if (T < o.fire || T > o.fire + .6) return; const A = arena(), q = cl01((T - o.fire) / .35); for (const y of o.lanes) for (const s of [-1, 1]) { const x = e.x + s * (s < 0 ? e.x - A.L : A.R - e.x) * q; ctx.save(); ctx.translate(x, y - 22); ctx.scale(s, 1); W7.kingTrident(0, 0); ctx.restore(); } } };
   };
   KA.undertow = (e) => ({ dur: 2.7, step(o, dt, T) {
-      if (T < 1.55) { e.w7pose = { k: 'inhale', u: T / 1.55 }; if (!['dodge', 'dead'].includes(P.state)) { const dx = e.x - P.x, dy = e.y - P.y; P.x += Math.sign(dx) * Math.min(Math.abs(dx), 76 * dt); P.y += Math.sign(dy) * Math.min(Math.abs(dy), 30 * dt); } if (!o.s) { o.s = 1; if (sfxOn && actx) noise(1.5, .07, 300); } }
+      if (T < 1.55) { e.w7pose = { k: 'inhale', u: T / 1.55 }; if (!['dodge', 'dead'].includes(P.state)) { const dx = e.x - P.x, dy = e.y - P.y; P.x += Math.sign(dx) * Math.min(Math.abs(dx), 76 * dt); P.y += Math.sign(dy) * Math.min(Math.abs(dy), 30 * dt); } flare(e, T / 1.55); if (!o.s) { o.s = 1; if (sfxOn && actx) noise(1.5, .07, 300); for (let i = 0; i < (e.phase >= 2 ? 2 : 1); i++) warnRing(e.x, e.y, 1.55 + i * .4, 250, Math.round(edmg(e) * .8)); } }
       else { e.w7pose = { k: 'exhale', u: 1 }; if (!o.blown) { o.blown = 1; sfx('whoosh'); sfx('slam', .7); shakeMag = Math.max(shakeMag, 9);
         if (Math.hypot(P.x - e.x, (P.y - e.y) * 2.2) < 74 && P.z < 60) { hitP(edmg(e), e.x, true); if (tookHit()) P.vx = Math.sign(P.x - e.x || 1) * 420; }
-        for (let i = 0; i < (e.phase >= 2 ? 2 : 1); i++) hazards.push({ kind: 'ring', x: e.x, y: e.y, r: 20, delay: i * .4, speed: 250, dmg: Math.round(edmg(e) * .8), t: 9, max: 9 }); bubbles(e.x, e.y, 60, 30, 160); } } },
+        bubbles(e.x, e.y, 60, 30, 160); } } },
     draw(o, T) { if (T >= 1.55) return; const k = T / 1.55; ctx.fillStyle = tellCol(k, .5); ell(e.x, e.y, 74, 74 / 2.2); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(e.x, e.y, 74, 74 / 2.2); ctx.stroke();
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + T, q = 1 - ((T * 1.4 + hsh(i)) % 1), r = 60 + q * 260; ctx.strokeStyle = `rgba(210,250,240,${.35 * (1 - q) + .1})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * r, e.y + Math.sin(a) * r * .35); ctx.lineTo(e.x + Math.cos(a) * (r - 24), e.y + Math.sin(a) * (r - 24) * .35); ctx.stroke(); } ctx.restore(); } });
-  KA.anchors = (e) => { const n = e.hp < e.maxHp * .8 ? 4 : 3; return { dur: 2.2, step(o, dt, T) { e.w7pose = { k: 'point', u: Math.min(1, T * 2) };
-      for (let i = 0; i < n; i++) if (T >= i * .35 && !(o['a' + i])) { o['a' + i] = 1; const A = arena(); hazards.push({ kind: 'w7anchor', x: clamp(P.x + (i ? rand(-90, 90) : 0), A.L + 20, A.R - 20), y: clamp(P.y + (i ? rand(-34, 34) : 0), FLOOR_TOP + 10, FLOOR_BOT - 4), el: 0, t: 3, max: 3, dmg: Math.round(edmg(e) * .9), rot: rand(-.4, .4) }); } } }; };
-  KA.sweep = (e) => ({ dur: 1.5, step(o, dt, T) { e.w7pose = { k: 'sweep', u: T < 1 ? 0 : cl01((T - 1) / .3) };
+  KA.anchors = (e) => { const n = e.hp < e.maxHp * .8 ? 4 : 3; return { dur: 2.2, step(o, dt, T) { e.w7pose = { k: 'point', u: Math.min(1, T * 2) }; flare(e, 1 - T / 2.2);
+      for (let i = 0; i < n; i++) if (T >= i * .35 && !(o['a' + i])) { o['a' + i] = 1; if (sfxOn && actx) { tone(140, .25, 'square', .03, -40); tone(110, .3, 'square', .03, -30, .12); } const A = arena(); hazards.push({ kind: 'w7anchor', x: clamp(P.x + (i ? rand(-90, 90) : 0), A.L + 20, A.R - 20), y: clamp(P.y + (i ? rand(-34, 34) : 0), FLOOR_TOP + 10, FLOOR_BOT - 4), el: 0, t: 3, max: 3, dmg: Math.round(edmg(e) * .9), rot: rand(-.4, .4) }); } } }; };
+  KA.sweep = (e) => ({ dur: 1.5, step(o, dt, T) { e.w7pose = T < 1 ? { k: 'raise', u: T * .6 } : { k: 'sweep', u: cl01((T - 1) / .3) }; if (T < 1) flare(e, T); if (!o.s0) { o.s0 = 1; if (sfxOn && actx) tone(330, .9, 'sawtooth', .03, 200); }
       if (T >= 1.05 && T < 1.3 && !o.hit && Math.hypot(P.x - e.x, (P.y - e.y) * 2.4) < 124 && P.z < 30) { o.hit = 1; hitP(Math.round(edmg(e) * 1.1), e.x, true); } if (T >= 1.05 && !o.s) { o.s = 1; sfx('whoosh'); } },
-    draw(o, T) { if (T > 1.3) return; const k = Math.min(1, T / 1); ctx.fillStyle = tellCol(k, .55); ell(e.x, e.y, 124, 124 / 2.4); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(e.x, e.y, 124, 124 / 2.4); ctx.stroke(); } });
+    draw(o, T) { if (T > 1.3) return; const k = Math.min(1, T / 1); ctx.fillStyle = tellCol(k, .55); ell(e.x, e.y, 124, 124 / 2.4); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(e.x, e.y, 124, 124 / 2.4); ctx.stroke();
+      if (k < 1) { const r = 124 * (1.7 - .7 * k); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; ctx.setLineDash([6, 5]); ell(e.x, e.y, r, r / 2.4); ctx.stroke(); ctx.setLineDash([]); } } });
   reg('w7anchor', { // a drowned ship's anchor, let fall: it sinks slowly (the water bears it), its shadow marks where
     update(h, dt) { h.el += dt; if (h.el >= 1.25 && !h.down) { h.down = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 6); bubbles(h.x, h.y, 4, 10, 70); dust(h.x, h.y, 8); if (inEll(P.x, P.y, h.x, h.y, 34) && P.z < 30) hitP(h.dmg, h.x, true); } if (h.el > 2.6) h.t = -1; },
     draw(h) { if (h.down) return; const k = cl01(h.el / 1.25); ctx.fillStyle = tellCol(k); ell(h.x, h.y, 34 * (.4 + .6 * k), 15 * (.4 + .6 * k)); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.8; ell(h.x, h.y, 34, 15); ctx.stroke(); },
@@ -1667,17 +1683,17 @@
     if (DET()) { ctx.strokeStyle = 'rgba(60,40,30,.6)'; ctx.lineWidth = 2; ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.moveTo(0, -54); ctx.lineTo(4, -120); ctx.stroke(); ctx.setLineDash([]); for (let i = 0; i < 5; i++) { ctx.fillStyle = 'rgba(120,60,70,.6)'; ell(-6 + hsh(i) * 12, -10 - hsh(i + 2) * 30, 2, 1.4); ctx.fill(); } }
   }
   // ---------------- the Maelstrom ----------------
-  KA.spout = (e) => ({ dur: 2.6, step(o, dt, T) { e.w7pose = { k: 'cast', u: 1 };
+  KA.spout = (e) => ({ dur: 2.6, step(o, dt, T) { e.w7pose = { k: 'cast', u: 1 }; flare(e, 1);
       for (let i = 0; i < 3; i++) if (T >= i * .55 && !o['s' + i]) { o['s' + i] = 1; hazards.push({ kind: 'w7spout', x: xClamp(P.x), y: yClamp(P.y), el: 0, t: 2, max: 2, dmg: Math.round(edmg(e) * .9) }); } } });
   reg('w7spout', {
-    update(h, dt) { h.el += dt; if (h.el >= .95 && !h.up) { h.up = 1; sfx('whoosh'); bubbles(h.x, h.y, 10, 20, 50); } if (h.up && !h.hit && h.el < 1.4 && inEll(P.x, P.y, h.x, h.y, 34) && P.z < 220) { h.hit = 1; hitP(h.dmg, h.x, true); if (tookHit()) P.vz = 300; } if (h.el > 1.6) h.t = -1; },
+    update(h, dt) { h.el += dt; if (!h.s) { h.s = 1; if (sfxOn && actx) tone(70, .9, 'sine', .07, 50); } if (!h.up && Math.random() < dt * 30) bubbles(h.x + rand(-26, 26), h.y + rand(-8, 8), 2, 1, 5); if (h.el >= .95 && !h.up) { h.up = 1; sfx('whoosh'); bubbles(h.x, h.y, 10, 20, 50); } if (h.up && !h.hit && h.el < 1.4 && inEll(P.x, P.y, h.x, h.y, 34) && P.z < 220) { h.hit = 1; hitP(h.dmg, h.x, true); if (tookHit()) P.vz = 300; } if (h.el > 1.6) h.t = -1; },
     draw(h, t) { const k = cl01(h.el / .95); if (!h.up) { ctx.fillStyle = tellCol(k); ell(h.x, h.y, 34, 15); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(h.x, h.y, 34 * (1.3 - .3 * k), 15 * (1.3 - .3 * k)); ctx.stroke(); } },
     ups(h, list, t) { if (!h.up) return; list.push([h.y + .3, () => onMain(() => { const a = 1 - cl01((h.el - 1.3) / .3), H = 240 * sm((h.el - .95) / .15); ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 3; k++) { const w = 26 - k * 7; const g = ctx.createLinearGradient(0, h.y - H, 0, h.y); g.addColorStop(0, 'rgba(220,255,250,0)'); g.addColorStop(.3, `rgba(200,250,240,${.35 * a})`); g.addColorStop(1, `rgba(240,255,252,${.7 * a})`); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(h.x - w, h.y); ctx.quadraticCurveTo(h.x - w * .6 + Math.sin(t * 20 + k) * 4, h.y - H * .5, h.x - w * .3, h.y - H); ctx.lineTo(h.x + w * .3, h.y - H); ctx.quadraticCurveTo(h.x + w * .6 - Math.sin(t * 18 + k) * 4, h.y - H * .5, h.x + w, h.y); ctx.closePath(); ctx.fill(); } ctx.restore(); })]); },
     box(h, box) { box(h.x, h.y, 0, 50, 260); },
   });
   const orbitPt = (a, rr = 1) => { const A = arena(), rx = (A.R - A.L) * .42 * rr, ry = 42 * rr; return [A.cx + Math.cos(a) * rx, A.cy + Math.sin(a) * ry]; };
   KA.whirl = (e) => ({ dur: 4.2, step(o, dt, T) {
-      if (T < .9) { e.w7pose = { k: 'raise', u: T / .9 }; G.sub = .45; return; }
+      if (T < .9) { e.w7pose = { k: 'raise', u: T / .9 }; G.sub = .45; flare(e, T / .9); if (!o.s) { o.s = 1; if (sfxOn && actx) tone(260, .8, 'triangle', .04, 300); } return; }
       if (!o.thrown) { o.thrown = 1; o.a = Math.atan2((P.y - arena().cy) / 42, (P.x - arena().cx) / ((arena().R - arena().L) * .42)) - 1.2; o.out = 0; sfx('whoosh'); e.w7noTrident = 1; }
       e.w7pose = { k: 'cast', u: 1 }; G.sub = .3;
       const q = T - .9; o.out = Math.min(1, q * 3); if (q < 2.6) o.a += dt * 2.5; const back = q > 2.6 ? cl01((q - 2.6) / .5) : 0;
@@ -1687,12 +1703,12 @@
     end() { e.w7noTrident = 0; },
     draw(o, T) { if (T < .9) { const k = T / .9, A = arena(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 3; ctx.setLineDash([6, 6]); ell(A.cx, A.cy, (A.R - A.L) * .42, 42); ctx.stroke(); ctx.setLineDash([]); } },
     up(o, T) { if (!o.thrown || o.x == null) return; ctx.save(); ctx.translate(o.x, o.y - 26); ctx.rotate(T * 14); W7.kingTrident(10, .5); ctx.restore(); } });
-  KA.drain = (e) => ({ dur: 3.4, step(o, dt, T) { e.w7pose = { k: 'cast', u: 1 }; G.eye = T < 1 ? T : T > 3.1 ? (3.4 - T) / .3 : 1;
+  KA.drain = (e) => ({ dur: 3.4, step(o, dt, T) { e.w7pose = { k: 'cast', u: 1 }; if (T < 1) { flare(e, T); if (Math.random() < dt * 40) { const a = rand(0, TAU), A = arena(); bubbles(A.cx + Math.cos(a) * 140, A.cy + Math.sin(a) * 40, 4, 1, 0); } } if (!o.s) { o.s = 1; if (sfxOn && actx) noise(1, .06, 200); } G.eye = T < 1 ? T : T > 3.1 ? (3.4 - T) / .3 : 1;
       if (T >= 1 && T < 3.1) { const A = arena(); if (!['dodge', 'dead'].includes(P.state)) { const dx = A.cx - P.x, dy = A.cy - P.y; P.x += Math.sign(dx) * Math.min(Math.abs(dx), 95 * dt); P.y += Math.sign(dy) * Math.min(Math.abs(dy), 40 * dt); }
         o.tick = (o.tick || 0) - dt; if (o.tick <= 0 && inEll(P.x, P.y, A.cx, A.cy, 66) && P.z < 40) { o.tick = .45; hitP(Math.round(edmg(e) * .5), A.cx, false); } } },
     draw(o, T) { const A = arena(), k = Math.min(1, T); ctx.fillStyle = tellCol(k, .7); ell(A.cx, A.cy, 66, 30); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(A.cx, A.cy, 66, 30); ctx.stroke(); } });
   // ---------------- Through the Glass ----------------
-  KA.shards = (e) => ({ dur: 2.4, step(o, dt, T) { e.w7pose = { k: 'point', u: 1 };
+  KA.shards = (e) => ({ dur: 2.4, step(o, dt, T) { e.w7pose = { k: 'point', u: 1 }; flare(e, 1 - T / 2.4);
       if (!o.line) { const a = rand(0, Math.PI); o.line = [...Array(6)].map((_, i) => ({ x: xClamp(P.x + Math.cos(a) * (i - 2.5) * 52), y: yClamp(P.y + Math.sin(a) * (i - 2.5) * 16) })); sfx('hit-crystal'); }
       for (let i = 0; i < 6; i++) if (T >= i * .16 && !o['f' + i]) { o['f' + i] = 1; hazards.push({ kind: 'w7shard', x: o.line[i].x, y: o.line[i].y, el: 0, t: 2, max: 2, dmg: Math.round(edmg(e) * .8), rot: rand(-.5, .5) }); } } });
   reg('w7shard', {
@@ -1701,18 +1717,19 @@
     ups(h, list) { if (h.down) return; list.push([h.y + .2, () => onMain(() => { const z = 320 * Math.pow(1 - cl01(h.el / 1.05), 1.3); ctx.save(); ctx.translate(h.x, h.y - z); ctx.rotate(h.rot); ctx.fillStyle = 'rgba(220,250,255,.75)'; poly([-5, -26, 6, -18, 3, 4, -3, 0]); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); })]); },
     box(h, box) { box(h.x, h.y, 0, 40, 340); },
   });
-  KA.unwind = (e) => { const two = e.hp < e.maxHp * .2, dir = Math.random() < .5 ? -1 : 1, a0 = rand(0, TAU); return { dur: 3.8, step(o, dt, T) { e.w7pose = { k: 'cast', u: 1 };
+  KA.unwind = (e) => { const two = e.hp < e.maxHp * .2, dir = Math.random() < .5 ? -1 : 1, a0 = rand(0, TAU); return { dur: 3.8, step(o, dt, T) { e.w7pose = { k: 'cast', u: 1 }; if (T < .95) flare(e, T / .95); if (!o.s) { o.s = 1; if (sfxOn && actx) tone(180, .95, 'sawtooth', .03, 120); }
       if (T < .95) return; const A = arena(), a = a0 + dir * (T - .95) / 2.6 * TAU, pa = Math.atan2((P.y - A.cy) * 3.2, P.x - A.cx), d = Math.hypot(P.x - A.cx, (P.y - A.cy) * 3.2); o.a = a;
       if (T < 3.55 && !o.hit && d > 24 && d < 310 && P.z < 20) for (const arm of two ? [a, a + Math.PI] : [a]) { const diff = Math.abs(((pa - arm) % TAU + TAU * 1.5) % TAU - Math.PI); if (diff < .16) { o.hit = 1; hitP(Math.round(edmg(e) * .9), A.cx, true); break; } } },
     draw(o, T) { const A = arena(); const arms = (a, al, col) => { for (const arm of two ? [a, a + Math.PI] : [a]) { ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(A.cx + Math.cos(arm) * 24, A.cy + Math.sin(arm) * 24 / 3.2); ctx.lineTo(A.cx + Math.cos(arm) * 310, A.cy + Math.sin(arm) * 310 / 3.2); ctx.globalAlpha = al; ctx.stroke(); ctx.globalAlpha = 1; } };
       if (T < .95) { const k = T / .95; arms(a0, 1, tellLine(k)); for (let i = 1; i < 4; i++) arms(a0 + dir * i * .12, .3 * k, tellLine(k)); return; }
       if (T > 3.55) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; arms(o.a, 1, 'rgba(160,190,255,.9)'); for (let i = 1; i < 6; i++) arms(o.a - dir * i * .05, .25, 'rgba(120,150,255,.6)'); ctx.restore(); } }; };
-  KA.breaker = (e) => { const from = Math.random() < .5 ? -1 : 1; return { dur: 2.6, step(o, dt, T) { e.w7pose = { k: 'raise', u: Math.min(1, T) };
-      const A = arena(); if (T < 1.2) { o.x = from < 0 ? A.L : A.R; return; } if (!o.go) { o.go = 1; sfx('whoosh'); if (sfxOn && actx) noise(1.2, .1, 600); floatText(P.x, P.y, 110, 'ROLL THROUGH IT', '#FFFFFF', 15); }
+  KA.breaker = (e) => { const from = Math.random() < .5 ? -1 : 1; return { dur: 2.6, step(o, dt, T) { e.w7pose = { k: 'raise', u: Math.min(1, T) }; if (T < 1.2) flare(e, T / 1.2); if (!o.s) { o.s = 1; if (sfxOn && actx) noise(1.2, .06, 300); }
+      const A = arena(); if (T < 1.2) { o.x = from < 0 ? A.L : A.R; return; } if (!o.go) { o.go = 1; sfx('whoosh'); if (sfxOn && actx) noise(1.2, .1, 600); }
       o.x = (from < 0 ? A.L : A.R) - from * (T - 1.2) * 560;
       if (!o.hit && Math.abs(P.x - o.x) < 22 && P.state !== 'dodge' && P.state !== 'dead' && P.inv <= 0) { o.hit = 1; hitP(edmg(e), o.x + from * 30, true); if (tookHit()) P.vx = -from * 380; } },
-    draw(o, T) { const A = arena(); if (T < 1.2) { const k = T / 1.2, x = from < 0 ? A.L : A.R - 40; ctx.fillStyle = tellCol(k); ctx.fillRect(x, FLOOR_TOP, 40, FLOOR_BOT - FLOOR_TOP + 6); } },
-    up(o, T) { if (o.x == null) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const x = o.x; for (let k = 0; k < 4; k++) { const g = ctx.createLinearGradient(x - 30 * from, 0, x + 30 * from, 0); g.addColorStop(0, 'rgba(200,250,240,0)'); g.addColorStop(1, `rgba(235,255,250,${.5 - k * .1})`); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 30 * from, FLOOR_BOT + 6); ctx.lineTo(x - 30 * from, FLOOR_TOP - 150 + k * 20); ctx.quadraticCurveTo(x + 10 * from, FLOOR_TOP - 170 + Math.sin(T * 10 + k) * 8, x + 12 * from, FLOOR_TOP - 120); ctx.lineTo(x + 4 * from, FLOOR_BOT + 6); ctx.closePath(); ctx.fill(); } ctx.restore(); } }; };
+    draw(o, T) { const A = arena(); if (T < 1.2) { const k = T / 1.2, x = from < 0 ? A.L : A.R - 40; ctx.fillStyle = tellCol(k); ctx.fillRect(x, FLOOR_TOP, 40, FLOOR_BOT - FLOOR_TOP + 6);
+      ctx.strokeStyle = tellLine(k); ctx.lineWidth = 3; for (let i = 0; i < 4; i++) { const q = (T * 1.5 + i / 4) % 1, xx = (from < 0 ? A.L : A.R) - from * q * (A.R - A.L) * k; ctx.globalAlpha = (1 - q) * .7; ctx.beginPath(); ctx.moveTo(xx + from * 6, FLOOR_TOP + 4); ctx.lineTo(xx - from * 6, (FLOOR_TOP + FLOOR_BOT) / 2); ctx.lineTo(xx + from * 6, FLOOR_BOT); ctx.stroke(); } ctx.globalAlpha = 1; } },
+    up(o, T) { if (o.x == null) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const x = o.x; if (T < 1.2) ctx.globalAlpha = cl01(T / 1.2); ctx.translate(x, FLOOR_BOT); ctx.scale(1, T < 1.2 ? .25 + .75 * sm(T / 1.2) : 1); ctx.translate(-x, -FLOOR_BOT); for (let k = 0; k < 4; k++) { const g = ctx.createLinearGradient(x - 30 * from, 0, x + 30 * from, 0); g.addColorStop(0, 'rgba(200,250,240,0)'); g.addColorStop(1, `rgba(235,255,250,${.5 - k * .1})`); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 30 * from, FLOOR_BOT + 6); ctx.lineTo(x - 30 * from, FLOOR_TOP - 150 + k * 20); ctx.quadraticCurveTo(x + 10 * from, FLOOR_TOP - 170 + Math.sin(T * 10 + k) * 8, x + 12 * from, FLOOR_TOP - 120); ctx.lineTo(x + 4 * from, FLOOR_BOT + 6); ctx.closePath(); ctx.fill(); } ctx.restore(); } }; };
   // ---------------- running the fight ----------------
   function startAtk(e, name, ...a) { G.cur = Object.assign({ name, T: 0 }, KA[name](e, ...a)); }
   function toPhase(e, n) {
@@ -1733,7 +1750,7 @@
       if (!e.w7init) initKing(e);
       if (e.dead) { G.vuln = false; if (G.cur && G.cur.end) G.cur.end(); G.cur = null; G.spin *= Math.pow(.2, dt); G.patRot += G.spin * dt; return; }
       if (stillT > 0) return;
-      G.t += dt; const ph = e.phase;
+      G.t += dt; const ph = e.phase; e.w7flare = Math.max(0, (e.w7flare || 0) - dt * 2.5);
       e.facing = Math.sign(P.x - e.x) || e.facing;
       G.sweepCd -= dt;
       // the current attack
@@ -1746,18 +1763,19 @@
         if (!G.cur) { G.atkT -= dt;
           if (G.sweepCd <= 0 && Math.hypot(P.x - e.x, (P.y - e.y) * 2.4) < 110) { G.sweepCd = 5; startAtk(e, 'sweep'); }
           else if (G.atkT <= 0) { const S = ['tines', 'undertow', 'anchors', 'tines', 'anchors', 'undertow']; startAtk(e, S[G.seq++ % S.length]); } }
+        if (!G.shoal && e.hp < e.maxHp * .85) { G.shoal = 1; for (let i = 0; i < 3; i++) spawnEnemy('w7nixie', i % 2 ? 1 : -1); } // (a shoal of nixies comes to the King)
         if (e.hp <= e.maxHp * .665) toPhase(e, 2);
       } else if (G.mode === 'p2in') {
         G.vuln = false; e.w7pose = { k: 'cast', u: 1 }; const k = cl01(G.t / 2.2);
         e.x += (A.cx - e.x) * Math.min(1, dt * 3); e.y += (A.cy - e.y) * Math.min(1, dt * 3); G.sub = sm(k); G.spin = lerp(0, 1.1, k);
-        if (G.t >= 2.2) { G.mode = 'p2'; G.trans = 0; G.t = 0; G.surf = 0; G.atkT = 1; G.wreck = [0, 1].map(i => ({ a: i * Math.PI, kind: i, cd: 0 })); }
+        if (G.t >= 2.2) { G.mode = 'p2'; G.trans = 0; G.t = 0; G.surf = 0; G.atkT = 1; G.wreck = [0, 1].map(i => ({ a: i * Math.PI, kind: i, cd: 0 })); spawnEnemy('w7knight', 1); }
       } else if (G.mode === 'p2') {
         e.x += (A.cx - e.x) * Math.min(1, dt * 3); e.y += (A.cy - e.y) * Math.min(1, dt * 3); e.z += (6 - e.z) * Math.min(1, dt * 3);
         if (e.hp < e.maxHp * .5 && G.wreck.length < 3) G.wreck.push({ a: G.wreck[0].a + Math.PI * .66, kind: 2, cd: 0 });
         // the whirl: round and in
         if (!['dodge', 'dead'].includes(P.state)) { const dx = P.x - A.cx, dy = (P.y - A.cy) * 3.2, d = Math.hypot(dx, dy) || 1; if (d > 40) { P.x += (-dy / d * 70 - dx / d * 24) * dt; P.y += (dx / d * 70 - dy / d * 24) / 3.2 * dt; } }
         for (const w of G.wreck) { w.a += dt * .85; w.cd -= dt; const [x, y] = orbitPt(w.a); w.x = x; w.y = y; if (w.cd <= 0 && Math.abs(P.x - x) < 26 && Math.abs(P.y - y) < 12 && P.z < 38) { w.cd = 1; hitP(Math.round(edmg(e) * .8), x, true); } }
-        if (G.surf > 0) { G.surf -= dt; G.vuln = true; G.sub += (.12 - G.sub) * Math.min(1, dt * 4); if (G.surf <= 0) { G.sub = .2; hazards.push({ kind: 'ring', x: A.cx, y: A.cy, r: 20, delay: 0, speed: 240, dmg: Math.round(edmg(e) * .7), t: 9, max: 9 }); sfx('slam', .6); } }
+        if (G.surf > 0) { G.surf -= dt; G.vuln = true; G.sub += (.12 - G.sub) * Math.min(1, dt * 4); if (G.surf < 1 && !G.surfW) { G.surfW = 1; warnRing(A.cx, A.cy, 1, 240, Math.round(edmg(e) * .7)); } if (G.surf < 1) { e.w7pose = { k: 'inhale', u: 1 - G.surf }; flare(e, 1 - G.surf); } if (G.surf <= 0) { G.sub = .2; G.surfW = 0; } }
         else { G.vuln = false; if (!G.cur) G.sub += (1 - G.sub) * Math.min(1, dt * 3); }
         if (!G.cur && !(G.surf > 0)) { G.atkT -= dt; if (G.atkT <= 0) { const S = ['spout', 'whirl', 'drain']; startAtk(e, S[G.seq++ % S.length]); } }
         if (G.cur && G.cur.name !== 'whirl') G.sub += (1 - G.sub) * Math.min(1, dt * 3);
@@ -1765,7 +1783,7 @@
         if (e.hp <= e.maxHp * .335) { G.wreck = []; toPhase(e, 3); }
       } else if (G.mode === 'p3in') {
         G.vuln = false; const k = cl01(G.t / 2.6); G.spin = lerp(1.1, -.2, k); G.sub = 1 - sm(cl01((G.t - 1.2) / 1.2)); W7.turnK = G.t < 1.6 ? G.t / 1.6 : 0; G.flip = sm(cl01((G.t - .8) / 1)); W7.flip = G.flip;
-        if (G.t >= 2.6) { G.mode = 'p3'; G.trans = 0; G.t = 0; W7.turnK = 0; G.atkT = .8; G.refl = { x: 2 * A.cx - e.x, y: e.y, z: 30, broken: 0, flash: 0 }; G.swapT = 8; G.gx = A.cx - 120; G.gy = FLOOR_TOP + 30; }
+        if (G.t >= 2.6) { G.mode = 'p3'; G.trans = 0; G.t = 0; W7.turnK = 0; G.atkT = .8; spawnEnemy('w7ziphius', -1); G.refl = { x: 2 * A.cx - e.x, y: e.y, z: 30, broken: 0, flash: 0 }; G.swapT = 8; G.gx = A.cx - 120; G.gy = FLOOR_TOP + 30; }
       } else if (G.mode === 'p3') {
         G.vuln = true; G.sub = 0; G.patLit = .35; G.spin = -.2;
         G.moveT -= dt; if (G.moveT <= 0) { G.moveT = 2.4; G.gx = A.cx + (e.x < A.cx ? -1 : 1) * rand(60, 200); G.gy = FLOOR_TOP + rand(16, 44); }
@@ -1819,7 +1837,7 @@
       ctx.restore(); })]);
   }
   W7.hitRefl = (dir) => { const R = G.refl; if (!R || R.broken > 0) return false; R.broken = 2.2; R.flash = .1; sfx('break'); burst(R.x, R.y, 70, ['#E8F8FF', '#BEEAD8', '#FFFFFF'], 30, 'crystal', dir, true);
-    floatText(R.x, R.y, 150, 'ONLY A REFLECTION', '#DCEEFF', 14); const e = KB(); setTimeout(() => { if (mode === 'play' && e && !e.dead) hazards.push({ kind: 'ring', x: R.x, y: R.y, r: 16, delay: 0, speed: 230, dmg: Math.round(edmg(e) * .65), t: 9, max: 9 }); }, 450); return true; };
+    const e = KB(); if (e && !e.dead) warnRing(R.x, R.y, .85, 230, Math.round(edmg(e) * .65)); return true; };
   W7.reflAt = (x, y, reach) => { const R = G.refl; return R && !(R.broken > 0) && G.mode === 'p3' && Math.abs(R.y - y) < 34 && Math.abs(R.x - x) < reach; };
 
   // ======================================================================================================
@@ -2029,6 +2047,7 @@
       const g = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH); g.addColorStop(0, `rgba(220,240,255,${.25 * W7.flip})`); g.addColorStop(1, `rgba(120,160,220,${.1 * W7.flip})`); ctx.fillStyle = g; ctx.fillRect(0, FLOOR_TOP, VW, VH - FLOOR_TOP);
     }
     W7.drawPattern(cx, cy, G.patRot || 0, (G.patA ?? 1) * (1 - .5 * (W7.flip || 0)), G.patLit ?? .5, t);
+    if (G.cur && G.cur.draw) { ctx.save(); ctx.translate(-camX, 0); try { G.cur.draw(G.cur, G.cur.T); } finally { ctx.restore(); } } // (his attack's own marks on the floor: the lanes, the rings, the arms of the Pattern)
     if (G.mode === 'p2' || G.mode === 'p2in') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; // the whirl: streaks of foam going round
       for (let i = 0; i < 26; i++) { const r = 40 + hsh(i) * 280, a = -(G.patRot * (1 + 60 / r)) + hsh(i + 3) * TAU; ctx.strokeStyle = `rgba(210,250,240,${.12 + .1 * hsh(i + 5)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, cy, r, r / 3.2, 0, a, a + .5); ctx.stroke(); } ctx.restore();
       if (G.eye > 0) { ctx.save(); ctx.translate(cx, cy); ctx.scale(1, .45); for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + t * 3; ctx.fillStyle = `rgba(240,250,250,${.8 * G.eye})`; poly([Math.cos(a) * 66, Math.sin(a) * 66, Math.cos(a + .1) * 40, Math.sin(a + .1) * 40, Math.cos(a + .2) * 66, Math.sin(a + .2) * 66]); ctx.fill(); } ctx.restore(); } }
