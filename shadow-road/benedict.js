@@ -21,8 +21,8 @@
 // ======================================================================================================
 (() => {
   if (!window.W5 || !W5.kit || !W5.akit || typeof BOSSES === 'undefined' || !BOSSES.benedict) return;
-  const { DET, add, glowAt, glowM, hsh, sm, cl01, taper, trace, horn, cel, PB, PP, PE, leafLine, mistTongue, benSword, silverArm, BN } = W5.kit;
-  const { act, targets, reg, hitP, tellCol, tellLine, label, inEll, yClamp, xClamp, mist, silverBurst } = W5.akit;
+  const { DET, add, glowAt, glowM, hsh, sm, cl01, taper, trace, horn, cel, PB, PP, PE, stripPath, leafLine, mistTongue, benSword, silverArm, BN } = W5.kit;
+  const { act, targets, reg, hitP, tellCol, tellLine, guardCol, guardLine, label, inEll, yClamp, xClamp, mist, silverBurst } = W5.akit;
   const isBen = (e) => e && e.def === BOSSES.benedict;
   const B = BOSSES.benedict;
   const W5B = W5.ben = {}; // (for tests and the silver arm)
@@ -388,6 +388,150 @@
       far ? shade(BN.silver, -.2) : BN.silver, { d: 1.2, r: .6, w: 1.1, dark: BN.silverDk, lite: BN.silverLt });
   }
   function knuckle(x, y, r) { ctx.fillStyle = C(BN.gilt); circle(x, y, r); ctx.fill(); outline(.9); if (DET()) { ctx.fillStyle = 'rgba(255,255,255,.85)'; circle(x - r * .3, y - r * .35, r * .3); ctx.fill(); } }
+
+  // ---------------- THE MOON MANTIS: the swordsman the night could not stop being ----------------
+  // Side on, facing +x, feet at 0,0. A praying mantis as tall as the throne: chitin of moon-pale lacquer over ink, wings
+  // of leaded glass with the dawn coming through them (and the stars he was, set in them as studs), eyes like lamps, and
+  // two raptorial forelegs folded in prayer: the far one ink-blue, the near one plated silver and gilt at the joints (the
+  // silver arm, which is all that will be left of it). A foreleg is [coxa, femur, tibia] angles, blended between poses.
+  const MN = { body: '#A6B4D2', bodyDk: '#46527E', bodyLt: '#EEF2FF', far: '#56648E', farDk: '#242C50', farLt: '#8A98C0', wing: '220,230,252', dawn: '255,206,190', eye: '#E4F4FF' };
+  const FORE = { pray: [1.25, -1.0, 2.0], cock: [.95, -2.1, .85], strike: [.42, -.1, .02], raise: [.7, -1.8, .55], low: [1.45, .5, 1.0], reap: [1.0, .02, .3], clasp: [.95, -.7, 2.45], droop: [1.5, .75, 1.95] };
+  const MDROP = 30; // about where the near scythe lies when it falls (deathStep lays the silver arm there)
+  const lerpA = (A, B, k) => A.map((v, i) => lerp(v, B[i], k));
+  const solid = (rgba) => FLASH ? '#FFFFFF' : TINT || rgba; // a see-through fill that still flashes and tints like the rest
+  function mantisPose(e, a, t) {
+    const st = e.state, w = a.wind || 0, plan = e.plan, actA = st === 'w5act' ? e.w5a : null, k = e.w5k || 0;
+    const M = { crouch: 0, lean: 0, head: 0, near: FORE.pray.slice(), far: FORE.pray.slice(), wing: 0, eye: .25, lz: e.w5lz || 0, g: e.w5gait || 0, sway: Math.sin(t * 1.7) * 2.6, unfold: 1, crack: 0, slash: 0, tuck: 0, spin: 0, glare: 0 };
+    const W = (p) => st === 'wind' && plan === p ? w : 0; let q;
+    if ((q = W('w5scythe'))) { M.near = lerpA(FORE.pray, FORE.cock, sm(cl01(q * 1.6))); M.far = lerpA(FORE.pray, FORE.cock, sm(cl01(q * 1.3))); M.crouch = 10 * q; M.lean = -.14 * q; M.head = -.1 * q; M.eye = q; }
+    if (actA === 'scythe') { const s = e.w5strike || 0; M.near = lerpA(FORE.cock, FORE.strike, s); M.far = lerpA(FORE.cock, FORE.strike, s * .85); M.crouch = 10 - 4 * s; M.lean = lerp(-.14, .2, s); M.eye = 1; M.slash = s; }
+    if ((q = W('w5leap'))) { M.crouch = 30 * sm(q); M.near = lerpA(FORE.pray, FORE.raise, q * .5); M.far = M.near.slice(); M.lean = .12 * q; M.wing = .2 * q; M.eye = q; }
+    if (actA === 'leap') { const air = M.lz > 2; M.eye = 1;
+      if (air) { M.tuck = 1; M.crouch = -4; M.near = lerpA(FORE.raise, FORE.strike, sm(cl01((k - .55) / .4))); M.far = M.near.slice(); M.wing = .75 + .25 * Math.sin(t * 46); M.lean = lerp(-.1, .3, k); }
+      else { M.crouch = 26; M.near = FORE.low.slice(); M.far = FORE.low.slice(); M.lean = .3; M.wing = .15; } }
+    if ((q = W('w5wings'))) { M.wing = sm(cl01(q * 1.4)); M.near = lerpA(FORE.pray, FORE.raise, sm(cl01(q * 2))); M.far = M.near.slice(); M.lean = -.2 * q; M.head = -.15 * q; M.eye = q; }
+    if (actA === 'wings') { M.wing = 1 - sm(cl01((k - .6) / .4)); M.near = FORE.raise.slice(); M.far = FORE.raise.slice(); M.lean = -.2; M.eye = 1; M.glare = cl01(1 - k * 1.6); }
+    if ((q = W('w5reap'))) { M.crouch = 22 * sm(q); M.near = lerpA(FORE.pray, FORE.low, sm(q)); M.far = lerpA(FORE.pray, FORE.low, sm(q)); M.lean = .25 * q; M.eye = q; }
+    if (actA === 'reap') { M.crouch = 24; M.lean = .25; const s = e.w5strike || 0; M.near = lerpA(FORE.low, FORE.reap, s); M.far = lerpA(FORE.low, FORE.reap, s); M.eye = 1; M.spin = e.w5spin || 0; M.slash = s * .8; }
+    if ((q = W('w5clasp'))) { M.near = lerpA(FORE.pray, FORE.raise, sm(q)); M.far = lerpA(FORE.pray, FORE.raise, sm(q)); M.wing = .35 * q; M.crouch = 8 * q; M.eye = q; M.lean = -.1 * q; }
+    if (actA === 'clasp') { const s = sm(cl01(k * 5)); M.near = lerpA(FORE.raise, FORE.clasp, s); M.far = lerpA(FORE.raise, FORE.clasp, s); M.wing = .35 * (1 - k); M.slash = s * (1 - k); M.eye = 1; M.lean = .15 * s; }
+    if (st === 'down') { M.crouch = 28; M.near = FORE.droop.slice(); M.far = FORE.droop.slice(); M.head = .5; M.lean = .3; M.eye = .1; }
+    else if (a.hurt) { M.lean = -.22; M.head = -.25; M.near = lerpA(M.near, FORE.raise, .4); }
+    return M;
+  }
+  // one raptorial foreleg from its shoulder S: the coxa, the spined femur, the tibia that folds onto it like a clasp knife
+  function foreleg(S, A, near, slash, t) {
+    const [cA, fA, tA] = A, L = [26, 48, 44];
+    const c1 = [S[0] + Math.cos(cA) * L[0], S[1] + Math.sin(cA) * L[0]], f1 = [c1[0] + Math.cos(fA) * L[1], c1[1] + Math.sin(fA) * L[1]], t1 = [f1[0] + Math.cos(tA) * L[2], f1[1] + Math.sin(tA) * L[2]];
+    const col = near ? BN.silver : MN.far, dk = near ? BN.silverDk : MN.farDk, lt = near ? BN.silverLt : MN.farLt;
+    const plate = (p0, p1, w0, w1, bx, by, lames) => { const s = taper(p0[0], p0[1], (p0[0] + p1[0]) / 2 + bx, (p0[1] + p1[1]) / 2 + by, p1[0], p1[1], w0, w1, 6);
+      cel(stripPath(s), col, { d: 1.8, r: .8, w: 1.3, dark: dk, lite: lt, tex: lames && near ? () => { ctx.strokeStyle = 'rgba(60,70,100,.55)'; ctx.lineWidth = .7; ctx.beginPath(); for (const i of [4, 8]) { ctx.moveTo(s.L[i], s.L[i + 1]); ctx.lineTo(s.R[i], s.R[i + 1]); } ctx.stroke(); } : null });
+      return s; };
+    const fx = f1[0] - c1[0], fy = f1[1] - c1[1], fl = Math.hypot(fx, fy) || 1, ux = fx / fl, uy = fy / fl, nx = -uy, ny = ux;
+    const sg = ((t1[0] - c1[0]) * nx + (t1[1] - c1[1]) * ny) >= 0 ? 1 : -1; // the side the tibia folds onto: the spines are there
+    plate(S, c1, 10, 8, 0, 0, true);
+    ctx.fillStyle = C(near ? BN.gilt : '#9AA6C8');
+    for (let i = 1; i <= 5; i++) { const u = i / 6.2, bx = c1[0] + fx * u, by = c1[1] + fy * u, h = i % 2 ? 7.5 : 4.5, o = 4.2 * sg;
+      ctx.beginPath(); ctx.moveTo(bx + nx * o - ux * 2.4, by + ny * o - uy * 2.4); ctx.lineTo(bx + nx * (o + h * sg) + ux * 2.2, by + ny * (o + h * sg) + uy * 2.2); ctx.lineTo(bx + nx * o + ux * 2.4, by + ny * o + uy * 2.4); ctx.closePath(); ctx.fill(); outline(.6); }
+    plate(c1, f1, 11.5, 8, -nx * sg * 3.5, -ny * sg * 3.5, true); // the femur, bellied away from its spines
+    const ts = plate(f1, t1, 6.6, 2.4, 0, 0, false); // the tibia: a blade
+    const tx = t1[0] - f1[0], ty = t1[1] - f1[1], tl = Math.hypot(tx, ty) || 1, hx = -ty / tl, hy = tx / tl, hs = ((c1[0] - f1[0]) * hx + (c1[1] - f1[1]) * hy) >= 1 ? 1 : ((c1[0] - f1[0]) * hx + (c1[1] - f1[1]) * hy) <= -1 ? -1 : sg;
+    horn(t1[0] - tx / tl * 3, t1[1] - ty / tl * 3, t1[0] + tx / tl * 5, t1[1] + ty / tl * 5, t1[0] + tx / tl * 3 + hx * hs * 7, t1[1] + ty / tl * 3 + hy * hs * 7, 3.2, .6, col, .8, dk); // the hook
+    if (near) { knuckle(c1[0], c1[1], 3.6); knuckle(f1[0], f1[1], 3.2); knuckle(S[0], S[1], 3.8); }
+    else { ctx.fillStyle = C(MN.farDk); circle(f1[0], f1[1], 2.6); ctx.fill(); }
+    if (near && DET()) add(() => { ctx.strokeStyle = `rgba(240,246,255,${.35 + .55 * (slash || 0)})`; ctx.lineWidth = 1.2; ctx.beginPath(); const E = hs > 0 ? ts.L : ts.R; ctx.moveTo(E[0], E[1]); for (let i = 2; i < E.length; i += 2) ctx.lineTo(E[i], E[i + 1]); ctx.stroke(); }); // the edge
+    if (slash > .05 && DET()) add(() => { const a0 = Math.atan2(t1[1] - S[1], t1[0] - S[0]), R = Math.hypot(t1[0] - S[0], t1[1] - S[1]); ctx.strokeStyle = `rgba(235,242,255,${.6 * slash})`; ctx.lineWidth = 7 * slash; ctx.beginPath(); ctx.arc(S[0], S[1], R, a0 - 1.1 * slash, a0); ctx.stroke(); ctx.strokeStyle = `rgba(255,255,255,${.8 * slash})`; ctx.lineWidth = 1.6; ctx.stroke(); }); // the cut, a crescent of light behind the blade
+    return t1;
+  }
+  // a hind wing thrown open in the display: a fan of glass, veined in silver leaf, edged with the dawn, and an eye on it
+  function wingFan(B, w, far, t) {
+    const R = 132 * Math.sqrt(w), a0 = -Math.PI + .12, a1 = lerp(-Math.PI + .3, -Math.PI / 2 + .3, w), n = 8, rim = [];
+    for (let i = 0; i <= n; i++) { const an = lerp(a0, a1, i / n), rr = R * (i % 2 ? .92 : 1) * (1 - .1 * Math.abs(i / n - .55)); rim.push([B[0] + Math.cos(an) * rr, B[1] + Math.sin(an) * rr]); }
+    const path = () => { ctx.beginPath(); ctx.moveTo(B[0], B[1]); for (let i = 0; i < rim.length; i++) { const p = rim[i]; if (!i) ctx.lineTo(p[0], p[1]); else { const q = rim[i - 1]; ctx.quadraticCurveTo((p[0] + q[0]) / 2 + (p[0] - B[0]) * .06, (p[1] + q[1]) / 2 + (p[1] - B[1]) * .06, p[0], p[1]); } } ctx.closePath(); };
+    ctx.save(); if (far) ctx.globalAlpha *= .75;
+    path(); if (FLASH || TINT) ctx.fillStyle = solid(''); else { const g = ctx.createRadialGradient(B[0], B[1], 6, B[0], B[1], R); g.addColorStop(0, far ? 'rgba(30,38,80,.85)' : 'rgba(46,58,112,.8)'); g.addColorStop(.55, `rgba(${MN.wing},${far ? .38 : .5})`); g.addColorStop(.9, `rgba(${MN.dawn},.62)`); g.addColorStop(1, `rgba(${MN.dawn},.82)`); ctx.fillStyle = g; }
+    ctx.fill(); outline(1.3);
+    if (DET()) leafLine(() => { for (let i = 1; i < rim.length - 1; i++) { ctx.moveTo(B[0], B[1]); ctx.quadraticCurveTo(lerp(B[0], rim[i][0], .5) + 4, lerp(B[1], rim[i][1], .5) - 3, rim[i][0], rim[i][1]); } }, .6, .55);
+    // the eye: a gilt ring, an iris of night, and in it a white crescent moon
+    const am = lerp(a0, a1, .5), er = 19 * Math.sqrt(w) * (far ? .85 : 1), ex = B[0] + Math.cos(am) * R * .6, ey = B[1] + Math.sin(am) * R * .6;
+    ctx.fillStyle = C(BN.gilt); circle(ex, ey, er); ctx.fill(); outline(1.1);
+    ctx.fillStyle = C('#141C40'); circle(ex, ey, er * .76); ctx.fill();
+    if (!FLASH) { ctx.fillStyle = '#F4F8FF'; ctx.beginPath(); ctx.arc(ex, ey, er * .5, -1.2, 1.9); ctx.arc(ex + er * .18, ey - er * .06, er * .4, 1.7, -1.0, true); ctx.closePath(); ctx.fill(); }
+    glowAt(ex, ey, er * 2.4, '235,242,255', .25 + .5 * w);
+    ctx.restore();
+    return [ex, ey];
+  }
+  // a chrysalis of silver: what the stars harden into on the floor of the hall, before it splits
+  function chrysalis(h, crack, split, t) {
+    if (h <= 1) return; const W = h * .34, pulse = 1 + .035 * Math.sin(t * 14) * crack * (1 - split);
+    const shape = PB([0, -h, W * .55, -h * .82, W, -h * .48, W * .82, -h * .14, W * .3, 0, -W * .3, 0, -W * .82, -h * .14, -W, -h * .48, -W * .55, -h * .82]);
+    for (const s of [-1, 1]) { ctx.save(); ctx.globalAlpha *= 1 - split * .85; ctx.translate(s * split * 26, 0); ctx.rotate(s * split * .7); ctx.scale(pulse, pulse);
+      if (split > 0) { ctx.beginPath(); ctx.rect(s > 0 ? 0 : -h, -h * 1.2, h, h * 1.3); ctx.clip(); }
+      cel(shape, BN.silver, { d: 3.4, r: 1.4, w: 1.7, dark: BN.silverDk, lite: BN.silverLt, tex: () => {
+        ctx.strokeStyle = 'rgba(60,70,100,.5)'; ctx.lineWidth = .9; ctx.beginPath(); for (let i = 1; i < 6; i++) { const y = -h * i / 6.4; ctx.moveTo(-W, y); ctx.quadraticCurveTo(0, y + 7, W, y); } ctx.stroke(); } });
+      if (DET()) for (let i = 0; i < 6; i++) { const y = -h * (.18 + i * .13), x = (hsh(i * 3.3) - .5) * W * .9; star4(x, y, 2.6, .9); } // the stars he was, set in the shell
+      ctx.restore(); }
+    if (crack > 0 && split < 1) add(() => { ctx.strokeStyle = `rgba(255,255,255,${.9 * crack * (1 - split)})`; ctx.lineWidth = 1.6 + 2 * crack; ctx.beginPath(); ctx.moveTo(0, -h * .98); for (let i = 1; i <= 8; i++) ctx.lineTo((i % 2 ? 4 : -4) * crack, -h * (1 - i / 8 * crack)); ctx.stroke(); glowAt(0, -h * .5, h * .6, '235,242,255', .5 * crack); });
+  }
+  function drawMantis(e, a, t, M, o = {}) {
+    const U = M.unfold ?? 1, cr = M.crouch + (1 - U) * 44, lz = M.lz || 0, g = M.g || 0, sw = (M.sway || 0) * U;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (o.a !== undefined) ctx.globalAlpha *= o.a;
+    if (M.spin) { const c = Math.cos(M.spin); ctx.scale(Math.max(.25, Math.abs(c)), 1); if (c < 0) ctx.scale(-1, 1); }
+    ctx.translate(0, -lz);
+    if (o.clipX !== undefined && o.clipX !== null) { ctx.beginPath(); ctx.rect(o.clipX, -400, 600, 420); ctx.clip(); } // (flaking away from the tail forward as it dies)
+    const TX = -6 + sw * .4, TY = -84 + cr; // the thorax, where the legs and the neck meet
+    const upper = (fn) => { ctx.save(); ctx.translate(TX, TY); ctx.rotate((M.lean || 0) + sw * .006); ctx.translate(-TX, -TY); fn(); ctx.restore(); };
+    // the four walking legs: a pair forward, a pair back, each stepping with the ground covered (far side first)
+    const leg = (hx, fx, ph, near) => { const pp = g + ph + (near ? Math.PI : 0), s = Math.sin(pp), lift = Math.max(0, Math.cos(pp)) * 8;
+      const hip = [hx, TY + 4]; let foot = [fx * lerp(.5, 1, U) + s * 11 + (near ? 6 : -4), -lift];
+      if (M.tuck) foot = [hx + (fx - hx) * .4, TY + 44];
+      const side = foot[0] > hip[0] ? -1 : 1, [g1, g2] = ik2(hip, foot, 50, 64, side), knee = [hip[0] + Math.cos(g1) * 50, hip[1] + Math.sin(g1) * 50], ft = [knee[0] + Math.cos(g2) * 64, knee[1] + Math.sin(g2) * 64];
+      const col = near ? MN.body : MN.far;
+      seg(hip[0], hip[1], knee[0], knee[1], 7.4, 5.2, col, .8); seg(knee[0], knee[1], ft[0], ft[1], 4.8, 2.4, col, .4);
+      ctx.strokeStyle = C(near ? MN.bodyDk : MN.farDk); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(ft[0], ft[1]); ctx.lineTo(ft[0] - side * 9, ft[1] + 1); ctx.stroke(); // the foot
+      ctx.fillStyle = C(near ? BN.gilt : MN.farDk); circle(knee[0], knee[1], near ? 3 : 2.4); ctx.fill(); outline(.7); };
+    leg(TX + 2, 30, 0, false); leg(TX - 14, -66, Math.PI * .5, false);
+    const B = [TX - 4, TY - 12]; let eyes = null;
+    if (M.wing > .02) { const e1 = wingFan([B[0] + 12, B[1] - 6], M.wing * .92, true, t); eyes = [e1]; }
+    upper(() => foreleg([TX + 17, TY - 44], M.far, false, M.slash, t));
+    // the abdomen: long, segmented, the tip lifted
+    const br = Math.sin(t * 2.1) * 1.5 * U;
+    cel(PB([TX - 2, TY - 8, TX - 40, TY - 18 - br, TX - 92, TY - 16 - br, TX - 128, TY - 12, TX - 148, TY - 24, TX - 140, TY - 2, TX - 98, TY + 10, TX - 50, TY + 13, TX - 12, TY + 9]), MN.body, { d: 3.6, r: 1.3, w: 1.8, dark: MN.bodyDk, lite: MN.bodyLt, tex: () => {
+      ctx.strokeStyle = 'rgba(30,38,76,.5)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 1; i < 7; i++) { const x = TX - 14 - i * 18; ctx.moveTo(x + 4, TY - 22); ctx.quadraticCurveTo(x - 3, TY, x + 2, TY + 14); } ctx.stroke();
+      if (M.crack) { ctx.strokeStyle = `rgba(255,255,255,${.9 * M.crack})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(TX - 130, TY - 8); ctx.lineTo(TX - 100, TY + 2); ctx.lineTo(TX - 80, TY - 10); ctx.lineTo(TX - 50, TY + 4); ctx.lineTo(TX - 20, TY - 6); ctx.stroke(); } } });
+    if (M.wing > .02) eyes = [wingFan(B, M.wing, false, t)].concat(eyes || []);
+    // the fore wing: a long leaf of glass laid over the back, lifted with the display
+    ctx.save(); ctx.translate(B[0] + 2, B[1] + 2); ctx.rotate(-M.wing * 1.15);
+    { const fw = PB([0, 2, -40, -9, -102, -10, -150, -2, -112, 7, -44, 9]); fw(0, 0); ctx.fillStyle = solid(`rgba(${MN.wing},.5)`); ctx.fill();
+      if (DET()) { ctx.save(); fw(0, 0); ctx.clip(); const gg = ctx.createLinearGradient(0, -10, 0, 10); gg.addColorStop(0, 'rgba(255,255,255,.35)'); gg.addColorStop(1, `rgba(${MN.dawn},.25)`); ctx.fillStyle = gg; ctx.fillRect(-152, -12, 154, 24); ctx.restore();
+        leafLine(() => { ctx.moveTo(-4, 1); ctx.quadraticCurveTo(-70, -6, -146, -2); for (const x of [-30, -60, -90, -120]) { ctx.moveTo(x, -4); ctx.lineTo(x - 14, 6); } }, .7, .7);
+        for (const [x, y] of [[-34, -2], [-70, 2], [-104, -3], [-128, 1]]) star4(x, y, 2.8, .95); } // the stars he was
+      fw(0, 0); outline(1.3); }
+    ctx.restore();
+    // the neck: the long prothorax, rising
+    let H0;
+    upper(() => { const N = [TX + 30, TY - 66], s = taper(TX - 6, TY + 4, TX + 12, TY - 30, N[0], N[1], 20, 10, 6); H0 = N;
+      cel(stripPath(s), MN.body, { d: 2.6, r: 1.1, w: 1.6, dark: MN.bodyDk, lite: MN.bodyLt, tex: () => {
+        ctx.strokeStyle = 'rgba(30,38,76,.45)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(s.M[2], s.M[3]); for (let i = 4; i < s.M.length; i += 2) ctx.lineTo(s.M[i], s.M[i + 1]); ctx.stroke();
+        if (M.crack) { ctx.strokeStyle = `rgba(255,255,255,${.9 * M.crack})`; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(TX, TY - 2); ctx.lineTo(TX + 12, TY - 22); ctx.lineTo(TX + 8, TY - 34); ctx.lineTo(TX + 22, TY - 52); ctx.stroke(); } } });
+      ctx.fillStyle = C(BN.gilt); circle(TX - 2, TY - 2, 4); ctx.fill(); outline(.9); }); // a gilt boss where the wings are hinged
+    leg(TX + 6, 40, 0, true); leg(TX - 10, -58, Math.PI * .5, true);
+    // the head: a triangle on a swivel, eyes like lamps at its corners, each with the dark false pupil that follows you
+    upper(() => { ctx.save(); ctx.translate(H0[0] + 6, H0[1] - 8); ctx.rotate(M.head || 0);
+      ctx.strokeStyle = C(MN.bodyDk); ctx.lineWidth = 1.2; ctx.beginPath(); for (const [dx, k] of [[-3, 0], [3, 1]]) { ctx.moveTo(dx, -10); ctx.quadraticCurveTo(-16 + dx * 2, -50 - k * 6 + Math.sin(t * 2 + k) * 3, -54 + dx * 3, -58 - k * 12 + Math.sin(t * 1.6 + k) * 5); } ctx.stroke(); // the antennae
+      cel(PB([-14, -8, 0, -15, 16, -9, 11, 3, 4, 15, -3, 13, -11, 2]), MN.body, { d: 2, r: 1, w: 1.5, dark: MN.bodyDk, lite: MN.bodyLt });
+      ctx.fillStyle = C(MN.bodyDk); ctx.beginPath(); ctx.moveTo(-1, 10); ctx.lineTo(5, 19); ctx.lineTo(6, 10); ctx.closePath(); ctx.fill(); outline(.7); // the mouthparts
+      const eg = M.eye ?? 0;
+      for (const [x, y, r, fr] of [[-11, -8, 5.4, 1], [12, -7, 6.8, 0]]) { cel(PE(x, y, r, r * 1.12), fr ? '#B8C8E6' : MN.eye, { d: 1.2, r: .6, w: 1.1, dark: '#7A8AB4', lite: '#FFFFFF' });
+        if (!FLASH) { ctx.fillStyle = 'rgba(16,20,46,.85)'; ell(x + 1.6, y + .6, r * .3, r * .42); ctx.fill(); } glowAt(x, y, r * 3.2, '220,240,255', .3 + .5 * eg); }
+      ctx.restore(); });
+    let tip = null;
+    if (!o.noNear) upper(() => { tip = foreleg([TX + 21, TY - 40], M.near, true, M.slash, t); });
+    ctx.restore();
+    if (e && eyes) { const s = e.size || 1; e.w5eyes = eyes.map(([x, y]) => ({ x: e.x + x * e.facing * s, z: (lz - y) * s })); } // (where the eyes on its wings are: the glare comes out of them)
+    return { TX, TY, tip };
+  }
   // ---------------- the changes, drawn ----------------
   const kneeling = (e) => Object.assign({}, e, { state: 'down', plan: null, phase: 1, w5shift: 0, dead: false, bph: 1 });
   function drawMorph(e, a, t) {
@@ -401,20 +545,35 @@
       const fade = 1 - seg01(u, .22, .55);
       if (fade > 0) { ctx.save(); ctx.globalAlpha *= fade; ctx.translate(0, -seg01(u, .22, .55) * 30); drawHost(e, { t, wind: 0, hurt: false }, t, 1, { look: 1 }); ctx.restore(); }
       if (u > .45) drawStars(e, calm, t, 1, { reveal: seg01(u, .45, .97) });
-    } else { // the stars fall into his heart; it flashes; and a hand of silver rises up over the floor of the hall
-      if (u < .34) drawStars(e, calm, t, 1 - seg01(u, .18, .34), { collapse: seg01(u, 0, .3) });
-      if (u > .38) { const r = sm(seg01(u, .38, .82)), turn = seg01(u, .84, 1);
-        const H = handPose(e, calm, t); H.up = 1 - sm(turn); H.shape = u < .62 ? 'claw' : 'paper'; H.lift = 0;
-        ctx.save(); ctx.beginPath(); ctx.rect(-260, -420, 520, 422); ctx.clip(); ctx.translate(0, (1 - r) * 210 + 60 * (1 - turn)); drawHand(e, calm, t, H); ctx.restore(); }
+    } else { // the stars redraw themselves into the Mantis (morphStep blends the figure), fall into his heart, and the heart
+      // falls to the floor; a chrysalis of silver grows there, cracks and splits, and the Mantis climbs out and unfolds
+      const shell = sm(seg01(u, .34, .5)), crack = seg01(u, .5, .66), split = seg01(u, .66, .82);
+      if (u < .4) { const drop = sm(seg01(u, .27, .35)); ctx.save(); ctx.translate(0, drop * 122); drawStars(e, calm, t, 1 - seg01(u, .33, .4), { collapse: seg01(u, .19, .29) }); ctx.restore(); }
+      if (u > .64) { const M = mantisPose(Object.assign({}, e, { state: 'idle', plan: null, w5lz: 0 }), calm, t), U = sm(seg01(u, .64, .88)), flare = Math.sin(Math.PI * seg01(u, .8, 1));
+        M.unfold = U; M.wing = flare; M.eye = U; M.near = lerpA(lerpA(FORE.droop, FORE.pray, U), FORE.raise, flare * .8); M.far = M.near.slice(); M.lean = -.18 * flare; M.head = .4 * (1 - U) - .15 * flare;
+        ctx.save(); ctx.scale(lerp(.62, 1, U), lerp(.5, 1, U)); drawMantis(e, calm, t, M); ctx.restore(); }
+      chrysalis(118 * shell, crack, split, t);
+      if (u > .3 && u < .5) glowAt(0, -10 - 50 * shell, 40 + 50 * shell, '235,242,255', .6 * Math.sin(Math.PI * seg01(u, .3, .5)));
+      if (u > .64 && u < .84) glowAt(0, -70, 120, '255,236,220', .55 * Math.sin(Math.PI * seg01(u, .64, .84))); // the dawn inside it
     }
   }
-  function drawHandDeath(e, a, t) {
+  // its death: it rears, then kneels and folds its scythes in prayer; it cracks, and flakes away to silver leaf from the
+  // tail forward; the silver scythe comes away whole, falls, and lies on the floor (and there it is the silver arm)
+  function drawMantisDeath(e, a, t) {
     const u = (e.w5die || 0) / 3; if (u >= .96) return;
-    const H = handPose(e, { t, wind: 0, hurt: false }, t), q = sm(seg01(u, .25, .74));
-    H.up = sm(seg01(u, 0, .2)) * (1 - q); H.shape = u < .12 ? 'paper' : 'rock'; H.crack = seg01(u, .2, .4); H.lift = 0;
-    ctx.save(); ctx.translate(Math.sin(t * 40) * 2 * (1 - q) * (u > .1 ? 1 : 0), 0);
-    drawHand(e, a, t, H, { s: lerp(1, .22, q), a: 1 - seg01(u, .7, .8) }); ctx.restore();
-    if (u > .2) glowAt(0, -60 * (1 - q), 60 * (1 - q) + 20, '235,242,255', .6 * Math.sin(Math.PI * seg01(u, .2, .8)));
+    const M = mantisPose(Object.assign({}, e, { state: 'idle', plan: null, w5lz: 0, dead: false, w5gait: e.w5gait }), { t, wind: 0, hurt: false }, t);
+    const rear = Math.sin(Math.PI * seg01(u, 0, .22)), kneel = sm(seg01(u, .18, .42)), dis = seg01(u, .42, .74);
+    M.wing = rear; M.near = lerpA(lerpA(FORE.pray, FORE.raise, rear), FORE.pray, kneel); M.far = M.near.slice(); M.lean = -.25 * rear + .22 * kneel; M.head = -.3 * rear + .4 * kneel;
+    M.crouch = 30 * kneel; M.crack = seg01(u, .2, .42); M.eye = 1 - seg01(u, .3, .5); M.sway = 0;
+    const cut = dis > 0 ? lerp(-170, 120, dis) : null, gone = u > .5;
+    let R;
+    if (cut === null || cut < 110) { ctx.save(); ctx.translate(Math.sin(t * 40) * 1.6 * M.crack * (1 - dis), 0); R = drawMantis(e, a, t, M, { clipX: cut, noNear: gone }); ctx.restore(); }
+    if (cut !== null && cut < 110) add(() => { const g = ctx.createLinearGradient(cut - 14, 0, cut + 6, 0); g.addColorStop(0, 'rgba(235,242,255,0)'); g.addColorStop(1, 'rgba(235,242,255,.55)'); ctx.fillStyle = g; ctx.fillRect(cut - 14, -200, 20, 200); }); // the edge where it is going
+    if (gone) { // the silver scythe, falling free and laid down flat
+      const f = sm(seg01(u, .5, .68)), fade = 1 - seg01(u, .72, .8); if (fade > 0) { const TX = -6, TY = -84 + 30;
+        ctx.save(); ctx.globalAlpha *= fade; ctx.translate(lerp(TX + 21, MDROP - 22, f), lerp(TY - 40, -4, f)); ctx.rotate(lerp(0, -.9, f)); ctx.scale(lerp(1, .55, f), lerp(1, .55, f));
+        foreleg([0, 0], lerpA(FORE.pray, [0, -.05, .1], f), true, 0, t); ctx.restore(); glowAt(MDROP, -6, 26, '235,242,255', .4 * f * fade); } }
+    if (u > .2 && u < .8) glowAt(0, -70, 90, '235,242,255', .35 * Math.sin(Math.PI * seg01(u, .2, .8)));
   }
 
   // ======================================================================================================
@@ -657,109 +816,126 @@
   TELL_FX.w5nova = (e, t, k) => ringTell(e.x, e.y, e.hw + 80, k, 'JUMP');
   PLAN_FX.w5nova = (e) => { sfx('hit-crystal'); sfx('slam'); flashT = Math.max(flashT, .08); ring(e.x, e.y, 220, ED(e, .8), { r0: 16, speed: 400 }); act(e, 'nova', (h, dt, e) => { if (h.el > .4) { recover(e, .9); return true; } return false; }); };
 
-  // ---------------- THE SILVER HAND ----------------
-  // ROCK, PAPER, SCISSORS: it rears up and pumps its fist, once, twice, three times, and throws. Rock comes down where
-  // you stand and sends a ring rolling out (get clear, then jump it); paper slaps flat across the whole floor (jump it);
-  // scissors cut an X through where you stand (step out of it)
-  const JK = ['rock', 'paper', 'scissors'], JKN = { rock: 'ROCK!', paper: 'PAPER!', scissors: 'SCISSORS!' };
-  const jkT = (e) => targets(e, () => { let s = pick(JK); if (s === e.w5jkLast && Math.random() < .7) s = pick(JK.filter(x => x !== s)); if (W5B.jkForce) s = W5B.jkForce; return { s, x: P.x, y: P.y, beats: 0 }; });
-  const scLines = (T) => { const L = 190, a = .34, dx = Math.cos(a) * L, dy = Math.sin(a) * L * .5; return [[T.x - dx, T.y - dy, T.x + dx, T.y + dy], [T.x - dx, T.y + dy, T.x + dx, T.y - dy]]; };
-  function jkTell(e, T, k, live) {
-    if (T.s === 'rock') { ringTell(T.x, T.y, 50, k, 'ROCK · GET CLEAR, THEN JUMP'); ctx.strokeStyle = tellLine(k * .5); ctx.lineWidth = 1.2; ctx.setLineDash([4, 6]); ell(T.x, T.y, 140, 140 / 2.2); ctx.stroke(); ctx.setLineDash([]); }
-    else if (T.s === 'paper') { const d = Math.sign(P.x - e.x) || e.facing, x0 = e.x, x1 = d > 0 ? rightWall() : leftWall(); ctx.fillStyle = tellCol(k * .8); ctx.fillRect(Math.min(x0, x1), FT(), Math.abs(x1 - x0), FB() + 6 - FT()); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ctx.strokeRect(Math.min(x0, x1), FT(), Math.abs(x1 - x0), FB() + 6 - FT());
-      label((x0 + x1) / 2, (FT() + FB()) / 2 + 3, 'PAPER · JUMP!', .6 + .4 * k); }
-    else { for (const [x0, y0, x1, y1] of scLines(T)) { const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0); ctx.save(); ctx.translate(x0, y0); ctx.rotate(a); ctx.fillStyle = tellCol(k); ctx.fillRect(0, -12, L, 24); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; ctx.strokeRect(0, -12, L, 24); ctx.restore(); } label(T.x, T.y + 40, 'SCISSORS · STEP OUT', .6 + .4 * k); }
-  }
-  WIND_UP.w5janken = (e, k) => { const T = jkT(e); if (k < .05) e.w5jk = null;
-    const beats = [.18, .43, .68]; for (let i = 0; i < 3; i++) if (k >= beats[i] && T.beats <= i) { T.beats = i + 1; big(['ROCK…', 'PAPER…', 'SCISSORS…'][i], e.x, e.y, 150 + i * 26, '#DDE6FF', 15); sfx('slam', .4); shakeMag = Math.max(shakeMag, 2); }
-    if (k < .72) { T.x = P.x; T.y = yClamp(P.y); return; }
-    if (!T.shown) { T.shown = 1; e.w5jk = T.s; big(JKN[T.s], e.x, e.y, 250, '#FFFFFF', 24); sfx('crit'); } };
-  TELL_FX.w5janken = (e, t, k) => { const T = jkT(e); if (T.shown) jkTell(e, T, cl01((k - .72) / .28) * .6 + .4, true); };
-  PLAN_FX.w5janken = (e) => {
-    const T = jkT(e); e.w5T = null; const s = T.s; e.w5jk = s; e.w5jkLast = s; if (!T.shown) big(JKN[s], e.x, e.y, 236, '#FFFFFF', 22);
-    const d = Math.sign(P.x - e.x) || e.facing, ex0 = e.x, ey0 = e.y;
-    if (s === 'rock') act(e, 'janken', (h, dt, e) => { e.w5k = cl01(h.el / .45); const q = sm(e.w5k); e.x = lerp(ex0, xClamp(T.x - e.facing * 10), q); e.y = lerp(ey0, T.y, q);
-        if (h.el > .45 && !h.hit) { h.hit = true; sfx('slam'); sfx('crunch'); shakeMag = Math.max(shakeMag, 13); hitstop = Math.max(hitstop, .06); dust(T.x, T.y, 16); silverBurst(T.x, T.y, 6, 20);
-          if (inEll(P.x, P.y, T.x, T.y, 52) && P.z < 34) hitP(ED(e, 1.2), T.x, true); ring(T.x, T.y, 300, ED(e, .8), { r0: 52, speed: 330 }); }
-        if (h.el > 1.25) { recover(e, .9); return true; } return false; }, { draw: (h) => { if (!h.hit) jkTell(e, T, 1, true); } });
-    else if (s === 'paper') act(e, 'janken', (h, dt, e) => { e.w5k = cl01(h.el / .3);
-        if (h.el > .3) { if (!h.go) { h.go = 1; sfx('whoosh'); } const px = e.x; e.x = clamp(e.x + d * 640 * dt, leftWall() + 40, rightWall() - 40); if (Math.random() < .8) dust(e.x - d * 30, rand(FT(), FB()), 1);
-          if (!h.hit && (P.x - px) * d > -60 && (P.x - e.x) * d < 70 && P.z < 26) { h.hit = true; hitP(ED(e, 1.0), e.x - d * 40, true); }
-          if (e.x <= leftWall() + 41 || e.x >= rightWall() - 41) { if (!h.end) { h.end = h.el; sfx('slam'); shakeMag = Math.max(shakeMag, 7); } } }
-        if (h.end && h.el > h.end + .5) { recover(e, 1.0); return true; } return h.el > 3; }, { draw: (h) => { if (!h.go) jkTell(e, T, 1, true); }, up: (h, t) => {}, uy: FB() });
-    else act(e, 'janken', (h, dt, e) => { e.w5k = cl01(h.el / .45); e.w5snip = sm(cl01((h.el - .25) / .2));
-        if (h.el > .45 && !h.hit) { h.hit = true; sfx('slice'); sfx('hit-metal'); shakeMag = Math.max(shakeMag, 6); h.flash = .3;
-          for (const [x0, y0, x1, y1] of scLines(T)) if (segDist(P.x, P.y, x0, y0, x1, y1) < 14 && P.z < 40) { hitP(ED(e, 1.1), T.x, true); break; } }
-        if (h.flash > 0) h.flash -= dt;
-        if (h.el > 1.0) { e.w5snip = 0; recover(e, .9); return true; } return false; },
-      { draw: (h) => { if (!h.hit) jkTell(e, T, 1, true); else if (h.flash > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(240,244,255,${h.flash * 3})`; ctx.lineWidth = 6; for (const [x0, y0, x1, y1] of scLines(T)) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); } ctx.restore(); } },
-        up: (h, t) => { if (h.hit) return; const q = e.w5snip || 0; for (const sgn of [-1, 1]) { const a = sgn * lerp(.9, .34, q); ctx.save(); ctx.translate(T.x - Math.cos(a) * 150, T.y - 30 - Math.sin(a) * 40); ctx.rotate(a); ctx.globalAlpha *= .9; ctx.fillStyle = C(BN.silver); ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(300, -1); ctx.lineTo(306, 0); ctx.lineTo(300, 1); ctx.lineTo(0, 5); ctx.closePath(); ctx.fill(); outline(1); ctx.restore(); } }, uy: P.y + 1 });
-  };
-  // THE DRUMMING: it drums its fingers across the floor toward you, then again toward where you went
-  const drumPath = (e, from, to, n) => { const d = Math.sign(to.x - from.x) || e.facing, ang = Math.atan2((to.y - from.y), (to.x - from.x)), out = [];
-    for (let j = 0; j < n; j++) { const dist = 40 + j * 36, side = [-9, -3, 3, 9][j % 4]; out.push({ x: clamp(from.x + Math.cos(ang) * dist, leftWall() + 14, rightWall() - 14), y: clamp(from.y + Math.sin(ang) * dist + side, FT() + 6, FB()), done: false }); } return out; };
-  TELL_FX.w5drum = (e, t, k) => { const pts = drumPath(e, e, P, 8); for (let j = 0; j < pts.length; j++) { const p = pts[j]; ctx.fillStyle = tellCol(k * .45); ell(p.x, p.y, 24, 10); ctx.fill(); } };
-  PLAN_FX.w5drum = (e) => {
-    const taps = drumPath(e, e, P, 8).map((p, j) => Object.assign(p, { at: .4 + j * .15 })); sfx('charge', 1);
-    hazards.push({ kind: 'w5taps', e, taps, el: 0, t: 9, max: 9, dmg: ED(e, .75), second: false });
-    act(e, 'drum', (h, dt, e) => { e.w5drumT = h.el; e.w5drumI = 1; const m = hazards.find(o => o.kind === 'w5taps' && o.e === e);
-      if (m) { const nx = m.taps.find(p => !p.done); if (nx) { e.x += (xClamp(nx.x - e.facing * 34) - e.x) * Math.min(1, dt * 6); e.y += (nx.y - e.y) * Math.min(1, dt * 5); e.facing = Math.sign(nx.x - e.x) || e.facing; } }
-      if (h.el > 1.55 && !h.second) { h.second = 1; if (m) { const more = drumPath(e, e, P, 6).map((p, j) => Object.assign(p, { at: m.el + .55 + j * .15 })); m.taps.push(...more); } }
-      if (h.el > 2.75) { e.w5drumI = -1; recover(e, .8); return true; } return false; });
-  };
-  reg('w5taps', {
-    update(h, dt) { h.el += dt; let left = 0;
-      for (const p of h.taps) { if (p.done) { p.f -= dt; continue; } left++; if (h.el >= p.at) { p.done = true; p.f = .3; sfx('slam', .45); shakeMag = Math.max(shakeMag, 3.5); dust(p.x, p.y, 4); if (!h.hitT && inEll(P.x, P.y, p.x, p.y, 30) && P.z < 24) { h.hitT = 1; hitP(h.dmg, p.x, false); } } }
-      if (h.hitT > 0) h.hitT -= dt * 2; // (one hit per half second at most)
-      if (!left && h.taps.every(p => p.f <= 0)) h.t = -1; },
-    draw(h, t) { for (const p of h.taps) { if (p.done) { if (p.f > 0) { ctx.strokeStyle = `rgba(235,242,255,${p.f * 3})`; ctx.lineWidth = 2; ell(p.x, p.y, 30 - p.f * 30, (30 - p.f * 30) / 2.4); ctx.stroke(); } continue; } const k = cl01(1 - (p.at - h.el) / .55); if (k <= 0) continue; ringTell(p.x, p.y, 30, k); } },
+  // ---------------- THE MOON MANTIS ----------------
+  // a crescent of moonlight thrown off a scythe, flying along the floor down one lane: tall ones out of the scythe cut
+  // (step out of the lane), low ones skimming the floor out of the leap (jump them)
+  reg('w5crescent', {
+    update(h, dt) { if (h.delay > 0) { h.delay -= dt; return; } h.x += h.vx * dt; if (h.x < leftWall() - 40 || h.x > rightWall() + 40) { h.t = -1; return; }
+      if (Math.random() < dt * 40) parts.push({ x: h.x - Math.sign(h.vx) * 10, y: h.y + rand(-3, 3), z: rand(2, h.hh * .8), vx: -h.vx * .08, vy: 0, vz: rand(10, 40), life: .35, max: .35, col: pick(['#FFFFFF', '#DDE6FF']), size: rand(1.5, 2.5), shape: 'star', rot: 0, vr: 3 });
+      if (!h.hit && Math.abs(P.x - h.x) < 22 && Math.abs(P.y - h.y) < 15 && P.z < h.zMax) { h.hit = true; hitP(h.dmg, h.x - h.vx * .05, true); } },
+    draw(h, t) { if (h.delay > 0) { const k = 1 - h.delay / (h.d0 || .2); ctx.fillStyle = `rgba(235,242,255,${.3 + .5 * k})`; ell(h.x, h.y, 10 + 10 * k, 4 + 3 * k); ctx.fill(); return; }
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const d = Math.sign(h.vx), g = ctx.createLinearGradient(h.x - d * 120, 0, h.x, 0); g.addColorStop(0, 'rgba(220,230,255,0)'); g.addColorStop(1, 'rgba(235,242,255,.45)'); ctx.fillStyle = g; ctx.fillRect(Math.min(h.x, h.x - d * 120), h.y - 3, 120, 6); ctx.restore(); },
+    ups(h, list, t) { if (h.delay > 0) return; list.push([h.y, () => onMain(() => { const d = Math.sign(h.vx), H = h.hh, x = h.x, y = h.y; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(200,215,255,.35)'; ctx.beginPath(); ctx.moveTo(x, y - H - 4); ctx.quadraticCurveTo(x + d * (H * .5 + 6), y - H / 2, x, y + 4); ctx.quadraticCurveTo(x + d * (H * .2), y - H / 2, x, y - H - 4); ctx.fill();
+      ctx.fillStyle = 'rgba(250,252,255,.95)'; ctx.beginPath(); ctx.moveTo(x, y - H); ctx.quadraticCurveTo(x + d * H * .45, y - H / 2, x, y); ctx.quadraticCurveTo(x + d * H * .22, y - H / 2, x, y - H); ctx.fill();
+      glowM(x + d * 6, y - H / 2, H * .7, '230,238,255', .45); ctx.restore(); })]); },
+    box(h, box) { box(h.x, h.y, 0, 40, h.hh + 20); },
   });
-  // THE SNATCH: it rises, its shadow finds you, and it comes down to close on you. Caught, you are crushed and thrown;
-  // missed, it is stuck flat on the floor for a moment, and wide open
-  const snT = () => ({ x: P.x, y: yClamp(P.y) });
-  WIND_UP.w5snatch = (e, k) => { if (k < .66 || !e.w5G) e.w5G = snT(); };
-  TELL_FX.w5snatch = (e, t, k) => { const G = e.w5G || snT(), lock = k >= .66, r = 58;
-    ctx.fillStyle = `rgba(10,14,34,${.15 + .35 * k})`; ell(G.x, G.y, r * (.5 + .5 * k), r * (.5 + .5 * k) / 2.2); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; if (!lock) ctx.setLineDash([5, 4]); ell(G.x, G.y, r, r / 2.2); ctx.stroke(); ctx.setLineDash([]); if (lock) label(G.x, G.y - r / 2.2 - 4, 'LOCKED', .5 + .4 * k); };
-  PLAN_FX.w5snatch = (e) => {
-    const G = e.w5G || snT(); e.w5G = null; const ex0 = e.x, ey0 = e.y; sfx('whoosh');
-    act(e, 'snatch', (h, dt, e) => { e.w5k = cl01(h.el / .22); const q = sm(e.w5k); e.x = lerp(ex0, xClamp(G.x), q); e.y = lerp(ey0, G.y, q);
-      if (h.el > .22 && !h.slam) { h.slam = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 10); dust(G.x, G.y, 12);
-        if (inEll(P.x, P.y, G.x, G.y, 60) && P.z < 40 && P.state !== 'dodge' && P.inv <= 0 && P.state !== 'dead') { h.caught = 1; e.w5caught = 1; hitP(ED(e, .7), G.x, false); big('CAUGHT', P.x, P.y, 100, '#E8EEF8', 16); } }
-      if (h.caught) { if (P.state !== 'dead') { P.state = 'hurt'; P.t = Math.max(P.t, .25); P.vx = 0; P.x = e.x + e.facing * 6; P.y = e.y + 1; P.z = 0; P.inv = Math.max(P.inv, .3); }
-        if (h.el > .55 && !h.sq) { h.sq = 1; sfx('crunch'); shakeMag = Math.max(shakeMag, 6); }
-        if (h.el > .95) { e.w5caught = 0; if (P.state !== 'dead') { P.inv = 0; hitP(ED(e, .55), e.x, true); const away = (P.x < (leftWall() + rightWall()) / 2) ? 1 : -1; P.vx = away * 420; P.vz = 320; P.knocked = true; P.inv = Math.max(P.inv, .8); } recover(e, .7); return true; }
-        return false; }
-      if (h.slam && !h.stuck) { h.stuck = 1; e.w5stuck = 1.6; e.state = 'recover'; e.t = 9; big('STUCK!', e.x, e.y, 90, '#FFE2A0', 17); return true; }
-      return false; });
+  const crescent = (x, y, d, o) => hazards.push(Object.assign({ kind: 'w5crescent', x, y, vx: d * 800, zMax: 30, hh: 58, hit: false, t: 4, max: 4, delay: 0 }, o));
+  const laneTell = (x0, d, y, k, txt, live = true) => { const x1 = d > 0 ? rightWall() : leftWall(), hh = 15; ctx.fillStyle = tellCol(live ? k : k * .4); ctx.fillRect(Math.min(x0, x1), y - hh, Math.abs(x1 - x0), hh * 2);
+    ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; if (!live) ctx.setLineDash([6, 5]); ctx.strokeRect(Math.min(x0, x1), y - hh, Math.abs(x1 - x0), hh * 2); ctx.setLineDash([]);
+    ctx.lineWidth = 2; for (let j = 0; j < 6; j++) { const ax = x0 + d * (40 + j * 60 + (performance.now() / 6) % 60); if ((ax - x1) * d > 0) continue; ctx.beginPath(); ctx.moveTo(ax, y - 6); ctx.lineTo(ax + d * 8, y); ctx.lineTo(ax, y + 6); ctx.stroke(); }
+    if (txt) label(x0 + d * 90, y + 3, txt, .5 + .4 * k); };
+  // THE SCYTHES: it draws both scythes back over its head, and cuts: a crescent of moonlight flies down the lane it stands
+  // in. Then it turns on you, finds your lane, and cuts again. Step out of the lane each time (or jump high over it)
+  const scyT = (e) => targets(e, () => ({ y: yClamp(P.y), d: Math.sign(P.x - e.x) || e.facing }));
+  WIND_UP.w5scythe = (e, k) => { const T = scyT(e); if (k < .5) { T.y = yClamp(P.y); T.d = Math.sign(P.x - e.x) || e.facing; } e.y += (T.y - e.y) * .12; e.facing = T.d; };
+  TELL_FX.w5scythe = (e, t, k) => { const T = scyT(e); laneTell(e.x, T.d, T.y, k, k >= .5 ? 'STEP OUT OF THE LANE' : null, k >= .5); };
+  PLAN_FX.w5scythe = (e) => {
+    const T = scyT(e); e.w5T = null; e.y = T.y; e.facing = T.d; const T2 = { y: yClamp(P.y), d: T.d, lock: false };
+    const cut = (y, d) => { sfx('slice'); sfx('whoosh'); shakeMag = Math.max(shakeMag, 5); e.facing = d; e.x = xClamp(e.x + d * 30); crescent(e.x + d * 60, y, d, { dmg: ED(e, .95) }); silverBurst(e.x + d * 70, y, 70, 8); };
+    act(e, 'scythe', (h, dt, e) => {
+      if (h.el < .14) e.w5strike = sm(h.el / .14); else if (!h.c1) { h.c1 = 1; e.w5strike = 1; cut(T.y, T.d); }
+      if (h.c1 && h.el < .55) { e.w5strike = 1 - sm(cl01((h.el - .14) / .3)); T2.y = yClamp(P.y); T2.d = Math.sign(P.x - e.x) || e.facing; e.facing = T2.d; } // it turns on you
+      else if (h.el >= .55 && !T2.lock) { T2.lock = true; sfx('charge', 1); }
+      if (h.c1 && !h.c2) e.y += (T2.y - e.y) * Math.min(1, dt * 7);
+      if (h.el >= .95 && !h.c2) e.w5strike = sm(cl01((h.el - .95) / .15));
+      if (h.el >= 1.1 && !h.c2) { h.c2 = 1; e.y = T2.y; cut(T2.y, T2.d); }
+      if (h.c2) e.w5strike = 1 - sm(cl01((h.el - 1.15) / .3));
+      if (h.el > 1.6) { e.w5strike = 0; recover(e, .8); return true; } return false; },
+      { draw: (h) => { if (h.c1 && !h.c2) laneTell(e.x, T2.d, T2.y, T2.lock ? cl01(.5 + (h.el - .55) / .55 * .5) : .35, T2.lock ? 'AGAIN · STEP OUT' : null, T2.lock); } });
   };
-  // THE FLICK: it hooks a finger behind its thumb, and flicks a pearl of moonlight down your lane; it rebounds once
-  const flT = (e) => targets(e, () => ({ y: yClamp(P.y) }));
-  WIND_UP.w5flick = (e, k) => { const T = flT(e); if (k < .7) T.y = yClamp(P.y); };
-  TELL_FX.w5flick = (e, t, k) => { const T = flT(e); const d = Math.sign(P.x - e.x) || e.facing, x1 = d > 0 ? rightWall() : leftWall();
-    ctx.fillStyle = tellCol(k); ctx.fillRect(Math.min(e.x, x1), T.y - 16, Math.abs(x1 - e.x), 32); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; if (k < .7) ctx.setLineDash([6, 5]); ctx.strokeRect(Math.min(e.x, x1), T.y - 16, Math.abs(x1 - e.x), 32); ctx.setLineDash([]); label(e.x + d * 60, T.y + 3, 'JUMP IT', .5 + .4 * k); };
-  PLAN_FX.w5flick = (e) => {
-    const T = flT(e); e.w5T = null; const d = Math.sign(P.x - e.x) || e.facing;
-    act(e, 'flick', (h, dt, e) => { if (h.el > .1 && !h.go) { h.go = 1; sfx('hit-crystal'); sfx('whoosh'); shakeMag = Math.max(shakeMag, 4);
-        hazards.push({ kind: 'w5pearl', x: e.x + d * 40, y: T.y, vx: d * 430, bounce: 1, hit: false, t: 6, max: 6, dmg: ED(e, .9), rot: 0 }); }
-      if (h.el > .5) { recover(e, .8); return true; } return false; });
+  // THE LEAP: it crouches, springs high over the hall, and its shadow hunts you across the floor; the shadow stops, and it
+  // comes down there scythes first. Get out from under the shadow; then jump the two low blades of moonlight it throws
+  // along the floor from where it lands (or be out of their lane)
+  const LEAP = { up: .85, lock: .2, r: 58 };
+  WIND_UP.w5leap = (e) => { e.w5G = { x: xClamp(P.x), y: yClamp(P.y) }; };
+  TELL_FX.w5leap = (e, t, k) => { const G = e.w5G; if (!G) return; ctx.strokeStyle = tellLine(k * .6); ctx.lineWidth = 1.4; ctx.setLineDash([5, 5]); ell(G.x, G.y, LEAP.r, LEAP.r / 2.2); ctx.stroke(); ctx.setLineDash([]); };
+  PLAN_FX.w5leap = (e) => {
+    const G = e.w5G || { x: xClamp(P.x), y: yClamp(P.y) }; e.w5G = null; const ex0 = e.x, ey0 = e.y; sfx('whoosh'); dust(e.x, e.y, 12); shakeMag = Math.max(shakeMag, 4);
+    act(e, 'leap', (h, dt, e) => {
+      if (h.el < LEAP.lock) { G.x = xClamp(P.x); G.y = yClamp(P.y); e.facing = Math.sign(P.x - e.x) || e.facing; } else if (!h.lock) { h.lock = 1; sfx('charge', 1); }
+      const q = cl01(h.el / LEAP.up); e.w5k = q;
+      if (!h.land) { e.w5lz = Math.sin(Math.PI * q) * 175; e.x = lerp(ex0, G.x - e.facing * 6, sm(q)); e.y = lerp(ey0, G.y, sm(q)); }
+      if (q >= 1 && !h.land) { h.land = 1; e.w5lz = 0; e.x = G.x - e.facing * 6; e.y = G.y; sfx('slam'); sfx('slice'); shakeMag = Math.max(shakeMag, 12); hitstop = Math.max(hitstop, .05); dust(G.x, G.y, 16); silverBurst(G.x, G.y, 6, 18);
+        fx.push({ kind: 'ring', x: G.x, y: G.y, z: 2, t: .35, max: .35, r: 80, col: '#EEF2FA', flat: 1 });
+        if (inEll(P.x, P.y, G.x, G.y, LEAP.r) && P.z < 40) hitP(ED(e, 1.1), G.x, true);
+        for (const d of [-1, 1]) crescent(G.x + d * 26, G.y, d, { vx: d * 400, zMax: 20, hh: 24, delay: .2, d0: .2, dmg: ED(e, .7) }); }
+      if (h.land && h.el > LEAP.up + .6) { recover(e, .9); return true; } return false; },
+      { draw: (h) => { if (h.land) return; const q = cl01(h.el / LEAP.up), k = h.lock ? cl01(.5 + (h.el - LEAP.lock) / (LEAP.up - LEAP.lock) * .5) : .35;
+        ctx.fillStyle = `rgba(8,10,28,${.2 + .35 * q})`; ell(G.x, G.y, LEAP.r * (.4 + .6 * q), LEAP.r * (.4 + .6 * q) / 2.2); ctx.fill(); // its shadow
+        ringTell(G.x, G.y, LEAP.r, k, h.lock ? 'GET CLEAR · THEN JUMP' : null);
+        if (h.lock) { ctx.strokeStyle = tellLine(k * .6); ctx.lineWidth = 1.2; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.moveTo(leftWall(), G.y); ctx.lineTo(rightWall(), G.y); ctx.stroke(); ctx.setLineDash([]); } } });
   };
-  reg('w5pearl', {
-    update(h, dt) { h.x += h.vx * dt; h.rot += h.vx * dt / 15;
-      if ((h.x > rightWall() - 14 && h.vx > 0) || (h.x < leftWall() + 14 && h.vx < 0)) { if (h.bounce > 0) { h.bounce--; h.vx = -h.vx * .9; h.hit = false; sfx('hit-crystal'); shakeMag = Math.max(shakeMag, 4); silverBurst(h.x, h.y, 14, 10); } else { h.t = -1; silverBurst(h.x, h.y, 14, 16); } }
-      if (!h.hit && Math.abs(P.y - h.y) < 18 && Math.abs(P.x - h.x) < 20 && P.z < 20) { h.hit = true; hitP(h.dmg, h.x, true); }
-      if (Math.random() < dt * 30) parts.push({ x: h.x, y: h.y, z: rand(4, 26), vx: -h.vx * .1, vy: 0, vz: rand(10, 30), life: .4, max: .4, col: pick(['#FFFFFF', '#DDE6FF']), size: rand(1.5, 2.5), shape: 'star', rot: 0, vr: 3 }); },
-    draw(h, t) { ctx.fillStyle = 'rgba(10,14,34,.35)'; ell(h.x, h.y, 16, 5); ctx.fill(); ctx.fillStyle = 'rgba(230,70,90,.18)'; ctx.fillRect(Math.min(h.x, h.x + Math.sign(h.vx) * 200), h.y - 14, 200, 28); },
-    ups(h, list, t) { list.push([h.y, () => { const x = h.x, y = h.y - 15; const g = ctx.createRadialGradient(x - 4, y - 5, 2, x, y, 15); g.addColorStop(0, C('#FFFFFF')); g.addColorStop(.6, C('#DCE4F6')); g.addColorStop(1, C('#8A96B4')); ctx.fillStyle = g; circle(x, y, 15); ctx.fill(); outline(1.2);
-      if (DET()) { ctx.strokeStyle = 'rgba(120,135,180,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y, 15, 5 + 4 * Math.sin(h.rot), h.rot * .3, 0, TAU); ctx.stroke(); } glowAt(x, y, 30, '235,242,255', .6); }]); },
-    box(h, box) { box(h.x, h.y, 0, 40, 50); },
-  });
-  // THE SNAP (up close): thumb and finger snapped, a crack of force rolling out round it
-  TELL_FX.w5snap = (e, t, k) => ringTell(e.x, e.y, e.hw + 76, k, 'JUMP');
-  PLAN_FX.w5snap = (e) => { act(e, 'snap', (h, dt, e) => { if (h.el > .08 && !h.go) { h.go = 1; sfx('crit'); sfx('slam'); flashT = Math.max(flashT, .06); shakeMag = Math.max(shakeMag, 7); ring(e.x, e.y, 230, ED(e, .85), { r0: 18, speed: 420 }); } if (h.el > .45) { recover(e, .9); return true; } return false; }); };
+  // THE EYES ON ITS WINGS: it rears and throws its wings open, and on them are two great eyes with a moon in each. They
+  // open, and their light falls on the whole floor in front of it. Get in under its wings (close), or round behind it
+  const EYE_SAFE = 96;
+  const wingT = (e) => targets(e, () => ({ d: Math.sign(P.x - e.x) || e.facing }));
+  const wingZone = (e, d) => { const x0 = e.x + d * EYE_SAFE, x1 = d > 0 ? rightWall() + 40 : leftWall() - 40; return { a: Math.min(x0, x1), b: Math.max(x0, x1) }; };
+  WIND_UP.w5wings = (e) => { e.facing = wingT(e).d; };
+  TELL_FX.w5wings = (e, t, k) => { const d = wingT(e).d, Z = wingZone(e, d), y0 = FT(), y1 = FB() + 6;
+    ctx.fillStyle = tellCol(k); ctx.fillRect(Z.a, y0, Z.b - Z.a, y1 - y0); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ctx.strokeRect(Z.a, y0, Z.b - Z.a, y1 - y0);
+    const s0 = Math.min(e.x - d * 70, e.x + d * EYE_SAFE), s1 = Math.max(e.x - d * 70, e.x + d * EYE_SAFE); ctx.fillStyle = guardCol(k * .5); ctx.fillRect(s0, y0, s1 - s0, y1 - y0); ctx.strokeStyle = guardLine(k); ctx.setLineDash([5, 4]); ctx.strokeRect(s0, y0, s1 - s0, y1 - y0); ctx.setLineDash([]);
+    label((s0 + s1) / 2, y1 - 6, 'UNDER ITS WINGS', .5 + .4 * k); label((Z.a + Z.b) / 2, (y0 + y1) / 2 + 3, 'ITS EYES WILL OPEN', .5 + .4 * k); };
+  PLAN_FX.w5wings = (e) => {
+    const d = wingT(e).d, Z = wingZone(e, d); e.w5T = null; e.facing = d;
+    act(e, 'wings', (h, dt, e) => { e.w5k = cl01(h.el / 1.0);
+      if (h.el > .06 && !h.go) { h.go = 1; sfx('hit-crystal'); sfx('crit'); flashT = Math.max(flashT, .1); shakeMag = Math.max(shakeMag, 5); big('THE EYES OPEN', e.x, e.y, 210, '#FFFFFF', 18); }
+      if (h.go && h.el < .42 && !h.hit && P.x > Z.a && P.x < Z.b) { h.hit = 1; hitP(ED(e, 1.05), e.x, true); }
+      if (h.el > 1.0) { recover(e, .9); return true; } return false; },
+      { draw: (h) => { if (!h.go) { TELL_FX.w5wings(e, 0, 1); return; } const f = cl01(1 - (h.el - .06) / .5); if (f <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(240,244,255,${.55 * f})`; ctx.fillRect(Z.a, FT(), Z.b - Z.a, FB() + 6 - FT()); ctx.restore(); },
+        up: (h, t) => { const f = h.go ? cl01(1 - (h.el - .06) / .5) : 0; if (f <= 0) return; const eyes = e.w5eyes || [{ x: e.x - d * 40, z: 150 }];
+          onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const ex = d > 0 ? Z.a : Z.b, ex1 = d > 0 ? Z.b : Z.a;
+            for (const p of eyes) { const g = ctx.createLinearGradient(p.x, e.y - p.z, ex1, FB()); g.addColorStop(0, `rgba(250,252,255,${.7 * f})`); g.addColorStop(1, `rgba(220,230,255,${.12 * f})`); ctx.fillStyle = g;
+              ctx.beginPath(); ctx.moveTo(p.x, e.y - p.z - 4); ctx.lineTo(ex1, FT() - 40); ctx.lineTo(ex1, FB() + 6); ctx.lineTo(ex, FB() + 6); ctx.lineTo(ex, FT()); ctx.closePath(); ctx.fill(); glowM(p.x, e.y - p.z, 40, '250,252,255', .9 * f); }
+            ctx.restore(); }); }, uy: FB() + 8 });
+  };
+  // THE HARVEST: it sinks low and reaps the floor round its feet with both scythes, at the height of your ankles: first a
+  // wide half-moon in front, then it spins and reaps all round it. Jump each one (or be outside it)
+  const REAP = { r1: 230, r2: 172, at1: .12, at2: 1.05 };
+  const reapT = (e) => targets(e, () => ({ d: Math.sign(P.x - e.x) || e.facing }));
+  const halfTell = (x, y, R, d, k, txt) => { ctx.fillStyle = tellCol(k * .8); ctx.beginPath(); if (d > 0) ctx.ellipse(x, y, R, R / 2.2, 0, -Math.PI / 2, Math.PI / 2); else ctx.ellipse(x, y, R, R / 2.2, 0, Math.PI / 2, Math.PI * 1.5); ctx.closePath(); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.stroke(); if (txt) label(x + d * R * .6, y + 3, txt, .5 + .4 * k); };
+  WIND_UP.w5reap = (e) => { e.facing = reapT(e).d; };
+  TELL_FX.w5reap = (e, t, k) => { halfTell(e.x, e.y, REAP.r1, reapT(e).d, k, 'LOW · JUMP'); };
+  PLAN_FX.w5reap = (e) => {
+    const d = reapT(e).d; e.w5T = null; e.facing = d; const x0 = e.x, y0 = e.y;
+    act(e, 'reap', (h, dt, e) => {
+      if (h.el < REAP.at1) e.w5strike = sm(h.el / REAP.at1); else if (!h.r1) { h.r1 = 1; sfx('slice'); sfx('whoosh'); shakeMag = Math.max(shakeMag, 6); dust(e.x + d * 120, e.y, 10); h.f1 = .3;
+        if (inEll(P.x, P.y, x0, y0, REAP.r1) && (P.x - x0) * d > -24 && P.z < 18) hitP(ED(e, .95), x0, true); }
+      if (h.r1 && h.el < .6) e.w5strike = 1 - sm(cl01((h.el - REAP.at1) / .3));
+      if (h.el >= .7 && h.el < 1.25) { e.w5spin = sm(cl01((h.el - .7) / .5)) * TAU; e.w5strike = 1; } else e.w5spin = 0;
+      if (h.el >= REAP.at2 && !h.r2) { h.r2 = 1; sfx('slice'); sfx('whoosh'); shakeMag = Math.max(shakeMag, 7); dust(e.x, e.y, 14); h.f2 = .3;
+        if (inEll(P.x, P.y, x0, y0, REAP.r2) && P.z < 18) hitP(ED(e, .9), x0, true); }
+      if (h.f1 > 0) h.f1 -= dt; if (h.f2 > 0) h.f2 -= dt;
+      if (h.el > 1.6) { e.w5strike = 0; e.w5spin = 0; recover(e, .9); return true; } return false; },
+      { draw: (h) => { if (!h.r1) halfTell(x0, y0, REAP.r1, d, 1, 'LOW · JUMP');
+          else if (!h.r2) ringTell(x0, y0, REAP.r2, cl01((h.el - REAP.at1) / (REAP.at2 - REAP.at1)), h.el > .45 ? 'AGAIN · JUMP' : null);
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 5;
+          if (h.f1 > 0) { ctx.strokeStyle = `rgba(240,244,255,${h.f1 * 3})`; ctx.beginPath(); if (d > 0) ctx.ellipse(x0, y0, REAP.r1 - 6, (REAP.r1 - 6) / 2.2, 0, -Math.PI / 2, Math.PI / 2); else ctx.ellipse(x0, y0, REAP.r1 - 6, (REAP.r1 - 6) / 2.2, 0, Math.PI / 2, Math.PI * 1.5); ctx.stroke(); }
+          if (h.f2 > 0) { ctx.strokeStyle = `rgba(240,244,255,${h.f2 * 3})`; ell(x0, y0, REAP.r2 - 6, (REAP.r2 - 6) / 2.2); ctx.stroke(); }
+          ctx.restore(); } });
+  };
+  // THE CLASP (up close): it rears with both scythes raised and snaps them shut round where you stand. Get clear, or roll
+  TELL_FX.w5clasp = (e, t, k) => ringTell(e.x, e.y, 104, k, 'GET CLEAR');
+  PLAN_FX.w5clasp = (e) => { const x0 = e.x, y0 = e.y; act(e, 'clasp', (h, dt, e) => { e.w5k = cl01(h.el / .55);
+      if (h.el > .06 && !h.go) { h.go = 1; sfx('slice'); sfx('hit-metal'); sfx('slam', .5); shakeMag = Math.max(shakeMag, 7); h.f = .25; silverBurst(e.x + e.facing * 60, e.y, 90, 10); if (inEll(P.x, P.y, x0, y0, 104) && P.z < 50) hitP(ED(e, .95), x0, true); }
+      if (h.f > 0) h.f -= dt;
+      if (h.el > .55) { recover(e, .9); return true; } return false; },
+    { draw: (h) => { if (!h.go) ringTell(x0, y0, 104, 1, 'GET CLEAR'); else if (h.f > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(240,244,255,${h.f * 3})`; ctx.lineWidth = 5; ell(x0, y0, 98, 98 / 2.2); ctx.stroke(); ctx.restore(); } } }); };
 
   // ======================================================================================================
   // THE HALL CHANGES WITH HIM: the armies of his wars stand along the horizon behind the Host; for the Swordsman the
-  // moon goes out and the sky is all stars, and the polished floor gives them back; for the Hand the dawn comes up
+  // moon goes out and the sky is all stars, and the polished floor gives them back; for the Mantis the dawn comes up
   // (art_w5.js's throne rule: W5.dawnK and the burning edges)
   // ======================================================================================================
   const AR = W5B.arena = { army: 0, night: 0 };

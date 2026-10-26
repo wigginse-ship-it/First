@@ -371,9 +371,9 @@
     return keys[keys.length - 1][1];
   }
   const W4 = {
-    theme2: 'dream', seed: 241, d0: 7.4, d1: 7.4, noCells: 1, bannerAt: 4.6, dur: 12.8, music: 'chaos', still: 1.2,
+    theme2: 'dream', seed: 241, d0: 7.1, d1: 7.1, noCells: 1, bannerAt: 7.6, dur: 12.4, music: 'chaos', still: 1.2,
     title: 'A Thousand Faces, Silent', sub: 'HE SLEPT AT THE BRINK, AND SOMETHING ASLEEP BENEATH THE ABYSS DREAMED HIM IN',
-    lidKeys: [[4.6, 0], [5.5, .62], [5.95, .4], [7, 1], [8.3, 1], [8.9, .42], [9.2, .56], [10, 0]], // heavy: they droop, lift once, and close; then, in the dream, open the same way
+    lidKeys: [[4.6, 0], [5.4, .6], [5.8, .4], [6.6, 1], [7.6, 1], [8.2, .42], [8.5, .56], [9.3, 0]], // heavy: they droop, lift once, and close; then, in the dream, open the same way
     setup(E) {
       const b = E.boss; E.masks = []; E.halo0 = b ? (b.w4halo ?? 1) : 1;
       if (b) for (let i = 0; i < 7; i++) E.masks.push({ x: b.x + (i - 3) * 20 * (b.size || 1) + rand(-5, 5), y: b.y + rand(-22, 16), z0: 70 + hsh(i + 3) * 60, at: .2 + i * .17 + hsh(i) * .08, rot: rand(-.5, .5), lr: rand(-1.2, 1.2), s: rand(.9, 1.25) });
@@ -383,12 +383,12 @@
       const b = E.boss; if (b && b.def.draw === 'tyiga') b.w4halo = E.halo0 * (1 - sm(T / 1.5));
       if (T > 1.6 && T < this.d0) { P.state = T > 4 ? 'down' : 'idle'; P.walk = 0; }
       if (T > 4 && !E.lay) { E.lay = 1; dust(P.x, P.y, 5); }
-      if (T > 7.4 && !E.dream) { E.dream = 1; if (TRACKS.dream) playMusic('dream'); }
-      if (T > 9.4 && !E.chime) { E.chime = 1; sfx('learned'); }
-      if (T > 11.2) E.walk += dt * 30 / 10.2;
+      if (T > 7.1 && !E.dream) { E.dream = 1; if (TRACKS.dream) playMusic('dream'); }
+      if (T > 8.6 && !E.chime) { E.chime = 1; sfx('learned'); }
+      if (T > 10.6) E.walk += dt * 30 / 10.2;
     },
     pose(E, pose) { // spent: down on one knee, head bowed, before he lies back
-      const T = E.t; if (T > 2.6 && T < 4) { pose.crouch = 1; pose.lean = lerp(pose.lean || 0, .4, sm((T - 2.6) / .4)); pose.arm = 1.4; pose.backArm = 1.2; }
+      const T = E.t; if (T > 2.6 && T < 4) { const q = sm((T - 2.6) / .4); pose.crouch = 1; pose.crouchK = 8 * q; pose.lean = lerp(pose.lean || 0, .4, q); pose.arm = 1.4; pose.backArm = 1.2; }
     },
     breath(T, t) { // the Abyss breathing under the rim: a pale haze swelling up over the edge of the dais and sinking back, and the soft Z's of a sleeper rising out of the dark
       const on = sm((T - 1.4) / 1.2); if (on <= 0) return; const b = .5 - .5 * Math.cos((T - 1.4) / 3.4 * TAU);
@@ -416,12 +416,12 @@
       lids(keyed(this.lidKeys, T), t);
     },
     act2(E, T, dt, t) { // behind his eyes, the dream: he lies on the paving of the piazza in its long shadows, and gets up, and walks on into it
-      const B = freshAlt(E), cam = 240, walk = T > 11.2;
+      const B = freshAlt(E), cam = 240, walk = T > 10.6;
       withSet(B, () => paintWorld('dream', { cam }, t));
-      const pose = poseAs(T < 10.3 ? 'down' : walk ? 'walk' : 'idle', E.walk); if (T >= 10.3 && T < 10.8) pose.crouch = 1;
+      const pose = poseAs(T < 9.7 ? 'down' : walk ? 'walk' : 'idle', E.walk); if (T >= 9.7 && T < 10.2) { pose.crouch = 1; pose.crouchK = 8; }
       ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.hx + (walk ? E.walk * 10.2 : 0), FLOOR_TOP + 64, 1, 1, pose, 1, true); ctx.restore();
       gradeFrame('dream');
-      const wk = sm((T - 8.4) / 1.8); if (wk < 1) { ctx.fillStyle = `rgba(255,250,240,${.3 * (1 - wk)})`; view(); } // waking into it, the light is too bright at first
+      const wk = sm((T - 7.8) / 1.8); if (wk < 1) { ctx.fillStyle = `rgba(255,250,240,${.3 * (1 - wk)})`; view(); } // waking into it, the light is too bright at first
       cycleTint(); lids(keyed(this.lidKeys, T), t);
     },
   };
@@ -505,7 +505,7 @@
       const B = freshAlt(E), cam = 300, Tc = T - CARD_AT;
       withSet(B, () => paintWorld('chaosBoss', { cam }, t));
       ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(80,100,170,.4)'; view(); ctx.restore(); // the Abyss lying quiet, as he left it
-      const pose = poseAs(T < 6.5 ? 'down' : E.moving ? 'walk' : 'idle', E.walk); if (T >= 6.5 && T < 7.1) pose.crouch = 1;
+      const pose = poseAs(T < 6.5 ? 'down' : E.moving ? 'walk' : 'idle', E.walk); if (T >= 6.5 && T < 7.1) { pose.crouch = 1; pose.crouchK = 8; }
       trumpPose(Tc, pose);
       const mk = (m) => { shadow(m.x, m.y, 7 * m.s); mask(m.x, m.y - 3, m.s, m.rot, 0); };
       for (const m of E.masks) if (m.y <= E.hy) mk(m);

@@ -1,6 +1,7 @@
 'use strict';
 // World 5 of six (data_w6.js) art, enemies, boss, passages, rules and ending: THE DREAMING SHADOW
-// A shadow that is not his: someone else is asleep and dreaming it, and Corwin walks into the dream. Everything here is
+// A shadow that is not his: someone else is asleep and dreaming it. Corwin fell asleep on the Rim of the Abyss, and the
+// Sleeper far down beneath the Courts dreamed him in (endings.js tells it, and his waking back on the rim). Everything here is
 // painted in the manner of the dream-painters of a later Earth's shadow, as if the Sleeper had once seen their pictures:
 //   dream      - The Piazza of Long Shadows: an empty square in an endless late afternoon, arcades with black mouths,
 //                red chimneys, a train that never leaves, a sky of men in bowler hats; shadows far too long

@@ -1,8 +1,10 @@
 'use strict';
 // The Dreaming Shadow: STAGES / EDEF / BOSSES / ZONES entries (see art_w6.js for its art, attacks, rules, passages, music
 // and ending). It loads before data_w5.js, so it is the fifth world and Tir-na Nog'th stays the sixth and last.
-// A shadow that someone else is dreaming: Corwin walks into the dream of a vast Sleeper, painted like the pictures of the
-// dream-painters of a later Earth.
+// A shadow that someone else is dreaming: spent after the Ty'iga, Corwin falls asleep on the Rim of the Abyss, and the vast
+// Sleeper that lies far down in the Abyss beneath the Courts (whose dreams were the thousand faces the Ty'iga wore) dreams
+// him into its dream, painted like the pictures of the dream-painters of a later Earth. When it wakes, he wakes back on
+// the rim, and goes on to Tir-na Nog'th by a Trump (both told in endings.js).
 //   dream      - The Piazza of Long Shadows (waves 1-2)
 //   dream2     - The Shore of Soft Clocks (wave 3; the hours melt into pools on the sand: rule 'w6melt')
 //   dreamBoss  - The Bed of the Sleeper: the Sleeper itself and its three dreams (rule 'w6sleep')
@@ -35,7 +37,7 @@
   // a little harder than the Courts, a little easier than the last world (see the matching entries in world.js and game.js)
   WORLD_DIFF.push({ hp: 2.6, boss: 1.78, dmg: 1.48, cd: .67 });
 
-  STAGES.push({ name: 'The Dreaming Shadow', sub: 'A SHADOW THAT SOMEONE ELSE IS DREAMING', theme: 'dream', len: 2950,
+  STAGES.push({ name: 'The Dreaming Shadow', sub: 'DREAMED BY WHAT SLEEPS BENEATH THE ABYSS', theme: 'dream', len: 2950,
     pods: [720, 1680], drop: [.92, .55],
     waves: [['w6bowler', 'w6fish', 'w6bowler', 'w6clock'],
       ['w6elephant*', 'w6mannequin', 'w6bowler', 'w6skybird', 'w6fish', 'w6mannequin'],

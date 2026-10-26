@@ -895,7 +895,7 @@
   // ======================================================================================================
   // THE PHANTOM OF BENEDICT: what Tir-na Nog'th makes of Amber's master of arms. Here, his first shape:
   //   Benedict as he is: tall, gaunt, plainly dressed, his right sleeve empty and pinned; he fights left-handed.
-  // What the city makes of him after that (the Host, the Swordsman in the Stars, the Silver Hand) is in benedict.js,
+  // What the city makes of him after that (the Host, the Swordsman in the Stars, the Moon Mantis) is in benedict.js,
   // which also uses his silver arm (silverArm below: plated, jointed, gilded at the joints) for the arm he leaves behind.
   // He faces right, so the near side is his right: the empty sleeve, then the silver arm. The sword is in his far hand.
   // ======================================================================================================
@@ -1458,8 +1458,8 @@
     update(m, dt) {
       const e = boss && isBen(boss) ? boss : null;
       if (!e) { W5.dawnK = 0; return; }
-      const ph = e.bph || e.phase; // his shape (benedict.js: the man, the Host, the Swordsman in the Stars, the Silver Hand)
-      const target = e.dead ? 1 : [0, 0, .25, 0, .8][ph]; W5.dawnK += (target - W5.dawnK) * Math.min(1, dt * .6); // the stars put the dawn back; the Hand brings it on
+      const ph = e.bph || e.phase; // his shape (benedict.js: the man, the Host, the Swordsman in the Stars, the Moon Mantis)
+      const target = e.dead ? 1 : [0, 0, .25, 0, .8][ph]; W5.dawnK += (target - W5.dawnK) * Math.min(1, dt * .6); // the stars put the dawn back; the Mantis brings it on
       if (stillT > 0) return;
       // in his last shape, the dawn has come to both ends of the hall
       m.edge += ((ph >= 4 && !e.dead && e.state !== 'w5morph' ? 58 : 0) - m.edge) * Math.min(1, dt * 1.2);
