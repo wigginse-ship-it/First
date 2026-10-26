@@ -6,7 +6,7 @@ const ZONES = [
     { theme: 'bloomBoss', len: 1000, waves: [], boss: 1, title: 'The Sunken Grove', sub: 'SOMETHING VAST STIRS IN THE WATER' } ] },
   { trans: ['clouds', 'lift'], zones: [
     { theme: 'sky', len: 2300, waves: [0, 1], pods: [700, 1900] },
-    { theme: 'sky2', len: 1700, waves: [2], pods: [1200], mech: 'tilt', title: 'The Gearworks Deck', sub: 'THE SHIP BANKS · KNOCK THEM OVERBOARD' },
+    { theme: 'sky2', len: 1700, waves: [2], pods: [1200], mech: 'tilt', title: 'The Gearworks Deck', sub: 'THE SHIP BANKS · THE BOILERS BLOW · KNOCK THEM OVERBOARD' },
     { theme: 'skyBoss', len: 1000, waves: [], boss: 1, title: 'The Foundry Crown', sub: 'THE FURNACES ARE LIT' } ] },
   { trans: ['shatter', 'invert'], zones: [
     { theme: 'prism', len: 2500, waves: [0, 1, 2], pods: [650, 1500, 2100] },
@@ -92,7 +92,7 @@ function mechStart() {
   if (!mech) return;
   if (MECH_FX[mech.kind]) { MECH_FX[mech.kind].start(mech); return; }
   if (mech.kind === 'spores') { mech.shrooms = [560, 800, 1040, 1300, 1520].map((x, i) => ({ x, y: FLOOR_TOP + 22 + (i % 3) * 34, cd: 2 + i * .8, puff: 0, flash: 0 })); mech.clouds = []; }
-  if (mech.kind === 'tilt') { mech.phase = 'calm'; mech.t = 4; mech.dir = 1; mech.a = 0; mech.crates = []; }
+  if (mech.kind === 'tilt') { mech.phase = 'calm'; mech.t = 4; mech.dir = 1; mech.a = 0; mech.vents = []; }
   if (mech.kind === 'echo') { mech.rec = []; mech.clock = 0; mech.hit = new Map(); mech.cur = null; }
 }
 function puff(s) { // a toadstool lets go a cloud of glittering spores
@@ -124,12 +124,10 @@ function updateMech(dt) {
   if (mech.kind === 'tilt') {
     mech.t -= dt;
     if (mech.t <= 0) {
-      if (mech.phase === 'calm') { mech.phase = 'warn'; mech.t = 1.5; mech.dir = Math.random() < .5 ? -1 : 1; mech.lanes = tiltLanes(); floatText(P.x, P.y, 110, mech.dir > 0 ? 'HARD TO STARBOARD!' : 'HARD TO PORT!', '#F2C99C', 16); sfx('charge', 1); }
-      else if (mech.phase === 'warn') { // the deck heels over, and the cargo breaks loose
-        mech.phase = 'bank'; mech.t = 3.4; shakeMag = 6;
-        const x = mech.dir > 0 ? camX - 40 : camX + VW + 40; sfx('break'); // (it rolls in from out of sight, so there's a moment to see it coming) // the lashings snap: heavy cargo comes down the marked lanes
-        for (const [i, y] of (mech.lanes || [rand(FLOOR_TOP + 20, FLOOR_BOT - 10)]).entries()) mech.crates.push({ x: x - mech.dir * i * 60, y, vx: mech.dir * 60, rot: 0, hit: new Set(), done: false, s: 1.45 });
-        mech.lanes = null;
+      if (mech.phase === 'calm') { mech.phase = 'warn'; mech.t = 1.5; mech.dir = Math.random() < .5 ? -1 : 1; mech.vents = tiltVents(); floatText(P.x, P.y, 110, mech.dir > 0 ? 'HARD TO STARBOARD!' : 'HARD TO PORT!', '#F2C99C', 16); sfx('charge', 1); }
+      else if (mech.phase === 'warn') { // the deck heels over, and the boiler vents in it blow
+        mech.phase = 'bank'; mech.t = 3.4; shakeMag = 6; sfx('whoosh'); sfx('slam', .6);
+        for (const v of mech.vents) { v.blow = .85; v.hit = new Set(); }
       } else { mech.phase = 'calm'; mech.t = rand(4.5, 6.5); }
     }
     const target = mech.phase === 'bank' ? mech.dir * .14 : 0;
@@ -148,14 +146,14 @@ function updateMech(dt) {
         } else e.x = clamp(e.x, leftWall(), rightWall());
       }
     }
-    for (const cr of mech.crates) { // a loose crate slides down the deck and flattens whoever is in its way
-      cr.vx += mech.dir * 640 * dt * Math.max(.25, Math.abs(k)); cr.vx = clamp(cr.vx, -400, 400); cr.x += cr.vx * dt; cr.rot = Math.sin(cr.x * .05) * .08;
-      if (Math.random() < .5) dust(cr.x - Math.sign(cr.vx) * 14, cr.y, 1);
-      if (!cr.hitP && Math.abs(P.x - cr.x) < 24 && Math.abs(P.y - cr.y) < 15 && P.z < 26) { cr.hitP = true; playerDamage(Math.round(maxHp() * .3), cr.x, true); shakeMag = Math.max(shakeMag, 9); } // a crushing blow: a third of your health (jump it, or keep out of the marked lanes)
-      for (const e of enemies) if (!e.dead && !e.boss && !cr.hit.has(e) && Math.abs(e.x - cr.x) < 24 + e.hw && Math.abs(e.y - cr.y) < 18 && e.z < 26) { cr.hit.add(e); const d = Math.round(e.maxHp * .45 + 30); strike(e, d, Math.sign(cr.vx), { dmg: d, kb: 520, launch: 320, power: 2, trump: 1 }); }
-      if ((cr.vx < 0 && cr.x < leftWall() - 4) || (cr.vx > 0 && cr.x > rightWall() + 4)) { cr.done = true; burst(cr.x, cr.y, 14, ['#8A6A44', '#C9A06A', '#5A4028'], 16, 'chunk', -Math.sign(cr.vx), true); sfx('break'); shakeMag = Math.max(shakeMag, 5); }
+    for (const v of mech.vents) { // a scalding jet roars up out of each grate: it catches anyone standing on it (or jumping low over it)
+      if (!(v.blow > 0)) continue; v.blow -= dt;
+      if (Math.random() < .9) parts.push({ x: v.x + rand(-v.w * .4, v.w * .4), y: v.y + rand(-4, 4), z: rand(10, 90), vx: rand(-30, 30), vy: 0, vz: rand(90, 220), life: .6, max: .6, col: 'rgba(240,232,222,.55)', size: rand(6, 12), shape: 'puff', rot: 0, vr: 0 });
+      const on = (x, y, z, hw) => Math.abs(x - v.x) < v.w / 2 + hw && Math.abs(y - v.y) < 15 && z < 110;
+      if (!v.hit.has(P) && P.state !== 'dead' && on(P.x, P.y, P.z, 6)) { v.hit.add(P); playerDamage(Math.round(maxHp() * .3), v.x, true); if (P.state === 'hurt') P.vz = 300; shakeMag = Math.max(shakeMag, 8); } // a third of your health
+      for (const e of enemies) if (!e.dead && !e.boss && !v.hit.has(e) && on(e.x, e.y, e.z, e.hw)) { v.hit.add(e); const d = Math.round(e.maxHp * .45 + 30); strike(e, d, Math.sign(e.x - v.x) || 1, { dmg: d, kb: 160, launch: 420, power: 2, trump: 1 }); }
     }
-    mech.crates = mech.crates.filter(c => !c.done);
+    if (mech.phase === 'calm') mech.vents = [];
   }
   if (mech.kind === 'echo') { // everything you do is recorded, and two and a half seconds later your echo does it again
     mech.clock += dt;
@@ -184,7 +182,7 @@ function mechBoxes(box) {
   if (!mech) return;
   if (MECH_FX[mech.kind]) { MECH_FX[mech.kind].boxes(mech, box); return; }
   if (mech.kind === 'spores') for (const s of mech.shrooms) box(s.x, s.y, 0, 50, 80);
-  if (mech.kind === 'tilt') for (const c of mech.crates) box(c.x, c.y, 0, 40, 50);
+  if (mech.kind === 'tilt') for (const v of mech.vents) box(v.x, v.y, 0, v.w, 140);
   if (mech.kind === 'echo' && mech.cur) box(mech.cur.x, mech.cur.y, mech.cur.z, 160, 170);
 }
 function mechList(list, t) {
@@ -198,7 +196,7 @@ function mechList(list, t) {
       ctx.restore();
     })]);
   }
-  if (mech.kind === 'tilt') { list.push([FLOOR_TOP - 2, () => drawTiltLanes(t)]); for (const c of mech.crates) list.push([c.y, () => drawCrate(c)]); }
+  if (mech.kind === 'tilt') { list.push([FLOOR_TOP - 2, () => drawVentGrates(t)]); for (const v of mech.vents) if (v.blow > 0) list.push([v.y + 1, () => drawVentJet(v, t)]); }
   if (mech.kind === 'echo' && mech.cur) { const r = mech.cur; list.push([r.y - .05, () => onMain(() => { // your echo: a glassy, prismatic double
     ctx.save(); TINT = '#7FD8E8'; drawPlayerAt(r.x, r.y, r.z, r.f, Object.assign({}, r.pose), .38); TINT = null;
     ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(r.x + 2, r.y, r.z, r.f, Object.assign({}, r.pose), .22); ctx.restore();
@@ -249,19 +247,27 @@ function drawCrate(c) { // it slides and tumbles, so it stays in the figure laye
   const sp = crateSprite(), s = c.s || 1;
   shadow(c.x, c.y, 18 * s); ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.scale(s, s); ctx.drawImage(sp.c, -sp.ox, -sp.oy, sp.w, sp.h); ctx.restore();
 }
-function tiltLanes() { // where the cargo will come down: two or three lanes across the deck, always with room between them to stand
-  const n = Math.random() < .45 ? 3 : 2, top = FLOOR_TOP + 18, bot = FLOOR_BOT - 8, ys = [];
-  for (let tries = 0; ys.length < n && tries < 60; tries++) { const y = rand(top, bot); if (ys.every(o => Math.abs(o - y) > 36)) ys.push(y); }
-  return ys.sort((a, b) => a - b);
+function tiltVents() { // which boiler grates in the deck will blow: a spread of them across the view, with clear planking between
+  const n = 4 + Math.floor(Math.random() * 3), out = [], top = FLOOR_TOP + 16, bot = FLOOR_BOT - 6;
+  for (let tries = 0; out.length < n && tries < 80; tries++) { const x = camX + rand(60, VW - 60), y = rand(top, bot);
+    if (out.every(o => Math.abs(o.x - x) > 90 || Math.abs(o.y - y) > 34)) out.push({ x, y, w: 64, blow: 0 }); }
+  return out;
 }
-function drawTiltLanes(t) { // chalked warnings along the marked lanes: red chevrons flashing the way the cargo will slide
-  if (mech.phase !== 'warn' || !mech.lanes) return; const k = 1 - mech.t / 1.5, on = .45 + .55 * Math.abs(Math.sin(t * (6 + 10 * k)));
+function drawVentGrates(t) { // the grates: dark iron set in the planks, glowing red-hot and spitting wisps as the pressure builds
+  if (!mech.vents.length) return; const warn = mech.phase === 'warn', k = warn ? 1 - mech.t / 1.5 : 1, on = warn ? .5 + .5 * Math.abs(Math.sin(t * (5 + 12 * k))) : 0;
   onMain(() => { ctx.save();
-    for (const y of mech.lanes) {
-      const g = ctx.createLinearGradient(0, y - 14, 0, y + 14); g.addColorStop(0, 'rgba(232,76,61,0)'); g.addColorStop(.5, `rgba(232,76,61,${.36 * on})`); g.addColorStop(1, 'rgba(232,76,61,0)');
-      ctx.fillStyle = g; ctx.fillRect(camX - 20, y - 14, VW + 40, 28);
-      ctx.strokeStyle = `rgba(255,110,80,${.9 * on})`; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
-      for (let x = camX - 40 + ((t * 140 * mech.dir) % 60 + 60) % 60; x < camX + VW + 40; x += 60) { ctx.beginPath(); ctx.moveTo(x - mech.dir * 6, y - 6); ctx.lineTo(x + mech.dir * 4, y); ctx.lineTo(x - mech.dir * 6, y + 6); ctx.stroke(); }
+    for (const v of mech.vents) { if (!warn && !(v.blow > 0)) continue;
+      ctx.fillStyle = '#2A2226'; ell(v.x, v.y, v.w / 2, 9); ctx.fill(); ctx.strokeStyle = '#6A5A50'; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.strokeStyle = '#140E10'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(v.x + i * 10 - 4, v.y - 6); ctx.lineTo(v.x + i * 10 + 4, v.y + 6); } ctx.stroke();
+      if (warn) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(v.x, v.y, 2, v.x, v.y, v.w * .7); g.addColorStop(0, `rgba(255,120,60,${.75 * on})`); g.addColorStop(1, 'rgba(255,60,30,0)'); ctx.fillStyle = g; ell(v.x, v.y, v.w * .7, 15); ctx.fill();
+        ctx.strokeStyle = `rgba(255,140,90,${.9 * on})`; ctx.lineWidth = 2.4; ell(v.x, v.y, v.w / 2 + 4, 12); ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
+        if (Math.random() < .25) parts.push({ x: v.x + rand(-v.w * .3, v.w * .3), y: v.y, z: 4, vx: 0, vy: 0, vz: rand(30, 70) * (.4 + k), life: .4, max: .4, col: 'rgba(240,232,222,.5)', size: rand(3, 6), shape: 'puff', rot: 0, vr: 0 }); }
     }
+    ctx.restore(); });
+}
+function drawVentJet(v, t) { // a roaring column of steam, white-hot at its root
+  onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const a = Math.min(1, v.blow / .2);
+    for (let i = 0; i < 5; i++) { const h = 120 + 20 * Math.sin(t * 20 + i), x = v.x + (i - 2) * 9, g = ctx.createLinearGradient(0, v.y - h, 0, v.y); g.addColorStop(0, 'rgba(240,236,228,0)'); g.addColorStop(.6, `rgba(244,238,230,${.35 * a})`); g.addColorStop(1, `rgba(255,250,240,${.8 * a})`);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 10, v.y); ctx.quadraticCurveTo(x - 16 + Math.sin(t * 14 + i) * 6, v.y - h * .5, x + Math.sin(t * 9 + i) * 8, v.y - h); ctx.quadraticCurveTo(x + 16, v.y - h * .5, x + 10, v.y); ctx.closePath(); ctx.fill(); }
     ctx.restore(); });
 }
