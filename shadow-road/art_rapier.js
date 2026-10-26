@@ -47,7 +47,6 @@ function drawGrayblade(pose) {
   if (tier >= 5) gbGlow(() => { // stars caught along the edge, each brightening in turn
     ctx.fillStyle = '#F4F0FF';
     for (let i = 0; i < 5; i++) { const k = (i + .5) / 5, a = Math.max(0, Math.sin(now * 2.6 - i * 1.3)); if (a > .15) gbStar(x0 + len * k * .92, (i % 2 ? -1 : 1) * w * .5, 1.6 + a * 2.2, a * .9); }
-    ctx.fillStyle = 'rgba(240,236,255,.9)'; gbStar(tip - 1, 0, 2.6 + Math.sin(now * 3.1) * .8, .8); // a star at the very point
   });
   // the guard
   if (tier === 1) { rrect(16, -7.5, 3.6, 15, 1.4); ctx.fillStyle = C(metal); ctx.fill(); outline(1.3); } // a plain cross

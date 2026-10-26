@@ -299,7 +299,6 @@ function t7Rapier(pose) {
   // sparks thrown off where the ribbon crosses the blade, and a star at the point
   t6Add(() => {
     for (let i = 0; i < 5; i++) { const ph2 = (now * .35 + i / 5) % 1, x = h0 + 6 + ((i * 11.3 + now * 6) % (h1 - h0 - 10)), y = -ph2 * 7 * (i % 2 ? 1 : -1); t6Star(x, y, .9 + Math.sin(ph2 * Math.PI) * 1.1, Math.sin(ph2 * Math.PI) * .8, '#E8F0FF'); }
-    ctx.fillStyle = 'rgba(244,248,255,.95)'; gbStar(tip - .5, 0, 3.2 + .7 * pulse, .9); ctx.fillStyle = 'rgba(170,200,255,.6)'; gbStar(tip - .5, 0, 6 + .8 * pulse, .35);
   });
   // the knuckle bow and swept quillons: plain silver lines, a star at each quillon's end
   t6Inked('#D8DCE8', 1.4, () => { ctx.moveTo(18, -5); ctx.bezierCurveTo(13, -13, 5, -9.5, 3, -3.4); });

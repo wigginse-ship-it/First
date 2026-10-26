@@ -287,10 +287,9 @@ function t6Rapier(pose) {
       pat(); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = .55; ctx.stroke();
     });
   }
-  // stars caught along the edge, each breathing slowly, and a bright star at the point
+  // stars caught along the edge, each breathing slowly
   t6Add(() => {
     for (let i = 0; i < 7; i++) { const k = (i + .6) / 7.4, x = x0 + 8 + (len - 10) * k, a = .3 + .55 * (.5 + .5 * Math.sin(now * .8 + i * 1.7)); t6Star(x, (i % 2 ? -1 : 1) * w * .75 * (1 - k * .3), 1.3 + a * 1.4, a, '#F2F0FF'); }
-    ctx.fillStyle = 'rgba(244,242,255,.95)'; gbStar(tip - .5, 0, 3 + .6 * pulse, .9); ctx.fillStyle = 'rgba(200,210,255,.6)'; gbStar(tip - .5, 0, 5.5 + .8 * pulse, .35);
   });
   // the guard: a knuckle bow of thorned silver vine, swept quillons ending in rosebuds, a cup of silver petals
   t6Inked('#C8CCDA', 1.5, () => { ctx.moveTo(18, -4.5); ctx.bezierCurveTo(13, -12.5, 5, -9.5, 2.6, -3); });
