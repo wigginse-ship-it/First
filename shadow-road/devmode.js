@@ -7,9 +7,10 @@
 (() => {
   const BACKUP = 'shadowroad-devbackup', OPTS = 'shadowroad-devopts';
   const DEV = window.DEV = { god: false };
-  let opts = { god: false, arsenal: false, arm: false, pearl: false, horn: false, cycle: 0, card: '', clv: 1 };
+  let opts = { god: false, arsenal: false, relic: '', cycle: 0, card: '', clv: 1 };
   try { Object.assign(opts, JSON.parse(localStorage.getItem(OPTS) || '{}')); } catch (e) {}
-  if (opts.relics) { opts.arm = opts.pearl = opts.horn = true; delete opts.relics; } // (the old single switch)
+  if (opts.relics || (opts.arm && opts.pearl && opts.horn)) opts.relic = 'all'; else if (opts.arm || opts.pearl || opts.horn) opts.relic = opts.arm ? 'arm' : opts.pearl ? 'pearl' : 'horn';
+  delete opts.relics; delete opts.arm; delete opts.pearl; delete opts.horn; // (the older switches)
   const keepOpts = () => { try { localStorage.setItem(OPTS, JSON.stringify(opts)); } catch (e) {} };
   DEV.god = !!opts.god;
 
@@ -26,9 +27,10 @@
     save.started = true;
     save.cycle = Math.max(0, opts.cycle | 0);
     if (opts.arsenal) { for (const id of WEAPON_ORDER) { save.owned[id] = true; save.wl[id] = Math.max(save.wl[id] || 1, WMAX()); } if (typeof ARROW_TIERS !== 'undefined') save.alv = ARROW_TIERS.length; }
-    // the three relics of the road's ends: a ticked one is given (an unticked one is left as the save has it)
-    if (opts.arm) save.silverArm = true; if (opts.pearl) save.w7relic = true; if (opts.horn) save.w8relic = true;
-    if (opts.arm) { save.owned.fists = true; save.weapon = 'fists'; } // (the arm is worn bare-handed)
+    // the relics of the road's ends: none, one of the three, or all three
+    const R = opts.relic, all = R === 'all';
+    save.silverArm = all || R === 'arm'; save.w7relic = all || R === 'pearl'; save.w8relic = all || R === 'horn';
+    if (all || R === 'arm') { save.owned.fists = true; save.weapon = 'fists'; } // (the arm is worn bare-handed)
     if (opts.card && TRUMPS[opts.card]) { save.trumps[opts.card] = true; save.trump = opts.card; save.tlv[opts.card] = clamp(opts.clv | 0, 1, 3); }
   }
   function go(i, zone) {
@@ -66,9 +68,7 @@
       <div class="opts">
         <label><input type="checkbox" data-o="god"> Invincible</label>
         <label><input type="checkbox" data-o="arsenal"> All weapons, max level, best arrows</label>
-        <label><input type="checkbox" data-o="arm"> Silver arm (equipped)</label>
-        <label><input type="checkbox" data-o="pearl"> Pearl of Judgement</label>
-        <label><input type="checkbox" data-o="horn"> Horn of Lorraine</label>
+        <label>Relic <select data-o="relic"><option value="">None</option><option value="arm">The Silver Arm (equipped)</option><option value="pearl">The Pearl of Judgement</option><option value="horn">The Horn of Lorraine</option><option value="all">All three</option></select></label>
         <label>Card <select data-o="card"><option value="">(as saved)</option>${TRUMP_ORDER.map(k => `<option value="${k}">${TRUMPS[k].name}</option>`).join('')}</select></label>
         <label>Card level <select data-o="clv">${[1, 2, 3].map(l => `<option value="${l}">${['I', 'II', 'III'][l - 1]}</option>`).join('')}</select></label>
         <label>Cycle <select data-o="cycle">${[0, 1, 2, 3].map(c => `<option value="${c}">${c ? 'NG+' + c : 'first'}</option>`).join('')}</select></label>
@@ -84,8 +84,8 @@
       if (i === 4 && window.BRANCH) { const r2 = document.createElement('div'); r2.className = 'w'; r2.innerHTML = `<b>Trump choice</b><button data-a="choice">The deck on the Rim (after the dream)</button>`; list.appendChild(r2); }
     });
     for (const c of el.querySelectorAll('[data-o]')) {
-      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'card' ? String(opts[k] || '') : String(opts[k] | 0);
-      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' ? c.value : +c.value; DEV.god = !!opts.god; keepOpts(); });
+      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'card' || k === 'relic' ? String(opts[k] || '') : String(opts[k] | 0);
+      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' ? c.value : +c.value; DEV.god = !!opts.god; keepOpts(); });
     }
     el.addEventListener('click', (ev) => {
       const b = ev.target.closest('button'); if (!b) { if (ev.target === el) close(); return; }
