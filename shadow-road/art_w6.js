@@ -1569,7 +1569,7 @@
       B.rem = late2 ? 2.4 : 1.4; floatText(e.x, e.y - e.z, 150, 'R · E · M', '#D8D0FF', 15); sfx('charge', 2); W6.mouth = .3; }
     if (kind === 'teeth') { dropRain(e, 'tooth', 6, .8); floatText(e.x, e.y - e.z, 150, 'ITS TEETH ARE FALLING OUT!', '#F4F0FF', 14); W6.mouth = 1; }
     if (kind === 'snooze') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'w6slap', delay: .05 + i * .75, tell: .9, el: 0, r: 38, x: P.x, y: P.y, f: 1, t: 9, max: 9, dmg: Math.round(dmg * .9) }); floatText(e.x, e.y - e.z, 150, 'FIVE MORE MINUTES...', '#F4F0FF', 14); W6.mouth = .6; }
-    if (kind === 'alarm') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'ring', x: e.x + 40, y: e.y + 14, r: 20, delay: .35 + i * .9, speed: 250, dmg: Math.round(dmg * .8), t: 9, max: 9 }); hazards.push({ kind: 'w6bell', x: e.x + 40, y: e.y + 14, t: 2.4, max: 2.4 }); // (its rings come far enough apart to jump each one) shakeMag = 10; W6.mouth = 1;
+    if (kind === 'alarm') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'ring', x: e.x + 40, y: e.y + 14, r: 20, delay: .35 + i * .9, speed: 250, dmg: Math.round(dmg * .8), t: 9, max: 9 }); hazards.push({ kind: 'w6bell', x: e.x + 40, y: e.y + 14, t: 2.4, max: 2.4 }); shakeMag = 10; W6.mouth = 1; // (its rings come far enough apart to jump each one)
       let n = 0; const bell = () => { if (n++ < 14 && sfxOn && actx) { tone(1800 + (n % 2) * 200, .05, 'square', .05); setTimeout(bell, 60); } }; bell(); floatText(e.x, e.y - e.z, 170, 'BRRRRRING', '#FFE0A0', 18); }
     if (kind === 'jolt') { hazards.push({ kind: 'w6jolt', el: 0, wait: 2.1, step: .7, n: 0, t: 9, max: 9, dmg: Math.round(dmg * .9) }); floatText(e.x, e.y - e.z, 150, 'IT DREAMS IT IS FALLING...', '#F4F0FF', 14); W6.mouth = .8; }
   }

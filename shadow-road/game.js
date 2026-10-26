@@ -255,7 +255,7 @@ function startDodge() {
   if (WEAPONS[P.w].parry && P.z <= 0 && Math.abs(dy) <= Math.abs(dx) * 1.2 && Math.sign(dx) !== P.facing) { startParry(); return; } // a fencer parries instead
   const d = Math.hypot(dx, dy) || 1;
   const quick = 1 - gearStat('dodgeFast'); // the wayfarer's set: the same dodge, over sooner
-  P.state = 'dodge'; P.dodgeDur = P.t = .34 * quick; P.dq = false; const tiny = Math.sqrt(P.shrink || 1); P.dvx = dx / d * 300 / quick * tiny; P.dvy = dy / d * 150 / quick * tiny; // (shrunk, his dodge carries him a shorter way) P.inv = Math.max(P.inv, .36 + gearStat('iframes')); P.seq = '';
+  P.state = 'dodge'; P.dodgeDur = P.t = .34 * quick; P.dq = false; const tiny = Math.sqrt(P.shrink || 1); P.dvx = dx / d * 300 / quick * tiny; P.dvy = dy / d * 150 / quick * tiny; P.inv = Math.max(P.inv, .36 + gearStat('iframes')); P.seq = ''; // (shrunk, his dodge carries him a shorter way)
   // the dash depends on its direction: a low lunge forward, a hopping backstep that keeps you facing the enemy,
   // or a quick sidestep up or down the street
   P.dk = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'side' : Math.sign(dx) === P.facing ? 'fwd' : 'back';
@@ -403,7 +403,7 @@ function hurtEnemy(e, dmg, dir, m, crit) {
     if (m.spike && e.air) { e.vz = -480; e.bounce = true; e.spin = dir * 8; }
     else if (e.jug <= 12) {
       const up = (m.launch || 140) * (e.boss ? .35 : e.def.weight);
-      e.vz = P.z > 15 && !m.launch ? 150 * (e.boss ? .35 : e.def.weight) : Math.max(e.vz, up); e.air = true; // air hits hold them level with you e.spin = dir * (5 + pw * 4) * (e.boss ? .2 : 1);
+      e.vz = P.z > 15 && !m.launch ? 150 * (e.boss ? .35 : e.def.weight) : Math.max(e.vz, up); e.air = true; e.spin = dir * (5 + pw * 4) * (e.boss ? .2 : 1); // (air hits hold them level with you)
     } else { e.vz = Math.min(e.vz, -100); }
   }
 }

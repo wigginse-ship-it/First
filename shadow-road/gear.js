@@ -150,7 +150,7 @@ function statsFor(eq) {
 }
 const SET_SCALES = { speed: 1, shards: 1, resist: 1, reflect: 1, thorns: 1, regen: 1, dodgeFast: 1 };
 function gearStat(name) { if (!gearCache) gearCache = statsFor(save.gear.eq); return gearCache[name] || 0; }
-const gearDR = (def) => Math.min(.8, def / (100 + def)); // the share of a blow the armor turns aside (never more than four fifths)
+const gearDR = (def) => Math.min(.65, def / (170 + def)); // the share of a blow the armor turns aside (never more than about two thirds)
 const gearMaxHp = () => BASE_HP + Math.round(gearStat('hp'));
 
 // ---------- names ----------
@@ -169,7 +169,7 @@ function affixTxt(it, a) {
   if (A.inv) return `✦ ${A.txt}: ${v.toFixed(1)}s`;
   return (A.rare ? '✦ ' : '') + (A.pct ? `+${Math.round(v * 100)}% ${A.txt}` : A.sec ? `+${v.toFixed(2)}s ${A.txt}` : `+${Math.round(v)} ${A.txt}`);
 }
-const salvageValue = (it) => Math.round((24 + 30 * Math.min(effTier(it), 5)) * pastTop(effTier(it), .4) * (1 + .8 * it.ench.length + (it.ench.some(a => AFFIXES[a.k].rare) ? 1.5 : 0)) * cyc()); // (worth breaking down: more for higher tiers, enchantments and rare ones above all)
+const salvageValue = (it) => Math.round((14 + 17 * Math.min(effTier(it), 5)) * pastTop(effTier(it), .3) * (1 + .5 * it.ench.length + (it.ench.some(a => AFFIXES[a.k].rare) ? .9 : 0)) * cyc()); // (worth breaking down: more for higher tiers, enchantments and rare ones above all)
 
 // ---------- equipping ----------
 function hpAdjust(before) { // more max health is yours at once; less trims what you have
