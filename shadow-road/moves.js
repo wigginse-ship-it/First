@@ -164,20 +164,29 @@ const MOVE_POSE = {
       pose.lean = lerp(-.14, .06, q); pose.arm = lerp(-1.25, 1, q); pose.elbow = lerp(.06, 1.9, q); pose.backArm = lerp(1.55, 1.3, q); pose.backElbow = lerp(2.45, 2, q);
     }
   },
-  'fists:X'(pose, m, k) { // Rising Fist: a boxer's lead uppercut, dipped to the lead side and driven up through the legs and hips
-    const h0 = m.h[0], h1 = m.h[1];
-    pose.trail = 0; pose.backArm = 1.25; pose.backElbow = 2.1; // the rear hand stays up by the chin
-    if (k < h0) { const q = ease(k / h0);
-      pose.sink = 11 * q; pose.lean = .42 * q; pose.yaw = -.3 * q; pose.legs = { f: 10, b: -9, fk: 3 + 9 * q, bk: 3 + 6 * q };
-      pose.arm = lerp(1, 1.4, q); pose.elbow = lerp(1.9, 1.3, q);
-    } else if (k < h1 + .1) { const q = ease(span(k, h0, h0 + (h1 - h0) * .5));
-      pose.sink = lerp(11, -2, q); pose.legs = { f: lerp(10, 7, q), b: lerp(-9, -8, q), fk: lerp(12, 1, q), bk: lerp(9, 1, q) };
-      pose.lean = lerp(.42, -.06, q); pose.yaw = lerp(-.3, .2, q);
-      pose.arm = lerp(1.4, -.42, q); pose.elbow = lerp(1.3, .5, q); // upper arm driven forward and up, the forearm rising past the chin: the L of an uppercut
-      if (q > .4) pose.streak = null;
-    } else { const q = ease(span(k, h1 + .1, 1));
-      pose.sink = lerp(-2, 2, q); pose.legs = { f: 8, b: -8, fk: lerp(1, 3, q), bk: lerp(1, 3, q) }; pose.lean = lerp(-.16, .06, q); pose.yaw = lerp(.2, 0, q);
-      pose.arm = lerp(-.6, 1, q); pose.elbow = lerp(.55, 1.9, q);
+  'fists:X'(pose, m, k) { // Rising Fist: sink into the knees with the lead fist dropped to the hip, then drive up off the legs, the fist
+    // travelling close up the body past the chin, the hips turning through, and he goes up with it, the arm finishing long overhead
+    const t = k * m.dur, t0 = m.dur * m.h[0] * .8, t1 = m.dur * m.h[1], air = !!m.rise; // (absolute times: the grounded fallback, rise 0, is shorter)
+    pose.trail = 0; pose.streak = null; delete pose.sweep; pose.spin = 0; pose.rot = 0; pose.ext = 0; pose.flow = 0;
+    if (t < t0) { const q = ease(t / t0); // the load: knees bent, hips turned away, the lead shoulder dropped and the fist down by the hip
+      pose.sink = 12 * q; pose.lean = .36 * q; pose.yaw = -.34 * q; pose.shift = -1.2 * q;
+      pose.legs = { f: 10, b: -10, fk: 3 + 9 * q, bk: 3 + 8 * q };
+      pose.arm = lerp(1, 1.55, q); pose.elbow = lerp(1.9, 1.45, q); // the upper arm let down beside the ribs, the forearm level in front: the fist down at the hip
+      pose.backArm = lerp(1.3, 1.15, q); pose.backElbow = lerp(2, 2.2, q); // the rear fist guarding the chin
+    } else if (t < t1 + .03) { const q = sstep((t - t0) / (t1 + .03 - t0)); // the drive: legs straighten, hips turn through, the fist rises in a tight arc up the body
+      pose.sink = lerp(12, -3, q); pose.lean = lerp(.36, -.1, q); pose.yaw = lerp(-.34, .3, q); pose.shift = lerp(-1.2, .8, q);
+      pose.legs = air ? { f: lerp(10, 7, q), b: lerp(-10, -9, q), fk: lerp(12, 11, q), bk: lerp(11, 0, q), fl: 17 * q } : { f: 10, b: lerp(-10, -8, q), fk: lerp(12, 2, q), bk: lerp(11, 1, q), bh: .7 * q }; // the lead knee driven up, the back leg long beneath him (on the street: up onto the back toes)
+      pose.arm = lerp(1.55, -.5, q); pose.elbow = lerp(1.45, 1.2, q); // the elbow stays bent: the fist goes up close to the body, not round it
+      pose.backArm = lerp(1.15, 1.5, q); pose.backElbow = lerp(2.2, 2.45, q); // the off hand pulled in to the ribs
+      pose.flow = 3 * q;
+    } else if (air) { const q = sstep((t - t1 - .03) / .14), d = sstep(span(k, .8, 1)); // the follow-through: carried up behind the fist, the arm reaching long overhead
+      pose.sink = -3; pose.lean = lerp(-.1, -.16, q) * (1 - d) + .04 * d; pose.yaw = lerp(.3, .22, q) * (1 - d) + .1 * d; pose.shift = .8 * (1 - d);
+      pose.legs = { f: lerp(7, 6, d), b: lerp(-9, -4, d), fk: lerp(11, 10, d), bk: lerp(0, 8, d), fl: lerp(17, 10, d), bl: 7 * d }; // the lead knee high, the other leg long; near the top both fold up toward the jump's
+      pose.arm = lerp(-.5, -1.32, q) + .2 * d; pose.elbow = lerp(1.2, .3, q) + .25 * d; pose.ext = .5 * q * (1 - d);
+      pose.backArm = 1.5; pose.backElbow = 2.45; pose.flow = 3;
+    } else { const q = sstep((t - t1 - .03) / Math.max(.05, m.dur - t1 - .03)); // grounded (it could not leave the street): the fist comes back to the guard
+      pose.sink = lerp(-3, 2, q); pose.lean = lerp(-.1, .06, q); pose.yaw = lerp(.3, 0, q); pose.legs = { f: 9, b: -8, fk: lerp(2, 3, q), bk: lerp(1, 3, q), bh: .7 * (1 - q) };
+      pose.arm = lerp(-.5, 1, q); pose.elbow = lerp(1.2, 1.9, q); pose.backArm = lerp(1.5, 1.3, q); pose.backElbow = lerp(2.45, 2, q);
     }
   },
   'fists:DA'(pose, m, k) { // Superman Punch: laid out in the air, the rear hand thrown long, the lead hand pulled back to the hip

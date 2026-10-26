@@ -30,6 +30,7 @@ function nextMove(key) {
 function begin(m) {
   if (m === 'charge') { P.state = 'charge'; P.ct = 0; P.clvl = 0; P.seq = 'H'; return; }
   if (!m) { P.state = 'idle'; return; }
+  if (m.rise && P.z > 2) m = Object.assign({}, m, { rise: 0, hop: 0, dur: .5, h: [.36, .58] }); // the rising uppercut only ever leaves from the street: no climbing the sky on it
   P.state = m.dive || (P.z > 0 && !m.hop && P.state !== 'dodge') ? 'air' : 'atk'; P.move = m; P.t = 0; P.moveId = (P.moveId || 0) + 1; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false; P.finDone = false; P.turned = false; P.vaultVx = undefined; P.stormed = false; P.blinkList = null;
   if (Math.abs(input.mx) > 0.3 && !m.dive) P.facing = Math.sign(input.mx);
   P.vx = (m.lunge || 0) * P.facing; P.dodgeCarry = 0;
@@ -89,6 +90,7 @@ function updatePlayer(dt) {
       P.x += P.jvx * dt; P.y += P.jvy * dt;
       if (airSpecial()) break;
       if (pressed.shoot) { startShoot(); break; }
+      if (P.airQ && P.z > 16) { const q = P.airQ; P.airQ = null; P.jvy = 0; if (q === 'H' && !P.jhUsed && w.tree.JH) { P.jhUsed = true; begin(w.tree.JH); } else if (airNext()) begin(airNext()); break; } // an attack pressed during the uppercut or the leap goes off once he is up
       if (pressed.heavy && P.jhUsed && unlocked(w.tree.AH)) { P.jvy = 0; begin(w.tree.AH); } // a second Heavy in the same jump: the learned dive
       else if (pressed.heavy && !P.jhUsed && w.tree.JH) { P.jvy = 0; P.jhUsed = true; begin(w.tree.JH); } // the air heavy, once a jump
       else if (pressed.light && P.runJump && !P.airN && w.tree.DA) { P.jvy = 0; P.runJump = false; begin(w.tree.DA); } // off a run: the flying attack
@@ -168,7 +170,7 @@ function updatePlayer(dt) {
 }
 function onLand() {
   dust(P.x, P.y, 6);
-  P.airN = 0; P.j2 = false; P.jhUsed = false; P.runJump = false;
+  P.airN = 0; P.j2 = false; P.jhUsed = false; P.runJump = false; P.airQ = null;
   if (P.state === 'jump') { P.state = 'idle'; }
   else if (P.state === 'air' || (P.state === 'atk' && P.move && (P.move.shock || P.move.bounce) && P.move.hop)) {
     const m = P.move;
@@ -198,12 +200,14 @@ function runMove(dt) {
     for (const d of m.wave2 ? [1, -1] : [1]) projs.push({ owner: 'p', x: P.x + d * P.facing * 40, y: P.y, z: 0, vx: d * P.facing * (quake ? 300 : 340), dmg: Math.round((m.wave === 1 ? 40 : m.wave) * wMult(P.w)), life: quake ? .9 : 1, hit: new Set(), wave: 1, quake }); // wave2: it runs both ways
   }
   if (k > .3) { if (pressed.light) P.q = 'L'; if (pressed.heavy) P.q = 'H'; }
-  if (pressed.dodge && k > .4) { startDodge(); return; }
+  if (pressed.dodge && k > .4 && !(m.rise && airborne)) { startDodge(); return; } // (no dodging off the top of the rising uppercut)
   if (m.launcher && pressed.jump) P.chaseQ = true; // a jump pressed during the launcher is remembered
-  if (m.launcher && P.chaseQ && k > .35) { P.chaseQ = false; chaseJump(); return; } // leap after the enemy you just launched
+  if (m.launcher && !m.rise && P.chaseQ && k > .35) { P.chaseQ = false; chaseJump(); return; } // leap after the enemy you just launched
+  if (m.rise && airborne && (P.t >= m.dur || (k > m.h[1] + .06 && (P.q || P.chaseQ)))) { toAir(P.q); return; } // the rising uppercut hands him to the air near the top of the climb, or as soon as an air attack is asked for
   if (m.key === 'L' && input.light && P.holdL >= .18 && !P.holdUsed) { begin(WEAPONS[P.w].tree.X); return; } // held: the jab turns into the launcher
   if (P.t >= m.dur && !(m.hop && airborne)) {
     if (input.light && P.holdL >= .2 && !P.holdUsed && m.key && m.key[0] === 'L') { begin(WEAPONS[P.w].tree.X); return; }
+    if (m.upJump && P.q !== 'H' && !airborne) { autoLeap(P.q); return; } // two Heavies: he leaps up after them (a third Heavy throws HHH instead)
     const nm = P.q ? nextMove(P.q) : null;
     if (nm) begin(nm); else { P.state = 'idle'; }
   }
@@ -215,6 +219,15 @@ function airSpecial() { // the staff's air tricks: a second vault, or a hovering
   return false;
 }
 function airNext() { return WEAPONS[P.w].tree['A'.repeat((P.airN || 0) + 1)] || null; }
+function toAir(q, vz) { // hand him from a move to an ordinary jump, still going up: air attacks, the air heavy and the landing all as usual
+  P.state = 'jump'; if (vz) P.vz = vz; P.jvy = 0; P.airN = 0; P.jhUsed = false; P.runJump = false; P.j2 = false; P.seq = ''; P.chaseQ = false; P.chaseT = 0;
+  const foe = P.hits ? [...P.hits.keys()].filter(e => enemies.includes(e) && !e.dead).sort((a, b) => (b.air ? 1 : 0) - (a.air ? 1 : 0))[0] : null; // drift after whoever he just hit, an airborne one first
+  P.jvx = foe ? clamp((foe.x - P.facing * (foe.hw + 18) - P.x) / .5, -240, 240) : P.facing * 30;
+  P.airQ = q || null; P.q = null;
+}
+function autoLeap(q) { // Heavy, Heavy: up after them off the palms
+  toAir(q, 480); sfx('jump'); dust(P.x, P.y, 8); addGhost();
+}
 function chaseJump() { // leap up after a launched enemy
   P.state = 'jump'; P.vz = 540; P.jvx = clamp(((P.chaseX || P.x) - P.x) / .55, -280, 280); P.jvy = 0; P.airN = 0; P.chaseT = 0; P.jhUsed = false; P.runJump = false;
   sfx('jump'); dust(P.x, P.y, 8); addGhost();

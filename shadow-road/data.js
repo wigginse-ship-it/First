@@ -19,12 +19,12 @@ const WEAPONS = {
       LLL:  { name: 'Hook', dur: .3, h: [.3, .65], x0: 0, x1: 38, dmg: 9, kb: 160, arc: [.3, .3], lunge: 60 },
       LLLL: { name: 'Roundhouse', dur: .48, h: [.34, .66], x0: 0, x1: 42, dmg: 12, kb: 300, kick: 1, lunge: 140, spin: 1, power: 1 }, // a spinning back kick: he turns his back, then the heel comes round
       H:    { name: 'Rising Dragon', dur: .56, h: [.34, .6], prep: 1, x0: 0, x1: 34, dmg: 13, kb: 60, launch: 430, arc: [1.6, -1.8], hop: 210, lunge: 210, power: 1 },
-      HH:   { name: 'Thunder Palm', dur: .46, h: [.3, .6], x0: 0, x1: 42, dmg: 16, kb: 380, arc: [.2, .2], lunge: 200, power: 2, wall: 1 }, // both palms driven forward hard enough to bounce them off a wall
+      HH:   { name: 'Thunder Palm', dur: .46, h: [.3, .6], x0: 0, x1: 42, dmg: 16, kb: 380, arc: [.2, .2], lunge: 200, power: 2, wall: 1, upJump: 1, desc: 'Two Heavies: both palms, and he leaps straight up after them, ready to fight on in the air. A third Heavy instead throws the Dragon Fist.' }, // both palms driven forward hard enough to bounce them off a wall; then the auto-leap (game.js, upJump)
       HHH:  { name: 'Dragon Fist', dur: .55, h: [.32, .6], x0: 0, x1: 46, dmg: 24, kb: 460, arc: [.1, .1], lunge: 320, power: 2, wall: 1 }, // the whole body behind one straight punch: sends them flying into the wall
       LH:   { name: 'Shoulder Bash', dur: .45, h: [.15, .7], x0: 0, x1: 38, dmg: 15, kb: 420, lunge: 460, arc: [.2, .2], power: 2, wall: 1 },
       LLH:  { name: 'Whirlwind Kick', dur: .62, h: [.15, .85], x0: 0, x1: 42, dmg: 6, kb: 220, kick: 1, around: 1, multi: .11, hop: 260, spin: 2, power: 1 },
       HL:   { name: 'Sky Hammer', dur: .55, h: [.55, .8], x0: 0, x1: 40, dmg: 18, kb: 120, arc: [-2.6, 1.4], hop: 280, lunge: 110, bounce: 1, power: 2 },
-      X:    { name: 'Rising Fist', dur: .5, h: [.36, .58], prep: 1, x0: 0, x1: 36, dmg: 10, kb: 30, launch: 580, arc: [1.6, -1.8], launcher: 1, power: 1 }, // a boxer's uppercut: dipped low to the lead side, then driven up from the legs
+      X:    { name: 'Rising Fist', dur: .72, h: [.25, .403], prep: 1, x0: 0, x1: 36, dmg: 10, kb: 30, launch: 580, arc: [1.6, -1.8], launcher: 1, rise: 1, hop: 470, power: 1 }, // a rising uppercut: sunk into the knees, then driven up from the legs, and he goes up with it (same hit window as ever, .18-.29s; the move runs on through the climb and hands him to the air)
       JH:   { name: 'Tornado Kick', dur: .5, h: [.3, .62], x0: 0, x1: 44, dmg: 13, kb: 320, kick: 1, spin: 1, power: 1, wall: 1 }, // Heavy in the air: a spinning hook kick, heel first
       DA:   { name: 'Superman Punch', dur: .46, h: [.24, .6], x0: 0, x1: 48, dmg: 14, kb: 360, arc: [.1, .1], fly: 1, power: 1, wall: 1 }, // Attack in a running jump: laid out flat behind a flying cross
       A:    { dur: .28, h: [.2, .6], x0: 0, x1: 38, dmg: 7, kb: 60, arc: [.9, -.2] },

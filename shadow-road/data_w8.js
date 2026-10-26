@@ -9,7 +9,7 @@
 //   lorraine     - The Winter Fields (waves 1-2; villagers flee across the field and the dead get up grey: rule 'w8flight')
 //   lorraine2    - The Edge of the Circle (waves 3-4, the Hangman last; the Circle breathes across the field: rule 'w8edge')
 //   lorraineBoss - The Heart of the Circle: the Goat-Lord in four shapes (rule 'w8heart')
-// Its relic is the Horn of Lorraine (save.w8relic): filled by landed blows, its blast staggers and breaks guards.
+// Its relic is the Horn of Lorraine (save.w8relic) and its Long March: verses earned by clearing worlds without falling (w8_late.js).
 (() => {
   if (STAGES.length !== 7) { console.error('data_w8.js: Lorraine is stage index 7, but ' + STAGES.length + ' stages are registered before it; not loaded'); return; }
   // the Circle's things are grey stuff all through: ash comes out of them when they are cut
@@ -70,7 +70,7 @@
     stage: 7, id: 'lorraine', name: 'LORRAINE',
     line: 'The Black Circle is eating Lorraine a village at a time, and Corwin knows whose curse it grew from: he goes back to unmake what he made, where Ganelon once held the line.',
     draw(ctx2, w, h, t) { if (window.W8 && W8.card) W8.card(ctx2, w, h, t); },
-    relic: { key: 'w8relic', name: 'The Horn of Lorraine', desc: 'Ganelon\'s war-horn, taken back from the Goat-Lord. Landed blows fill it (the gold HORN bar); full, it sounds by itself when a foe is in front of you: a cone of sound that does little damage but staggers what it catches, breaks two pips of an armored guard and shakes a boss\'s poise. In New Game+ it fills a little faster, reaches further, staggers longer and breaks three pips.' },
+    relic: { key: 'w8relic', name: 'The Horn of Lorraine', desc: 'Ganelon\'s war-horn, and the Long March it carries. Every world you clear without falling adds a verse: you choose one of two, and it holds for the rest of the road and into every new cycle. The Charge (first blows land double and floor), the Banner (a gold wave down the lane), Iron (finishers break the ground), the Drum (kills chain a growing bonus), the Hunt (wounded foes take far more), Lorraine\'s Dead (a ghost rider charges), the Watchfire (blows burn, and the burning burst), Ganelon\'s Standard (badly hurt, you hit much harder). Falling loses only the newest verse. Five verses at first, one more each cycle, and each a little stronger.' },
   });
 })();
 // the attacks, rules, passages and music (art_w8.js) register now that world.js and zones.js have loaded

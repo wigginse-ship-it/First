@@ -46,7 +46,7 @@
     LH:   { name: 'Up From Below', dur: .55, h: [.3, .34], x0: 0, x1: 24, dmg: 20, kb: 40, launch: 560, power: 2, below: 1 },
     LLH:  { name: 'Meteor Flail', dur: .8, h: [.1, .86], x0: 0, x1: 100, depth: 36, dmg: 7, kb: 200, around: 1, multi: .11, spin: 2, power: 1, flail: 1 },
     HL:   { name: 'Moonfall', dur: .6, h: [.55, .8], x0: 0, x1: 60, depth: 30, dmg: 28, kb: 140, arc: [-2.6, 1.4], hop: 300, lunge: 110, bounce: 1, shock: 120, power: 2 },
-    X:    { name: 'Silver Lift', dur: .5, h: [.36, .58], prep: 1, x0: 0, x1: 60, dmg: 15, kb: 30, launch: 650, arc: [1.6, -1.8], launcher: 1, power: 1 },
+    X:    { name: 'Silver Lift', dur: .72, h: [.25, .403], prep: 1, x0: 0, x1: 60, dmg: 15, kb: 30, launch: 650, arc: [1.6, -1.8], launcher: 1, rise: 1, hop: 470, power: 1 }, // he rises with it, like the bare-handed Rising Fist
     A:    { dur: .28, h: [.2, .6], x0: 0, x1: 56, dmg: 10, kb: 70, arc: [.9, -.2] },
     AA:   { dur: .3, h: [.2, .6], x0: 0, x1: 60, dmg: 11, kb: 80, arc: [.5, .2] },
     AAA:  { name: 'Meteor Fist', dur: .42, h: [.2, .65], x0: 0, x1: 70, depth: 26, dmg: 17, kb: 140, arc: [-2.4, 1.4], spike: 1, power: 2 },
@@ -230,7 +230,7 @@
     'arm:LH'(pose, m, k) { const g = ease(span(k, 0, m.h[0])); pose.arm = lerp(.4, 1.45, g); pose.elbow = lerp(1.6, 0, g); pose.ext = .4 * g; pose.crouch = 1; pose.lean = .5 * g; pose.armShape = 'rock'; pose.armBig = 1.3; pose.trail = 0; pose.streak = null; delete pose.sweep; pose.armChain = 10 * g; },
     'arm:LLH'(pose, m, k) { pose.arm = -.05; pose.elbow = 0; pose.ext = .3; pose.armChain = 64 * sst(span(k, 0, .15)) * (1 - span(k, .88, 1)); pose.armBig = 1.6; pose.armShape = 'rock'; pose.backArm = 2.6; pose.lean = -.2; pose.trail = 0; pose.flat = k > .12 && k < .86 ? { r: 110, k: .96, rev: false, col: 'rgba(225,235,255,.95)', w: 5 } : null; },
     'arm:HL'(pose, m, k) { const g = sst(span(k, .1, .5)); pose.armBig = 1 + 2 * g; pose.armShape = 'rock'; },
-    'arm:X'(pose, m, k) { const g = sst(span(k, .1, m.h[0])); pose.armBig = 1 + 1.6 * g * (1 - span(k, .8, 1)); pose.armShape = 'paper'; pose.armRot = -.6 * g; },
+    'arm:X'(pose, m, k) { MOVE_POSE['fists:X'](pose, m, k); const g = sst(span(k, .1, m.h[0])); pose.armBig = 1 + 1.6 * g * (1 - span(k, .8, 1)); pose.armShape = 'paper'; pose.armRot = -.6 * g; pose.trail = 0; }, // the Rising Fist's body, the open silver hand scooping up
     'arm:AAA'(pose, m, k) { pose.armBig = 1 + 1.2 * out(m, k); pose.armShape = 'rock'; pose.armChain = 20 * out(m, k); },
     'arm:JH'(pose, m, k) { const g = k < m.h[0] ? 1 : out(m, k); pose.arm = -.1; pose.elbow = 0; pose.ext = .6; pose.armChain = P.hookE && k < m.h[0] ? Math.min(90, Math.abs(P.hookE.x - P.x) - 20) * (1 - span(k, .2, m.h[0])) : 0; pose.armShape = k < m.h[0] ? 'claw' : 'rock'; pose.armBig = 1.3 + .6 * g; pose.lean = .35; pose.legs = { f: 10, b: -16, fk: 10, bk: 4 }; pose.flow = 14; pose.trail = 0; pose.streak = null; },
     'arm:DA'(pose, m, k) { const e = out(m, k); pose.arm = -.1 - (pose.rot || 0) * .5; pose.elbow = 0; pose.ext = .8; pose.armChain = 30 * e; pose.armBig = 1.2 + .9 * e; pose.armShape = 'rock'; pose.rot = .36; pose.lean = .25; pose.legs = { f: 4, b: -19, fk: 12, bk: -2 }; pose.flow = 16; pose.trail = 0; pose.streak = null; },
