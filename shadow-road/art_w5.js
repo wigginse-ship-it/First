@@ -1643,7 +1643,7 @@
     ctx.restore();
     const [x, y] = at(walkU), s = lerp(.7, 1.15, walkU);
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    shadow(0, 0, 12); drawHumanoid(_look(), { walk: t * 7, weapon: 'benArm', arm: .9, grip: -.6, armA: 2.6, armBend: 1.6, armSwing: .8 }); // (he carries it like a weapon, swinging with his stride; his own hands are not silver yet)
+    shadow(0, 0, 12); drawHumanoid(Object.assign(heroLook(), { glove: buildHeroLook(save.gear.eq).glove, gauntPlate: 0 }), { walk: t * 7, weapon: 'benArm', arm: .9, grip: -.6, armA: 2.6, armBend: 1.6, armSwing: .8 }); // (he carries it like a weapon, swinging with his stride; his own hands are not silver yet)
     ctx.restore();
   }
   // Benedict's silver arm carried like a weapon: gripped by the shoulder in his fist, the rest of it running out along the
