@@ -10,6 +10,7 @@ const ARROW_TIERS = [
   { name: 'Rune Arrows', dmg: 98, crit: .18, pierce: 1, blast: 46, desc: 'Runes cut in the shaft burst on impact, catching whoever stands close.' },
   { name: 'Starfall Arrows', dmg: 116, crit: .28, pierce: 2, blast: 60, desc: 'Fletched with light: each one falls like a star and goes through three.' },
 ];
+const arrowVs = e => e.boss ? .3 : e.champ ? .6 : 1; // arrows are for picking off the crowd: bosses and champions shrug most of one off
 const aTier = () => ARROW_TIERS[Math.min(ARROW_TIERS.length, save.alv || 1) - 1];
 const arrowCost = (lvl) => ({ s: Math.round([0, 200, 400, 700, 1100][lvl] * (1 + .5 * (save.cycle || 0))), g: Math.round([0, 3, 5, 8, 12][lvl] * (1 + .5 * (save.cycle || 0))) }); // a better arrow is dear, but within reach
 function maybeDropArrow(e) {
@@ -87,7 +88,8 @@ function arrowHit(p) {
   if (!best) return false;
   p.hit.add(best); if (best === p.tgt) p.tgt = null;
   const wasDead = best.dead;
-  strike(best, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .08 + p.crit * .7 });
+  const ad = p.dmg * arrowVs(best);
+  strike(best, ad, Math.sign(p.vx), { dmg: ad, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .08 + p.crit * .7 });
   if (best.dead && !wasDead) { // the killing arrow stays in the body, where it went in (in the foe's own frame: x along its facing, up negative)
     const sc = best.boss ? best.size || 1 : best.champ ? 1.3 : 1, f = best.facing || 1;
     (best.arrows = best.arrows || []).push({ x: clamp((p.x - best.x) * f / sc, -best.hw * .5, best.hw * .5), y: clamp(-(p.z - best.z) / sc, -best.hh * .92, -best.hh * .12),
@@ -96,7 +98,7 @@ function arrowHit(p) {
   burst(best.x, best.y, p.z, ['#FFFFFF', '#E8D8B0'], 8, 'spark', Math.sign(p.vx));
   if (p.blast) { // rune and starfall arrows burst where they land
     fx.push({ kind: 'ring', x: best.x, y: best.y, z: 4, t: .35, max: .35, r: p.blast * 1.4, col: p.arrow >= 5 ? '#E8E0FF' : '#9FE8F0', flat: 1 });
-    for (const o of enemies) if (o !== best && !o.dead && Math.hypot(o.x - best.x, (o.y - best.y) * 2) < p.blast) strike(o, p.dmg * .4, Math.sign(o.x - best.x) || 1, { dmg: p.dmg * .4, kb: 220, launch: 160, power: 1, arrow: 1 });
+    for (const o of enemies) if (o !== best && !o.dead && Math.hypot(o.x - best.x, (o.y - best.y) * 2) < p.blast) strike(o, p.dmg * .4 * arrowVs(o), Math.sign(o.x - best.x) || 1, { dmg: p.dmg * .4 * arrowVs(o), kb: 220, launch: 160, power: 1, arrow: 1 });
   }
   if (p.pierce > 0) { p.pierce--; return false; }
   return true;
