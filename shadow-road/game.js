@@ -562,6 +562,7 @@ function applyElement(e, base, dir) {
   burst(e.x, e.y, cy, [el.col, '#FFFFFF'], 6, 'spark', dir);
 }
 function updateElements(e, dt) { // burning, chill and freeze on one enemy; returns true while frozen solid
+  if (e.bleed > 0 && !e.dead) updateBleed(e, dt); // (a barbed arrow's wound: arrows.js)
   if (e.burn > 0 && !e.dead) {
     e.burn -= dt; e.burnTick = (e.burnTick || 0) - dt;
     if (Math.random() < .6) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(0, e.hh), vx: rand(-10, 10), vy: 0, vz: rand(80, 140), life: .5, max: .5, col: pick(['#FF8A4A', '#FFD27A', '#E85A3A']), size: rand(2.5, 4), shape: 'puff', rot: 0, vr: 0 });

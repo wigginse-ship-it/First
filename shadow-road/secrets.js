@@ -55,7 +55,7 @@ const BOONS = {
   edge: { name: "The Unicorn's Edge", sub: () => `${WEAPONS[boonW()].name.toUpperCase()} +1 LEVEL`, ok: () => !!boonW(), give() { const id = boonW(); save.wl[id]++; } },
   heart: { name: 'Heart of the Unicorn', sub: () => `AN ENCHANTED PIECE OF ${GEAR_SETS[worldTier()].short.toUpperCase()} ARMOR`, ok: () => true, // armor of this world, always enchanted, always with more health
     give() { const it = makeGearItem(worldTier(), pick(GEAR_SLOTS), { ench: ['hp', ...(worldTier() >= 3 ? [pick(AFFIX_IDS.filter(k => k !== 'hp'))] : [])] }); if (!pickGear({ item: it })) loot.push(Object.assign(makeLoot('gear', P.x + 30, P.y, 0), { item: it })); P.hp = maxHp(); } },
-  quiver: { name: 'Quiver of Starlight', sub: () => save.alv < 5 ? `A FULL QUIVER · ${ARROW_TIERS[save.alv].name.toUpperCase()}` : 'A FULL QUIVER', ok: () => true, give() { save.arrows = ARROW_MAX; if (save.alv < 5) save.alv++; refreshArrows(); } },
+  quiver: { name: 'Quiver of Starlight', sub: () => arrowLv() < ARROW_LV ? `A FULL QUIVER · ${ARROW_TIERS[arrowLv()].name.toUpperCase()}` : 'A FULL QUIVER', ok: () => true, give() { save.arrows = ARROW_MAX; if (arrowLv() < ARROW_LV) save.alv = arrowLv() + 1; refreshArrows(); } },
   card: { name: 'A Card, Freshly Drawn', sub: () => { const id = TRUMP_ORDER.find(k => !save.trumps[k]); return id ? `THE ${TRUMPS[id].name.toUpperCase()}` : 'ONE OF YOUR CARDS, INSCRIBED DEEPER'; },
     ok: () => TRUMP_ORDER.some(k => !save.trumps[k] || TL(k) < 3),
     give() { const id = TRUMP_ORDER.find(k => !save.trumps[k]); if (id) { save.trumps[id] = true; if (!save.trump) save.trump = id; } else { const k = pick(TRUMP_ORDER.filter(k => TL(k) < 3)); save.tlv[k] = TL(k) + 1; } } },

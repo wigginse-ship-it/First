@@ -144,12 +144,12 @@ function renderForge(note) {
     });
     wrap.appendChild(d);
   }
-  // the arrows: five levels, each a better arrow
+  // the arrows: seven levels, each a better arrow with a trick of its own
   const al = Math.min(ARROW_TIERS.length, save.alv || 1), ac2 = arrowCost(al), almax = al >= ARROW_TIERS.length, alcan = !almax && save.shards >= ac2.s && save.sigils >= ac2.g;
   const da = document.createElement('div'); da.className = 'card';
   da.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">LV ${al}/${ARROW_TIERS.length} · ${save.arrows || 0}/${ARROW_MAX} IN THE QUIVER</div><div class="nm">${aTier().name}</div>
-    <p>Rare arrows from fallen shooters, loosed with any weapon. Each strikes the first foe in its path for ${aTier().dmg}+ damage.</p>
-    <ul>${ARROW_TIERS.map((tt, i) => `<li class="${al >= i + 1 ? 'got' : al === i ? 'next' : ''}"><b>LV${i + 1} · ${tt.name}</b><br><em>${tt.desc}</em></li>`).join('')}</ul>
+    <p>Rare arrows from fallen shooters, loosed with any weapon, for picking off the crowd: a full draw strikes the first foe in its path for ${aTier().dmg}+ damage, though bosses and champions shrug most of it off. Each level keeps the tricks of the last.</p>
+    <ul>${ARROW_TIERS.map((tt, i) => `<li class="${al >= i + 1 ? 'got' : al === i ? 'next' : ''}"><b>LV${i + 1} · ${tt.name}</b> · ${tt.skill}<br><em>${tt.desc}</em></li>`).join('')}</ul>
     <button class="buy" type="button" ${alcan ? '' : 'disabled'}>${almax ? 'The finest arrows' : `Fletch better arrows · ${costTxt(ac2)}`}</button>`;
   drawIcon(da.querySelector('canvas'), 'arrow', .78);
   da.querySelector('button').addEventListener('click', () => {

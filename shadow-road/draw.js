@@ -739,7 +739,7 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   g.setTransform(s, 0, 0, s, 0, 0);
   // the weapon on its own, laid diagonally across the card
   const tier = id === 'fists' ? 1 : Math.min(7, save.wl[id]);
-  if (id === 'arrow') { ctx.translate(34, 30); ctx.rotate(-.75); ctx.scale(1.5, 1.5); drawArrowShape(Math.min(5, save.alv || 1), 24); }
+  if (id === 'arrow') { ctx.translate(34, 30); ctx.rotate(-.75); ctx.scale(1.5, 1.5); drawArrowShape(arrowLv(), 24); }
   else if (id === 'fists') { // a gauntleted fist, knuckles forward
     ctx.translate(32, 33); ctx.rotate(-.25);
     ctx.fillStyle = C('#3A3A46'); rrect(-15, 2, 14, 15, 3); ctx.fill(); outline(1.2); // the cuff
