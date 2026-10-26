@@ -204,7 +204,7 @@
   // where things stand in the panel: the picture on the right, standing on the frame's lower edge (her shell fades out
   // above), a column in front of its left edge; the niche and the rose window centred behind her
   function moireLay() {
-    const Y0 = Y_OFF, H = VH - Y0, s = (H + 6) * .86 / MO_H, x0 = Math.max(VW - 1072 * s - 8, VW * .36), ax = x0 + 420 * s;
+    const Y0 = Y_OFF, H = VH - Y0, s = Math.min((H + 6) * .86 / MO_H, VW * .64 / 1072), x0 = Math.max(VW - 1072 * s - 8, VW * .34), ax = x0 + 420 * s; // (smaller on a narrow screen, so her feet stay in it)
     return { Y0, H, s, x0, y0: VH + 4 - (MO_H + MO_PAD) * s, wall: Y0 + H * .8, fl: Y0 + H * .92, col: x0 + 7, ax, ar: 470 * s, wx: ax, wy: Y0 + H * .1, lx: x0 + 1010 * s };
   }
   // the hall behind her, painted once into its own canvas
