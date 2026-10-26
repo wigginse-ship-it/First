@@ -1808,7 +1808,7 @@
     _kill(e, dir, m);
     if (e.def === BOSSES.w7king) { W7.kingDown(e); return; }
     const cd = CUSTOM_DEATH[e.type];
-    if (cd) { const wasPop = e.death === 'pop'; e.death = cd; e.air = false; e.spin = 0; e.rotA = 0; e.vx = cd === 'w7flee' ? dir * 40 : 0; e.vz = 0; e.t = e.dmax = 1.8; if (wasPop) dropLoot(e); bubbles(e.x, e.y, e.hh * .6, 14, 70); }
+    if (cd) { const wasPop = e.death === 'pop'; e.death = cd; e.air = false; e.spin = 0; e.rotA = 0; e.vx = cd === 'w7flee' ? dir * 40 : 0; e.vz = 0; e.t = e.dmax = cd === 'w7float' ? 3.4 : cd === 'w7flee' ? 2.6 : 1.8; if (wasPop) dropLoot(e); bubbles(e.x, e.y, e.hh * .6, 14, 70); }
   };
   W7.kingDown = (e) => { // the King breaks like glass, and the Pearl of Judgement falls out of his crown onto the Pattern
     e.death = 'w7glassend'; e.air = false; e.spin = 0; e.vx = 0; e.vz = 0; e.t = e.dmax = 3; e.w7nopearl = 1;
@@ -1822,11 +1822,11 @@
     const d = e.death; if (!d || !/^w7/.test(d)) return _dd(e, t);
     const el = e.corpse ? (e.dmax || 1) : e.dmax - e.t, k = cl01(el / (e.dmax || 1)), a = { walk: 0, t: e.deadAt || t, wind: 0, hurt: true };
     const draw = (fn) => { ctx.save(); ctx.globalAlpha *= e.fade !== undefined ? e.fade : 1; try { fn(); } finally { ctx.restore(); } };
-    if (d === 'w7float') draw(() => { if (k >= .999) return; ctx.translate(e.x, e.y - e.z - k * 90); ctx.rotate(-k * 1.2 * e.facing); ctx.globalAlpha *= 1 - sm((k - .4) / .6); ctx.scale(e.facing, 1); CREATURES[e.def.draw](e, a); });
+    if (d === 'w7float') draw(() => { if (k >= .999) return; ctx.translate(e.x, e.y - e.z - Math.pow(k, 1.5) * (e.y - e.z + e.hh * 1.5 + 60)); ctx.rotate(-k * 1.2 * e.facing); ctx.scale(e.facing, 1); CREATURES[e.def.draw](e, a); });
     else if (d === 'w7douse') draw(() => { e.w7out = 1; ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-sm(Math.min(1, k * 1.6)) * 1.4); ctx.globalAlpha *= 1 - sm((k - .6) / .4) * .4; CREATURES.w7lamp(e, a); });
     else if (d === 'w7foam') draw(() => { if (k < .5) { ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); ctx.globalAlpha *= 1 - k * 2; CREATURES.w7siren(e, a); }
       if (k < .999) onMain(() => { for (let i = 0; i < 24; i++) { const q = cl01(k * 1.4 - hsh(i) * .4), x = e.x + (hsh(i + 2) - .5) * 30, y = e.y - e.z - 20 - q * 70 + (hsh(i + 5) - .5) * 20; ctx.strokeStyle = `rgba(240,250,250,${.8 * Math.sin(q * Math.PI)})`; ctx.lineWidth = .8; circle(x, y, 1 + hsh(i + 7) * 3); ctx.stroke(); } }); });
-    else if (d === 'w7flee') draw(() => { if (k >= .999) return; ctx.translate(e.x + e.facing * -k * 260, e.y - e.z - k * 120); ctx.globalAlpha *= 1 - sm((k - .5) / .5); ctx.scale(-e.facing, 1); CREATURES.w7hippo(e, a); });
+    else if (d === 'w7flee') draw(() => { if (k >= .999) return; ctx.translate(e.x + e.facing * -Math.pow(k, 1.3) * (VW + 120), e.y - e.z - k * 140); ctx.scale(-e.facing, 1); CREATURES.w7hippo(e, a); });
     else if (d === 'w7flood') draw(() => { e.w7bare = 1; ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-sm(Math.min(1, k * 2)) * 1.4); CREATURES.w7bellk(e, a); });
     else if (d === 'w7topple') draw(() => { ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-Math.pow(sm(Math.min(1, k * 1.4)), 2) * 1.5); CREATURES.w7triton(e, a); });
     else if (d === 'w7glassend') draw(() => { // the King breaks: the glass of him flies apart and the water of him goes out into the water
