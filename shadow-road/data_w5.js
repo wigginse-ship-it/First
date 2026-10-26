@@ -4,13 +4,13 @@
 // moonlight; at dawn it fades, and so does the stair. This is the last world of the road.
 //   moon      - The Stair of Moonlight (waves 1-2; the dawn comes up behind you: rule 'w5dawn')
 //   moon2     - The Streets of Tir-na Nog'th (wave 3, then the Sphinx and her riddle; cloud shadows: rule 'w5cloud')
-//   moonBoss  - The Moon Throne: the Phantom of Benedict (the one-armed master, the Host, the Swordsman in the Stars, the Moon Mantis)
+//   moonBoss  - The Moon Throne: the Phantom of Benedict (the one-armed master, the Host, the Swordsman in the Stars, the Moon Panoply)
 (() => {
   // the Phantom's shapes fight at different distances: how close he closes before each attack (the later shapes: benedict.js)
   const STANDOFF = { w5lunge: 230, w5feint: 70, w5guard: 96, w5wheel: 50,
     w5phalanx: 40, w5volley: 40, w5cavalry: 40, w5standard: 70, w5shieldwall: 40, // (his later shapes fill the hall with their
     w5web: 40, w5zodiac: 40, w5meteor: 40, w5nova: 40,                             // attacks, so they come right up to you:
-    w5scythe: 120, w5leap: 170, w5wings: 70, w5reap: 60, w5clasp: 40 };            // stand your ground and hit back)
+    w5cleave: 120, w5vault: 170, w5rose: 70, w5mow: 60, w5cage: 40 };           // stand your ground and hit back)
   const benPlan = () => (typeof boss !== 'undefined' && boss && boss.def === BOSSES.benedict ? boss.plan : null);
   // the ghosts of the city bleed silver when they are cut
   MAT_COL.ghost = ['#C8D4EC', '#EEF2FA', '#8A9AC8']; MAT_SFX.ghost = 'hit-crystal';
@@ -35,9 +35,9 @@
     1: ['w5lunge', 'w5feint', 'w5guard', 'w5lunge', 'w5feint'],                              // Benedict, master of arms
     2: ['w5phalanx', 'w5volley', 'w5cavalry', 'w5standard', 'w5volley', 'w5cavalry', 'w5phalanx'], // the Host of Benedict
     3: ['w5web', 'w5zodiac', 'w5meteor', 'w5zodiac', 'w5web', 'w5zodiac'],                    // the Swordsman in the Stars
-    4: ['w5scythe', 'w5leap', 'w5wings', 'w5reap', 'w5scythe', 'w5wings', 'w5leap'],         // the Moon Mantis
+    4: ['w5cleave', 'w5vault', 'w5rose', 'w5mow', 'w5cleave', 'w5rose', 'w5vault'],         // the Moon Panoply
   };
-  const CLOSE = { 1: 'w5wheel', 2: 'w5shieldwall', 3: 'w5nova', 4: 'w5clasp' };
+  const CLOSE = { 1: 'w5wheel', 2: 'w5shieldwall', 3: 'w5nova', 4: 'w5cage' };
   BOSSES.benedict = {
     get close() { return CLOSE[benShape()]; }, name: 'The Phantom of Benedict', title: 'MASTER OF ARMS OF AMBER', draw: 'w5benedict', mat: 'ghost', move: 'ground',
     get reach() { return STANDOFF[benPlan()] || 70; },
