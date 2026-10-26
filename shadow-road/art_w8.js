@@ -1567,7 +1567,7 @@
     e.size = S.size; e.hw = e.def.hw * e.size; e.hh = e.def.hh * e.size; e.dmg = Math.round(e.baseDmg * S.dmg); e.poiseMax = e.def.poise * 1.6; e.poise = e.poiseMax; e.staggers = 0;
     e.state = 'recover'; e.t = .8; e.cd = 1; e.plan = null; e.closeCd = 2.5; e.z = 0;
     phaseDrop(e); flashT = Math.max(flashT, .1); sfx('slam');
-    if (f === 2) { e.w8m = 'toEngine'; e.w8vol = 0; e.w8cyc = 0; e.state = 'w8act'; e.w8a = 'tithe'; for (let i = 0; i < 2; i++) { const a = spawnEnemy('w8hollow', i ? -1 : 1, false); a.w8tithe = 1; } floatText(e.x, e.y, 150, 'THE TITHE COMES TO FIGHT', '#E8D8B0', 14); }
+    if (f === 2) { e.w8m = 'toEngine'; e.w8vol = 0; e.w8cyc = 0; e.state = 'w8act'; e.w8a = 'tithe'; }
     if (f === 4) { e.w8m = 'curse'; e.state = 'w8act'; e.w8a = 'curse'; e.w8mt2 = 0; e.w8round = 0; }
   }
   function morphStep(e, dt) {

@@ -146,8 +146,8 @@
   const PAL_GOLD = '#C89A3A';
   // ---------------- C: Moire on her throne of nacre ----------------
   // She is a painted picture, not drawn here: moire.webp, the Queen cut out with her couch of nacre (1100 x 756, loaded at
-  // startup), set into a hall painted to match the rest of Rebma: a niche of dim gold mosaic, a rose window with the sea
-  // behind it, columns of green bronze, a floor of slate and lapis. She is inked round and graded into its light once, when
+  // startup), set into her palace as the picture itself has it, painted here: a colonnade of nacre and glass whose
+  // arches open on the sea and the castle on its cliff (moire_sea.webp), a floor of pearl mosaic. She is inked round and graded into its light once, when
   // she loads. Her hair and the loose sea-silk of her gown sway in the current: the picture is cut into a grid of cells
   // (MO_CS px), and each frame the cells holding hair or loose cloth are drawn bent by a smooth field of displacement (a wave
   // running out along the hair from her head, a slower swell through the cloth, her breath at the breast), each cell an affine
@@ -162,9 +162,10 @@
   function moirePrep(im) {
     const IW = im.naturalWidth, IH = im.naturalHeight, P = MO_PAD, CW = IW + P * 2, CH = IH + P * 2, [S, g] = texCanvas(CW, CH);
     { const [sil, sg] = texCanvas(CW, CH); sg.drawImage(im, P, P); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = '#071216'; sg.fillRect(0, 0, CW, CH);
-      g.globalAlpha = .85; for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; g.drawImage(sil, Math.cos(a) * 2.6, Math.sin(a) * 2.6); } g.globalAlpha = 1; retire(sil); } // an ink line round her, as round everything painted here
+      g.globalAlpha = .85; for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; g.drawImage(sil, Math.cos(a) * 2.6, Math.sin(a) * 2.6); } g.globalAlpha = 1; retire(sil);
+      g.clearRect(0, 0, CW, P + 90 * IW / MO_W); } // an ink line round her, as round everything painted here (but not where her shell fades out at the top)
     g.drawImage(im, P, P);
-    // graded into the hall's light: the deep's blue-green over all, deeper below, a little gold where the rose window's light falls
+    // graded into the hall's light: the deep's blue-green over all, deeper below, a little warmth where the light from the surface falls
     g.globalCompositeOperation = 'source-atop';
     const gr = g.createLinearGradient(0, 0, 0, CH); gr.addColorStop(0, 'rgba(30,96,116,.10)'); gr.addColorStop(.6, 'rgba(14,52,84,.17)'); gr.addColorStop(1, 'rgba(6,20,38,.38)'); g.fillStyle = gr; g.fillRect(0, 0, CW, CH);
     const gl = g.createRadialGradient(CW * .62, 0, 10, CW * .62, 0, CW * .62); gl.addColorStop(0, 'rgba(255,224,160,.12)'); gl.addColorStop(1, 'rgba(255,224,160,0)'); g.fillStyle = gl; g.fillRect(0, 0, CW, CH);
@@ -190,8 +191,8 @@
     const M = MO, P = MO_PAD, n = M.U.length, VX = M.VX, VY = M.VY, U = M.U, V = M.V, IH = M.IH, q = M.IW / MO_W;
     const surge = (Math.sin(t * .37) * .6 + Math.sin(t * .23 + 1) * .4) * q; // the current's slow swell
     for (let k = 0; k < n; k++) { let dx = 0, dy = 0; const h = M.wh[k], c = M.wc[k], b = M.wb[k];
-      if (h) { const a = t * 1.15 - M.ph[k]; dx += h * ((3.4 * Math.sin(a) + 1.3 * Math.sin(a * 1.9 + 1.3)) * q + 2 * surge); dy += h * 1.7 * q * Math.cos(a * .8 + .5); }
-      if (c) { const a = t * .95 - M.ph[k]; dx += c * ((3 * Math.sin(a) + 1 * Math.sin(t * 1.7 + U[k] * .03)) * q + 1.3 * surge); dy += c * 1.3 * q * Math.cos(a * 1.1) * cl01((IH - V[k]) / (60 * q)); } // (the hem stays down at the frame)
+      if (h) { const a = t * .85 - M.ph[k]; dx += h * ((7.5 * Math.sin(a) + 2.4 * Math.sin(a * 1.7 + 1.3)) * q + 4.5 * surge); dy += h * 4 * q * Math.cos(a * .8 + .5); }
+      if (c) { const a = t * .7 - M.ph[k]; dx += c * ((6.5 * Math.sin(a) + 1.8 * Math.sin(t * 1.3 + U[k] * .03)) * q + 3 * surge); dy += c * 3 * q * Math.cos(a * 1.1) * cl01((IH - V[k]) / (60 * q)); } // (the hem stays down at the frame)
       if (b) dy -= b * 1.3 * q * (.5 + .5 * Math.sin(t * 1.25));
       VX[k] = x0 + (P + U[k] + dx) * s; VY[k] = y0 + (P + V[k] + dy) * s; }
     ctx.drawImage(M.B, x0, y0, M.B.width * s, M.B.height * s);
@@ -199,65 +200,63 @@
     for (let i = 0; i < C.length; i += 7) { const sx = C[i], sy = C[i + 1], cw = C[i + 2], ch = C[i + 3], k = C[i + 4], kr = C[i + 5], kb = C[i + 6];
       const x = VX[k], y = VY[k], ax = (VX[kr] - x) / cw, ay = (VY[kr] - y) / cw, bx = (VX[kb] - x) / ch, by = (VY[kb] - y) / ch, ex = x - ax * sx - bx * sy, ey = y - ay * sx - by * sy;
       ctx.setTransform(ma * ax + mc * ay, mb * ax + md * ay, ma * bx + mc * by, mb * bx + md * by, ma * ex + mc * ey + me, mb * ex + md * ey + mf);
-      ctx.drawImage(S, sx - 1, sy - 1, cw + 2, ch + 2, sx - 1, sy - 1, cw + 2, ch + 2); } // each a pixel larger all round, so no seam opens between them
+      ctx.drawImage(S, sx - 2, sy - 2, cw + 4, ch + 4, sx - 2, sy - 2, cw + 4, ch + 4); } // each two pixels larger all round, so no seam opens between them
     ctx.setTransform(T0);
   }
   // where things stand in the panel: the picture on the right, standing on the frame's lower edge (her shell fades out
-  // above), a column in front of its left edge; the niche and the rose window centred behind her
+  // above), a column in front of its left edge; behind her the colonnade of her palace, its arches open on the sea, with
+  // a bay centred on the castle on its cliff (as in the picture she comes from)
   function moireLay() {
     const Y0 = Y_OFF, H = VH - Y0, s = Math.min((H + 6) * .86 / MO_H, VW * .64 / 1072), x0 = Math.max(VW - 1072 * s - 8, VW * .34), ax = x0 + 420 * s; // (smaller on a narrow screen, so her feet stay in it)
-    return { Y0, H, s, x0, y0: VH + 4 - (MO_H + MO_PAD) * s, wall: Y0 + H * .8, fl: Y0 + H * .92, col: x0 + 7, ax, ar: 470 * s, wx: ax, wy: Y0 + H * .1, lx: x0 + 1010 * s };
+    const cx = Math.min(x0 + 1004 * s, VW - 62), bw = Math.max(96, Math.min(130, H * .4));
+    return { Y0, H, s, x0, y0: VH + 4 - (MO_H + MO_PAD) * s, wall: Y0 + H * .8, fl: Y0 + H * .92, col: x0 + 7, ax, cx, bw, sill: Y0 + H * .72, spring: Y0 + H * .3, apex: Y0 + H * .07 };
   }
-  // the hall behind her, painted once into its own canvas
+  // the sea seen through the arches (moire_sea.webp: the castle on its cliff, cut from her picture's own window), and the
+  // colonnade itself, each painted once into its own canvas; the light and the fish go between them, live
+  { const im = new Image(); im.onload = () => { MO.sea = im; MO.bgKey = ''; }; im.src = 'moire_sea.webp'; }
+  const MO_INK = '#0A1A22';
+  function moireArch(g, x, w, L) { const y0 = L.Y0, sp = L.spring - y0, ap = L.apex - y0, sl = L.sill - y0, r = w / 2; // a pointed arch, its opening
+    g.beginPath(); g.moveTo(x - r, sl); g.lineTo(x - r, sp); g.quadraticCurveTo(x - r, ap + (sp - ap) * .25, x, ap); g.quadraticCurveTo(x + r, ap + (sp - ap) * .25, x + r, sp); g.lineTo(x + r, sl); g.closePath(); }
+  function moireBays(L) { const out = []; for (let x = L.cx - Math.ceil((L.cx + L.bw) / L.bw) * L.bw; x < VW + L.bw; x += L.bw) out.push(x); return out; } // the centres of the arches
   function moireHall(L) {
-    const key = [VW, K, L.H, L.x0.toFixed(1)].join(); if (MO.bg && MO.bgKey === key) return MO.bg;
-    retire(MO.bg); const H = L.H, [c, g] = texCanvas(Math.ceil(VW * K), Math.ceil(H * K)), rnd = mulberry(77), PA = W7.PAL || {};
-    const gold = PA.gold || '#C89A3A', goldL = PA.goldL || '#F2D68A', goldD = PA.goldD || '#6A4A18', wall = L.wall - L.Y0, ax = L.ax, ar = L.ar, wx = L.wx, wy = L.wy - L.Y0;
-    g.scale(K, K);
-    { const gr = g.createLinearGradient(0, 0, 0, wall); gr.addColorStop(0, '#060E1A'); gr.addColorStop(.6, '#0E2232'); gr.addColorStop(1, '#14303C'); g.fillStyle = gr; g.fillRect(0, 0, VW, wall); }
-    for (let i = 0; i < 1500; i++) { g.fillStyle = rnd() < .08 ? 'rgba(200,160,80,.35)' : `rgba(${rnd() < .5 ? '40,90,110' : '10,30,40'},.35)`; g.fillRect(rnd() * VW, rnd() * wall, 1.8, 1.8); } // the wall's dim mosaic
-    // blind arcades down the wall on his side, gold in their spandrels
-    for (let x = 30; x < L.x0 - 24; x += 62) { g.fillStyle = '#0A1A24'; g.beginPath(); g.moveTo(x - 24, wall); g.lineTo(x - 24, wall - 120); g.arc(x, wall - 120, 24, Math.PI, 0); g.lineTo(x + 24, wall); g.closePath(); g.fill();
-      g.strokeStyle = goldD; g.lineWidth = 2; g.stroke(); g.fillStyle = 'rgba(200,160,80,.25)'; g.fillRect(x + 28, wall - 160, 5, 18); }
-    // the niche behind her throne: a half-dome of dim gold mosaic, mosaic waves at its foot
-    g.save(); g.beginPath(); g.moveTo(ax - ar, wall); g.lineTo(ax - ar, wall - H * .55); g.ellipse(ax, wall - H * .55, ar, H * .45, 0, Math.PI, 0); g.lineTo(ax + ar, wall); g.closePath(); g.clip();
-    { const gr = g.createRadialGradient(ax, wall - H * .6, 10, ax, wall - H * .5, ar * 1.2); gr.addColorStop(0, '#8A6A2A'); gr.addColorStop(.6, '#4A3A1A'); gr.addColorStop(1, '#1A1608'); g.fillStyle = gr; g.fillRect(ax - ar, 0, ar * 2, wall); }
-    for (let y = 0; y < wall; y += 2.6) for (let x = ax - ar + (Math.floor(y / 2.6) % 2) * 1.3; x < ax + ar; x += 2.6) { const k = rnd(); g.fillStyle = k < .09 ? (rnd() < .6 ? gold : goldL) : shade('#4A3A1C', (rnd() - .5) * .24); g.globalAlpha = .45 + rnd() * .3; g.fillRect(x, y, 2.2, 2.2); } g.globalAlpha = 1;
-    g.globalAlpha = .9; for (let row = 0; row < 3; row++) for (let k = -9; k <= 9; k++) { const x = ax + k * 22 + (row % 2) * 11, y = wall - 12 - row * 10; g.strokeStyle = row % 2 ? '#3A7A8A' : '#5AAAB4'; g.lineWidth = 2.6; g.beginPath(); g.arc(x, y, 9, Math.PI, 0); g.stroke(); } g.globalAlpha = 1;
-    { const sh = g.createLinearGradient(0, 0, 0, wall); sh.addColorStop(0, 'rgba(4,10,16,.62)'); sh.addColorStop(.5, 'rgba(4,10,16,.3)'); sh.addColorStop(1, 'rgba(4,10,16,.55)'); g.fillStyle = sh; g.fillRect(ax - ar, 0, ar * 2, wall);
-      const sd = g.createLinearGradient(ax - ar, 0, ax + ar, 0); sd.addColorStop(0, 'rgba(4,10,16,.5)'); sd.addColorStop(.3, 'rgba(4,10,16,0)'); sd.addColorStop(.7, 'rgba(4,10,16,0)'); sd.addColorStop(1, 'rgba(4,10,16,.5)'); g.fillStyle = sd; g.fillRect(ax - ar, 0, ar * 2, wall); } // dimmed by the deep, darker into its curve
-    g.restore();
-    g.strokeStyle = goldD; g.lineWidth = 6; g.beginPath(); g.moveTo(ax - ar - 3, wall); g.lineTo(ax - ar - 3, wall - H * .55); g.ellipse(ax, wall - H * .55, ar + 3, H * .45 + 3, 0, Math.PI, 0); g.lineTo(ax + ar + 3, wall); g.stroke(); g.strokeStyle = gold; g.lineWidth = 1.4; g.stroke(); // its rim
-    // the rose window, the sea's light behind its glass
-    { const rr = Math.min(30, H * .11), GL = ['#2A5AB8', '#2E8A6A', '#1E3A8A', '#4A98B0', '#6A3AA8', '#C8962E'];
-      g.fillStyle = '#04080E'; g.beginPath(); g.arc(wx, wy, rr + 4, 0, TAU); g.fill();
-      for (let k = 0; k < 12; k++) { const a0 = k / 12 * TAU, a1 = (k + 1) / 12 * TAU; g.fillStyle = GL[k % GL.length]; g.globalAlpha = .7; g.beginPath(); g.moveTo(wx, wy); g.arc(wx, wy, rr, a0 + .04, a1 - .04); g.closePath(); g.fill(); }
-      g.globalAlpha = 1; g.fillStyle = '#C8D8F0'; g.beginPath(); g.arc(wx, wy, rr * .24, 0, TAU); g.fill(); g.strokeStyle = '#04080E'; g.lineWidth = 2;
-      for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; g.beginPath(); g.moveTo(wx + Math.cos(a) * rr * .24, wy + Math.sin(a) * rr * .24); g.lineTo(wx + Math.cos(a) * rr, wy + Math.sin(a) * rr); g.stroke(); }
-      g.beginPath(); g.arc(wx, wy, rr * .62, 0, TAU); g.stroke(); g.strokeStyle = goldD; g.lineWidth = 3; g.beginPath(); g.arc(wx, wy, rr + 3, 0, TAU); g.stroke(); g.strokeStyle = gold; g.lineWidth = 1; g.stroke();
-      g.save(); g.globalCompositeOperation = 'lighter'; const gw = g.createRadialGradient(wx, wy, 0, wx, wy, rr * 2.4); gw.addColorStop(0, 'rgba(120,170,230,.28)'); gw.addColorStop(1, 'rgba(120,170,230,0)'); g.fillStyle = gw; g.fillRect(wx - rr * 2.4, wy - rr * 2.4, rr * 4.8, rr * 4.8); g.restore(); }
-    // a lamp of pearl on its long chain, to the right of the niche
-    if (L.lx < VW - 8) { const x = L.lx, y = H * .36; g.strokeStyle = 'rgba(160,140,90,.6)'; g.lineWidth = .8; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, y - 8); g.stroke();
-      g.fillStyle = gold; g.fillRect(x - 6, y - 8, 12, 3); g.fillStyle = '#F2EEF8'; g.beginPath(); g.arc(x, y, 5, 0, TAU); g.fill(); g.strokeStyle = '#071216'; g.lineWidth = .8; g.stroke();
-      g.save(); g.globalCompositeOperation = 'lighter'; const gp = g.createRadialGradient(x, y, 0, x, y, 30); gp.addColorStop(0, 'rgba(236,232,246,.4)'); gp.addColorStop(1, 'rgba(236,232,246,0)'); g.fillStyle = gp; g.fillRect(x - 30, y - 30, 60, 60); g.restore(); }
-    // a column of green bronze at the far left, gilded at capital and base
-    { const x = 12, w = 16, top = -4; const gr = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0); gr.addColorStop(0, '#8ACCB0'); gr.addColorStop(.35, '#3E8A72'); gr.addColorStop(1, '#0E2A22'); g.fillStyle = gr; g.fillRect(x - w / 2, top, w, wall - top);
-      g.fillStyle = goldD; g.fillRect(x - w * .75, wall - 12, w * 1.5, 12); g.fillStyle = gold; g.fillRect(x - w * .75, wall - 12, w * 1.5, 2); }
-    // the floor: polished slate with lapis in it, a border of gold and lapis mosaic along the wall
-    { const gr = g.createLinearGradient(0, wall, 0, H); gr.addColorStop(0, '#16283A'); gr.addColorStop(.45, '#1E3448'); gr.addColorStop(1, '#0A1420'); g.fillStyle = gr; g.fillRect(0, wall, VW, H - wall); }
-    for (let i = 0; i < 700; i++) { g.fillStyle = rnd() < .5 ? 'rgba(80,120,170,.09)' : 'rgba(0,0,0,.13)'; g.fillRect(rnd() * VW, wall + rnd() * (H - wall), 2, 1.4); }
-    g.fillStyle = goldD; g.fillRect(0, wall, VW, 6); for (let x = 0; x < VW; x += 8) { g.fillStyle = (x / 8) % 2 ? gold : '#2A4A6A'; g.fillRect(x + 1, wall + 1, 6, 4); }
-    g.save(); g.globalAlpha = .35; g.fillStyle = texPat(g, 'sky'); g.fillRect(0, 0, VW, wall); g.restore(); // long brushstrokes in the water
-    MO.bg = c; MO.bgKey = key; return c;
+    const key = [VW, K, L.H, L.x0.toFixed(1), !!MO.sea].join(); if (MO.bg && MO.bgKey === key) return MO.bg;
+    retire(MO.bg && MO.bg.view); retire(MO.bg && MO.bg.wall);
+    const H = L.H, W = Math.ceil(VW * K), Hh = Math.ceil(H * K), rnd = mulberry(77), wall = L.wall - L.Y0, sl = L.sill - L.Y0, bays = moireBays(L), ow = L.bw * .78;
+    // ---- the sea: lit from the surface above, deep blue below, a far ridge of rock, the castle in the middle bay
+    const [vc, v] = texCanvas(W, Hh); v.scale(K, K);
+    { const gr = v.createLinearGradient(0, 0, 0, sl); gr.addColorStop(0, '#78C8D2'); gr.addColorStop(.25, '#3A90A6'); gr.addColorStop(.6, '#1E5E78'); gr.addColorStop(1, '#0E3042'); v.fillStyle = gr; v.fillRect(0, 0, VW, sl + 4); }
+    for (const [base, hgt, col, n] of [[sl * .86, .2, '#2A5E70', 9], [sl + 2, .14, '#1A4252', 13]]) { v.fillStyle = col; v.beginPath(); v.moveTo(0, sl + 4); for (let i = 0; i <= n; i++) v.lineTo(i / n * VW, base - (.3 + rnd() * .7) * hgt * sl); v.lineTo(VW, sl + 4); v.closePath(); v.fill(); } // far rocks
+    if (MO.sea) { const h = H * .62, w = h * MO.sea.width / MO.sea.height; v.drawImage(MO.sea, L.cx - w / 2, sl - h + 6, w, h); }
+    v.save(); v.globalAlpha = .12; v.fillStyle = texPat(v, 'sky'); v.fillRect(0, 0, VW, sl); v.restore();
+    // ---- the colonnade: a wall of nacre mosaic, the arches cut through it, slender columns of glass and pearl between them
+    const [wc, g] = texCanvas(W, Hh); g.scale(K, K);
+    { const gr = g.createLinearGradient(0, 0, 0, wall); gr.addColorStop(0, '#1C2A36'); gr.addColorStop(.5, '#3E5462'); gr.addColorStop(1, '#26384A'); g.fillStyle = gr; g.fillRect(0, 0, VW, wall); }
+    for (let i = 0; i < 2600; i++) { const k = rnd(); g.fillStyle = k < .1 ? 'rgba(240,248,255,.55)' : k < .2 ? 'rgba(200,170,230,.3)' : k < .3 ? 'rgba(150,220,220,.3)' : `rgba(${rnd() < .5 ? '20,40,52' : '170,196,206'},.25)`; g.fillRect(rnd() * VW, rnd() * wall, 2, 2); } // tesserae of nacre and glass, some glinting
+    g.save(); g.globalCompositeOperation = 'destination-out'; for (const x of bays) { moireArch(g, x, ow, L); g.fill(); } g.restore();
+    for (const x of bays) { moireArch(g, x, ow + 7, L); g.strokeStyle = '#B8CCD6'; g.lineWidth = 5; g.stroke(); g.strokeStyle = 'rgba(240,248,252,.7)'; g.lineWidth = 1.4; g.stroke(); moireArch(g, x, ow, L); g.strokeStyle = MO_INK; g.lineWidth = 1.2; g.stroke(); // its moulding, pearl-bright
+      g.fillStyle = '#9AB2BE'; g.fillRect(x - ow / 2 - 3, sl - 1, ow + 6, 5); g.strokeStyle = MO_INK; g.lineWidth = .8; g.strokeRect(x - ow / 2 - 3, sl - 1, ow + 6, 5); // the sill
+      g.strokeStyle = 'rgba(200,226,236,.45)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x - ow / 2, L.spring - L.Y0 + (sl - L.spring + L.Y0) * .55); g.lineTo(x + ow / 2, L.spring - L.Y0 + (sl - L.spring + L.Y0) * .55); g.stroke(); } // a glass transom
+    for (const x0 of bays) { const x = x0 + L.bw / 2, w = L.bw - ow - 4, top = -2; // the columns between the arches: clustered shafts of glass and pearl
+      const gr = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0); gr.addColorStop(0, '#4E6A78'); gr.addColorStop(.3, '#E2ECF0'); gr.addColorStop(.55, '#9AB4C0'); gr.addColorStop(1, '#2E4654'); g.fillStyle = gr; g.fillRect(x - w / 2, top, w, wall - top);
+      for (let y = top; y < wall; y += 2.4) { if (rnd() < .35) { g.fillStyle = rnd() < .5 ? 'rgba(255,255,255,.5)' : 'rgba(160,200,230,.4)'; g.fillRect(x - w / 2 + rnd() * w, y, 1.6, 1.6); } }
+      g.strokeStyle = 'rgba(10,26,34,.45)'; g.lineWidth = .7; for (const f of [-.2, .2]) { g.beginPath(); g.moveTo(x + f * w, top); g.lineTo(x + f * w, wall); g.stroke(); }
+      g.fillStyle = '#C8D8E0'; g.fillRect(x - w * .8, L.spring - L.Y0 - 6, w * 1.6, 6); g.fillRect(x - w * .8, sl - 2, w * 1.6, 5); g.strokeStyle = MO_INK; g.lineWidth = .9; g.strokeRect(x - w * .8, L.spring - L.Y0 - 6, w * 1.6, 6); // capital and band
+      g.strokeRect(x - w / 2, top, w, wall - top); }
+    { const sh = g.createLinearGradient(0, 0, 0, wall); sh.addColorStop(0, 'rgba(4,14,22,.45)'); sh.addColorStop(.4, 'rgba(4,14,22,.1)'); sh.addColorStop(1, 'rgba(4,14,22,.3)'); g.save(); g.globalCompositeOperation = 'source-atop'; g.fillStyle = sh; g.fillRect(0, 0, VW, wall); g.restore(); } // the deep's dimness, heaviest at the vault
+    // the floor: a plinth and then a floor of mosaic, pearl and pale blue, glinting
+    { const gr = g.createLinearGradient(0, wall, 0, H); gr.addColorStop(0, '#7A96A4'); gr.addColorStop(.35, '#4E6A7A'); gr.addColorStop(1, '#1A2C38'); g.fillStyle = gr; g.fillRect(0, wall, VW, H - wall); }
+    for (let r = 0, y = wall + 4; y < H; r++, y += 2.4 + r * .5) for (let x = (r % 2) * 2; x < VW; x += 3.6 + r * .6) { const k = rnd(); g.fillStyle = k < .1 ? 'rgba(240,248,255,.3)' : k < .3 ? 'rgba(150,200,220,.16)' : 'rgba(10,26,34,.14)'; g.fillRect(x, y, 2.8 + r * .5, 1.4 + r * .3); }
+    g.fillStyle = '#B8CCD6'; g.fillRect(0, wall - 1, VW, 4); g.strokeStyle = MO_INK; g.lineWidth = .9; g.beginPath(); g.moveTo(0, wall + 3); g.lineTo(VW, wall + 3); g.stroke();
+    g.save(); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = .3; g.fillStyle = texPat(g, 'brush'); g.fillRect(0, 0, VW, H); g.restore();
+    MO.bg = { view: vc, wall: wc }; MO.bgKey = key; return MO.bg;
   }
-  // the column standing before the left edge of her niche (and of the picture)
+  // the column standing before the left edge of the picture: glass and pearl, like the colonnade's
   function moireColumn(L) {
-    const x = L.col, w = 18, top = L.Y0 - 4, base = VH - 3, gr = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0), PA = W7.PAL || {};
-    gr.addColorStop(0, '#8ACCB0'); gr.addColorStop(.35, '#3E8A72'); gr.addColorStop(1, '#0E2A22'); ctx.fillStyle = gr; ctx.fillRect(x - w / 2, top, w, base - top);
-    ctx.strokeStyle = 'rgba(4,20,16,.5)'; ctx.lineWidth = .8; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x + k * w * .18, top + 30); ctx.lineTo(x + k * w * .18, base - 12); ctx.stroke(); }
-    ctx.fillStyle = PA.gold || PAL_GOLD; ctx.beginPath(); ctx.moveTo(x - w * .9, L.Y0 + 14); ctx.lineTo(x + w * .9, L.Y0 + 14); ctx.lineTo(x + w * .55, L.Y0 + 26); ctx.lineTo(x - w * .55, L.Y0 + 26); ctx.closePath(); ctx.fill(); ctx.fillStyle = PA.goldL || '#F2D68A'; ctx.fillRect(x - w * .9, L.Y0 + 12, w * 1.8, 2.4);
-    ctx.fillStyle = PA.goldD || '#6A4A18'; ctx.fillRect(x - w * .8, base - 12, w * 1.6, 14); ctx.fillStyle = PA.gold || PAL_GOLD; ctx.fillRect(x - w * .8, base - 12, w * 1.6, 2);
-    ctx.strokeStyle = '#071216'; ctx.lineWidth = 1; ctx.strokeRect(x - w / 2, top, w, base - top);
+    const x = L.col, w = 18, top = L.Y0 - 4, base = VH - 3, gr = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+    gr.addColorStop(0, '#4E6A78'); gr.addColorStop(.3, '#E2ECF0'); gr.addColorStop(.55, '#9AB4C0'); gr.addColorStop(1, '#2E4654'); ctx.fillStyle = gr; ctx.fillRect(x - w / 2, top, w, base - top);
+    ctx.strokeStyle = 'rgba(10,26,34,.45)'; ctx.lineWidth = .8; for (const f of [-.2, .2]) { ctx.beginPath(); ctx.moveTo(x + f * w, top); ctx.lineTo(x + f * w, base); ctx.stroke(); }
+    ctx.fillStyle = '#C8D8E0'; ctx.fillRect(x - w * .8, L.spring - 6, w * 1.6, 6); ctx.fillRect(x - w * .8, base - 12, w * 1.6, 14);
+    ctx.strokeStyle = MO_INK; ctx.lineWidth = 1; ctx.strokeRect(x - w * .8, L.spring - 6, w * 1.6, 6); ctx.strokeRect(x - w * .8, base - 12, w * 1.6, 14); ctx.strokeRect(x - w / 2, top, w, base - top);
   }
   // if the picture could not be had: her empty throne of nacre, lit
   function moireFallback(L, t) {
@@ -269,16 +268,21 @@
   }
   function panelMoire(T, t) {
     const L = moireLay(), Y0 = L.Y0, H = L.H, fl = L.fl;
-    ctx.drawImage(moireHall(L), 0, Y0, VW, H);
-    // the rose window's light let down through the water onto her, its shafts slowly swaying
-    const shafts = (k) => { ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 4; i++) { const sw = Math.sin(t * .5 + i * 1.7) * 10, a = k * (.05 + .025 * Math.sin(t * .8 + i * 2.1)), x1 = L.x0 + (120 + i * 230) * L.s + sw, w0 = 5 + i, w1 = 22 + i * 6;
-        const gg = ctx.createLinearGradient(L.wx, L.wy, x1, VH); gg.addColorStop(0, `rgba(190,220,240,${a})`); gg.addColorStop(1, 'rgba(190,220,240,0)'); ctx.fillStyle = gg;
-        for (const f of [1, .66, .33]) { ctx.beginPath(); ctx.moveTo(L.wx - w0 * f, L.wy); ctx.lineTo(L.wx + w0 * f, L.wy); ctx.lineTo(x1 + w1 * f, VH); ctx.lineTo(x1 - w1 * f, VH); ctx.closePath(); ctx.fill(); } } // (each laid three times, narrower each time: soft-edged)
+    const HB = moireHall(L);
+    ctx.drawImage(HB.view, 0, Y0, VW, H);
+    // in the sea beyond the arches: the light let down from the surface in slanting shafts, slowly swaying, and fish going by
+    const shafts = (k, y1) => { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) { const x0 = VW * (.08 + i * .2) + Math.sin(t * .4 + i * 1.9) * 12, a = k * (.07 + .03 * Math.sin(t * .7 + i * 2.3)), dx = -(y1 - Y0) * .35, w0 = 4 + (i % 3) * 3, w1 = 16 + (i % 3) * 8;
+        const gg = ctx.createLinearGradient(0, Y0, 0, y1); gg.addColorStop(0, `rgba(200,236,240,${a})`); gg.addColorStop(1, 'rgba(200,236,240,0)'); ctx.fillStyle = gg;
+        for (const f of [1, .6, .3]) { ctx.beginPath(); ctx.moveTo(x0 - w0 * f, Y0); ctx.lineTo(x0 + w0 * f, Y0); ctx.lineTo(x0 + dx + w1 * f, y1); ctx.lineTo(x0 + dx - w1 * f, y1); ctx.closePath(); ctx.fill(); } } // (each laid three times, narrower each time: soft-edged)
       ctx.restore(); };
-    shafts(1);
+    shafts(1.6, L.sill);
+    for (let i = 0; i < 6; i++) { const dir = i % 2 ? 1 : -1, sp = 7 + hsh(i + 80) * 8, span = VW + 80, x = dir > 0 ? (hsh(i + 81) * span + t * sp) % span - 40 : span - 40 - (hsh(i + 81) * span + t * sp) % span, y = L.apex + (L.sill - L.apex) * (.25 + hsh(i + 82) * .5) + Math.sin(t * .8 + i) * 3, z = .6 + hsh(i + 83) * .6;
+      ctx.save(); ctx.translate(x, y); ctx.scale(dir * z, z); ctx.fillStyle = `rgba(16,48,62,${.45 + .2 * z})`; ctx.beginPath(); ctx.ellipse(0, 0, 9, 2.6, 0, 0, TAU); ctx.fill(); // a fish, dark against the blue
+      const fl2 = Math.sin(t * 6 + i) * 1.6; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-13, -3 + fl2); ctx.lineTo(-13, 3 + fl2); ctx.closePath(); ctx.fill(); ctx.restore(); }
+    ctx.drawImage(HB.wall, 0, Y0, VW, H);
     if (MO.ok) moireDraw(L.x0 - MO_PAD * L.s, L.y0, L.s * MO_W / MO.IW, t); else moireFallback(L, t);
-    shafts(.35); // and a little of it on her
+    shafts(.3, VH); // and a little of it on her and the floor
     moireColumn(L);
     // bubbles going up through the hall, and motes adrift in the current
     ctx.save(); for (let i = 0; i < 18; i++) { const sp = 14 + hsh(i + 40) * 16, y = VH + 6 - ((t * sp + hsh(i + 41) * H) % (H + 12)), x = (i < 10 ? L.x0 + hsh(i + 42) * 400 * L.s : hsh(i + 42) * VW) + Math.sin(t * 1.3 + i * 2.3) * 3, r = .7 + hsh(i + 43) * 1.5;
@@ -318,7 +322,10 @@
     textPanel(LINES.d, VW * .5, Y0 + H * .1, VW * .44, cl01((T - SECT[3] - 1) / 1) * (1 - cl01((T - SECT[4] + .6) / .6)), 10, '255,248,236');
   }
   function renderEnding(t) {
-    const now = performance.now(), dt = Math.min(.05, (now - END.last) / 1000); END.last = now; END.t += dt; const T = END.t;
+    const now = performance.now(), dt = Math.min(.05, (now - END.last) / 1000); END.last = now; END.t += dt;
+    if (END.t >= SECT[2] && END.t < SECT[3] + dt) { // C: Moire's panel waits for the player: time stops just before it fades, until a button is pressed
+      if (END.cAge == null) END.cAge = 0; END.cAge += dt; if (!END.goC && END.t > MO_HOLD) END.t = MO_HOLD; moirePad(); }
+    const T = END.t;
     if (T < SECT[1] + .8) { // A: the hall, live: he walks to the Pearl and takes it up; the Pattern burns
       const pr = W7.pearl; if (pr && !END.took) { const dx = pr.x - 16 - P.x; if (Math.abs(dx) > 4 || Math.abs(pr.y - P.y) > 4) { P.state = 'walk'; P.facing = Math.sign(dx) || 1; P.walk += dt * 9; P.x += clamp(dx, -70 * dt, 70 * dt); P.y += clamp(pr.y - P.y, -40 * dt, 40 * dt); } else { P.state = 'idle'; P.facing = 1; if (T > 2.8) { END.took = 1; W7.pearl = null; sfx('learned'); flashT = .12; } } }
       if (END.took) { P.state = 'idle'; }
@@ -340,10 +347,19 @@
       let y = VH + 10 - k * 26; ctx.textAlign = 'center';
       for (const [s, sz] of CREDITS) { y += sz + 8; if (!s) continue; const fa = cl01((y - Y_OFF) / 40) * cl01((VH - y) / 40); ctx.fillStyle = `rgba(226,244,240,${fa})`; ctx.font = `700 ${sz}px Cinzel, Georgia, serif`; ctx.fillText(s, VW / 2, y); }
       if (y < Y_OFF - 10) { finishEnding(); return; } }
-    if (T > 2) { ctx.fillStyle = 'rgba(200,230,226,.55)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); }
+    if (inMoire()) { if (END.cAge > 1.5 && !END.goC) { const a = cl01((END.cAge - 1.5) / .6) * (.6 + .4 * Math.sin(END.cAge * 4)); ctx.save(); ctx.font = '700 9px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; // the prompt to go on, glowing softly
+        ctx.shadowColor = `rgba(150,230,210,${.8 * a})`; ctx.shadowBlur = 6; ctx.fillStyle = `rgba(232,248,240,${a})`; ctx.fillText((KBD ? 'PRESS ANY KEY' : 'TAP') + ' TO CONTINUE ▸', VW - 14, VH - 10); ctx.restore(); } }
+    else if (T > 2) { ctx.fillStyle = 'rgba(200,230,226,.55)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); }
     paperFrame();
   }
-  function skipEnding() { if (!END || END.t < 1.2) return; const T = END.t; const nx = SECT.find(s => s > T + .05); if (nx === undefined) finishEnding(); else END.t = nx === SECT[1] ? SECT[1] + .8 : nx; }
+  // Moire's panel holds until the player answers: any key, a tap or click, or a gamepad button goes on (it fades out as
+  // usual); for its first moments a press is ignored, so the press that skipped the last panel does not skip this one too
+  const MO_HOLD = SECT[3] - .85;
+  const inMoire = () => !!END && END.t >= SECT[2] && END.t < SECT[3] && !END.goC;
+  function moireGo() { if (!inMoire() || !(END.cAge > .6)) return false; END.goC = true; END.t = Math.max(END.t, MO_HOLD); return true; }
+  function moirePad() { let down = false; try { for (const gp of (navigator.getGamepads ? navigator.getGamepads() : [])) if (gp) for (const b of gp.buttons) if (b && b.pressed) down = true; } catch (e) {}
+    if (down && !END.padDown) moireGo(); END.padDown = down; }
+  function skipEnding() { if (!END || END.t < 1.2) return; if (END.t >= SECT[2] && END.t < SECT[3]) { moireGo(); return; } const T = END.t; const nx = SECT.find(s => s > T + .05); if (nx === undefined) finishEnding(); else END.t = nx === SECT[1] ? SECT[1] + .8 : nx; }
   function finishEnding() {
     if (!END) return; const sc = END.sc; END = null; W7.ending = false;
     app.classList.remove('nocontrols', 'sr-end'); $('#banner').classList.remove('on');
@@ -359,6 +375,6 @@
   W7.endT = () => END && END.t; W7.skipEnding = skipEnding; W7.finishEnding = finishEnding;
   { const _sc = stageClear; stageClear = function () { if (isMine() && !END) { W7.startEnding(_sc); return; } return _sc(); }; }
   { const _ds = drawScene; W7.origDraw = _ds; drawScene = function (t) { if (END && mode !== 'ending') { END = null; W7.ending = false; } if (END) { renderEnding(t); return; } return _ds(t); }; }
-  window.addEventListener('keydown', (e) => { if (!END) return; if (['Enter', 'NumpadEnter', 'Space', 'Escape', 'KeyJ'].includes(e.code) && !e.repeat) skipEnding(); e.stopImmediatePropagation(); e.preventDefault(); }, true);
+  window.addEventListener('keydown', (e) => { if (!END) return; if (!e.repeat && (['Enter', 'NumpadEnter', 'Space', 'Escape', 'KeyJ'].includes(e.code) || inMoire())) skipEnding(); e.stopImmediatePropagation(); e.preventDefault(); }, true);
   window.addEventListener('pointerdown', (e) => { if (END) { skipEnding(); e.preventDefault(); } }, true);
 })();

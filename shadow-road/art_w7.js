@@ -1612,7 +1612,6 @@
     }
     const B = m.bish, e = B.e;
     if (!enemies.includes(e) || e.dead) { m.bishDone = true; m.bish = null; banner('The Well of the Pattern', 'THE WAY DOWN IS OPEN', 2.2); return; }
-    if (!B.called && e.hp < e.maxHp * .5) { B.called = 1; floatText(e.x, e.y, e.hh + 30, 'HE CALLS THE DROWNED TO PRAYER', '#F2E6C8', 13); spawnEnemy('w7drowned', -1); for (let i = 0; i < 2; i++) spawnEnemy('w7nixie', 1); }
   }
 
   // ======================================================================================================
@@ -1779,12 +1778,11 @@
         if (!G.cur) { G.atkT -= dt;
           if (G.sweepCd <= 0 && Math.hypot(P.x - e.x, (P.y - e.y) * 2.4) < 110) { G.sweepCd = 5; startAtk(e, 'sweep'); }
           else if (G.atkT <= 0) { const S = ['tines', 'undertow', 'anchors', 'tines', 'anchors', 'undertow']; startAtk(e, S[G.seq++ % S.length]); } }
-        if (!G.shoal && e.hp < e.maxHp * .85) { G.shoal = 1; for (let i = 0; i < 3; i++) spawnEnemy('w7nixie', i % 2 ? 1 : -1); } // (a shoal of nixies comes to the King)
         if (e.hp <= e.maxHp * .665) toPhase(e, 2);
       } else if (G.mode === 'p2in') {
         G.vuln = false; e.w7pose = { k: 'cast', u: 1 }; const k = cl01(G.t / 2.2);
         e.x += (A.cx - e.x) * Math.min(1, dt * 3); e.y += (A.cy - e.y) * Math.min(1, dt * 3); G.sub = sm(k); G.spin = lerp(0, 1.1, k);
-        if (G.t >= 2.2) { G.mode = 'p2'; G.trans = 0; G.t = 0; G.surf = 0; G.atkT = 1; G.wreck = [0, 1].map(i => ({ a: i * Math.PI, kind: i, cd: 0 })); spawnEnemy('w7knight', 1); }
+        if (G.t >= 2.2) { G.mode = 'p2'; G.trans = 0; G.t = 0; G.surf = 0; G.atkT = 1; G.wreck = [0, 1].map(i => ({ a: i * Math.PI, kind: i, cd: 0 })); }
       } else if (G.mode === 'p2') {
         e.x += (A.cx - e.x) * Math.min(1, dt * 3); e.y += (A.cy - e.y) * Math.min(1, dt * 3); e.z += (6 - e.z) * Math.min(1, dt * 3);
         if (e.hp < e.maxHp * .5 && G.wreck.length < 3) G.wreck.push({ a: G.wreck[0].a + Math.PI * .66, kind: 2, cd: 0 });
@@ -1799,7 +1797,7 @@
         if (e.hp <= e.maxHp * .335) { G.wreck = []; toPhase(e, 3); }
       } else if (G.mode === 'p3in') {
         G.vuln = false; const k = cl01(G.t / 2.6); G.spin = lerp(1.1, -.2, k); G.sub = 1 - sm(cl01((G.t - 1.2) / 1.2)); W7.turnK = G.t < 1.6 ? G.t / 1.6 : 0; G.flip = sm(cl01((G.t - .8) / 1)); W7.flip = G.flip;
-        if (G.t >= 2.6) { G.mode = 'p3'; G.trans = 0; G.t = 0; W7.turnK = 0; G.atkT = .8; spawnEnemy('w7ziphius', -1); G.refl = { x: 2 * A.cx - e.x, y: e.y, z: 30, broken: 0, flash: 0 }; G.swapT = 8; G.gx = A.cx - 120; G.gy = FLOOR_TOP + 30; }
+        if (G.t >= 2.6) { G.mode = 'p3'; G.trans = 0; G.t = 0; W7.turnK = 0; G.atkT = .8; G.refl = { x: 2 * A.cx - e.x, y: e.y, z: 30, broken: 0, flash: 0 }; G.swapT = 8; G.gx = A.cx - 120; G.gy = FLOOR_TOP + 30; }
       } else if (G.mode === 'p3') {
         G.vuln = true; G.sub = 0; G.patLit = .35; G.spin = -.2;
         G.moveT -= dt; if (G.moveT <= 0) { G.moveT = 2.4; G.gx = A.cx + (e.x < A.cx ? -1 : 1) * rand(60, 200); G.gy = FLOOR_TOP + rand(16, 44); }
