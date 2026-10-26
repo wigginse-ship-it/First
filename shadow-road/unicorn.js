@@ -1,13 +1,13 @@
 'use strict';
 // ---------- the Unicorn of Amber, as she really is ----------
 // secrets.js still paints her its own way (drawUnicorn, left exactly as it was). When she first comes into view she is
-// that old drawing, untouched, for a few seconds; then it dissolves into this one: a white mare painted from life, with
+// that old drawing, untouched, for a moment; then it dissolves into this one: a white mare painted from life, with
 // a long head and a dished face, an arched neck, a deep chest, clean jointed legs, a mane and tail of pearly hair and a
 // spiralled horn. Each visit to her grove she is seen the old way first.
 (() => {
   if (typeof drawUnicorn !== 'function') return;
   const OLD = drawUnicorn;
-  const HOLD = 3, FADE = 2; // seconds in view as she was, then seconds of the dissolve
+  const HOLD = 1.2, FADE = .8; // seconds in view as she was, then seconds of the dissolve
   const S = 1.02; // her scale beside the old drawing (a horse stands about as tall at the withers as a man's shoulder)
   const hsh = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
   const sm = (k) => k * k * (3 - 2 * k);
