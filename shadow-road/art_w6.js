@@ -11,7 +11,7 @@
 //   dreamBoss  - The Bed of the Sleeper: an endless quilt under a day sky, a dark street at night along its edge, and
 //                over it the Sleeper itself, a vast soft head propped up on crutches (rule 'w6sleep': its three dreams)
 // Enemies: Gentleman of Golconda, Soft Clock, Stilt Elephant, Mannequin of the Muses, Lobster Telephone, Bird of
-// Daylight, Collective Invention. Boss: the Sleeper (Asleep on its crutches; the Patchwork Dream; Waking: all of it bedtime).
+// Daylight, Collective Invention. Boss: the Sleeper (Asleep on its crutches, dreaming bedtime; the Dream of the Board; Waking).
 // Passages: 'w6easel' (into a painting of the place ahead, on its easel) and 'w6bed' (he lies down, and the eyes close).
 // Everything lives inside this closure; the late parts are handed to data_w6.js.
 (() => {
@@ -911,7 +911,7 @@
 
   // ======================================================================================================
   // THE SLEEPER: a head as big as a house, soft as dough, its lower half sagging like a sack and held up off the quilt
-  // on crutches. It is dreaming all of this. Its eyes are shut (one opens in the Patchwork Dream; both, wide and
+  // on crutches. It is dreaming all of this. Its eyes are shut (one opens in the Dream of the Board; both, wide and
   // spiralling, when it wakes). Drawn about the lowest point of its jowls; o: { eyes 0..1, sag 0..1, mouth 0..1, mood
   // -1 (pained) .. 1 (pleased), look -1..1, snore 0..1, t }
   // ======================================================================================================
@@ -1269,10 +1269,9 @@
   //                   your lane), a snore that rolls out across the bed, and at last the Sandman, pouring his sand along
   //                   every row but one. Knock all its crutches away and its face comes down onto the quilt: strike it
   //                   there before it props itself up again (new crutches grow, fewer each time)
-  //   the Quilt       the bed becomes a patchwork quilt and it tosses and turns across it a patch at a time, sending its
-  //                   nursery things over the patches: the duvet heaving along your row and your file, sleepwalkers down
-  //                   your diagonals, the cow that jumped over the moon (three hops), and late on a lullaby, sung out
-  //                   along every line from where it lies. Stay off the patches it lights
+  //   the Board       the quilt becomes a chessboard. It is the king, moving a square at a time, and it plays pieces against
+  //                   you: rooks along your row and file, bishops down your diagonals, a knight's three jumps, and late in
+  //                   the game its queen. Stay off the squares it lights
   //   Waking          the dream is closing round you like an iris; outside it you are forgotten. It wakes the way anyone
   //                   wakes: its eyes flicker (two rows at a time), its teeth fall out, it slaps about for the snooze,
   //                   its alarm rings, and at the very last it dreams it is falling and the whole bed jolts (jump!).
@@ -1284,9 +1283,6 @@
   const BOARD = () => { const L = leftWall(), R = rightWall(), nc = Math.max(6, Math.round((R - L) / 78)), cw = (R - L) / nc, y0 = FLOOR_TOP + 8, rh = (FLOOR_BOT - y0) / 4;
     return { L, R, nc, nr: 4, cw, y0, rh, cx: (c) => L + (c + .5) * cw, cy: (r) => y0 + (r + .5) * rh, col: (x) => clamp(Math.floor((x - L) / cw), 0, nc - 1), row: (y) => clamp(Math.floor((y - y0) / rh), 0, 3) }; };
   W6.BOARD = BOARD;
-  // the patches of its quilt (the Quilt draws them, and the duvet's heave takes the colour of the patch it lifts)
-  const PATCH = ['#A8B8DC', '#8EA8D2', '#E8D29C', '#9CC2A2', '#C4B2D8', '#F0E4CC', '#B8D4C8']; // (no reds: red is what it lights)
-  W6.patchCol = (c, r) => PATCH[Math.floor(hsh(c * 7.3 + r * 13.1) * PATCH.length)];
   const SHZ = ['w6drop', 'w6sheep', 'w6snore', 'w6sand', 'w6piece', 'w6rem', 'w6slap', 'w6jolt', 'w6bell', 'ring'];
   const CRUTCH_FEET = [[-200, 40], [200, 44], [-100, 86], [110, 90]];
   function anchorAt(e, i) { const [ax, ay] = W6.ANCH[i], s = e.size || 1.15, S = e.w6S || {}, hs = W6.HS; return [e.x + ax * s, e.y - e.z + (ay + (ay + 60 * hs) * (S.sag || 0) * .35) * s]; }
@@ -1311,7 +1307,7 @@
     hazards = hazards.filter(h => !SHZ.includes(h.kind)); B.inhale = 0; e.w6S.flush = 0;
     for (const c of corpses) if (c.type === 'w6crutch') { c.remove2 = 1; puffAt(c.x, c.y); } corpses = corpses.filter(c => !c.remove2);
     shakeMag = 14; flashT = .2; sfx('roar'); zoom = .06;
-    if (n === 2) { B.mode = 'turn'; B.t = 0; banner('The Patchwork Dream', 'IT TOSSES AND TURNS · STAY OFF THE PATCHES IT LIGHTS', 2.8); }
+    if (n === 2) { B.mode = 'turn'; B.t = 0; banner('The Dream of the Board', 'IT PLAYS AGAINST YOU · STAY OFF THE SQUARES IT LIGHTS', 2.8); }
     if (n === 3) { B.mode = 'wake'; B.t = 0; banner('It Is Waking', 'THE DREAM IS CLOSING · EVERY BLOW HOLDS IT OPEN', 2.8); }
   }
 
@@ -1341,42 +1337,6 @@
     for (const x of [-15, -5, 5, 15]) fillPoly([x - 3.5, 0, x - 3.5, -30, x, -35, x + 3.5, -30, x + 3.5, 0], '#F2EEE6', 1.1);
     for (const y of [-9, -22]) { ctx.fillStyle = C('#E2D8C6'); rrect(-21, y - 2.5, 42, 5, 1.5); ctx.fill(); outline(1); }
   }
-  function sleepwalkerArt(ph) {
-    const sw = Math.sin(ph) * 3;
-    for (const fx of [-3 + sw, 4 - sw]) { ctx.fillStyle = C(FLESH); ell(fx, -1, 4, 2); ctx.fill(); outline(1); }
-    cel(PP([-9, -3, -7, -30, -4, -36, 6, -36, 9, -30, 11, -3]), '#E2E8F6', { d: 2.5, r: 1.2, w: 1.3, tex: () => { ctx.strokeStyle = 'rgba(120,150,210,.45)'; ctx.lineWidth = 1; for (let x = -8; x <= 10; x += 4) { ctx.beginPath(); ctx.moveTo(x, -36); ctx.lineTo(x + 1, -2); ctx.stroke(); } } });
-    horn(1, -31, 11, -32 + Math.sin(ph * .5) * 1.5, 22, -30, 6, 4.4, '#E2E8F6', 1.1); // arms held out in front, as sleepwalkers do
-    ctx.fillStyle = C(FLESH); circle(23, -30, 2.7); ctx.fill(); outline(1);
-    cel(PE(1, -42, 6.5, 7), FLESH, { d: 1.6, r: 1, w: 1.2, dark: FLESHD, lite: FLESHL });
-    ctx.strokeStyle = C('#3A2418'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(4, -42.5, 1.8, .2, Math.PI - .2); ctx.stroke(); ctx.beginPath(); ctx.arc(5, -38.5, 1, 0, TAU); ctx.stroke(); // shut eye, open mouth
-    const cap = horn(-4, -47, -4, -62, -15, -53, 13, 3, '#B8402E', 1.1); // the nightcap, flopping
-    ctx.fillStyle = C('#F2EEE4'); circle(-15, -52, 3); ctx.fill(); outline(1);
-    ctx.fillStyle = C('#F2EEE4'); rrect(-7, -49, 15, 3.4, 1.5); ctx.fill(); outline(.9);
-  }
-  function cowArt(ph, air) {
-    ctx.strokeStyle = C('#3A2A26'); ctx.lineWidth = 2.6; ctx.lineCap = 'round';
-    for (const [lx, o] of [[-13, 0], [-8, 1], [9, 0], [14, 1]]) { const sw = air ? (lx < 0 ? -5 : 5) : Math.sin(ph + o * Math.PI) * 3; ctx.beginPath(); ctx.moveTo(lx, -11); ctx.lineTo(lx + sw, air ? -3 : 0); ctx.stroke(); }
-    ctx.strokeStyle = C('#3A2A26'); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-19, -22); ctx.quadraticCurveTo(-26, -20, -24, -12); ctx.stroke(); ctx.fillStyle = C('#3A2A26'); circle(-24, -11, 2); ctx.fill();
-    cel(PB([-19, -12, -20, -25, -8, -29, 10, -29, 19, -25, 19, -12, 6, -10, -8, -10]), '#F4F0E8', { d: 3, r: 1.5, w: 1.5, tex: () => { ctx.fillStyle = '#2A2226'; ell(-8, -21, 6, 4.5, .3); ctx.fill(); ell(9, -24, 4.5, 3); ctx.fill(); ell(-15, -14, 3, 2); ctx.fill(); } });
-    ctx.fillStyle = C('#E8A0A8'); ell(2, -10, 4, 2.4); ctx.fill(); outline(.9); // the udder
-    ctx.save(); ctx.translate(21, -27);
-    ctx.strokeStyle = C('#E8DCC0'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-2, -5); ctx.quadraticCurveTo(-3, -10, 0, -11); ctx.moveTo(3, -5); ctx.quadraticCurveTo(4, -10, 7, -10); ctx.stroke(); // horns
-    cel(PB([-6, -5, 4, -6, 9, 0, 8, 7, -2, 8, -7, 2]), '#F4F0E8', { d: 1.4, r: 1, w: 1.3 });
-    ctx.fillStyle = C('#E8A8A8'); ell(5, 5, 5, 3.2); ctx.fill(); outline(1); ctx.fillStyle = '#7A3A3A'; circle(4, 5, .8); ctx.fill(); circle(7, 5, .8); ctx.fill();
-    ctx.fillStyle = '#1A1014'; circle(1, -1, 1.3); ctx.fill();
-    ctx.restore();
-  }
-  function moonArt(r) { // a crescent: what the cow jumps over
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.arc(r * .45, -r * .25, r * .85, 0, TAU, true); ctx.fillStyle = C('#F2DC8C'); ctx.fill('evenodd'); outline(1);
-  }
-  function noteArt(v) { // a music-box note, inked, with a little gold on its head
-    ctx.save(); ctx.rotate(Math.sin(v) * .15);
-    ctx.strokeStyle = C('#2A1E34'); ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(4.5, -6); ctx.lineTo(4.5, -32); ctx.stroke();
-    ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(4.5, -32); ctx.quadraticCurveTo(13, -27, 11, -17); ctx.stroke();
-    ctx.fillStyle = C('#2A1E34'); ell(0, -6, 6, 4.3, -.4); ctx.fill(); outline(1);
-    if (DET()) { ctx.fillStyle = 'rgba(232,192,96,.8)'; ell(-1.5, -7.5, 2.4, 1.3, -.4); ctx.fill(); }
-    ctx.restore();
-  }
   function toothArt() {
     cel(PB([-11, -26, 0, -29, 11, -26, 13, -16, 8, -9, 6, 1, 2, -5, -2, -5, -6, 1, -8, -9, -13, -16]), '#F8F4EA', { d: 2.5, r: 1.5, w: 1.5, dark: '#C8C0AC' });
     if (DET()) { ctx.strokeStyle = 'rgba(150,140,120,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-5, -26); ctx.quadraticCurveTo(0, -22, 5, -26); ctx.stroke(); }
@@ -1399,7 +1359,7 @@
     if (DET()) { ctx.fillStyle = '#2A1A10'; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.fillRect(Math.cos(a) * 9 - .6, -19 + Math.sin(a) * 9 - .6, 1.2, 1.2); } }
     ctx.restore();
   }
-  W6.ART2 = { pillowArt, sheepArt, fenceArt, sleepwalkerArt, cowArt, moonArt, noteArt, toothArt, handArt, clockArt };
+  W6.ART2 = { pillowArt, sheepArt, fenceArt, toothArt, handArt, clockArt };
 
   // ---------------- the dreams of its sleep ----------------
   // PILLOW FIGHT: pillows come down out of the sky onto marks round you, one after another, and burst into feathers
@@ -1510,8 +1470,14 @@
   const DREAMS = { pillows: dreamPillows, sheep: dreamSheep, snore: dreamSnore, sand: dreamSand };
   const DREAM_T = { pillows: 3.2, sheep: 4.3, snore: 3.6, sand: 5.2 };
 
-  // ---------------- the patchwork dream: what comes over the patches ----------------
-  // each thing goes along a path of patches (the cow hops); whoever stands on the patch it is crossing is struck
+  // ---------------- the pieces of the board ----------------
+  // a piece slides (or a knight hops) along a path of squares; whoever stands on the square it is crossing is struck
+  const PIECE_DRAW = {
+    rook(s) { fillPoly([-11, 0, -9, -8, -7, -8, -7, -30, -10, -30, -10, -40, -6, -40, -6, -36, -2, -36, -2, -40, 2, -40, 2, -36, 6, -36, 6, -40, 10, -40, 10, -30, 7, -30, 7, -8, 9, -8, 11, 0], s, 1.2); },
+    bishop(s) { fillPoly([-11, 0, -9, -7, -6, -8, -5, -24, -8, -30, -6, -38, 0, -46, 6, -38, 8, -30, 5, -24, 6, -8, 9, -7, 11, 0], s, 1.2); ctx.strokeStyle = C('#8A6A40'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-2, -40); ctx.lineTo(3, -33); ctx.stroke(); circle(0, -48, 2.2); ctx.fillStyle = C(s); ctx.fill(); outline(.8); },
+    knight(s) { fillPoly([-11, 0, -9, -8, -6, -8, -8, -22, -6, -32, 0, -42, 6, -44, 12, -36, 14, -28, 8, -28, 4, -24, 7, -8, 9, -8, 11, 0], s, 1.2); ctx.fillStyle = C('#1A1014'); circle(5, -36, 1.4); ctx.fill(); },
+    queen(s) { fillPoly([-12, 0, -9, -8, -6, -8, -6, -26, -11, -38, -5, -32, -3, -42, 0, -34, 3, -42, 5, -32, 11, -38, 6, -26, 6, -8, 9, -8, 12, 0], s, 1.2); ctx.fillStyle = C('#E8C060'); for (const x of [-11, -3, 3, 11]) { circle(x, x === -11 || x === 11 ? -39 : -43, 1.6); ctx.fill(); } },
+  };
   function piecePath(type, Bd, c0, r0) {
     const out = [], inB = (c, r) => c >= 0 && r >= 0 && c < Bd.nc && r < Bd.nr;
     if (type === 'row') { const d = c0 < Bd.nc / 2 ? -1 : 1; for (let i = 0; i < Bd.nc; i++) out.push([d > 0 ? i : Bd.nc - 1 - i, r0]); } // it comes in from the far side
@@ -1519,23 +1485,20 @@
     if (type === 'diag' || type === 'anti') { const dr = type === 'diag' ? 1 : -1; let c = c0, r = r0; while (inB(c - 1, r - dr)) { c--; r -= dr; } while (inB(c, r)) { out.push([c, r]); c++; r += dr; } }
     return out;
   }
-  const PIECE_SAY = { ripple: 'IT TOSSES AND TURNS', walker: 'SLEEPWALKERS', cow: 'HEY DIDDLE DIDDLE', lullaby: 'HUSH-A-BYE' };
   function playPiece(e, kind) {
     const Bd = BOARD(), pc = Bd.col(P.x), pr = Bd.row(P.y), dmg = edmg(e), list = [];
     const hc = Bd.col(e.x), hr = Bd.row(e.y);
-    if (kind === 'ripple') list.push({ type: 'ripple', path: piecePath('row', Bd, pc, pr), sp: 7 }, { type: 'ripple', path: piecePath('col', Bd, pc, pr), sp: 5, delay: .35 });
-    if (kind === 'walker') list.push({ type: 'walker', path: piecePath('diag', Bd, pc, pr), sp: 4.5 }, { type: 'walker', path: piecePath('anti', Bd, pc, pr), sp: 4.5, delay: .3 });
-    if (kind === 'lullaby') for (const k of ['row', 'col', 'diag', 'anti']) { const p = piecePath(k, Bd, hc, hr); list.push({ type: 'note', path: p, sp: 6, delay: k === 'row' ? 0 : .25 }); }
-    if (kind === 'cow') { // three hops, each a knight's move from the last, the first onto your patch
+    if (kind === 'rook') list.push({ type: 'rook', path: piecePath('row', Bd, pc, pr), sp: 7 }, { type: 'rook', path: piecePath('col', Bd, pc, pr), sp: 5, delay: .35 });
+    if (kind === 'bishop') list.push({ type: 'bishop', path: piecePath('diag', Bd, pc, pr), sp: 6 }, { type: 'bishop', path: piecePath('anti', Bd, pc, pr), sp: 6, delay: .3 });
+    if (kind === 'queen') for (const k of ['row', 'col', 'diag', 'anti']) { const p = piecePath(k, Bd, hc, hr); list.push({ type: 'queen', path: p, sp: 7, delay: k === 'row' ? 0 : .25 }); }
+    if (kind === 'knight') { // three jumps, each a knight's move from the last, the first onto your square
       const path = [[pc, pr]]; const J = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]];
       for (let i = 0; i < 2; i++) { const [c, r] = path[path.length - 1], ok = J.map(([a, b]) => [c + a, r + b]).filter(([a, b]) => a >= 0 && b >= 0 && a < Bd.nc && b < Bd.nr && !path.some(q => q[0] === a && q[1] === b)); if (!ok.length) break; ok.sort((a, b) => Math.abs(a[0] - pc) - Math.abs(b[0] - pc)); path.push(ok[Math.floor(Math.random() * Math.min(2, ok.length))]); }
-      list.push({ type: 'cow', path, sp: 1.8, hop: 1 });
+      list.push({ type: 'knight', path, sp: 1.8, hop: 1 });
     }
-    for (const p of list) if (p.path.length) hazards.push(Object.assign({ kind: 'w6piece', el: 0, wait: 1.15 + (p.delay || 0), t: 12, max: 12, dmg, hits: new Set() }, p));
-    floatText(e.x, e.y - e.z, 150, PIECE_SAY[kind], '#F4F0FF', 15);
-    const atk = list.some(p => p.path.some(q => q[0] === pc && q[1] === pr)); if (atk) floatText(P.x, P.y, 96, 'NIGHT NIGHT!', '#FFE0B0', 15);
+    for (const p of list) if (p.path.length) hazards.push(Object.assign({ kind: 'w6piece', el: 0, wait: 1.15 + (p.delay || 0), t: 12, max: 12, dmg, hits: new Set(), white: Math.random() < .5 }, p));
+    const atk = list.some(p => p.path.some(q => q[0] === pc && q[1] === pr)); if (atk) floatText(P.x, P.y, 96, 'CHECK!', '#FFE0B0', 15);
     sfx('charge', 1); W6.mouth = .5;
-    if (kind === 'lullaby' && sfxOn && actx) [784, 659, 587, 659, 523].forEach((f, i) => tone(f, .22, 'triangle', .035, 0, i * .24)); // a music box
   }
   reg('w6piece', {
     update(h, dt) { h.el += dt; if (h.el < h.wait) return; const Bd = BOARD(), pos = (h.el - h.wait) * h.sp, i = Math.floor(pos);
@@ -1547,19 +1510,12 @@
     },
     draw(h, t) { const Bd = BOARD(), k = Math.min(1, h.el / h.wait), pos = h.el < h.wait ? -1 : (h.el - h.wait) * h.sp;
       h.path.forEach(([c, r], i) => { if (pos > i + 1.2) return; const a = pos > i ? 1 - (pos - i) / 1.2 : 1, x = Bd.L + c * Bd.cw, y = Bd.y0 + r * Bd.rh;
-        ctx.fillStyle = tellCol(k, a * 1.5); ctx.fillRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.strokeStyle = tellLine(k); ctx.globalAlpha = a; ctx.lineWidth = 1.8; ctx.strokeRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.globalAlpha = 1;
-        if (h.hop) { ctx.save(); ctx.translate(x + Bd.cw / 2 - 10, y + Bd.rh / 2); ctx.scale(1, .5); moonArt(8); ctx.restore(); ctx.fillStyle = `rgba(255,236,214,${.7 + .3 * k})`; ctx.font = '700 11px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(String(i + 1), x + Bd.cw / 2 + 8, y + Bd.rh / 2 + 4); } }); },
+        ctx.fillStyle = tellCol(k, a); ctx.fillRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.strokeStyle = tellLine(k); ctx.globalAlpha = a; ctx.lineWidth = 1.2; ctx.strokeRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.globalAlpha = 1;
+        if (h.hop) { ctx.fillStyle = `rgba(255,230,210,${.6 + .3 * k})`; ctx.font = '700 10px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(String(i + 1), x + Bd.cw / 2, y + Bd.rh / 2 + 4); } }); },
     ups(h, list, t) { const Bd = BOARD(); if (h.el < h.wait * .5) return; const pos = h.el < h.wait ? 0 : Math.min(h.path.length - 1, (h.el - h.wait) * h.sp), i = Math.floor(pos), f = pos - i, a = h.path[i], b = h.path[Math.min(h.path.length - 1, i + 1)];
-      const x = lerp(Bd.cx(a[0]), Bd.cx(b[0]), h.hop ? sm(f) : f), y = lerp(Bd.cy(a[1]), Bd.cy(b[1]), h.hop ? sm(f) : f), z = h.hop ? Math.sin(f * Math.PI) * 64 : 0, dir = Math.sign(Bd.cx(b[0]) - Bd.cx(a[0])) || h.face || 1; h.face = dir;
+      const x = lerp(Bd.cx(a[0]), Bd.cx(b[0]), h.hop ? sm(f) : f), y = lerp(Bd.cy(a[1]), Bd.cy(b[1]), h.hop ? sm(f) : f), z = h.hop ? Math.sin(f * Math.PI) * 60 : 0;
       const al = h.el < h.wait ? (h.el / h.wait - .5) * 2 : h.endT ? 1 - (h.el - h.endT) / .35 : 1;
-      list.push([y, () => { ctx.save(); ctx.globalAlpha = Math.max(0, al);
-        if (h.type === 'ripple') { const w = Bd.cw * .5, col = W6.patchCol(a[0], a[1]); ctx.translate(x, y + Bd.rh * .3); // the duvet heaving up in a long soft hump
-          cel(PB([-w * 1.2, 0, -w * .7, -12, 0, -22, w * .7, -12, w * 1.2, 0, 0, 2]), col, { d: 3, r: 1.5, w: 1.5, tex: () => { ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1; ctx.setLineDash([2.5, 2.5]); ctx.beginPath(); ctx.moveTo(-w * .9, -3); ctx.quadraticCurveTo(0, -24, w * .9, -3); ctx.stroke(); ctx.setLineDash([]); } }); }
-        else { shadow(x, y, 12); ctx.translate(x, y - z);
-          if (h.type === 'walker') { ctx.scale(dir * 1.3, 1.3); sleepwalkerArt(h.el * 7); }
-          else if (h.type === 'cow') { ctx.scale(dir * 1.25, 1.25); cowArt(h.el * 9, z > 6); }
-          else { ctx.scale(1.35, 1.35); ctx.translate(0, -Math.abs(Math.sin(h.el * 8)) * 4); noteArt(h.el * 6 + (h.path[0][0] || 0)); } }
-        ctx.restore(); }]); },
+      list.push([y, () => { shadow(x, y, 12); ctx.save(); ctx.globalAlpha = Math.max(0, al); ctx.translate(x, y - z); ctx.scale(1.7, 1.7); PIECE_DRAW[h.type](h.white ? '#EEE6D6' : '#2A2228'); if (DET() && h.white) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(-7, -30, 2.4, 22); } ctx.restore(); }]); },
     box(h, box) { box(camX + VW / 2, FLOOR_BOT, 0, VW / 2 + 20, 160); },
   });
 
@@ -1664,11 +1620,11 @@
           if (B.t > 2) { B.mode = 'board'; B.t = 0; B.kc = Bd.col(e.x); B.kr = 0; B.moveT = 1; B.castT = 1.2; B.cast = 0; } }
         else if (B.mode === 'board') {
           B.vuln = true; B.boardK = 1; S.eyes = .5; S.mood = .4 + Math.sin(t * .7) * .2; S.mouth = .1 + W6.mouth * .5; S.look = clamp((P.x - e.x) / 200, -1, 1);
-          B.moveT -= dt; if (B.moveT <= 0) { B.moveT = 1.5 - (e.hp < e.maxHp * .45 ? .3 : 0); // it tosses over onto the next patch, keeping a little way from you
+          B.moveT -= dt; if (B.moveT <= 0) { B.moveT = 1.5 - (e.hp < e.maxHp * .45 ? .3 : 0); // the king steps one square, keeping a little way from you
             const pc = Bd.col(P.x), opts = []; for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) { const c = B.kc + dc, r = B.kr + dr; if ((dc || dr) && c >= 1 && c < Bd.nc - 1 && r >= 0 && r < 2) opts.push([c, r, -Math.abs(Math.abs(c - pc) - 3) + Math.random() * 1.5]); }
             if (opts.length) { opts.sort((a, b) => b[2] - a[2]); [B.kc, B.kr] = opts[0]; sfx('whoosh'); } }
           B.kc = clamp(B.kc ?? 2, 0, Bd.nc - 1); B.gx = Bd.cx(B.kc); B.gy = Bd.cy(B.kr ?? 0); B.gz = 30 + Math.sin(t * 2) * 4;
-          B.castT -= dt; if (B.castT <= 0) { const late2 = e.hp < e.maxHp * .45, seq = late2 ? ['ripple', 'cow', 'walker', 'lullaby'] : ['ripple', 'walker', 'cow']; playPiece(e, seq[B.cast++ % seq.length]); B.castT = late2 ? 2.7 : 3.1; }
+          B.castT -= dt; if (B.castT <= 0) { const late2 = e.hp < e.maxHp * .45, seq = late2 ? ['rook', 'knight', 'bishop', 'queen'] : ['rook', 'bishop', 'knight']; playPiece(e, seq[B.cast++ % seq.length]); B.castT = late2 ? 2.7 : 3.1; }
           if (e.hp <= e.maxHp * .34) toPhase(e, 3);
         }
       } else {
@@ -1931,20 +1887,15 @@
   // where he was a moment ago (for the soft clocks)
   const _up = updatePlayer;
   updatePlayer = function (dt) { _up(dt); const H = W6.hist || (W6.hist = []), now = performance.now() / 1000; if (P && P.state !== 'dead') H.push({ x: P.x, y: P.y, t: now }); while (H.length > 1 && H[1].t <= now - 1.5) H.shift(); if (H.length > 400) H.splice(0, H.length - 400); };
-  // the Patchwork Dream: the bed turns into a patchwork quilt, patch by patch from the middle out, each one stitched round
+  // the Dream of the Board: the quilt turns into a chessboard, square by square from the middle out
   const _br = drawBossRoom;
   drawBossRoom = function (t) { _br(t);
     const B = W6.B; if (!stage || stage.theme !== 'dreamBoss' || !B || !(B.boardK > 0)) return;
     const Bd = W6.BOARD(), k = B.boardK, mid = (Bd.L + Bd.R) / 2;
     ctx.save(); ctx.translate(-camX, 0);
     for (let c = 0; c < Bd.nc; c++) for (let r = 0; r < Bd.nr; r++) { const x = Bd.L + c * Bd.cw, y = Bd.y0 + r * Bd.rh, d = Math.abs(x + Bd.cw / 2 - mid) / (Bd.R - Bd.L) * 2, q = cl01(k * 1.8 - d * .8); if (q <= 0) continue;
-      const px = x + (1 - q) * Bd.cw * .5 + 1, py = y + (1 - q) * Bd.rh * .5 + 1, pw = Bd.cw * q - 2, ph = Bd.rh * q - 2;
-      ctx.globalAlpha = .62 * q; ctx.fillStyle = W6.patchCol(c, r); ctx.fillRect(px, py, pw, ph);
-      if (DET() && q > .5) { const v = Math.floor(hsh(c * 3.1 + r * 5.7) * 3); ctx.fillStyle = 'rgba(255,255,255,.35)'; // a print on some of the patches: dots, or stripes
-        if (v === 0) for (let i = 0; i < 6; i++) { circle(px + (i % 3 + .5) * pw / 3, py + (Math.floor(i / 3) + .5) * ph / 2, 1.6); ctx.fill(); }
-        else if (v === 1) for (let i = 1; i < 5; i++) ctx.fillRect(px + i * pw / 5, py + 1, 1.4, ph - 2); }
-      ctx.globalAlpha = .8 * q; ctx.strokeStyle = '#F6EEDC'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.strokeRect(px + 2.5, py + 2.5, pw - 5, ph - 5); ctx.setLineDash([]); ctx.globalAlpha = 1; }
-    ctx.globalAlpha = k; ctx.strokeStyle = '#8A5A4A'; ctx.lineWidth = 2.5; ctx.strokeRect(Bd.L, Bd.y0, Bd.R - Bd.L, Bd.rh * 4); ctx.globalAlpha = 1;
+      const dark = (c + r) % 2; ctx.fillStyle = dark ? `rgba(26,18,30,${.62 * q})` : `rgba(246,236,214,${.5 * q})`; ctx.fillRect(x + (1 - q) * Bd.cw * .5, y + (1 - q) * Bd.rh * .5, Bd.cw * q, Bd.rh * q); }
+    ctx.globalAlpha = k; ctx.strokeStyle = '#C8A060'; ctx.lineWidth = 2; ctx.strokeRect(Bd.L, Bd.y0, Bd.R - Bd.L, Bd.rh * 4); ctx.globalAlpha = 1;
     ctx.restore(); };
   // Waking: an iris of dark closes on the dream, lashes round its rim, like an eye closing on what it saw
   const _gf = gradeFrame;
@@ -2033,7 +1984,7 @@
       // the Bed, before it is woken: a lullaby, very slow
       dreamBoss: { bpm: 58, n: 12, style: 'waltz', kit: 'soft', duty: .5, lv: .16, vib: 12, echo: .45, echoSteps: 3, chords: ['C', 'Am', 'F', 'G', 'C', 'Em', 'F', 'G'],
         lead: ['E5 - - G5 - - - - - E5 - -', 'C5 - - - - - E5 - - A4 - -', 'A4 - - C5 - - F5 - - - - -', 'D5 - - - - - G4 - - B4 - -', 'E5 - - G5 - - C6 - - - - -', 'B5 - - G5 - - E5 - - - - -', 'A5 - - F5 - - C5 - - A4 - -', 'B4 - - - - - - - - . . .'] },
-      // the Sleeper: the lullaby gone wrong; then a music-box march over the quilt; then the alarm, at a run
+      // the Sleeper: the lullaby gone wrong; then a march of chessmen; then the alarm, at a run
       boss_w6sleeper: { duty: .25, vib: 12, echo: .15, form: ['A', 'A', 'B', 'B', 'C', 'C'], parts: {
         A: { bpm: 96, n: 12, style: 'waltz', chords: ['Cm', 'Abaug', 'Fm', 'G7'], lead: ['Eb5 - - G5 - - C6 - - B5 - -', 'C6 - - - - - G#5 - - E5 - -', 'F5 - - Ab5 - - C6 - - Ab5 - -', 'B5 - - - - - D5 - - G5 - -'] },
         B: { bpm: 140, style: 'march', chords: ['Cm', 'G', 'Ab', 'G'], lead: ['C5 . C5 . G5 . G5 . Ab5 - G5 - F5 - Eb5 -', 'D5 . D5 . B4 . G4 . B4 - D5 - F5 - G5 -', 'Ab5 . Ab5 . F5 . C5 . Eb5 - F5 - G5 - Ab5 -', 'G5 - - - B5 - - - D6 - - - B5 - - -'] },
