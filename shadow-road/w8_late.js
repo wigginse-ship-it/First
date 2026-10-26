@@ -147,7 +147,7 @@
     iron:      { name: 'Verse of Iron', col: '#7A7E86', text: () => `Every heavy finisher cracks the ground ahead in a line; a breath later the line breaks under everyone on it for ${Math.round(90 * NGK())}% of the blow.` },
     drum:      { name: 'Verse of the Drum', col: '#8A5A2E', text: () => `Each kill within three seconds of the last beats the drum: +${Math.round(12 * NGK())}% to every blow per beat, up to six beats. Rings beat at your feet.` },
     hunt:      { name: 'Verse of the Hunt', col: '#C23A1E', text: () => `A foe below a third of its health is marked with a red pennon and takes +${Math.round(60 * NGK())}% from every blow (a lord of a world, +${Math.round(25 * NGK())}%).` },
-    dead:      { name: 'Verse of Lorraine\'s Dead', col: '#8EA2C0', text: () => `Every ${deadN()} kills, one of the riders who fell at the Circle charges down your lane, striking all it passes. Horseshoes on the scroll count toward the next.` },
+    dead:      { name: 'Verse of Lorraine\'s Dead', col: '#8EA2C0', text: () => `Every ${deadN()} kills, one of the riders who fell at the Circle charges down your lane, striking all it passes. The scroll counts the kills toward the next.` },
     watchfire: { name: 'Verse of the Watchfire', col: '#E8782A', text: () => `Your blows set foes alight. A foe that dies burning bursts into flame, burning those near it for ${Math.round(30 * NGK())}% of what it was.` },
     standard:  { name: 'Ganelon\'s Standard', col: '#3A5A86', text: () => `Below 40% health you raise Lorraine's standard over you, and every blow lands +${Math.round(45 * NGK())}%.` },
   };
