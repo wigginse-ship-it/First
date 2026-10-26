@@ -29,12 +29,6 @@ function drawGrayblade(pose) {
   else { ctx.fillStyle = C(metal); circle(4.6, 0, 2.8); ctx.fill(); outline(1); }
   // the blade: long and narrow, tapering to a needle point
   const blade = () => { ctx.beginPath(); ctx.moveTo(x0, -w); ctx.lineTo(x0 + len * .82, -w * .7); ctx.lineTo(tip, 0); ctx.lineTo(x0 + len * .82, w * .7); ctx.lineTo(x0, w); ctx.closePath(); };
-  if (tier >= 4) gbGlow(() => { // a cold halo of light around the steel
-    const pulse = tier >= 5 ? .5 + .5 * Math.sin(now * 2.2) : .5;
-    const cx = x0 + len * .5, g = ctx.createRadialGradient(cx, 0, 0, cx, 0, len * .6); // a soft cold light along the steel
-    g.addColorStop(0, tier >= 5 ? `rgba(170,180,255,${.16 + .1 * pulse})` : 'rgba(190,205,255,.12)'); g.addColorStop(1, 'rgba(170,180,255,0)');
-    ctx.fillStyle = g; ctx.save(); ctx.translate(cx, 0); ctx.scale(1, .16); ctx.translate(-cx, 0); circle(cx, 0, len * .6); ctx.fill(); ctx.restore();
-  });
   blade();
   const bg = ctx.createLinearGradient(0, -w, 0, w); bg.addColorStop(0, C(shade(bc, .4))); bg.addColorStop(.5, C(bc)); bg.addColorStop(1, C(shade(bc, -.3)));
   ctx.fillStyle = bg; ctx.fill(); outline(1.5);

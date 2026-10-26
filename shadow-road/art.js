@@ -313,11 +313,10 @@ function drawWeapon(kind, pose) {
   if (kind === 'fists' || !kind) { drawHand((pose && pose.glove) || '#FFF1E0', pose && pose.openHand); return; }
   if (kind === 'grayblade' || kind === 'rapier') { drawGrayblade(pose || {}); return; }
   if (kind === 'shortbow') { drawShortBow(pose || {}); return; } // the prince's own sword (art_rapier.js)
-  // the hero's weapons change as they level: 1 iron and wood, 2 steel and leather, 3 gold and a gem, 4 runes that glow, 5 shadow-steel with a violet aura
+  // the hero's weapons change as they level: 1 iron and wood, 2 steel and leather, 3 gold and a gem, 4 runes that glow, 5 shadow-steel
   const tier = (pose && pose.tier) || 1, hand = (pose && pose.glove) || '#FFF1E0';
   const glowRune = (x, y, w, h, col) => { ctx.save(); if (!FLASH) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillStyle = C(col); ctx.fillRect(x, y, w, h); ctx.restore(); };
   const glow = (col, blur, fn) => { ctx.save(); if (!FLASH && !TINT) { ctx.shadowColor = col; ctx.shadowBlur = blur; } fn(); ctx.restore(); };
-  const aura = (col, fn) => { if (FLASH || TINT) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = col; fn(); ctx.fill(); ctx.restore(); };
   const poly = (pts, col, w = 1.4) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let k = 2; k < pts.length; k += 2) ctx.lineTo(pts[k], pts[k + 1]); ctx.closePath(); ctx.fillStyle = typeof col === 'string' ? C(col) : col; ctx.fill(); outline(w); };
   const vgrad = (y0, y1, col) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, C(shade(col, .35))); g.addColorStop(.5, C(col)); g.addColorStop(1, C(shade(col, -.3))); return g; };
   if (kind === 'hammer') {
@@ -343,14 +342,12 @@ function drawWeapon(kind, pose) {
       poly([33, -18, 57, -18, 54, -12, 52, -6, 52, 6, 54, 12, 57, 18, 33, 18, 36, 12, 38, 6, 38, -6, 36, -12], vgrad(-18, 18, '#7F9AB8'), 1.7); // anvil head, flared faces
       ctx.fillStyle = C('#C8D8E8'); ctx.fillRect(34, -18, 22, 2.4); ctx.fillRect(34, 15.6, 22, 2.4);
       for (const y of [-11, -4, 3, 10]) glow('#9FE8F0', 9, () => { ctx.fillStyle = C('#BFF5FF'); ctx.fillRect(43, y - 1.5, 4, 2.4); }); // runes
-      aura('rgba(159,232,240,.16)', () => rrect(30, -22, 30, 44, 10));
     } else {
       poly([38, 16, 42, 30, 45, 18, 48, 34, 52, 16], '#2E2A3E', 1.3); // crystal spikes behind
       poly([40, -16, 42, -30, 45, -18, 48, -26, 50, -16], '#2E2A3E', 1.3); // and above
       poly([32, -16, 58, -16, 60, -8, 56, 0, 60, 8, 58, 16, 32, 16, 30, 8, 34, 0, 30, -8], vgrad(-16, 16, '#2E2A3E'), 1.8); // obsidian head
       ctx.strokeStyle = C('#B89CFF'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(33, -12); ctx.lineTo(44, -2); ctx.lineTo(39, 8); ctx.moveTo(57, -10); ctx.lineTo(48, 2); ctx.lineTo(55, 12); ctx.stroke(); // violet cracks
       glow('#B89CFF', 12, () => { ctx.fillStyle = C('#D8C8FF'); circle(45, 0, 3.6); ctx.fill(); });
-      aura('rgba(184,156,255,.22)', () => rrect(26, -32, 38, 66, 14));
     }
     if (!(pose && pose.noHand)) gripHand(hand); return;
   }
@@ -418,7 +415,6 @@ function drawWeapon(kind, pose) {
     } else { // a curved guard of blue steel, and frost runes down the blade
       ctx.strokeStyle = C('#7F9AB8'); ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(22, -13); ctx.quadraticCurveTo(15, -6, 19, 0); ctx.quadraticCurveTo(15, 6, 22, 13); ctx.stroke();
       for (let x = 28; x < 14 + len; x += 9) glowRune(x, -.8, 4, 1.6, '#9FE8F0');
-      aura('rgba(159,232,240,.14)', () => rrect(16, -10, len + 14, 20, 9));
     }
     if (pose && pose.glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .55; ctx.fillStyle = pose.glow; rrect(16, -10, len + 14, 20, 8); ctx.fill(); ctx.restore(); }
     if (!(pose && pose.noHand)) gripHand(hand); // his hand closed on the grip

@@ -34,7 +34,6 @@ function t6SwingGlow(pose, x, w, h) { if (pose && pose.glow) { ctx.save(); ctx.g
 function t6Hammer(pose) {
   const now = performance.now() / 1000, plain = t6Plain(), pulse = .5 + .5 * Math.sin(now * 1.1), L = 52, cx = 46;
   const fit = !!pose.noHand; if (fit) { ctx.save(); ctx.translate(30, 0); ctx.scale(.78, .78); ctx.translate(-40, 0); } // the card portrait: the great head centred and inside its frame
-  t6Halo(cx, 0, 40, '255,128,52', .2 + .06 * pulse); // the heat of the head
   // the haft: blackened iron-wood, bound with bronze, a molten seam showing between the bands
   limb([0, 0, L, 0], '#2A2026', 5);
   if (plain) { ctx.strokeStyle = 'rgba(255,190,140,.22)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(2, -1.6); ctx.lineTo(L - 4, -1.6); ctx.stroke(); }
@@ -181,7 +180,6 @@ function t6Sword(pose) {
   const sc = pose.noHand ? .8 : 1; if (sc !== 1) { ctx.save(); ctx.translate(40, 0); ctx.scale(sc, sc); ctx.translate(-40, 0); } // keep the card portrait inside its frame
   const len = 86, x0 = 22, tip = x0 + len + 8, W = 8.4;
   const wAt = (x) => x < x0 + 6 ? W : W - (W - 5) * Math.min(1, (x - x0 - 6) / (len * .86 - 6)); // the blade's half-width along its length
-  t6Halo(x0 + len * .5, 0, len * .62, '255,200,110', .2 + .07 * pulse, .26); // the blade's warm light
   // the grip, wound with gold wire, and a sunburst pommel
   limb([3, 0, 18, 0], '#1E1A24', 4.6);
   if (plain) { ctx.strokeStyle = '#D8AA55'; ctx.lineWidth = .7; ctx.beginPath(); for (let x = 5; x < 17; x += 1.7) { ctx.moveTo(x, -2.2); ctx.lineTo(x + 1.2, 2.2); } ctx.stroke(); }
@@ -267,8 +265,6 @@ function t6Rapier(pose) {
   limb([5, 0, 17, 0], '#141218', 3.8);
   ctx.strokeStyle = C('#DCE0EC'); ctx.lineWidth = .7; ctx.beginPath(); for (let x = 6.6; x < 16; x += 1.5) { ctx.moveTo(x, -1.9); ctx.lineTo(x + 1, 1.9); } ctx.stroke();
   gbRose(3.4, 0, 3.9, '#D8DCE8', '#3FBF6A'); t6Halo(3.4, 0, 5, '110,230,150', .35);
-  // a cold moonlit halo along the steel
-  t6Halo(x0 + len * .5, 0, len * .64, '160,180,255', .18 + .08 * pulse, .17);
   // the blade: a short ricasso, then long and narrow to a needle point
   const blade = () => { ctx.beginPath(); ctx.moveTo(x0, -w * 1.15); ctx.lineTo(x0 + 6, -w * 1.15); ctx.lineTo(x0 + 7.5, -w); ctx.lineTo(x0 + len * .84, -w * .66); ctx.lineTo(tip, 0); ctx.lineTo(x0 + len * .84, w * .66); ctx.lineTo(x0 + 7.5, w); ctx.lineTo(x0 + 6, w * 1.15); ctx.lineTo(x0, w * 1.15); ctx.closePath(); };
   blade();

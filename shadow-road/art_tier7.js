@@ -30,7 +30,6 @@ function t7Curve(x0, y0, x1, y1, x2, y2, N = 8) { const p = []; for (let i = 0; 
 function t7Hammer(pose) {
   const now = t7Now(), plain = t6Plain(), beat = t7Beat(now), L = 52, cx = 46;
   const fit = !!pose.noHand; if (fit) { ctx.save(); ctx.translate(30, 0); ctx.scale(.76, .76); ctx.translate(-40, 0); } // the card portrait: the head centred and inside its frame
-  t6Halo(cx, 0, 46, '255,40,80', .18 + .14 * beat);
   // the storm ring: three small clouds circling the jewel's waist, the far side passing behind it
   const RX = 27, RY = 7.5, TILT = -.22, clouds = [0, 1, 2, 3].map(i => { const a = now * .42 + i * TAU / 4 + (i % 2) * .3, c = Math.cos(a), s = Math.sin(a);
     return { x: cx + c * RX * Math.cos(TILT) - s * RY * Math.sin(TILT), y: c * RX * Math.sin(TILT) + s * RY * Math.cos(TILT), front: s > 0, k: .78 + .22 * s, i }; });
@@ -196,7 +195,6 @@ function t7Sword(pose) {
   const now = t7Now(), plain = t6Plain(), pulse = .5 + .5 * Math.sin(now * 1.0);
   const sc = pose.noHand ? .8 : 1; if (sc !== 1) { ctx.save(); ctx.translate(40, 0); ctx.scale(sc, sc); ctx.translate(-40, 0); } // keep the card portrait inside its frame
   const x0 = 22, len = 88, tip = x0 + len + 6, W = 8.6, xs = x0 + len * .76;
-  t6Halo(x0 + len * .5, 0, len * .6, '200,220,255', .16 + .06 * pulse, .26);
   // the grip, black wound with silver; a pommel set with a stone that holds the sky
   limb([3, 0, 18, 0], '#16141E', 4.6);
   if (plain) { ctx.strokeStyle = '#C8D0E4'; ctx.lineWidth = .7; ctx.beginPath(); for (let x = 5; x < 17; x += 1.7) { ctx.moveTo(x, -2.2); ctx.lineTo(x + 1.2, 2.2); } ctx.stroke(); }
@@ -278,7 +276,6 @@ function t7Rapier(pose) {
   const helix = (front) => { ctx.beginPath(); let on = false; for (let x = h0; x <= h1; x += .7) { const p = ph(x), f = Math.cos(p) >= 0, y = Math.sin(p) * amp(x); if (f === front) { on ? ctx.lineTo(x, y) : ctx.moveTo(x, y); on = true; } else on = false; } };
   if (plain) t6Add(() => { ctx.lineCap = 'round'; helix(false); ctx.strokeStyle = 'rgba(120,150,255,.4)'; ctx.lineWidth = 1.2; ctx.stroke(); });
   else { ctx.lineCap = 'round'; helix(false); ctx.strokeStyle = C('#9AB0FF'); ctx.lineWidth = .8; ctx.stroke(); }
-  t6Halo(x0 + len * .5, 0, len * .66, '150,190,255', .2 + .08 * pulse, .2);
   // the blade: clear, frozen light, long and narrow to a needle point
   const blade = () => { ctx.beginPath(); ctx.moveTo(x0, -w * 1.1); ctx.lineTo(x0 + 6, -w * 1.1); ctx.lineTo(x0 + 7.5, -w); ctx.lineTo(x0 + len * .84, -w * .66); ctx.lineTo(tip, 0); ctx.lineTo(x0 + len * .84, w * .66); ctx.lineTo(x0 + 7.5, w); ctx.lineTo(x0 + 6, w * 1.1); ctx.lineTo(x0, w * 1.1); ctx.closePath(); };
   blade();

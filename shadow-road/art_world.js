@@ -158,7 +158,6 @@ const ENEMY_WEAPONS = {
   // set in a black hilt with a crown of crystal spurs for a guard
   prism(pose) {
     const now = performance.now() / 1000, pulse = .75 + .25 * Math.sin(now * 4);
-    awHalo(50, 0, 30, '200,150,255', .16 * pulse);
     awShape([7, -2.8, -1.4, 0, 7, 2.8], '#E8A0D8', 1); // a shard for a pommel
     limb([6, 0, 16, 0], '#2A1A36', 4.2);
     if (awPlain()) { ctx.fillStyle = '#C878A8'; for (let x = 7.5; x < 15; x += 2.4) ctx.fillRect(x, -2.1, .9, 4.2); }
