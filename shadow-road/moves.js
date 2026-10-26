@@ -290,22 +290,15 @@ const MOVE_POSE = {
     pose.arm = .06 - pose.lean * .9; pose.ext = e; pose.elbow = 0; pose.grip = 0;
     pose.backArm = pose.arm + .25 - .2 * p; pose.backElbow = lerp(1.2, .15, p); pose.backReach = .35 * p; pose.openHand = 0; pose.yaw = .2 * p;
   },
-  'staff:DH'(pose, m, k) { // Vaulting Dragon: a pole vault. At a sprint he digs the staff's end into the street ahead, the pole
-    // takes his weight and pivots up to upright as he swings up over it, legs whipping up and forward; at the top he lets go,
-    // drives both feet into the crowd, and the staff topples away behind him as he lands
-    delete pose.kick; pose.trail = 0; pose.flow = 16; pose.twoHand = 1; pose.gripGap = 13; pose.openHand = 0;
-    const kv = Math.min(1, k + .09), out = kickOut(kv, m.h[0], m.h[1]);
-    const dig = ease(span(k, 0, .16)), swing = ease(span(k, .14, .46)), push = span(k, .46, .6), fall = span(k, .6, .9);
-    let r, A, armW;
-    if (k < .14) { r = lerp(0, .12, dig); A = lerp(.35, 1.0, dig); armW = lerp(.1, -.45, dig); // the run-up: the pole comes down and its end bites into the street
-      pose.lean = .25 * dig; pose.sink = 6 * dig; pose.legs = { f: 14, b: -16, fk: 4, bk: 9 }; }
-    else if (k < .46) { r = lerp(.12, -1.2, swing); A = lerp(1.0, 1.62, swing); armW = lerp(-.45, -1.6, swing); // the pole bends upright and he swings up on it, legs flung up and over
-      const tuck = Math.sin(Math.PI * swing); pose.legs = { f: lerp(14, 18, swing), b: lerp(-16, 6, swing), fk: 6 + 14 * tuck, bk: 4 + 12 * tuck }; pose.lean = -.2 * swing; }
-    else { pose.kickK = kv; pose.kickH = m.h; pose.kickStyle = 'drop'; r = lerp(-1.2, -1.35 * out, push); A = lerp(1.62, 2.4, ease(fall)); armW = lerp(-1.6, -.4, ease(span(k, .48, .7))); // let go: both feet driven into them, the staff left falling behind
-      pose.lean = lerp(-.2, 0, out); pose.twoHand = k < .5 ? 1 : 0; }
-    pose.rot = r; pose.yaw = 0;
-    pose.arm = armW - r; pose.elbow = .12; pose.grip = A - armW; pose.slide = k < .6 ? 34 : lerp(34, 0, ease(span(k, .6, .8))); // (the staff's angle in the world, whatever his body is doing)
-    pose.backArm = pose.twoHand ? pose.arm : lerp(2.3, 1.6, fall); pose.backElbow = .3;
+  'staff:DH'(pose, m, k) { // Vaulting Dragon: plant the staff, swing up on it and drive both feet in
+    delete pose.kick;
+    const kv = Math.min(1, k + .09); // the feet are already driving out as the blow lands
+    pose.kickK = kv; pose.kickH = m.h; pose.kickStyle = 'drop';
+    const out = kickOut(kv, m.h[0], m.h[1]);
+    pose.rot = -1.35 * out; pose.lean = lerp(.4, 0, out); pose.yaw = lerp(0, -.6, out);
+    const plant = 1 - ease(span(k, .18, .36));
+    pose.arm = lerp(.85, 2.5, 1 - plant); pose.grip = lerp(.55, .2, 1 - plant); pose.backArm = lerp(.9, 2.3, 1 - plant); pose.backElbow = .3; pose.trail = 0;
+    pose.flow = 14;
   },
   'staff:RH'(pose, m, k) { // Vaulting Reversal: planted, over in a front flip, turned in the air, and a cut down across their back
     pose.trail = 0;
