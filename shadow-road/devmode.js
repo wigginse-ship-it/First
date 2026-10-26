@@ -7,8 +7,9 @@
 (() => {
   const BACKUP = 'shadowroad-devbackup', OPTS = 'shadowroad-devopts';
   const DEV = window.DEV = { god: false };
-  let opts = { god: false, arsenal: false, relics: false, cycle: 0 };
+  let opts = { god: false, arsenal: false, arm: false, pearl: false, horn: false, cycle: 0 };
   try { Object.assign(opts, JSON.parse(localStorage.getItem(OPTS) || '{}')); } catch (e) {}
+  if (opts.relics) { opts.arm = opts.pearl = opts.horn = true; delete opts.relics; } // (the old single switch)
   const keepOpts = () => { try { localStorage.setItem(OPTS, JSON.stringify(opts)); } catch (e) {} };
   DEV.god = !!opts.god;
 
@@ -25,7 +26,9 @@
     save.started = true;
     save.cycle = Math.max(0, opts.cycle | 0);
     if (opts.arsenal) { for (const id of WEAPON_ORDER) { save.owned[id] = true; save.wl[id] = Math.max(save.wl[id] || 1, WMAX()); } if (typeof ARROW_TIERS !== 'undefined') save.alv = ARROW_TIERS.length; }
-    if (opts.relics) { save.silverArm = true; save.w7relic = true; save.w8relic = true; }
+    // the three relics of the road's ends: a ticked one is given (an unticked one is left as the save has it)
+    if (opts.arm) save.silverArm = true; if (opts.pearl) save.w7relic = true; if (opts.horn) save.w8relic = true;
+    if (opts.arm) { save.owned.fists = true; save.weapon = 'fists'; } // (the arm is worn bare-handed)
   }
   function go(i, zone) {
     backup(); applyOpts(); close();
@@ -62,7 +65,9 @@
       <div class="opts">
         <label><input type="checkbox" data-o="god"> Invincible</label>
         <label><input type="checkbox" data-o="arsenal"> All weapons, max level, best arrows</label>
-        <label><input type="checkbox" data-o="relics"> All relics</label>
+        <label><input type="checkbox" data-o="arm"> Silver arm (equipped)</label>
+        <label><input type="checkbox" data-o="pearl"> Pearl of Judgement</label>
+        <label><input type="checkbox" data-o="horn"> Horn of Lorraine</label>
         <label>Cycle <select data-o="cycle">${[0, 1, 2, 3].map(c => `<option value="${c}">${c ? 'NG+' + c : 'first'}</option>`).join('')}</select></label>
       </div>
       <div class="list"></div>
