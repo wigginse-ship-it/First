@@ -996,6 +996,83 @@
   };
 
   // ======================================================================================================
+  // THE SWIMMERS: what goes through the water over the stair and the streets, not along their floors
+  // ======================================================================================================
+  // ---------------- SEA-KNIGHT OF MOIRE: one of the Queen's mer-knights, a man to the waist in nacre plate and a sea-
+  // beast below, a kite shield with Rebma's reversed unicorn on it, a long spear couched for the joust ----------------
+  CREATURES.w7knight = function (e, a) {
+    a = a || {}; const t = a.t || 0, hurt = a.hurt, wJ = windK(e, a, 'w7joust'), wH = windK(e, a, 'w7hurl'), kJ = actK(e, 'joust'), kH = actK(e, 'hurl');
+    const dash = kJ >= 0 && kJ > .15 && kJ < .8 ? 1 : 0, sw = Math.sin(t * (dash ? 12 : 3.4) + (e.slot || 0)), noSpear = e.w7noSpear > 0;
+    ctx.save(); ctx.rotate((dash ? .62 : .22) - wJ * .25 + (hurt ? -.35 : 0) + Math.sin(t * 1.6) * .04);
+    // the tail behind and below, in a long S, its fan of a fin beating
+    seaTail(-2, -14, -22, 4 + sw * 6, -40, -6 - sw * 8, 14, '#3E6A8A', '#9AC8E0', '#1E3A54', t, sw * .5);
+    // the shield on the far arm: a kite of lapis, the unicorn turned about in white, a gold rim
+    ctx.save(); ctx.translate(-13, -30); ctx.scale(1.25, 1.25); ctx.rotate(-.25 + wJ * .2);
+    cel(PB([-7, -9, 7, -9, 6, 4, 0, 14, -6, 4]), '#1E3A78', { d: 1.8, r: 1, dark: '#0E1C40', lite: '#4A6AB8', w: 1.2, tex: () => {
+      ctx.strokeStyle = '#EEF0EA'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(3, 5); ctx.lineTo(1, -1); ctx.lineTo(-3, -3); ctx.lineTo(-5, -7); ctx.moveTo(-3, -3); ctx.lineTo(-2, 4); ctx.stroke(); } });
+    ctx.strokeStyle = C(PAL.gold); ctx.lineWidth = 1.2; PB([-7, -9, 7, -9, 6, 4, 0, 14, -6, 4])(0, 0); ctx.stroke(); ctx.beginPath();
+    ctx.restore();
+    // the body: a breastplate of nacre scales, a gilt belt where the tail begins
+    cel(PB([-8, -46, 8, -46, 10, -34, 8, -16, -1, -12, -9, -16, -10, -34]), PAL.nacre, { d: 2.6, dark: PAL.nacreD, lite: PAL.nacreL, w: 1.3, tex: () => {
+      for (let r = 0; r < 6; r++) for (let c = -2; c <= 2; c++) { const x = c * 3.4 + (r % 2) * 1.7, y = -43 + r * 4.4; ctx.strokeStyle = 'rgba(110,100,130,.55)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(x, y, 2, .1, Math.PI - .1); ctx.stroke(); }
+      ctx.fillStyle = PAL.gold; ctx.fillRect(-9, -18, 18, 2.6); } });
+    // the head: a close helm of green bronze with a gold fin for a crest, the visor down, sea-green hair streaming out behind
+    for (let i = 0; i < 4; i++) drift(-5 + i, -52, 9 + i * 2, 1.8, i % 2 ? PAL.hair : PAL.hairL, t, i + (e.slot || 0), -1.2);
+    cel(PB([-6, -46, -7, -54, -3, -59, 4, -58, 7, -53, 7, -47]), PAL.verd, { d: 1.8, dark: PAL.verdD, lite: PAL.verdL, w: 1.2, tex: () => { ctx.fillStyle = '#0A1410'; ctx.fillRect(1, -53.6, 6, 1.4); ctx.fillRect(3.4, -52, 1, 4); } });
+    cel(PB([-6, -56, -9 + sw * .6, -64, -2, -67, 4, -60]), PAL.gold, { d: 1, r: .8, w: 1, dark: PAL.goldD, lite: PAL.goldL });
+    // the spear, couched under the near arm (or gone, thrown)
+    if (!noSpear) { const la = kH >= 0 ? lerp(-1.1, .5, sm(kH / .4)) : wH > 0 ? lerp(0, -1.1, wH) : -.05 + wJ * .1;
+      ctx.save(); ctx.translate(6, -32); ctx.rotate(la); ctx.beginPath(); ctx.rect(-16, -1.1, 62, 2.2); ctx.fillStyle = C('#5A4430'); ctx.fill(); outline(.7);
+      ctx.fillStyle = C('#D8E0E4'); poly([46, -2.6, 58, 0, 46, 2.6]); ctx.fill(); outline(.8); ctx.fillStyle = C(PAL.gold); ctx.beginPath(); ctx.rect(43, -2.4, 3, 4.8); ctx.fill(); ctx.restore(); }
+    seg2(6, -42, Math.PI / 2 - .2 - wJ * .4, 8, .1 - wJ * .2, 7, 4, 3.4, PAL.nacre, { col2: PAL.rebm, lit: PAL.nacreL });
+    ctx.restore();
+  };
+
+  // ---------------- THE ZIPHIUS: the beast of the northern sea-charts, an owl's face on a sea-beast, that comes down on
+  // its prey from above as an owl does; fins like wings, a hooked beak, eyes like two lamps ----------------
+  CREATURES.w7ziphius = function (e, a) {
+    a = a || {}; const t = a.t || 0, hurt = a.hurt, wS = windK(e, a, 'w7swoop'), wN = windK(e, a, 'w7snatch'), kS = actK(e, 'swoop'), kN = actK(e, 'snatch');
+    const dive = kS >= 0 && kS < .5 ? 1 : 0, fast = kN >= 0 ? 1 : 0, beat = Math.sin(t * (dive || fast ? 14 : 4) + (e.slot || 0)), spread = dive ? -.6 : wS * .5 + wN * .4;
+    ctx.save(); ctx.rotate(dive ? .9 : fast ? .25 : (hurt ? -.4 : 0) + Math.sin(t * 1.3) * .05);
+    const finW = (side) => { ctx.save(); ctx.translate(-2, -18); ctx.scale(1, side); ctx.rotate(-.5 - beat * .45 - spread);
+      cel(PB([0, 0, -6, -10, -18, -22, -30, -26, -26, -16, -22, -8, -12, -2]), side > 0 ? '#3A4A6A' : '#2A3654', { d: 2, r: 1, w: 1.2, dark: '#1A2238', lite: '#7A8AB0', tex: () => { ctx.strokeStyle = 'rgba(200,210,240,.45)'; ctx.lineWidth = .6; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(-2, -1); ctx.lineTo(-28 + i * 3, -24 + i * 3.4); ctx.stroke(); } } });
+      ctx.restore(); };
+    finW(-1);
+    // the tail and its fluke
+    seaTail(-8, -16, -22, -12 + beat * 3, -34, -20 - beat * 4, 12, '#34426A', '#8A9AC8', '#18203A', t, beat * .4);
+    // the body: dark slate, a pale belly, scaled
+    cel(PB([-14, -18, -6, -28, 8, -30, 18, -24, 18, -12, 6, -6, -10, -9]), '#3A4868', { d: 2.6, dark: '#1A2238', lite: '#7A8AB8', w: 1.4, tex: () => {
+      ctx.fillStyle = 'rgba(220,214,190,.55)'; ell(4, -10, 12, 4); ctx.fill();
+      ctx.strokeStyle = 'rgba(10,14,30,.45)'; ctx.lineWidth = .6; for (let i = 0; i < 10; i++) { ctx.beginPath(); ctx.arc(-8 + (i % 5) * 5, -24 + Math.floor(i / 5) * 5, 2, .2, Math.PI - .2); ctx.stroke(); } } });
+    // the owl's face: a pale disc, two great lamp-eyes, the hooked beak, the tufts of fin like an owl's ears
+    ctx.save(); ctx.translate(18, -22);
+    cel(PE(0, 0, 9, 10), '#D8D0B8', { d: 1.6, r: 1, w: 1.2, dark: '#8A8270', lite: '#F8F2E0' });
+    for (const s of [-1, 1]) { ctx.fillStyle = C('#3A4868'); poly([s * 3, -8, s * 8, -15, s * 7, -7]); ctx.fill(); outline(.8); }
+    for (const ex of [-3.4, 3.4]) { ctx.fillStyle = C('#E8A030'); circle(ex, -2, 3.2); ctx.fill(); outline(.8); if (DET()) { ctx.fillStyle = '#0A0806'; circle(ex + .4, -2, 1.6 + (dive ? .8 : 0)); ctx.fill(); ctx.fillStyle = '#FFFFFF'; circle(ex - .4, -3, .5); ctx.fill(); } }
+    ctx.fillStyle = C('#4A3A20'); poly([-1.6, 1, 1.6, 1, 1.4, 4, 0, 7, -.8, 4]); ctx.fill(); outline(.7);
+    if (fast && DET()) { ctx.fillStyle = '#0A0806'; ell(0, 5, 2, 1.2); ctx.fill(); }
+    ctx.restore();
+    finW(1);
+    ctx.restore();
+  };
+
+  // ---------------- NIXIE OF THE STAIR: the little drowned folk of the sea-tales, a child to the waist and a fish below,
+  // lantern-eyes, wild hair; they go in shoals, and they bite ----------------
+  CREATURES.w7nixie = function (e, a) {
+    a = a || {}; const t = a.t || 0, hurt = a.hurt, wN = windK(e, a, 'w7nip'), kN = actK(e, 'nip'), kR = actK(e, 'ring'), dart = kN > .25 ? 1 : 0;
+    const sw = Math.sin(t * (dart || kR >= 0 ? 16 : 6) + (e.slot || 0) * 2);
+    ctx.save(); ctx.scale(1.35, 1.35); ctx.rotate((dart ? .9 : kR >= 0 ? .5 : 0) - wN * .3 + (hurt ? -.5 : 0));
+    seaTail(-1, -8, -8 + sw * 2, 2, -12, -4 + sw * 3, 8, '#4A8A8A', '#A8E0D0', '#24504E', t, sw * .5);
+    for (let i = 0; i < 6; i++) drift(-2 + i * .7, -20, 7 + hsh(i + (e.slot || 0)) * 5, 1.4, i % 2 ? '#3A6A7A' : '#7AB0B8', t * 1.4, i * 1.3 + (e.slot || 0), -1);
+    cel(PB([-4, -18, 4, -18, 5, -12, 3, -7, -3, -7, -5, -12]), '#A8D0CC', { d: 1.4, r: .8, w: 1, dark: '#6A9894', lite: '#D8F0EC' });
+    cel(PE(1, -21.5, 4.6, 4.4), '#B8DCD6', { d: 1.2, r: .8, w: 1, dark: '#7AA8A2', lite: '#E8FAF6' });
+    if (DET()) { ctx.fillStyle = '#0A1A1A'; ell(3, -22, 1.5, 1.8); ctx.fill(); ell(-.4, -22, 1.2, 1.6); ctx.fill(); ctx.fillStyle = '#D8FFE8'; circle(3.2, -22.4, .6); ctx.fill(); circle(-.2, -22.4, .5); ctx.fill();
+      if (wN > .3 || dart) { ctx.fillStyle = '#0A1A1A'; ell(3.6, -18.8, 1.4, 1); ctx.fill(); ctx.fillStyle = '#F2F8F0'; ctx.fillRect(2.4, -19.6, .6, .8); ctx.fillRect(3.8, -19.6, .6, .8); } } // needle teeth
+    seg2(3, -16, .3 - wN * 1.2 + dart * -.6, 4, -.1 - dart * .6, 3.4, 2, 1.8, '#A8D0CC');
+    ctx.restore();
+  };
+
+  // ======================================================================================================
   // THE KING IN THE GLASS: Rebma's reflection of Oberon. With Oberon gone out of Amber it has no one left to follow, and
   // it has made itself a king. Made of sea-glass and the sea: a crowned torso in a Byzantine loros of gold and pearl over
   // robes of green glass, a beard of foam, a crown with pendilia of pearls, and the Pearl of Judgement set in its brow;
@@ -1331,6 +1408,76 @@
       draw(h) { const k = h.el / h.dur; if (k < .15 || h.land) return; const q = cl01((k - .15) / .53), e = h.e; ctx.fillStyle = tellCol(q); ell(e.x, e.y, 50, 22); ctx.fill(); ctx.strokeStyle = tellLine(q); ctx.lineWidth = 2; ell(e.x, e.y, 50, 22); ctx.stroke(); } });
   };
 
+  // ---------------- SEA-KNIGHT OF MOIRE ----------------
+  // THE JOUST: the spear couched, he comes straight through where you stand and on past; get off his line, or over it
+  const lineTell = (w) => ({ fix: (e) => { const dx = P.x - e.x, dy = P.y - e.y, L = Math.hypot(dx, dy * 2) || 1; return { x2: xClamp(P.x + dx / L * 150), y2: yClamp(P.y + dy / L * 40) }; },
+    draw(e, T, k) { ctx.strokeStyle = tellCol(k, 1.6); ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(T.x2, T.y2); ctx.stroke(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]); ctx.stroke(); ctx.setLineDash([]); } });
+  PLAN_FX.w7joust = (e) => { const T = e.w7T || TELLS.w7joust.fix(e); sfx('whoosh');
+    const x0 = e.x, y0 = e.y, z0 = e.z;
+    act(e, 'joust', .95, (h, dt, e, k) => {
+      if (k < .15) { e.x -= e.facing * 40 * dt; return false; }
+      const u = cl01((k - .15) / .6); e.facing = Math.sign(T.x2 - x0) || e.facing; e.x = lerp(x0, T.x2, u); e.y = lerp(y0, T.y2, u); e.z = lerp(z0, 20, Math.min(1, u * 3));
+      if (Math.random() < .5) W7.bubbles(e.x - e.facing * 20, e.y, e.z + 20, 1, 10);
+      if (!h.hit && Math.abs(P.x - e.x) < 24 && Math.abs(P.y - e.y) < 14 && P.z < 56) { h.hit = 1; hitP(edmg(e), e.x, true); }
+      return false; }, { rec: .9 });
+  };
+  TELLS.w7joust = lineTell(24);
+  // THE CAST SPEAR: thrown high, it comes down point first on where you stood (and he draws another)
+  PLAN_FX.w7hurl = (e) => { const T = e.w7T || { x: xClamp(P.x), y: yClamp(P.y) }; sfx('swing');
+    act(e, 'hurl', .55, (h, dt, e, k) => { if (k >= .35 && !h.thrown) { h.thrown = 1; e.w7noSpear = 1.6; hazards.push({ kind: 'w7spear', x0: e.x + e.facing * 10, y0: e.y, z0: e.z + 30, x: T.x, y: T.y, el: 0, t: 2, max: 2, dmg: edmg(e) }); } return false; }, { rec: 1.0 });
+  };
+  TELLS.w7hurl = spotTell(30);
+  reg('w7spear', {
+    update(h, dt) { h.el += dt; if (h.el >= .9 && !h.down) { h.down = 1; sfx('hit-metal', .6); dust(h.x, h.y, 6); W7.bubbles(h.x, h.y, 4, 8, 50); if (inEll(P.x, P.y, h.x, h.y, 30) && P.z < 30) hitP(h.dmg, h.x, false); } if (h.el > 1.7) h.t = -1; },
+    draw(h) { if (h.down) return; const k = cl01(h.el / .9); ctx.fillStyle = tellCol(k); ell(h.x, h.y, 30, 13); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(h.x, h.y, 30, 13); ctx.stroke(); },
+    ups(h, list) { list.push([h.y + .2, () => { const at = (u) => [lerp(h.x0, h.x, u), lerp(h.y0, h.y, u) - lerp(h.z0, 0, u) - Math.sin(u * Math.PI) * 120], u = cl01(h.el / .9), p1 = at(Math.min(.95, u)), p2 = at(Math.min(1, u + .05));
+      const a = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]), [x, y] = h.down ? [h.x, h.y - 16] : at(u);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.beginPath(); ctx.rect(-26, -1.1, 46, 2.2); ctx.fillStyle = C('#5A4430'); ctx.fill(); outline(.7); ctx.fillStyle = C('#D8E0E4'); poly([20, -2.6, 30, 0, 20, 2.6]); ctx.fill(); outline(.8); ctx.restore(); }]); },
+    box(h, box) { box(h.x, h.y, 0, 80, 200); },
+  });
+
+  // ---------------- THE ZIPHIUS ----------------
+  // THE STOOP: it folds its fins and comes down out of the water above, beak first, on the spot it marked
+  PLAN_FX.w7swoop = (e) => { const T = e.w7T || { x: xClamp(P.x), y: yClamp(P.y) }; sfx('whoosh');
+    const x0 = e.x, y0 = e.y, z0 = e.z;
+    act(e, 'swoop', 1.2, (h, dt, e, k) => {
+      if (k < .45) { const u = sm(k / .45); e.x = lerp(x0, T.x, u); e.y = lerp(y0, T.y, u); e.z = lerp(z0, 6, u * u); }
+      else if (!h.land) { h.land = 1; sfx('slam', .6); shakeMag = Math.max(shakeMag, 5); W7.bubbles(e.x, e.y, 6, 12, 80); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .3, max: .3, r: 44, col: '#C8D8F0', flat: 1 }); if (inEll(P.x, P.y, e.x, e.y, 38) && P.z < 30) hitP(edmg(e), e.x, true); }
+      else e.z = lerp(6, e.def.hover, sm((k - .55) / .45));
+      return false; }, { rec: 1.0 });
+  };
+  TELLS.w7swoop = spotTell(38);
+  // THE SNATCH: low down your lane; what it takes it carries up into the water, and lets fall
+  PLAN_FX.w7snatch = (e) => { const ly = e.w7T ? e.w7T.y : yClamp(P.y); sfx('whoosh');
+    act(e, 'snatch', 1.8, (h, dt, e, k) => {
+      if (h.held) { h.held -= dt; P.state = 'hurt'; P.t = Math.max(P.t, .15); P.vx = 0; P.vz = 0; P.x = e.x + e.facing * 6; P.y = e.y; e.z += (110 - e.z) * Math.min(1, dt * 3); P.z = Math.max(0, e.z - 34); e.x += e.facing * 60 * dt;
+        if (h.held <= 0) { h.done2 = 1; P.vz = -40; floatText(P.x, P.y, 90, 'LET FALL', '#C8D8F0', 13); return true; } return false; }
+      if (h.done2) return true;
+      e.y += (ly - e.y) * Math.min(1, dt * 6); e.z += (16 - e.z) * Math.min(1, dt * 6); if (k > .12) e.x += e.facing * 330 * dt;
+      if (!h.hit && k > .12 && Math.abs(P.x - e.x) < 24 && Math.abs(P.y - e.y) < 13 && P.z < 44 && P.state !== 'dodge' && P.inv <= 0) { h.hit = 1; hitP(Math.round(edmg(e) * .8), e.x, false); if (tookHit()) { h.held = .8; floatText(P.x, P.y, 90, 'SEIZED', '#C8D8F0', 13); } }
+      if (e.x < leftWall() + 16 || e.x > rightWall() - 16) { e.x = clamp(e.x, leftWall() + 16, rightWall() - 16); if (!h.held) return true; }
+      return false; }, { rec: 1.0 });
+  };
+  TELLS.w7snatch = { fix: () => ({ y: yClamp(P.y) }), draw(e, T, k) { const x0 = e.facing > 0 ? e.x : leftWall(), x1 = e.facing > 0 ? rightWall() : e.x; ctx.fillStyle = tellCol(k, .7); ctx.fillRect(x0, T.y - 12, x1 - x0, 24); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.strokeRect(x0, T.y - 12, x1 - x0, 24); ctx.setLineDash([]); } };
+
+  // ---------------- NIXIE OF THE STAIR ----------------
+  // THE NIP: a dart in and a bite, quick as a fish, back out to the shoal
+  PLAN_FX.w7nip = (e) => { const tx = xClamp(P.x), ty = yClamp(P.y), x0 = e.x, y0 = e.y;
+    act(e, 'nip', .6, (h, dt, e, k) => {
+      if (k < .25) return false; const u = sm(cl01((k - .25) / .35)); e.x = lerp(x0, tx, u); e.y = lerp(y0, ty, u); e.z += (14 - e.z) * Math.min(1, dt * 8);
+      if (!h.hit && Math.abs(P.x - e.x) < 16 && Math.abs(P.y - e.y) < 12 && P.z < 40) { h.hit = 1; sfx('hit-flesh', .4); hitP(edmg(e), e.x, false); }
+      return false; }, { rec: .7 });
+  };
+  TELLS.w7nip = { draw(e, T, k) { ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(xClamp(P.x), yClamp(P.y)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = tellCol(k); ell(xClamp(P.x), yClamp(P.y), 16, 7); ctx.fill(); } };
+  // THE RING: it marks a ring round you and swims it, fast; the safe places are the middle and outside
+  PLAN_FX.w7ring = (e) => { const cx = xClamp(P.x), cy = yClamp(P.y), a0 = Math.atan2((e.y - cy) * 2.4, e.x - cx);
+    act(e, 'ring', 1.6, (h, dt, e, k) => {
+      if (k < .3) return false; const a = a0 + (k - .3) / .7 * TAU * 1.5; e.x = cx + Math.cos(a) * 64; e.y = cy + Math.sin(a) * 64 / 2.4; e.z += (14 - e.z) * Math.min(1, dt * 8); e.facing = -Math.sin(a) > 0 ? 1 : -1;
+      if (!h.hit && Math.abs(P.x - e.x) < 15 && Math.abs(P.y - e.y) < 11 && P.z < 40) { h.hit = 1; hitP(edmg(e), e.x, false); }
+      return false; }, { rec: .8,
+      draw(h) { const k = Math.min(1, h.el / (h.dur * .3)); ctx.strokeStyle = tellCol(k, 2); ctx.lineWidth = 14; ell(cx, cy, 64, 64 / 2.4); ctx.stroke(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.2; ctx.setLineDash([4, 4]); ell(cx, cy, 64, 64 / 2.4); ctx.stroke(); ctx.setLineDash([]); } });
+  };
+
   // ======================================================================================================
   // THE RULES OF THE PLACES
   // ======================================================================================================
@@ -1446,7 +1593,7 @@
     }
     const B = m.bish, e = B.e;
     if (!enemies.includes(e) || e.dead) { m.bishDone = true; m.bish = null; banner('The Well of the Pattern', 'THE WAY DOWN IS OPEN', 2.2); return; }
-    if (!B.called && e.hp < e.maxHp * .5) { B.called = 1; floatText(e.x, e.y, e.hh + 30, 'HE CALLS THE DROWNED TO PRAYER', '#F2E6C8', 13); for (let i = 0; i < 2; i++) spawnEnemy('w7drowned', i ? 1 : -1); }
+    if (!B.called && e.hp < e.maxHp * .5) { B.called = 1; floatText(e.x, e.y, e.hh + 30, 'HE CALLS THE DROWNED TO PRAYER', '#F2E6C8', 13); spawnEnemy('w7drowned', -1); for (let i = 0; i < 2; i++) spawnEnemy('w7nixie', 1); }
   }
 
   // ======================================================================================================
@@ -1718,7 +1865,7 @@
   const KING = () => (typeof boss !== 'undefined' && boss && boss.def === BOSSES.w7king ? boss : null);
 
   // ---------------- how each of them comes on ----------------
-  if (typeof ENTRY !== 'undefined') Object.assign(ENTRY, { w7drowned: ['w7rise'], w7lamp: ['w7glide'], w7guard: ['w7glide'], w7siren: ['w7swimin'], w7hippo: ['w7swimin'], w7triton: ['w7sink'], w7bellk: ['w7sink'], w7bishop: ['w7rise'] });
+  if (typeof ENTRY !== 'undefined') Object.assign(ENTRY, { w7knight: ['w7swimin'], w7ziphius: ['w7plummet'], w7nixie: ['w7shoal'], w7drowned: ['w7rise'], w7lamp: ['w7glide'], w7guard: ['w7glide'], w7siren: ['w7swimin'], w7hippo: ['w7swimin'], w7triton: ['w7sink'], w7bellk: ['w7sink'], w7bishop: ['w7rise'] });
   if (typeof ENTER_FX !== 'undefined') Object.assign(ENTER_FX, {
     // the drowned (and the Sea-Bishop) come up out of the sand of the stair, shedding it, in a burst of bubbles
     w7rise: { max: 1.5, start(e, n) { if (e.type !== 'w7bishop') e.x = entranceSpot(e); n.y = yC(e.y); e.y = n.y; sfx('hit-goo', .5); },
@@ -1729,6 +1876,14 @@
       update(e, n, dt) { const k = cl01(n.t / n.max); e.x = lerp(n.x0, n.x1, k); e.y = lerp(FLOOR_TOP + 6, n.y1, sm(k)); e.walk += dt * 8; return n.t >= n.max; },
       draw(e, n, t, inner) { const k = sm(n.t / n.max), s = lerp(.7, 1, k); ctx.save(); ctx.globalAlpha = k; ctx.translate(e.x, e.y); ctx.scale(s, s); ctx.translate(-e.x, -e.y); inner(); ctx.restore(); } },
     // the swimmers come down in a long curve out of the water overhead
+    // the ziphius comes down from high in the water in a long spiral, as an owl drops to a branch
+    w7plummet: { max: 1.6, keepFace: 1, start(e, n) { n.x1 = entranceSpot(e); n.y1 = yC(e.y); e.y = n.y1; n.z0 = 280; e.z = n.z0; e.facing = Math.sign(P.x - n.x1) || 1; sfx('whoosh', .5); },
+      update(e, n, dt) { const k = sm(n.t / n.max); e.x = n.x1 + Math.cos(n.t * 5) * 40 * (1 - k); e.z = lerp(n.z0, e.def.hover, k); return n.t >= n.max; },
+      draw(e, n, t, inner) { inner(); } },
+    // the nixies come out of a burst of bubbles, small at first
+    w7shoal: { max: 1.1, start(e, n) { e.x = entranceSpot(e); bubbles(e.x, e.y, e.def.hover, 14, 60); },
+      update(e, n, dt) { if (Math.random() < .4) bubbles(e.x, e.y, e.z + 10, 1, 20); return n.t >= n.max; },
+      draw(e, n, t, inner) { const k = sm(n.t / n.max); ctx.save(); ctx.translate(e.x, e.y - e.z); ctx.scale(k, k); ctx.translate(-e.x, -(e.y - e.z)); inner(); ctx.restore(); } },
     w7swimin: { max: 1.5, keepFace: 1, start(e, n) { n.x1 = entranceSpot(e); n.dir = Math.sign(P.x - n.x1) || 1; n.x0 = n.x1 - n.dir * 200; n.z0 = 220; n.y1 = yC(e.y); e.facing = n.dir; e.x = n.x0; e.z = n.z0; },
       update(e, n, dt) { const k = sm(n.t / n.max); e.x = lerp(n.x0, n.x1, k); e.z = lerp(n.z0, e.def.hover, k); e.y = n.y1; if (Math.random() < .4) bubbles(e.x, e.y, e.z, 1, 10); return n.t >= n.max; },
       draw(e, n, t, inner) { inner(); } },
@@ -1765,12 +1920,21 @@
     }; }
 
   // ---------------- what each of them does every frame ----------------
+  const SWIM = { w7knight: [60, 30, 1.1], w7ziphius: [80, 20, .8], w7nixie: [90, 50, 2.6] }; // how far and how fast each weaves as it swims
   const _upd = updateEnemy;
   updateEnemy = function (e, dt) {
     const decay = () => { e.flash = Math.max(0, e.flash - dt); e.jit = Math.max(0, e.jit - dt); e.flinch = Math.max(0, (e.flinch || 0) - dt); e.sqx += (1 - e.sqx) * Math.min(1, dt * 8); e.sqy += (1 - e.sqy) * Math.min(1, dt * 8); };
     if (e.def === BOSSES.w7king) { if (e.dead) return _upd(e, dt); decay(); e.state = 'w7act'; e.w7a = 'king'; e.vx = 0; e.vz = 0; e.air = false; e.plan = null; e.rageT = 0; e.enraged = false; return; } // (the 'w7glass' rule moves him)
     if (e.dead) return _upd(e, dt);
     if (e.type === 'w7bellk' && e.w7bare && e.state === 'idle' && e.plan !== 'w7stab') e.plan = 'w7stab';
+    if (SWIM[e.type] && !['enter', 'w7act', 'dying', 'hurt', 'down'].includes(e.state)) { // they swim: they circle and weave rather than walk
+      const r = _upd(e, dt), ph = performance.now() / 1000 * SWIM[e.type][2] + (e.slot || 0);
+      if (e.state === 'idle' || e.state === 'recover') { e.x += Math.cos(ph) * SWIM[e.type][0] * dt; e.y = clamp(e.y + Math.sin(ph * 1.3) * SWIM[e.type][1] * dt, FLOOR_TOP + 8, FLOOR_BOT); }
+      if (e.type === 'w7nixie') { const mates = enemies.filter(o => o !== e && !o.dead && o.type === 'w7nixie' && Math.abs(o.x - e.x) < 260); if (mates.length) { const mx = mates.reduce((a, o) => a + o.x, 0) / mates.length, my = mates.reduce((a, o) => a + o.y, 0) / mates.length; if (Math.abs(mx - e.x) > 40) e.x += Math.sign(mx - e.x) * 30 * dt; if (Math.abs(my - e.y) > 16) e.y += Math.sign(my - e.y) * 14 * dt; } }
+      if (e.w7noSpear > 0) e.w7noSpear -= dt;
+      if (Math.random() < dt * .6) bubbles(e.x, e.y, e.z + e.hh * .6, 1, 8);
+      return r; }
+    if (e.w7noSpear > 0) e.w7noSpear -= dt;
     if (e.type === 'w7drowned' && Math.random() < dt * .4) bubbles(e.x + e.facing * 3, e.y, e.hh - 4, 2, 6);
     return _upd(e, dt);
   };
@@ -1802,14 +1966,14 @@
     const m = P.move; if (!m || !W7.reflAt) return; const R = W7.refl && W7.refl(); if (!R || P.w7reflHit === P.moveId) return;
     if (W7.reflAt(P.x, P.y, 400) && inReach(m, R.x, R.y, R.z, 30, 130)) { P.w7reflHit = P.moveId; W7.hitRefl(P.facing); } }; }
   // deaths, each in its own way: the drowned go up; the siren goes to foam; the bronze topples; the glass breaks
-  const CUSTOM_DEATH = { w7drowned: 'w7float', w7bishop: 'w7float', w7lamp: 'w7douse', w7siren: 'w7foam', w7hippo: 'w7flee', w7bellk: 'w7flood', w7triton: 'w7topple' };
+  const CUSTOM_DEATH = { w7drowned: 'w7float', w7bishop: 'w7float', w7lamp: 'w7douse', w7siren: 'w7foam', w7hippo: 'w7flee', w7bellk: 'w7flood', w7triton: 'w7topple', w7knight: 'w7drift', w7ziphius: 'w7drift', w7nixie: 'w7drift' };
   const _kill = killEnemy;
   killEnemy = function (e, dir, m) {
     _kill(e, dir, m);
     if (e.def === BOSSES.w7king) { W7.kingDown(e); return; }
     const cd = CUSTOM_DEATH[e.type];
     // (the drowned rise at 50 px/s and the hippocamp swims at its own pace, until they are off the screen)
-    if (cd) { const wasPop = e.death === 'pop'; e.death = cd; e.air = false; e.spin = 0; e.rotA = 0; e.vx = cd === 'w7flee' ? dir * 40 : 0; e.vz = 0; e.t = e.dmax = cd === 'w7float' ? (e.y + e.hh * 1.6 + 80) / 50 : cd === 'w7flee' ? (VW + 260) / 144 : 1.8; if (wasPop) dropLoot(e); bubbles(e.x, e.y, e.hh * .6, 14, 70); }
+    if (cd) { const wasPop = e.death === 'pop'; e.death = cd; e.air = false; e.spin = 0; e.rotA = 0; e.vx = cd === 'w7flee' ? dir * 40 : 0; e.vz = 0; e.t = e.dmax = cd === 'w7float' ? (e.y + e.hh * 1.6 + 80) / 50 : cd === 'w7flee' ? (VW + 260) / 144 : cd === 'w7drift' ? (e.y + e.hh + 300) / 60 : 1.8; if (wasPop) dropLoot(e); bubbles(e.x, e.y, e.hh * .6, 14, 70); }
   };
   W7.kingDown = (e) => { // the King breaks like glass, and the Pearl of Judgement falls out of his crown onto the Pattern
     e.death = 'w7glassend'; e.air = false; e.spin = 0; e.vx = 0; e.vz = 0; e.t = e.dmax = 3; e.w7nopearl = 1;
@@ -1827,6 +1991,7 @@
     else if (d === 'w7douse') draw(() => { e.w7out = 1; ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-sm(Math.min(1, k * 1.6)) * 1.4); ctx.globalAlpha *= 1 - sm((k - .6) / .4) * .4; CREATURES.w7lamp(e, a); });
     else if (d === 'w7foam') draw(() => { if (k < .5) { ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); ctx.globalAlpha *= 1 - k * 2; CREATURES.w7siren(e, a); }
       if (k < .999) onMain(() => { for (let i = 0; i < 24; i++) { const q = cl01(k * 1.4 - hsh(i) * .4), x = e.x + (hsh(i + 2) - .5) * 30, y = e.y - e.z - 20 - q * 70 + (hsh(i + 5) - .5) * 20; ctx.strokeStyle = `rgba(240,250,250,${.8 * Math.sin(q * Math.PI)})`; ctx.lineWidth = .8; circle(x, y, 1 + hsh(i + 7) * 3); ctx.stroke(); } }); });
+    else if (d === 'w7drift') draw(() => { if (k >= .999) return; ctx.translate(e.x - e.facing * el * 30, e.y - e.z - el * 60); ctx.rotate(Math.min(1, el / 1.2) * Math.PI * .85 * e.facing); ctx.scale(e.facing, 1); CREATURES[e.def.draw](e, a); }); // (belly up, it goes up through the water at a steady pace until it is gone)
     else if (d === 'w7flee') draw(() => { if (k >= .999) return; ctx.translate(e.x + e.facing * -el * 144, e.y - e.z - el * 67); ctx.scale(-e.facing, 1); CREATURES.w7hippo(e, a); });
     else if (d === 'w7flood') draw(() => { e.w7bare = 1; ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-sm(Math.min(1, k * 2)) * 1.4); CREATURES.w7bellk(e, a); });
     else if (d === 'w7topple') draw(() => { ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-Math.pow(sm(Math.min(1, k * 1.4)), 2) * 1.5); CREATURES.w7triton(e, a); });
