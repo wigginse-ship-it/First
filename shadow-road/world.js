@@ -31,6 +31,16 @@ function updateFx(dt) {
 
 // ---------- enemies ----------
 const scaleStat = (v, k) => v * (1 + k * save.cycle);
+// New Game+ blows keep pace with the armor each cycle drops: a cycle's pieces are five tiers up (gear.js effTier), so a full
+// set turns far more aside and adds health. Enemy damage is scaled so that, against the armor this world normally drops,
+// a blow costs the same share of your health as it did on the first cycle, and then a quarter more for every cycle.
+function ngDmgK() {
+  const q = save.cycle || 0; if (!q) return 1;
+  const t0 = clamp((stageIdx || 0) + 1, 1, 5), setDef = (T) => GEAR_SLOTS.reduce((a, s) => a + GEAR_DEF[s][Math.min(T, 5) - 1] * pastTop(T, .3), 0);
+  const setHp = (T) => BASE_HP + GEAR_SLOTS.length * GEAR_HP[Math.min(T, 5) - 1] * pastTop(T, .32);
+  const taken = (T) => (1 - gearDR(setDef(T))) / setHp(T); // the share of your health one point of damage takes, in full gear of tier T
+  return taken(t0) / taken(t0 + 5 * q) * (1 + .25 * q);
+}
 // each world is harder than the last: enemies take more hits to bring down, hit a little harder and attack more often.
 // Your own damage doesn't change, so leveling your weapons is what keeps pace.
 const WORLD_DIFF = [{ hp: 1, boss: 1, dmg: 1, cd: 1 }, { hp: 1.4, boss: 1.2, dmg: 1.12, cd: .88 }, { hp: 1.85, boss: 1.4, dmg: 1.25, cd: .78 }, { hp: 2.35, boss: 1.65, dmg: 1.4, cd: .7 }];
@@ -56,7 +66,7 @@ function spawnEnemy(type, side, isBoss) {
   const wd = worldDiff(), hp = Math.round(scaleStat(def.hp, .5) * (isBoss ? wd.boss : wd.hp) * (!isBoss && def.ranged && !def.poise ? .65 : 1)); // shooters are fragile: close the gap and they drop fast (the armored tank isn't)
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
-    dmg: Math.round(scaleStat(def.dmg, .3) * (isBoss ? 1.6 : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
+    dmg: Math.round(def.dmg * ngDmgK() * (isBoss ? 1.6 : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
   if (!isBoss && (forceElite || (stageIdx >= 1 && def.move !== 'fly' && Math.random() < [0, .15, .22, .3, .36][Math.min(stageIdx, 4)]))) makeElite(e);
   if (isBoss) { e.phase = 1; e.baseDmg = e.dmg; e.size = 1.15; e.hw = def.hw * e.size; e.hh = def.hh * e.size; e.rageT = 0; e.staggers = 0; }

@@ -10,7 +10,7 @@ const ARROW_TIERS = [
   { name: 'Rune Arrows', dmg: 98, crit: .18, pierce: 1, blast: 46, desc: 'Runes cut in the shaft burst on impact, catching whoever stands close.' },
   { name: 'Starfall Arrows', dmg: 116, crit: .28, pierce: 2, blast: 60, desc: 'Fletched with light: each one falls like a star and goes through three.' },
 ];
-const arrowVs = e => e.boss ? .3 : e.champ ? .6 : 1; // arrows are for picking off the crowd: bosses and champions shrug most of one off
+const arrowVs = e => e.boss ? .15 : e.champ ? .45 : 1; // arrows are for picking off the crowd: bosses and champions shrug most of one off
 const aTier = () => ARROW_TIERS[Math.min(ARROW_TIERS.length, save.alv || 1) - 1];
 const arrowCost = (lvl) => ({ s: Math.round([0, 200, 400, 700, 1100][lvl] * (1 + .5 * (save.cycle || 0))), g: Math.round([0, 3, 5, 8, 12][lvl] * (1 + .5 * (save.cycle || 0))) }); // a better arrow is dear, but within reach
 function maybeDropArrow(e) {
@@ -64,7 +64,7 @@ function loose() {
   const perfect = P.full && P.sinceFull < .12; // let go the instant the draw is full: a perfect release always crits
   if (perfect) { floatText(P.x, P.y, 96, 'PERFECT', '#FFE08A', 15); flashT = .06; burst(P.x + P.facing * 28, P.y, P.z + 40, ['#FFE08A', '#FFFFFF'], 14, 'spark', P.facing, true); }
   projs.push({ owner: 'p', arrow: lvl, x: P.x + P.facing * 22, y: P.y, z: Math.max(30, P.z + 40), vx: P.facing * sp * Math.cos(P.aim), vz: sp * Math.sin(P.aim),
-    dmg: Math.round(T.dmg * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1) * (1 + gearStat('arrow'))), perfect, life: 1.3, hit: new Set(), tgt: arrowTarget(Math.max(30, P.z + 40)), pierce: k >= 1 ? T.pierce : 0, crit: T.crit + (k >= 1 ? .1 : 0), blast: k >= 1 ? T.blast : T.blast * .5, full: k >= 1 });
+    dmg: Math.round(T.dmg * .75 * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1) * (1 + gearStat('arrow'))), perfect, life: 1.3, hit: new Set(), tgt: arrowTarget(Math.max(30, P.z + 40)), pierce: k >= 1 ? T.pierce : 0, crit: T.crit + (k >= 1 ? .1 : 0), blast: k >= 1 ? T.blast : T.blast * .5, full: k >= 1 });
   sfx('shoot'); P.vx = -P.facing * (40 + 60 * k);
 }
 // while drawn: a faint line along the shot, brightening to gold at full strength
