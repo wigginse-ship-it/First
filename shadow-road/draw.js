@@ -479,21 +479,21 @@ function drawDeath(e, t) {
     if (el < .9) { // points of light where the blade went in, then a silver cross cut flares over them
       const a = el < .2 ? el / .2 : Math.max(0, 1 - (el - .2) / .7);
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#F4F0FF';
-      for (const w of e.wounds || []) gbStar(w.x * e.hw, -w.y * e.hh, 2 + a * 3, a * .7); // a glint as the point goes in
+      for (const w of e.wounds || []) { circle(w.x * e.hw, -w.y * e.hh, 1.5 + a * 1.5); ctx.globalAlpha = a * .8; ctx.fill(); ctx.globalAlpha = 1; } // a pinprick of light as the point goes in
       if (el > .3 && el < .6) { const q = (el - .3) / .3; ctx.strokeStyle = `rgba(232,236,255,${1 - q})`; ctx.lineWidth = 2.4; ctx.beginPath(); const r = e.hw * 1.2; ctx.moveTo(-r, -e.hh * .75); ctx.lineTo(r, -e.hh * .25); ctx.moveTo(r, -e.hh * .75); ctx.lineTo(-r, -e.hh * .25); ctx.stroke(); }
       ctx.restore();
     }
     if (el > .25) { // the wounds stay: round holes punched clean through, most taken from the edge of the body, the street showing through
       const mat = e.def.mat, base = (MAT_COL[mat] || MAT_COL.fur)[0], g = ease(Math.min(1, (el - .25) / .14)); // (each opens in a quick punch)
       const kind = { fur: 'blood', flesh: 'blood', metal: 'oil', goo: 'ooze', rock: 'sunk', crystal: 'sunk', china: 'sunk', spark: 'glow', ghost: 'glow', dream: 'glow' }[mat] || 'blood';
-      const geo = (w) => [w.x * e.hw, -w.y * e.hh, clamp(e.hw * .3, 3.6, 8.5) * (w.r || 1) * g];
+      const geo = (w) => [w.x * e.hw, -w.y * e.hh, clamp(e.hw * .2, 2.6, 5.5) * (w.r || 1) * g];
       ctx.save(); ctx.globalCompositeOperation = 'destination-out'; for (const w of e.wounds || []) { const [x, y, R] = geo(w); circle(x, y, R); ctx.fill(); } ctx.restore(); // cut through: perfectly round
       if (!FLASH && !TINT) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; // (the rim only where the body is left: nothing hangs in the air)
         for (const w of e.wounds || []) { const [x, y, R] = geo(w); if (R < 1) continue; const h = (k) => { const v = Math.sin((w.s || 1) * 91.3 + k * 12.9898) * 43758.5; return v - Math.floor(v); }; // (its own rough edge, the same every frame)
-          const rough = (col, n, d0, d1, s0, s1) => { ctx.fillStyle = col; for (let i = 0; i < n; i++) { const a = h(i) * TAU, d = R + d0 + h(i + 40) * (d1 - d0), r = s0 + h(i + 80) * (s1 - s0); circle(x + Math.cos(a) * d, y + Math.sin(a) * d, r); ctx.fill(); } };
+          const rough = (col, n, d0, d1, s0, s1) => { ctx.fillStyle = col; n = Math.ceil(n * .5); d1 = d0 + (d1 - d0) * .45; s0 *= .6; s1 *= .55; for (let i = 0; i < n; i++) { const a = h(i) * TAU, d = R + d0 + h(i + 40) * (d1 - d0), r = s0 + h(i + 80) * (s1 - s0); circle(x + Math.cos(a) * d, y + Math.sin(a) * d, r); ctx.fill(); } };
           const drip = (col, n, len) => { ctx.fillStyle = col; for (let i = 0; i < n; i++) { const a = .9 + h(i + 120) * 1.3, px = x + Math.cos(a) * R, py = y + Math.sin(a) * R, l = len * (.5 + h(i + 130)) * g; ell(px, py + l / 2, .9 + h(i + 140) * .6, l / 2 + .6); ctx.fill(); circle(px, py + l, 1.2); ctx.fill(); } };
           ctx.lineWidth = 2;
-          if (kind === 'blood') { ctx.strokeStyle = '#4A060C'; circle(x, y, R + .8); ctx.stroke(); rough('#7A0E16', 16, -.2, 3.6, 1, 2.4); rough('#B01E28', 9, .4, 2.8, .5, 1.3); drip('#7A0E16', 2, 8); }
+          if (kind === 'blood') { ctx.strokeStyle = '#4A060C'; circle(x, y, R + .8); ctx.stroke(); rough('#7A0E16', 16, -.2, 3.6, 1, 2.4); rough('#B01E28', 9, .4, 2.8, .5, 1.3); drip('#7A0E16', 1, 6); }
           else if (kind === 'oil') { ctx.strokeStyle = '#0C0A10'; ctx.lineWidth = 2.6; circle(x, y, R + .9); ctx.stroke(); rough('#141018', 15, 0, 3.6, 1, 2.4); ctx.strokeStyle = 'rgba(150,120,230,.55)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.arc(x, y, R + 1.6, 3.6, 4.6); ctx.stroke(); ctx.strokeStyle = 'rgba(110,200,190,.45)'; ctx.beginPath(); ctx.arc(x, y, R + 1.6, 4.6, 5.4); ctx.stroke(); drip('#141018', 2, 9); } // black oil with a rainbow sheen
           else if (kind === 'ooze') { ctx.strokeStyle = shade(base, -.4); circle(x, y, R + .7); ctx.stroke(); rough(shade(base, -.15), 14, -.3, 3.4, 1, 2.5); rough(shade(base, .45), 7, 0, 1.6, .4, .9); drip(shade(base, -.2), 3, 8); } // glossy, gloopy
           else if (kind === 'glow') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,240,200,${.7 * g})`; circle(x, y, R + .6); ctx.stroke(); rough('rgba(255,220,160,.35)', 8, 0, 3, .6, 1.4); ctx.restore(); } // the hole rimmed in its own light
