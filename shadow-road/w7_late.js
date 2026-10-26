@@ -122,7 +122,7 @@
   function textPanel(s, x, y, w, a, size = 10, col = '240,246,250') { if (a <= 0) return; ctx.save(); ctx.font = `700 ${size}px Cinzel, Georgia, serif`; ctx.textAlign = 'left'; const rows = wrapRows(s, w);
     ctx.fillStyle = `rgba(4,12,20,${.5 * a})`; rrect(x - 10, y - size - 6, w + 20, rows.length * (size + 5) + 14, 6); ctx.fill();
     rows.forEach((r, i) => { ctx.fillStyle = `rgba(${col},${a})`; ctx.fillText(r, x, y + i * (size + 5)); }); ctx.restore(); }
-  function brushOver() { skyWash(0); ctx.save(); ctx.globalAlpha = .5; ctx.fillStyle = texPat(ctx, 'brush'); ctx.scale(.5, .5); ctx.fillRect(0, Y_OFF * 2, VW * 2, (VH - Y_OFF) * 2); ctx.restore(); }
+  function brushOver(soft) { if (!soft) skyWash(0); ctx.save(); ctx.globalAlpha = soft ? .3 : .5; ctx.fillStyle = texPat(ctx, 'brush'); ctx.scale(.5, .5); ctx.fillRect(0, Y_OFF * 2, VW * 2, (VH - Y_OFF) * 2); ctx.restore(); }
   const kit = () => (window.ENDINGS && ENDINGS.kit) || null;
   function hero(x, y, s, facing, state, walk, a = 1) { const K2 = kit(); if (!K2) return; const pose = K2.poseAs(state, walk); K2.inkHero(x, y, s, facing, pose, a, false); }
   // ---------------- B: the Pattern of Rebma from above, as a mosaic; he walks its line, and it lights behind him ----------------
@@ -145,47 +145,148 @@
   }
   const PAL_GOLD = '#C89A3A';
   // ---------------- C: Moire on her throne of nacre ----------------
-  function moire(x, y, s, t) { // the Queen of Rebma, seated: a crown of pearls, sea-green hair floating up and out, a gown of sea-silk
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    // the throne: a great scallop of nacre on a gilt frame, its ribs catching the light
-    ctx.fillStyle = '#E6DCD4'; ctx.beginPath(); ctx.moveTo(-36, 0); ctx.lineTo(-32, -96); ctx.quadraticCurveTo(0, -136, 32, -96); ctx.lineTo(36, 0); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = PAL_GOLD; ctx.lineWidth = 2.4; ctx.stroke();
-    for (let i = -5; i <= 5; i++) { ctx.strokeStyle = i % 2 ? 'rgba(170,150,190,.55)' : 'rgba(150,200,190,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(i * 2, -8); ctx.lineTo(i * 6, -116 + Math.abs(i) * 3.4); ctx.stroke(); }
-    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.moveTo(-28, -12); ctx.lineTo(-26, -92); ctx.quadraticCurveTo(-12, -110, -4, -114); ctx.lineTo(-10, -12); ctx.closePath(); ctx.fill();
-    // her hair, long and sea-green, floating up and out about her head in the water
-    for (let i = 0; i < 26; i++) { const side = i % 2 ? 1 : -1, q = (i >> 1) / 13, a = -Math.PI / 2 + side * (.3 + q * 1.1), L = 34 + hsh(i) * 22, sw = Math.sin(t * .9 + i) * 5;
-      ctx.strokeStyle = ['#1E5A4A', '#2E7A62', '#5AB08A', '#7ED0A8'][i % 4]; ctx.lineWidth = 2.2 - q; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(side * 3, -66); ctx.bezierCurveTo(side * 10, -76, Math.cos(a) * L * .6 + sw * .5, -64 + Math.sin(a) * L * .6, Math.cos(a) * L + sw, -60 + Math.sin(a) * L * .9 + Math.cos(t + i) * 3); ctx.stroke(); }
-    // the gown: deep lapis sea-silk falling in folds to the dais, a band of pearls at the hem and down the front
-    ctx.fillStyle = '#1E3A78'; ctx.beginPath(); ctx.moveTo(-11, -52); ctx.lineTo(11, -52); ctx.quadraticCurveTo(16, -30, 24, -2); ctx.quadraticCurveTo(0, 5, -24, -2); ctx.quadraticCurveTo(-16, -30, -11, -52); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#0A1430'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.strokeStyle = 'rgba(120,150,230,.6)'; ctx.lineWidth = 1.4; for (const fx of [-14, -6, 6, 14]) { ctx.beginPath(); ctx.moveTo(fx * .4, -46); ctx.quadraticCurveTo(fx * .8, -22, fx, -2); ctx.stroke(); }
-    ctx.strokeStyle = PAL_GOLD; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-24, -3); ctx.quadraticCurveTo(0, 4, 24, -3); ctx.stroke();
-    ctx.fillStyle = '#F2EEF6'; for (let i = 0; i < 13; i++) { ctx.beginPath(); ctx.arc(-22 + i * 3.7, -2 + Math.sin(i / 12 * Math.PI) * 3.4, 1.1, 0, TAU); ctx.fill(); } for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(0, -48 + i * 5, 1, 0, TAU); ctx.fill(); }
-    // her arms: one on the throne, one held out to him, palm up
-    ctx.strokeStyle = '#8ACAB6'; ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-9, -48); ctx.quadraticCurveTo(-18, -34, -24, -26); ctx.moveTo(9, -48); ctx.quadraticCurveTo(18, -40, 26, -46); ctx.stroke();
-    ctx.fillStyle = '#A8D8C6'; ctx.beginPath(); ctx.ellipse(28, -47, 3.4, 2, -.3, 0, TAU); ctx.fill();
-    // the face: pale green, grave, lidded, the gill-slits of Rebma at the throat
-    ctx.fillStyle = '#A8D8C6'; ctx.beginPath(); ctx.ellipse(0, -62, 7, 8.6, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#1A2A26'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = 'rgba(60,120,100,.35)'; ctx.beginPath(); ctx.ellipse(3, -60, 4, 7, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#F2FFF8'; for (const ex of [-3, 3]) { ctx.beginPath(); ctx.ellipse(ex, -63.6, 1.8, 1, 0, 0, TAU); ctx.fill(); } ctx.fillStyle = '#1A4A3A'; for (const ex of [-2.8, 3.2]) { ctx.beginPath(); ctx.arc(ex, -63.6, .8, 0, TAU); ctx.fill(); }
-    ctx.strokeStyle = '#2A4A3E'; ctx.lineWidth = .8; for (const ex of [-3, 3]) { ctx.beginPath(); ctx.moveTo(ex - 2, -66.4); ctx.lineTo(ex + 2, -66); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(0, -62.6); ctx.lineTo(.8, -59.6); ctx.stroke(); ctx.fillStyle = '#7A3A48'; ctx.fillRect(-1.8, -57.2, 3.6, 1.1);
-    ctx.strokeStyle = 'rgba(40,90,70,.6)'; ctx.lineWidth = .6; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-3 + i * 1.6, -53); ctx.lineTo(-2.4 + i * 1.6, -51); ctx.stroke(); }
-    // the crown of pearls
-    ctx.fillStyle = PAL_GOLD; ctx.fillRect(-8, -72, 16, 3); ctx.strokeStyle = '#6A4A18'; ctx.lineWidth = .6; ctx.strokeRect(-8, -72, 16, 3);
-    for (let i = 0; i < 5; i++) { ctx.fillStyle = '#F2EEF6'; ctx.beginPath(); ctx.arc(-6 + i * 3, -74 - (i % 2 ? 4 : 2), 1.5, 0, TAU); ctx.fill(); ctx.fillStyle = PAL_GOLD; ctx.fillRect(-6.3 + i * 3, -73.6 - (i % 2 ? 3 : 1), .6, (i % 2 ? 3 : 1)); }
-    ctx.restore();
+  // She is a painted picture, not drawn here: moire.webp, the Queen cut out with her couch of nacre (1100 x 756, loaded at
+  // startup), set into a hall painted to match the rest of Rebma: a niche of dim gold mosaic, a rose window with the sea
+  // behind it, columns of green bronze, a floor of slate and lapis. She is inked round and graded into its light once, when
+  // she loads. Her hair and the loose sea-silk of her gown sway in the current: the picture is cut into a grid of cells
+  // (MO_CS px), and each frame the cells holding hair or loose cloth are drawn bent by a smooth field of displacement (a wave
+  // running out along the hair from her head, a slower swell through the cloth, her breath at the breast), each cell an affine
+  // piece of the field; face, body, limbs and shell are left in one still piece beneath them
+  const MO_SRC = 'moire.webp', MO_CS = 28, MO_PAD = 6, MO_W = 1100, MO_H = 756;
+  // how much each grid point sways ('.' not at all, a-z hair, A-Z cloth), a row for every MO_CS px down the picture
+  // (made from the picture with the hair, sleeve, hem and scarf marked, and her skin held still: change it with the picture)
+  const MO_GRID = '.........................................|.........................................|.........................................|.......aba...............................|......dfdb......bb.......................|....ckmjfc.....bdge......................|..bkttqmif......gjmja....................|agsyywspka......anqtnb...................|rxzzzs..b........muwxoa..................|zzzzz.............vyzub..................|zzzzxg.............wyvc..................|zzzi.EB............dhf...................|vtjH.MC..................................|bP....B..................................|ARTM.....................................|.........................................|.........................................|.........................................|........AAAABBBBBBBBBAAA.............FE..|.....CDEEEEEEEEEEEEEEEEEDC...........OM..|....BHIIIIIIIIIIIIIIIIIIIHE..........SR..|..AAGMNNNNNNNNNNNNNNNNNNNMLE.........BD..|IJKKNRRRRRRRRRRRRRRRRRRRRRRLA............|MMMMTVVVVVVVVVVVVVVVVVVVVVVRC............|MMMMUYYYYYYYYYYYYYYYYYYYYYYVF............|MMMMSZZZZZZZZZZZZZZZZZZZZZZXI............|MMMMOZZZZZZZZZZZZZZZZZZZZZZYL............|MMMMMYZZZZZZZZZZZZZZZZZZZZZZNA...........';
+  const MO = W7.moire = { ok: false, failed: false, S: null, B: null, cells: null, bg: null, bgKey: '' };
+  { const im = new Image(); im.onload = () => { const go = () => { try { moirePrep(im); } catch (e) { MO.failed = true; console.warn('moire.webp', e); } }; if (im.decode) im.decode().then(go, go); else go(); };
+    im.onerror = () => { MO.failed = true; }; im.src = MO_SRC; }
+  function moirePrep(im) {
+    const IW = im.naturalWidth, IH = im.naturalHeight, P = MO_PAD, CW = IW + P * 2, CH = IH + P * 2, [S, g] = texCanvas(CW, CH);
+    { const [sil, sg] = texCanvas(CW, CH); sg.drawImage(im, P, P); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = '#071216'; sg.fillRect(0, 0, CW, CH);
+      g.globalAlpha = .85; for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; g.drawImage(sil, Math.cos(a) * 2.6, Math.sin(a) * 2.6); } g.globalAlpha = 1; retire(sil); } // an ink line round her, as round everything painted here
+    g.drawImage(im, P, P);
+    // graded into the hall's light: the deep's blue-green over all, deeper below, a little gold where the rose window's light falls
+    g.globalCompositeOperation = 'source-atop';
+    const gr = g.createLinearGradient(0, 0, 0, CH); gr.addColorStop(0, 'rgba(30,96,116,.10)'); gr.addColorStop(.6, 'rgba(14,52,84,.17)'); gr.addColorStop(1, 'rgba(6,20,38,.38)'); g.fillStyle = gr; g.fillRect(0, 0, CW, CH);
+    const gl = g.createRadialGradient(CW * .62, 0, 10, CW * .62, 0, CW * .62); gl.addColorStop(0, 'rgba(255,224,160,.12)'); gl.addColorStop(1, 'rgba(255,224,160,0)'); g.fillStyle = gl; g.fillRect(0, 0, CW, CH);
+    g.globalAlpha = .2; g.fillStyle = texPat(g, 'brush'); g.fillRect(0, 0, CW, CH); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    // the grid, and what sways at each of its points
+    const rows = MO_GRID.split('|'), nx = rows[0].length, ny = rows.length, q = IW / MO_W, n = nx * ny;
+    const U = new Float32Array(n), V = new Float32Array(n), wh = new Float32Array(n), wc = new Float32Array(n), wb = new Float32Array(n), ph = new Float32Array(n);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const k = j * nx + i, c = rows[j].charCodeAt(i) || 46, u = Math.min(i * MO_CS * q, IW), v = Math.min(j * MO_CS * q, IH);
+      U[k] = u; V[k] = v; if (c >= 97) wh[k] = (c - 96) / 26; else if (c >= 65 && c <= 90) wc[k] = (c - 64) / 26;
+      const bx = (u / q - 318) / 92, by = (v / q - 290) / 64; wb[k] = Math.max(0, 1 - bx * bx - by * by) ** 2; // her breast, rising and falling
+      ph[k] = wh[k] ? Math.hypot(u / q - 345, (v / q - 70) * 1.1) * .016 : v / q * .011 - u / q * .006; } // the wave runs out along her hair from her head; down and across the cloth
+    // the still picture has the swaying cells cut out of it; they are drawn bent over the holes
+    const [B, bgc] = texCanvas(CW, CH); bgc.drawImage(S, 0, 0); const cells = [];
+    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const k = j * nx + i;
+      if (![k, k + 1, k + nx, k + nx + 1].some(m => wh[m] || wc[m] || wb[m] > .002)) continue;
+      const sx = P + U[k], sy = P + V[k], cw = U[k + 1] - U[k], ch = V[k + nx] - V[k]; if (cw < 1 || ch < 1) continue;
+      cells.push(sx, sy, cw, ch, k); bgc.clearRect(sx, sy, cw, ch); }
+    Object.assign(MO, { S, B, cells, nx, U, V, wh, wc, wb, ph, IW, IH, VX: new Float32Array(n), VY: new Float32Array(n), ok: true });
+  }
+  // the picture with its top left at (x0, y0), s world units to each of its pixels
+  function moireDraw(x0, y0, s, t) {
+    const M = MO, P = MO_PAD, nx = M.nx, n = M.U.length, VX = M.VX, VY = M.VY, U = M.U, V = M.V, IH = M.IH, q = M.IW / MO_W;
+    const surge = (Math.sin(t * .37) * .6 + Math.sin(t * .23 + 1) * .4) * q; // the current's slow swell
+    for (let k = 0; k < n; k++) { let dx = 0, dy = 0; const h = M.wh[k], c = M.wc[k], b = M.wb[k];
+      if (h) { const a = t * 1.15 - M.ph[k]; dx += h * ((3.4 * Math.sin(a) + 1.3 * Math.sin(a * 1.9 + 1.3)) * q + 2 * surge); dy += h * 1.7 * q * Math.cos(a * .8 + .5); }
+      if (c) { const a = t * .95 - M.ph[k]; dx += c * ((3 * Math.sin(a) + 1 * Math.sin(t * 1.7 + U[k] * .03)) * q + 1.3 * surge); dy += c * 1.3 * q * Math.cos(a * 1.1) * cl01((IH - V[k]) / (60 * q)); } // (the hem stays down at the frame)
+      if (b) dy -= b * 1.3 * q * (.5 + .5 * Math.sin(t * 1.25));
+      VX[k] = x0 + (P + U[k] + dx) * s; VY[k] = y0 + (P + V[k] + dy) * s; }
+    ctx.drawImage(M.B, x0, y0, M.B.width * s, M.B.height * s);
+    const T0 = ctx.getTransform(), ma = T0.a, mb = T0.b, mc = T0.c, md = T0.d, me = T0.e, mf = T0.f, C = M.cells, S = M.S;
+    for (let i = 0; i < C.length; i += 5) { const sx = C[i], sy = C[i + 1], cw = C[i + 2], ch = C[i + 3], k = C[i + 4];
+      const x = VX[k], y = VY[k], ax = (VX[k + 1] - x) / cw, ay = (VY[k + 1] - y) / cw, bx = (VX[k + nx] - x) / ch, by = (VY[k + nx] - y) / ch, ex = x - ax * sx - bx * sy, ey = y - ay * sx - by * sy;
+      ctx.setTransform(ma * ax + mc * ay, mb * ax + md * ay, ma * bx + mc * by, mb * bx + md * by, ma * ex + mc * ey + me, mb * ex + md * ey + mf);
+      ctx.drawImage(S, sx - 1, sy - 1, cw + 2, ch + 2, sx - 1, sy - 1, cw + 2, ch + 2); } // each a pixel larger all round, so no seam opens between them
+    ctx.setTransform(T0);
+  }
+  // where things stand in the panel: the picture on the right, standing on the frame's lower edge (her shell fades out
+  // above), a column in front of its left edge; the niche and the rose window centred behind her
+  function moireLay() {
+    const Y0 = Y_OFF, H = VH - Y0, s = (H + 6) * .86 / MO_H, x0 = Math.max(VW - 1072 * s - 8, VW * .36), ax = x0 + 420 * s;
+    return { Y0, H, s, x0, y0: VH + 4 - (MO_H + MO_PAD) * s, wall: Y0 + H * .8, fl: Y0 + H * .92, col: x0 + 7, ax, ar: 470 * s, wx: ax, wy: Y0 + H * .1, lx: x0 + 1010 * s };
+  }
+  // the hall behind her, painted once into its own canvas
+  function moireHall(L) {
+    const key = [VW, K, L.H, L.x0.toFixed(1)].join(); if (MO.bg && MO.bgKey === key) return MO.bg;
+    retire(MO.bg); const H = L.H, [c, g] = texCanvas(Math.ceil(VW * K), Math.ceil(H * K)), rnd = mulberry(77), PA = W7.PAL || {};
+    const gold = PA.gold || '#C89A3A', goldL = PA.goldL || '#F2D68A', goldD = PA.goldD || '#6A4A18', wall = L.wall - L.Y0, ax = L.ax, ar = L.ar, wx = L.wx, wy = L.wy - L.Y0;
+    g.scale(K, K);
+    { const gr = g.createLinearGradient(0, 0, 0, wall); gr.addColorStop(0, '#060E1A'); gr.addColorStop(.6, '#0E2232'); gr.addColorStop(1, '#14303C'); g.fillStyle = gr; g.fillRect(0, 0, VW, wall); }
+    for (let i = 0; i < 1500; i++) { g.fillStyle = rnd() < .08 ? 'rgba(200,160,80,.35)' : `rgba(${rnd() < .5 ? '40,90,110' : '10,30,40'},.35)`; g.fillRect(rnd() * VW, rnd() * wall, 1.8, 1.8); } // the wall's dim mosaic
+    // blind arcades down the wall on his side, gold in their spandrels
+    for (let x = 30; x < L.x0 - 24; x += 62) { g.fillStyle = '#0A1A24'; g.beginPath(); g.moveTo(x - 24, wall); g.lineTo(x - 24, wall - 120); g.arc(x, wall - 120, 24, Math.PI, 0); g.lineTo(x + 24, wall); g.closePath(); g.fill();
+      g.strokeStyle = goldD; g.lineWidth = 2; g.stroke(); g.fillStyle = 'rgba(200,160,80,.25)'; g.fillRect(x + 28, wall - 160, 5, 18); }
+    // the niche behind her throne: a half-dome of dim gold mosaic, mosaic waves at its foot
+    g.save(); g.beginPath(); g.moveTo(ax - ar, wall); g.lineTo(ax - ar, wall - H * .55); g.ellipse(ax, wall - H * .55, ar, H * .45, 0, Math.PI, 0); g.lineTo(ax + ar, wall); g.closePath(); g.clip();
+    { const gr = g.createRadialGradient(ax, wall - H * .6, 10, ax, wall - H * .5, ar * 1.2); gr.addColorStop(0, '#8A6A2A'); gr.addColorStop(.6, '#4A3A1A'); gr.addColorStop(1, '#1A1608'); g.fillStyle = gr; g.fillRect(ax - ar, 0, ar * 2, wall); }
+    for (let y = 0; y < wall; y += 2.6) for (let x = ax - ar + (Math.floor(y / 2.6) % 2) * 1.3; x < ax + ar; x += 2.6) { const k = rnd(); g.fillStyle = k < .09 ? (rnd() < .6 ? gold : goldL) : shade('#4A3A1C', (rnd() - .5) * .24); g.globalAlpha = .45 + rnd() * .3; g.fillRect(x, y, 2.2, 2.2); } g.globalAlpha = 1;
+    g.globalAlpha = .9; for (let row = 0; row < 3; row++) for (let k = -9; k <= 9; k++) { const x = ax + k * 22 + (row % 2) * 11, y = wall - 12 - row * 10; g.strokeStyle = row % 2 ? '#3A7A8A' : '#5AAAB4'; g.lineWidth = 2.6; g.beginPath(); g.arc(x, y, 9, Math.PI, 0); g.stroke(); } g.globalAlpha = 1;
+    { const sh = g.createLinearGradient(0, 0, 0, wall); sh.addColorStop(0, 'rgba(4,10,16,.62)'); sh.addColorStop(.5, 'rgba(4,10,16,.3)'); sh.addColorStop(1, 'rgba(4,10,16,.55)'); g.fillStyle = sh; g.fillRect(ax - ar, 0, ar * 2, wall);
+      const sd = g.createLinearGradient(ax - ar, 0, ax + ar, 0); sd.addColorStop(0, 'rgba(4,10,16,.5)'); sd.addColorStop(.3, 'rgba(4,10,16,0)'); sd.addColorStop(.7, 'rgba(4,10,16,0)'); sd.addColorStop(1, 'rgba(4,10,16,.5)'); g.fillStyle = sd; g.fillRect(ax - ar, 0, ar * 2, wall); } // dimmed by the deep, darker into its curve
+    g.restore();
+    g.strokeStyle = goldD; g.lineWidth = 6; g.beginPath(); g.moveTo(ax - ar - 3, wall); g.lineTo(ax - ar - 3, wall - H * .55); g.ellipse(ax, wall - H * .55, ar + 3, H * .45 + 3, 0, Math.PI, 0); g.lineTo(ax + ar + 3, wall); g.stroke(); g.strokeStyle = gold; g.lineWidth = 1.4; g.stroke(); // its rim
+    // the rose window, the sea's light behind its glass
+    { const rr = Math.min(30, H * .11), GL = ['#2A5AB8', '#2E8A6A', '#1E3A8A', '#4A98B0', '#6A3AA8', '#C8962E'];
+      g.fillStyle = '#04080E'; g.beginPath(); g.arc(wx, wy, rr + 4, 0, TAU); g.fill();
+      for (let k = 0; k < 12; k++) { const a0 = k / 12 * TAU, a1 = (k + 1) / 12 * TAU; g.fillStyle = GL[k % GL.length]; g.globalAlpha = .7; g.beginPath(); g.moveTo(wx, wy); g.arc(wx, wy, rr, a0 + .04, a1 - .04); g.closePath(); g.fill(); }
+      g.globalAlpha = 1; g.fillStyle = '#C8D8F0'; g.beginPath(); g.arc(wx, wy, rr * .24, 0, TAU); g.fill(); g.strokeStyle = '#04080E'; g.lineWidth = 2;
+      for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; g.beginPath(); g.moveTo(wx + Math.cos(a) * rr * .24, wy + Math.sin(a) * rr * .24); g.lineTo(wx + Math.cos(a) * rr, wy + Math.sin(a) * rr); g.stroke(); }
+      g.beginPath(); g.arc(wx, wy, rr * .62, 0, TAU); g.stroke(); g.strokeStyle = goldD; g.lineWidth = 3; g.beginPath(); g.arc(wx, wy, rr + 3, 0, TAU); g.stroke(); g.strokeStyle = gold; g.lineWidth = 1; g.stroke();
+      g.save(); g.globalCompositeOperation = 'lighter'; const gw = g.createRadialGradient(wx, wy, 0, wx, wy, rr * 2.4); gw.addColorStop(0, 'rgba(120,170,230,.28)'); gw.addColorStop(1, 'rgba(120,170,230,0)'); g.fillStyle = gw; g.fillRect(wx - rr * 2.4, wy - rr * 2.4, rr * 4.8, rr * 4.8); g.restore(); }
+    // a lamp of pearl on its long chain, to the right of the niche
+    if (L.lx < VW - 8) { const x = L.lx, y = H * .36; g.strokeStyle = 'rgba(160,140,90,.6)'; g.lineWidth = .8; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, y - 8); g.stroke();
+      g.fillStyle = gold; g.fillRect(x - 6, y - 8, 12, 3); g.fillStyle = '#F2EEF8'; g.beginPath(); g.arc(x, y, 5, 0, TAU); g.fill(); g.strokeStyle = '#071216'; g.lineWidth = .8; g.stroke();
+      g.save(); g.globalCompositeOperation = 'lighter'; const gp = g.createRadialGradient(x, y, 0, x, y, 30); gp.addColorStop(0, 'rgba(236,232,246,.4)'); gp.addColorStop(1, 'rgba(236,232,246,0)'); g.fillStyle = gp; g.fillRect(x - 30, y - 30, 60, 60); g.restore(); }
+    // a column of green bronze at the far left, gilded at capital and base
+    { const x = 12, w = 16, top = -4; const gr = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0); gr.addColorStop(0, '#8ACCB0'); gr.addColorStop(.35, '#3E8A72'); gr.addColorStop(1, '#0E2A22'); g.fillStyle = gr; g.fillRect(x - w / 2, top, w, wall - top);
+      g.fillStyle = goldD; g.fillRect(x - w * .75, wall - 12, w * 1.5, 12); g.fillStyle = gold; g.fillRect(x - w * .75, wall - 12, w * 1.5, 2); }
+    // the floor: polished slate with lapis in it, a border of gold and lapis mosaic along the wall
+    { const gr = g.createLinearGradient(0, wall, 0, H); gr.addColorStop(0, '#16283A'); gr.addColorStop(.45, '#1E3448'); gr.addColorStop(1, '#0A1420'); g.fillStyle = gr; g.fillRect(0, wall, VW, H - wall); }
+    for (let i = 0; i < 700; i++) { g.fillStyle = rnd() < .5 ? 'rgba(80,120,170,.09)' : 'rgba(0,0,0,.13)'; g.fillRect(rnd() * VW, wall + rnd() * (H - wall), 2, 1.4); }
+    g.fillStyle = goldD; g.fillRect(0, wall, VW, 6); for (let x = 0; x < VW; x += 8) { g.fillStyle = (x / 8) % 2 ? gold : '#2A4A6A'; g.fillRect(x + 1, wall + 1, 6, 4); }
+    g.save(); g.globalAlpha = .35; g.fillStyle = texPat(g, 'sky'); g.fillRect(0, 0, VW, wall); g.restore(); // long brushstrokes in the water
+    MO.bg = c; MO.bgKey = key; return c;
+  }
+  // the column standing before the left edge of her niche (and of the picture)
+  function moireColumn(L) {
+    const x = L.col, w = 18, top = L.Y0 - 4, base = VH - 3, gr = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0), PA = W7.PAL || {};
+    gr.addColorStop(0, '#8ACCB0'); gr.addColorStop(.35, '#3E8A72'); gr.addColorStop(1, '#0E2A22'); ctx.fillStyle = gr; ctx.fillRect(x - w / 2, top, w, base - top);
+    ctx.strokeStyle = 'rgba(4,20,16,.5)'; ctx.lineWidth = .8; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(x + k * w * .18, top + 30); ctx.lineTo(x + k * w * .18, base - 12); ctx.stroke(); }
+    ctx.fillStyle = PA.gold || PAL_GOLD; ctx.beginPath(); ctx.moveTo(x - w * .9, L.Y0 + 14); ctx.lineTo(x + w * .9, L.Y0 + 14); ctx.lineTo(x + w * .55, L.Y0 + 26); ctx.lineTo(x - w * .55, L.Y0 + 26); ctx.closePath(); ctx.fill(); ctx.fillStyle = PA.goldL || '#F2D68A'; ctx.fillRect(x - w * .9, L.Y0 + 12, w * 1.8, 2.4);
+    ctx.fillStyle = PA.goldD || '#6A4A18'; ctx.fillRect(x - w * .8, base - 12, w * 1.6, 14); ctx.fillStyle = PA.gold || PAL_GOLD; ctx.fillRect(x - w * .8, base - 12, w * 1.6, 2);
+    ctx.strokeStyle = '#071216'; ctx.lineWidth = 1; ctx.strokeRect(x - w / 2, top, w, base - top);
+  }
+  // if the picture could not be had: her empty throne of nacre, lit
+  function moireFallback(L, t) {
+    const x = L.x0 + 150 * L.s * 2, y = L.wall, r = L.H * .42;
+    ctx.save(); ctx.fillStyle = '#E6DCD4'; ctx.beginPath(); ctx.moveTo(x - r, y); for (let k = 0; k <= 7; k++) { const a = Math.PI + k / 7 * Math.PI; ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 1.1); } ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = PAL_GOLD; ctx.lineWidth = 3; ctx.stroke(); for (let k = 1; k < 7; k++) { const a = Math.PI + k / 7 * Math.PI; ctx.strokeStyle = k % 2 ? 'rgba(170,150,190,.6)' : 'rgba(150,200,190,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * r * .95, y + Math.sin(a) * r * 1.05); ctx.stroke(); }
+    ctx.restore(); if (W7.drawPearl) W7.drawPearl(x, y - r * .5, L.H / 200, t, true);
   }
   function panelMoire(T, t) {
-    const Y0 = Y_OFF, H = VH - Y0, fl = Y0 + H * .8;
-    const g = ctx.createLinearGradient(0, Y0, 0, VH); g.addColorStop(0, '#0A2232'); g.addColorStop(.7, '#1A4A5A'); g.addColorStop(1, '#0C2028'); ctx.fillStyle = g; ctx.fillRect(0, Y0, VW, H);
-    for (let i = 0; i < 6; i++) { const x = VW * (.08 + i * .17); ctx.fillStyle = 'rgba(200,220,214,.18)'; ctx.fillRect(x - 10, Y0, 20, fl - Y0); ctx.fillStyle = 'rgba(4,14,20,.5)'; ctx.beginPath(); ctx.moveTo(x + 10, fl); ctx.lineTo(x + 10, Y0 + 60); ctx.quadraticCurveTo(x + VW * .085, Y0 + 20, x + VW * .17 - 10, Y0 + 60); ctx.lineTo(x + VW * .17 - 10, fl); ctx.fill(); } // arcades of nacre
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 9; i++) { const x = VW * .62 + (i - 4) * 18; const gg = ctx.createLinearGradient(0, Y0, 0, fl); gg.addColorStop(0, 'rgba(255,220,150,.22)'); gg.addColorStop(1, 'rgba(255,220,150,0)'); ctx.strokeStyle = gg; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(VW * .62, Y0); ctx.lineTo(x * 1.4 - VW * .25, fl); ctx.stroke(); } ctx.restore(); // gold rays on her
-    ctx.fillStyle = '#24485A'; ctx.fillRect(0, fl, VW, VH - fl); for (let k = 0; k < 3; k++) { ctx.fillStyle = k % 2 ? '#2E5868' : '#3A6878'; ctx.fillRect(VW * .5 + k * 14, fl - 8 - k * 8, VW * .3 - k * 28, 8); }
-    moire(VW * .65, fl - 24, H / 170, t);
-    hero(VW * .3, fl + 4, H / 210, 1, 'idle', 0, 1);
-    if (W7.drawPearl) { ctx.save(); W7.drawPearl(VW * .3 + 14 * H / 210, fl - 40 * H / 210, H / 260, t, true); ctx.restore(); }
-    textPanel(LINES.c, VW * .06, Y0 + H * .14, VW * .4, cl01((T - SECT[2] - .7) / 1) * (1 - cl01((T - SECT[3] + .7) / .6)), 10, '232,248,240');
+    const L = moireLay(), Y0 = L.Y0, H = L.H, fl = L.fl;
+    ctx.drawImage(moireHall(L), 0, Y0, VW, H);
+    // the rose window's light let down through the water onto her, its shafts slowly swaying
+    const shafts = (k) => { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 4; i++) { const sw = Math.sin(t * .5 + i * 1.7) * 10, a = k * (.05 + .025 * Math.sin(t * .8 + i * 2.1)), x1 = L.x0 + (120 + i * 230) * L.s + sw, w0 = 5 + i, w1 = 22 + i * 6;
+        const gg = ctx.createLinearGradient(L.wx, L.wy, x1, VH); gg.addColorStop(0, `rgba(190,220,240,${a})`); gg.addColorStop(1, 'rgba(190,220,240,0)'); ctx.fillStyle = gg;
+        for (const f of [1, .66, .33]) { ctx.beginPath(); ctx.moveTo(L.wx - w0 * f, L.wy); ctx.lineTo(L.wx + w0 * f, L.wy); ctx.lineTo(x1 + w1 * f, VH); ctx.lineTo(x1 - w1 * f, VH); ctx.closePath(); ctx.fill(); } } // (each laid three times, narrower each time: soft-edged)
+      ctx.restore(); };
+    shafts(1);
+    if (MO.ok) moireDraw(L.x0 - MO_PAD * L.s, L.y0, L.s * MO_W / MO.IW, t); else moireFallback(L, t);
+    shafts(.35); // and a little of it on her
+    moireColumn(L);
+    // bubbles going up through the hall, and motes adrift in the current
+    ctx.save(); for (let i = 0; i < 18; i++) { const sp = 14 + hsh(i + 40) * 16, y = VH + 6 - ((t * sp + hsh(i + 41) * H) % (H + 12)), x = (i < 10 ? L.x0 + hsh(i + 42) * 400 * L.s : hsh(i + 42) * VW) + Math.sin(t * 1.3 + i * 2.3) * 3, r = .7 + hsh(i + 43) * 1.5;
+      ctx.strokeStyle = 'rgba(220,245,240,.45)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillRect(x - r * .5, y - r * .5, .7, .7); }
+    ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 26; i++) { const x = (hsh(i + 60) * VW + t * (5 + hsh(i + 61) * 6)) % VW, y = Y0 + hsh(i + 62) * H + Math.sin(t * .7 + i) * 4; ctx.fillStyle = `rgba(190,230,220,${.12 + .1 * Math.sin(t * 1.4 + i * 3)})`; ctx.fillRect(x, y, 1.2, 1.2); }
+    ctx.restore();
+    const hx = Math.max(VW * .13, L.x0 * .46), hs = H / 165;
+    hero(hx, fl + 4, hs, 1, 'idle', 0, 1);
+    if (W7.drawPearl) { ctx.save(); W7.drawPearl(hx + 14 * hs, fl - 40 * hs, H / 210, t, true); ctx.restore(); }
+    textPanel(LINES.c, VW * .045, Y0 + H * .1, Math.max(150, Math.min(VW * .36, L.x0 + 30 - VW * .045)), cl01((T - SECT[2] - .7) / 1) * (1 - cl01((T - SECT[3] + .7) / .6)), 10, '232,248,240');
   }
   // ---------------- D: the shore at dawn: Amber above the water, Rebma in it ----------------
   function panelShore(T, t) {
@@ -229,7 +330,7 @@
     }
     const fadeIn = (s) => cl01((T - s) / .8), fadeOut = (s) => cl01((T - (s - .8)) / .8);
     if (T < SECT[2]) { panelPattern(T, t); brushOver(); }
-    else if (T < SECT[3]) { panelMoire(T, t); brushOver(); }
+    else if (T < SECT[3]) { panelMoire(T, t); brushOver(MO.ok); } // (over her picture, the brush's grain but not the long strokes of the water: those are in the hall behind her)
     else if (T < SECT[4] + 1.2) { panelShore(T, t); brushOver(); }
     for (const s of [SECT[1] + .8, SECT[2], SECT[3]]) { const a = 1 - fadeIn(s); if (T >= s && a > 0) { ctx.fillStyle = `rgba(4,8,16,${a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF); } }
     for (const s of [SECT[2], SECT[3]]) { const a = fadeOut(s); if (T < s && a > 0) { ctx.fillStyle = `rgba(4,8,16,${a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF); } }
