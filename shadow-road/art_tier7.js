@@ -4,9 +4,9 @@
 // (NG+ can push levels higher) draws the level-7 form; level 6 falls through to art_tier6.js, lower levels to drawWeapon.
 //   hammer  Judgment: the Jewel of Judgment cut as a maul's head, a great faceted ruby in gold claws, the Pattern
 //           turning in its depths, its heart beating, and a ring of storm cloud circling it (the Jewel rules the weather)
-//   staff   the Unicorn's Horn: a staff of spiralled pearl shimmering with every colour, the Unicorn of Amber's horn
-//           for its point, a mane of light streaming back from a gold coronet, a tail of silver hair from the far end,
-//           and the light that passes the horn's point split into a little rainbow
+//   staff   the Logrus Stave: two strands of black Chaos-iron twisted round a core of green Chaos-fire, the twist crawling
+//           slowly along it; at either end a crown of writhing iron tines, the Logrus's shifting lines, holding a turning
+//           shard of Chaos-crystal, with now and then a thread of lightning snapping from a tine to the shard's point
 //   sword   the Trumpblade: the blade is a window cut into Shadow, the land seen through it walking past and changing
 //           (dusk over Kolvir, night, aurora, the red sky of Chaos), rimmed in silver with light splitting at its edges;
 //           its guard is a fan of Trumps, one of them always cold with a contact
@@ -115,82 +115,70 @@ function t7Hammer(pose) {
 }
 
 // ======================================================================================================
-// THE UNICORN'S HORN — a staff of spiralled pearl, the Unicorn of Amber's horn for its point
+// THE LOGRUS STAVE — black Chaos-iron twisted round a core of green Chaos-fire, the Logrus writhing at either end
 // ======================================================================================================
+// Two strands of black iron wound about a core of green Chaos-fire, the twist crawling slowly along the staff with light
+// travelling down the core between the strands. Each end is a crown of curved iron tines, never quite still, like the
+// Logrus's own shifting lines, and holds a long shard of Chaos-crystal that turns slowly; now and then a thread of the
+// Logrus's lightning snaps from a tine to the shard's point. The far end is the same crown a little smaller, so either
+// end looks right when the staff slides through the hands.
 function t7Staff(pose) {
-  const now = t7Now(), plain = t6Plain(), len = 62, back = -30, pulse = .5 + .5 * Math.sin(now * .9), hx = len + 32; // hx: the horn's point
-  const sc = pose.noHand ? .86 : 1; if (sc !== 1) { ctx.save(); ctx.translate(15, 0); ctx.scale(sc, sc); ctx.translate(-24, 0); } // the card portrait: kept inside its frame
-  const hue = (x) => ((x * 2.6 - now * 36) % 360 + 360) % 360;
-
-  // the light through the horn's point, split into a little rainbow that fans out ahead of it
-  t6Add(() => { const sp = .055 + .012 * Math.sin(now * .7); for (let i = 0; i < 6; i++) { const a = (i - 2.5) * sp, Lr = 20 + 3 * Math.sin(now * .8 + i);
-    ctx.fillStyle = `hsla(${i * 52},95%,62%,${.17 + .06 * pulse})`; ctx.beginPath(); ctx.moveTo(hx - 2, 0); ctx.lineTo(hx + Math.cos(a - sp / 2) * Lr, Math.sin(a - sp / 2) * Lr); ctx.lineTo(hx + Math.cos(a + sp / 2) * Lr, Math.sin(a + sp / 2) * Lr); ctx.closePath(); ctx.fill(); } });
-  // a lock of hair: a tapered ribbon, white with a pearly sheen and a fine light down it
-  const lock = (pts, w0, w1, col) => { t7Ribbon(pts, w0, w1); ctx.fillStyle = t6VG(-6, 10, col, .3, -.22); ctx.fill(); outline(.85);
-    if (plain) { ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = .5; ctx.beginPath(); pts.slice(1, -2).forEach(([x, y], j) => j ? ctx.lineTo(x, y - w0 * .3) : ctx.moveTo(x, y - w0 * .3)); ctx.stroke(); } };
-  // the tail: a full horse's tail of silver-white hair streaming from the far end in an S, swaying, its locks parting at the end
-  { const sw = Math.sin(now * 1.1) * 3, sw2 = Math.sin(now * 1.1 - 1.2) * 2.4, N = 12;
-    const cub = (k) => { const q = 1 - k, P = [[back - 1, 0], [back - 12, -1 + sw * .2], [back - 12 + sw2, 15], [back - 27 + sw, 17 + sw2 * .3]];
-      return [q * q * q * P[0][0] + 3 * q * q * k * P[1][0] + 3 * q * k * k * P[2][0] + k * k * k * P[3][0], q * q * q * P[0][1] + 3 * q * q * k * P[1][1] + 3 * q * k * k * P[2][1] + k * k * k * P[3][1]]; };
-    for (let j = 0; j < 3; j++) { const o = (j - 1) * 2.6, lenK = [.92, 1, .84][j], pts = [];
-      for (let i = 0; i <= N; i++) { const k = i / N * lenK, [x, y] = cub(k), [x2, y2] = cub(Math.min(1, k + .02)), d = Math.hypot(x2 - x, y2 - y) || 1; pts.push([x - (y2 - y) / d * o * k * 1.6, y + (x2 - x) / d * o * k * 1.6]); }
-      lock(pts, [2.6, 3.2, 2.4][j], .3, ['#CCC8E0', '#F4F2FF', '#E2DEF2'][j]); } }
-  // the shaft: twisted pearl, a soft play of colour running over it
-  limb([back, 0, len - 6, 0], '#EFE8DA', 4.4);
-  ctx.save(); ctx.beginPath(); ctx.rect(back, -2.4, len - back, 4.8); ctx.clip();
-  for (let x = back + 1; x < len - 6; x += 3.6) { // the twist of the horn: a groove and a pearly band at each turn
-    if (plain) { ctx.strokeStyle = `hsla(${hue(x)},70%,80%,.55)`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 1.3, -2.4); ctx.lineTo(x + 3.1, 2.4); ctx.stroke(); }
-    ctx.strokeStyle = C('#A8988A'); ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(x, -2.4); ctx.lineTo(x + 1.8, 2.4); ctx.stroke();
-  }
-  if (plain) { ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(back, -1.9, len - back, .7); }
-  ctx.restore();
-  for (const x of [8, 25]) { rrect(x - 1.4, -2.9, 2.8, 5.8, 1); ctx.fillStyle = t6VG(-3, 3, '#E2B85A', .5, -.35); ctx.fill(); outline(.8); } // gold collars either side of the grip
-  // the far end: a cloven hoof shod in silver
-  t6Shape([back + 2, -3, back - 3, -3.6, back - 6.5, -1.4, back - 5, 0, back - 6.5, 1.4, back - 3, 3.6, back + 2, 3], t6VG(-3.6, 3.6, '#D4DAE8', .45, -.35), 1.1);
-  rrect(back - .5, -3.5, 3.4, 7, 1.2); ctx.fillStyle = t6VG(-3.5, 3.5, '#E2B85A', .5, -.35); ctx.fill(); outline(.9);
-  // the mane: a crest of white hair laid back along the staff from the poll, its locks rippling
-  const FX = len + 1, FY = 1.6; // the unicorn's head: its forehead sits on the staff's line
-  { const mane = () => { ctx.beginPath(); ctx.moveTo(FX - 4, FY - 4.8); let vx = FX - 6, vy = FY - 5; // each lock rises from the crest and sweeps back, its tip hooked behind the next
-      for (let i = 0; i < 5; i++) { const r = Math.sin(now * 1.5 - i * 1.1) * 1.3, tx = vx - 10 + r * .5, ty = -9.4 + i * .95 + r * .6, nx = vx - 6.2, ny = -3.4 + i * .25;
-        ctx.quadraticCurveTo(vx - 3, ty - 1.4, tx, ty); ctx.quadraticCurveTo(tx + 3.4, (ty + ny) / 2 - .4, nx, ny); vx = nx; vy = ny; }
-      ctx.quadraticCurveTo(vx - 4, -2.6, vx - 8, -1.6); ctx.lineTo(FX - 14, -1.6); ctx.closePath(); };
-    mane(); ctx.fillStyle = t6VG(-12, 0, '#EEEAFA', .4, -.2); ctx.fill(); outline(1);
-    if (plain) { ctx.strokeStyle = 'rgba(150,140,190,.55)'; ctx.lineWidth = .5; ctx.beginPath(); for (let i = 0; i < 5; i++) { const x = FX - 7 - i * 6.2; ctx.moveTo(x, -2.6); ctx.quadraticCurveTo(x - 3, -6, x - 7.5, -7 + i * .9); } ctx.stroke();
-      ctx.save(); mane(); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { const x = FX - 12 - i * 6.2; ctx.fillStyle = `hsla(${hue(x)},90%,70%,.22)`; ell(x, -6, 3.4, 2.4); ctx.fill(); } ctx.restore(); } }
-  // the head: a white unicorn's head, the horn its point
-  ctx.save(); ctx.translate(FX, FY);
-  const head = () => { ctx.beginPath(); ctx.moveTo(-15, -2.6); ctx.quadraticCurveTo(-10, -5.4, -5.6, -4.4); ctx.lineTo(-5.4, -10.4); ctx.lineTo(-2.6, -4.9);
-    ctx.quadraticCurveTo(-1, -3.6, .6, -2.8); ctx.quadraticCurveTo(5.2, .6, 8.4, 7.6); ctx.quadraticCurveTo(10.8, 11.6, 7.8, 13.4); ctx.quadraticCurveTo(5, 14.6, 2.6, 12.4);
-    ctx.quadraticCurveTo(-1.2, 13.4, -3.8, 10.4); ctx.quadraticCurveTo(-8, 5.4, -15, 2.6); ctx.closePath(); };
-  head(); const hg = ctx.createLinearGradient(-4, -6, 4, 14); hg.addColorStop(0, C('#FFFFFF')); hg.addColorStop(.55, C('#ECEAF6')); hg.addColorStop(1, C('#B4AECC')); ctx.fillStyle = hg; ctx.fill(); outline(1.3);
-  if (plain) {
-    ctx.strokeStyle = 'rgba(120,110,160,.55)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(-1.6, 6); ctx.quadraticCurveTo(-3.4, 9.6, -.6, 11.2); ctx.moveTo(-4.4, -4.3); ctx.lineTo(-4.2, -8); ctx.stroke(); // the cheek, the ear's hollow
-    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.moveTo(.4, -2); ctx.quadraticCurveTo(4.4, 1, 7.2, 6.6); ctx.lineTo(6, 6.8); ctx.quadraticCurveTo(3.4, 1.8, .2, -.8); ctx.closePath(); ctx.fill(); // light down the nose
-  }
-  ell(1.4, 2.2, 1.3, .9, .5); ctx.fillStyle = C('#1A1830'); ctx.fill(); // the eye
-  if (plain) { ctx.fillStyle = '#9AD8FF'; ctx.fillRect(1.5, 1.6, .7, .7); }
-  ell(7.6, 11.2, .7, .45, .8); ctx.fillStyle = C('#6A6488'); ctx.fill(); // the nostril
-  ctx.restore();
-  t6Halo(FX + 1.4, FY + 2.2, 4, '150,210,255', .5 + .3 * pulse);
-  // the forelock, falling over the brow
-  lock(t7Curve(FX - 4, FY - 4.6, FX - 1, FY - 6.6 + Math.sin(now * 1.6), FX + 1.6, FY - 5.4, 6), 1.8, .3, '#FFFFFF');
-  // the horn: a long spiralled cone of pearl, springing from the brow
-  const X = FX - .4, hw = (x) => 3.4 * (1 - (x - X) / (hx - X)) ** .9;
-  const horn = () => { ctx.beginPath(); ctx.moveTo(X, -3.6); ctx.quadraticCurveTo(X + 14, -2.6, hx, 0); ctx.quadraticCurveTo(X + 14, 2.6, X, 3.2); ctx.closePath(); };
-  horn(); ctx.fillStyle = t6VG(-3.6, 3.6, '#F4F0FA', .5, -.25); ctx.fill(); outline(1.2);
-  ctx.save(); horn(); ctx.clip();
-  for (let x = X + 1; x < hx - 2; x += 3) { const w = hw(x) + .6;
-    if (plain) { ctx.strokeStyle = `hsla(${hue(x + 40)},80%,78%,.7)`; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x + 1, -w); ctx.lineTo(x + 2.4, w); ctx.stroke(); }
-    ctx.strokeStyle = C('#8E86A0'); ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(x, -w); ctx.lineTo(x + 1.4, w); ctx.stroke(); }
-  if (plain) { ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(X, -2.8, hx - X, .7); }
-  ctx.restore();
-  // motes of coloured light drifting back off the horn, and a star at its point
-  t6Add(() => {
-    for (let i = 0; i < 6; i++) { const ph = (now * .2 + i / 6) % 1, x = hx - 4 - ph * 46, y = Math.sin(ph * 6 + i * 2) * (3 + ph * 7) - 4;
-      ctx.fillStyle = `hsla(${(i * 60 + now * 30) % 360},90%,78%,1)`; gbStar(x, y, 1.2 + Math.sin(ph * Math.PI) * 1.1, Math.sin(ph * Math.PI) * .85); }
-    ctx.fillStyle = 'rgba(255,255,255,.95)'; gbStar(hx, 0, 3.2 + .8 * pulse, .95); ctx.fillStyle = 'rgba(220,200,255,.5)'; gbStar(hx, 0, 6 + pulse, .4);
-  });
-  t6SwingGlow(pose, back - 10, hx - back + 12, 18);
+  const now = t7Now(), plain = t6Plain(), len = 62, back = -28, pulse = .5 + .5 * Math.sin(now * .9);
+  const sc = pose.noHand ? .86 : 1; if (sc !== 1) { ctx.save(); ctx.translate(15, 0); ctx.scale(sc, sc); ctx.translate(-22, 0); } // the card portrait: kept inside its frame
+  const IRON = '#363040', IRON2 = '#26222E', IRON3 = '#4A4458';
+  // the core: green Chaos-fire, with slow bright pulses travelling along it (seen only between the strands)
+  limb([back, 0, len, 0], plain ? '#22C487' : '#2AA878', 5);
+  t6Add(() => { ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { const p = (now * .16 + i / 3) % 1, x = back + 2 + p * (len - back - 4), a = Math.sin(p * Math.PI);
+      ctx.strokeStyle = `rgba(150,255,200,${.7 * a})`; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x - 6, 0); ctx.lineTo(x + 6, 0); ctx.stroke();
+      ctx.strokeStyle = `rgba(240,255,248,${.8 * a})`; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(x - 3.5, 0); ctx.lineTo(x + 3.5, 0); ctx.stroke(); } });
+  // the two strands of iron: the twist crawls slowly along the staff; the strand passing behind is darker
+  { const pb = new Path2D(), pf = new Path2D(), ph = new Path2D(), A = 1.4, step = 1.1, crawl = now * .7;
+    for (const s of [0, Math.PI]) for (let x = back + .6; x < len - .6; x += step) {
+      const a = x * .27 - crawl + s, y0 = Math.sin(a) * A, y1 = Math.sin(a + step * .27) * A, front = Math.cos(a) > 0, P = front ? pf : pb;
+      P.moveTo(x, y0); P.lineTo(x + step + .25, y1); if (front && plain) { ph.moveTo(x, y0 - .7); ph.lineTo(x + step + .25, y1 - .7); } }
+    ctx.lineCap = 'butt'; ctx.strokeStyle = C('#16141C'); ctx.lineWidth = 2.2; ctx.stroke(pb);
+    ctx.strokeStyle = C(IRON); ctx.lineWidth = 2.5; ctx.stroke(pf);
+    if (plain) { ctx.strokeStyle = 'rgba(200,235,225,.5)'; ctx.lineWidth = .55; ctx.stroke(ph); } }
+  ctx.lineCap = 'round';
+  for (const x of [8, 25]) { rrect(x - 1.3, -3, 2.6, 6, 1); ctx.fillStyle = t6VG(-3, 3, IRON3, .5, -.4); ctx.fill(); outline(.8); } // iron collars either side of the grip
+  // a crown of the Logrus at one end: swept iron fins inlaid with green fire round a turning shard of Chaos-crystal (drawn pointing along +x)
+  const crown = (X, dir, s, seed) => {
+    ctx.save(); ctx.translate(X, 0); ctx.scale(dir * s, s);
+    // a fin: a flat blade of iron swept forward, a channel of green fire let into it; the fins open and close a little, slowly
+    const FIN = [0, -2.4, 5, -9.5, 8.5, -11.6, 12, -10.9, 23, -6.2, 11, -6.8, 6.5, -4.6, 3, -2.2], INL = [5.2, -7.4, 9, -9.6, 18.5, -6.8];
+    const ang = (k) => .06 * Math.sin(now * .8 + seed + k * 2.2);
+    const at = ([x, y], sy, a) => [x * Math.cos(a) + y * Math.sin(a), (y * Math.cos(a) - x * Math.sin(a)) * sy]; // a fin point in the crown's frame
+    const fin = (sy, k, col) => { const a = ang(k); ctx.save(); ctx.scale(1, sy); ctx.rotate(-a);
+      t6Shape(FIN, t6VG(-12, -2, col, .5, -.35), 1);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = C('#0E5A40'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(INL[0], INL[1]); ctx.lineTo(INL[2], INL[3]); ctx.lineTo(INL[4], INL[5]); ctx.stroke();
+      t6Add(() => { ctx.strokeStyle = `rgba(110,255,190,${.6 + .35 * Math.sin(now * 1.7 + k * 2 + seed)})`; ctx.lineWidth = .65; ctx.stroke(); });
+      ctx.restore(); return at([23, -6.2], sy, a); };
+    const barb = (sy) => { ctx.save(); ctx.scale(1, sy); t6Shape([1, -2.6, -1.5, -6.5, -5, -10, -.4, -7.4, 3, -3.4], t6VG(-10, -2, IRON2, .5, -.3), .9); ctx.restore(); }; // short barbs swept back
+    barb(-1); barb(1);
+    const botTip = fin(-1, 1, IRON2);
+    // the shard: a long eight-sided crystal, its ridge turning as it rotates, floating a little
+    const sx = 3.6 + Math.sin(now * 1.1 + seed) * .5, sw = 4, r = Math.sin(now * .7 + seed) * 2.9, tip = sx + 22;
+    t6Path([sx, 0, sx + 7, -sw, tip, 0, sx + 7, r]); ctx.fillStyle = C('#A8FFD8'); ctx.fill();
+    t6Path([sx, 0, sx + 7, r, tip, 0, sx + 7, sw]); ctx.fillStyle = C('#0C7A56'); ctx.fill();
+    t6Path([sx, 0, sx + 7, -sw, tip, 0, sx + 7, sw]); outline(1);
+    if (plain) { ctx.strokeStyle = 'rgba(230,255,245,.9)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(sx + .8, 0); ctx.lineTo(sx + 7, r); ctx.lineTo(tip - .8, 0); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.75)'; t6Path([sx + 2.4, -.7, sx + 7, -sw + .9, sx + 9.5, -sw * .55]); ctx.fill(); }
+    const topTip = fin(1, 0, IRON);
+    t6Shape([-1, -3.4, 4.6, -2.8, 6.4, 0, 4.6, 2.8, -1, 3.4], t6VG(-3.4, 3.4, IRON3, .5, -.4), .9); // the clasp round the shard's foot
+    rrect(-2.5, -3.7, 4.4, 7.4, 1.4); ctx.fillStyle = t6VG(-3.7, 3.7, IRON3, .5, -.4); ctx.fill(); outline(.9); // the socket
+    circle(-.3, 0, 1.15); ctx.fillStyle = C('#6CFFC0'); ctx.fill(); outline(.5);
+    // glints, and a thread of the Logrus's lightning now and then from a tine's point to the shard's
+    t6Add(() => { ctx.fillStyle = 'rgba(235,255,245,.95)'; gbStar(tip, 0, 1.6 + .9 * pulse, .9); ctx.fillStyle = 'rgba(200,255,230,.9)'; gbStar(-.3, 0, 1, .8);
+      const c = now * .55 + seed * .37, ph = c % 1;
+      if (ph < .2) { const n = Math.floor(c), q = Math.floor(now * 14), a = 1 - ph / .2, from = n % 2 ? topTip : botTip, j = (k) => Math.sin(n * 12.9 + q * 7.3 + k * 4.1) * 1.6;
+        const pts = [from]; for (let k = 1; k < 4; k++) { const u = k / 4; pts.push([from[0] + (tip - from[0]) * u + j(k) * .4, from[1] * (1 - u) + j(k + 5)]); } pts.push([tip, 0]);
+        const line = () => { ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
+        ctx.lineJoin = 'round'; line(); ctx.strokeStyle = `rgba(60,255,170,${.5 * a})`; ctx.lineWidth = 1.5; ctx.stroke(); line(); ctx.strokeStyle = `rgba(240,255,250,${.95 * a})`; ctx.lineWidth = .55; ctx.stroke(); } });
+    ctx.restore();
+  };
+  crown(back, -1, .9, 2.3); crown(len, 1, 1.1, 0);
+  t6SwingGlow(pose, back - 26, len - back + 56, 20);
   if (sc !== 1) ctx.restore();
   if (!pose.noHand) gripHand(pose.glove || '#FFF1E0');
 }

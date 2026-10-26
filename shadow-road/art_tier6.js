@@ -163,7 +163,7 @@ function t6Staff(pose) {
   const ox = X + 14; circle(ox, 0, 4.6);
   if (plain) { const g = ctx.createRadialGradient(ox - 1.4, -1.4, 0, ox, 0, 4.6); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, '#D6E6FF'); g.addColorStop(1, '#7E98CC'); ctx.fillStyle = g; } else ctx.fillStyle = C('#D6E6FF');
   ctx.fill(); outline(1);
-  t6Halo(ox, 0, 11, '210,230,255', .5 + .2 * pulse);
+
   t6Add(() => { for (let i = 0; i < 3; i++) { const a = now * .5 + i / 3 * TAU; ctx.fillStyle = `rgba(225,238,255,${.55 + .3 * Math.sin(a)})`; circle(ox + Math.cos(a) * 3.2, Math.sin(a) * 8.6, .9 + .3 * Math.sin(a)); ctx.fill(); } }); // motes circling the moonstone
   // the near half of each ring, glowing with moonlight
   for (const r of rings) { t6Inked('#E4EEFF', 1.1, () => ringHalf(r, true)); t6Add(() => { ctx.strokeStyle = `rgba(170,210,255,${.35 + .2 * pulse})`; ctx.lineWidth = 2.6; ctx.beginPath(); ringHalf(r, true); ctx.stroke(); }); }
