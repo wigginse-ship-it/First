@@ -1285,7 +1285,7 @@
     return { L, R, nc, nr: 4, cw, y0, rh, cx: (c) => L + (c + .5) * cw, cy: (r) => y0 + (r + .5) * rh, col: (x) => clamp(Math.floor((x - L) / cw), 0, nc - 1), row: (y) => clamp(Math.floor((y - y0) / rh), 0, 3) }; };
   W6.BOARD = BOARD;
   // the patches of its quilt (the Quilt draws them, and the duvet's heave takes the colour of the patch it lifts)
-  const PATCH = ['#D89090', '#8EA8D2', '#E8D29C', '#9CC2A2', '#C4A2CC', '#F0E4CC', '#E0A878'];
+  const PATCH = ['#A8B8DC', '#8EA8D2', '#E8D29C', '#9CC2A2', '#C4B2D8', '#F0E4CC', '#B8D4C8']; // (no reds: red is what it lights)
   W6.patchCol = (c, r) => PATCH[Math.floor(hsh(c * 7.3 + r * 13.1) * PATCH.length)];
   const SHZ = ['w6drop', 'w6sheep', 'w6snore', 'w6sand', 'w6piece', 'w6rem', 'w6slap', 'w6jolt', 'w6bell', 'ring'];
   const CRUTCH_FEET = [[-200, 40], [200, 44], [-100, 86], [110, 90]];
@@ -1495,12 +1495,15 @@
         ctx.fillStyle = `rgba(226,190,116,${.4 * fa})`; ctx.fillRect(xa, y + 2, xb - xa, Bd.rh - 4);
         const ya = clamp(h.dir > 0 ? h.x : Bd.L, Bd.L, Bd.R), yb = clamp(h.dir > 0 ? Bd.R : h.x, Bd.L, Bd.R); if (yb > ya) { ctx.fillStyle = tellCol(1, .45); ctx.fillRect(ya, y + 1, yb - ya, Bd.rh - 2); } } },
     ups(h, list, t) { const Bd = BOARD(), x = h.go ? h.x : h.x + h.dir * 14, k = h.go ? 1 - cl01((h.fade || 0) / .5) : cl01((h.el - .5) / (h.wait - .5)) * .35; if (k <= 0) return;
-      for (let r = 0; r < 4; r++) { if (r === h.gap) continue; const fy = Bd.cy(r) + 4; list.push([fy, () => {
-        ctx.save(); ctx.globalAlpha = k; const top = fy - 170;
-        const g = ctx.createLinearGradient(0, top, 0, fy); g.addColorStop(0, 'rgba(232,196,120,0)'); g.addColorStop(.35, 'rgba(232,196,120,.55)'); g.addColorStop(1, 'rgba(214,170,90,.85)');
-        ctx.fillStyle = g; ctx.fillRect(x - 7, top, 14, fy - top);
-        ctx.fillStyle = '#F6DCA0'; for (let i = 0; i < 12; i++) { const gx = x + (hsh(i + r * 11) - .5) * 22, gy = top + ((t * 2.2 + hsh(i * 3 + r)) % 1) * (fy - top); ctx.fillRect(gx, gy, 2, 3); }
-        ctx.fillStyle = C('#D8B070'); ell(x, fy, 13, 4); ctx.fill(); outline(.9); // the little heap it makes
+      const back = [0, 1, 2, 3].find(r => r !== h.gap);
+      for (let r = 0; r < 4; r++) { if (r === h.gap) continue; const fy = Bd.cy(r) + 4; list.push([fy, () => { // a slanting veil of sand pouring down onto this row
+        ctx.save(); ctx.globalAlpha = k; const top = Bd.cy(back) - 150, tx = x - h.dir * 16;
+        ctx.beginPath(); ctx.moveTo(tx - 6, top); ctx.lineTo(tx + 6, top); ctx.lineTo(x + 15, fy); ctx.lineTo(x - 15, fy); ctx.closePath();
+        const g = ctx.createLinearGradient(0, top, 0, fy); g.addColorStop(0, 'rgba(232,196,120,.15)'); g.addColorStop(.4, 'rgba(232,196,120,.5)'); g.addColorStop(1, 'rgba(214,170,90,.8)'); ctx.fillStyle = g; ctx.fill();
+        ctx.fillStyle = '#F6DCA0'; for (let i = 0; i < 18; i++) { const u = (t * 2.2 + hsh(i * 3 + r)) % 1, gx = lerp(tx, x, u) + (hsh(i + r * 11) - .5) * (10 + 22 * u), gy = top + u * (fy - top); ctx.fillRect(gx, gy, 2, 3); }
+        ctx.fillStyle = C('#D8B070'); ell(x, fy, 18, 5); ctx.fill(); outline(.9); // the little heap it makes
+        if (r === back) { ctx.save(); ctx.translate(tx, top - 22); ctx.rotate(Math.PI - h.dir * .5); // the Sandman's sack, tipped, pouring
+          cel(PB([-10, 2, -13, -12, -6, -22, 6, -22, 13, -12, 10, 2]), '#8A6440', { d: 2.5, r: 1.2, w: 1.4 }); ctx.strokeStyle = C('#4A3020'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-6, -18); ctx.lineTo(6, -18); ctx.stroke(); ctx.fillStyle = C('#E8C478'); ell(0, -22, 6, 2.2); ctx.fill(); ctx.restore(); }
         ctx.restore(); }]); } },
     box(h, box) { box(camX + VW / 2, FLOOR_BOT, 0, VW / 2 + 20, 200); },
   });
@@ -1544,7 +1547,7 @@
     },
     draw(h, t) { const Bd = BOARD(), k = Math.min(1, h.el / h.wait), pos = h.el < h.wait ? -1 : (h.el - h.wait) * h.sp;
       h.path.forEach(([c, r], i) => { if (pos > i + 1.2) return; const a = pos > i ? 1 - (pos - i) / 1.2 : 1, x = Bd.L + c * Bd.cw, y = Bd.y0 + r * Bd.rh;
-        ctx.fillStyle = tellCol(k, a); ctx.fillRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.strokeStyle = tellLine(k); ctx.globalAlpha = a; ctx.lineWidth = 1.2; ctx.strokeRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.globalAlpha = 1;
+        ctx.fillStyle = tellCol(k, a * 1.5); ctx.fillRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.strokeStyle = tellLine(k); ctx.globalAlpha = a; ctx.lineWidth = 1.8; ctx.strokeRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.globalAlpha = 1;
         if (h.hop) { ctx.save(); ctx.translate(x + Bd.cw / 2 - 10, y + Bd.rh / 2); ctx.scale(1, .5); moonArt(8); ctx.restore(); ctx.fillStyle = `rgba(255,236,214,${.7 + .3 * k})`; ctx.font = '700 11px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(String(i + 1), x + Bd.cw / 2 + 8, y + Bd.rh / 2 + 4); } }); },
     ups(h, list, t) { const Bd = BOARD(); if (h.el < h.wait * .5) return; const pos = h.el < h.wait ? 0 : Math.min(h.path.length - 1, (h.el - h.wait) * h.sp), i = Math.floor(pos), f = pos - i, a = h.path[i], b = h.path[Math.min(h.path.length - 1, i + 1)];
       const x = lerp(Bd.cx(a[0]), Bd.cx(b[0]), h.hop ? sm(f) : f), y = lerp(Bd.cy(a[1]), Bd.cy(b[1]), h.hop ? sm(f) : f), z = h.hop ? Math.sin(f * Math.PI) * 64 : 0, dir = Math.sign(Bd.cx(b[0]) - Bd.cx(a[0])) || h.face || 1; h.face = dir;
