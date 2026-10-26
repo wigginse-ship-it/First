@@ -230,7 +230,7 @@ $('#quitBtn').addEventListener('click', () => { persist(); mode = 'title'; refre
 $('#musicBtn').addEventListener('click', () => { setTimeout(refreshMute); setMusic(!musicOn); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); });
 $('#retryBtn').addEventListener('click', () => play(save.stage));
 $('#overForgeBtn').addEventListener('click', () => openForge('REGROUP AND REFORGE'));
-$('#cycleBtn').addEventListener('click', () => { save.cycle++; save.stage = 0; persist(); openForge('CYCLE ' + (save.cycle + 1) + ' BEGINS'); });
+$('#cycleBtn').addEventListener('click', () => { save.cycle++; save.stage = 0; save.silverArm = true; save.owned.fists = true; save.weapon = 'fists'; persist(); openForge('CYCLE ' + (save.cycle + 1) + ' BEGINS'); }); // (a new cycle starts with Benedict's silver arm on)
 onKeyMenu = (e) => {
   if (mode === 'inv') return invKey(e); // the inventory has its own keys (inventory.js)
   if (e.code === 'Enter' || e.code === 'NumpadEnter') { // Enter takes the main choice on any menu
