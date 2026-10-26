@@ -639,21 +639,21 @@ const CORWIN = (() => {
       fstroke(paths, hsh(s + 12) < .27 ? 1 : 0, x, y, Dx, Dy, -dy * bend + trx * lag, dx * bend + try_ * lag, w);
     };
     // off the hem: down the fall of the cloth and out from it
-    const nh = Math.round((u1 - u0) * (fine ? 18 : 9));
+    const nh = Math.round((u1 - u0) * (fine ? 34 : 14));
     for (let m = 0; m < nh; m++) { const [e, sd] = life(m * 31.7 + salt); if (e < .08) continue;
       const u = u0 + (u1 - u0) * (m + .2 + .6 * hsh(sd)) / nh, v = .8 + hsh(sd + 1) * .14; uv(Pt, u, v - .12); const ax = UX, ay = UY; uv(Pt, u, v);
       let tx = UX - ax, ty = UY - ay; const tl = Math.hypot(tx, ty) || 1; let ox = UX - cx, oy = UY - cy; const ol = Math.hypot(ox, oy) || 1, j = (hsh(sd + 2) - .5) * .5;
       let dx = tx / tl * .85 + ox / ol * .45 + trx * 1.2 + j, dy = ty / tl * .85 + oy / ol * .45 + try_ * 1.2 - j * .3; const dl = Math.hypot(dx, dy) || 1;
-      emit(UX, UY, dx / dl, dy / dl, (6 + hsh(sd + 3) * 13) * (1 + sp * .7) * e, 1.3 + hsh(sd + 4) * 2.6, sd); }
+      emit(UX, UY, dx / dl, dy / dl, (9 + Math.pow(hsh(sd + 3), .8) * 22) * (1 + sp * .7) * e * (pose.down ? .4 : 1), 1.6 + Math.pow(hsh(sd + 4), 1.6) * 5.5, sd); }
     // off the outer edges, row by row down the cloth: wherever the cloth stands out past his body, out from it and down
-    const i0 = Math.ceil(u0 * (S - 1) - 1e-3), i1 = Math.floor(u1 * (S - 1) + 1e-3), per = fine ? 2 : 1;
-    for (let r = 0; r < 5; r++) { const v = .26 + r * .15; let xn = 1e9, yn = 0, xx = -1e9, yx = 0;
+    const i0 = Math.ceil(u0 * (S - 1) - 1e-3), i1 = Math.floor(u1 * (S - 1) + 1e-3), per = pose.down ? 0 : fine ? 3 : 1; // (knocked flat, only a few short smears off the hem)
+    for (let r = 0; r < 7; r++) { const v = .22 + r * .12; let xn = 1e9, yn = 0, xx = -1e9, yx = 0;
       for (let i = i0 - 1; i <= i1 + 1; i++) { const u = clamp(i / (S - 1), u0, u1); uv(Pt, u, v); if (UX < xn) { xn = UX; yn = UY; } if (UX > xx) { xx = UX; yx = UY; } }
       for (const sg of [-1, 1]) { const x = sg < 0 ? xn : xx, y = sg < 0 ? yn : yx; if (x * sg < 9) continue;
         for (let k = 0; k < per; k++) { const [e, sd] = life(r * 13.1 + (sg + 1) * 41 + k * 7.7 + salt); if (e < .08) continue;
-          const j = (hsh(sd + 2) - .5) * .6, dy0 = .55 + hsh(sd + 5) * .5 + v * .3; let dx = sg * .8 + trx * 1.3 + j * .4, dy = dy0 + try_ * 1.3; const dl = Math.hypot(dx, dy) || 1;
-          emit(x - sg * 2.5, y + (hsh(sd + 6) - .5) * 6, dx / dl, dy / dl, (5 + hsh(sd + 3) * 11) * (.8 + v * .6) * (1 + sp * .8) * e, 1.2 + hsh(sd + 4) * 2.2, sd); } } }
-    const cols = [C(lining ? (L.cloakLining || '#0B0A0E') : L.cloak), C(L.cloakSlate)], base = [lining ? .4 : .5, .36];
+          const j = (hsh(sd + 2) - .5) * .5, dy0 = .2 + hsh(sd + 5) * .45 + v * .25; let dx = sg + trx * 1.3 + j * .3, dy = dy0 + try_ * 1.3; const dl = Math.hypot(dx, dy) || 1;
+          emit(x - sg * 1.5, y + (hsh(sd + 6) - .5) * 7, dx / dl, dy / dl, (7 + Math.pow(hsh(sd + 3), .8) * 18) * (.7 + v * .7) * (1 + sp * .8) * e, 1.4 + Math.pow(hsh(sd + 4), 1.6) * 5, sd); } } }
+    const cols = [C(lining ? (L.cloakLining || '#0B0A0E') : L.cloak), C(L.cloakSlate)], base = [lining ? .45 : .55, .42];
     const draw = () => { const ga = ctx.globalAlpha; for (let c = 0; c < 2; c++) { ctx.fillStyle = cols[c]; for (let q = 0; q < 4; q++) { ctx.globalAlpha = ga * base[c] * FR_A[q]; ctx.fill(paths[c * 4 + q]); } } ctx.globalAlpha = ga; };
     if (!layer) { draw(); return; }
     const m = ctx.getTransform(), a = ctx.globalAlpha;

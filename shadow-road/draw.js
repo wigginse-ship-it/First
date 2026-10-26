@@ -226,7 +226,7 @@ function playerPose() {
   else if (P.state === 'hurt') { // as in the strip: struck, he braces wide and low, chest thrown open toward us, the arms
     // flung out from his sides and the head snapped back, then he gathers himself
     const hk = clamp(1 - P.t / (P.knocked ? .45 : .3), 0, 1), j = 1 - ease(hk);
-    pose.yaw = .72; pose.legs = { f: -12, b: 13, fk: 7 + 2 * j, bk: 7 + 2 * j, w: 1.8 }; // (turned to us, the far foot ahead and the near one back read as a wide, square base, as in the idle) pose.sink = 5 + 3 * Math.sin(Math.PI * hk);
+    pose.yaw = .72; pose.legs = { f: -12, b: 13, fk: 7 + 2 * j, bk: 7 + 2 * j, w: 1.8 }; pose.sink = 5 + 3 * Math.sin(Math.PI * hk); // (turned to us, the far foot ahead and the near one back read as a wide, square base, as in the idle)
     pose.lean = -.3 * j - .06; pose.openHand = 0; pose.flow = -6 * j;
     // the arms flung wide by the blow, as in the sheet: turned less far to us, so one arm is thrown out ahead and up, the other out behind
     pose.yaw = .42; pose.arm = lerp(.05, .55, hk); pose.elbow = lerp(.25, .6, hk); pose.backArm = lerp(3.55, 3.1, hk); pose.backElbow = lerp(-.35, -.15, hk);
@@ -563,7 +563,10 @@ function drawScene(t) {
   const boxes = [], box = (x, y, z, hw, hh) => boxes.push([x - hw, y - z - hh, x + hw, y + 12]);
   box(P.x, P.y, P.z, 160, 170);
   for (const e of enemies) { const s = e.boss ? e.size : 1; box(e.x, e.y, e.z, (e.hw + 110 + (e.def.tail || 0)) * s, (e.hh + 90) * s); }
-  for (const c of corpses) box(c.x, c.y, 0, 110, 110);
+  for (const c of corpses) { // sized to the body, as a live one's is: a fallen boss lies far outside a fixed box, and was cut off at its edge wherever the prince's own box did not happen to reach
+    const R = Math.max(110, (Math.max(c.hw || 0, c.hh || 0) * 1.7 + 80 + (c.def.tail || 0)) * (c.champ ? 1.3 : 1)); // (a boss's hw and hh already carry its size; it may lie on its side, or be cut in two and thrown, in any direction)
+    box(c.x, c.y + R * .5, 0, R, R * 1.5);
+  }
   for (const p of props) box(p.x, p.y, 0, 60, 100);
   for (const k of loot) box(k.x, k.y, k.z || 0, 40, 50);
   for (const p of projs) box(p.x, p.y, p.z || 0, 50, 50);
