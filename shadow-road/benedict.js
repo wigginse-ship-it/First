@@ -88,7 +88,7 @@
       once(.34, () => { sfx('slam'); shakeMag = Math.max(shakeMag, 6); silverBurst(e.x, e.y, 4, 18); }); // the stars hit the floor
       once(.46, () => { sfx('charge', 2); });
       once(.58, () => { sfx('crunch', .5); shakeMag = Math.max(shakeMag, 3); });
-      once(.66, () => { sfx('crunch'); flashT = Math.max(flashT, .3); shakeMag = Math.max(shakeMag, 10); // the chrysalis splits
+      once(.66, () => { sfx('crunch'); flashT = Math.max(flashT, .14); shakeMag = Math.max(shakeMag, 10); // the chrysalis splits
         for (let i = 0; i < 30; i++) parts.push({ x: e.x + rand(-30, 30), y: e.y + rand(-8, 8), z: rand(10, 100), vx: rand(-160, 160), vy: 0, vz: rand(100, 280), life: 1.1, max: 1.1, col: pick(['#B6C2D8', '#6E7A98', '#E6ECF6', '#FFFFFF']), size: rand(2, 5), shape: 'shard', rot: rand(0, 6), vr: rand(-8, 8) }); });
       once(.84, () => { sfx('roar'); sfx('whoosh'); shakeMag = Math.max(shakeMag, 8); }); // and it opens its wings
     }
@@ -394,7 +394,7 @@
   // of leaded glass with the dawn coming through them (and the stars he was, set in them as studs), eyes like lamps, and
   // two raptorial forelegs folded in prayer: the far one ink-blue, the near one plated silver and gilt at the joints (the
   // silver arm, which is all that will be left of it). A foreleg is [coxa, femur, tibia] angles, blended between poses.
-  const MN = { body: '#A6B4D2', bodyDk: '#46527E', bodyLt: '#EEF2FF', far: '#56648E', farDk: '#242C50', farLt: '#8A98C0', wing: '220,230,252', dawn: '255,206,190', eye: '#E4F4FF' };
+  const MN = { body: '#8E9DC6', bodyDk: '#38436E', bodyLt: '#DCE4FA', far: '#56648E', farDk: '#242C50', farLt: '#8A98C0', wing: '220,230,252', dawn: '255,206,190', eye: '#E4F4FF' };
   const FORE = { pray: [1.25, -1.0, 2.0], cock: [.95, -2.1, .85], strike: [.42, -.1, .02], raise: [.7, -1.8, .55], low: [1.45, .5, 1.0], reap: [1.0, .02, .3], clasp: [.95, -.7, 2.45], droop: [1.5, .75, 1.95] };
   const MDROP = 30; // about where the near scythe lies when it falls (deathStep lays the silver arm there)
   const lerpA = (A, B, k) => A.map((v, i) => lerp(v, B[i], k));
@@ -480,15 +480,15 @@
     if (M.spin) { const c = Math.cos(M.spin); ctx.scale(Math.max(.25, Math.abs(c)), 1); if (c < 0) ctx.scale(-1, 1); }
     ctx.translate(0, -lz);
     if (o.clipX !== undefined && o.clipX !== null) { ctx.beginPath(); ctx.rect(o.clipX, -400, 600, 420); ctx.clip(); } // (flaking away from the tail forward as it dies)
-    const TX = -6 + sw * .4, TY = -84 + cr; // the thorax, where the legs and the neck meet
+    const TX = -6 + sw * .4, TY = -72 + cr; // the thorax, where the legs and the neck meet
     const upper = (fn) => { ctx.save(); ctx.translate(TX, TY); ctx.rotate((M.lean || 0) + sw * .006); ctx.translate(-TX, -TY); fn(); ctx.restore(); };
     // the four walking legs: a pair forward, a pair back, each stepping with the ground covered (far side first)
     const leg = (hx, fx, ph, near) => { const pp = g + ph + (near ? Math.PI : 0), s = Math.sin(pp), lift = Math.max(0, Math.cos(pp)) * 8;
       const hip = [hx, TY + 4]; let foot = [fx * lerp(.5, 1, U) + s * 11 + (near ? 6 : -4), -lift];
       if (M.tuck) foot = [hx + (fx - hx) * .4, TY + 44];
-      const side = foot[0] > hip[0] ? -1 : 1, [g1, g2] = ik2(hip, foot, 50, 64, side), knee = [hip[0] + Math.cos(g1) * 50, hip[1] + Math.sin(g1) * 50], ft = [knee[0] + Math.cos(g2) * 64, knee[1] + Math.sin(g2) * 64];
+      const side = foot[0] > hip[0] ? -1 : 1, [g1, g2] = ik2(hip, foot, 46, 56, side), knee = [hip[0] + Math.cos(g1) * 46, hip[1] + Math.sin(g1) * 46], ft = [knee[0] + Math.cos(g2) * 56, knee[1] + Math.sin(g2) * 56];
       const col = near ? MN.body : MN.far;
-      seg(hip[0], hip[1], knee[0], knee[1], 7.4, 5.2, col, .8); seg(knee[0], knee[1], ft[0], ft[1], 4.8, 2.4, col, .4);
+      seg(hip[0], hip[1], knee[0], knee[1], 8.4, 5.6, col, 1.2); seg(knee[0], knee[1], ft[0], ft[1], 5.2, 2.6, col, .5);
       ctx.strokeStyle = C(near ? MN.bodyDk : MN.farDk); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(ft[0], ft[1]); ctx.lineTo(ft[0] - side * 9, ft[1] + 1); ctx.stroke(); // the foot
       ctx.fillStyle = C(near ? BN.gilt : MN.farDk); circle(knee[0], knee[1], near ? 3 : 2.4); ctx.fill(); outline(.7); };
     leg(TX + 2, 30, 0, false); leg(TX - 14, -66, Math.PI * .5, false);
@@ -497,12 +497,12 @@
     upper(() => foreleg([TX + 17, TY - 44], M.far, false, M.slash, t));
     // the abdomen: long, segmented, the tip lifted
     const br = Math.sin(t * 2.1) * 1.5 * U;
-    cel(PB([TX - 2, TY - 8, TX - 40, TY - 18 - br, TX - 92, TY - 16 - br, TX - 128, TY - 12, TX - 148, TY - 24, TX - 140, TY - 2, TX - 98, TY + 10, TX - 50, TY + 13, TX - 12, TY + 9]), MN.body, { d: 3.6, r: 1.3, w: 1.8, dark: MN.bodyDk, lite: MN.bodyLt, tex: () => {
+    cel(PB([TX - 2, TY - 10, TX - 40, TY - 22 - br, TX - 92, TY - 20 - br, TX - 128, TY - 14, TX - 150, TY - 26, TX - 142, TY - 2, TX - 100, TY + 14, TX - 50, TY + 17, TX - 12, TY + 11]), MN.body, { d: 3.6, r: 1.3, w: 1.8, dark: MN.bodyDk, lite: MN.bodyLt, tex: () => {
       ctx.strokeStyle = 'rgba(30,38,76,.5)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 1; i < 7; i++) { const x = TX - 14 - i * 18; ctx.moveTo(x + 4, TY - 22); ctx.quadraticCurveTo(x - 3, TY, x + 2, TY + 14); } ctx.stroke();
       if (M.crack) { ctx.strokeStyle = `rgba(255,255,255,${.9 * M.crack})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(TX - 130, TY - 8); ctx.lineTo(TX - 100, TY + 2); ctx.lineTo(TX - 80, TY - 10); ctx.lineTo(TX - 50, TY + 4); ctx.lineTo(TX - 20, TY - 6); ctx.stroke(); } } });
     if (M.wing > .02) eyes = [wingFan(B, M.wing, false, t)].concat(eyes || []);
     // the fore wing: a long leaf of glass laid over the back, lifted with the display
-    ctx.save(); ctx.translate(B[0] + 2, B[1] + 2); ctx.rotate(-M.wing * 1.15);
+    ctx.save(); ctx.translate(B[0] + 2, B[1] + 2); ctx.rotate(M.wing * 1.15);
     { const fw = PB([0, 2, -40, -9, -102, -10, -150, -2, -112, 7, -44, 9]); fw(0, 0); ctx.fillStyle = solid(`rgba(${MN.wing},.5)`); ctx.fill();
       if (DET()) { ctx.save(); fw(0, 0); ctx.clip(); const gg = ctx.createLinearGradient(0, -10, 0, 10); gg.addColorStop(0, 'rgba(255,255,255,.35)'); gg.addColorStop(1, `rgba(${MN.dawn},.25)`); ctx.fillStyle = gg; ctx.fillRect(-152, -12, 154, 24); ctx.restore();
         leafLine(() => { ctx.moveTo(-4, 1); ctx.quadraticCurveTo(-70, -6, -146, -2); for (const x of [-30, -60, -90, -120]) { ctx.moveTo(x, -4); ctx.lineTo(x - 14, 6); } }, .7, .7);
@@ -511,7 +511,7 @@
     ctx.restore();
     // the neck: the long prothorax, rising
     let H0;
-    upper(() => { const N = [TX + 30, TY - 66], s = taper(TX - 6, TY + 4, TX + 12, TY - 30, N[0], N[1], 20, 10, 6); H0 = N;
+    upper(() => { const N = [TX + 30, TY - 66], s = taper(TX - 6, TY + 4, TX + 12, TY - 30, N[0], N[1], 24, 11, 6); H0 = N;
       cel(stripPath(s), MN.body, { d: 2.6, r: 1.1, w: 1.6, dark: MN.bodyDk, lite: MN.bodyLt, tex: () => {
         ctx.strokeStyle = 'rgba(30,38,76,.45)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(s.M[2], s.M[3]); for (let i = 4; i < s.M.length; i += 2) ctx.lineTo(s.M[i], s.M[i + 1]); ctx.stroke();
         if (M.crack) { ctx.strokeStyle = `rgba(255,255,255,${.9 * M.crack})`; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(TX, TY - 2); ctx.lineTo(TX + 12, TY - 22); ctx.lineTo(TX + 8, TY - 34); ctx.lineTo(TX + 22, TY - 52); ctx.stroke(); } } });
@@ -568,9 +568,8 @@
     const cut = dis > 0 ? lerp(-170, 120, dis) : null, gone = u > .5;
     let R;
     if (cut === null || cut < 110) { ctx.save(); ctx.translate(Math.sin(t * 40) * 1.6 * M.crack * (1 - dis), 0); R = drawMantis(e, a, t, M, { clipX: cut, noNear: gone }); ctx.restore(); }
-    if (cut !== null && cut < 110) add(() => { const g = ctx.createLinearGradient(cut - 14, 0, cut + 6, 0); g.addColorStop(0, 'rgba(235,242,255,0)'); g.addColorStop(1, 'rgba(235,242,255,.55)'); ctx.fillStyle = g; ctx.fillRect(cut - 14, -200, 20, 200); }); // the edge where it is going
     if (gone) { // the silver scythe, falling free and laid down flat
-      const f = sm(seg01(u, .5, .68)), fade = 1 - seg01(u, .72, .8); if (fade > 0) { const TX = -6, TY = -84 + 30;
+      const f = sm(seg01(u, .5, .68)), fade = 1 - seg01(u, .72, .8); if (fade > 0) { const TX = -6, TY = -72 + 30;
         ctx.save(); ctx.globalAlpha *= fade; ctx.translate(lerp(TX + 21, MDROP - 22, f), lerp(TY - 40, -4, f)); ctx.rotate(lerp(0, -.9, f)); ctx.scale(lerp(1, .55, f), lerp(1, .55, f));
         foreleg([0, 0], lerpA(FORE.pray, [0, -.05, .1], f), true, 0, t); ctx.restore(); glowAt(MDROP, -6, 26, '235,242,255', .4 * f * fade); } }
     if (u > .2 && u < .8) glowAt(0, -70, 90, '235,242,255', .35 * Math.sin(Math.PI * seg01(u, .2, .8)));
@@ -862,7 +861,7 @@
   WIND_UP.w5leap = (e) => { e.w5G = { x: xClamp(P.x), y: yClamp(P.y) }; };
   TELL_FX.w5leap = (e, t, k) => { const G = e.w5G; if (!G) return; ctx.strokeStyle = tellLine(k * .6); ctx.lineWidth = 1.4; ctx.setLineDash([5, 5]); ell(G.x, G.y, LEAP.r, LEAP.r / 2.2); ctx.stroke(); ctx.setLineDash([]); };
   PLAN_FX.w5leap = (e) => {
-    const G = e.w5G || { x: xClamp(P.x), y: yClamp(P.y) }; e.w5G = null; const ex0 = e.x, ey0 = e.y; sfx('whoosh'); dust(e.x, e.y, 12); shakeMag = Math.max(shakeMag, 4);
+    const G = e.w5G || { x: xClamp(P.x), y: yClamp(P.y) }; e.w5G = null; W5B.leapG = G; const ex0 = e.x, ey0 = e.y; sfx('whoosh'); dust(e.x, e.y, 12); shakeMag = Math.max(shakeMag, 4);
     act(e, 'leap', (h, dt, e) => {
       if (h.el < LEAP.lock) { G.x = xClamp(P.x); G.y = yClamp(P.y); e.facing = Math.sign(P.x - e.x) || e.facing; } else if (!h.lock) { h.lock = 1; sfx('charge', 1); }
       const q = cl01(h.el / LEAP.up); e.w5k = q;
