@@ -121,7 +121,7 @@ function t7Staff(pose) {
   const now = t7Now(), plain = t6Plain(), len = 62, back = -30, pulse = .5 + .5 * Math.sin(now * .9), hx = len + 32; // hx: the horn's point
   const sc = pose.noHand ? .86 : 1; if (sc !== 1) { ctx.save(); ctx.translate(15, 0); ctx.scale(sc, sc); ctx.translate(-24, 0); } // the card portrait: kept inside its frame
   const hue = (x) => ((x * 2.6 - now * 36) % 360 + 360) % 360;
-  t6Halo(len + 8, 2, 30, '232,224,255', .2 + .07 * pulse);
+
   // the light through the horn's point, split into a little rainbow that fans out ahead of it
   t6Add(() => { const sp = .055 + .012 * Math.sin(now * .7); for (let i = 0; i < 6; i++) { const a = (i - 2.5) * sp, Lr = 20 + 3 * Math.sin(now * .8 + i);
     ctx.fillStyle = `hsla(${i * 52},95%,62%,${.17 + .06 * pulse})`; ctx.beginPath(); ctx.moveTo(hx - 2, 0); ctx.lineTo(hx + Math.cos(a - sp / 2) * Lr, Math.sin(a - sp / 2) * Lr); ctx.lineTo(hx + Math.cos(a + sp / 2) * Lr, Math.sin(a + sp / 2) * Lr); ctx.closePath(); ctx.fill(); } });
@@ -279,7 +279,7 @@ function t7Sword(pose) {
 // ======================================================================================================
 function t7Rapier(pose) {
   const now = t7Now(), plain = t6Plain(), pulse = .5 + .5 * Math.sin(now * .9);
-  const len = 56, x0 = 20, tip = x0 + len + 5, w = 2.6;
+  const len = 56, x0 = 20, tip = x0 + len + 5, w = 2.3;
   // the grip, black wound with silver, a green stone in silver claws for a pommel
   limb([5, 0, 17, 0], '#141218', 3.8);
   ctx.strokeStyle = C('#DCE0EC'); ctx.lineWidth = .7; ctx.beginPath(); for (let x = 6.6; x < 16; x += 1.5) { ctx.moveTo(x, -1.9); ctx.lineTo(x + 1, 1.9); } ctx.stroke();

@@ -375,11 +375,9 @@ function drawWeapon(kind, pose) {
       ctx.fillStyle = vgrad(-14, 14, '#E2EEF8'); ctx.fill(); outline(1.3);
       ctx.fillStyle = C('#7F9AB8'); rrect(back - 4, -3, 7, 6, 2); ctx.fill();
       for (const x of [-6, 14, 34]) glow('#9FE8F0', 8, () => { ctx.fillStyle = C('#BFF5FF'); ctx.fillRect(x, -2.6, 2, 5.2); });
-      aura('rgba(159,232,240,.12)', () => rrect(back - 6, -6, len - back + 28, 12, 6));
     } else {
       for (const [x, d] of [[len - 2, 1], [back + 2, -1]]) glow('#B89CFF', 12, () => poly([x, -3.4, x + d * 6, -6, x + d * 22, 0, x + d * 6, 6, x, 3.4], '#4A3A7A', 1.2)); // crystal blades
       ctx.fillStyle = C('#B89CFF'); for (const x of [-10, 8, 26, 44]) ctx.fillRect(x, -2.4, 1.6, 4.8);
-      aura('rgba(184,156,255,.2)', () => rrect(back - 26, -8, len - back + 52, 16, 8));
     }
     if (!(pose && pose.noHand)) gripHand(hand); return;
   }
@@ -952,6 +950,7 @@ function drawHumanoid(look, pose) {
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   { const kind = pose.weapon || look.weapon, held = ['hammer', 'staff', 'sword', 'grayblade', 'rapier', 'shortbow'].includes(kind) && !pose.noHand; // (the weapons whose last stroke is the hand)
     if (held) { GRIP.cx = gripCX(kind); GRIP.rot = kind === 'shortbow' ? Math.PI / 2 : 0; gripBack(look.glove || '#FFF1E0'); GRIP.back = true; } // the palm, under the handle
+    if (pose.slide) { ctx.translate(pose.slide, 0); GRIP.cx -= pose.slide; } // (the weapon slid through his hands, as in a pole vault's grip near the end)
     drawWeapon(kind, pose); // (its last stroke closes the fingers over the handle: gripHand)
     GRIP.back = false; GRIP.cx = 17.1; GRIP.rot = 0; }
   ctx.restore();

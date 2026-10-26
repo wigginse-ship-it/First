@@ -433,14 +433,13 @@
   Object.assign(D.waist, { wayfarerWaist, corsairWaist, prismWaist, chaosWaist, moonWaist });
 })();
 
-// ---------- an enchanted piece on him: a faint gold-violet glow and three motes circling slowly ----------
+// ---------- an enchanted piece on him: three motes circling slowly ----------
 // (painted on the page behind the inked figure; it never flickers, it only drifts)
 function drawGearAura(t, front) {
   if (!P || P.state === 'dead' || !heroLook().enchanted) return;
   const cy = P.y - P.z - 40;
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  if (!front) { const g = ctx.createRadialGradient(P.x, cy, 4, P.x, cy, 50); g.addColorStop(0, 'rgba(240,200,110,.3)'); g.addColorStop(.55, 'rgba(184,140,255,.18)'); g.addColorStop(1, 'rgba(184,140,255,0)');
-    ctx.fillStyle = g; ell(P.x, cy, 32, 50); ctx.fill(); }
+  // (no glow round him: only the motes show the enchantment)
   for (let i = 0; i < 3; i++) { // each mote passes in front of him for half its circle and behind him for the other half
     const a = t * .9 + i * TAU / 3; if ((Math.sin(a) > 0) !== !!front) continue;
     const x = P.x + Math.cos(a) * 18, y = cy + 4 + Math.sin(a * 1.3 + i) * 24;

@@ -106,7 +106,7 @@ function t6Hammer(pose) {
 function t6Staff(pose) {
   const now = performance.now() / 1000, plain = t6Plain(), len = 62, back = -30, pulse = .5 + .5 * Math.sin(now * .9);
   const sc = pose.noHand ? .86 : 1; if (sc !== 1) { ctx.save(); ctx.translate(15, 0); ctx.scale(sc, sc); ctx.translate(-22, 0); } // the card portrait: the moon kept inside its frame
-  t6Halo(len + 12, 0, 26, '190,215,255', .22 + .08 * pulse); t6Halo(back - 10, 0, 16, '190,215,255', .14);
+
   // a silver-blue ribbon, swaying slowly
   const sway = Math.sin(now * 1.3) * 3;
   { // a pennon of silver-blue silk with a forked tail, hanging from the far end
@@ -262,7 +262,7 @@ function t6Sword(pose) {
 // ======================================================================================================
 function t6Rapier(pose) {
   const now = performance.now() / 1000, plain = t6Plain(), pulse = .5 + .5 * Math.sin(now * .9);
-  const len = 54, x0 = 20, tip = x0 + len + 5, w = 2.5;
+  const len = 54, x0 = 20, tip = x0 + len + 5, w = 2.2;
   // the grip, black and wound with silver wire, a silver rose for a pommel
   limb([5, 0, 17, 0], '#141218', 3.8);
   ctx.strokeStyle = C('#DCE0EC'); ctx.lineWidth = .7; ctx.beginPath(); for (let x = 6.6; x < 16; x += 1.5) { ctx.moveTo(x, -1.9); ctx.lineTo(x + 1, 1.9); } ctx.stroke();

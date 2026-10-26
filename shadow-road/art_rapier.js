@@ -17,7 +17,7 @@ function gbRose(x, y, r, petal, core) { // a little rose of overlapping petals
 }
 function drawGrayblade(pose) {
   const tier = clamp(pose.tier || 1, 1, 5), now = performance.now() / 1000;
-  const len = [40, 44, 46, 48, 50][tier - 1], x0 = 20, tip = x0 + len + 4, w = [2.4, 1.8, 1.9, 2.1, 2.3][tier - 1]; // a fencer's blade: well short of the great sword, and slim
+  const len = [40, 44, 46, 48, 50][tier - 1], x0 = 20, tip = x0 + len + 4, w = [2.4, 1.8, 1.9, 2.1, 2.3][tier - 1] * .88; // a fencer's blade: well short of the great sword, and slim
   // each level is forged from a stranger metal: blue starsteel, verdigris greenbronze, rose-gold, violet moonglass, night-silver
   const bc = ['#9FB8DA', '#62AC90', '#E6A88E', '#9A6EDC', '#4A4C5E'][tier - 1];
   const metal = ['#6E86AC', '#3E7A62', '#C88468', '#6A48B0', '#D8DCE8'][tier - 1]; // its guard and fittings
