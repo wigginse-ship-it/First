@@ -9,13 +9,13 @@
 // through arrowVs, and each foe takes at most one share of the tricks per arrow, so nothing adds up against a boss.
 const ARROW_MAX = 5;
 const ARROW_TIERS = [
-  { name: 'Ash Arrows', dmg: 14, crit: 0, pierce: 0, blast: 0, skill: 'A True Shot', desc: 'Plain ash shafts and goose fletching. Hold for a full draw; let go the instant it is full for a perfect shot.' },
-  { name: 'Barbed Steel', dmg: 17, crit: .08, pierce: 0, blast: 0, bleed: 1, skill: 'Bleed', desc: 'Barbed steel heads tear going in: the foe bleeds for a moment after.' },
-  { name: 'Silver Broadheads', dmg: 20, crit: .1, pierce: 1, blast: 0, bleed: 1, skill: 'Pierce', desc: 'Broad silver heads: at a full draw they punch through the first foe into a second.' },
-  { name: 'Rune Arrows', dmg: 23, crit: .12, pierce: 1, blast: 42, bleed: 1, skill: 'Rune Burst', desc: 'Runes cut in the shaft burst on impact, catching whoever stands close.' },
-  { name: 'Starfall Arrows', dmg: 27, crit: .14, pierce: 1, blast: 46, bleed: 1, split: 2, skill: 'Starsplit', desc: 'At a full draw each one breaks on the first foe into two falling stars, which fly on into the foes behind.' },
-  { name: 'Shadowsteel Arrows', dmg: 30, crit: .16, pierce: 1, blast: 50, bleed: 1, split: 2, ret: 1, skill: 'Shadow-walk', desc: 'Raven-fletched and forged in Shadow: an arrow that kills walks back through Shadow into your quiver.' },
-  { name: 'Pattern Arrows', dmg: 34, crit: .18, pierce: 1, blast: 54, bleed: 1, split: 2, ret: 1, chain: 2, skill: 'Pattern Fire', desc: "Lit with the Pattern's blue fire: at a full draw it leaps from the struck foe to two more nearby." },
+  { name: 'Ash Arrows', dmg: 22, crit: 0, pierce: 0, blast: 0, skill: 'A True Shot', desc: 'Plain ash shafts and goose fletching. Hold for a full draw; let go the instant it is full for a perfect shot.' },
+  { name: 'Barbed Steel', dmg: 27, crit: .08, pierce: 0, blast: 0, bleed: 1, skill: 'Bleed', desc: 'Barbed steel heads tear going in: the foe bleeds for a moment after.' },
+  { name: 'Silver Broadheads', dmg: 32, crit: .1, pierce: 1, blast: 0, bleed: 1, skill: 'Pierce', desc: 'Broad silver heads: at a full draw they punch through the first foe into a second.' },
+  { name: 'Rune Arrows', dmg: 37, crit: .12, pierce: 1, blast: 42, bleed: 1, skill: 'Rune Burst', desc: 'Runes cut in the shaft burst on impact, catching whoever stands close.' },
+  { name: 'Starfall Arrows', dmg: 43, crit: .14, pierce: 1, blast: 46, bleed: 1, split: 2, skill: 'Starsplit', desc: 'At a full draw each one breaks on the first foe into two falling stars, which fly on into the foes behind.' },
+  { name: 'Shadowsteel Arrows', dmg: 48, crit: .16, pierce: 1, blast: 50, bleed: 1, split: 2, ret: 1, skill: 'Shadow-walk', desc: 'Raven-fletched and forged in Shadow: an arrow that kills walks back through Shadow into your quiver.' },
+  { name: 'Pattern Arrows', dmg: 54, crit: .18, pierce: 1, blast: 54, bleed: 1, split: 2, ret: 1, chain: 2, skill: 'Pattern Fire', desc: "Lit with the Pattern's blue fire: at a full draw it leaps from the struck foe to two more nearby." },
 ];
 const ARROW_LV = ARROW_TIERS.length;
 const arrowLv = () => Math.max(1, Math.min(ARROW_LV, save.alv || 1));
