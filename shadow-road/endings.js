@@ -4,7 +4,10 @@
 // the live scene with this file's touches laid into it), then a second panel shows the road going on (Act II, painted
 // from the next stretch of that world's own backgrounds). A line of narration comes up in the banner. Tap, click,
 // Enter, Space or any game button skips it; on a new cycle of the road it runs faster and can be skipped at once.
-// The last world, Tir-na Nog'th, keeps its own, longer ending (art_w5.js), which wraps stageClear outside this one and is left untouched.
+// The dream (world 5) ends on the Rim of the Abyss with Corwin taking out his deck of Trumps; the choice of road that
+// follows (the shuffle, the three cards, the step through the one he picks) is branch.js, which this hands over to.
+// The three worlds the road can go on to each keep their own, longer ending (Tir-na Nog'th's is in art_w5.js, Rebma's and
+// Lorraine's in their own files), which wrap stageClear outside this one and are left untouched.
 // Everything here hooks in by wrapping: stageClear, drawScene, drawBossRoom, mechBoxes and mechList.
 (() => {
   const cl01 = (k) => clamp(k, 0, 1), sm = (k) => { k = cl01(k); return k * k * (3 - 2 * k); };
@@ -425,58 +428,33 @@
       cycleTint(); lids(keyed(this.lidKeys, T), t);
     },
   };
-  // A TRUMP, drawn from the deck: held up at arm's length, it flies out and grows, the picture on it comes alive, he walks
-  // into it, and it opens out to fill the view. T runs from 2.1, when he reaches for it; o: { B: the picture's painted
-  // layers, theme, label, hand: where it is held, at: where it hangs in the air }
-  function trumpPose(T, pose) { // the card held up before him, at arm's length
-    const q = sm((T - 2.1) / .45) * (1 - sm((T - 3.6) / .5));
+  // A TRUMP held up before him, at arm's length (T runs from 2.1, when he reaches for it); keep: and kept there
+  function trumpPose(T, pose, keep) {
+    const q = sm((T - 2.1) / .45) * (keep ? 1 : 1 - sm((T - 3.6) / .5));
     if (q > 0) { pose.backArm = lerp(pose.backArm ?? 1.5, -.12, q); pose.backElbow = lerp(pose.backElbow ?? .3, .55, q); pose.openHand = 0; }
   }
-  function trumpCard(E, T, t, o) { // the moon over its ghost city, in a frame of silver leaf, alive under his eyes
-      const B = o.B, held = sm((T - 2.3) / .3), fly = sm((T - 3.3) / 1.1), zoom = sm((T - 5.8) / 1.2);
-      if (held <= 0) return;
-      const [hx, hy] = o.hand, hc = lerp(19, 150, fly), cx0 = lerp(hx, o.at[0], fly), cy0 = lerp(hy, o.at[1], fly);
-      const S1 = [VW * .68, Y_OFF + VIEW_H / 2], VC = [VW / 2, Y_OFF + VIEW_H / 2]; // the picture is centred on the moon; the card opens out to fill the view
-      const cx = lerp(cx0, VC[0], zoom), cy = lerp(cy0, VC[1], zoom), px = lerp(cx0, S1[0], zoom), py = lerp(cy0, S1[1], zoom), w = lerp(hc * .62, VW + 4, zoom), h = lerp(hc, VIEW_H + 4, zoom), sc = lerp(hc / VIEW_H, 1, zoom);
-      const alive = sm((T - 3.6) / 1.2); // first only paint on a card, then the picture breathes and moves
-      ctx.save(); ctx.globalAlpha = held;
-      if (zoom < 1) glowR(cx, cy, h * .9, '220,230,255', (.18 + .3 * sm((T - 4.6) / 1)) * (1 - zoom));
-      ctx.save(); rrect(cx - w / 2, cy - h / 2, w, h, 4 * (1 - zoom)); ctx.clip();
-      ctx.translate(px, py); ctx.scale(sc, sc); ctx.translate(-S1[0], -S1[1]);
-      const camM = 280 + (T - 3) * 6 * alive, tm = 1000 + (T - 3) * alive;
-      withSet(B, () => paintWorld(o.theme, { cam: camM }, tm));
-      if (E.inCard || T > 5.2) { const k = sm((T - 5.2) / .6), mt = Math.max(0, T - 5.6); // and he is in it, walking on toward the city
-        ctx.save(); ctx.translate(-camM, 0); inkHero(camM + VW * .4 + mt * 34, FLOOR_TOP + 62, 1, 1, poseAs('walk', 5 + mt * 3.4), k, E.inCard); ctx.restore(); }
-      gradeFrame(o.theme);
-      if (alive < 1) { ctx.fillStyle = `rgba(200,210,235,${.5 * (1 - alive)})`; view(); } // still only a painting, misted with silver
-      ctx.restore();
-      if (zoom < 1) { // the frame, which opens out past the edges as he goes through
-        const b = Math.max(2, w * .06); ctx.save(); ctx.globalAlpha = held * (1 - zoom * .6);
-        ctx.beginPath(); ctx.rect(cx - w / 2 - b, cy - h / 2 - b, w + b * 2, h + b * 2); ctx.rect(cx - w / 2, cy - h / 2, w, h);
-        const fg = ctx.createLinearGradient(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2); fg.addColorStop(0, '#F4F7FC'); fg.addColorStop(.5, '#8E9AB4'); fg.addColorStop(1, '#DCE4F0'); ctx.fillStyle = fg; ctx.fill('evenodd');
-        ctx.strokeStyle = OUT; ctx.lineWidth = 1.1; ctx.strokeRect(cx - w / 2 - b, cy - h / 2 - b, w + b * 2, h + b * 2); ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
-        if (hc > 60) { ctx.fillStyle = 'rgba(40,48,80,.55)'; for (let i = 0; i < 22; i++) { const q = i / 21; circle(cx - w / 2 - b / 2 + q * (w + b), cy - h / 2 - b / 2, .8); ctx.fill(); circle(cx - w / 2 - b / 2 + q * (w + b), cy + h / 2 + b / 2, .8); ctx.fill(); }
-          for (const [px, py] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) silverRose(cx + px * (w / 2 + b / 2), cy + py * (h / 2 + b / 2), b * .3, false);
-          ctx.globalAlpha *= cl01((hc - 60) / 40) * (1 - zoom); ctx.fillStyle = 'rgba(8,12,30,.85)'; rrect(cx - w * .4, cy + h / 2 - 20, w * .8, 14, 3); ctx.fill(); ctx.fillStyle = '#E8EEF8'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(o.label, cx, cy + h / 2 - 10.5); }
-        ctx.restore();
-      }
-      ctx.restore();
+  // the deck of Trumps in his hand, small, at arm's length: a little stack of black-and-silver cards
+  function deckInHand(x, y, a) {
+    if (a <= 0) return; ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.rotate(-.12);
+    for (let i = 3; i >= 0; i--) { rrect(-3.4 + i * .35, -5.2 + i * .45, 6.8, 10.4, 1); ctx.fillStyle = i ? '#C9CFDC' : '#1A2040'; ctx.fill(); }
+    ctx.strokeStyle = '#E8EEF8'; ctx.lineWidth = .5; rrect(-2.6, -4.4, 5.2, 8.8, .8); ctx.stroke(); rrect(-3.4, -5.2, 6.8, 10.4, 1); outline(.7);
+    ctx.restore();
   }
   // ======================================================================================================
   // THE DREAMING SHADOW: the Sleeper wakes, and what it dreamed goes out, colour first and then line, until there is
   // only the bare ground of the panel and the prince standing on it; then that goes dark too, for he was only dreamed
   // there. His eyes open on the Rim of the Abyss, where he lay down to sleep, the Ty'iga's masks still lying round him.
-  // He gets up and draws a Trump from the deck: the moon over a ghostly city. It comes alive in his hand, and he steps
-  // through it, toward Tir-na Nog'th
+  // He gets up and takes his deck of Trumps out of his doublet: three roads call him from the Rim, and the choice of them
+  // (branch.js) takes over from here, on this same panel
   // ======================================================================================================
-  const PAPER = '#EFE6D2', CARD_AT = 5.6; // (he reaches for the Trump at CARD_AT + 2.1)
+  const PAPER = '#EFE6D2', CARD_AT = 5.6; // (he reaches for the deck at CARD_AT + 2.1)
   const W6E = {
-    theme2: 'chaosBoss', seed: 251, d0: 4.6, d1: 4.6, noCells: 1, bannerAt: 7.2, dur: 13.8, music: 'dreamBoss', still: 1.4,
-    title: 'And the Dreamer Woke', sub: 'AND SO DID HE, ON THE RIM OF THE ABYSS; AND HE DREW A CARD, AND THE MOON WAS ON IT',
+    theme2: 'chaosBoss', seed: 251, d0: 4.6, d1: 4.6, noCells: 1, bannerAt: 7.2, dur: 10.9, music: 'dreamBoss', still: 1.4, noFade: 1, keepB: 1,
+    title: 'And the Dreamer Woke', sub: 'AND SO DID HE, ON THE RIM OF THE ABYSS, WITH THE TRUMPS OF AMBER STILL IN HIS DOUBLET',
     lidKeys: [[4.6, 1], [5.3, .45], [5.6, .6], [6.5, 0]],
     setup(E) {
-      E.B2 = buildAlt('moon', 261 + stageIdx); E.side = 1; E.hy = FLOOR_TOP + 66; E.walk = 0;
-      E.hx = E.wx = clamp(P.x - camX, VW * .2, VW * .4); E.cardX = clamp(E.hx + 96, VW * .3, VW * .8); E.cardY = Y_OFF + VIEW_H * .44;
+      E.side = 1; E.hy = FLOOR_TOP + 66; E.walk = 0;
+      E.hx = E.wx = clamp(P.x - camX, VW * .2, VW * .4);
       E.masks = []; for (let i = 0; i < 7; i++) { const x = VW * (.06 + i * .145) + (hsh(i + 61) - .5) * 30; if (Math.abs(x - E.hx) < 44) continue; // the faces the Ty'iga wore, lying where they fell
         E.masks.push({ x, y: FLOOR_TOP + 26 + hsh(i + 71) * 80, rot: (hsh(i + 81) - .5) * 1.6, s: .95 + hsh(i + 91) * .35 }); }
     },
@@ -484,11 +462,9 @@
       if (T > .3 && !E.chime) { E.chime = 1; sfx('learned'); }
       if (T > 5 && !E.rim) { E.rim = 1; if (TRACKS.chaos) playMusic('chaos'); }
       const Tc = T - CARD_AT; E.moving = 0;
-      if (Tc > 2.4 && !E.drew) { E.drew = 1; sfx('trump'); }
-      if (Tc > 4.6 && !E.inCard) { const d = E.cardX - E.side * 4 - E.wx; if (Math.abs(d) > 1.5) { const st = Math.min(Math.abs(d), 70 * dt); E.wx += Math.sign(d) * st; E.walk += st / 10.2; E.moving = 1; } }
-      E.heroA = 1 - sm((Tc - 5.2) / .5); if (E.heroA <= 0 && !E.inCard) { E.inCard = 1; sfx('whoosh'); }
-      if (Tc > 5.8 && !E.moon) { E.moon = 1; if (TRACKS.moon) playMusic('moon'); }
+      if (Tc > 2.3 && !E.drew) { E.drew = 1; sfx('swing', .3); } // the deck comes out
     },
+    then(sc, E) { if (window.BRANCH && BRANCH.choose) BRANCH.choose(sc, { from: E }); else { dropAlt(E.B); sc(); } }, // on into the choice of road
     over(E, T, t) { // the dream unpaints itself from the edges in, the colour draining first; he is left on bare paper
       const k = sm((T - 1) / 2.6), dr = sm((T - .6) / 1.6);
       if (dr > 0) { ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${.85 * dr})`; view(); ctx.restore(); }
@@ -501,18 +477,18 @@
         ctx.save(); ctx.translate(-camX, 0); inkHero(P.x, P.y, 1, P.facing, poseAs('idle'), 1, true); ctx.restore(); }
       const dk = sm((T - 3.7) / .8); if (dk > 0) { ctx.fillStyle = `rgba(8,6,14,${dk})`; view(); } // and then he goes out too: it was only a dream of him
     },
-    act2(E, T, dt, t) { // his eyes open on the rim of the Abyss, where he lay down; he gets up, and draws a card
+    act2(E, T, dt, t) { // his eyes open on the rim of the Abyss, where he lay down; he gets up, and takes out his deck
       const B = freshAlt(E), cam = 300, Tc = T - CARD_AT;
       withSet(B, () => paintWorld('chaosBoss', { cam }, t));
       ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(80,100,170,.4)'; view(); ctx.restore(); // the Abyss lying quiet, as he left it
       const pose = poseAs(T < 6.5 ? 'down' : E.moving ? 'walk' : 'idle', E.walk); if (T >= 6.5 && T < 7.1) { pose.crouch = 1; pose.crouchK = 8; }
-      trumpPose(Tc, pose);
+      trumpPose(Tc, pose, true);
       const mk = (m) => { shadow(m.x, m.y, 7 * m.s); mask(m.x, m.y - 3, m.s, m.rot, 0); };
       for (const m of E.masks) if (m.y <= E.hy) mk(m);
       if (E.heroA > 0) { ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.wx, E.hy, 1, E.side, pose, E.heroA, true); ctx.restore(); }
+      deckInHand(E.wx + E.side * 19.5, E.hy - 70, sm((Tc - 2.3) / .3));
       for (const m of E.masks) if (m.y > E.hy) mk(m);
       gradeFrame('chaosBoss');
-      trumpCard(E, Tc, t, { B: freshAlt(E, 'B2'), theme: 'moon', label: "TIR-NA NOG'TH", hand: [E.wx + E.side * 19.5, E.hy - 70], at: [E.cardX, E.cardY] });
       const wk = sm((T - 5) / 1.6); if (wk < 1) { ctx.fillStyle = `rgba(255,250,240,${.25 * (1 - wk)})`; view(); } // the light too bright at first
       cycleTint(); lids(keyed(this.lidKeys, T), t);
     },
@@ -541,7 +517,7 @@
     }
     if (E.bannered) { const bk = sm((T - W.bannerAt) / .8) * (1 - sm((T - (W.dur - 1.4)) / .7)); // a soft shadow behind the narration, so it reads on any sky
       if (bk > 0) { ctx.save(); ctx.translate(VW / 2, Y_OFF + VIEW_H * .335); ctx.scale(1, .2); const g = ctx.createRadialGradient(0, 0, 10, 0, 0, VW * .52); g.addColorStop(0, `rgba(14,8,18,${.5 * bk})`); g.addColorStop(.6, `rgba(14,8,18,${.32 * bk})`); g.addColorStop(1, 'rgba(14,8,18,0)'); ctx.fillStyle = g; ctx.fillRect(-VW, -VW * .6, VW * 2, VW * 1.2); ctx.restore(); } }
-    const fo = sm((T - (W.dur - .8)) / .8); if (fo > 0) { ctx.fillStyle = `rgba(8,6,12,${fo})`; view(); }
+    const fo = W.noFade ? 0 : sm((T - (W.dur - .8)) / .8); if (fo > 0) { ctx.fillStyle = `rgba(8,6,12,${fo})`; view(); }
     skipHint(E.real);
     paperFrame();
     if (T >= W.dur) finish();
@@ -558,14 +534,14 @@
     app.classList.add('sr-end', 'nocontrols'); app.classList.remove('playing');
     if (W.music && TRACKS[W.music]) playMusic(W.music);
   }
-  function cleanup() {
+  function cleanup(keep) { // keep: the panel's painted layers go on with W.then (it drops them)
     const E = END; if (!E) return; END = null;
-    dropAlt(E.B); dropAlt(E.B2); app.classList.remove('sr-end');
+    if (!keep) dropAlt(E.B); dropAlt(E.B2); app.classList.remove('sr-end');
     $('#banner').classList.remove('on'); bannerT = 0;
     if (P && P.state !== 'dead') { P.state = 'idle'; P.walk = 0; }
     return E;
   }
-  function finish() { const E = cleanup(); if (!E) return; app.classList.remove('nocontrols'); E.sc(); }
+  function finish() { const keep = END && END.W.then && END.W.keepB, E = cleanup(keep); if (!E) return; app.classList.remove('nocontrols'); if (E.W.then) E.W.then(E.sc, E); else E.sc(); }
   let swallowT = 0;
   function skip() { if (!END || END.real < (END.rate > 1 ? .2 : .9)) return false; swallowT = performance.now() + 450; finish(); return true; }
 
@@ -602,5 +578,7 @@
   { const st = document.createElement('style'); // while it plays the HUD steps aside, all but the banner
     st.textContent = '#app.sr-end #hud > :not(#banner){visibility:hidden!important}#app.sr-end #banner{transition:opacity .9s}#app.sr-end #banner .s{max-width:84%;margin:6px auto 0;line-height:1.7}';
     document.head.appendChild(st); }
-  window.ENDINGS = { get active() { return !!END; }, t: () => END && END.t, real: () => END && END.real, skip: () => skip(), world: () => END && baseStage.theme, hold: (T) => { HOLD.at = T ?? null; } };
+  // the painting kit, for the choice of road after the dream (branch.js) and any world's own ending
+  const kit = { buildAlt, dropAlt, withSet, paintWorld, cycleTint, inkHero, poseAs, trumpPose, deckInHand, mask, glowR, sm, cl01, hsh, lids, keyed };
+  window.ENDINGS = { kit, get active() { return !!END; }, t: () => END && END.t, real: () => END && END.real, skip: () => skip(), world: () => END && baseStage.theme, hold: (T) => { HOLD.at = T ?? null; } };
 })();

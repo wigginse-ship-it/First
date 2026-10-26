@@ -40,6 +40,25 @@ function showOnly(id) {
   app.classList.toggle('playing', id === null);
   $('#hud').hidden = id === 'titleOv' || id === 'forgeOv' || id === 'winOv' || (id === 'invOv' && typeof invFrom !== 'undefined' && invFrom === 'forge');
 }
+// ---------- the road forks after the dream ----------
+// Worlds 0-4 are walked in order. The dream (world 4, FORK) ends on the Rim of the Abyss with his deck of Trumps, and the
+// card the player picks there (branch.js) sets save.branch: the world the road goes on to, 5 Tir-na Nog'th, 6 Rebma or
+// 7 Lorraine. Each of those ends the road: its own ending, then the win card, and save.endings records the endings seen
+// ({ moon, rebma, lorraine }). A new cycle of the road clears save.branch, so the choice comes round again.
+const FORK = 4;
+const isFinal = (i) => i > FORK;
+const branchStage = () => (save.branch > FORK && STAGES[save.branch]) ? save.branch : FORK + 1; // (a road whose world is not there falls back to the moon)
+const roadStage = () => { const i = save.stage | 0; return i > FORK ? (STAGES[i] ? i : FORK + 1) : Math.min(i, STAGES.length - 1); }; // where "Walk on" leads
+const endingId = (i) => (window.BRANCH && BRANCH.idOf(i)) || ['moon', 'rebma', 'lorraine'][i - FORK - 1] || 'world' + i;
+const endingsSeen = () => Object.keys(save.endings || {}).filter(k => save.endings[k]).length;
+{ // saves from before the road forked: the moon was the only road from the Rim, and stage 6 meant the road was walked
+  if (!save.endings) save.endings = {};
+  if (save.branch === undefined) {
+    if (save.stage > FORK + 1) { save.stage = FORK + 1; save.branch = FORK + 1; save.done = true; save.endings.moon = true; }
+    else save.branch = save.stage === FORK + 1 ? FORK + 1 : null;
+    if (save.started) persist();
+  }
+}
 function play(i, zone = 0) {
   save.started = true; persist(); clearInput();
   startStage(i); retryZone = 0;
@@ -61,12 +80,28 @@ function stageClear() {
     else if (k.kind === 'gear') sweepGear(k);
   }
   loot = [];
-  save.stage += 1; persist();
-  if (save.stage >= STAGES.length) {
-    mode = 'win';
-    $('#winText').textContent = 'Every shadow is behind you. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and cards come with you.';
-    showOnly('winOv'); playMusic('title');
-  } else openForge(`WORLD CLEARED: +${runShards} SHARDS, +${runSigils} SIGILS`);
+  const from = stageIdx;
+  if (isFinal(from)) { // the end of the road: each of the worlds past the fork is the last
+    save.stage = from; save.branch = from; save.done = true; save.endings = save.endings || {}; save.endings[endingId(from)] = true; persist();
+    mode = 'win'; winCard(from); showOnly('winOv'); playMusic('title');
+  } else {
+    save.stage = from === FORK ? branchStage() : from + 1; persist();
+    openForge(`WORLD CLEARED: +${runShards} SHARDS, +${runSigils} SIGILS`);
+  }
+}
+// the win card, for whichever road was walked (a world's own ending may write over it after: art_w5.js does)
+function winCard(i) {
+  const c = window.BRANCH && BRANCH.card(i), W = (c && c.win) || {}, relic = c && c.relic;
+  const k = $('#winOv .kicker'), h2 = $('#winOv .h2');
+  if (k) k.textContent = W.kicker || 'THE ROAD IS WALKED'; if (h2) h2.textContent = W.title || `${STAGES[i].name} is behind you`;
+  $('#winText').textContent = W.text || `Every shadow of the road is behind you${relic ? `, and ${relic.name} is yours` : ''}. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels and cards come with you.`;
+  const row = $('#winOv .row');
+  if (row && !$('#w5TitleBtn')) { const b = document.createElement('button'); b.className = 'cta alt'; b.id = 'w5TitleBtn'; b.type = 'button'; b.textContent = 'Title screen'; b.addEventListener('click', () => { mode = 'title'; refreshTitle(); showOnly('titleOv'); playMusic('title'); }); row.appendChild(b); } // (the id art_w5.js gives its own, so there is only ever one)
+  Promise.resolve().then(() => { // after any world's own words: how many of the roads' ends have been seen
+    let el = $('#winTally'); if (!el) { el = document.createElement('p'); el.id = 'winTally'; el.className = 'small'; $('#winText').after(el); }
+    const n = endingsSeen();
+    el.textContent = n >= 3 ? 'All three roads from the Rim are walked: the moon, the sea and the Black Circle.' : `Endings seen: ${n} of 3. On the next cycle the deck comes out again on the Rim: draw another Trump, and another road.`;
+  });
 }
 
 // ---------- explaining moves: inputs shown as button chips ----------
@@ -178,7 +213,7 @@ function renderForge(note) {
     tw.appendChild(d2);
   }
   $('#forgeNote').textContent = note || '';
-  $('#walkBtn').textContent = `Walk on: ${STAGES[Math.min(save.stage, STAGES.length - 1)].name}`;
+  $('#walkBtn').textContent = `Walk on: ${STAGES[roadStage()].name}`;
 }
 function drawTrumpArt(canvas, id) {
   const g = canvas.getContext('2d'), old = ctx; ctx = g;
@@ -204,16 +239,17 @@ function refreshTitle() {
   $('#newBtn').textContent = has ? 'New journey' : 'Begin the journey';
   $('#newBtn').className = has ? 'cta alt' : 'cta';
   const found = WEAPON_ORDER.filter(id => save.owned[id]).map(id => WEAPONS[id].name).join(', ');
-  $('#saveInfo').textContent = has ? `Saved: ${STAGES[Math.min(save.stage, STAGES.length - 1)].name}${save.cycle ? ', cycle ' + (save.cycle + 1) : ''} · ${save.shards} shards · ${save.sigils} sigils · ${found}` : '';
+  const ends = endingsSeen();
+  $('#saveInfo').textContent = has ? `Saved: ${save.atChoice ? 'the Rim of the Abyss, deck in hand' : STAGES[roadStage()].name}${save.done ? ' (the road walked)' : ''}${save.cycle ? ', cycle ' + (save.cycle + 1) : ''}${ends ? ` · endings ${ends}/3` : ''} · ${save.shards} shards · ${save.sigils} sigils · ${found}` : '';
 }
 let confirmNew = false;
-$('#contBtn').addEventListener('click', () => { audioInit(); if (save.stage > 0) openForge(); else play(0); });
+$('#contBtn').addEventListener('click', () => { audioInit(); if (save.atChoice && window.BRANCH) BRANCH.resume(); else if (save.stage > 0) openForge(); else play(0); }); // (left with the deck in hand: back to the Rim)
 $('#newBtn').addEventListener('click', () => {
   audioInit();
   if (save.started && !confirmNew) { confirmNew = true; $('#newBtn').textContent = 'Tap again to erase your save'; return; }
   confirmNew = false; save = freshSave(); gearChanged(); persist(); play(0);
 });
-$('#walkBtn').addEventListener('click', () => play(Math.min(save.stage, STAGES.length - 1)));
+$('#walkBtn').addEventListener('click', () => play(roadStage()));
 $('#forgeTitleBtn').addEventListener('click', () => { mode = 'title'; refreshTitle(); showOnly('titleOv'); });
 $('#pauseBtn').addEventListener('click', pauseGame);
 // one button (and the M key) silences everything, sound and music together, and remembers it; turning it back on restores both
@@ -228,9 +264,14 @@ $('#resumeBtn').addEventListener('click', resume);
 $('#sfxBtn').addEventListener('click', () => { setTimeout(refreshMute); sfxOn = !sfxOn; try { localStorage.setItem('shadowroad-sfx', sfxOn ? '1' : '0'); } catch (e) {} $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); });
 $('#quitBtn').addEventListener('click', () => { persist(); mode = 'title'; refreshTitle(); showOnly('titleOv'); playMusic('title'); });
 $('#musicBtn').addEventListener('click', () => { setTimeout(refreshMute); setMusic(!musicOn); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); });
-$('#retryBtn').addEventListener('click', () => play(save.stage));
+$('#retryBtn').addEventListener('click', () => play(roadStage()));
 $('#overForgeBtn').addEventListener('click', () => openForge('REGROUP AND REFORGE'));
-$('#cycleBtn').addEventListener('click', () => { save.cycle++; save.stage = 0; save.silverArm = true; save.owned.fists = true; save.weapon = 'fists'; persist(); openForge('CYCLE ' + (save.cycle + 1) + ' BEGINS'); }); // (a new cycle starts with Benedict's silver arm on)
+$('#cycleBtn').addEventListener('click', () => { // a new cycle: the road from the start, and the choice on the Rim to make again
+  save.cycle++; save.stage = 0; save.branch = null; save.done = false; save.atChoice = false;
+  if (save.silverArm) { save.owned.fists = true; save.weapon = 'fists'; } // (it starts with Benedict's silver arm on, once it is won)
+  if (window.BRANCH) BRANCH.newCycle(); // (and each relic won on the other roads takes hold: their files)
+  persist(); openForge('CYCLE ' + (save.cycle + 1) + ' BEGINS');
+});
 onKeyMenu = (e) => {
   if (mode === 'inv') return invKey(e); // the inventory has its own keys (inventory.js)
   if (e.code === 'Enter' || e.code === 'NumpadEnter') { // Enter takes the main choice on any menu
@@ -301,7 +342,7 @@ function step(now) {
 
 // ---------- boot ----------
 layout();
-startStage(Math.min(save.stage, STAGES.length - 1));
+startStage(roadStage());
 $('#banner').classList.remove('on'); bannerT = 0;
 P.x = 200; P.state = 'walk';
 [['slime', 330], ['boar', 420]].forEach(([k, x]) => { const e = spawnEnemy(k, 1); e.x = x; e.facing = -1; });

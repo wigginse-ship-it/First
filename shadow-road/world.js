@@ -403,7 +403,7 @@ function updateWorld(dt) {
     if (zoneIdx === 1 && waveIdx === 0 && !stage.secret) { // the approach's first wave brings strangers: a couple of foes from this or earlier worlds, and a champion
       boostDrop();
       const firstWorld = (k) => STAGES.findIndex(st => (st.waves || []).some(w => w.some(t => t.replace(/[*!]/g, '') === k))); // the first world a foe appears in
-      const pool = Object.keys(EDEF).filter(k => !wave.includes(k) && !EDEF[k].noRandom && firstWorld(k) >= 0 && firstWorld(k) <= stageIdx); // (only foes already met on the road: none from later worlds)
+      const pool = Object.keys(EDEF).filter(k => !wave.includes(k) && !EDEF[k].noRandom && firstWorld(k) >= 0 && (firstWorld(k) <= Math.min(stageIdx, 4) || firstWorld(k) === stageIdx)); // (only foes already met on the road: none from later worlds, nor from the roads past the Rim not taken)
       for (let j = 0; j < 2; j++) spawnQ.push({ type: pick(pool), side: j % 2 ? 1 : -1, at: 1.2 + j * 1.4, drop: null });
       spawnQ.push({ type: pick(wave.map(t => t.replace('*', '')).filter(t => EDEF[t] && EDEF[t].move !== 'fly')), side: 1, at: 3.4, drop: null, champ: true });
       spawnQ.sort((a, b) => a.at - b.at);
