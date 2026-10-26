@@ -177,16 +177,17 @@
       const bx = (u / q - 318) / 92, by = (v / q - 290) / 64; wb[k] = Math.max(0, 1 - bx * bx - by * by) ** 2; // her breast, rising and falling
       ph[k] = wh[k] ? Math.hypot(u / q - 345, (v / q - 70) * 1.1) * .016 : v / q * .011 - u / q * .006; } // the wave runs out along her hair from her head; down and across the cloth
     // the still picture has the swaying cells cut out of it; they are drawn bent over the holes
-    const [B, bgc] = texCanvas(CW, CH); bgc.drawImage(S, 0, 0); const cells = [];
-    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) { const k = j * nx + i;
-      if (![k, k + 1, k + nx, k + nx + 1].some(m => wh[m] || wc[m] || wb[m] > .002)) continue;
-      const sx = P + U[k], sy = P + V[k], cw = U[k + 1] - U[k], ch = V[k + nx] - V[k]; if (cw < 1 || ch < 1) continue;
-      cells.push(sx, sy, cw, ch, k); bgc.clearRect(sx, sy, cw, ch); }
-    Object.assign(MO, { S, B, cells, nx, U, V, wh, wc, wb, ph, IW, IH, VX: new Float32Array(n), VY: new Float32Array(n), ok: true });
+    const [B, bgc] = texCanvas(CW, CH); bgc.drawImage(S, 0, 0); const cells = [], moving = (i, j) => { const k = j * nx + i; return [k, k + 1, k + nx, k + nx + 1].some(m => wh[m] || wc[m] || wb[m] > .002); };
+    const cell = (i, j, di, dj) => { const k = j * nx + i, kr = k + di, kb = k + dj * nx, sx = P + U[k], sy = P + V[k], cw = U[kr] - U[k], ch = V[kb] - V[k]; if (cw < 1 || ch < 1) return; cells.push(sx, sy, cw, ch, k, kr, kb); bgc.clearRect(sx, sy, cw, ch); };
+    for (let j = 0; j < ny - 1; j += 2) for (let i = 0; i < nx - 1; i += 2) { // cells in fours where only the cloth's broad swell moves them, one by one where hair does
+      const sub = [[i, j], [i + 1, j], [i, j + 1], [i + 1, j + 1]].filter(([a, b]) => a < nx - 1 && b < ny - 1);
+      let big = sub.length === 4 && sub.every(([a, b]) => moving(a, b)); for (let b = j; big && b <= j + 2; b++) for (let a = i; a <= i + 2; a++) if (wh[b * nx + a]) big = false;
+      if (big) cell(i, j, 2, 2); else for (const [a, b] of sub) if (moving(a, b)) cell(a, b, 1, 1); }
+    Object.assign(MO, { S, B, cells, nx, U, V, wh, wc, wb, ph, IW, IH, VX: new Float32Array(n), VY: new Float32Array(n), draw: moireDraw, ok: true }); // (draw: for timing it in tests)
   }
   // the picture with its top left at (x0, y0), s world units to each of its pixels
   function moireDraw(x0, y0, s, t) {
-    const M = MO, P = MO_PAD, nx = M.nx, n = M.U.length, VX = M.VX, VY = M.VY, U = M.U, V = M.V, IH = M.IH, q = M.IW / MO_W;
+    const M = MO, P = MO_PAD, n = M.U.length, VX = M.VX, VY = M.VY, U = M.U, V = M.V, IH = M.IH, q = M.IW / MO_W;
     const surge = (Math.sin(t * .37) * .6 + Math.sin(t * .23 + 1) * .4) * q; // the current's slow swell
     for (let k = 0; k < n; k++) { let dx = 0, dy = 0; const h = M.wh[k], c = M.wc[k], b = M.wb[k];
       if (h) { const a = t * 1.15 - M.ph[k]; dx += h * ((3.4 * Math.sin(a) + 1.3 * Math.sin(a * 1.9 + 1.3)) * q + 2 * surge); dy += h * 1.7 * q * Math.cos(a * .8 + .5); }
@@ -195,8 +196,8 @@
       VX[k] = x0 + (P + U[k] + dx) * s; VY[k] = y0 + (P + V[k] + dy) * s; }
     ctx.drawImage(M.B, x0, y0, M.B.width * s, M.B.height * s);
     const T0 = ctx.getTransform(), ma = T0.a, mb = T0.b, mc = T0.c, md = T0.d, me = T0.e, mf = T0.f, C = M.cells, S = M.S;
-    for (let i = 0; i < C.length; i += 5) { const sx = C[i], sy = C[i + 1], cw = C[i + 2], ch = C[i + 3], k = C[i + 4];
-      const x = VX[k], y = VY[k], ax = (VX[k + 1] - x) / cw, ay = (VY[k + 1] - y) / cw, bx = (VX[k + nx] - x) / ch, by = (VY[k + nx] - y) / ch, ex = x - ax * sx - bx * sy, ey = y - ay * sx - by * sy;
+    for (let i = 0; i < C.length; i += 7) { const sx = C[i], sy = C[i + 1], cw = C[i + 2], ch = C[i + 3], k = C[i + 4], kr = C[i + 5], kb = C[i + 6];
+      const x = VX[k], y = VY[k], ax = (VX[kr] - x) / cw, ay = (VY[kr] - y) / cw, bx = (VX[kb] - x) / ch, by = (VY[kb] - y) / ch, ex = x - ax * sx - bx * sy, ey = y - ay * sx - by * sy;
       ctx.setTransform(ma * ax + mc * ay, mb * ax + md * ay, ma * bx + mc * by, mb * bx + md * by, ma * ex + mc * ey + me, mb * ex + md * ey + mf);
       ctx.drawImage(S, sx - 1, sy - 1, cw + 2, ch + 2, sx - 1, sy - 1, cw + 2, ch + 2); } // each a pixel larger all round, so no seam opens between them
     ctx.setTransform(T0);
@@ -260,10 +261,11 @@
   }
   // if the picture could not be had: her empty throne of nacre, lit
   function moireFallback(L, t) {
-    const x = L.x0 + 150 * L.s * 2, y = L.wall, r = L.H * .42;
+    const x = L.ax, y = L.wall, r = L.H * .32;
     ctx.save(); ctx.fillStyle = '#E6DCD4'; ctx.beginPath(); ctx.moveTo(x - r, y); for (let k = 0; k <= 7; k++) { const a = Math.PI + k / 7 * Math.PI; ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r * 1.1); } ctx.closePath(); ctx.fill();
     ctx.strokeStyle = PAL_GOLD; ctx.lineWidth = 3; ctx.stroke(); for (let k = 1; k < 7; k++) { const a = Math.PI + k / 7 * Math.PI; ctx.strokeStyle = k % 2 ? 'rgba(170,150,190,.6)' : 'rgba(150,200,190,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * r * .95, y + Math.sin(a) * r * 1.05); ctx.stroke(); }
-    ctx.restore(); if (W7.drawPearl) W7.drawPearl(x, y - r * .5, L.H / 200, t, true);
+    ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(x, y - r * .4, 0, x, y - r * .4, r); gg.addColorStop(0, `rgba(236,232,246,${.2 + .05 * Math.sin(t * 1.3)})`); gg.addColorStop(1, 'rgba(236,232,246,0)'); ctx.fillStyle = gg; ctx.fillRect(x - r, y - r * 1.4, r * 2, r * 2);
+    ctx.restore();
   }
   function panelMoire(T, t) {
     const L = moireLay(), Y0 = L.Y0, H = L.H, fl = L.fl;

@@ -998,33 +998,39 @@
   // ======================================================================================================
   // THE SWIMMERS: what goes through the water over the stair and the streets, not along their floors
   // ======================================================================================================
-  // ---------------- SEA-KNIGHT OF MOIRE: one of the Queen's mer-knights, a man to the waist in nacre plate and a sea-
-  // beast below, a kite shield with Rebma's reversed unicorn on it, a long spear couched for the joust ----------------
+  // ---------------- SEA-KNIGHT OF MOIRE: a knight of the Queen's guard in full plate, swimming as a man in armour swims
+  // in Rebma: the legs kicking together like a frog's, the shield sculling, the cloak and the plume of his great helm
+  // streaming up off him in the water; a long spear couched for the joust ----------------
   CREATURES.w7knight = function (e, a) {
     a = a || {}; const t = a.t || 0, hurt = a.hurt, wJ = windK(e, a, 'w7joust'), wH = windK(e, a, 'w7hurl'), kJ = actK(e, 'joust'), kH = actK(e, 'hurl');
-    const dash = kJ >= 0 && kJ > .15 && kJ < .8 ? 1 : 0, sw = Math.sin(t * (dash ? 12 : 3.4) + (e.slot || 0)), noSpear = e.w7noSpear > 0;
-    ctx.save(); ctx.rotate((dash ? .62 : .22) - wJ * .25 + (hurt ? -.35 : 0) + Math.sin(t * 1.6) * .04);
-    // the tail behind and below, in a long S, its fan of a fin beating
-    seaTail(-2, -14, -22, 4 + sw * 6, -40, -6 - sw * 8, 14, '#3E6A8A', '#9AC8E0', '#1E3A54', t, sw * .5);
-    // the shield on the far arm: a kite of lapis, the unicorn turned about in white, a gold rim
-    ctx.save(); ctx.translate(-13, -30); ctx.scale(1.25, 1.25); ctx.rotate(-.25 + wJ * .2);
+    const dash = kJ >= 0 && kJ > .15 && kJ < .8 ? 1 : 0, noSpear = e.w7noSpear > 0, ph = t * 3 + (e.slot || 0), kick = dash ? 0 : Math.sin(ph), push = Math.max(0, Math.sin(ph + .6));
+    const STEEL = '#8E98A2', STEELL = '#E0E6EA', STEELD = '#3E464E';
+    ctx.save(); ctx.translate(0, -24 - push * 3); ctx.rotate((dash ? 1.25 : .42 + Math.sin(ph) * .06 + wJ * .2) + (hurt ? -.35 : 0)); ctx.translate(0, 24);
+    // the cloak, lapis, streaming up and back off his shoulders
+    const cw = Math.sin(t * 1.4 + (e.slot || 0)) * 4;
+    cel(PB([-6, -42, 4, -42, 2, -56 - cw, -10, -70 + cw, -22, -66, -16, -50]), '#1E3A78', { d: 2, r: 1, w: 1.2, dark: '#0E1C40', lite: '#4A6AB8' });
+    // the legs, in plate, kicking together (the frog-kick of a man swimming in armour)
+    for (const side of [0, 1]) { const u = dash ? 0 : (kick + 1) / 2, th = Math.PI / 2 + .55 - u * 1.15 + (side ? .1 : -.06), kn = dash ? .02 : .15 + u * 1.5; // both together, drawn up and driven back
+      const L = seg2(side ? 2.5 : -2.5, -18, th, 11, th + kn, 11, 5.6, 4.8, side ? STEEL : '#6E7882', { lit: STEELL });
+      ctx.fillStyle = C(STEELD); ell(L.ex, L.ey + 1, 3.6, 1.8, th + kn - Math.PI / 2); ctx.fill(); outline(.8); }
+    // the shield on the far arm, sculling: a kite of lapis with the reversed unicorn in white
+    ctx.save(); ctx.translate(-9, -32); ctx.rotate(-.3 + Math.sin(ph + 1.5) * (dash ? .05 : .45) + wJ * .2); ctx.scale(1.15, 1.15);
     cel(PB([-7, -9, 7, -9, 6, 4, 0, 14, -6, 4]), '#1E3A78', { d: 1.8, r: 1, dark: '#0E1C40', lite: '#4A6AB8', w: 1.2, tex: () => {
-      ctx.strokeStyle = '#EEF0EA'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(3, 5); ctx.lineTo(1, -1); ctx.lineTo(-3, -3); ctx.lineTo(-5, -7); ctx.moveTo(-3, -3); ctx.lineTo(-2, 4); ctx.stroke(); } });
-    ctx.strokeStyle = C(PAL.gold); ctx.lineWidth = 1.2; PB([-7, -9, 7, -9, 6, 4, 0, 14, -6, 4])(0, 0); ctx.stroke(); ctx.beginPath();
+      ctx.strokeStyle = '#EEF0EA'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(3, 5); ctx.lineTo(1, -1); ctx.lineTo(-3, -3); ctx.lineTo(-5, -7); ctx.moveTo(-3, -3); ctx.lineTo(-2, 4); ctx.stroke();
+      ctx.strokeStyle = PAL.gold; ctx.lineWidth = 1.2; PB([-7, -9, 7, -9, 6, 4, 0, 14, -6, 4])(0, 0); ctx.stroke(); } });
     ctx.restore();
-    // the body: a breastplate of nacre scales, a gilt belt where the tail begins
-    cel(PB([-8, -46, 8, -46, 10, -34, 8, -16, -1, -12, -9, -16, -10, -34]), PAL.nacre, { d: 2.6, dark: PAL.nacreD, lite: PAL.nacreL, w: 1.3, tex: () => {
-      for (let r = 0; r < 6; r++) for (let c = -2; c <= 2; c++) { const x = c * 3.4 + (r % 2) * 1.7, y = -43 + r * 4.4; ctx.strokeStyle = 'rgba(110,100,130,.55)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(x, y, 2, .1, Math.PI - .1); ctx.stroke(); }
-      ctx.fillStyle = PAL.gold; ctx.fillRect(-9, -18, 18, 2.6); } });
-    // the head: a close helm of green bronze with a gold fin for a crest, the visor down, sea-green hair streaming out behind
-    for (let i = 0; i < 4; i++) drift(-5 + i, -52, 9 + i * 2, 1.8, i % 2 ? PAL.hair : PAL.hairL, t, i + (e.slot || 0), -1.2);
-    cel(PB([-6, -46, -7, -54, -3, -59, 4, -58, 7, -53, 7, -47]), PAL.verd, { d: 1.8, dark: PAL.verdD, lite: PAL.verdL, w: 1.2, tex: () => { ctx.fillStyle = '#0A1410'; ctx.fillRect(1, -53.6, 6, 1.4); ctx.fillRect(3.4, -52, 1, 4); } });
-    cel(PB([-6, -56, -9 + sw * .6, -64, -2, -67, 4, -60]), PAL.gold, { d: 1, r: .8, w: 1, dark: PAL.goldD, lite: PAL.goldL });
-    // the spear, couched under the near arm (or gone, thrown)
-    if (!noSpear) { const la = kH >= 0 ? lerp(-1.1, .5, sm(kH / .4)) : wH > 0 ? lerp(0, -1.1, wH) : -.05 + wJ * .1;
-      ctx.save(); ctx.translate(6, -32); ctx.rotate(la); ctx.beginPath(); ctx.rect(-16, -1.1, 62, 2.2); ctx.fillStyle = C('#5A4430'); ctx.fill(); outline(.7);
-      ctx.fillStyle = C('#D8E0E4'); poly([46, -2.6, 58, 0, 46, 2.6]); ctx.fill(); outline(.8); ctx.fillStyle = C(PAL.gold); ctx.beginPath(); ctx.rect(43, -2.4, 3, 4.8); ctx.fill(); ctx.restore(); }
-    seg2(6, -42, Math.PI / 2 - .2 - wJ * .4, 8, .1 - wJ * .2, 7, 4, 3.4, PAL.nacre, { col2: PAL.rebm, lit: PAL.nacreL });
+    // the body: a breastplate, a surcoat of Rebma's blue whose skirts float up round his hips
+    cel(PB([-8, -45, 8, -45, 9, -32, 8, -20, -8, -20, -9, -32]), STEEL, { d: 2.6, dark: STEELD, lite: STEELL, w: 1.3, tex: () => { ctx.strokeStyle = 'rgba(30,36,44,.6)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(0, -44); ctx.lineTo(0, -22); ctx.stroke(); } });
+    const sk = Math.sin(t * 1.8 + (e.slot || 0)) * 2;
+    cel(PP([-7, -34, 7, -34, 10, -18 - sk, 4, -22, 0, -15 + sk, -4, -22, -10, -18 + sk]), '#2E4A8A', { d: 1.6, w: 1.1, dark: '#16264A', lite: '#5A7AB8', tex: () => { ctx.fillStyle = PAL.gold; ctx.fillRect(-7, -27, 14, 2); } });
+    // the great helm: flat-topped, the eye-slit and breaths, a gold crest-band; the plume streaming up out of it
+    for (let i = 0; i < 4; i++) drift(-2 + i * 1.2, -60, 11 + i * 3, 2.4, i % 2 ? '#E8DCC8' : '#C8343A', t * 1.2, i * .7 + (e.slot || 0), -.8);
+    cel(PP([-6, -46, -6, -58, 7, -59, 7.5, -46]), STEEL, { d: 1.8, dark: STEELD, lite: STEELL, w: 1.3, tex: () => { ctx.fillStyle = '#0A0E12'; ctx.fillRect(1, -54.4, 6.5, 1.5); for (let i = 0; i < 3; i++) ctx.fillRect(4 + i * 1.4, -50, .7, 2.4); ctx.fillStyle = PAL.gold; ctx.fillRect(-6, -59, 13, 1.6); } });
+    // the spear, couched in the near hand (or gone, thrown)
+    if (!noSpear) { const la = kH >= 0 ? lerp(-1.1, .5, sm(kH / .4)) : wH > 0 ? lerp(0, -1.1, wH) : (dash ? -1.2 : -.1) + wJ * .1;
+      ctx.save(); ctx.translate(7, -34); ctx.rotate(la); ctx.beginPath(); ctx.rect(-18, -1.1, 66, 2.2); ctx.fillStyle = C('#5A4430'); ctx.fill(); outline(.7);
+      ctx.fillStyle = C('#D8E0E4'); poly([48, -2.6, 60, 0, 48, 2.6]); ctx.fill(); outline(.8); ctx.fillStyle = C('#C8343A'); poly([30, -1, 20 - Math.sin(t * 5) * 2, -7, 16, -1]); ctx.fill(); outline(.6); ctx.restore(); }
+    seg2(6, -42, Math.PI / 2 - .3 - wJ * .4 + (dash ? -1.2 : 0), 8, .1 - wJ * .2 + (dash ? -1.2 : 0), 7, 4.4, 3.8, STEEL, { lit: STEELL });
     ctx.restore();
   };
 
@@ -1056,19 +1062,29 @@
     ctx.restore();
   };
 
-  // ---------------- NIXIE OF THE STAIR: the little drowned folk of the sea-tales, a child to the waist and a fish below,
-  // lantern-eyes, wild hair; they go in shoals, and they bite ----------------
+  // ---------------- NIXIE OF THE STAIR: the sea's putti, as the old painters put them round the sea-gods: fat drowned
+  // children with ringlets of weed, borne up on webbed wings like a bat's, that beat as fast as a moth's; they go in
+  // shoals, and they bite ----------------
   CREATURES.w7nixie = function (e, a) {
-    a = a || {}; const t = a.t || 0, hurt = a.hurt, wN = windK(e, a, 'w7nip'), kN = actK(e, 'nip'), kR = actK(e, 'ring'), dart = kN > .25 ? 1 : 0;
-    const sw = Math.sin(t * (dart || kR >= 0 ? 16 : 6) + (e.slot || 0) * 2);
-    ctx.save(); ctx.scale(1.35, 1.35); ctx.rotate((dart ? .9 : kR >= 0 ? .5 : 0) - wN * .3 + (hurt ? -.5 : 0));
-    seaTail(-1, -8, -8 + sw * 2, 2, -12, -4 + sw * 3, 8, '#4A8A8A', '#A8E0D0', '#24504E', t, sw * .5);
-    for (let i = 0; i < 6; i++) drift(-2 + i * .7, -20, 7 + hsh(i + (e.slot || 0)) * 5, 1.4, i % 2 ? '#3A6A7A' : '#7AB0B8', t * 1.4, i * 1.3 + (e.slot || 0), -1);
-    cel(PB([-4, -18, 4, -18, 5, -12, 3, -7, -3, -7, -5, -12]), '#A8D0CC', { d: 1.4, r: .8, w: 1, dark: '#6A9894', lite: '#D8F0EC' });
-    cel(PE(1, -21.5, 4.6, 4.4), '#B8DCD6', { d: 1.2, r: .8, w: 1, dark: '#7AA8A2', lite: '#E8FAF6' });
-    if (DET()) { ctx.fillStyle = '#0A1A1A'; ell(3, -22, 1.5, 1.8); ctx.fill(); ell(-.4, -22, 1.2, 1.6); ctx.fill(); ctx.fillStyle = '#D8FFE8'; circle(3.2, -22.4, .6); ctx.fill(); circle(-.2, -22.4, .5); ctx.fill();
-      if (wN > .3 || dart) { ctx.fillStyle = '#0A1A1A'; ell(3.6, -18.8, 1.4, 1); ctx.fill(); ctx.fillStyle = '#F2F8F0'; ctx.fillRect(2.4, -19.6, .6, .8); ctx.fillRect(3.8, -19.6, .6, .8); } } // needle teeth
-    seg2(3, -16, .3 - wN * 1.2 + dart * -.6, 4, -.1 - dart * .6, 3.4, 2, 1.8, '#A8D0CC');
+    a = a || {}; const t = a.t || 0, hurt = a.hurt, wN = windK(e, a, 'w7nip'), kN = actK(e, 'nip'), kR = actK(e, 'ring'), dart = kN > .25 ? 1 : 0, fast = dart || kR >= 0;
+    const beat = Math.sin(t * (fast ? 30 : 17) + (e.slot || 0) * 2), kick = Math.sin(t * 6 + (e.slot || 0));
+    const SK = '#B8D4C8', SKD = '#7AA096', SKL = '#E8F6EE';
+    ctx.save(); ctx.scale(1.5, 1.5); ctx.rotate((dart ? .8 : kR >= 0 ? .35 : 0) - wN * .35 + (hurt ? -.5 : 0) + Math.sin(t * 2.4 + (e.slot || 0)) * .08);
+    const wing = (side) => { ctx.save(); ctx.translate(-2, -17); ctx.scale(1, side); ctx.rotate(-1.1 - beat * .55 * side - (dart ? .6 : 0));
+      cel(PB([0, 0, 2, -8, -2, -16, -8, -12, -11, -14, -13, -6, -9, -2]), side > 0 ? '#9AC8D8' : '#78A8BC', { d: 1, r: .6, w: 1, dark: '#4A7A8E', lite: '#D8F0F8', tex: () => { ctx.strokeStyle = 'rgba(40,70,90,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-2, -16); ctx.moveTo(0, 0); ctx.lineTo(-11, -14); ctx.moveTo(0, 0); ctx.lineTo(-13, -6); ctx.stroke(); } });
+      ctx.restore(); };
+    wing(-1);
+    // fat little legs, kicking
+    for (const side of [0, 1]) { const th = Math.PI / 2 + (side ? .3 : -.2) + (side ? kick : -kick) * .35 - (dart ? .9 : 0); seg2(side ? 2 : -1.5, -9, th, 4.6, th + .5, 4, 3.6, 3, side ? SK : SKD, { lit: SKL }); }
+    // the round body
+    cel(PE(0, -13, 5.6, 6.2), SK, { d: 1.6, r: 1, w: 1.1, dark: SKD, lite: SKL, tex: () => { ctx.fillStyle = 'rgba(230,140,150,.3)'; ell(1, -11, 2.4, 1.6); ctx.fill(); } });
+    // the head: big, round, ringlets of green weed, lantern-pale eyes, the needle-teeth when it means to bite
+    cel(PE(1.5, -22, 5.4, 5), SK, { d: 1.4, r: .8, w: 1.1, dark: SKD, lite: SKL });
+    for (let i = 0; i < 7; i++) { const a2 = Math.PI * (.95 + i * .16); ctx.fillStyle = C(i % 2 ? '#2E6A5A' : '#4E8A6A'); circle(1.5 + Math.cos(a2) * 5.2, -22 + Math.sin(a2) * 4.8, 1.9); ctx.fill(); outline(.6); }
+    if (DET()) { ctx.fillStyle = '#0A1A1A'; ell(4, -22.4, 1.4, 1.7); ctx.fill(); ell(.6, -22.4, 1.1, 1.5); ctx.fill(); ctx.fillStyle = '#DFFFEA'; circle(4.2, -22.8, .6); ctx.fill(); circle(.8, -22.8, .5); ctx.fill();
+      if (wN > .3 || dart) { ctx.fillStyle = '#0A1A1A'; ell(4.6, -19.4, 1.5, 1.1); ctx.fill(); ctx.fillStyle = '#F2F8F0'; ctx.fillRect(3.4, -20.2, .6, .8); ctx.fillRect(4.9, -20.2, .6, .8); } }
+    seg2(3.4, -15, .4 - wN * 1.1 + dart * -.7, 3.6, -.1 - dart * .6, 3, 2.4, 2, SK, { lit: SKL });
+    wing(1);
     ctx.restore();
   };
 
