@@ -112,7 +112,7 @@ function moveListHtml(id) {
 const cyc = () => 1 + .5 * (save.cycle || 0);
 const WMAX = () => save.cycle > 0 ? WLEARN + 6 : WLEARN; // past level 7 (new cycles only) each level is a plain damage bump
 // tuned so a world pays for one or two upgrades, no more
-const wCost = (lvl) => lvl < WLEARN ? { s: Math.round([0, 90, 190, 330, 520, 760, 1050][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) } : { s: Math.round((1150 + 120 * (lvl - WLEARN)) * cyc()), g: Math.round((4 + (lvl - WLEARN)) * cyc()) }; // level 7, the last move, is a step dearer than 6
+const wCost = (lvl) => lvl < WLEARN ? { s: Math.round([0, 90, 190, 330, 520, 760, 1050][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) } : { s: Math.round((1600 + 250 * (lvl - WLEARN)) * cyc()), g: Math.round((14 + 3 * (lvl - WLEARN)) * cyc()) }; // level 7, the last move, is a step dearer than 6
 const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
@@ -133,7 +133,7 @@ function renderForge(note) {
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/${WMAX()} · DAMAGE ×${wMult(id).toFixed(2)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
       <p>${bare ? w.desc + ' Fists never level up.' : owned ? w.desc : 'Not found yet. Defeat enemies to find it.'}</p><ul>${moves}</ul>
-      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX() > WLEARN ? 'Fully tempered' : 'Every move learned') : lvl >= WLEARN ? `Temper: +6% damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
+      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX() > WLEARN ? 'Fully tempered' : 'Every move learned') : lvl >= WLEARN ? `Temper: +4% damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
     if (b) b.addEventListener('click', () => {
