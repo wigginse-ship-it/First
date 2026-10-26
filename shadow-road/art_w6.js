@@ -11,7 +11,7 @@
 //   dreamBoss  - The Bed of the Sleeper: an endless quilt under a day sky, a dark street at night along its edge, and
 //                over it the Sleeper itself, a vast soft head propped up on crutches (rule 'w6sleep': its three dreams)
 // Enemies: Gentleman of Golconda, Soft Clock, Stilt Elephant, Mannequin of the Muses, Lobster Telephone, Bird of
-// Daylight, Collective Invention. Boss: the Sleeper (Asleep on its crutches; the Dream of the Board; Waking).
+// Daylight, Collective Invention. Boss: the Sleeper (Asleep on its crutches; the Patchwork Dream; Waking: all of it bedtime).
 // Passages: 'w6easel' (into a painting of the place ahead, on its easel) and 'w6bed' (he lies down, and the eyes close).
 // Everything lives inside this closure; the late parts are handed to data_w6.js.
 (() => {
@@ -911,7 +911,7 @@
 
   // ======================================================================================================
   // THE SLEEPER: a head as big as a house, soft as dough, its lower half sagging like a sack and held up off the quilt
-  // on crutches. It is dreaming all of this. Its eyes are shut (one opens in the Dream of the Board; both, wide and
+  // on crutches. It is dreaming all of this. Its eyes are shut (one opens in the Patchwork Dream; both, wide and
   // spiralling, when it wakes). Drawn about the lowest point of its jowls; o: { eyes 0..1, sag 0..1, mouth 0..1, mood
   // -1 (pained) .. 1 (pleased), look -1..1, snore 0..1, t }
   // ======================================================================================================
@@ -1263,15 +1263,20 @@
   } });
 
   // ======================================================================================================
-  // THE SLEEPER: three dreams
-  //   Asleep          it cannot be hurt (blows sink into it), only its crutches can. It dreams at you: rains of gentlemen,
-  //                   trains out of fireplaces. Knock all its crutches away and its face comes down onto the quilt: strike
-  //                   it there before it props itself up again (new crutches grow, fewer each time)
-  //   the Board       the quilt becomes a chessboard. It is the king, moving a square at a time, and it plays pieces against
-  //                   you: rooks along your row and file, bishops down your diagonals, a knight's three jumps, and late in
-  //                   the game its queen. Stay off the squares it lights
-  //   Waking          the dream is closing round you like an iris; outside it you are forgotten. Every blow on the Sleeper
-  //                   holds the dream open a little longer; let it close and the Sleeper's alarm goes off
+  // THE SLEEPER: three dreams, and every one of them is bedtime
+  //   Asleep          it cannot be hurt (blows sink into it), only its crutches can. It dreams at you, and what it dreams
+  //                   is bedtime: pillows thrown down out of the sky, sheep jumping a fence to be counted (and run down
+  //                   your lane), a snore that rolls out across the bed, and at last the Sandman, pouring his sand along
+  //                   every row but one. Knock all its crutches away and its face comes down onto the quilt: strike it
+  //                   there before it props itself up again (new crutches grow, fewer each time)
+  //   the Quilt       the bed becomes a patchwork quilt and it tosses and turns across it a patch at a time, sending its
+  //                   nursery things over the patches: the duvet heaving along your row and your file, sleepwalkers down
+  //                   your diagonals, the cow that jumped over the moon (three hops), and late on a lullaby, sung out
+  //                   along every line from where it lies. Stay off the patches it lights
+  //   Waking          the dream is closing round you like an iris; outside it you are forgotten. It wakes the way anyone
+  //                   wakes: its eyes flicker (two rows at a time), its teeth fall out, it slaps about for the snooze,
+  //                   its alarm rings, and at the very last it dreams it is falling and the whole bed jolts (jump!).
+  //                   Every blow on it holds the dream open a little longer; let it close and the alarm goes off
   // ======================================================================================================
   const SB = () => (typeof boss !== 'undefined' && boss && boss.def === BOSSES.sleeper ? boss : null);
   let B = W6.B = { mode: 'none' };
@@ -1279,6 +1284,10 @@
   const BOARD = () => { const L = leftWall(), R = rightWall(), nc = Math.max(6, Math.round((R - L) / 78)), cw = (R - L) / nc, y0 = FLOOR_TOP + 8, rh = (FLOOR_BOT - y0) / 4;
     return { L, R, nc, nr: 4, cw, y0, rh, cx: (c) => L + (c + .5) * cw, cy: (r) => y0 + (r + .5) * rh, col: (x) => clamp(Math.floor((x - L) / cw), 0, nc - 1), row: (y) => clamp(Math.floor((y - y0) / rh), 0, 3) }; };
   W6.BOARD = BOARD;
+  // the patches of its quilt (the Quilt draws them, and the duvet's heave takes the colour of the patch it lifts)
+  const PATCH = ['#D89090', '#8EA8D2', '#E8D29C', '#9CC2A2', '#C4A2CC', '#F0E4CC', '#E0A878'];
+  W6.patchCol = (c, r) => PATCH[Math.floor(hsh(c * 7.3 + r * 13.1) * PATCH.length)];
+  const SHZ = ['w6drop', 'w6sheep', 'w6snore', 'w6sand', 'w6piece', 'w6rem', 'w6slap', 'w6jolt', 'w6bell', 'ring'];
   const CRUTCH_FEET = [[-200, 40], [200, 44], [-100, 86], [110, 90]];
   function anchorAt(e, i) { const [ax, ay] = W6.ANCH[i], s = e.size || 1.15, S = e.w6S || {}, hs = W6.HS; return [e.x + ax * s, e.y - e.z + (ay + (ay + 60 * hs) * (S.sag || 0) * .35) * s]; }
   function plantCrutch(e, i, hpK, grow) {
@@ -1291,7 +1300,7 @@
   function initSleeper(e) {
     e.w6init = 1; e.x = homeX(); e.y = FLOOR_TOP + 16; e.z = 62; e.facing = 1; e.state = 'w6act'; e.w6a = 'sleep'; e.plan = null;
     e.w6S = { sag: 0, eyes: 0, mouth: .15, mood: 0, look: 0 };
-    B = W6.B = { mode: 'asleep', t: 0, dreamT: 3.2, dreamN: 0, crutches: [], broken: 0, regrows: 0, vuln: false, boardK: 0, iris: null, castT: 2, moveT: 1, cast: 0, gx: e.x, gy: e.y, gz: 62 };
+    B = W6.B = { mode: 'asleep', t: 0, dreamT: 3.2, dreamN: 0, crutches: [], broken: 0, regrows: 0, vuln: false, boardK: 0, iris: null, castT: 2, moveT: 1, cast: 0, gx: e.x, gy: e.y, gz: 62, sheep: 0, inhale: 0, rem: 0 };
     for (let i = 0; i < 4; i++) plantCrutch(e, i, 1, false);
     banner(e.def.name, 'IT IS DREAMING ALL OF THIS · KNOCK AWAY ITS CRUTCHES', 2.6);
   }
@@ -1299,69 +1308,207 @@
   function toPhase(e, n) {
     phaseDrop(e); e.phase = n; e.dmg = Math.round(e.baseDmg * [1, 1.12, 1.25][n - 1]);
     for (const c of B.crutches) if (!c.dead) { c.dead = true; c.w6counted = 1; c.state = 'dying'; c.death = 'w6snap'; c.t = c.dmax = 1.2; c.vx = 0; c.deadAt = performance.now() / 1000; c.dir = Math.sign(c.x - e.x) || 1; }
-    hazards = hazards.filter(h => !['w6man', 'w6train', 'w6piece'].includes(h.kind));
+    hazards = hazards.filter(h => !SHZ.includes(h.kind)); B.inhale = 0; e.w6S.flush = 0;
     for (const c of corpses) if (c.type === 'w6crutch') { c.remove2 = 1; puffAt(c.x, c.y); } corpses = corpses.filter(c => !c.remove2);
     shakeMag = 14; flashT = .2; sfx('roar'); zoom = .06;
-    if (n === 2) { B.mode = 'turn'; B.t = 0; banner('The Dream of the Board', 'IT PLAYS AGAINST YOU · STAY OFF THE SQUARES IT LIGHTS', 2.8); }
+    if (n === 2) { B.mode = 'turn'; B.t = 0; banner('The Patchwork Dream', 'IT TOSSES AND TURNS · STAY OFF THE PATCHES IT LIGHTS', 2.8); }
     if (n === 3) { B.mode = 'wake'; B.t = 0; banner('It Is Waking', 'THE DREAM IS CLOSING · EVERY BLOW HOLDS IT OPEN', 2.8); }
   }
+
+  // ---------------- the things of bedtime, painted ----------------
+  // (each is drawn standing on its own origin, facing right)
+  function pillowArt(v = 0) {
+    const col = ['#F4EEE2', '#D6E2F4', '#F2D8D4'][v % 3];
+    cel(PB([-26, -1, -13, 3, 0, 1, 13, 3, 26, -1, 21, -14, 25, -28, 11, -24, 0, -26, -11, -24, -25, -28, -21, -14]), col, { d: 3, r: 1.6, w: 1.5, tex: () => {
+      ctx.strokeStyle = shade(col, -.16); ctx.lineWidth = 1.4; for (let x = -24; x <= 24; x += 6) { ctx.beginPath(); ctx.moveTo(x, -28); ctx.lineTo(x + 2, 4); ctx.stroke(); } // the ticking's stripes
+      ctx.fillStyle = 'rgba(120,100,90,.25)'; ell(0, -12, 5, 2.4); ctx.fill(); } }); // the dimple where a head was
+  }
+  function feathers(x, y, n = 16) { for (let i = 0; i < n; i++) parts.push({ x: x + rand(-14, 14), y: y + rand(-4, 4), z: rand(6, 26), vx: rand(-90, 90), vy: rand(-12, 12), vz: rand(120, 300), life: 1.1, max: 1.1, col: pick(['#FFFFFF', '#F4EEE2', '#E2E6F2']), size: rand(3, 5), shape: 'tuft', rot: rand(0, 3), vr: rand(-8, 8) }); }
+  function sheepArt(ph, black) {
+    const wool = black ? '#3E3640' : '#F2EEE4', face = black ? '#141016' : '#2E262A';
+    ctx.strokeStyle = C(face); ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+    for (const [lx, o] of [[-11, 0], [-6, 1], [7, 0], [12, 1]]) { const sw = Math.sin(ph + o * Math.PI) * 4; ctx.beginPath(); ctx.moveTo(lx, -9); ctx.lineTo(lx + sw, 0); ctx.stroke(); }
+    cel(PB([-18, -10, -21, -20, -13, -29, 0, -31, 12, -29, 20, -21, 18, -10, 6, -6, -6, -6]), wool, { d: 3, r: 1.5, w: 1.5, dark: black ? '#221C24' : '#C8BCAA', tex: () => {
+      ctx.strokeStyle = black ? 'rgba(255,255,255,.14)' : 'rgba(150,128,108,.4)'; ctx.lineWidth = 1; for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(-14 + (i % 5) * 7, -24 + Math.floor(i / 5) * 8, 3.2, Math.PI * .9, Math.PI * 2.1); ctx.stroke(); } } }); // its curls
+    ctx.save(); ctx.translate(21, -22); ctx.rotate(.3);
+    ctx.fillStyle = C(face); ell(-4, -4, 4, 1.8, -.7); ctx.fill(); outline(1);
+    cel(PE(1, 1, 6.5, 5), face, { d: 1.4, r: 1, w: 1.3 });
+    ctx.fillStyle = C(wool); circle(-3, -4, 3.6); ctx.fill(); outline(1); // a curl on its head
+    ctx.strokeStyle = '#F2EEE4'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(3, 0, 1.8, .2, Math.PI - .2); ctx.stroke(); // a sleepy eye
+    ctx.restore();
+  }
+  function fenceArt() {
+    for (const x of [-15, -5, 5, 15]) fillPoly([x - 3.5, 0, x - 3.5, -30, x, -35, x + 3.5, -30, x + 3.5, 0], '#F2EEE6', 1.1);
+    for (const y of [-9, -22]) { ctx.fillStyle = C('#E2D8C6'); rrect(-21, y - 2.5, 42, 5, 1.5); ctx.fill(); outline(1); }
+  }
+  function sleepwalkerArt(ph) {
+    const sw = Math.sin(ph) * 3;
+    for (const fx of [-3 + sw, 4 - sw]) { ctx.fillStyle = C(FLESH); ell(fx, -1, 4, 2); ctx.fill(); outline(1); }
+    cel(PP([-9, -3, -7, -30, -4, -36, 6, -36, 9, -30, 11, -3]), '#E2E8F6', { d: 2.5, r: 1.2, w: 1.3, tex: () => { ctx.strokeStyle = 'rgba(120,150,210,.45)'; ctx.lineWidth = 1; for (let x = -8; x <= 10; x += 4) { ctx.beginPath(); ctx.moveTo(x, -36); ctx.lineTo(x + 1, -2); ctx.stroke(); } } });
+    horn(1, -31, 11, -32 + Math.sin(ph * .5) * 1.5, 22, -30, 6, 4.4, '#E2E8F6', 1.1); // arms held out in front, as sleepwalkers do
+    ctx.fillStyle = C(FLESH); circle(23, -30, 2.7); ctx.fill(); outline(1);
+    cel(PE(1, -42, 6.5, 7), FLESH, { d: 1.6, r: 1, w: 1.2, dark: FLESHD, lite: FLESHL });
+    ctx.strokeStyle = C('#3A2418'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(4, -42.5, 1.8, .2, Math.PI - .2); ctx.stroke(); ctx.beginPath(); ctx.arc(5, -38.5, 1, 0, TAU); ctx.stroke(); // shut eye, open mouth
+    const cap = horn(-4, -47, -4, -62, -15, -53, 13, 3, '#B8402E', 1.1); // the nightcap, flopping
+    ctx.fillStyle = C('#F2EEE4'); circle(-15, -52, 3); ctx.fill(); outline(1);
+    ctx.fillStyle = C('#F2EEE4'); rrect(-7, -49, 15, 3.4, 1.5); ctx.fill(); outline(.9);
+  }
+  function cowArt(ph, air) {
+    ctx.strokeStyle = C('#3A2A26'); ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+    for (const [lx, o] of [[-13, 0], [-8, 1], [9, 0], [14, 1]]) { const sw = air ? (lx < 0 ? -5 : 5) : Math.sin(ph + o * Math.PI) * 3; ctx.beginPath(); ctx.moveTo(lx, -11); ctx.lineTo(lx + sw, air ? -3 : 0); ctx.stroke(); }
+    ctx.strokeStyle = C('#3A2A26'); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-19, -22); ctx.quadraticCurveTo(-26, -20, -24, -12); ctx.stroke(); ctx.fillStyle = C('#3A2A26'); circle(-24, -11, 2); ctx.fill();
+    cel(PB([-19, -12, -20, -25, -8, -29, 10, -29, 19, -25, 19, -12, 6, -10, -8, -10]), '#F4F0E8', { d: 3, r: 1.5, w: 1.5, tex: () => { ctx.fillStyle = '#2A2226'; ell(-8, -21, 6, 4.5, .3); ctx.fill(); ell(9, -24, 4.5, 3); ctx.fill(); ell(-15, -14, 3, 2); ctx.fill(); } });
+    ctx.fillStyle = C('#E8A0A8'); ell(2, -10, 4, 2.4); ctx.fill(); outline(.9); // the udder
+    ctx.save(); ctx.translate(21, -27);
+    ctx.strokeStyle = C('#E8DCC0'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-2, -5); ctx.quadraticCurveTo(-3, -10, 0, -11); ctx.moveTo(3, -5); ctx.quadraticCurveTo(4, -10, 7, -10); ctx.stroke(); // horns
+    cel(PB([-6, -5, 4, -6, 9, 0, 8, 7, -2, 8, -7, 2]), '#F4F0E8', { d: 1.4, r: 1, w: 1.3 });
+    ctx.fillStyle = C('#E8A8A8'); ell(5, 5, 5, 3.2); ctx.fill(); outline(1); ctx.fillStyle = '#7A3A3A'; circle(4, 5, .8); ctx.fill(); circle(7, 5, .8); ctx.fill();
+    ctx.fillStyle = '#1A1014'; circle(1, -1, 1.3); ctx.fill();
+    ctx.restore();
+  }
+  function moonArt(r) { // a crescent: what the cow jumps over
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.arc(r * .45, -r * .25, r * .85, 0, TAU, true); ctx.fillStyle = C('#F2DC8C'); ctx.fill('evenodd'); outline(1);
+  }
+  function noteArt(v) { // a music-box note, inked, with a little gold on its head
+    ctx.save(); ctx.rotate(Math.sin(v) * .15);
+    ctx.strokeStyle = C('#2A1E34'); ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(4.5, -6); ctx.lineTo(4.5, -32); ctx.stroke();
+    ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(4.5, -32); ctx.quadraticCurveTo(13, -27, 11, -17); ctx.stroke();
+    ctx.fillStyle = C('#2A1E34'); ell(0, -6, 6, 4.3, -.4); ctx.fill(); outline(1);
+    if (DET()) { ctx.fillStyle = 'rgba(232,192,96,.8)'; ell(-1.5, -7.5, 2.4, 1.3, -.4); ctx.fill(); }
+    ctx.restore();
+  }
+  function toothArt() {
+    cel(PB([-11, -26, 0, -29, 11, -26, 13, -16, 8, -9, 6, 1, 2, -5, -2, -5, -6, 1, -8, -9, -13, -16]), '#F8F4EA', { d: 2.5, r: 1.5, w: 1.5, dark: '#C8C0AC' });
+    if (DET()) { ctx.strokeStyle = 'rgba(150,140,120,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-5, -26); ctx.quadraticCurveTo(0, -22, 5, -26); ctx.stroke(); }
+  }
+  function handArt() { // a vast hand coming down flat, a striped pyjama sleeve behind it
+    cel(PP([-30, -8, -18, -20, -58, -110, -88, -92]), '#B8C8E8', { d: 3, r: 1.5, w: 1.6, tex: () => { ctx.strokeStyle = 'rgba(70,90,150,.55)'; ctx.lineWidth = 3; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(-90 + i * 12, -120); ctx.lineTo(-30 + i * 12, 0); ctx.stroke(); } } });
+    ctx.fillStyle = C('#E8EEF8'); ctx.beginPath(); ctx.moveTo(-34, -4); ctx.lineTo(-20, -24); ctx.lineTo(-14, -20); ctx.lineTo(-27, 0); ctx.closePath(); ctx.fill(); outline(1.2); // the cuff
+    cel(PB([-26, -1, -24, -18, -4, -23, 18, -20, 36, -12, 38, -1, 10, 3]), FLESH, { d: 2.6, r: 1.4, w: 1.7, dark: FLESHD, lite: FLESHL });
+    ctx.strokeStyle = 'rgba(120,70,50,.55)'; ctx.lineWidth = 1.1; for (const x of [12, 20, 28]) { ctx.beginPath(); ctx.moveTo(x - 4, -17); ctx.lineTo(x + 2, -2); ctx.stroke(); } // fingers
+    ctx.fillStyle = C(FLESH); ell(2, -21, 9, 4, -.3); ctx.fill(); outline(1.2); // thumb
+  }
+  function clockArt(sh) { // a bell alarm clock, jumping about as it rings
+    ctx.save(); ctx.rotate(Math.sin(sh * 40) * .12 * (sh > 0 ? 1 : 0));
+    ctx.strokeStyle = C('#3A2A1A'); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(-9, -6); ctx.lineTo(-13, 0); ctx.moveTo(9, -6); ctx.lineTo(13, 0); ctx.stroke(); // legs
+    for (const s of [-1, 1]) { ctx.save(); ctx.translate(s * 10, -33); ctx.rotate(s * .5); ctx.beginPath(); ctx.arc(0, 0, 7, Math.PI, 0); ctx.closePath(); ctx.fillStyle = C('#C8A050'); ctx.fill(); outline(1.1); ctx.restore(); } // bells
+    ctx.strokeStyle = C('#3A2A1A'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(Math.sin(sh * 60) * 6, -38); ctx.stroke(); // the hammer
+    cel(PE(0, -19, 15, 15), '#B8402E', { d: 2.5, r: 1.2, w: 1.6 });
+    ctx.fillStyle = C('#F6EEDC'); circle(0, -19, 11); ctx.fill(); outline(1);
+    ctx.strokeStyle = C('#2A1A10'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, -19); ctx.lineTo(0, -27); ctx.moveTo(0, -19); ctx.lineTo(6, -16); ctx.stroke();
+    if (DET()) { ctx.fillStyle = '#2A1A10'; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.fillRect(Math.cos(a) * 9 - .6, -19 + Math.sin(a) * 9 - .6, 1.2, 1.2); } }
+    ctx.restore();
+  }
+  W6.ART2 = { pillowArt, sheepArt, fenceArt, sleepwalkerArt, cowArt, moonArt, noteArt, toothArt, handArt, clockArt };
+
   // ---------------- the dreams of its sleep ----------------
-  // A RAIN OF GENTLEMEN: men in bowler hats fall out of the sky onto marks round you, one after another
-  function dreamGolconda(e) {
-    const n = 5 + Math.min(3, B.broken), spots = [[P.x, P.y]];
+  // PILLOW FIGHT: pillows come down out of the sky onto marks round you, one after another, and burst into feathers
+  // (in its Waking the same marks are its teeth, falling out: the dream everyone has)
+  function dropRain(e, art, n, dmgK) {
+    const spots = [[P.x, P.y]];
     for (let i = 1; i < n; i++) { let x, y, k = 0; do { x = P.x + rand(-170, 170); y = P.y + rand(-46, 46); k++; } while (k < 12 && spots.some(s => Math.hypot(s[0] - x, (s[1] - y) * 2.2) < 60)); spots.push([x, y]); }
-    spots.forEach(([x, y], i) => hazards.push({ kind: 'w6man', x: xClamp(x), y: yClamp(y), r: 30, t: 1.05 + i * .17, max: 1.05 + i * .17, dmg: Math.round(edmg(e) * .75), s: rand(0, 6) }));
-    sfx('whoosh'); W6.mouth = 1;
+    spots.forEach(([x, y], i) => hazards.push({ kind: 'w6drop', art, x: xClamp(x), y: yClamp(y), r: 30, t: 1.1 + i * .17, max: 1.1 + i * .17, dmg: Math.round(edmg(e) * dmgK), s: rand(-.5, .5), v: i % 3 }));
   }
-  reg('w6man', {
-    update(h, dt) { if (h.t <= 0 && !h.done) { h.done = 1; sfx('hit-goo', .5); dust(h.x, h.y, 6); shakeMag = Math.max(shakeMag, 3); if (inEll(P.x, P.y, h.x, h.y, h.r + 6) && P.z < 30) hitP(h.dmg, h.x, true); } if (h.t < -.35) h.t = -1; },
-    draw(h, t) { if (h.t <= 0) return; const k = 1 - h.t / h.max; ctx.fillStyle = tellCol(k); ell(h.x, h.y, h.r * k, h.r / 2.2 * k); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke();
-      ctx.fillStyle = `rgba(20,16,30,${.2 + .4 * k})`; ell(h.x, h.y - 1, 9, 2.4); ctx.fill(); ctx.fillRect(h.x - 4, h.y - 4, 8, 3); }, // a bowler's shadow, growing
-    ups(h, list) { if (h.t > .55) return; list.push([h.y, () => { const z = Math.max(0, h.t) / .55 * 320, sq = h.t < 0 ? 1 + h.t / .35 : 1;
-      ctx.save(); ctx.translate(h.x, h.y - z); ctx.scale(1, sq); ctx.globalAlpha = h.t < 0 ? 1 + h.t / .35 : 1; W6_ART.golcondaMan(0, -50, 2.2, '#8A8EA8'); ctx.restore(); }]); },
-    box(h, box) { box(h.x, h.y, 0, 40, 340); },
-  });
-  // TIME TRANSFIXED: a fireplace stands at the end of your lane, and a locomotive comes roaring out of it across the arena
-  function dreamTrain(e, lanes) {
-    const Bd = BOARD(), dir = P.x < (Bd.L + Bd.R) / 2 ? -1 : 1, r0 = Bd.row(P.y), rows = [r0];
-    if (lanes > 1) rows.push(r0 < 2 ? r0 + 2 : r0 - 2);
-    rows.forEach((r, i) => hazards.push({ kind: 'w6train', y: Bd.cy(r), rh: Bd.rh, dir, x0: dir > 0 ? Bd.L - 30 : Bd.R + 30, x: dir > 0 ? Bd.L - 30 : Bd.R + 30, wait: 1.35 + i * .5, el: 0, sp: 560, t: 6, max: 6, dmg: Math.round(edmg(e) * 1.1) }));
-    sfx('charge', 1); W6.mouth = 1;
+  function dreamPillows(e) {
+    dropRain(e, 'pillow', 4 + Math.min(3, B.broken + B.regrows), .75);
+    floatText(e.x, e.y - e.z, 150, 'PILLOW FIGHT!', '#F4F0FF', 15); sfx('whoosh'); W6.mouth = 1;
   }
-  reg('w6train', {
-    update(h, dt) { h.el += dt; if (h.el < h.wait) { if (Math.random() < dt * 14) parts.push({ x: h.x0 + h.dir * 14, y: h.y, z: 50 + rand(0, 20), vx: h.dir * rand(10, 40), vy: 0, vz: rand(20, 50), life: 1, max: 1, col: 'rgba(240,240,240,.7)', size: rand(4, 8), shape: 'puff', rot: 0, vr: 0 }); return; }
-      if (!h.go) { h.go = 1; sfx('roar'); shakeMag = Math.max(shakeMag, 6); }
-      h.x += h.dir * h.sp * dt; if (Math.random() < .6) parts.push({ x: h.x - h.dir * 30, y: h.y, z: 56, vx: -h.dir * 60, vy: 0, vz: 40, life: .8, max: .8, col: 'rgba(250,250,250,.8)', size: rand(6, 10), shape: 'puff', rot: 0, vr: 0 });
-      if (!h.hit && Math.abs(P.x - h.x) < 46 && Math.abs(P.y - h.y) < h.rh * .58 && P.z < 40) { h.hit = 1; hitP(h.dmg, h.x - h.dir * 20, true); }
-      if ((h.dir > 0 && h.x > rightWall() + 140) || (h.dir < 0 && h.x < leftWall() - 140)) h.t = -1; },
-    draw(h, t) { const k = Math.min(1, h.el / h.wait), Bd = BOARD(); if (h.go && Math.abs(h.x - h.x0) > Bd.R - Bd.L + 100) return;
-      ctx.fillStyle = tellCol(h.go ? 1 : k, h.go ? .5 : 1); ctx.fillRect(Bd.L, h.y - h.rh * .5, Bd.R - Bd.L, h.rh); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.2; ctx.strokeRect(Bd.L, h.y - h.rh * .5, Bd.R - Bd.L, h.rh);
-      if (!h.go) for (let i = 0; i < 8; i++) { const x = h.x0 + h.dir * (30 + i * 60 + (t * 90) % 60); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - h.dir * 5, h.y - 6); ctx.lineTo(x + h.dir * 5, h.y); ctx.lineTo(x - h.dir * 5, h.y + 6); ctx.stroke(); } },
-    ups(h, list, t) { list.push([h.y + .3, () => { // the fireplace, and the engine
-      const fx = h.x0, y = h.y, d = h.dir, op = Math.min(1, h.el / .4) * (1 - cl01((h.el - h.wait - 1.4) / .4));
-      if (op > 0) { ctx.save(); ctx.globalAlpha = op; ctx.translate(fx, y); ctx.scale(-d, 1); // a marble mantelpiece, its fire-hole black
-        fillPoly([-26, 0, -26, -52, 26, -52, 26, 0, 16, 0, 16, -34, -16, -34, -16, 0], '#E8DCC8', 1.2); fillPoly([-30, -52, 30, -52, 30, -58, -30, -58], '#D6C8B0', 1.2);
-        ctx.fillStyle = C('#0A0808'); ctx.fillRect(-16, -34, 32, 34); if (DET()) { ctx.fillStyle = 'rgba(140,120,100,.4)'; ctx.fillRect(-26, -52, 6, 52); }
-        for (const s of [-1, 1]) { ctx.fillStyle = C('#C8A050'); rrect(s * 18 - 3, -66, 6, 8, 2); ctx.fill(); outline(.8); } // candlesticks
-        ctx.restore(); }
-      if (!h.go) return; const x = h.x; if (Math.abs(x - fx) < 4) return;
-      ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
-      if (Math.abs(x - fx) < 60) { ctx.beginPath(); ctx.rect(d > 0 ? (fx - x) * d : -200, -200, 400, 400); ctx.clip(); } // still coming out of the fireplace
-      fillPoly([-46, -6, -46, -40, -16, -40, -16, -52, -6, -52, -6, -40, 18, -40, 26, -30, 30, -6], '#1A1A20', 1.4); // the engine
-      if (DET()) { ctx.fillStyle = '#3A3A48'; ctx.fillRect(-44, -36, 26, 3); ctx.fillStyle = '#C8A050'; ctx.fillRect(-14, -30, 30, 2); ctx.fillStyle = '#FFE6A0'; circle(26, -26, 3); ctx.fill(); }
-      ctx.fillStyle = C('#1A1A20'); rrect(-10, -64, 8, 14, 2); ctx.fill(); outline(1); // the stack
-      for (let i = 0; i < 4; i++) { const wx = -38 + i * 18; ctx.fillStyle = C('#3A3036'); circle(wx, -6, 6); ctx.fill(); outline(1); if (DET()) { ctx.strokeStyle = '#C8A050'; ctx.lineWidth = 1; ctx.beginPath(); const a = t * 30; ctx.moveTo(wx, -6); ctx.lineTo(wx + Math.cos(a) * 5, -6 + Math.sin(a) * 5); ctx.stroke(); } }
+  reg('w6drop', {
+    update(h, dt) { if (h.t <= 0 && !h.done) { h.done = 1;
+        if (h.art === 'pillow') { sfx('hit-goo', .6); feathers(h.x, h.y, 16); } else { sfx('hit-crystal'); burst(h.x, h.y, 2, ['#F8F4EA', '#C8C0AC'], 6, 'crystal', 0); }
+        dust(h.x, h.y, 5); shakeMag = Math.max(shakeMag, 3); if (inEll(P.x, P.y, h.x, h.y, h.r + 6) && P.z < 30) hitP(h.dmg, h.x, true); }
+      if (h.t < -.35) h.t = -1; },
+    draw(h) { if (h.t <= 0) return; const k = 1 - h.t / h.max; ctx.fillStyle = tellCol(k); ell(h.x, h.y, h.r * k, h.r / 2.2 * k); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke();
+      ctx.fillStyle = `rgba(20,16,30,${.15 + .4 * k})`; ell(h.x, h.y, 6 + 14 * k, 2 + 3 * k); ctx.fill(); }, // its shadow, growing as it comes
+    ups(h, list) { if (h.t > .55) return; list.push([h.y, () => { const z = Math.max(0, h.t) / .55 * 320, land = h.t < 0 ? cl01(-h.t / .35) : 0;
+      ctx.save(); ctx.translate(h.x, h.y - z); ctx.globalAlpha = 1 - land; if (h.t > 0) ctx.rotate(h.s * h.t * 3);
+      if (h.art === 'pillow') { ctx.scale(1.25 + land * .4, 1.25 * (1 - land * .5)); pillowArt(h.v); } else { ctx.scale(1.3, 1.3); if (h.t > 0) ctx.rotate(Math.PI); if (h.t > 0) ctx.translate(0, 26); toothArt(); }
       ctx.restore(); }]); },
-    box(h, box) { box(h.x, h.y, 0, 80, 90); box(h.x0, h.y, 0, 50, 90); },
+    box(h, box) { box(h.x, h.y, 0, 44, 340); },
   });
-  // ---------------- the pieces of the board ----------------
-  // a piece slides (or a knight hops) along a path of squares; whoever stands on the square it is crossing is struck
-  const PIECE_DRAW = {
-    rook(s) { fillPoly([-11, 0, -9, -8, -7, -8, -7, -30, -10, -30, -10, -40, -6, -40, -6, -36, -2, -36, -2, -40, 2, -40, 2, -36, 6, -36, 6, -40, 10, -40, 10, -30, 7, -30, 7, -8, 9, -8, 11, 0], s, 1.2); },
-    bishop(s) { fillPoly([-11, 0, -9, -7, -6, -8, -5, -24, -8, -30, -6, -38, 0, -46, 6, -38, 8, -30, 5, -24, 6, -8, 9, -7, 11, 0], s, 1.2); ctx.strokeStyle = C('#8A6A40'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-2, -40); ctx.lineTo(3, -33); ctx.stroke(); circle(0, -48, 2.2); ctx.fillStyle = C(s); ctx.fill(); outline(.8); },
-    knight(s) { fillPoly([-11, 0, -9, -8, -6, -8, -8, -22, -6, -32, 0, -42, 6, -44, 12, -36, 14, -28, 8, -28, 4, -24, 7, -8, 9, -8, 11, 0], s, 1.2); ctx.fillStyle = C('#1A1014'); circle(5, -36, 1.4); ctx.fill(); },
-    queen(s) { fillPoly([-12, 0, -9, -8, -6, -8, -6, -26, -11, -38, -5, -32, -3, -42, 0, -34, 3, -42, 5, -32, 11, -38, 6, -26, 6, -8, 9, -8, 12, 0], s, 1.2); ctx.fillStyle = C('#E8C060'); for (const x of [-11, -3, 3, 11]) { circle(x, x === -11 || x === 11 ? -39 : -43, 1.6); ctx.fill(); } },
-  };
+  // COUNTING SHEEP: a stile stands at the end of your row; sheep come over it one at a time to be counted (the count runs
+  // on all fight long) and trot on down the row. Leave the row, or jump each sheep as it comes; late on there is a black one
+  function dreamSheep(e) {
+    const Bd = BOARD(), r0 = Bd.row(P.y), rows = [[r0, P.x < (Bd.L + Bd.R) / 2 ? -1 : 1]], esc = B.broken >= 2 || B.regrows > 0;
+    if (esc) rows.push([r0 < 2 ? r0 + 2 : r0 - 2, -rows[0][1]]);
+    rows.forEach(([r, dir], i) => { const x0 = dir > 0 ? Bd.L - 30 : Bd.R + 30;
+      hazards.push({ kind: 'w6sheep', y: Bd.cy(r), rh: Bd.rh, dir, x0, fx: x0 + dir * 72, n: 3 + Math.min(2, B.broken), gap: .5, wait: 1.35 + i * .6, sp: 290, el: 0, sh: [], black: B.broken >= 1 && i === 0, t: 30, max: 30, dmg: Math.round(edmg(e) * .7) }); });
+    floatText(e.x, e.y - e.z, 150, 'COUNTING SHEEP...', '#F4F0FF', 15); sfx('charge', 1); W6.mouth = .6;
+  }
+  reg('w6sheep', {
+    update(h, dt) { h.el += dt; const t0 = h.el - h.wait; if (t0 < 0) return; let alive = 0;
+      for (let i = 0; i < h.n; i++) { const st = t0 - i * h.gap; if (st < 0) { alive++; continue; }
+        const s = h.sh[i] || (h.sh[i] = { black: h.black && i === h.n - 1 }), x = h.x0 + h.dir * h.sp * st, df = (x - h.fx) * h.dir;
+        s.x = x; s.ph = st * 14; s.z = Math.abs(df) < 46 ? Math.cos(df / 46 * Math.PI / 2) * 44 : Math.abs(Math.sin(st * 10)) * 5;
+        if (df > -30 && !s.hop) { s.hop = 1; sfx('jump'); }
+        if (df > 0 && !s.counted) { s.counted = 1; B.sheep = (B.sheep || 0) + 1; floatText(h.fx, h.y, 76, s.black ? B.sheep + '... BAA?' : String(B.sheep), s.black ? '#C8B8D8' : '#F4F0FF', s.black ? 14 : 17);
+          if (sfxOn && actx) { tone(s.black ? 210 : 330, .16, 'triangle', .035); tone(s.black ? 190 : 300, .2, 'triangle', .03, 0, .13); } } // baa
+        if (!s.hit && Math.abs(P.x - x) < 20 && Math.abs(P.y - h.y) < h.rh * .6 && P.z < s.z + 22) { s.hit = 1; hitP(Math.round(h.dmg * (s.black ? 1.3 : 1)), x - h.dir * 10, true); }
+        if (h.dir > 0 ? x < rightWall() + 60 : x > leftWall() - 60) alive++; }
+      if (!alive) h.t = -1; },
+    draw(h, t) { const Bd = BOARD(), k = Math.min(1, h.el / h.wait), y = h.y - h.rh * .5;
+      ctx.fillStyle = tellCol(h.el < h.wait ? k : 1, h.el < h.wait ? 1 : .45); ctx.fillRect(Bd.L, y, Bd.R - Bd.L, h.rh); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.2; ctx.strokeRect(Bd.L, y, Bd.R - Bd.L, h.rh);
+      if (h.el < h.wait) for (let i = 0; i < 6; i++) { const x = h.fx + h.dir * (40 + i * 70 + (t * 80) % 70); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - h.dir * 5, h.y - 6); ctx.lineTo(x + h.dir * 5, h.y); ctx.lineTo(x - h.dir * 5, h.y + 6); ctx.stroke(); } },
+    ups(h, list, t) { const op = Math.min(1, h.el / .4); // the stile, and the flock
+      list.push([h.y - 2, () => { ctx.save(); ctx.globalAlpha = op; ctx.translate(h.fx, h.y - 2); ctx.scale(1.4, 1.4); fenceArt(); ctx.restore(); }]);
+      for (const s of h.sh) if (s && Math.abs(s.x - h.fx) < 900) list.push([h.y + .2, () => { shadow(s.x, h.y, 14); ctx.save(); ctx.translate(s.x, h.y - s.z); ctx.scale(h.dir * 1.35, 1.35); if (s.z > 8) ctx.rotate(-.25 * Math.sign((s.x - h.fx) * h.dir || -1)); sheepArt(s.ph, s.black); ctx.restore(); }]); },
+    box(h, box) { box(camX + VW / 2, h.y, 0, VW / 2 + 40, 110); },
+  });
+  // THE SNORE: it draws a long breath in (its cheeks fill, its mouth shuts) and lets it out: rings of snore roll out across
+  // the bed from under it, Z's riding on them. Jump each ring
+  function dreamSnore(e) {
+    const n = 2 + (B.broken >= 3 || B.regrows > 0 ? 1 : 0); B.inhale = 1.25;
+    floatText(e.x, e.y - e.z, 150, 'hhhhnnnnk...', '#F4F0FF', 15); sfx('charge', 1);
+    for (let i = 0; i < n; i++) hazards.push({ kind: 'w6snore', x: e.x, y: e.y + 6, r: 26, delay: 1.25 + i * .9, speed: 225, dmg: Math.round(edmg(e) * .8), t: 12, max: 12, first: !i });
+  }
+  reg('w6snore', {
+    update(h, dt) { if (h.delay > 0) { h.delay -= dt; return; }
+      if (h.first && !h.out) { h.out = 1; sfx('roar'); shakeMag = Math.max(shakeMag, 8); W6.mouth = 1; const e = SB(); if (e) floatText(e.x, e.y - e.z, 170, 'SNNNOOORRK!', '#F4F0FF', 18); }
+      h.r += h.speed * dt; const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2);
+      if (!h.hit && Math.abs(d - h.r) < 14 && P.z < 10) { h.hit = 1; hitP(h.dmg, h.x, true); }
+      if (h.r > 560) h.t = -1; },
+    draw(h, t) { const ry = .3;
+      if (h.delay > 0) { if (!h.first) return; const k = 1 - h.delay / 1.25; ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ctx.setLineDash([6, 5]); ell(h.x, h.y, 40 + k * 30, (40 + k * 30) * ry); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = tellCol(k, .6); ell(h.x, h.y, 40 + k * 30, (40 + k * 30) * ry); ctx.fill(); return; }
+      const a = 1 - cl01((h.r - 420) / 140);
+      ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(40,40,90,.55)'; ctx.lineWidth = 8; ell(h.x, h.y, h.r, h.r * ry); ctx.stroke(); ctx.strokeStyle = '#DCE2FF'; ctx.lineWidth = 4.5; ell(h.x, h.y, h.r, h.r * ry); ctx.stroke();
+      ctx.font = '700 13px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(30,30,70,.7)'; ctx.fillStyle = '#F4F0FF';
+      for (let i = 0; i < 8; i++) { const an = i / 8 * TAU + h.r * .004, x = h.x + Math.cos(an) * h.r, y = h.y + Math.sin(an) * h.r * ry - 6; ctx.strokeText('z', x, y); ctx.fillText('z', x, y); }
+      ctx.restore(); },
+  });
+  // THE SANDMAN: he comes along the bed pouring sleep out of his sack, a falling curtain of golden sand across every row
+  // but one (marked); be in that row when the sand goes by, or roll through it
+  function dreamSand(e) {
+    const Bd = BOARD(), dir = P.x < (Bd.L + Bd.R) / 2 ? -1 : 1, pr = Bd.row(P.y), gap = (pr + 1 + Math.floor(Math.random() * 3)) % 4;
+    hazards.push({ kind: 'w6sand', dir, x: dir > 0 ? Bd.L - 10 : Bd.R + 10, gap, wait: 1.7, sp: 190, el: 0, dmg: Math.round(edmg(e) * .9), t: 30, max: 30 });
+    floatText(e.x, e.y - e.z, 150, 'HERE COMES THE SANDMAN', '#FFE0A0', 15); sfx('charge', 1); W6.mouth = .5;
+  }
+  reg('w6sand', {
+    update(h, dt) { h.el += dt; if (h.el < h.wait) return; const Bd = BOARD(); if (!h.go) { h.go = 1; sfx('whoosh'); h.x0 = h.x; }
+      h.x += h.dir * h.sp * dt;
+      if (!h.hit && Math.abs(P.x - h.x) < 15 && Bd.row(P.y) !== h.gap && P.z < 90) { h.hit = 1; hitP(h.dmg, h.x - h.dir * 20, true); floatText(P.x, P.y, 96, 'SO... SLEEPY...', '#FFE0A0', 13); }
+      if (h.dir > 0 ? h.x > Bd.R + 30 : h.x < Bd.L - 30) { h.fade = (h.fade || 0) + dt; if (h.fade > .8) h.t = -1; } },
+    draw(h, t) { const Bd = BOARD(), k = Math.min(1, h.el / h.wait), fa = 1 - cl01((h.fade || 0) / .8);
+      for (let r = 0; r < 4; r++) { const y = Bd.y0 + r * Bd.rh;
+        if (r === h.gap) { if (h.go && fa < 1) continue; ctx.strokeStyle = `rgba(210,232,255,${.55 + .35 * Math.sin(t * 6)})`; ctx.lineWidth = 2; ctx.setLineDash([7, 4]); ctx.strokeRect(Bd.L + 3, y + 2.5, Bd.R - Bd.L - 6, Bd.rh - 5); ctx.setLineDash([]); continue; }
+        if (!h.go) { ctx.fillStyle = tellCol(k, .8); ctx.fillRect(Bd.L, y + 1, Bd.R - Bd.L, Bd.rh - 2); continue; }
+        const xa = clamp(h.dir > 0 ? Bd.L : h.x, Bd.L, Bd.R), xb = clamp(h.dir > 0 ? h.x : Bd.R, Bd.L, Bd.R); // the sand it leaves drifted on the quilt; the rest still marked
+        ctx.fillStyle = `rgba(226,190,116,${.4 * fa})`; ctx.fillRect(xa, y + 2, xb - xa, Bd.rh - 4);
+        const ya = clamp(h.dir > 0 ? h.x : Bd.L, Bd.L, Bd.R), yb = clamp(h.dir > 0 ? Bd.R : h.x, Bd.L, Bd.R); if (yb > ya) { ctx.fillStyle = tellCol(1, .45); ctx.fillRect(ya, y + 1, yb - ya, Bd.rh - 2); } } },
+    ups(h, list, t) { const Bd = BOARD(), x = h.go ? h.x : h.x + h.dir * 14, k = h.go ? 1 - cl01((h.fade || 0) / .5) : cl01((h.el - .5) / (h.wait - .5)) * .35; if (k <= 0) return;
+      for (let r = 0; r < 4; r++) { if (r === h.gap) continue; const fy = Bd.cy(r) + 4; list.push([fy, () => {
+        ctx.save(); ctx.globalAlpha = k; const top = fy - 170;
+        const g = ctx.createLinearGradient(0, top, 0, fy); g.addColorStop(0, 'rgba(232,196,120,0)'); g.addColorStop(.35, 'rgba(232,196,120,.55)'); g.addColorStop(1, 'rgba(214,170,90,.85)');
+        ctx.fillStyle = g; ctx.fillRect(x - 7, top, 14, fy - top);
+        ctx.fillStyle = '#F6DCA0'; for (let i = 0; i < 12; i++) { const gx = x + (hsh(i + r * 11) - .5) * 22, gy = top + ((t * 2.2 + hsh(i * 3 + r)) % 1) * (fy - top); ctx.fillRect(gx, gy, 2, 3); }
+        ctx.fillStyle = C('#D8B070'); ell(x, fy, 13, 4); ctx.fill(); outline(.9); // the little heap it makes
+        ctx.restore(); }]); } },
+    box(h, box) { box(camX + VW / 2, FLOOR_BOT, 0, VW / 2 + 20, 200); },
+  });
+  const DREAMS = { pillows: dreamPillows, sheep: dreamSheep, snore: dreamSnore, sand: dreamSand };
+  const DREAM_T = { pillows: 3.2, sheep: 4.3, snore: 3.6, sand: 5.2 };
+
+  // ---------------- the patchwork dream: what comes over the patches ----------------
+  // each thing goes along a path of patches (the cow hops); whoever stands on the patch it is crossing is struck
   function piecePath(type, Bd, c0, r0) {
     const out = [], inB = (c, r) => c >= 0 && r >= 0 && c < Bd.nc && r < Bd.nr;
     if (type === 'row') { const d = c0 < Bd.nc / 2 ? -1 : 1; for (let i = 0; i < Bd.nc; i++) out.push([d > 0 ? i : Bd.nc - 1 - i, r0]); } // it comes in from the far side
@@ -1369,20 +1516,23 @@
     if (type === 'diag' || type === 'anti') { const dr = type === 'diag' ? 1 : -1; let c = c0, r = r0; while (inB(c - 1, r - dr)) { c--; r -= dr; } while (inB(c, r)) { out.push([c, r]); c++; r += dr; } }
     return out;
   }
+  const PIECE_SAY = { ripple: 'IT TOSSES AND TURNS', walker: 'SLEEPWALKERS', cow: 'HEY DIDDLE DIDDLE', lullaby: 'HUSH-A-BYE' };
   function playPiece(e, kind) {
     const Bd = BOARD(), pc = Bd.col(P.x), pr = Bd.row(P.y), dmg = edmg(e), list = [];
     const hc = Bd.col(e.x), hr = Bd.row(e.y);
-    if (kind === 'rook') list.push({ type: 'rook', path: piecePath('row', Bd, pc, pr), sp: 7 }, { type: 'rook', path: piecePath('col', Bd, pc, pr), sp: 5, delay: .35 });
-    if (kind === 'bishop') list.push({ type: 'bishop', path: piecePath('diag', Bd, pc, pr), sp: 6 }, { type: 'bishop', path: piecePath('anti', Bd, pc, pr), sp: 6, delay: .3 });
-    if (kind === 'queen') for (const k of ['row', 'col', 'diag', 'anti']) { const p = piecePath(k, Bd, hc, hr); list.push({ type: 'queen', path: p, sp: 7, delay: k === 'row' ? 0 : .25 }); }
-    if (kind === 'knight') { // three jumps, each a knight's move from the last, the first onto your square
+    if (kind === 'ripple') list.push({ type: 'ripple', path: piecePath('row', Bd, pc, pr), sp: 7 }, { type: 'ripple', path: piecePath('col', Bd, pc, pr), sp: 5, delay: .35 });
+    if (kind === 'walker') list.push({ type: 'walker', path: piecePath('diag', Bd, pc, pr), sp: 4.5 }, { type: 'walker', path: piecePath('anti', Bd, pc, pr), sp: 4.5, delay: .3 });
+    if (kind === 'lullaby') for (const k of ['row', 'col', 'diag', 'anti']) { const p = piecePath(k, Bd, hc, hr); list.push({ type: 'note', path: p, sp: 6, delay: k === 'row' ? 0 : .25 }); }
+    if (kind === 'cow') { // three hops, each a knight's move from the last, the first onto your patch
       const path = [[pc, pr]]; const J = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]];
       for (let i = 0; i < 2; i++) { const [c, r] = path[path.length - 1], ok = J.map(([a, b]) => [c + a, r + b]).filter(([a, b]) => a >= 0 && b >= 0 && a < Bd.nc && b < Bd.nr && !path.some(q => q[0] === a && q[1] === b)); if (!ok.length) break; ok.sort((a, b) => Math.abs(a[0] - pc) - Math.abs(b[0] - pc)); path.push(ok[Math.floor(Math.random() * Math.min(2, ok.length))]); }
-      list.push({ type: 'knight', path, sp: 1.8, hop: 1 });
+      list.push({ type: 'cow', path, sp: 1.8, hop: 1 });
     }
-    for (const p of list) if (p.path.length) hazards.push(Object.assign({ kind: 'w6piece', el: 0, wait: 1.15 + (p.delay || 0), t: 12, max: 12, dmg, hits: new Set(), white: Math.random() < .5 }, p));
-    const atk = list.some(p => p.path.some(q => q[0] === pc && q[1] === pr)); if (atk) floatText(P.x, P.y, 96, 'CHECK!', '#FFE0B0', 15);
+    for (const p of list) if (p.path.length) hazards.push(Object.assign({ kind: 'w6piece', el: 0, wait: 1.15 + (p.delay || 0), t: 12, max: 12, dmg, hits: new Set() }, p));
+    floatText(e.x, e.y - e.z, 150, PIECE_SAY[kind], '#F4F0FF', 15);
+    const atk = list.some(p => p.path.some(q => q[0] === pc && q[1] === pr)); if (atk) floatText(P.x, P.y, 96, 'NIGHT NIGHT!', '#FFE0B0', 15);
     sfx('charge', 1); W6.mouth = .5;
+    if (kind === 'lullaby' && sfxOn && actx) [784, 659, 587, 659, 523].forEach((f, i) => tone(f, .22, 'triangle', .035, 0, i * .24)); // a music box
   }
   reg('w6piece', {
     update(h, dt) { h.el += dt; if (h.el < h.wait) return; const Bd = BOARD(), pos = (h.el - h.wait) * h.sp, i = Math.floor(pos);
@@ -1395,21 +1545,77 @@
     draw(h, t) { const Bd = BOARD(), k = Math.min(1, h.el / h.wait), pos = h.el < h.wait ? -1 : (h.el - h.wait) * h.sp;
       h.path.forEach(([c, r], i) => { if (pos > i + 1.2) return; const a = pos > i ? 1 - (pos - i) / 1.2 : 1, x = Bd.L + c * Bd.cw, y = Bd.y0 + r * Bd.rh;
         ctx.fillStyle = tellCol(k, a); ctx.fillRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.strokeStyle = tellLine(k); ctx.globalAlpha = a; ctx.lineWidth = 1.2; ctx.strokeRect(x + 2, y + 1.5, Bd.cw - 4, Bd.rh - 3); ctx.globalAlpha = 1;
-        if (h.hop) { ctx.fillStyle = `rgba(255,230,210,${.6 + .3 * k})`; ctx.font = '700 10px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(String(i + 1), x + Bd.cw / 2, y + Bd.rh / 2 + 4); } }); },
+        if (h.hop) { ctx.save(); ctx.translate(x + Bd.cw / 2 - 10, y + Bd.rh / 2); ctx.scale(1, .5); moonArt(8); ctx.restore(); ctx.fillStyle = `rgba(255,236,214,${.7 + .3 * k})`; ctx.font = '700 11px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(String(i + 1), x + Bd.cw / 2 + 8, y + Bd.rh / 2 + 4); } }); },
     ups(h, list, t) { const Bd = BOARD(); if (h.el < h.wait * .5) return; const pos = h.el < h.wait ? 0 : Math.min(h.path.length - 1, (h.el - h.wait) * h.sp), i = Math.floor(pos), f = pos - i, a = h.path[i], b = h.path[Math.min(h.path.length - 1, i + 1)];
-      const x = lerp(Bd.cx(a[0]), Bd.cx(b[0]), h.hop ? sm(f) : f), y = lerp(Bd.cy(a[1]), Bd.cy(b[1]), h.hop ? sm(f) : f), z = h.hop ? Math.sin(f * Math.PI) * 60 : 0;
+      const x = lerp(Bd.cx(a[0]), Bd.cx(b[0]), h.hop ? sm(f) : f), y = lerp(Bd.cy(a[1]), Bd.cy(b[1]), h.hop ? sm(f) : f), z = h.hop ? Math.sin(f * Math.PI) * 64 : 0, dir = Math.sign(Bd.cx(b[0]) - Bd.cx(a[0])) || h.face || 1; h.face = dir;
       const al = h.el < h.wait ? (h.el / h.wait - .5) * 2 : h.endT ? 1 - (h.el - h.endT) / .35 : 1;
-      list.push([y, () => { shadow(x, y, 12); ctx.save(); ctx.globalAlpha = Math.max(0, al); ctx.translate(x, y - z); ctx.scale(1.7, 1.7); PIECE_DRAW[h.type](h.white ? '#EEE6D6' : '#2A2228'); if (DET() && h.white) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(-7, -30, 2.4, 22); } ctx.restore(); }]); },
+      list.push([y, () => { ctx.save(); ctx.globalAlpha = Math.max(0, al);
+        if (h.type === 'ripple') { const w = Bd.cw * .5, col = W6.patchCol(a[0], a[1]); ctx.translate(x, y + Bd.rh * .3); // the duvet heaving up in a long soft hump
+          cel(PB([-w * 1.2, 0, -w * .7, -12, 0, -22, w * .7, -12, w * 1.2, 0, 0, 2]), col, { d: 3, r: 1.5, w: 1.5, tex: () => { ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1; ctx.setLineDash([2.5, 2.5]); ctx.beginPath(); ctx.moveTo(-w * .9, -3); ctx.quadraticCurveTo(0, -24, w * .9, -3); ctx.stroke(); ctx.setLineDash([]); } }); }
+        else { shadow(x, y, 12); ctx.translate(x, y - z);
+          if (h.type === 'walker') { ctx.scale(dir * 1.3, 1.3); sleepwalkerArt(h.el * 7); }
+          else if (h.type === 'cow') { ctx.scale(dir * 1.25, 1.25); cowArt(h.el * 9, z > 6); }
+          else { ctx.scale(1.35, 1.35); ctx.translate(0, -Math.abs(Math.sin(h.el * 8)) * 4); noteArt(h.el * 6 + (h.path[0][0] || 0)); } }
+        ctx.restore(); }]); },
     box(h, box) { box(camX + VW / 2, FLOOR_BOT, 0, VW / 2 + 20, 160); },
   });
-  // ---------------- its waking: tears, its gaze, its alarm ----------------
+
+  // ---------------- its waking ----------------
+  // REM: its eyes dart back and forth under the light, and their glance sweeps two rows at once (late on, the other two after)
+  reg('w6rem', {
+    update(h, dt) { h.el += dt; const Bd = BOARD();
+      if (h.el >= h.wait && !h.fired) { h.fired = 1; sfx('shoot'); shakeMag = Math.max(shakeMag, 6); }
+      if (h.fired && h.el < h.wait + .3 && !h.hit && Bd.row(P.y) === h.row && P.z < 60) { h.hit = 1; hitP(h.dmg, P.x - P.facing, true); }
+      if (h.el > h.wait + .5) h.t = -1; },
+    draw(h, t) { const Bd = BOARD(), y = Bd.y0 + h.row * Bd.rh, k = Math.min(1, h.el / h.wait);
+      if (!h.fired) { ctx.fillStyle = tellCol(k, .9); ctx.fillRect(Bd.L, y + 1, Bd.R - Bd.L, Bd.rh - 2); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 90; ctx.strokeRect(Bd.L + 1, y + 1.5, Bd.R - Bd.L - 2, Bd.rh - 3); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+        for (const ex of [Bd.L + 18, Bd.R - 18]) { const cy = y + Bd.rh / 2; ctx.fillStyle = '#F8F2E6'; ell(ex, cy, 10, 5); ctx.fill(); ctx.strokeStyle = '#3A2418'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.fillStyle = '#3A5A9A'; circle(ex + Math.sin(t * 26 + h.row) * 5, cy, 3.4); ctx.fill(); } } // the darting eye at each end
+      else { const f = 1 - cl01((h.el - h.wait) / .5); ctx.fillStyle = `rgba(206,196,250,${.75 * f})`; ctx.fillRect(Bd.L, y, Bd.R - Bd.L, Bd.rh);
+        ctx.fillStyle = `rgba(255,255,255,${.7 * f})`; for (let i = 0; i < 7; i++) ctx.fillRect(Bd.L + ((i * 97 + (h.el - h.wait) * 1400) % (Bd.R - Bd.L - 40)), y + 4 + (i % 3) * (Bd.rh - 8) / 2, 40, 2); } },
+  });
+  // THE SNOOZE: a vast hand in a pyjama sleeve comes down flat, three times, wherever you were standing a moment before
+  reg('w6slap', {
+    update(h, dt) { if (h.delay > 0) { h.delay -= dt; if (h.delay <= 0) { h.x = xClamp(P.x); h.y = yClamp(P.y); const e = SB(); h.f = e ? Math.sign(h.x - e.x) || 1 : 1; } return; } h.el += dt;
+      if (h.el >= h.tell && !h.hit) { h.hit = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 8); dust(h.x, h.y, 10); floatText(h.x, h.y, 50, 'SNOOZE', '#FFE0A0', 15); if (inEll(P.x, P.y, h.x, h.y, h.r + 6) && P.z < 50) hitP(h.dmg, h.x, true); }
+      if (h.el > h.tell + .7) h.t = -1; },
+    draw(h) { if (h.delay > 0 || h.el > h.tell + .05) return; const k = h.el / h.tell; ctx.fillStyle = tellCol(k); ell(h.x, h.y, h.r * k, h.r / 2.2 * k); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.8; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke();
+      ctx.fillStyle = `rgba(20,16,30,${.15 + .35 * k})`; ell(h.x + 6, h.y, 12 + 24 * k, 3 + 6 * k); ctx.fill(); },
+    ups(h, list) { if (h.delay > 0 || h.el < h.tell - .35) return; list.push([h.y, () => { const z = h.el < h.tell ? (h.tell - h.el) / .35 * 230 : h.el < h.tell + .35 ? 0 : (h.el - h.tell - .35) / .35 * 230;
+      ctx.save(); ctx.globalAlpha = 1 - cl01((h.el - h.tell - .45) / .25); ctx.translate(h.x, h.y - z); ctx.scale(h.f * 1.15, 1.15); handArt(); ctx.restore(); }]); },
+    box(h, box) { box(h.x, h.y, 0, 110, 260); },
+  });
+  // THE ALARM: a bell clock jumps about in front of it, ringing, and the ringing rolls out in rings to jump
+  reg('w6bell', {
+    update(h) { const e = SB(); if (e) { h.x = e.x + 40; h.y = e.y + 14; } },
+    ups(h, list, t) { list.push([h.y, () => { const a = Math.min(1, (h.max - h.t) / .2, Math.max(0, h.t) / .3); shadow(h.x, h.y, 14); ctx.save(); ctx.globalAlpha = a; ctx.translate(h.x, h.y - Math.abs(Math.sin(t * 22)) * 6); ctx.scale(1.7, 1.7); clockArt(h.t); ctx.restore(); }]); },
+    box(h, box) { box(h.x, h.y, 0, 40, 80); },
+  });
+  // THE FALL: it dreams that it is falling, and jerks awake: the whole bed jolts. Be off it (jump) when the count runs out
+  reg('w6jolt', {
+    update(h, dt) { h.el += dt; const n = 3 - Math.floor(h.el / h.step);
+      if (h.el < h.wait && n !== h.n && n >= 1) { h.n = n; floatText(P.x, P.y, 100, n === 1 ? '1 · JUMP!' : String(n), '#FFE0B0', 20); sfx('hit-crystal'); }
+      if (h.el >= h.wait && !h.done) { h.done = 1; sfx('slam'); sfx('roar'); shakeMag = 16; flashT = Math.max(flashT, .06); floatText(P.x, P.y, 112, 'JOLT!', '#FFE0B0', 22);
+        for (let i = 0; i < 6; i++) dust(rand(leftWall() + 30, rightWall() - 30), rand(FLOOR_TOP + 12, FLOOR_BOT - 6), 6);
+        if (P.z < 8) hitP(h.dmg, P.x - P.facing, true); }
+      if (h.el > h.wait + .5) h.t = -1; },
+    draw(h, t) { if (h.done) return; const Bd = BOARD(), k = Math.min(1, h.el / h.wait), pul = .5 + .5 * Math.sin(t * (8 + k * 14));
+      ctx.fillStyle = tellCol(k, .35 + .35 * pul); ctx.fillRect(Bd.L, Bd.y0, Bd.R - Bd.L, Bd.rh * 4); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2.4; ctx.strokeRect(Bd.L, Bd.y0, Bd.R - Bd.L, Bd.rh * 4);
+      ctx.lineWidth = 2; for (let i = 0; i < 9; i++) { const x = Bd.L + (i + .5) * (Bd.R - Bd.L) / 9, y = Bd.y0 + 14 + ((t * 40 + i * 9) % (Bd.rh * 4 - 24)); ctx.beginPath(); ctx.moveTo(x - 5, y - 4); ctx.lineTo(x, y + 2); ctx.lineTo(x + 5, y - 4); ctx.stroke(); } }, // chevrons falling away down the bed
+  });
   function wakeAttack(e, kind) {
-    const dmg = edmg(e);
-    if (kind === 'gaze') { const Bd = BOARD(), r0 = Bd.row(P.y), r1 = (r0 + 2) % 4; for (const r of [r0, r1]) hazards.push({ kind: 'beam', y: Bd.cy(r), t: 1.3, max: 1.3, dmg: Math.round(dmg * 1.1), col: '170,200,255', hit: false }); sfx('charge', 2); W6.mouth = .3; }
-    if (kind === 'tears') { for (let i = 0; i < 6; i++) hazards.push({ kind: 'fall', x: xClamp(P.x + (i ? rand(-150, 150) : 0)), y: yClamp(P.y + (i ? rand(-40, 40) : 0)), r: 30, t: .9 + i * .14, max: .9 + i * .14, dmg: Math.round(dmg * .8), col: '150,190,255' }); W6.mouth = .6; }
-    if (kind === 'alarm') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'ring', x: e.x, y: e.y + 10, r: 20, delay: i * .4, speed: 250, dmg: Math.round(dmg * .8), t: 9, max: 9 }); shakeMag = 12; sfx('roar'); W6.mouth = 1;
-      let n = 0; const bell = () => { if (n++ < 10 && sfxOn && actx) { tone(1800 + (n % 2) * 200, .05, 'square', .05); setTimeout(bell, 60); } }; bell(); floatText(e.x, e.y - e.z, 170, 'BRRRRING', '#FFE0A0', 18); }
+    const dmg = edmg(e), Bd = BOARD();
+    if (kind === 'rem') { const r0 = Bd.row(P.y), late2 = B.cast >= 5;
+      for (const r of [r0, (r0 + 2) % 4]) hazards.push({ kind: 'w6rem', row: r, wait: 1.1, el: 0, t: 9, max: 9, dmg: Math.round(dmg * 1.05) });
+      if (late2) for (const r of [(r0 + 1) % 4, (r0 + 3) % 4]) hazards.push({ kind: 'w6rem', row: r, wait: 2.05, el: 0, t: 9, max: 9, dmg: Math.round(dmg * 1.05) });
+      B.rem = late2 ? 2.4 : 1.4; floatText(e.x, e.y - e.z, 150, 'R · E · M', '#D8D0FF', 15); sfx('charge', 2); W6.mouth = .3; }
+    if (kind === 'teeth') { dropRain(e, 'tooth', 6, .8); floatText(e.x, e.y - e.z, 150, 'ITS TEETH ARE FALLING OUT!', '#F4F0FF', 14); W6.mouth = 1; }
+    if (kind === 'snooze') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'w6slap', delay: .05 + i * .75, tell: .9, el: 0, r: 38, x: P.x, y: P.y, f: 1, t: 9, max: 9, dmg: Math.round(dmg * .9) }); floatText(e.x, e.y - e.z, 150, 'FIVE MORE MINUTES...', '#F4F0FF', 14); W6.mouth = .6; }
+    if (kind === 'alarm') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'ring', x: e.x + 40, y: e.y + 14, r: 20, delay: .35 + i * .4, speed: 250, dmg: Math.round(dmg * .8), t: 9, max: 9 }); hazards.push({ kind: 'w6bell', x: e.x + 40, y: e.y + 14, t: 1.9, max: 1.9 }); shakeMag = 10; W6.mouth = 1;
+      let n = 0; const bell = () => { if (n++ < 14 && sfxOn && actx) { tone(1800 + (n % 2) * 200, .05, 'square', .05); setTimeout(bell, 60); } }; bell(); floatText(e.x, e.y - e.z, 170, 'BRRRRRING', '#FFE0A0', 18); }
+    if (kind === 'jolt') { hazards.push({ kind: 'w6jolt', el: 0, wait: 2.1, step: .7, n: 0, t: 9, max: 9, dmg: Math.round(dmg * .9) }); floatText(e.x, e.y - e.z, 150, 'IT DREAMS IT IS FALLING...', '#F4F0FF', 14); W6.mouth = .8; }
   }
+  const WAKE_T = { rem: 2.5, teeth: 2.4, snooze: 3.0, alarm: 2.6, jolt: 2.8 };
+  W6.ATK = { dreams: DREAMS, piece: (k) => SB() && playPiece(SB(), k), wake: (k) => SB() && wakeAttack(SB(), k) };
   // ---------------- running it ----------------
   MECH_FX.w6sleep = {
     start(m) { B = W6.B = { mode: 'none' }; m.clk = 0; },
@@ -1418,7 +1624,7 @@
       if (!e) return;
       if (!e.w6init) initSleeper(e);
       const S = e.w6S, t = m.clk;
-      if (e.dead) { if (!B.dead) { B.dead = 1; B.vuln = false; for (const c of B.crutches) if (!c.dead) { c.dead = true; c.w6counted = 1; c.state = 'dying'; c.death = 'w6snap'; c.t = c.dmax = 1.2; c.vx = 0; c.deadAt = performance.now() / 1000; c.dir = 1; } hazards = hazards.filter(h => !['w6man', 'w6train', 'w6piece', 'beam', 'fall', 'ring'].includes(h.kind)); }
+      if (e.dead) { if (!B.dead) { B.dead = 1; B.vuln = false; for (const c of B.crutches) if (!c.dead) { c.dead = true; c.w6counted = 1; c.state = 'dying'; c.death = 'w6snap'; c.t = c.dmax = 1.2; c.vx = 0; c.deadAt = performance.now() / 1000; c.dir = 1; } hazards = hazards.filter(h => !SHZ.includes(h.kind)); }
         B.boardK = Math.max(0, B.boardK - dt); if (B.iris) B.iris.r += dt * 700; S.eyes = 1; S.mouth = 1; return; }
       W6.mouth = Math.max(0, (W6.mouth || 0) - dt * 1.4);
       if (stillT > 0) return;
@@ -1431,15 +1637,17 @@
       if (ph === 1) {
         if (B.mode === 'asleep') {
           B.vuln = false; B.gz = 62 - S.sag * 14; S.eyes = 0; S.mouth = .12 + Math.max(0, Math.sin(t * 1.3)) * .12 + W6.mouth * .5; S.mood = 0;
+          if (B.inhale > 0) { B.inhale -= dt; S.mouth = .02; S.flush = Math.min(1, (S.flush || 0) + dt * 3); S.mood = .3; } else S.flush = Math.max(0, (S.flush || 0) - dt * 2); // (drawing the snore in: cheeks full, mouth shut)
           B.dreamT -= dt;
-          if (B.dreamT <= 0) { B.dreamN++; B.dreamT = 3.6 - Math.min(1, B.broken * .25); if (B.dreamN % 2) dreamGolconda(e); else dreamTrain(e, B.broken >= 2 || B.regrows > 0 ? 2 : 1); }
+          if (B.dreamT <= 0) { B.dreamN++; const lv = B.broken + B.regrows, L = lv >= 2 ? ['pillows', 'sheep', 'snore', 'sand'] : lv >= 1 ? ['pillows', 'sheep', 'snore'] : ['pillows', 'sheep'], d = L[(B.dreamN - 1) % L.length];
+            B.dreamT = DREAM_T[d] - Math.min(.8, B.broken * .2); DREAMS[d](e); } // (the more it sags, the more of bedtime it dreams)
           if (!B.crutches.some(c => !c.dead)) { B.mode = 'collapse'; B.t = 0; sfx('roar'); }
         } else if (B.mode === 'collapse') {
           B.gz = Math.max(0, 62 * (1 - sm(B.t / .45)));
           if (B.t >= .45) { B.mode = 'down'; B.t = 0; e.sqx = 1.25; e.sqy = .78; shakeMag = 15; sfx('slam'); hitstop = Math.max(hitstop, .08); dust(e.x - 60, e.y + 6, 10); dust(e.x + 60, e.y + 6, 10); fx.push({ kind: 'ring', x: e.x, y: e.y + 10, z: 2, t: .5, max: .5, r: 170, col: '#F4E6C8', flat: 1 });
             floatText(e.x, e.y, 150, 'ITS FACE IS ON THE QUILT · STRIKE!', '#FFE6B0', 15); }
         } else if (B.mode === 'down') {
-          B.vuln = true; B.gz = 0; S.mood = -.3; S.eyes = 0; S.mouth = .3; S.drool = Math.min(1, B.t / 3);
+          B.vuln = true; B.gz = 0; S.mood = -.3; S.flush = 0; S.eyes = 0; S.mouth = .3; S.drool = Math.min(1, B.t / 3);
           if (e.hp <= e.maxHp * .67) toPhase(e, 2);
           else if (B.t > 9) { B.mode = 'rise'; B.t = 0; B.regrows++; S.sag = Math.max(.2, S.sag - .5); S.drool = 0; floatText(e.x, e.y, 150, 'IT PROPS ITSELF UP AGAIN', '#F4E6C8', 14);
             const pick3 = [0, 1, 2, 3].sort(() => Math.random() - .5).slice(0, B.regrows > 1 ? 2 : 3); B.broken = 4 - pick3.length; for (const i of pick3) plantCrutch(e, i, .6, true); }
@@ -1453,11 +1661,11 @@
           if (B.t > 2) { B.mode = 'board'; B.t = 0; B.kc = Bd.col(e.x); B.kr = 0; B.moveT = 1; B.castT = 1.2; B.cast = 0; } }
         else if (B.mode === 'board') {
           B.vuln = true; B.boardK = 1; S.eyes = .5; S.mood = .4 + Math.sin(t * .7) * .2; S.mouth = .1 + W6.mouth * .5; S.look = clamp((P.x - e.x) / 200, -1, 1);
-          B.moveT -= dt; if (B.moveT <= 0) { B.moveT = 1.5 - (e.hp < e.maxHp * .45 ? .3 : 0); // the king steps one square, keeping a little way from you
+          B.moveT -= dt; if (B.moveT <= 0) { B.moveT = 1.5 - (e.hp < e.maxHp * .45 ? .3 : 0); // it tosses over onto the next patch, keeping a little way from you
             const pc = Bd.col(P.x), opts = []; for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) { const c = B.kc + dc, r = B.kr + dr; if ((dc || dr) && c >= 1 && c < Bd.nc - 1 && r >= 0 && r < 2) opts.push([c, r, -Math.abs(Math.abs(c - pc) - 3) + Math.random() * 1.5]); }
             if (opts.length) { opts.sort((a, b) => b[2] - a[2]); [B.kc, B.kr] = opts[0]; sfx('whoosh'); } }
           B.kc = clamp(B.kc ?? 2, 0, Bd.nc - 1); B.gx = Bd.cx(B.kc); B.gy = Bd.cy(B.kr ?? 0); B.gz = 30 + Math.sin(t * 2) * 4;
-          B.castT -= dt; if (B.castT <= 0) { const late2 = e.hp < e.maxHp * .45, seq = late2 ? ['rook', 'knight', 'bishop', 'queen'] : ['rook', 'bishop', 'knight']; playPiece(e, seq[B.cast++ % seq.length]); B.castT = late2 ? 2.7 : 3.1; }
+          B.castT -= dt; if (B.castT <= 0) { const late2 = e.hp < e.maxHp * .45, seq = late2 ? ['ripple', 'cow', 'walker', 'lullaby'] : ['ripple', 'walker', 'cow']; playPiece(e, seq[B.cast++ % seq.length]); B.castT = late2 ? 2.7 : 3.1; }
           if (e.hp <= e.maxHp * .34) toPhase(e, 3);
         }
       } else {
@@ -1466,11 +1674,12 @@
           if (B.t > 1.8) { B.mode = 'waking'; B.t = 0; B.castT = 1.4; B.moveT = 0; } }
         else if (B.mode === 'waking') {
           B.vuln = true; S.eyes = 1; S.mood = -.3 + Math.sin(t * 3) * .2; S.mouth = .25 + W6.mouth * .7; S.look = clamp((P.x - e.x) / 200, -1, 1);
+          if (B.rem > 0) { B.rem -= dt; S.look = Math.sin(t * 26); } // its eyes darting
           const I = B.iris; I.r = Math.max(118, I.r - dt * (I.r > 300 ? 22 : 13));
           if (I.r <= 118) { I.minT = (I.minT || 0) + dt; if (I.minT > 1.2) { I.minT = 0; I.r = 340; wakeAttack(e, 'alarm'); floatText(e.x, e.y - e.z, 140, 'IT STIRS', '#FFE6B0', 16); } } else I.minT = 0;
           B.moveT -= dt; if (B.moveT <= 0) { B.moveT = 2.4; const cx = homeX(); B.gx = clamp(cx + rand(-80, 80), leftWall() + 90, rightWall() - 90); B.gy = FLOOR_TOP + rand(16, 46); }
           B.gz = 26 + Math.sin(t * 1.6) * 5;
-          B.castT -= dt; if (B.castT <= 0) { B.cast++; wakeAttack(e, ['gaze', 'tears', 'gaze', 'alarm'][B.cast % 4]); B.castT = 2.5; }
+          B.castT -= dt; if (B.castT <= 0) { B.cast++; const seq = e.hp < e.maxHp * .2 ? ['rem', 'jolt', 'teeth', 'snooze', 'jolt', 'alarm'] : ['rem', 'teeth', 'snooze', 'alarm'], k = seq[B.cast % seq.length]; wakeAttack(e, k); B.castT = WAKE_T[k]; }
         }
       }
       // it drifts to where it means to be
@@ -1719,15 +1928,20 @@
   // where he was a moment ago (for the soft clocks)
   const _up = updatePlayer;
   updatePlayer = function (dt) { _up(dt); const H = W6.hist || (W6.hist = []), now = performance.now() / 1000; if (P && P.state !== 'dead') H.push({ x: P.x, y: P.y, t: now }); while (H.length > 1 && H[1].t <= now - 1.5) H.shift(); if (H.length > 400) H.splice(0, H.length - 400); };
-  // the Dream of the Board: the quilt turns into a chessboard, square by square from the middle out
+  // the Patchwork Dream: the bed turns into a patchwork quilt, patch by patch from the middle out, each one stitched round
   const _br = drawBossRoom;
   drawBossRoom = function (t) { _br(t);
     const B = W6.B; if (!stage || stage.theme !== 'dreamBoss' || !B || !(B.boardK > 0)) return;
     const Bd = W6.BOARD(), k = B.boardK, mid = (Bd.L + Bd.R) / 2;
     ctx.save(); ctx.translate(-camX, 0);
     for (let c = 0; c < Bd.nc; c++) for (let r = 0; r < Bd.nr; r++) { const x = Bd.L + c * Bd.cw, y = Bd.y0 + r * Bd.rh, d = Math.abs(x + Bd.cw / 2 - mid) / (Bd.R - Bd.L) * 2, q = cl01(k * 1.8 - d * .8); if (q <= 0) continue;
-      const dark = (c + r) % 2; ctx.fillStyle = dark ? `rgba(26,18,30,${.62 * q})` : `rgba(246,236,214,${.5 * q})`; ctx.fillRect(x + (1 - q) * Bd.cw * .5, y + (1 - q) * Bd.rh * .5, Bd.cw * q, Bd.rh * q); }
-    ctx.globalAlpha = k; ctx.strokeStyle = '#C8A060'; ctx.lineWidth = 2; ctx.strokeRect(Bd.L, Bd.y0, Bd.R - Bd.L, Bd.rh * 4); ctx.globalAlpha = 1;
+      const px = x + (1 - q) * Bd.cw * .5 + 1, py = y + (1 - q) * Bd.rh * .5 + 1, pw = Bd.cw * q - 2, ph = Bd.rh * q - 2;
+      ctx.globalAlpha = .62 * q; ctx.fillStyle = W6.patchCol(c, r); ctx.fillRect(px, py, pw, ph);
+      if (DET() && q > .5) { const v = Math.floor(hsh(c * 3.1 + r * 5.7) * 3); ctx.fillStyle = 'rgba(255,255,255,.35)'; // a print on some of the patches: dots, or stripes
+        if (v === 0) for (let i = 0; i < 6; i++) { circle(px + (i % 3 + .5) * pw / 3, py + (Math.floor(i / 3) + .5) * ph / 2, 1.6); ctx.fill(); }
+        else if (v === 1) for (let i = 1; i < 5; i++) ctx.fillRect(px + i * pw / 5, py + 1, 1.4, ph - 2); }
+      ctx.globalAlpha = .8 * q; ctx.strokeStyle = '#F6EEDC'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.strokeRect(px + 2.5, py + 2.5, pw - 5, ph - 5); ctx.setLineDash([]); ctx.globalAlpha = 1; }
+    ctx.globalAlpha = k; ctx.strokeStyle = '#8A5A4A'; ctx.lineWidth = 2.5; ctx.strokeRect(Bd.L, Bd.y0, Bd.R - Bd.L, Bd.rh * 4); ctx.globalAlpha = 1;
     ctx.restore(); };
   // Waking: an iris of dark closes on the dream, lashes round its rim, like an eye closing on what it saw
   const _gf = gradeFrame;
@@ -1816,7 +2030,7 @@
       // the Bed, before it is woken: a lullaby, very slow
       dreamBoss: { bpm: 58, n: 12, style: 'waltz', kit: 'soft', duty: .5, lv: .16, vib: 12, echo: .45, echoSteps: 3, chords: ['C', 'Am', 'F', 'G', 'C', 'Em', 'F', 'G'],
         lead: ['E5 - - G5 - - - - - E5 - -', 'C5 - - - - - E5 - - A4 - -', 'A4 - - C5 - - F5 - - - - -', 'D5 - - - - - G4 - - B4 - -', 'E5 - - G5 - - C6 - - - - -', 'B5 - - G5 - - E5 - - - - -', 'A5 - - F5 - - C5 - - A4 - -', 'B4 - - - - - - - - . . .'] },
-      // the Sleeper: the lullaby gone wrong; then a march of chessmen; then the alarm, at a run
+      // the Sleeper: the lullaby gone wrong; then a music-box march over the quilt; then the alarm, at a run
       boss_w6sleeper: { duty: .25, vib: 12, echo: .15, form: ['A', 'A', 'B', 'B', 'C', 'C'], parts: {
         A: { bpm: 96, n: 12, style: 'waltz', chords: ['Cm', 'Abaug', 'Fm', 'G7'], lead: ['Eb5 - - G5 - - C6 - - B5 - -', 'C6 - - - - - G#5 - - E5 - -', 'F5 - - Ab5 - - C6 - - Ab5 - -', 'B5 - - - - - D5 - - G5 - -'] },
         B: { bpm: 140, style: 'march', chords: ['Cm', 'G', 'Ab', 'G'], lead: ['C5 . C5 . G5 . G5 . Ab5 - G5 - F5 - Eb5 -', 'D5 . D5 . B4 . G4 . B4 - D5 - F5 - G5 -', 'Ab5 . Ab5 . F5 . C5 . Eb5 - F5 - G5 - Ab5 -', 'G5 - - - B5 - - - D6 - - - B5 - - -'] },

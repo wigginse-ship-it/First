@@ -30,8 +30,8 @@
   BOSSES.sleeper = {
     close: 'w6none', name: 'The Sleeper', title: 'IT IS DREAMING ALL OF THIS', draw: 'w6sleeper', mat: 'dream', move: 'fly', hover: 60,
     hp: 1250, spd: 60, hw: 60, hh: 104, dmg: 20, wind: .6, cd: [.8, 1.3], weight: 0, poise: 0, ranged: 1, reach: 80,
-    // (its whole fight is run by the 'w6sleep' rule: these are only the dreams each phase can send)
-    p1: ['w6golconda', 'w6train', 'w6golconda'], p2: ['w6rook', 'w6bishop', 'w6knight'], p3: ['w6alarm', 'w6gaze', 'w6tears'],
+    // (its whole fight is run by the 'w6sleep' rule: these are only the dreams each phase can send, every one of them bedtime)
+    p1: ['w6pillows', 'w6sheep', 'w6snore', 'w6sand'], p2: ['w6ripple', 'w6walker', 'w6cow', 'w6lullaby'], p3: ['w6rem', 'w6teeth', 'w6snooze', 'w6alarm', 'w6jolt'],
   };
 
   // a little harder than the Courts, a little easier than the last world (see the matching entries in world.js and game.js)
