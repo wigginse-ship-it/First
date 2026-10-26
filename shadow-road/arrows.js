@@ -14,8 +14,8 @@ const ARROW_TIERS = [
   { name: 'Silver Broadheads', dmg: 20, crit: .1, pierce: 1, blast: 0, bleed: 1, skill: 'Pierce', desc: 'Broad silver heads: at a full draw they punch through the first foe into a second.' },
   { name: 'Rune Arrows', dmg: 23, crit: .12, pierce: 1, blast: 42, bleed: 1, skill: 'Rune Burst', desc: 'Runes cut in the shaft burst on impact, catching whoever stands close.' },
   { name: 'Starfall Arrows', dmg: 27, crit: .14, pierce: 1, blast: 46, bleed: 1, split: 2, skill: 'Starsplit', desc: 'At a full draw each one breaks on the first foe into two falling stars, which fly on into the foes behind.' },
-  { name: 'Shadowsteel Arrows', dmg: 30, crit: .16, pierce: 2, blast: 50, bleed: 1, split: 2, ret: 1, skill: 'Shadow-walk', desc: 'Raven-fletched and forged in Shadow: an arrow that kills walks back through Shadow into your quiver.' },
-  { name: 'Pattern Arrows', dmg: 34, crit: .18, pierce: 2, blast: 54, bleed: 1, split: 2, ret: 1, chain: 2, skill: 'Pattern Fire', desc: "Lit with the Pattern's blue fire: at a full draw it leaps from the struck foe to two more nearby." },
+  { name: 'Shadowsteel Arrows', dmg: 30, crit: .16, pierce: 1, blast: 50, bleed: 1, split: 2, ret: 1, skill: 'Shadow-walk', desc: 'Raven-fletched and forged in Shadow: an arrow that kills walks back through Shadow into your quiver.' },
+  { name: 'Pattern Arrows', dmg: 34, crit: .18, pierce: 1, blast: 54, bleed: 1, split: 2, ret: 1, chain: 2, skill: 'Pattern Fire', desc: "Lit with the Pattern's blue fire: at a full draw it leaps from the struck foe to two more nearby." },
 ];
 const ARROW_LV = ARROW_TIERS.length;
 const arrowLv = () => Math.max(1, Math.min(ARROW_LV, save.alv || 1));
@@ -103,7 +103,7 @@ function arrowHit(p) {
   const wasDead = best.dead, dir = Math.sign(p.vx), first = !p.struck; p.struck = true;
   const ad = p.dmg * arrowVs(best);
   strike(best, ad, dir, p.shard ? { dmg: ad, kb: 140, launch: 60, power: 1, arrow: 1, crit: Math.random() < p.crit * .5 } : { dmg: ad, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .08 + p.crit * .7 });
-  if (p.bleed && !best.dead) arrowBleed(best, p.dmg * .08 * arrowVs(best)); // barbs: it bleeds for a moment after
+  if (p.bleed && !best.dead) arrowBleed(best, p.dmg * .06 * arrowVs(best)); // barbs: it bleeds for a moment after
   const killed = best.dead && !wasDead;
   if (killed && p.ret && !p.returned && !p.shard) { // shadowsteel: the killing arrow walks back through Shadow into the quiver
     p.returned = true; save.arrows = Math.min(ARROW_MAX, (save.arrows || 0) + 1); persist(); refreshArrows();
@@ -118,20 +118,20 @@ function arrowHit(p) {
   }
   burst(best.x, best.y, p.z, p.shard ? ['#FFFFFF', '#FFE08A'] : ['#FFFFFF', '#E8D8B0'], p.shard ? 5 : 8, 'spark', dir);
   if (p.shard) return true;
-  const share = (o, k, m) => { if (o === best || o.dead || p.splash.has(o)) return; p.splash.add(o); const d = p.dmg * k * arrowVs(o); strike(o, d, Math.sign(o.x - best.x) || dir, Object.assign({ dmg: d, arrow: 1 }, m)); if (p.bleed && !o.dead) arrowBleed(o, p.dmg * .05 * arrowVs(o)); };
+  const share = (o, k, m) => { if (o === best || o.dead || p.splash.has(o)) return; p.splash.add(o); const d = p.dmg * k * arrowVs(o); strike(o, d, Math.sign(o.x - best.x) || dir, Object.assign({ dmg: d, arrow: 1 }, m)); if (p.bleed && !o.dead) arrowBleed(o, p.dmg * .04 * arrowVs(o)); };
   if (p.blast) { // rune arrows and finer burst where they land
     fx.push({ kind: 'ring', x: best.x, y: best.y, z: 4, t: .35, max: .35, r: p.blast * 1.4, col: ['#9FE8F0', '#E8E0FF', '#B89AF0', '#A8D0FF'][Math.min(3, p.arrow - 4)], flat: 1 });
-    for (const o of enemies) if (Math.hypot(o.x - best.x, (o.y - best.y) * 2) < p.blast) share(o, .4, { kb: 220, launch: 160, power: 1 });
+    for (const o of enemies) if (Math.hypot(o.x - best.x, (o.y - best.y) * 2) < p.blast) share(o, .3, { kb: 220, launch: 160, power: 1 });
   }
   if (p.chain && first) { // pattern fire: blue lightning leaps from the struck foe to the nearest others
     const cz = best.z + best.hh * .55;
     const near = enemies.filter(o => o !== best && !o.dead && !p.splash.has(o) && Math.hypot(o.x - best.x, (o.y - best.y) * 2) < 170).sort((u, v) => Math.hypot(u.x - best.x, u.y - best.y) - Math.hypot(v.x - best.x, v.y - best.y)).slice(0, p.chain);
-    for (const o of near) { fx.push({ kind: 'bolt', x: best.x, y: best.y, z: cz, x2: o.x, y2: o.y, z2: o.z + o.hh * .5, t: .22, max: .22, col: '#6AA8FF', seed: Math.random() * 99 }); share(o, .45, { kb: 60, power: 0, el: 1 }); }
+    for (const o of near) { fx.push({ kind: 'bolt', x: best.x, y: best.y, z: cz, x2: o.x, y2: o.y, z2: o.z + o.hh * .5, t: .22, max: .22, col: '#6AA8FF', seed: Math.random() * 99 }); share(o, .35, { kb: 60, power: 0, el: 1 }); }
     if (near.length) sfx('shoot', .4);
   }
   if (p.split && first) { // starsplit: two falling stars break off and fly on, fanning out across the lanes behind
     for (let i = 0; i < p.split; i++) { const s = i % 2 ? 1 : -1;
-      projs.push({ owner: 'p', arrow: p.arrow, shard: 1, x: p.x, y: p.y, z: p.z, vx: p.vx * .8, vy: s * 170, vz: 0, dmg: Math.round(p.dmg * .4), life: .5, hit: new Set([best]), splash: p.splash, tgt: null, pierce: 0, crit: p.crit, blast: 0, bleed: p.bleed, full: true }); }
+      projs.push({ owner: 'p', arrow: p.arrow, shard: 1, x: p.x, y: p.y, z: p.z, vx: p.vx * .8, vy: s * 170, vz: 0, dmg: Math.round(p.dmg * .3), life: .5, hit: p.hit, splash: p.splash, tgt: null, pierce: 0, crit: p.crit, blast: 0, bleed: p.bleed, full: true }); }
   }
   if (p.pierce > 0) { p.pierce--; return false; }
   return true;
