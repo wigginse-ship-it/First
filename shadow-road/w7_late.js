@@ -6,12 +6,11 @@
 // (save.w7relic, set as he falls: art_w7.js). It is the sea's reflection of the Jewel of Judgement, which commands the
 // weather; this commands the tide, and it goes with Corwin into every world afterward, whatever he fights with:
 //   UNDERTOW      every dodge leaves a whirlpool where he stood: it drags foes in and grinds at them
-//   THE WAVE      a finishing blow (any heavy, power-2 hit) raises a wave of seawater that rolls down the lane ahead,
-//                 carrying foes before it and breaking them on the walls (it gathers again after a few seconds)
-//   SEA-LEGS      in the air, Jump again to kick off the water once more
-// In New Game+ it is far stronger: the whirlpools are wider, last longer and grind harder; the wave rises more often,
-// rolls both ways and hits harder; and he can kick off the water twice. It shows on the weapon card (a black pearl, its
-// ring filling as the wave gathers), in the forge, and at the head of the move list.
+//   THE SPLASH    every foe that falls bursts in a crown of seawater that strikes the foes round it and pushes them
+//                 back a little; a foe the splash kills splashes too, but the chain stops two splashes deep
+// In New Game+ it is far stronger: wider and longer whirlpools that grind harder, and wider splashes that hit harder.
+// It shows on the weapon card (a black pearl, its ring filling as the next whirlpool gathers), in the forge, and at the
+// head of the move list.
 // Test: in the console, w7relic() gives it (w7relic(false) takes it away).
 //
 // THE ENDING. The Pearl lies on the Pattern; he takes it up. Then, painted: he walks the Pattern of Rebma forward, the way
@@ -32,53 +31,68 @@
   // ======================================================================================================
   // THE RELIC
   // ======================================================================================================
-  const R = W7.R = { pools: [], waves: [], waveCd: 0, poolCd: 0 };
+  const R = W7.R = { pools: [], splashes: [], poolCd: 0 };
   const foes = () => enemies.filter(e => !e.dead && e.state !== 'enter');
-  const WAVE_CD = () => (save.cycle > 0 ? 1.5 : 2.6);
+  const POOL_CD = .8;
+  // UNDERTOW: every dodge leaves a whirlpool where he stood
   { const _sd = startDodge; startDodge = function () { const x = P.x, y = P.y; _sd();
-    if (has() && P.state === 'dodge' && R.poolCd <= 0) { const k = PW(); R.poolCd = .8; R.pools.push({ x, y, t: 0, max: .9 + .55 * k, r: 54 * Math.sqrt(k), tick: 0, hit: new Map() }); sfx('hit-goo', .4); bub(x, y, 10, 8, 50); } }; }
-  { const _st = strike; strike = function (e, base, dir, m, echo) { const r = _st(e, base, dir, m, echo);
-    if (has() && m && P && m === P.move && m.power === 2 && R.waveCd <= 0 && mode === 'play') { R.waveCd = WAVE_CD(); const k = PW();
-      for (const d of save.cycle > 0 ? [1, -1] : [1]) R.waves.push({ x: P.x + d * P.facing * 20, y: P.y, dir: d * P.facing, t: 0, max: .75 + .15 * k, hit: new Set(), h: 52 + 16 * k, dmg: Math.round((16 + 4 * (save.wl[P.w] || 1)) * k) });
-      sfx('whoosh'); shakeMag = Math.max(shakeMag, 4); }
-    return r; }; }
+    if (has() && P.state === 'dodge' && R.poolCd <= 0) { const k = PW(); R.poolCd = POOL_CD; R.pools.push({ x, y, t: 0, max: .9 + .55 * k, r: 54 * Math.sqrt(k), tick: 0 }); sfx('hit-goo', .4); bub(x, y, 10, 8, 50); } }; }
+  // THE SPLASH: whatever falls bursts in a crown of seawater that strikes everything near it and pushes it back a little.
+  // A foe the splash kills splashes in its turn, but only twice over (so a crowd can go up in a chain, never a whole road)
+  const SPLASH_DEPTH = 2;
+  function splash(e, dir, depth) {
+    const k = PW(), r = 80 * Math.sqrt(k), wl = (save.wl && save.wl[P.w]) || 1, dmg = Math.round((8 + 3 * wl + Math.min(60, e.maxHp * .1)) * k * (depth ? .8 : 1));
+    const S = { x: e.x, y: e.y, z: Math.max(0, e.z || 0), t: 0, max: .6, r, seed: Math.random() * 9 };
+    R.splashes.push(S); if (R.splashes.length > 14) R.splashes.shift();
+    sfx('hit-goo', .7); if (sfxOn && actx) noise(.25, .06, 1600);
+    for (let i = 0; i < 14; i++) { const a = rand(0, TAU), v = rand(80, 200); parts.push({ x: e.x, y: e.y + rand(-4, 4), z: S.z + rand(4, 20), vx: Math.cos(a) * v, vy: Math.sin(a) * v * .25, vz: rand(140, 300), life: .9, max: .9, col: pick(['#BFE6E0', '#E8FAF6', '#6AB0B0']), size: rand(1.6, 3.2), shape: 'blob', rot: 0, vr: 0 }); }
+    bub(e.x, e.y, S.z + 10, 8, 70);
+    for (const o of foes()) { if (o === e || Math.hypot(o.x - e.x, (o.y - e.y) * 2) > r + o.hw || o.z > 90) continue;
+      const d = Math.max(1, Math.round(dmg * (o.boss ? .4 : 1))), dr = Math.sign(o.x - e.x) || dir || 1;
+      strike(o, d, dr, { dmg: d, kb: 140, launch: 0, power: 1, el: 1, w7splash: depth + 1 }); }
+  }
+  { const _kill = killEnemy; killEnemy = function (e, dir, m) { const was = e.dead; _kill(e, dir, m);
+    if (!was && e.dead && has() && mode === 'play') { const depth = (m && m.w7splash) || 0; if (depth <= SPLASH_DEPTH) splash(e, dir, depth); } }; }
   { const _up = updatePlayer; updatePlayer = function (dt) {
-    if (has() && P && pressed.jump && P.state === 'jump' && P.z > 8) { // sea-legs: kick off the water
-      const tree = WEAPONS[P.w].tree, staffJ2 = tree.J2 && unlocked(tree.J2) && !P.j2;
-      if (!staffJ2 && (P.w7kicks || 0) < (save.cycle > 0 ? 2 : 1)) { P.w7kicks = (P.w7kicks || 0) + 1; P.vz = Math.max(P.vz, 320); pressed.jump = false; sfx('jump'); bub(P.x, P.y, P.z, 10, 60); fx.push({ kind: 'ring', x: P.x, y: P.y, z: P.z, t: .3, max: .3, r: 22, col: '#C8F0E8' }); }
-    }
     _up(dt);
-    if (P.z <= 0) P.w7kicks = 0;
-    R.waveCd = Math.max(0, R.waveCd - dt); R.poolCd = Math.max(0, R.poolCd - dt);
-    if (R.stage !== stage) { R.stage = stage; R.pools = []; R.waves = []; }
+    R.poolCd = Math.max(0, R.poolCd - dt);
+    if (R.stage !== stage) { R.stage = stage; R.pools = []; R.splashes = []; }
     const k = PW();
     for (const p of R.pools) { p.t += dt; p.tick -= dt;
       for (const e of foes()) { if (e.boss) continue; const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy * 2); if (d < p.r * 1.9 && d > 6) { e.x += dx / d * 110 * k * dt; e.y += dy / Math.max(1, Math.abs(dy)) * Math.min(Math.abs(dy), 40 * dt); } }
       if (p.tick <= 0) { p.tick = .35; for (const e of foes()) if (Math.hypot(e.x - p.x, (e.y - p.y) * 2) < p.r + e.hw && e.z < 40) { const d = Math.round((4 + 1.5 * (save.wl[P.w] || 1)) * k); strike(e, d, Math.sign(e.x - p.x) || 1, { dmg: d, kb: 10, power: 0, el: 1, noStun: 1 }); } }
       if (Math.random() < dt * 20) bub(p.x + rand(-p.r, p.r) * .6, p.y, 4, 1, 20); }
     R.pools = R.pools.filter(p => p.t < p.max);
-    for (const w of R.waves) { w.t += dt; w.x += w.dir * 470 * dt;
-      for (const e of foes()) { if (Math.abs(e.x - w.x) < 24 + e.hw && Math.abs(e.y - w.y) < 26 && e.z < w.h + 20) { if (!w.hit.has(e)) { w.hit.add(e); strike(e, w.dmg, w.dir, { dmg: w.dmg, kb: 440, launch: 220, power: 2, wall: 1, el: 1 }); } else if (!e.boss && !e.dead) e.x += w.dir * 300 * dt; } }
-      if (Math.random() < dt * 40) bub(w.x, w.y + rand(-10, 10), rand(0, w.h), 1, 40);
-      if (w.x < leftWall() - 20 || w.x > rightWall() + 20) w.t = w.max; }
-    R.waves = R.waves.filter(w => w.t < w.max);
+    for (const S of R.splashes) S.t += dt;
+    R.splashes = R.splashes.filter(S => S.t < S.max);
   }; }
   function drawPool(p, t) { const a = Math.min(1, p.t / .15, (p.max - p.t) / .3); ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 5; i++) { const r = p.r * (.3 + i * .18), s = t * (5 - i * .6); ctx.strokeStyle = `rgba(190,250,240,${.35 * a})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r / 2.4, 0, s, s + 3.6); ctx.stroke(); }
     ctx.fillStyle = `rgba(30,90,110,${.25 * a})`; ctx.globalCompositeOperation = 'source-over'; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * .5, p.r * .2, 0, 0, TAU); ctx.fill(); ctx.restore(); }
-  function drawWave(w, t) { const a = Math.min(1, w.t / .08, (w.max - w.t) / .2), x = w.x, H = w.h * 1.3, d = w.dir; ctx.save(); ctx.globalAlpha = a;
-    const g = ctx.createLinearGradient(x - d * 70, 0, x, 0); g.addColorStop(0, 'rgba(40,120,130,0)'); g.addColorStop(.6, 'rgba(60,150,160,.7)'); g.addColorStop(1, 'rgba(150,230,220,.92)'); ctx.fillStyle = g;
-    ctx.beginPath(); ctx.moveTo(x - d * 76, w.y + 10); ctx.lineTo(x - d * 60, w.y - H * .45); ctx.quadraticCurveTo(x - d * 4, w.y - H * 1.1, x + d * 12, w.y - H * .7 + Math.sin(t * 20) * 2); ctx.quadraticCurveTo(x + d * 2, w.y - H * .5, x + d * 6, w.y + 10); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(240,255,252,.95)'; ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - d * 30, w.y - H * .8); ctx.quadraticCurveTo(x - d * 4, w.y - H * 1.1, x + d * 12, w.y - H * .7 + Math.sin(t * 20) * 2); ctx.stroke(); // the crest of foam
-    ctx.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(x + d * (8 - i * 6) + Math.sin(t * 14 + i) * 2, w.y - H * .72 - Math.abs(Math.sin(i * 1.7)) * 6, 1.6, 0, TAU); ctx.fill(); }
-    ctx.restore(); }
-  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); for (const w of R.waves) box(w.x, w.y, 0, 60, w.h * 1.6 + 20); for (const p of R.pools) box(p.x, p.y, 0, p.r + 20, 40); }; }
+  // the splash, painted: a crown of seawater thrown up round where it fell, its spikes rising and falling back, a ring of
+  // foam running out over the floor to the edge of what it struck
+  function drawSplash(S, t) {
+    const u = S.t / S.max, rise = Math.sin(Math.min(1, u * 1.6) * Math.PI), y = S.y - S.z;
+    ctx.save();
+    const rr = S.r * Math.min(1, u * 2.4), fa = 1 - u;
+    ctx.fillStyle = `rgba(40,110,120,${.22 * fa})`; ctx.beginPath(); ctx.ellipse(S.x, S.y, rr, rr / 2.4, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(235,255,250,${.85 * fa})`; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(S.x, S.y, rr, rr / 2.4, 0, 0, TAU); ctx.stroke();
+    ctx.lineWidth = 1; ctx.strokeStyle = `rgba(150,220,215,${.6 * fa})`; ctx.beginPath(); ctx.ellipse(S.x, S.y, rr * .7, rr * .7 / 2.4, 0, 0, TAU); ctx.stroke();
+    const n = 13, cr = 14 + 18 * Math.min(1, u * 2);
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + S.seed, back = Math.sin(a) < 0, bx = S.x + Math.cos(a) * cr, by = y + Math.sin(a) * cr / 2.4, h = (22 + 14 * hsh(i + S.seed)) * rise, lean = Math.cos(a) * 8 * rise;
+      ctx.strokeStyle = back ? `rgba(110,180,185,${.8 * fa + .2})` : `rgba(200,245,238,${.9 * fa + .1})`; ctx.lineWidth = 3.2 - (back ? 1 : 0); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + lean * .3, by - h * .6, bx + lean, by - h); ctx.stroke();
+      if (h > 4) { ctx.fillStyle = `rgba(250,255,255,${fa})`; ctx.beginPath(); ctx.arc(bx + lean, by - h - 2, 1.8, 0, TAU); ctx.fill(); } }
+    ctx.restore();
+  }
+  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); for (const p of R.pools) box(p.x, p.y, 0, p.r + 20, 40); for (const S of R.splashes) box(S.x, S.y, 0, S.r + 20, 80); }; }
   { const _ml = mechList; mechList = function (list, t) { _ml(list, t);
     for (const p of R.pools) list.push([p.y - .3, () => onMain(() => drawPool(p, t))]);
-    for (const w of R.waves) list.push([w.y + 20, () => onMain(() => drawWave(w, t))]); }; }
+    for (const S of R.splashes) list.push([S.y + 8, () => onMain(() => drawSplash(S, t))]); }; }
+  W7.splashTest = (e) => splash(e, 1, 0); // (tests)
 
   // ---------------- where it shows: the weapon card, the forge, the move list ----------------
-  function pearlIcon(g, s, k, t) { // the black pearl in a ring of gold, the ring filling as the wave gathers
+  function pearlIcon(g, s, k, t) { // the black pearl in a ring of gold, the ring filling as the next whirlpool gathers
     const old = ctx; ctx = g; try { g.clearRect(0, 0, 40, 40); if (W7.drawPearl) { g.save(); g.translate(20, 26); W7.drawPearl(0, 0, 2.1 * s, t, false); g.restore(); }
       g.strokeStyle = 'rgba(30,24,10,.8)'; g.lineWidth = 3; g.beginPath(); g.arc(20, 13.4, 16, 0, TAU); g.stroke();
       g.strokeStyle = k >= 1 ? '#F2D68A' : '#9A7A3A'; g.lineWidth = 2.2; g.beginPath(); g.arc(20, 13.4, 16, -Math.PI / 2, -Math.PI / 2 + TAU * k); g.stroke(); } finally { ctx = old; }
@@ -88,10 +102,10 @@
     if (!hudCv) { const card = document.querySelector('.wcard'); if (!card) return; hudCv = document.createElement('canvas'); hudCv.id = 'w7pearlHud'; hudCv.width = 40; hudCv.height = 40; hudCv.title = 'The Pearl of Judgement';
       hudCv.style.cssText = 'position:absolute;right:-12px;top:-10px;width:20px;height:20px;pointer-events:none'; card.appendChild(hudCv); }
     hudCv.hidden = !has(); if (!has()) return;
-    pearlIcon(hudCv.getContext('2d'), 1, 1 - R.waveCd / WAVE_CD(), performance.now() / 1000);
+    pearlIcon(hudCv.getContext('2d'), 1, 1 - R.poolCd / POOL_CD, performance.now() / 1000);
   }
   { const _ht = hudTick; hudTick = function () { _ht(); try { hudBadge(); } catch (e) {} }; }
-  const RELIC_TEXT = () => `The sea's reflection of the Jewel of Judgement, out of the King in the Glass. Whatever you fight with: every dodge leaves an undertow that drags foes in; a finishing blow raises a wave that carries them down the lane; in the air, Jump again to kick off the water.${save.cycle > 0 ? ' In this cycle the tide runs strong: wider whirlpools, a wave both ways and more often, and two kicks.' : ' In New Game+ it is far stronger.'}`;
+  const RELIC_TEXT = () => `The sea's reflection of the Jewel of Judgement, out of the King in the Glass. Whatever you fight with: every dodge leaves an undertow that drags foes in and grinds at them, and every foe that falls bursts in a splash of seawater that strikes the foes round it and pushes them back (a splash can set off another, two deep).${save.cycle > 0 ? ' In this cycle the tide runs strong: wider, harder whirlpools and splashes.' : ' In New Game+ it is far stronger.'}`;
   { const _of = openForge; openForge = function (kicker) { _of(kicker);
     let row = document.getElementById('w7relicRow');
     if (!has()) { if (row) row.remove(); return; }
