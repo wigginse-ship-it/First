@@ -107,7 +107,7 @@ function arrowHit(p) {
   const killed = best.dead && !wasDead;
   if (killed && p.ret && !p.returned && !p.shard) { // shadowsteel: the killing arrow walks back through Shadow into the quiver
     p.returned = true; save.arrows = Math.min(ARROW_MAX, (save.arrows || 0) + 1); persist(); refreshArrows();
-    floatText(best.x, best.y, best.z + best.hh + 30, 'RETURNS', '#C8B0F0', 12);
+    floatText(P.x, P.y, 92, 'ARROW RETURNS', '#C8B0F0', 12);
     for (let i = 0; i < 7; i++) parts.push({ x: best.x + rand(-6, 6), y: best.y, z: p.z + rand(-6, 6), vx: rand(-30, 30), vy: 0, vz: rand(20, 60), life: rand(.35, .55), max: .55, col: pick(['#3A2A58', '#7A5AB8', '#C8B0F0']), size: rand(2, 3.2), shape: 'puff' });
     for (let i = 0; i < 5; i++) parts.push({ x: P.x - P.facing * rand(4, 10), y: P.y, z: rand(44, 62), vx: rand(-14, 14), vy: 0, vz: rand(-10, 30), life: rand(.3, .5), max: .5, col: pick(['#7A5AB8', '#C8B0F0', '#FFFFFF']), size: rand(1.6, 2.6), shape: 'puff' });
   }
