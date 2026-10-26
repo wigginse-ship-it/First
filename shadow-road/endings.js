@@ -24,7 +24,7 @@
   }
   function dropAlt(B) { if (B) { retire(B.far); retire(B.mid); retire(B.floor); } }
   function withSet(B, fn) { const A = getSet(); putSet(B); try { fn(); } finally { putSet(A); } }
-  function freshAlt(E) { if (E.B && E.B.K !== K) { const { theme, seed } = E.B; dropAlt(E.B); E.B = buildAlt(theme, seed); if (E.W.tintB) E.W.tintB(E.B); } return E.B; } // the window was resized
+  function freshAlt(E, key = 'B') { const B = E[key]; if (B && B.K !== K) { const { theme, seed } = B; dropAlt(B); E[key] = buildAlt(theme, seed); if (key === 'B' && E.W.tintB) E.W.tintB(E[key]); } return E[key]; } // the window was resized
   function tintCanvas(c, col) { if (!c) return; const g = c.getContext('2d'); g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height); g.restore(); }
 
   // drawWorld, with its layers under our control: each can slide, sink or fade on its own, and the sky can be repainted
@@ -85,10 +85,6 @@
     if (E.frozenPose) { pose.live = 0; drawPlayerAt(P.x, P.y, 0, E.frozenF, pose, a); }
     else withLive(() => drawPlayerAt(P.x, P.y, 0, P.facing, pose, a));
     hatchActor(P.x, P.y, 13, 50);
-  }
-  function walkTo(E, dt, x, spd) { // walk him across the boss room
-    const d = x - P.x; if (Math.abs(d) < 1.5) { P.state = 'idle'; P.walk = 0; return true; }
-    P.facing = Math.sign(d); P.state = 'walk'; const st = Math.min(Math.abs(d), spd * dt); P.x += P.facing * st; P.walk += st / 10.2; return false;
   }
 
   // ---------------- small painted things ----------------
@@ -349,30 +345,59 @@
   };
 
   // ======================================================================================================
-  // WORLD 4, THE COURTS OF CHAOS: the faces the Ty'iga wore fall silent, the Abyss goes still, and he draws a Trump: the
-  // long-shadowed square of a stranger's dream. It comes alive in his hand, and he steps through it, into the Dreaming Shadow
-  // (the card shows whichever world comes next: theme2)
+  // WORLD 4, THE COURTS OF CHAOS: the faces the Ty'iga wore fall silent and the Abyss goes still; and then it breathes,
+  // slow and even, like a sleeper. Something vast lies asleep far down in the Abyss beneath the Courts (the thousand faces
+  // were its dreams, and the Ty'iga only wore them), and its breath comes up over the rim. Spent, he goes down on one knee,
+  // then lies back on the dais; his eyes close, and when they open he is lying in the long shadows of a piazza on an
+  // afternoon that no one ever painted: the Sleeper's dream, the Dreaming Shadow. (He leaves it by the Trump, in the
+  // Dreaming Shadow's own ending below, once he has woken back here on the rim.)
   // ======================================================================================================
+  // his eyes: two lids come together over the view, lashes and all (k: 0 open .. 1 shut); behind them the dark turns slowly
+  function lids(k, t) {
+    if (k <= .01) return; const Y0 = Y_OFF, H = VH - Y0, mid = Y0 + H / 2, open = (1 - k) * H / 2 + 2;
+    if (k > .6) { ctx.fillStyle = `rgba(8,6,14,${cl01((k - .6) / .3)})`; ctx.fillRect(0, Y0, VW, H); ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(150,140,220,${.18 * cl01((k - .7) / .3)})`; ctx.lineWidth = 6; ctx.beginPath(); for (let a = 0; a < TAU * 2.5; a += .15) { const r = a * 14 + i * 20, px = VW / 2 + Math.cos(a + t * (1 + i * .3)) * r, py = mid + Math.sin(a + t * (1 + i * .3)) * r * .55; a ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); } ctx.restore(); }
+    for (const s of [-1, 1]) { // a lid: skin, darker toward its edge, its lashes along the rim
+      const edge = mid + s * open, curve = 26 * (1 - k * .8);
+      ctx.save(); ctx.beginPath(); if (s < 0) { ctx.moveTo(-10, Y0 - 10); ctx.lineTo(VW + 10, Y0 - 10); ctx.lineTo(VW + 10, edge); ctx.quadraticCurveTo(VW / 2, edge + curve, -10, edge); } else { ctx.moveTo(-10, VH + 10); ctx.lineTo(VW + 10, VH + 10); ctx.lineTo(VW + 10, edge); ctx.quadraticCurveTo(VW / 2, edge - curve, -10, edge); } ctx.closePath();
+      const g = ctx.createLinearGradient(0, s < 0 ? Y0 : VH, 0, edge); g.addColorStop(0, '#C89070'); g.addColorStop(.75, '#A86A50'); g.addColorStop(1, '#5A2A24'); ctx.fillStyle = g; ctx.fill();
+      ctx.strokeStyle = '#2A1410'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = '#1A0C0A'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; for (let i = 0; i <= 30; i++) { const u = i / 30, x = u * VW, y = edge + s * curve * u * (1 - u) * 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + (u - .5) * 8, y + s * 6, x + (u - .5) * 16, y + s * (10 + 4 * Math.sin(u * Math.PI))); ctx.stroke(); }
+      ctx.restore(); }
+  }
+  function keyed(keys, T) { // eased between [time, value] keys
+    if (T <= keys[0][0]) return keys[0][1];
+    for (let i = 1; i < keys.length; i++) if (T < keys[i][0]) { const [t0, v0] = keys[i - 1], [t1, v1] = keys[i]; return lerp(v0, v1, sm((T - t0) / (t1 - t0))); }
+    return keys[keys.length - 1][1];
+  }
   const W4 = {
-    theme2: 'dream', seed: 241, d0: 7, d1: 7, noCells: 1, bannerAt: 6.1, dur: 10, music: 'chaos', still: 1.2,
-    title: 'A Thousand Faces, Silent', sub: 'HE DREW A CARD FROM THE DECK, AND ON IT AN AFTERNOON THAT NO ONE HAD EVER PAINTED', label: 'THE DREAMING SHADOW',
+    theme2: 'dream', seed: 241, d0: 7.4, d1: 7.4, noCells: 1, bannerAt: 4.6, dur: 12.8, music: 'chaos', still: 1.2,
+    title: 'A Thousand Faces, Silent', sub: 'HE SLEPT AT THE BRINK, AND SOMETHING ASLEEP BENEATH THE ABYSS DREAMED HIM IN',
+    lidKeys: [[4.6, 0], [5.5, .62], [5.95, .4], [7, 1], [8.3, 1], [8.9, .42], [9.2, .56], [10, 0]], // heavy: they droop, lift once, and close; then, in the dream, open the same way
     setup(E) {
       const b = E.boss; E.masks = []; E.halo0 = b ? (b.w4halo ?? 1) : 1;
       if (b) for (let i = 0; i < 7; i++) E.masks.push({ x: b.x + (i - 3) * 20 * (b.size || 1) + rand(-5, 5), y: b.y + rand(-22, 16), z0: 70 + hsh(i + 3) * 60, at: .2 + i * .17 + hsh(i) * .08, rot: rand(-.5, .5), lr: rand(-1.2, 1.2), s: rand(.9, 1.25) });
-      const side = P.x - camX < VW * .55 ? 1 : -1; // he draws the card on the side with room for it
-      E.cardX = clamp(P.x - camX + side * 96, VW * .3, VW * .8); E.cardY = Y_OFF + VIEW_H * .44; E.x0 = P.x; E.side = side;
+      E.hx = clamp(P.x - camX, VW * .2, VW * .6); E.walk = 0; // (in the dream he lies just where he lay down on the rim)
     },
     update(E, T, dt) {
       const b = E.boss; if (b && b.def.draw === 'tyiga') b.w4halo = E.halo0 * (1 - sm(T / 1.5));
-      if (T > 1.7 && T < 4.6) { P.facing = E.side; P.state = 'idle'; }
-      if (T > 2.4 && !E.drew) { E.drew = 1; sfx('trump'); }
-      if (T > 4.6) { const tx = E.cardX + camX - E.side * 4; if (!E.inCard) walkTo(E, dt, tx, 70); }
-      E.heroA = 1 - sm((T - 5.2) / .5); if (E.heroA <= 0 && !E.inCard) { E.inCard = 1; sfx('whoosh'); }
-      if (T > 5.8 && !E.moon) { E.moon = 1; if (TRACKS[this.theme2]) playMusic(this.theme2); }
+      if (T > 1.6 && T < this.d0) { P.state = T > 4 ? 'down' : 'idle'; P.walk = 0; }
+      if (T > 4 && !E.lay) { E.lay = 1; dust(P.x, P.y, 5); }
+      if (T > 7.4 && !E.dream) { E.dream = 1; if (TRACKS.dream) playMusic('dream'); }
+      if (T > 9.4 && !E.chime) { E.chime = 1; sfx('learned'); }
+      if (T > 11.2) E.walk += dt * 30 / 10.2;
     },
-    pose(E, pose) { // the card held up before him, at arm's length
-      const T = E.t, q = sm((T - 2.1) / .45) * (1 - sm((T - 3.6) / .5));
-      if (q > 0) { pose.backArm = lerp(pose.backArm ?? 1.5, -.12, q); pose.backElbow = lerp(pose.backElbow ?? .3, .55, q); pose.openHand = 0; }
+    pose(E, pose) { // spent: down on one knee, head bowed, before he lies back
+      const T = E.t; if (T > 2.6 && T < 4) { pose.crouch = 1; pose.lean = lerp(pose.lean || 0, .4, sm((T - 2.6) / .4)); pose.arm = 1.4; pose.backArm = 1.2; }
+    },
+    breath(T, t) { // the Abyss breathing under the rim: a pale haze swelling up over the edge of the dais and sinking back, and the soft Z's of a sleeper rising out of the dark
+      const on = sm((T - 1.4) / 1.2); if (on <= 0) return; const b = .5 - .5 * Math.cos((T - 1.4) / 3.4 * TAU);
+      ctx.save(); ctx.globalCompositeOperation = 'screen';
+      const g = ctx.createLinearGradient(0, VH, 0, FLOOR_TOP - 50); g.addColorStop(0, `rgba(190,180,240,${(.2 + .25 * b) * on})`); g.addColorStop(.6, `rgba(170,160,230,${(.06 + .12 * b) * on})`); g.addColorStop(1, 'rgba(170,160,230,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, FLOOR_TOP - 50, VW, VH - FLOOR_TOP + 50);
+      for (let i = 0; i < 10; i++) { const life = ((T - 1.4) * .11 + i / 10) % 1, x = hsh(i + 40) * VW + Math.sin(t * .4 + i) * 20, y = VH + 20 - life * (VH - FLOOR_TOP + 110); softDab(x, y, 26 + life * 44, '220,214,255', .26 * on * Math.sin(life * Math.PI) * (.6 + .4 * b)); }
+      ctx.restore();
+      if (window.W6 && W6.snoreZs) for (const [x, ph] of [[.18, 0], [.78, 1.7]]) W6.snoreZs(VW * x, VH - 14, T + ph, on * (.25 + .55 * b), 1.05);
     },
     items(E, list, T) {
       for (const m of E.masks) list.push([m.y, () => { // each one drops from the dark and lies where it falls, quiet
@@ -383,11 +408,34 @@
       }]);
     },
     boxes(E, box) { for (const m of E.masks) box(m.x, m.y, 0, 20, m.z0 + 20); },
-    hand() { const f = P.facing; return [P.x - camX + f * 19.5, P.y - 70]; }, // (held up between finger and thumb, at eye height)
-    card(E, T, t) { // the Trump: the moon over its ghost city, in a frame of silver leaf, alive under his eyes
-      const B = freshAlt(E), held = sm((T - 2.3) / .3), fly = sm((T - 3.3) / 1.1), zoom = sm((T - 5.8) / 1.2);
+    over(E, T, t) { // the Abyss lies down, and then breathes like a sleeper; its breath comes over him, and his eyes close
+      const k = sm(T / 2.2);
+      ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(80,100,170,${.4 * k})`; view(); ctx.restore();
+      this.breath(T, t);
+      const v = sm((T - 3.4) / 3); if (v > 0) { ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = `rgba(150,140,200,${.22 * v})`; view(); ctx.restore(); } // the haze of it, thick as sleep
+      lids(keyed(this.lidKeys, T), t);
+    },
+    act2(E, T, dt, t) { // behind his eyes, the dream: he lies on the paving of the piazza in its long shadows, and gets up, and walks on into it
+      const B = freshAlt(E), cam = 240, walk = T > 11.2;
+      withSet(B, () => paintWorld('dream', { cam }, t));
+      const pose = poseAs(T < 10.3 ? 'down' : walk ? 'walk' : 'idle', E.walk); if (T >= 10.3 && T < 10.8) pose.crouch = 1;
+      ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.hx + (walk ? E.walk * 10.2 : 0), FLOOR_TOP + 64, 1, 1, pose, 1, true); ctx.restore();
+      gradeFrame('dream');
+      const wk = sm((T - 8.4) / 1.8); if (wk < 1) { ctx.fillStyle = `rgba(255,250,240,${.3 * (1 - wk)})`; view(); } // waking into it, the light is too bright at first
+      cycleTint(); lids(keyed(this.lidKeys, T), t);
+    },
+  };
+  // A TRUMP, drawn from the deck: held up at arm's length, it flies out and grows, the picture on it comes alive, he walks
+  // into it, and it opens out to fill the view. T runs from 2.1, when he reaches for it; o: { B: the picture's painted
+  // layers, theme, label, hand: where it is held, at: where it hangs in the air }
+  function trumpPose(T, pose) { // the card held up before him, at arm's length
+    const q = sm((T - 2.1) / .45) * (1 - sm((T - 3.6) / .5));
+    if (q > 0) { pose.backArm = lerp(pose.backArm ?? 1.5, -.12, q); pose.backElbow = lerp(pose.backElbow ?? .3, .55, q); pose.openHand = 0; }
+  }
+  function trumpCard(E, T, t, o) { // the moon over its ghost city, in a frame of silver leaf, alive under his eyes
+      const B = o.B, held = sm((T - 2.3) / .3), fly = sm((T - 3.3) / 1.1), zoom = sm((T - 5.8) / 1.2);
       if (held <= 0) return;
-      const [hx, hy] = this.hand(), hc = lerp(19, 150, fly), cx0 = lerp(hx, E.cardX, fly), cy0 = lerp(hy, E.cardY, fly);
+      const [hx, hy] = o.hand, hc = lerp(19, 150, fly), cx0 = lerp(hx, o.at[0], fly), cy0 = lerp(hy, o.at[1], fly);
       const S1 = [VW * .68, Y_OFF + VIEW_H / 2], VC = [VW / 2, Y_OFF + VIEW_H / 2]; // the picture is centred on the moon; the card opens out to fill the view
       const cx = lerp(cx0, VC[0], zoom), cy = lerp(cy0, VC[1], zoom), px = lerp(cx0, S1[0], zoom), py = lerp(cy0, S1[1], zoom), w = lerp(hc * .62, VW + 4, zoom), h = lerp(hc, VIEW_H + 4, zoom), sc = lerp(hc / VIEW_H, 1, zoom);
       const alive = sm((T - 3.6) / 1.2); // first only paint on a card, then the picture breathes and moves
@@ -396,10 +444,10 @@
       ctx.save(); rrect(cx - w / 2, cy - h / 2, w, h, 4 * (1 - zoom)); ctx.clip();
       ctx.translate(px, py); ctx.scale(sc, sc); ctx.translate(-S1[0], -S1[1]);
       const camM = 280 + (T - 3) * 6 * alive, tm = 1000 + (T - 3) * alive;
-      withSet(B, () => paintWorld(this.theme2, { cam: camM }, tm));
+      withSet(B, () => paintWorld(o.theme, { cam: camM }, tm));
       if (E.inCard || T > 5.2) { const k = sm((T - 5.2) / .6), mt = Math.max(0, T - 5.6); // and he is in it, walking on toward the city
         ctx.save(); ctx.translate(-camM, 0); inkHero(camM + VW * .4 + mt * 34, FLOOR_TOP + 62, 1, 1, poseAs('walk', 5 + mt * 3.4), k, E.inCard); ctx.restore(); }
-      gradeFrame(this.theme2);
+      gradeFrame(o.theme);
       if (alive < 1) { ctx.fillStyle = `rgba(200,210,235,${.5 * (1 - alive)})`; view(); } // still only a painting, misted with silver
       ctx.restore();
       if (zoom < 1) { // the frame, which opens out past the edges as he goes through
@@ -409,29 +457,38 @@
         ctx.strokeStyle = OUT; ctx.lineWidth = 1.1; ctx.strokeRect(cx - w / 2 - b, cy - h / 2 - b, w + b * 2, h + b * 2); ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
         if (hc > 60) { ctx.fillStyle = 'rgba(40,48,80,.55)'; for (let i = 0; i < 22; i++) { const q = i / 21; circle(cx - w / 2 - b / 2 + q * (w + b), cy - h / 2 - b / 2, .8); ctx.fill(); circle(cx - w / 2 - b / 2 + q * (w + b), cy + h / 2 + b / 2, .8); ctx.fill(); }
           for (const [px, py] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) silverRose(cx + px * (w / 2 + b / 2), cy + py * (h / 2 + b / 2), b * .3, false);
-          ctx.globalAlpha *= cl01((hc - 60) / 40) * (1 - zoom); ctx.fillStyle = 'rgba(8,12,30,.85)'; rrect(cx - w * .4, cy + h / 2 - 20, w * .8, 14, 3); ctx.fill(); ctx.fillStyle = '#E8EEF8'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(this.label, cx, cy + h / 2 - 10.5); }
+          ctx.globalAlpha *= cl01((hc - 60) / 40) * (1 - zoom); ctx.fillStyle = 'rgba(8,12,30,.85)'; rrect(cx - w * .4, cy + h / 2 - 20, w * .8, 14, 3); ctx.fill(); ctx.fillStyle = '#E8EEF8'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(o.label, cx, cy + h / 2 - 10.5); }
         ctx.restore();
       }
       ctx.restore();
-    },
-    over(E, T, t) { // the Abyss lies down; then the card
-      const k = sm(T / 2.2);
-      ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(80,100,170,${.4 * k})`; view(); ctx.restore();
-      this.card(E, T, t);
-    },
-    act2(E, T, dt, t) { this.card(E, T, t); cycleTint(); },
-  };
+  }
   // ======================================================================================================
   // THE DREAMING SHADOW: the Sleeper wakes, and what it dreamed goes out, colour first and then line, until there is
-  // only the bare ground of the panel and the prince standing on it; then a new picture is painted in round him, stroke
-  // by stroke: night, the full moon, and a stair of moonlight going up to a city in the sky. He walks on toward it
+  // only the bare ground of the panel and the prince standing on it; then that goes dark too, for he was only dreamed
+  // there. His eyes open on the Rim of the Abyss, where he lay down to sleep, the Ty'iga's masks still lying round him.
+  // He gets up and draws a Trump from the deck: the moon over a ghostly city. It comes alive in his hand, and he steps
+  // through it, toward Tir-na Nog'th
   // ======================================================================================================
-  const PAPER = '#EFE6D2';
+  const PAPER = '#EFE6D2', CARD_AT = 5.6; // (he reaches for the Trump at CARD_AT + 2.1)
   const W6E = {
-    theme2: 'moon', seed: 251, d0: 4.4, d1: 5.8, dir: 1, bannerAt: 5, dur: 11, music: 'moon', still: 1.4,
-    title: 'And the Dreamer Woke', sub: 'AND ALL IT HAD DREAMED WENT OUT, BUT THE MOON, AND A CITY THAT IS ONLY THERE BY ITS LIGHT',
-    setup(E) { E.hx = P.x - camX; },
-    update(E, T, dt) { if (T > .3 && !E.chime) { E.chime = 1; sfx('learned'); } if (T > 1.3 && !E.chime2) { E.chime2 = 1; sfx('trump'); } },
+    theme2: 'chaosBoss', seed: 251, d0: 4.6, d1: 4.6, noCells: 1, bannerAt: 7.2, dur: 13.8, music: 'dreamBoss', still: 1.4,
+    title: 'And the Dreamer Woke', sub: 'AND SO DID HE, ON THE RIM OF THE ABYSS; AND HE DREW A CARD, AND THE MOON WAS ON IT',
+    lidKeys: [[4.6, 1], [5.3, .45], [5.6, .6], [6.5, 0]],
+    setup(E) {
+      E.B2 = buildAlt('moon', 261 + stageIdx); E.side = 1; E.hy = FLOOR_TOP + 66; E.walk = 0;
+      E.hx = E.wx = clamp(P.x - camX, VW * .2, VW * .4); E.cardX = clamp(E.hx + 96, VW * .3, VW * .8); E.cardY = Y_OFF + VIEW_H * .44;
+      E.masks = []; for (let i = 0; i < 7; i++) { const x = VW * (.06 + i * .145) + (hsh(i + 61) - .5) * 30; if (Math.abs(x - E.hx) < 44) continue; // the faces the Ty'iga wore, lying where they fell
+        E.masks.push({ x, y: FLOOR_TOP + 26 + hsh(i + 71) * 80, rot: (hsh(i + 81) - .5) * 1.6, s: .95 + hsh(i + 91) * .35 }); }
+    },
+    update(E, T, dt) {
+      if (T > .3 && !E.chime) { E.chime = 1; sfx('learned'); }
+      if (T > 5 && !E.rim) { E.rim = 1; if (TRACKS.chaos) playMusic('chaos'); }
+      const Tc = T - CARD_AT; E.moving = 0;
+      if (Tc > 2.4 && !E.drew) { E.drew = 1; sfx('trump'); }
+      if (Tc > 4.6 && !E.inCard) { const d = E.cardX - E.side * 4 - E.wx; if (Math.abs(d) > 1.5) { const st = Math.min(Math.abs(d), 70 * dt); E.wx += Math.sign(d) * st; E.walk += st / 10.2; E.moving = 1; } }
+      E.heroA = 1 - sm((Tc - 5.2) / .5); if (E.heroA <= 0 && !E.inCard) { E.inCard = 1; sfx('whoosh'); }
+      if (Tc > 5.8 && !E.moon) { E.moon = 1; if (TRACKS.moon) playMusic('moon'); }
+    },
     over(E, T, t) { // the dream unpaints itself from the edges in, the colour draining first; he is left on bare paper
       const k = sm((T - 1) / 2.6), dr = sm((T - .6) / 1.6);
       if (dr > 0) { ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${.85 * dr})`; view(); ctx.restore(); }
@@ -442,14 +499,22 @@
         for (let i = 0; i < 26; i++) { const x = hsh(i) * VW, y = Y_OFF + hsh(i + 5) * VIEW_H, d = Math.hypot(x - cx, y - cy); if (d < R * .7) continue; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 20 + hsh(i + 9) * 40, y + (hsh(i + 11) - .5) * 20); ctx.stroke(); }
         ctx.restore();
         ctx.save(); ctx.translate(-camX, 0); inkHero(P.x, P.y, 1, P.facing, poseAs('idle'), 1, true); ctx.restore(); }
+      const dk = sm((T - 3.7) / .8); if (dk > 0) { ctx.fillStyle = `rgba(8,6,14,${dk})`; view(); } // and then he goes out too: it was only a dream of him
     },
-    act2(E, T, dt, t) { // the next panel, painted in over the bare ground: the stair of moonlight, and he walks toward it
-      const u = T - this.d0, B = freshAlt(E), cam = 300 + 14 * u;
-      ctx.fillStyle = PAPER; view();
-      withSet(B, () => paintWorld('moon', { cam }, t));
-      P.state = 'walk'; P.facing = 1; P.walk += dt * 40 / 10.2;
-      ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.hx + 40 * u, P.y, 1, 1, poseAs('walk'), 1, true); ctx.restore();
-      gradeFrame('moon'); cycleTint();
+    act2(E, T, dt, t) { // his eyes open on the rim of the Abyss, where he lay down; he gets up, and draws a card
+      const B = freshAlt(E), cam = 300, Tc = T - CARD_AT;
+      withSet(B, () => paintWorld('chaosBoss', { cam }, t));
+      ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(80,100,170,.4)'; view(); ctx.restore(); // the Abyss lying quiet, as he left it
+      const pose = poseAs(T < 6.5 ? 'down' : E.moving ? 'walk' : 'idle', E.walk); if (T >= 6.5 && T < 7.1) pose.crouch = 1;
+      trumpPose(Tc, pose);
+      const mk = (m) => { shadow(m.x, m.y, 7 * m.s); mask(m.x, m.y - 3, m.s, m.rot, 0); };
+      for (const m of E.masks) if (m.y <= E.hy) mk(m);
+      if (E.heroA > 0) { ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.wx, E.hy, 1, E.side, pose, E.heroA, true); ctx.restore(); }
+      for (const m of E.masks) if (m.y > E.hy) mk(m);
+      gradeFrame('chaosBoss');
+      trumpCard(E, Tc, t, { B: freshAlt(E, 'B2'), theme: 'moon', label: "TIR-NA NOG'TH", hand: [E.wx + E.side * 19.5, E.hy - 70], at: [E.cardX, E.cardY] });
+      const wk = sm((T - 5) / 1.6); if (wk < 1) { ctx.fillStyle = `rgba(255,250,240,${.25 * (1 - wk)})`; view(); } // the light too bright at first
+      cycleTint(); lids(keyed(this.lidKeys, T), t);
     },
   };
   const WORLDS = { bloom: W1, sky: W2, prism: W3, chaos: W4, dream: W6E };
@@ -485,7 +550,7 @@
     const W = WORLDS[baseStage.theme]; if (!W) return sc();
     const E = END = { W, t: 0, real: 0, last: performance.now(), sc, orig: E_ORIG, t0: performance.now() / 1000, boss: boss && boss.dead ? boss : null, rate: save.cycle > 0 ? 1.6 : 1, heroA: 1 };
     try { E.B = buildAlt(W.theme2, W.seed + stageIdx); if (W.tintB) W.tintB(E.B); W.setup(E); }
-    catch (err) { console.error(err); dropAlt(E.B); END = null; return sc(); }
+    catch (err) { console.error(err); dropAlt(E.B); dropAlt(E.B2); END = null; return sc(); }
     mode = 'ending'; clearInput();
     hitstop = 0; slowmo = 0; shakeMag = 0; zoom = 0; flashT = 0; hurtFlash = 0; mirrorT = 0; stillT = 0;
     P.inv = 0; P.z = 0; P.vz = 0; P.state = 'idle'; P.move = null;
@@ -495,7 +560,7 @@
   }
   function cleanup() {
     const E = END; if (!E) return; END = null;
-    dropAlt(E.B); app.classList.remove('sr-end');
+    dropAlt(E.B); dropAlt(E.B2); app.classList.remove('sr-end');
     $('#banner').classList.remove('on'); bannerT = 0;
     if (P && P.state !== 'dead') { P.state = 'idle'; P.walk = 0; }
     return E;

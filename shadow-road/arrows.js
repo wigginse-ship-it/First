@@ -124,7 +124,7 @@ function arrowHead(pts, top, bot) { // a symmetric head from its upper outline (
 function drawArrowShape(lvl, len = 30) {
   lvl = Math.max(1, Math.min(5, lvl | 0 || 1));
   const fine = !FLASH && !TINT, t = performance.now() / 1000, L = len;
-  const fb = -L + 1.2, ff = -L + Math.max(8, L * .42); // the fletching's tail and front
+  const fb = -L + 1.2, ff = -L + Math.max(7.5, L * .37); // the fletching's tail and front
   ctx.save(); ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
   // the shaft, with a lit edge along its top
   const SH = [['#B8945E', '#E6CC98'], ['#5E3C2A', '#9A6A4E'], ['#24398A', '#6A88E0'], ['#211A2E', '#54426E'], ['#1C1848', '#5650B0']][lvl - 1], thick = lvl >= 4 ? 1.8 : 1.5;
@@ -136,8 +136,8 @@ function drawArrowShape(lvl, len = 30) {
   else if (lvl === 3) { for (const x of [ff + 1, -L * .48, -5.2]) arrowBand(x, 1, '#E8C060', 1.2); if (fine) { ctx.fillStyle = '#F4F6FF'; for (const x of [ff + 1, -L * .48, -5.2]) ctx.fillRect(x + .2, -1, .5, .7); } }
   else if (lvl === 4) { // runes cut in the ebony, their light running up the shaft toward the head
     arrowBand(ff + .6, 1, '#C89A3A', 1.2);
-    const x0 = ff + 3.4, n = Math.max(2, Math.floor((-4 - x0) / 4.2));
-    for (let i = 0; i < n; i++) { const x = x0 + i * 4.2 + 1;
+    const x0 = ff + 2.6, n = Math.max(2, Math.floor((-3.6 - x0) / 3.3));
+    for (let i = 0; i < n; i++) { const x = x0 + i * 3.3 + 1;
       ctx.beginPath(); const g = i % 4;
       if (g === 0) { ctx.moveTo(x - .8, 1.1); ctx.lineTo(x - .8, -1.1); ctx.lineTo(x + .8, 0); ctx.lineTo(x - .8, .4); }
       else if (g === 1) { ctx.moveTo(x - .8, -1.1); ctx.lineTo(x + .8, 1.1); ctx.moveTo(x - .8, 1.1); ctx.lineTo(x + .8, -1.1); }
@@ -158,7 +158,8 @@ function drawArrowShape(lvl, len = 30) {
     arrowBand(ff - .4, 1.5, '#B4382C', 1.1); arrowBand(-3.6, 1.4, '#B4382C', 1.1);
   } else if (lvl === 2) { // black vanes with crimson vanes laid over them and a white edge
     for (const s of [-1, 1]) { arrowVane(fb - 1, ff, s, 4.1); ctx.fillStyle = C('#2A2630'); ctx.fill(); outline(.5);
-      if (fine) { ctx.strokeStyle = '#F0E8E0'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(fb - 2.2, s * 3.1); ctx.lineTo(fb - .3, s * 4); ctx.stroke(); }
+      ctx.save(); ctx.clip(); ctx.fillStyle = C('#F0E8E0'); ctx.beginPath(); ctx.moveTo(fb - 3, 0); ctx.lineTo(fb + 1.4, 0); ctx.lineTo(fb - .4, s * 5); ctx.lineTo(fb - 3, s * 5); ctx.fill(); ctx.restore(); // white tips
+      arrowVane(fb - 1, ff, s, 4.1); outline(.5);
       arrowVane(fb + 1.4, ff - .6, s, 2.7); ctx.fillStyle = C('#C8303A'); ctx.fill(); outline(.4); }
     ctx.fillStyle = C('#C8303A'); ctx.fillRect(fb + 1, -.5, ff - fb - 2, 1);
   } else if (lvl === 3) { // sapphire vanes, white ones over them with blue bars, a gold quill between

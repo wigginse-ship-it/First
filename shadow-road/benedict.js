@@ -8,10 +8,13 @@
 //   shape 3  THE SWORDSMAN IN THE STARS: the moon goes out and the host goes up into the sky as sparks; they come down
 //            as a constellation, a giant drawn in stars and silver leaf, which redraws itself into the signs of the
 //            zodiac to fight: the Scorpion's sting, the Archer's arrows, the Hunter's belt thrown like a boomerang.
-//   shape 4  THE SILVER HAND: the stars fall into one point, the dawn breaks, and what rises over the edge of the hall
-//            is a hand of silver the size of a house. It walks on its fingers. It drums them. It snatches. It flicks.
-//            And it plays you at rock, paper, scissors.
-// When the Hand is beaten it shrinks into the silver arm, which lies on the floor of the hall, and it is yours.
+//   shape 4  THE MOON MANTIS: the stars redraw themselves into a sign no zodiac has, fall to the floor and harden into
+//            a chrysalis of silver; at dawn it splits, and what climbs out is the swordsman the night could not stop
+//            being: a praying mantis as tall as the throne, its wings glass, its near scythe the silver arm. It cuts
+//            moonlight down your lane, leaps on you, opens the eyes on its wings, and reaps the floor at your ankles.
+// When the Mantis is beaten it kneels and prays, and flakes away to silver leaf; only its silver scythe is left whole,
+// and on the floor of the hall that is the silver arm again, and it is yours.
+// (The Silver Hand that once was the last shape is gone, but its rig stays here for the silver arm: W5B.rig.)
 // Phases: world.js knows bosses with three; this file keeps his shape in e.bph (1-4) and maps it onto e.phase.
 // Everything plugs into the hooks the other files expose: PLAN_FX / TELL_FX / BOSS_WIND (world.js), the controller
 // and hazard kit of art_w5.js (W5.akit), its drawing kit (W5.kit), and wrappers round updateEnemy and hurtEnemy.
@@ -30,22 +33,22 @@
     1: { name: 'The Phantom of Benedict', title: 'MASTER OF ARMS OF AMBER', hw: 24, hh: 84, size: 1.15, dmg: 1 },
     2: { name: 'The Host of Benedict', title: 'EVERY BATTLE HE EVER WON', hw: 40, hh: 118, size: 1.32, dmg: 1.04 },
     3: { name: 'The Swordsman in the Stars', title: 'THE NIGHT DRAWS HIM', hw: 30, hh: 196, size: 1, dmg: 1.1 },
-    4: { name: 'The Silver Hand', title: 'WHAT THE CITY KEPT OF HIM', hw: 54, hh: 116, size: 1.06, dmg: 1.16 },
+    4: { name: 'The Moon Mantis', title: 'THE BLADE THAT PRAYS', hw: 44, hh: 150, size: 1.08, dmg: 1.16 },
   };
   const shapeOf = (e) => (e && e.bph) || 1;
   Object.defineProperty(B, 'name', { get() { return SHAPE[shapeOf(typeof boss !== 'undefined' ? boss : null)].name; }, configurable: true });
   Object.defineProperty(B, 'title', { get() { return SHAPE[shapeOf(typeof boss !== 'undefined' ? boss : null)].title; }, configurable: true });
-  const MORPH_T = { 2: 3.1, 3: 3.5, 4: 3.7 }; // how long each change takes
-  const KINDS = new Set(['w5pikes', 'w5volley', 'w5riders', 'w5web', 'w5sting', 'w5arrows', 'w5belt', 'w5meteor', 'w5pearl', 'w5ring']);
+  const MORPH_T = { 2: 3.1, 3: 3.5, 4: 4.3 }; // how long each change takes
+  const KINDS = new Set(['w5pikes', 'w5volley', 'w5riders', 'w5web', 'w5sting', 'w5arrows', 'w5belt', 'w5meteor', 'w5crescent', 'w5ring']);
   // tell and act times (seconds of wind-up before world.js's phase speed-up of x.88 / x.76)
   Object.assign(BOSS_WIND, { w5phalanx: 1.25, w5volley: 1.35, w5cavalry: 1.3, w5standard: 1.0, w5shieldwall: 1.0,
-    w5web: 1.45, w5zodiac: 1.45, w5meteor: 1.25, w5nova: 1.15, w5janken: 1.9, w5drum: 1.35, w5snatch: 1.5, w5flick: 1.35, w5snap: 1.15 });
+    w5web: 1.45, w5zodiac: 1.45, w5meteor: 1.25, w5nova: 1.15, w5scythe: 1.45, w5leap: 1.3, w5wings: 1.6, w5reap: 1.45, w5clasp: 1.2 });
 
   // ---------------- the changes ----------------
   function startMorph(e, ph) {
     e.mfrom = e.bph || 1; e.bph = ph; e.phase = Math.min(3, ph); e.state = 'w5morph'; e.mt = 0; e.mmax = MORPH_T[ph]; e.plan = null; e.w5T = null;
     e.w5guarding = false; e.w5vis = 1; e.w5reach = 0; e.w5caught = 0; e.rotA = 0; e.spin = 0; e.air = false; e.z = 0; e.vz = 0; e.vx = 0; e.walk = 0; e.enraged = false; e.rageT = 0; e.rageQ = false;
-    e.w5sign = null; e.w5signK = 0; e.w5stuck = 0; e.w5hold = null;
+    e.w5sign = null; e.w5signK = 0; e.w5lz = 0; e.w5strike = 0; e.w5draw = 0; e.w5beltOut = 0;
     hazards = hazards.filter(h => !(h.kind === 'w5ctl' && h.e === e) && !KINDS.has(h.kind)); // what he was doing ends with the shape that did it
     projs = projs.filter(p => p.owner !== 'e');
     const a = SHAPE[e.mfrom], b = SHAPE[ph]; e.hw = Math.max(a.hw, b.hw) * e.size; e.hh = Math.max(a.hh, b.hh) * e.size; // (the ink box has room for both shapes)
@@ -79,11 +82,15 @@
       once(.08, () => { sfx('charge', 2); });
       once(.3, () => { sfx('whoosh'); for (let i = 0; i < 46; i++) parts.push({ x: e.x + rand(-50, 50), y: e.y + rand(-10, 10), z: rand(10, 120), vx: rand(-40, 40), vy: 0, vz: rand(160, 420), life: 1.3, max: 1.3, col: pick(['#FFFFFF', '#EEF2FA', '#C8D4EC']), size: rand(1.5, 3), shape: 'star', rot: 0, vr: 4 }); });
       once(.62, () => { sfx('hit-crystal'); });
-    } else if (ph === 4) {
-      once(.06, () => { sfx('hit-crystal'); });
-      once(.32, () => { flashT = Math.max(flashT, .35); sfx('slam'); shakeMag = Math.max(shakeMag, 6); });
-      once(.5, () => { sfx('crunch'); shakeMag = Math.max(shakeMag, 10); for (let i = 0; i < 30; i++) parts.push({ x: e.x + rand(-80, 80), y: e.y + rand(-8, 8), z: 2, vx: rand(-120, 120), vy: 0, vz: rand(120, 300), life: 1, max: 1, col: pick(['#B6C2D8', '#6E7A98', '#E6ECF6']), size: rand(2, 5), shape: 'chunk', rot: rand(0, 6), vr: rand(-8, 8) }); });
-      once(.8, () => { sfx('roar'); });
+    } else if (ph === 4) { // (see drawMorph: the sign redrawn, the fall, the chrysalis, the splitting, the unfolding)
+      e.w5sign = 'mantis'; e.w5signK = seg01(u, .02, .2);
+      once(.04, () => { sfx('hit-crystal'); big('A SIGN NO ZODIAC HAS', e.x, e.y, 236, '#DDE6FF', 15); });
+      once(.34, () => { sfx('slam'); shakeMag = Math.max(shakeMag, 6); silverBurst(e.x, e.y, 4, 18); }); // the stars hit the floor
+      once(.46, () => { sfx('charge', 2); });
+      once(.58, () => { sfx('crunch', .5); shakeMag = Math.max(shakeMag, 3); });
+      once(.66, () => { sfx('crunch'); flashT = Math.max(flashT, .3); shakeMag = Math.max(shakeMag, 10); // the chrysalis splits
+        for (let i = 0; i < 30; i++) parts.push({ x: e.x + rand(-30, 30), y: e.y + rand(-8, 8), z: rand(10, 100), vx: rand(-160, 160), vy: 0, vz: rand(100, 280), life: 1.1, max: 1.1, col: pick(['#B6C2D8', '#6E7A98', '#E6ECF6', '#FFFFFF']), size: rand(2, 5), shape: 'shard', rot: rand(0, 6), vr: rand(-8, 8) }); });
+      once(.84, () => { sfx('roar'); sfx('whoosh'); shakeMag = Math.max(shakeMag, 8); }); // and it opens its wings
     }
     if (u >= 1) finishMorph(e);
   }
@@ -93,7 +100,7 @@
   const _hurt = hurtEnemy;
   hurtEnemy = function (e, dmg, dir, m, crit) {
     if (isBen(e) && !e.dead) {
-      if (e.state === 'w5morph') return;
+      if (e.state === 'w5morph' || (e.w5lz || 0) > 60) return; // (nor while the Mantis is high in its leap)
       const ph = shapeOf(e); if (ph < 4) { const floor = ENDS[ph + 1] * e.maxHp - 1; dmg = Math.max(1, Math.min(dmg, Math.ceil(e.hp - floor)));
         const r = _hurt(e, dmg, dir, m, crit); if (!e.dead && e.hp <= floor + 1) startMorph(e, ph + 1); return r; } // the blow that ends a shape starts the next
     }
@@ -112,11 +119,7 @@
     if (e.state === 'w5morph') { morphStep(e, dt); return; }
     const ph = e.bph, want = e.hp <= ENDS[4] * e.maxHp ? 4 : e.hp <= ENDS[3] * e.maxHp ? 3 : e.hp <= ENDS[2] * e.maxHp ? 2 : 1;
     if (want > ph && e.state !== 'w5act' && e.state !== 'enter') { startMorph(e, ph + 1); return; }
-    if (e.w5stuck > 0) { // the Hand, slammed down on nothing, is stuck flat for a moment
-      e.w5stuck -= dt; e.flash = Math.max(0, e.flash - dt); e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12);
-      if (e.state === 'hurt' || e.state === 'down') { e.t -= dt; if (e.t <= 0) e.state = 'recover'; }
-      if (e.w5stuck <= 0) { e.state = 'recover'; e.t = .3; } return;
-    }
+    if (e.state !== 'w5act') e.w5lz = 0;
     const x0 = e.x;
     _upd(e, dt);
     if (ph >= 2) e.w5gait = (e.w5gait || 0) + Math.abs(e.x - x0) * .09; // feet and fingers step with the ground covered
@@ -131,7 +134,10 @@
     e.w5die += dt; e.flash = 0; e.state = 'dying'; e.t = 99; e.z = 0; e.vz = 0; e.vx = 0; e.air = true; e.death = 'pop'; e.rotA = 0; e.spin = 0; // (held upright: the drawing does the dying)
     const u = e.w5die / 3;
     if (u > .25 && !e.d1) { e.d1 = 1; sfx('crunch'); shakeMag = 10; for (let i = 0; i < 24; i++) parts.push({ x: e.x + rand(-50, 50), y: e.y + rand(-8, 8), z: rand(30, 110), vx: rand(-160, 160), vy: 0, vz: rand(60, 260), life: 1.2, max: 1.2, col: pick(['#FFFFFF', '#E6ECF6', '#B6C2D8']), size: rand(2, 4), shape: 'shard', rot: rand(0, 6), vr: rand(-10, 10) }); }
-    if (u > .72 && !e.d2) { e.d2 = 1; sfx('hit-crystal'); flashT = .15; e.w5armDrop = { x: e.x - e.facing * 8, y: e.y + 2 }; }
+    if (u > .42 && u < .74 && Math.random() < dt * 40) { const ex = lerp(-150, 60, seg01(u, .42, .74)) * (e.size || 1); // the Mantis flaking away to silver leaf, from the tail forward
+      parts.push({ x: e.x + e.facing * ex + rand(-6, 6), y: e.y + rand(-6, 6), z: rand(20, 150), vx: rand(-30, 30) - e.facing * 20, vy: 0, vz: rand(30, 110), life: 1.3, max: 1.3, col: pick(['#E6ECF6', '#B9C3D4', '#FFFFFF', '#D8D0B0']), size: rand(2, 4.5), shape: 'shard', rot: rand(0, 6), vr: rand(-6, 6) }); }
+    if (u > .5 && !e.d4) { e.d4 = 1; sfx('slice'); } // the silver scythe comes away
+    if (u > .72 && !e.d2) { e.d2 = 1; sfx('hit-crystal'); flashT = .15; e.w5armDrop = { x: e.x + e.facing * MDROP * (e.size || 1), y: e.y + 2 }; }
     if (u > .72 && !e.d3 && u > .95) { e.d3 = 1; e.remove = true; banner('The Silver Arm', 'IT IS YOURS NOW · FIGHT BARE-HANDED TO WIELD IT', 3); }
   }
 
@@ -141,13 +147,13 @@
   const prev = CREATURES.w5benedict;
   CREATURES.w5benedict = function (e, a) {
     a = a || {}; const t = a.t || 0;
-    if (e.dead && (e.bph || 1) >= 4) { drawHandDeath(e, a, t); return; }
+    if (e.dead && (e.bph || 1) >= 4) { drawMantisDeath(e, a, t); return; }
     if (e.state === 'w5morph') { drawMorph(e, a, t); return; }
     const ph = e.bph || 1;
     if (ph === 1 || e.dead) { prev(e, a); return; }
     if (ph === 2) drawHost(e, a, t, 1);
     else if (ph === 3) drawStars(e, a, t, 1);
-    else drawHand(e, a, t, handPose(e, a, t));
+    else drawMantis(e, a, t, mantisPose(e, a, t));
   };
   // ---------------- the ghost soldiers: every army he led, out of every age ----------------
   // era: 0 a hoplite (crested Corinthian helm, round shield), 1 a legionary (galea, curved scutum), 2 a Norman (nasal helm,
@@ -244,6 +250,9 @@
       l: [[0, 1], [1, 2], [1, 3], [2, 5], [5, 4], [3, 6], [7, 6], [6, 8], [7, 4], [4, 8], [4, 10], [1, 9], [9, 11], [11, 12], [12, 13], [11, 14], [14, 15]], big: [7, 8, 10, 0] },
     hunter: { name: 'THE HUNTER', p: [[2, -196], [-18, -170], [18, -172], [-34, -196], [-26, -222], [-8, -240], [52, -196], [60, -170], [54, -144], [0, -140], [-12, -112], [0, -110], [12, -108], [-24, -2], [26, 0], [2, -80]],
       l: [[0, 1], [0, 2], [1, 3], [3, 4], [4, 5], [2, 7], [6, 7], [7, 8], [1, 9], [2, 9], [9, 10], [10, 11], [11, 12], [10, 13], [12, 14], [11, 15]], big: [1, 2, 10, 11, 12, 14, 13] },
+    // the sign he draws last, which is in no zodiac: the Mantis (it is only ever drawn as he changes into it)
+    mantis: { name: 'THE MANTIS', p: [[44, -178], [26, -150], [62, -152], [72, -138], [46, -118], [56, -108], [-6, -96], [-54, -94], [-118, -100], [12, -124], [24, -104], [-34, -114], [42, -2], [-74, -2], [-14, -216], [-124, -130]],
+      l: [[0, 1], [1, 9], [9, 6], [9, 3], [3, 5], [9, 2], [2, 4], [6, 7], [7, 8], [6, 15], [15, 8], [6, 10], [10, 12], [6, 11], [11, 13], [0, 14]], big: [0, 3, 8, 12, 13] },
   };
   const SIGNS = ['scorpion', 'archer', 'hunter'];
   function figPoints(e, a, t) { // the swordsman's stars, posed for what he is doing, blended toward the sign he is becoming
@@ -294,7 +303,7 @@
     onMain(() => { const h = pts[9]; glowM(h[0], h[1], 34, '200,215,255', .35 * k * shown(9)); });
     W5B.heart = { x: e.x + pts[9][0] * e.facing * (e.size || 1), y: e.y, z: -pts[9][1] * (e.size || 1) }; // (for the attacks that come out of his heart)
   }
-  // ---------------- the Silver Hand: a hand of plated silver the size of a house ----------------
+  // ---------------- the Silver Hand's rig (kept for the silver arm: W5B.rig, silverarm.js) ----------------
   // A rig in the palm's own frame: +x runs from the wrist to the knuckles, the fingers from index (-y) to little finger
   // (+y). Seen from the back. Each finger has three segments; f is how far it is opened (0 a fist's stub, 1 straight).
   const HL = { fl: [46, 52, 48, 38], fy: [-21, -7, 7, 21], kx: 26, wx: -30, th: 34 };
@@ -315,33 +324,7 @@
     const dx = T[0] - b[0], dy = T[1] - b[1], d = Math.min(Math.hypot(dx, dy) || 1e-3, L1 + L2 - .01), A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), b0 = Math.atan2(dy, dx);
     const g1 = b0 + side * A, J = [b[0] + Math.cos(g1) * L1, b[1] + Math.sin(g1) * L1]; return [g1, Math.atan2(T[1] - J[1], T[0] - J[0])];
   }
-  // where everything is this frame: walking on its fingertips (palm down, the wrist up into mist), or reared up to show a shape
-  function handPose(e, a, t) {
-    const st = e.state, w = a.wind || 0, plan = e.plan, actA = st === 'w5act' ? e.w5a : null, g = e.w5gait || 0;
-    const H = { px: 0, py: -72, rot: Math.PI / 2, up: 0, shape: null, tips: null, s: 1, crack: 0, fist: 0 };
-    // up: 0 standing on its fingers .. 1 reared upright showing a shape
-    let up = 0, shape = 'paper', lift = 0;
-    if (plan === 'w5janken' && st === 'wind') { up = sm(cl01(w * 3)); shape = 'rock'; H.pump = Math.max(0, Math.sin(w * Math.PI * 3.2)) * (w < .72 ? 1 : 0); if (w >= .72) shape = e.w5jk || 'rock'; }
-    if (actA === 'janken') { const k = e.w5k || 0; shape = e.w5jk; up = 1;
-      if (shape === 'rock') { up = 1 - sm(cl01(k * 1.1)); H.fq = 1; lift = -36 * sm(cl01(k * 1.1)); if (k >= 1) { up = 0; lift = -36; } }
-      if (shape === 'paper') { up = 1 - sm(cl01(k * 3)); H.flat = sm(cl01(k * 3)); }
-      if (shape === 'scissors') { H.snip = e.w5snip || 0; } }
-    if ((plan === 'w5snap' && st === 'wind') || actA === 'snap') { up = st === 'wind' ? sm(cl01(w * 2.5)) : 1; shape = 'snap'; if (actA) H.snapped = 1; }
-    if ((plan === 'w5flick' && st === 'wind') || actA === 'flick') { up = .55 * (st === 'wind' ? sm(cl01(w * 2.5)) : 1); shape = actA ? 'paper' : 'flick'; }
-    if ((plan === 'w5snatch' && st === 'wind')) { up = .3 * w; lift = 60 * sm(cl01(w * 1.6)); shape = 'claw'; }
-    if (actA === 'snatch') { const k = e.w5k || 0; lift = 60 * (1 - sm(cl01(k * 5))); shape = e.w5caught ? 'rock' : 'claw'; H.slam = 1 - lift / 60; }
-    if (e.w5stuck > 0) { lift = 0; shape = 'paper'; H.flatOut = 1; }
-    if ((plan === 'w5drum' && st === 'wind')) { lift = 10 * w; }
-    if (st === 'down') { lift = -14; H.sag = 1; }
-    if (a.hurt && st !== 'down') H.rock = .12;
-    H.up = up; H.shape = shape; H.lift = lift; if (H.fq === undefined) H.fq = up;
-    // the fingertips, planted on the floor and stepping (a drum or a hurt staggers them)
-    const drum = actA === 'drum' ? e.w5drumI : -1;
-    H.tips = [44, 16, -12, -38].map((x, i) => { const ph = g + i * Math.PI * .5, s = Math.sin(ph); let y = -Math.max(0, Math.cos(ph)) * 7;
-      if (drum >= 0) { const d = ((e.w5drumT || 0) - i * .07) % .28; y = d >= 0 && d < .14 ? -18 * Math.sin(d / .14 * Math.PI) : 0; }
-      if (H.flatOut) y = 0; return [x * (H.flatOut ? 1.25 : 1) + s * 6, y]; });
-    return H;
-  }
+  // (the Hand's own walking pose went with it; the rig below is drawn for the silver arm through W5B.rig)
   function drawHand(e, a, t, H, o = {}) {
     const S = SHAPES_H[H.shape] || SHAPES_H.paper, up = H.up, s = (o.s ?? 1);
     ctx.save(); ctx.scale(s, s); if (o.a !== undefined) ctx.globalAlpha *= o.a;
