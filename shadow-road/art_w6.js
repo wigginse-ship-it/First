@@ -1426,13 +1426,13 @@
       ctx.restore(); }]); },
     box(h, box) { box(h.x, h.y, 0, 44, 340); },
   });
-  // COUNTING SHEEP: a stile stands at the end of your row; sheep come over it one at a time to be counted (the count runs
-  // on all fight long) and trot on down the row. Leave the row, or jump each sheep as it comes; late on there is a black one
+  // COUNTING SHEEP: a stile stands in the middle of your row; sheep trot in from the end, leap it one at a time to be
+  // counted (the count runs on all fight long) and trot on down the row. Leave the row, or jump each sheep as it comes; late on there is a black one
   function dreamSheep(e) {
     const Bd = BOARD(), r0 = Bd.row(P.y), rows = [[r0, P.x < (Bd.L + Bd.R) / 2 ? -1 : 1]], esc = B.broken >= 2 || B.regrows > 0;
     if (esc) rows.push([r0 < 2 ? r0 + 2 : r0 - 2, -rows[0][1]]);
     rows.forEach(([r, dir], i) => { const x0 = dir > 0 ? Bd.L - 30 : Bd.R + 30;
-      hazards.push({ kind: 'w6sheep', y: Bd.cy(r), rh: Bd.rh, dir, x0, fx: x0 + dir * 72, n: 3 + Math.min(2, B.broken), gap: .5, wait: 1.35 + i * .6, sp: 290, el: 0, sh: [], black: B.broken >= 1 && i === 0, t: 30, max: 30, dmg: Math.round(edmg(e) * .7) }); });
+      hazards.push({ kind: 'w6sheep', y: Bd.cy(r), rh: Bd.rh, dir, x0, fx: (Bd.L + Bd.R) / 2, n: 3 + Math.min(2, B.broken), gap: .5, wait: 1.35 + i * .6, sp: 290, el: 0, sh: [], black: B.broken >= 1 && i === 0, t: 30, max: 30, dmg: Math.round(edmg(e) * .7) }); });
     floatText(e.x, e.y - e.z, 150, 'COUNTING SHEEP...', '#F4F0FF', 15); sfx('charge', 1); W6.mouth = .6;
   }
   reg('w6sheep', {
@@ -1448,7 +1448,7 @@
       if (!alive) h.t = -1; },
     draw(h, t) { const Bd = BOARD(), k = Math.min(1, h.el / h.wait), y = h.y - h.rh * .5;
       ctx.fillStyle = tellCol(h.el < h.wait ? k : 1, h.el < h.wait ? 1 : .45); ctx.fillRect(Bd.L, y, Bd.R - Bd.L, h.rh); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.2; ctx.strokeRect(Bd.L, y, Bd.R - Bd.L, h.rh);
-      if (h.el < h.wait) for (let i = 0; i < 6; i++) { const x = h.fx + h.dir * (40 + i * 70 + (t * 80) % 70); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - h.dir * 5, h.y - 6); ctx.lineTo(x + h.dir * 5, h.y); ctx.lineTo(x - h.dir * 5, h.y + 6); ctx.stroke(); } },
+      if (h.el < h.wait) for (let i = 0; i < 6; i++) { const x = h.x0 + h.dir * (70 + i * 70 + (t * 80) % 70); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - h.dir * 5, h.y - 6); ctx.lineTo(x + h.dir * 5, h.y); ctx.lineTo(x - h.dir * 5, h.y + 6); ctx.stroke(); } },
     ups(h, list, t) { const op = Math.min(1, h.el / .4); // the stile, and the flock
       list.push([h.y - 2, () => { ctx.save(); ctx.globalAlpha = op; ctx.translate(h.fx, h.y - 2); ctx.scale(1.4, 1.4); fenceArt(); ctx.restore(); }]);
       for (const s of h.sh) if (s && Math.abs(s.x - h.fx) < 900) list.push([h.y + .2, () => { shadow(s.x, h.y, 14); ctx.save(); ctx.translate(s.x, h.y - s.z); ctx.scale(h.dir * 1.35, 1.35); if (s.z > 8) ctx.rotate(-.25 * Math.sign((s.x - h.fx) * h.dir || -1)); sheepArt(s.ph, s.black); ctx.restore(); }]); },
