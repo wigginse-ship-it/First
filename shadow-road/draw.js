@@ -562,11 +562,11 @@ function drawScene(t) {
   // every figure is painted into the ink layer; this box (generous, so swings and debris fit) is where the ink work happens
   const boxes = [], box = (x, y, z, hw, hh) => boxes.push([x - hw, y - z - hh, x + hw, y + 12]);
   box(P.x, P.y, P.z, 160, 170);
-  for (const e of enemies) { const s = e.boss ? e.size : 1; box(e.x, e.y, e.z, (e.hw + 110 + (e.def.tail || 0)) * s, (e.hh + 90) * s); }
-  for (const c of corpses) { // sized to the body, as a live one's is: a fallen boss lies far outside a fixed box, and was cut off at its edge wherever the prince's own box did not happen to reach
-    const R = Math.max(110, (Math.max(c.hw || 0, c.hh || 0) * 1.7 + 80 + (c.def.tail || 0)) * (c.champ ? 1.3 : 1)); // (a boss's hw and hh already carry its size; it may lie on its side, or be cut in two and thrown, in any direction)
-    box(c.x, c.y + R * .5, 0, R, R * 1.5);
-  }
+  // the fallen (and the falling) get a box sized to the body: a boss lying on its side, or cut in two and thrown, reaches far
+  // past a fixed box, and was cut off at its edge wherever the prince's own box did not happen to reach
+  const fallen = (c) => { const R = Math.max(110, (Math.max(c.hw || 0, c.hh || 0) * 1.7 + 80 + (c.def.tail || 0)) * (c.champ ? 1.3 : 1)); box(c.x, c.y - (c.z || 0) + R * .5, 0, R, R * 1.5); }; // (a boss's hw and hh already carry its size)
+  for (const e of enemies) { const s = e.boss ? e.size : 1; box(e.x, e.y, e.z, (e.hw + 110 + (e.def.tail || 0)) * s, (e.hh + 90) * s); if (e.dead) fallen(e); }
+  for (const c of corpses) fallen(c);
   for (const p of props) box(p.x, p.y, 0, 60, 100);
   for (const k of loot) box(k.x, k.y, k.z || 0, 40, 50);
   for (const p of projs) box(p.x, p.y, p.z || 0, 50, 50);
