@@ -9,7 +9,7 @@
 //   lorraine     - The Winter Fields (waves 1-2; villagers flee across the field and the dead get up grey: rule 'w8flight')
 //   lorraine2    - The Edge of the Circle (waves 3-4, the Hangman last; the Circle breathes across the field: rule 'w8edge')
 //   lorraineBoss - The Heart of the Circle: the Goat-Lord in four shapes (rule 'w8heart')
-// Its relic is the Horn of Lorraine (save.w8relic): blown, it brings Star, the warhorse, and Corwin fights mounted.
+// Its relic is the Horn of Lorraine (save.w8relic): filled by landed blows, its blast staggers and breaks guards.
 (() => {
   if (STAGES.length !== 7) { console.error('data_w8.js: Lorraine is stage index 7, but ' + STAGES.length + ' stages are registered before it; not loaded'); return; }
   // the Circle's things are grey stuff all through: ash comes out of them when they are cut
@@ -70,7 +70,7 @@
     stage: 7, id: 'lorraine', name: 'LORRAINE',
     line: 'The Black Circle is eating Lorraine a village at a time, and Corwin knows whose curse it grew from: he goes back to unmake what he made, where Ganelon once held the line.',
     draw(ctx2, w, h, t) { if (window.W8 && W8.card) W8.card(ctx2, w, h, t); },
-    relic: { key: 'w8relic', name: 'The Horn of Lorraine', desc: 'Ganelon\'s war-horn, taken back from the Goat-Lord. Landed blows fill it; when it is full it sounds by itself, and Star, the warhorse of Lorraine, comes at a gallop: Corwin fights mounted, trampling through the ranks, hitting harder and shrugging off blows. In New Game+ it fills twice as fast, Star stays longer and tramples harder.' },
+    relic: { key: 'w8relic', name: 'The Horn of Lorraine', desc: 'Ganelon\'s war-horn, taken back from the Goat-Lord. Landed blows fill it (the gold HORN bar); full, it sounds by itself when a foe is in front of you: a cone of sound that does little damage but staggers what it catches, breaks two pips of an armored guard and shakes a boss\'s poise. In New Game+ it fills a little faster, reaches further, staggers longer and breaks three pips.' },
   });
 })();
 // the attacks, rules, passages and music (art_w8.js) register now that world.js and zones.js have loaded

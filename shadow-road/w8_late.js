@@ -3,11 +3,13 @@
 // thresholds.js, draw.js and ui.js). Three things:
 //   1. W8.dom(): the entrances, landmarks and deaths of the world (art_w8.js)
 //   2. THE HORN OF LORRAINE, the relic won from the Goat-Lord (save.w8relic). Ganelon's war-horn. Every blow you land
-//      fills it (the HUD shows it, gold, under your health); full, it sounds by itself as soon as there is a fight, and
-//      Star, the warhorse of Lorraine, comes at a gallop: you fight mounted for a while. Mounted you go half as fast
-//      again, trample whatever you ride through, hit harder, take less from every blow and can't be knocked down.
-//      In New Game+ (any cycle past the first) it fills about twice as fast, Star stays longer, and every one of
-//      those is stronger. Test: W8.relic() gives it, W8.relic(false) takes it, W8.ride() mounts you now.
+//      fills it (a gold HORN bar in the HUD, under your health). Full, it sounds by itself the next time a foe stands in
+//      front of you while you are free to act: Corwin lifts it for a moment and the blast goes out ahead of him in a
+//      cone. It does little damage, but it staggers what it catches (knocked back and off their feet for a moment),
+//      breaks two pips of an armored foe's guard, and costs a boss a large bite of its poise (it can stagger one that
+//      is already close to breaking). Then the horn is empty and must be filled again. In New Game+ it fills a little
+//      faster and the blast reaches further, staggers longer and breaks three pips. Test: W8.relic() gives it,
+//      W8.relic(false) takes it, W8.blow() sounds it now.
 //   3. THE ENDING of Lorraine: the colour comes back into the Circle from where the Goat-Lord fell, Corwin blows the
 //      horn, and Ganelon rides out of the morning with what is left of the riders of Lorraine; then the credits and
 //      the win flow (whatever stageClear was before this file: CHOICE's branch.js may wrap it further)
@@ -21,70 +23,50 @@
   const isLorraine = () => typeof baseStage !== 'undefined' && baseStage && baseStage.theme === 'lorraine';
 
   // ======================================================================================================
-  // THE HORN OF LORRAINE
+  // THE HORN OF LORRAINE: Ganelon's call
   // ======================================================================================================
-  const R = W8.R = { fill: 0, call: 0, star: null }; // fill 0..1; call: the horn at his lips; star: the horse coming or going
-  const HITS = () => NG() ? 18 : 34;                   // blows to fill it
-  const RIDE = () => NG() ? Math.min(19, 13 + 2 * save.cycle) : 9; // seconds in the saddle
-  const DMG_OUT = () => NG() ? 1.7 : 1.35, DMG_IN = () => NG() ? .45 : .6, TRAMPLE = () => NG() ? .2 : .13;
+  const R = W8.R = { fill: 0, call: 0, blast: null }; // fill 0..1; call: the horn at his lips; blast: the cone going out
+  const HITS = () => NG() ? 30 : 38;                    // landed blows to fill it
+  const REACH = () => NG() ? 200 : 160, STAG = () => NG() ? 1.1 : .8, PIPS = () => NG() ? 3 : 2, POISE = () => NG() ? 6 : 4;
   W8.relic = (on = true) => { save.w8relic = !!on; persist(); refreshHornHud(); return on ? 'the Horn of Lorraine is yours' : 'the horn is put away'; };
-  W8.ride = () => { if (!P) return; R.fill = 1; mount(); };
-  const riding = () => P && (P.w8ride || 0) > 0;
-  function mount() { P.w8ride = RIDE(); P.w8hw = 0; R.star = null; sfx('trump'); flashT = .1; shakeMag = Math.max(shakeMag, 6); banner('STAR', NG() ? 'THE WARHORSE OF LORRAINE · NEW GAME+: HE STAYS LONGER AND HITS HARDER' : 'THE WARHORSE OF LORRAINE', 1.6); dust(P.x, P.y, 14); }
-  function dismount() { P.w8ride = 0; R.star = { x: P.x, y: P.y, dir: P.facing, t: 0, out: 1 }; floatText(P.x, P.y, 100, 'STAR GALLOPS OFF', '#F2E0A8', 13); sfx('whoosh'); }
-  function blow() { // he lifts the horn and blows it; Star comes from behind him at a gallop
-    R.fill = 0; R.call = 1.1; P.inv = Math.max(P.inv, 1.1);
-    if (typeof tone === 'function' && sfxOn && actx) { tn(147, .9, 'sawtooth', .07, 196); tn(220, .7, 'sawtooth', .05, 294, .45); tn(294, 1.1, 'triangle', .06, 0, .8); }
-    floatText(P.x, P.y, 110, 'THE HORN OF LORRAINE', '#F2D890', 15);
-    R.star = { x: P.x - P.facing * (VW * .6), y: P.y, dir: P.facing, t: 0, out: 0 };
+  W8.blow = () => { if (P) { R.fill = 1; blow(); } };
+  const inCone = (e, f) => { const d = (e.x - P.x) * f; return d > -10 && d < REACH() + e.hw && Math.abs(e.y - P.y) < 24 + d * .22; };
+  function blow() { // he lifts the horn; the blast goes out ahead of him in a cone
+    const f = P.facing; R.fill = 0; R.call = .45; R.blast = { x: P.x + f * 12, y: P.y, f, t: 0 };
+    tn(147, .7, 'sawtooth', .07, 196); tn(220, .6, 'sawtooth', .05, 294, .3); tn(294, .8, 'triangle', .05, 0, .55);
+    shakeMag = Math.max(shakeMag, 5); floatText(P.x, P.y, 110, 'THE HORN OF LORRAINE', '#F2D890', 14);
+    for (const e of enemies) { if (e.dead || e.state === 'enter' || !inCone(e, f)) continue;
+      const d = e.boss ? 4 : 6 + (save.wl[P.w] || 1); // a breath of force, not a weapon
+      if (e.elite && e.guard > 0) { e.guard = Math.max(0, e.guard - PIPS()); floatText(e.x, e.y, e.hh + 30, e.guard ? 'GUARD ' + '◆'.repeat(e.guard) : 'GUARD BREAK!', '#EED48A', 13); }
+      if (e.boss) { e.poise = (e.poise || 0) - POISE(); strike(e, d, f, { dmg: d, kb: 60, power: 1, w8horn: 1, trump: 1 }); }
+      else { strike(e, d, f, { dmg: d, kb: 300, launch: 140, power: 1, w8horn: 1, trump: 1 }); if (!e.dead) { e.stagger = STAG(); if (!e.air) { e.state = 'down'; e.t = STAG(); e.plan = null; e.vx = f * 260; } } } }
   }
-  // the gauge fills with every blow that lands (not with the cards)
+  // the gauge fills with every blow that lands (not with the cards, not with the horn itself)
   const _hurt = hurtEnemy;
-  hurtEnemy = function (e, dmg, dir, m, crit) { const r = _hurt(e, dmg, dir, m, crit); if (owned() && !riding() && !(m && (m.trump || m.w8trample)) && !R.call) { R.fill = Math.min(1, R.fill + 1 / HITS() + (e.dead ? .04 : 0)); } return r; };
-  // mounted, his blows land harder (the trample has its own weight)
-  const _strike = strike;
-  strike = function (e, base, dir, m, echo) { if (riding() && m && !m.trump && !m.w8trample) base *= DMG_OUT(); return _strike(e, base, dir, m, echo); };
-  // and blows land lighter on him, and never put him on the ground
-  const _pd = playerDamage;
-  playerDamage = function (dmg, fromX, big) { if (riding()) { dmg = Math.max(1, Math.round(dmg * DMG_IN())); const r = _pd(dmg, fromX, false); if (P.state === 'hurt') { P.t = Math.min(P.t, .18); P.vx *= .3; P.vz = 0; P.knocked = false; } return r; } return _pd(dmg, fromX, big); };
+  hurtEnemy = function (e, dmg, dir, m, crit) { const r = _hurt(e, dmg, dir, m, crit); if (owned() && !(m && (m.trump || m.w8horn)) && !R.call && R.fill < 1) R.fill = Math.min(1, R.fill + 1 / HITS()); return r; };
   W8.afterPlayer = (dt, x0, y0) => {
     if (!P || typeof stage === 'undefined' || !stage) return;
-    if (R.call > 0) { R.call -= dt; P.vx = 0; if (P.state === 'walk' || P.state === 'run') P.state = 'idle'; }
-    if (R.star) { const s = R.star; s.t += dt;
-      if (!s.out) { const tx = P.x, sp = 520; s.x += Math.sign(tx - s.x) * Math.min(Math.abs(tx - s.x), sp * dt); s.y += (P.y - s.y) * Math.min(1, dt * 6); if (Math.random() < .6) dust(s.x - s.dir * 20, s.y, 1); if (Math.abs(s.x - tx) < 8 || s.t > 1.6) mount(); }
-      else { s.x += s.dir * 480 * dt; if (Math.random() < .5) dust(s.x - s.dir * 20, s.y, 1); if (s.t > 2) R.star = null; } }
-    if (riding()) {
-      if (P.state === 'dead' || mode !== 'play') { P.w8ride = 0; return; }
-      if (!zoneTrans) P.w8ride -= dt; if (P.w8ride <= 0) { dismount(); return; }
-      // half as fast again
-      if (['idle', 'walk', 'run', 'jump'].includes(P.state)) { P.x = x0 + (P.x - x0) * 1.55; P.y = y0 + (P.y - y0) * 1.4; P.x = clamp(P.x, camX + 14, lockX !== null ? lockX + VW - 14 : stage.len - 14); P.y = clamp(P.y, FLOOR_TOP + 6, FLOOR_BOT); }
-      const sp = Math.abs(P.x - x0) / Math.max(dt, 1e-4); P.w8hw = (P.w8hw || 0) + dt * (sp > 20 ? 10 : 2); P.w8gal = sp > 150 ? 1 : 0;
-      // the trample: whatever he rides through at speed is knocked flying
-      if (sp > 70) for (const e of enemies) { if (e.dead || e.state === 'enter' || (e.w8tr || 0) > performance.now()) continue;
-        if (Math.abs(e.x - P.x) < 26 + e.hw * .5 && Math.abs(e.y - P.y) < 18 && e.z < 34) { e.w8tr = performance.now() + 700; const d = Math.max(6, Math.round(e.maxHp * (e.boss ? TRAMPLE() * .14 : TRAMPLE()))); strike(e, d, Math.sign(P.x - x0) || P.facing, { dmg: d, kb: 340, launch: e.boss ? 0 : 260, power: 1, w8trample: 1 }); sfx('slam', .5); shakeMag = Math.max(shakeMag, 4); } }
-      return;
-    }
-    // full: it sounds by itself as soon as there is a fight in view
-    if (owned() && R.fill >= 1 && !R.call && !R.star && !zoneTrans && mode === 'play' && ['idle', 'walk', 'run'].includes(P.state) && enemies.some(e => !e.dead && e.state !== 'enter' && e.x > camX && e.x < camX + VW)) blow();
+    if (R.call > 0) R.call -= dt;
+    if (R.blast) { R.blast.t += dt; if (R.blast.t > .55) R.blast = null; }
+    // full: it sounds by itself when a foe is in front of him and he is free to act
+    if (owned() && R.fill >= 1 && !(R.call > 0) && !zoneTrans && mode === 'play' && ['idle', 'walk', 'run'].includes(P.state) && enemies.some(e => !e.dead && e.state !== 'enter' && inCone(e, P.facing))) blow();
   };
-  // a new place: he comes into it on foot (Star waits outside), but the horn keeps what it had
-  { const _ez = enterZone; enterZone = function (z, Zs) { const was = riding(); const r = _ez(z, Zs); if (was) { P.w8ride = 0; R.fill = Math.max(R.fill, .5); } R.star = null; R.call = 0; return r; }; }
-  { const _ss = startStage; startStage = function (i) { const r = _ss(i); R.call = 0; R.star = null; if (P) P.w8ride = 0; refreshHornHud(); return r; }; }
-  // ---------------- drawing: Corwin in the saddle, the horse coming and going, the horn at his lips ----------------
+  { const _ez = enterZone; enterZone = function (z, Zs) { const r = _ez(z, Zs); R.call = 0; R.blast = null; return r; }; }
+  { const _ss = startStage; startStage = function (i) { const r = _ss(i); R.call = 0; R.blast = null; refreshHornHud(); return r; }; }
+  // ---------------- drawing: the horn at his lips, the blast going out in arcs ----------------
   const _dpa = drawPlayerAt;
-  drawPlayerAt = function (x, y, z, facing, pose, alpha) {
-    if (!(P && pose && pose.live && riding() && x === P.x && y === P.y)) { _dpa(x, y, z, facing, pose, alpha); if (pose && pose.live && R.call > 0 && x === P.x) hornAtLips(x, y, z, P.facing); return; }
-    const t = performance.now() / 1000, L = heroLook(), o = { t, walk: P.w8hw || 0, gallop: P.w8gal || 0 };
-    ctx.save(); ctx.translate(x, y - z); ctx.scale(P.facing, 1); ctx.globalAlpha = alpha; W8.horse('back', o); ctx.restore();
-    pose = Object.assign({}, pose, { walk: 0 }); _dpa(x, y, z + 36, facing, pose, alpha);
-    ctx.save(); ctx.translate(x, y - z); ctx.scale(P.facing, 1); ctx.globalAlpha = alpha; W8.horse('front', Object.assign(o, { legCol: L.legs, bootCol: L.boots })); ctx.restore();
-  };
-  function hornAtLips(x, y, z, f) { const k = sm(Math.min(1, (1.1 - R.call) / .2)) * (1 - sm((.15 - R.call) / .15)); ctx.save(); ctx.translate(x + f * 6, y - z - 50); ctx.scale(f, 1); W8.hornDraw(4, 0, .7, 0, k, -.6); ctx.restore(); }
+  drawPlayerAt = function (x, y, z, facing, pose, alpha) { _dpa(x, y, z, facing, pose, alpha); if (P && pose && pose.live && R.call > 0 && x === P.x) hornAtLips(x, y, z, P.facing); };
+  function hornAtLips(x, y, z, f) { const k = sm(Math.min(1, (.45 - R.call) / .12)) * (1 - sm((.1 - R.call) / .1)); ctx.save(); ctx.translate(x + f * 6, y - z - 50); ctx.scale(f, 1); W8.hornDraw(4, 0, .7, 0, k, -.6); ctx.restore(); }
   { const _ml = mechList; mechList = function (list, t) { _ml(list, t);
-    if (R.star) { const s = R.star; list.push([s.y, () => { shadow(s.x, s.y, 26); ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.dir, 1); const o = { t, walk: t * 14, gallop: 1, rider: false }; W8.horse('back', o); W8.horse('front', o); ctx.restore(); }]); }
+    if (R.blast) { const b = R.blast; list.push([b.y + .3, () => onMain(() => { const u = b.t / .55; ctx.save(); ctx.lineCap = 'round';
+      for (let i = 0; i < 4; i++) { const k = u * 1.4 - i * .14; if (k <= 0 || k > 1) continue; const r = 20 + k * REACH(), a = (1 - k) * .8;
+        ctx.strokeStyle = `rgba(70,36,10,${a * .8})`; ctx.lineWidth = 5.5 - k * 3; ctx.beginPath(); ctx.ellipse(b.x, b.y - 30, r, r * .55, 0, b.f > 0 ? -.5 : Math.PI - .5, b.f > 0 ? .5 : Math.PI + .5); ctx.stroke(); ctx.strokeStyle = `rgba(250,222,140,${a})`; ctx.lineWidth = 3.4 - k * 2; ctx.beginPath(); ctx.ellipse(b.x, b.y - 30, r, r * .55, 0, b.f > 0 ? -.5 : Math.PI - .5, b.f > 0 ? .5 : Math.PI + .5); ctx.stroke();
+        ctx.strokeStyle = `rgba(120,60,20,${a * .6})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(b.x, b.y - 30, r + 3, (r + 3) * .55, 0, b.f > 0 ? -.4 : Math.PI - .4, b.f > 0 ? .4 : Math.PI + .4); ctx.stroke(); }
+      const g = 1 - u; ctx.fillStyle = `rgba(150,96,30,${.16 * g})`; ctx.beginPath(); ctx.moveTo(b.x, b.y - 2); ctx.lineTo(b.x + b.f * REACH(), b.y - 2 - (24 + REACH() * .22)); ctx.lineTo(b.x + b.f * REACH(), b.y - 2 + 24 + REACH() * .22); ctx.closePath(); ctx.fill(); // its reach, along the ground
+      ctx.restore(); })]); }
     if (W8.hornDrop && boss && boss.dead) { const h = W8.hornDrop; list.push([h.y + 1, () => W8.hornDraw(h.x, h.y - 6, .9, t, 1)]); } }; }
-  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (R.star) box(R.star.x, R.star.y, 0, 70, 90); if (riding()) box(P.x, P.y, P.z, 80, 130); }; }
-  // ---------------- the HUD: a horn and a gold bar under his health ----------------
+  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (R.call > 0) box(P.x, P.y, P.z, 60, 90); }; }
+  // ---------------- the HUD: a gold bar under his health, labelled HORN; it shines when the horn is ready ----------------
   let hornEl = null, hornBar = null;
   function refreshHornHud() {
     if (!hornEl) { const tb = document.getElementById('tbarWrap'); if (!tb || !tb.parentNode) return;
@@ -97,7 +79,7 @@
   }
   W8.refreshHornHud = refreshHornHud;
   const _ht = hudTick;
-  hudTick = function () { _ht(); if (!hornEl || hornEl.hidden !== !owned()) refreshHornHud(); if (hornBar && owned()) { const v = riding() ? P.w8ride / RIDE() : R.fill; hornBar.style.width = (100 * v) + '%'; hornBar.style.opacity = riding() ? '.65' : R.fill >= 1 ? (Math.sin(performance.now() / 120) > 0 ? '1' : '.7') : '1'; } };
+  hudTick = function () { _ht(); if (!hornEl || hornEl.hidden !== !owned()) refreshHornHud(); if (hornBar && owned()) { hornBar.style.width = (100 * R.fill) + '%'; hornBar.style.opacity = R.fill >= 1 ? (Math.sin(performance.now() / 120) > 0 ? '1' : '.7') : '1'; } };
   setTimeout(refreshHornHud, 0);
 
   // ======================================================================================================
@@ -107,10 +89,10 @@
   const isLorraineEnd = () => isLorraine() && STAGES[stageIdx] && STAGES[stageIdx].theme === 'lorraine';
   const lines = () => ['The Circle closed on nothing, and was gone.', 'Where it had been, the ground was only ground; in a week it was green.',
     (W8.vill && W8.vill.seen ? `${W8.vill.saved} of the ${W8.vill.seen} who ran from it across the snow came home.` : 'The people who had run from it came home across the snow.'),
-    'Ganelon did not ask him how he had known what was at its heart. He gave him the horse instead.'];
+    'Ganelon did not ask him how he had known what was at its heart. He only asked him to keep the horn.'];
   const CREDITS = [['SHADOW ROAD', 22], ['the way through Lorraine', 9], ['', 6], ['THE WINTER FIELDS · THE EDGE OF THE CIRCLE · THE HEART OF THE CIRCLE', 8], ['', 10],
     ['after Roger Zelazny\'s The Chronicles of Amber', 10], ['', 8], ['CORWIN', 11], ['Prince of Amber, who cursed it, and came back', 8], ['', 6], ['GANELON', 11], ['who held its edge', 8], ['', 6],
-    ['STAR', 11], ['the warhorse of Lorraine', 8], ['', 6], ['THE GOAT-LORD OF THE CIRCLE', 11], ['who only listened', 8], ['', 10],
+['THE GOAT-LORD OF THE CIRCLE', 11], ['who only listened', 8], ['', 10],
     ['painted after Bruegel, Bosch and the Limbourg brothers', 9], ['in tempera, gold leaf and grisaille', 9], ['', 14], ['Thank you for walking the road.', 12]];
   const GANELON = { skin: '#D49A72', hair: '#8A3A1A', hairLt: '#C06A3A', hairDk: '#4A1A0A', body: PAL.gules, sleeve: '#7A1E18', trim: PAL.or, legs: '#3A2E26', boots: '#2A1E14', plate: '#8E9296', plateTrim: PAL.or, pauldron: '#7A7E82', cape: '#24365E', eye: '#3A5A2A' };
   // a spring morning over Lorraine: a Book of Hours' March: a castle on its hill, ploughmen with oxen, blossom, the
@@ -162,7 +144,7 @@
       if (i % 2 === 0) { ctx.strokeStyle = '#2A1E14'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x + 6, y - 90); ctx.lineTo(x + 6, y - 40); ctx.stroke(); ctx.fillStyle = PAL.or; ctx.beginPath(); ctx.moveTo(x + 6, y - 90); ctx.quadraticCurveTo(x + 20, y - 88 + Math.sin(t * 4 + i) * 2, x + 30, y - 84); ctx.lineTo(x + 6, y - 78); ctx.fill(); ctx.strokeStyle = PAL.gules; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x + 8, y - 88); ctx.lineTo(x + 24, y - 82); ctx.stroke(); } }
     const mist = 1 - ridersIn; if (mist > 0) { ctx.save(); for (let i = 0; i < 12; i++) softDab(i * 60 - 40, Hz + 60 + (i % 3) * 10, 70, '240,240,236', .5 * mist); ctx.restore(); }
     if (T < 12.5) { ctx.save(); ctx.translate(VW * .8, Hz + 96); ctx.scale(-1.05, 1.05); drawHumanoid(look, { arm: blowing ? -1.6 : .5, Y: .3, weapon: 'fists' }); if (blowing) W8.hornDraw(10, -60, .8, t, 1, -1.1); else W8.hornDraw(-6, -32, .7, t, 1, .5); ctx.restore(); }
-    else { const u = cl01((T - 12.5) / 2); rider(lerp(VW * .8, VW * .64, sm(u)), Hz + 96, .95, look, -1, t, u < 1 ? t * 8 : 0, 0); } // Star is brought up for him, and he mounts beside Ganelon
+    else { const u = cl01((T - 12.5) / 2); ctx.save(); ctx.translate(lerp(VW * .8, VW * .7, sm(u)), Hz + 96); ctx.scale(-1.05, 1.05); drawHumanoid(look, { walk: u < 1 ? t * 8 : 0, arm: .5, Y: .3, weapon: 'fists' }); W8.hornDraw(-6, -32, .7, t, 1, .5); ctx.restore(); } // he walks down to meet Ganelon, the horn at his hip
     if (T > 14) { const a = cl01((T - 14) / 1) * (1 - cl01((T - 23) / 1)); ctx.fillStyle = `rgba(20,14,10,${.5 * a})`; ctx.fillRect(0, Y_OFF, VW, (VH - Y_OFF) * .42);
       ctx.textAlign = 'center'; ctx.font = '700 10px Cinzel, Georgia, serif'; let ly = Y_OFF + 22;
       lines().forEach((l, i) => { const la = cl01((T - 14.5 - i * 1.6) / 1) * (1 - cl01((T - 23) / 1)); if (la > 0) { ctx.fillStyle = `rgba(246,240,226,${la})`; ctx.fillText(l, VW / 2, ly); } ly += 17; }); }
@@ -181,12 +163,12 @@
     sc();
     if (mode === 'win') {
       const k = $('#winOv .kicker'), h2 = $('#winOv .h2'); if (k) k.textContent = 'THE CIRCLE IS BROKEN'; if (h2) h2.textContent = 'You unmade what you made';
-      $('#winText').textContent = 'The Black Circle is gone out of Lorraine, and Ganelon\'s war-horn is yours: fill it with blows and it calls Star, the warhorse, to carry you through the next fight. Walking the road again starts a harder cycle, where the horn fills faster and Star stays longer and hits harder; at the end of the dream you may draw another card.';
+      $('#winText').textContent = 'The Black Circle is gone out of Lorraine, and Ganelon\'s war-horn is yours: fill it with blows, and its blast staggers whatever stands in front of you and breaks their guard. Walking the road again starts a harder cycle, where the horn fills a little faster and its blast reaches further; at the end of the dream you may draw another card.';
     }
   }
   W8.startEnding = (sc) => {
     END = { t: 0, last: performance.now(), sc: sc || (() => {}), orig: W8.origDraw }; W8.ending = true; mode = 'ending';
-    save.w8relic = true; persist(); clearInput(); if (P) P.w8ride = 0; R.star = null;
+    save.w8relic = true; persist(); clearInput(); R.call = 0; R.blast = null;
     $('#hud').hidden = true; $('#bossbar').hidden = true; app.classList.add('nocontrols'); app.classList.remove('playing');
     if (TRACKS.w8spring) playMusic('w8spring');
   };

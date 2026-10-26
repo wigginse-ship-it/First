@@ -1085,8 +1085,8 @@
     beam(0, -58, 0, -86, 1.6); ctx.fillStyle = C(PAL.verm); ctx.beginPath(); ctx.moveTo(1, -86); ctx.quadraticCurveTo(10, -86 + Math.sin(t * 3) * 2, 22, -82); ctx.lineTo(1, -78); ctx.fill();
     ctx.restore();
   }
-  // ---------------- STAR, the warhorse of Lorraine (the relic's gift): a white destrier in a caparison of Lorraine's
-  // arms, drawn in two halves so the rider sits between them (w8_late.js puts him on it) ----------------
+  // ---------------- a warhorse of Lorraine (the riders of the card and the ending): a white destrier in a caparison of Lorraine's
+  // arms, drawn in two halves so a rider sits between them (the card and the ending) ----------------
   // the horse, in its own frame (feet at 0, facing +x); part: 'back' (far legs, body, neck, head) or 'front' (near
   // legs, caparison skirt over the rider's leg, the saddle-bow)
   function horse(part, o) {
