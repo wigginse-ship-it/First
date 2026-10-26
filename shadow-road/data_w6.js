@@ -35,7 +35,7 @@
   };
 
   // a little harder than the Courts, a little easier than the last world (see the matching entries in world.js and game.js)
-  WORLD_DIFF.push({ hp: 2.75, boss: 1.85, dmg: 1.75, cd: .56 }); // (the dream is a clear step past the Courts: its foes hit hard and often)
+  WORLD_DIFF.push({ hp: 3.8, boss: 2.05, dmg: 1.75, cd: .56 }); // (the dream is a clear step past the Courts: its foes hit hard and often)
 
   STAGES.push({ name: 'The Dreaming Shadow', sub: 'DREAMED BY WHAT SLEEPS BENEATH THE ABYSS', theme: 'dream', len: 2950,
     pods: [720, 1680], drop: [.92, .55],

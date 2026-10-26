@@ -115,6 +115,13 @@ function arrowVane(x0, x1, s, h) { // the path of one feather vane, tail (x0) to
 function arrowStar(x, y, r, ri, n = 4, rot = 0) { // an n-pointed star's path
   ctx.beginPath(); for (let i = 0; i < n * 2; i++) { const a = rot + i / (n * 2) * TAU, q = i % 2 ? ri : r; ctx.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } ctx.closePath();
 }
+function runePath(x, g) { // one of four cut runes, centred at (x, 0), about 1.8 by 2.4
+  ctx.beginPath();
+  if (g === 0) { ctx.moveTo(x - .8, 1.1); ctx.lineTo(x - .8, -1.1); ctx.lineTo(x + .8, 0); ctx.lineTo(x - .8, .4); }
+  else if (g === 1) { ctx.moveTo(x - .8, -1.1); ctx.lineTo(x + .8, 1.1); ctx.moveTo(x - .8, 1.1); ctx.lineTo(x + .8, -1.1); }
+  else if (g === 2) { ctx.moveTo(x + .8, -1.1); ctx.lineTo(x - .7, 0); ctx.lineTo(x + .8, 1.1); ctx.moveTo(x - .9, -1.1); ctx.lineTo(x - .9, 1.1); }
+  else { ctx.moveTo(x, -1.2); ctx.lineTo(x + .9, 0); ctx.lineTo(x, 1.2); ctx.lineTo(x - .9, 0); ctx.closePath(); }
+}
 function arrowBand(x, w, col, h = 1.25) { ctx.beginPath(); ctx.rect(x, -h, w, h * 2); ctx.fillStyle = C(col); ctx.fill(); outline(.35); } // a ring, lashing or ferrule round the shaft
 function arrowHead(pts, top, bot) { // a symmetric head from its upper outline (x, y pairs from the point back): lit above, shadowed below
   ctx.beginPath(); ctx.moveTo(pts[0], 0); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], -pts[i + 1]); ctx.lineTo(pts[pts.length - 2], 0); ctx.closePath(); ctx.fillStyle = C(top); ctx.fill();
@@ -138,11 +145,7 @@ function drawArrowShape(lvl, len = 30) {
     arrowBand(ff + .6, 1, '#C89A3A', 1.2);
     const x0 = ff + 2.6, n = Math.max(2, Math.floor((-3.6 - x0) / 3.3));
     for (let i = 0; i < n; i++) { const x = x0 + i * 3.3 + 1;
-      ctx.beginPath(); const g = i % 4;
-      if (g === 0) { ctx.moveTo(x - .8, 1.1); ctx.lineTo(x - .8, -1.1); ctx.lineTo(x + .8, 0); ctx.lineTo(x - .8, .4); }
-      else if (g === 1) { ctx.moveTo(x - .8, -1.1); ctx.lineTo(x + .8, 1.1); ctx.moveTo(x - .8, 1.1); ctx.lineTo(x + .8, -1.1); }
-      else if (g === 2) { ctx.moveTo(x + .8, -1.1); ctx.lineTo(x - .7, 0); ctx.lineTo(x + .8, 1.1); ctx.moveTo(x - .9, -1.1); ctx.lineTo(x - .9, 1.1); }
-      else { ctx.moveTo(x, -1.2); ctx.lineTo(x + .9, 0); ctx.lineTo(x, 1.2); ctx.lineTo(x - .9, 0); ctx.closePath(); }
+      runePath(x, i % 4);
       ctx.strokeStyle = C('#4FC8DC'); ctx.lineWidth = .7; ctx.stroke();
       if (fine) { const b = .5 + .5 * Math.sin(t * 7 - i * 1.2); if (b > .45) { ctx.globalAlpha = Math.min(1, (b - .45) * 2.2); ctx.strokeStyle = '#E8FFFF'; ctx.lineWidth = .5; ctx.stroke(); ctx.globalAlpha = 1; } } }
   } else if (lvl === 5) { // a gold wire wound round it, and little stars set between the turns
