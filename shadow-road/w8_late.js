@@ -76,7 +76,7 @@
     if (!(P && pose && pose.live && riding() && x === P.x && y === P.y)) { _dpa(x, y, z, facing, pose, alpha); if (pose && pose.live && R.call > 0 && x === P.x) hornAtLips(x, y, z, P.facing); return; }
     const t = performance.now() / 1000, L = heroLook(), o = { t, walk: P.w8hw || 0, gallop: P.w8gal || 0 };
     ctx.save(); ctx.translate(x, y - z); ctx.scale(P.facing, 1); ctx.globalAlpha = alpha; W8.horse('back', o); ctx.restore();
-    pose = Object.assign({}, pose, { walk: 0 }); _dpa(x, y, z + 30, facing, pose, alpha);
+    pose = Object.assign({}, pose, { walk: 0 }); _dpa(x, y, z + 36, facing, pose, alpha);
     ctx.save(); ctx.translate(x, y - z); ctx.scale(P.facing, 1); ctx.globalAlpha = alpha; W8.horse('front', Object.assign(o, { legCol: L.legs, bootCol: L.boots })); ctx.restore();
   };
   function hornAtLips(x, y, z, f) { const k = sm(Math.min(1, (1.1 - R.call) / .2)) * (1 - sm((.15 - R.call) / .15)); ctx.save(); ctx.translate(x + f * 6, y - z - 50); ctx.scale(f, 1); W8.hornDraw(4, 0, .7, 0, k, -.6); ctx.restore(); }
@@ -124,8 +124,8 @@
     for (let i = 0; i < 6; i++) { const y = hz + 6 + i * 16; ctx.strokeStyle = `rgba(${90 + i * 8},${70 + i * 6},${40},.5)`; ctx.lineWidth = 1.2 + i * .3; ctx.beginPath(); for (let x = -20; x <= VW + 20; x += 20) ctx.lineTo(x, y + Math.sin(x * .02 + i) * 2); ctx.stroke(); } // furrows
     // the castle on its hill, white towers, blue roofs, Lorraine's banner
     ctx.fillStyle = '#7E9A52'; ctx.beginPath(); ctx.moveTo(VW * .05, hz); ctx.quadraticCurveTo(VW * .22, hz - 70, VW * .42, hz); ctx.fill();
-    for (const [dx, w, h] of [[-50, 16, 52], [-28, 22, 40], [-6, 14, 62], [12, 20, 44], [30, 12, 50]]) { const x = VW * .23 + dx; ctx.fillStyle = '#F2EEE4'; ctx.fillRect(x - w / 2, hz - 50 - h, w, h); ctx.fillStyle = '#C8CCD0'; ctx.fillRect(x - w / 2, hz - 50 - h, w * .3, h); ctx.fillStyle = '#3A5A96'; ctx.beginPath(); ctx.moveTo(x - w * .6, hz - 50 - h); ctx.lineTo(x, hz - 50 - h - w * 1.1); ctx.lineTo(x + w * .6, hz - 50 - h); ctx.fill(); }
-    W8.arms(VW * .23 + 18, hz - 150, 14, 16);
+    for (const [dx, w, h] of [[-50, 16, 52], [-28, 22, 40], [-6, 14, 62], [12, 20, 44], [30, 12, 50]]) { const x = VW * .23 + dx; ctx.fillStyle = '#F2EEE4'; ctx.fillRect(x - w / 2, hz - 30 - h, w, h + 4); ctx.fillStyle = '#C8CCD0'; ctx.fillRect(x - w / 2, hz - 30 - h, w * .3, h + 4); ctx.fillStyle = '#3A5A96'; ctx.beginPath(); ctx.moveTo(x - w * .6, hz - 30 - h); ctx.lineTo(x, hz - 30 - h - w * 1.1); ctx.lineTo(x + w * .6, hz - 30 - h); ctx.fill(); }
+    W8.arms(VW * .23 + 18, hz - 130, 14, 16);
     // a ploughman and his oxen, blossom on the trees along the field's edge
     const px = ((t * 8) % (VW + 200)) - 100; ctx.save(); ctx.translate(px, hz + 34); ctx.fillStyle = '#5A3A26'; for (const ox of [0, 26]) { ctx.beginPath(); ctx.ellipse(ox, -8, 11, 6, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(ox + 8, -12, 6, 5); ctx.fillRect(ox - 8, -4, 2, 6); ctx.fillRect(ox + 6, -4, 2, 6); } ctx.fillStyle = '#E6DCC2'; ctx.fillRect(-26, -20, 7, 14); ctx.fillStyle = '#C8946A'; ctx.beginPath(); ctx.arc(-22, -23, 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     for (let i = 0; i < 9; i++) { const x = (i * 97 + 30) % VW, y = hz - 2; ctx.strokeStyle = '#4A3A26'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 26); ctx.stroke(); for (let j = 0; j < 14; j++) { ctx.fillStyle = j % 3 ? 'rgba(250,236,240,.9)' : 'rgba(230,180,190,.9)'; ctx.beginPath(); ctx.arc(x + Math.cos(j * 2.4) * 12 * hsh(i + j), y - 30 + Math.sin(j * 2.4) * 8 * hsh(j), 2.4, 0, Math.PI * 2); ctx.fill(); } }
@@ -134,7 +134,7 @@
   // a rider: a horse in Lorraine's caparison, and on it Corwin, or Ganelon
   function rider(x, y, s, look, f, t, walk, gal, lift = 0) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s * f, s); const o = { t, walk, gallop: gal, legCol: look.legs, bootCol: look.boots };
-    W8.horse('back', o); ctx.save(); ctx.translate(0, -30); drawHumanoid(look, { arm: lift ? -1.6 : .6, Y: .25, weapon: lift ? 'fists' : 'rapier' }); if (lift) W8.hornDraw(10, -58, .8, t, 1, -1.1); ctx.restore(); W8.horse('front', o); ctx.restore();
+    W8.horse("back", o); ctx.save(); ctx.translate(0, -36); drawHumanoid(look, { arm: lift ? -1.6 : .6, Y: .25, weapon: lift ? 'fists' : 'rapier' }); if (lift) W8.hornDraw(10, -58, .8, t, 1, -1.1); ctx.restore(); W8.horse('front', o); ctx.restore();
   }
   function renderEnding(t) {
     const now = performance.now(), dt = Math.min(.05, (now - END.last) / 1000); END.last = now; END.t += dt; const T = END.t;

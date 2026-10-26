@@ -37,7 +37,7 @@
   // (his whole fight is run by the 'w7glass' rule: these lists only name what each of his shapes can do)
   BOSSES.w7king = {
     close: 'w7none', name: 'The King in the Glass', title: "OBERON'S REFLECTION · KING OF NOTHING", draw: 'w7king', mat: 'w7glass', move: 'fly', hover: 30,
-    hp: 1050, spd: 60, hw: 34, hh: 120, dmg: 21, wind: .6, cd: [.8, 1.3], weight: 0, poise: 0, ranged: 1, reach: 80,
+    hp: 850, spd: 60, hw: 34, hh: 120, dmg: 21, wind: .6, cd: [.8, 1.3], weight: 0, poise: 0, ranged: 1, reach: 80,
     p1: ['w7tines', 'w7undertow', 'w7anchors', 'w7sweep'], p2: ['w7spout', 'w7whirl', 'w7drain'], p3: ['w7mirror', 'w7shards', 'w7unwind', 'w7breaker'],
   };
 
@@ -61,6 +61,9 @@
     stage: 6, id: 'rebma', name: 'REBMA',
     line: 'Rebma, the drowned mirror of Amber: its Pattern gave him back his memory once, and now something down there is walking it backward.',
     draw(ctx2, w, h, t) { if (window.W7 && W7.cardDraw) W7.cardDraw(ctx2, w, h, t); },
+    go: 'He steps through the card, and the sea closes over his head, and he finds that here he can breathe it.',
+    win: { kicker: 'THE TIDE HAS TURNED', title: 'You came up out of Rebma',
+      text: "The King in the Glass is broken, the Pattern of Rebma runs the right way again, and the Pearl of Judgement is yours: its undertow, its wave and its sea-legs go with you into every world, whatever you fight with, and far more strongly in a new cycle. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels, cards and relics come with you." },
     relic: { key: 'w7relic', name: 'The Pearl of Judgement', desc: "The sea's reflection of the Jewel: dodges leave an undertow, finishing blows raise a wave, and you can kick off the water once in the air. Far stronger in New Game+." },
   });
 })();

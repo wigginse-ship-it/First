@@ -28,7 +28,7 @@
     w8crow:    { name: 'Funnel-Hat Crow', draw: 'w8crow', mat: 'fur', move: 'fly', hover: 64, hp: 42, spd: 88, hw: 18, hh: 26, dmg: 12, plans: ['w8peck', 'w8murder', 'w8peck'], wind: .6, cd: [1.3, 2.2], ranged: 1, reach: 150, weight: 1.15, shards: [5, 8], kind: 'creature' },
     w8egg:     { name: 'Walking Egg', draw: 'w8egg', mat: 'shell', move: 'ground', hp: 64, spd: 122, hw: 15, hh: 62, dmg: 13, plans: ['w8kick', 'w8roll', 'w8kick'], wind: .5, cd: [.9, 1.6], reach: 48, weight: 1, shards: [6, 9], kind: 'creature' },
     // he waits at the gallows at the end of the edge (the last wave there; never sent anywhere else)
-    w8hangman: { name: 'The Hangman of the Circle', noRandom: 1, draw: 'w8hangman', mat: 'flesh', move: 'ground', hp: 360, spd: 72, hw: 18, hh: 88, dmg: 18, plans: ['w8noose', 'w8axe', 'w8gallows', 'w8sweep', 'w8axe'], wind: .65, cd: [.9, 1.5], reach: 82, weight: .4, poise: 7, shards: [26, 34], sigil: 1, kind: 'human' },
+    w8hangman: { name: 'The Hangman of the Circle', noRandom: 1, draw: 'w8hangman', mat: 'flesh', move: 'ground', hp: 300, spd: 72, hw: 18, hh: 88, dmg: 18, plans: ['w8noose', 'w8axe', 'w8gallows', 'w8sweep', 'w8axe'], wind: .65, cd: [.9, 1.5], reach: 82, weight: .4, poise: 7, shards: [26, 34], sigil: 1, kind: 'human' },
   });
 
   // the Goat-Lord keeps his shape in e.w8form (1-4; art_w8.js's 'w8heart' rule); world.js only ever sees phases 1-3
@@ -70,7 +70,7 @@
     stage: 7, id: 'lorraine', name: 'LORRAINE',
     line: 'The Black Circle is eating Lorraine a village at a time, and Corwin knows whose curse it grew from: he goes back to unmake what he made, where Ganelon once held the line.',
     draw(ctx2, w, h, t) { if (window.W8 && W8.card) W8.card(ctx2, w, h, t); },
-    relic: { key: 'w8relic', name: 'The Horn of Lorraine', desc: 'Ganelon\'s war-horn, taken back from the Goat-Lord. Land blows to fill it; when it is full it sounds by itself, and Star, the warhorse of Lorraine, comes at a gallop: Corwin fights mounted, trampling through the ranks, hitting harder and shrugging off blows. In New Game+ it fills twice as fast, Star stays longer and tramples harder.' },
+    relic: { key: 'w8relic', name: 'The Horn of Lorraine', desc: 'Ganelon\'s war-horn, taken back from the Goat-Lord. Landed blows fill it; when it is full it sounds by itself, and Star, the warhorse of Lorraine, comes at a gallop: Corwin fights mounted, trampling through the ranks, hitting harder and shrugging off blows. In New Game+ it fills twice as fast, Star stays longer and tramples harder.' },
   });
 })();
 // the attacks, rules, passages and music (art_w8.js) register now that world.js and zones.js have loaded

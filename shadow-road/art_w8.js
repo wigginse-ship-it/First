@@ -522,7 +522,7 @@
     floorA: GR(.66), floorB: GR(.36), path: GR(.6), skyKind: 'none',
     grade: { desat: .4, top: 'rgba(90,86,80,.35)', bot: 'rgba(160,150,130,.3)', vig: 'rgba(16,12,10,.62)' },
     liveSky(camX, t) { for (let i = 0; i < 26; i++) { const life = ((t * .03 + hsh(i)) % 1), x = ((hsh(i + 2) * 1280 - camX * .3 + Math.sin(t * .4 + i) * 20) % 1280 + 1280) % 1280 - 300, y = lerp(Y_OFF, T, life); if (x < 0 || x > VW) continue; ctx.fillStyle = `rgba(60,56,50,${.5 * Math.sin(life * Math.PI)})`; ctx.save(); ctx.translate(x, y); ctx.rotate(t + i); ctx.fillRect(-1.6, -.5, 3.2, 1); ctx.restore(); } }, // ash coming down
-    liveFloor(camX, t) { if (stage && stage.bossRoom) drawPit(camX, t, W8.pitOpen ?? 1); },
+    liveFloor(camX, t) { if (stage && stage.bossRoom) { ctx.save(); ctx.globalCompositeOperation = 'source-over'; drawPit(camX, t, W8.pitOpen ?? 1); ctx.restore(); } },
   };
   AW_FAR.lorraineBoss = heartFar; AW_MID.lorraineBoss = heartMid; AW_FLOOR.lorraineBoss = heartFloor;
   Object.assign(W8.art, { GR, sketch, hatchRect, boschForm, ringStone, goatBanner, drawPit });
@@ -1092,40 +1092,39 @@
   function horse(part, o) {
     const t = o.t || 0, gal = o.gallop || 0, ph = o.walk || 0, rear = o.rear || 0;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    if (rear) { ctx.translate(-20, 0); ctx.rotate(-rear * .55); ctx.translate(20, 0); }
-    const body = '#E8E2D4', bodyDk = '#A8A090', bodyLt = '#FFFDF6';
-    const legCyc = (off) => { const a = ph + off; return gal ? [Math.sin(a) * 14, -Math.max(0, Math.cos(a)) * 9] : [Math.sin(a) * 7, -Math.max(0, Math.cos(a)) * 4]; };
-    const leg = (hx, hy, off, near) => { const [fx, fy] = legCyc(off), f = [hx + fx, fy], kk = knee(hx, hy, f[0], f[1], 16, hx > 0 ? 1 : -1);
-      limb3(hx, hy, kk[0], kk[1], f[0], f[1] - 3, 7, 4.2, 3.4, near ? body : bodyDk);
-      cel(PP([f[0] - 3, f[1], f[0] - 2.4, f[1] - 4, f[0] + 3, f[1] - 4, f[0] + 3.6, f[1]]), '#3A3430', { d: .5, r: .3, w: 1.1 }); };
+    if (rear) { ctx.translate(-26, 0); ctx.rotate(-rear * .5); ctx.translate(26, 0); }
+    const body = '#ECE6D8', bodyDk = '#ACA494', bodyLt = '#FFFDF6', bob = gal ? Math.abs(Math.sin(ph)) * 3 : Math.abs(Math.sin(ph)) * 1;
+    ctx.translate(0, -bob);
+    const leg = (hx, off, near, fore) => { const a = ph + off, sw = gal ? Math.sin(a) * 16 : Math.sin(a) * 8, lift = gal ? Math.max(0, Math.cos(a)) * 12 : Math.max(0, Math.cos(a)) * 5;
+      const hy = -42, fx = hx + sw, fy = -lift + bob, kk = knee(hx, hy, fx, fy, 23, fore ? -1 : 1);
+      limb3(hx, hy, kk[0], kk[1], fx, fy - 4, 6.4, 4, 3.2, near ? body : bodyDk);
+      cel(PP([fx - 3, fy, fx - 2.6, fy - 4.6, fx + 3, fy - 4.6, fx + 3.8, fy]), '#3A3430', { d: .5, r: .3, w: 1.1 }); };
     if (part === 'back') {
-      leg(22, -30, Math.PI, false); leg(-22, -30, 0, false);
-      // the tail and the body (most of it hidden under the caparison)
-      cel(PB([-30, -40, -40, -32, -42, -14, -36, -20, -32, -30]), '#D8D0C0', { d: 1, r: .5, w: 1.2 });
-      cel(PB([-32, -44, -10, -50, 20, -50, 34, -42, 32, -28, 10, -26, -20, -26, -34, -30]), body, { d: 3, r: 1.2, w: 1.6, dark: bodyDk, lite: bodyLt });
-      // the neck, the head, the mane; a chanfron of steel on the face
-      const nod = Math.sin(ph * 2) * (gal ? .12 : .05);
-      ctx.save(); ctx.translate(28, -46); ctx.rotate(-.7 + nod - rear * .3);
-      cel(PB([-6, 6, -4, -10, 4, -26, 12, -30, 14, -20, 8, -8, 6, 6]), body, { d: 2, r: 1, w: 1.5, dark: bodyDk, lite: bodyLt });
-      cel(PB([4, -26, 14, -32, 30, -30, 34, -24, 28, -18, 14, -18]), body, { d: 1.6, r: .8, w: 1.4, dark: bodyDk, lite: bodyLt });
-      cel(PP([12, -31, 28, -30, 30, -25, 14, -22]), '#B8BCC0', { d: .7, r: .5, w: 1.1, lite: '#F0F4F6' }); // the chanfron
-      fillPoly([10, -32, 12, -38, 14, -32], body, 1); bead(19, -27.6, .9);
-      for (let i = 0; i < 6; i++) { const u = i / 6; ctx.strokeStyle = C('#C8C0B0'); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(lerp(-4, 8, u), lerp(-8, -28, u)); ctx.lineTo(lerp(-4, 8, u) - 5 - Math.sin(t * 6 + i) * gal * 2, lerp(-8, -28, u) + 3); ctx.stroke(); } // the mane
-      ctx.strokeStyle = C('#5A3A20'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30, -24); ctx.quadraticCurveTo(10, -10, -2, 4); ctx.stroke(); // the rein
+      leg(26, Math.PI, false, true); leg(-28, 0, false, false);
+      // the tail, the barrel, the neck and the head (a steel chanfron on its face), the mane
+      cel(PB([-38, -64, -50, -54, -54, -30, -48, -24, -44, -46]), '#DCD4C4', { d: 1, r: .5, w: 1.2, tex: () => { ctx.strokeStyle = 'rgba(150,140,124,.6)'; ctx.lineWidth = .6; ctx.beginPath(); for (let k = 0; k < 4; k++) { ctx.moveTo(-42 - k * 2, -60); ctx.quadraticCurveTo(-50 - k, -44, -48 - k * 2, -26); } ctx.stroke(); } });
+      cel(PB([-42, -60, -20, -70, 16, -70, 36, -62, 38, -46, 20, -38, -16, -38, -40, -44]), body, { d: 3, r: 1.2, w: 1.6, dark: bodyDk, lite: bodyLt });
+      const nod = Math.sin(ph * 2) * (gal ? .08 : .03) - rear * .2;
+      ctx.save(); ctx.translate(30, -62); ctx.rotate(nod);
+      cel(PB([-6, 8, -2, -10, 10, -30, 18, -34, 22, -24, 14, -6, 10, 10]), body, { d: 2, r: 1, w: 1.5, dark: bodyDk, lite: bodyLt });
+      cel(PB([12, -34, 22, -38, 36, -26, 40, -18, 34, -14, 22, -18]), body, { d: 1.6, r: .8, w: 1.4, dark: bodyDk, lite: bodyLt });
+      cel(PP([20, -36, 36, -25, 33, -20, 18, -30]), '#B8BCC0', { d: .7, r: .5, w: 1.1, lite: '#F0F4F6' }); // the chanfron
+      fillPoly([12, -36, 13, -44, 17, -36], body, 1); fillPoly([15, -37, 17, -44, 19, -36], bodyDk, 1); bead(21, -29, 1); ctx.fillStyle = C('#2A2420'); circle(37, -17, 1.1); ctx.fill();
+      for (let k = 0; k < 7; k++) { const u = k / 7; ctx.strokeStyle = C(k % 2 ? '#D0C8B8' : '#BCB4A4'); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(lerp(-4, 12, u), lerp(-8, -32, u)); ctx.lineTo(lerp(-4, 12, u) - 6 - Math.sin(t * 7 + k) * gal * 2.4, lerp(-8, -32, u) + 4); ctx.stroke(); } // the mane
+      ctx.strokeStyle = C('#5A3A20'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(34, -18); ctx.quadraticCurveTo(10, -14, -24, -6); ctx.stroke(); // the rein, back to the rider's hand
       ctx.restore();
     } else {
-      leg(-18, -30, Math.PI * .5, true); leg(26, -30, Math.PI * 1.5, true);
-      // the caparison: Lorraine's arms on the trapper, gold, the red bend, the alerions, a dagged hem
-      const cp = PB([-36, -46, -8, -52, 22, -52, 36, -44, 34, -18, 20, -14, -4, -16, -24, -14, -38, -20]);
+      leg(-24, Math.PI * .5, true, false); leg(30, Math.PI * 1.5, true, true);
+      // the caparison: Lorraine's arms on the trapper (or, a bend gules, three alerions argent), its hem dagged
+      const cp = PB([-46, -64, -14, -74, 22, -74, 42, -64, 42, -36, 24, -30, -8, -32, -30, -30, -46, -36]);
       cel(cp, PAL.or, { d: 3, r: 1.2, w: 1.7, dark: '#8A6418', lite: '#FFE8A0', tex: () => {
-        ctx.save(); ctx.translate(0, -34); ctx.rotate(.5); ctx.fillStyle = C(PAL.gules); ctx.fillRect(-60, -6, 120, 12); ctx.fillStyle = C(PAL.argent); for (const k of [-24, 0, 24]) { poly([k - 4, -1.6, k, 1, k + 4, -1.6, k + 1.2, 1.2, k, 4, -1.2 + k, 1.2]); ctx.fill(); } ctx.restore();
-        ctx.fillStyle = 'rgba(80,50,10,.35)'; ctx.beginPath(); for (let x = -38; x < 36; x += 6) { ctx.moveTo(x, -16); ctx.lineTo(x + 3, -12); ctx.lineTo(x + 6, -16); } ctx.fill();
-        goldLine(() => { ctx.moveTo(-36, -18); ctx.quadraticCurveTo(0, -12, 34, -18); }, 1.1);
+        ctx.save(); ctx.translate(-2, -52); ctx.rotate(.42); ctx.fillStyle = C(PAL.gules); ctx.fillRect(-80, -7, 160, 14); ctx.fillStyle = C(PAL.argent); for (const k of [-30, 0, 30]) { poly([k - 4.6, -1.8, k, 1.2, k + 4.6, -1.8, k + 1.4, 1.4, k, 4.6, k - 1.4, 1.4]); ctx.fill(); } ctx.restore();
+        ctx.fillStyle = 'rgba(70,40,6,.4)'; ctx.beginPath(); for (let x = -46; x < 42; x += 7) { ctx.moveTo(x, -36); ctx.lineTo(x + 3.5, -30 - (Math.floor(x / 7) % 2) * 2); ctx.lineTo(x + 7, -36); } ctx.fill();
+        goldLine(() => { ctx.moveTo(-46, -38); ctx.quadraticCurveTo(-2, -32, 42, -38); }, 1.1);
       } });
-      cel(PB([-10, -54, 10, -54, 12, -48, -12, -48]), '#5A3A20', { d: .7, r: .5, w: 1.2 }); // the saddle
-      cel(PB([8, -60, 14, -58, 13, -50, 8, -50]), '#6A4428', { d: .5, r: .4, w: 1.1 }); // its bow
-      // the rider's near leg in its stirrup (drawn here, over the caparison)
-      if (o.rider !== false) { limb3(-2, -50, 4, -38, 1, -26, 6, 5, 4, o.legCol || '#2A2422'); cel(PB([-2, -28, 7, -27, 9, -24, -1, -23]), o.bootCol || '#3A2618', { d: .6, r: .4, w: 1.1 }); ctx.strokeStyle = C('#9A9EA2'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-1, -48); ctx.lineTo(2, -24); ctx.stroke(); }
+      cel(PB([-14, -78, 8, -78, 12, -70, -16, -70]), '#5A3A20', { d: .7, r: .5, w: 1.2 }); // the saddle
+      cel(PB([6, -84, 13, -82, 12, -72, 6, -72]), '#6A4428', { d: .5, r: .4, w: 1.1 }); cel(PB([-18, -82, -12, -80, -12, -72, -18, -72]), '#6A4428', { d: .5, r: .4, w: 1.1 }); // its bow and cantle
+      if (o.rider !== false) { limb3(-2, -72, 8, -56, 3, -42, 7, 6, 4.6, o.legCol || '#2A2422'); cel(PB([-1, -44, 9, -43, 11, -39, -1, -38]), o.bootCol || '#3A2618', { d: .6, r: .4, w: 1.1 }); ctx.strokeStyle = C('#9A9EA2'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -70); ctx.lineTo(3, -39); ctx.stroke(); }
     }
     ctx.restore();
   }
@@ -1171,7 +1170,7 @@
     if (e.state === 'wind') e.w8T.lastT = e.t;
     return e.w8T;
   }
-  W8.akit = { reg, act, endAct, targets, hitP, inEll, yClamp, xClamp, tellCol, tellLine, label, lane, ring, ash, fwdOf };
+  W8.akit = { alive, reg, act, endAct, targets, hitP, inEll, yClamp, xClamp, tellCol, tellLine, label, lane, ring, ash, fwdOf };
   // the Circle's cold: slowed for a while (a grab, a bell's note, a binding)
   const chill = (s, txt) => { if (!alive()) return; if (!(P.w8slow > 0) && txt) floatText(P.x, P.y, 86, txt, '#C8C2B4', 13); P.w8slow = Math.max(P.w8slow || 0, s); };
   W8.chill = chill;
@@ -1329,7 +1328,7 @@
   // THE RULES OF THE PLACES, and the small behaviours every foe of this world shares
   // ======================================================================================================
   W8.lateParts.push(() => {
-  const { reg, act, hitP, inEll, yClamp, xClamp, tellCol, tellLine, label, lane, ring, ash, fwdOf } = W8.akit;
+  const { alive, reg, act, hitP, inEll, yClamp, xClamp, tellCol, tellLine, label, lane, ring, ash, fwdOf } = W8.akit;
   const inLorraine = () => typeof baseStage !== 'undefined' && baseStage && baseStage.theme === 'lorraine';
   // ---------------- every frame, for every foe here: the aim of their wind-ups, the Circle's cold on the prince ----------------
   const _upd = updateEnemy;
@@ -1466,7 +1465,7 @@
       if (waveActive && lockX !== null && m.lockAt !== lockX) { m.lockAt = lockX; m.fires = [.24, .5, .76].map((u, i) => ({ x: lockX + VW * u, y: FLOOR_TOP + 22 + (i % 2) * 50, lit: 0, flash: 0 })); m.phase = 'calm'; m.t = 2.5; m.E = Math.max(m.E, lockX + VW * .92); }
       const restE = L + VW * .92;
       m.t -= dt;
-      if (!waveActive) { m.phase = 'calm'; m.E += (Math.max(restE, camX + VW * .95) - m.E) * Math.min(1, dt * .8); }
+      if (!waveActive) { m.phase = 'calm'; m.E += (Math.max(restE, camX + VW * .95) - m.E) * Math.min(1, dt * .8); m.E = Math.max(m.E, camX + VW * .82); }
       else if (m.phase === 'calm') { m.E += (restE - m.E) * Math.min(1, dt * 1.5); if (m.t <= 0) { m.phase = 'warn'; m.t = 1.3; floatText(P.x, P.y, 110, 'THE CIRCLE SWELLS', '#C8C2B4', 15); sfx('growl'); tn(55, 1.3, 'sawtooth', .06, 45); } }
       else if (m.phase === 'warn') { if (m.t <= 0) { m.phase = 'surge'; m.t = 2; sfx('whoosh'); shakeMag = Math.max(shakeMag, 5); } }
       else if (m.phase === 'surge') { m.E -= 170 * dt; if (m.E < L + VW * .26 || m.t <= 0) { m.phase = 'hold'; m.t = 3.2; } }
@@ -1535,7 +1534,7 @@
   // the changes between them, his attacks, and his fall
   // ======================================================================================================
   W8.lateParts.push(() => {
-  const { reg, act, hitP, inEll, yClamp, xClamp, tellCol, tellLine, label, lane, ring, ash, fwdOf } = W8.akit;
+  const { alive, reg, act, hitP, inEll, yClamp, xClamp, tellCol, tellLine, label, lane, ring, ash, fwdOf } = W8.akit;
   const B = BOSSES.w8goat, isGoat = (e) => e && e.def === B;
   const ENDS = { 2: .75, 3: .5, 4: .25 };
   const SHAPE = {
@@ -1658,14 +1657,14 @@
   PLAN_FX.w8gore = (e) => charge(e, 500, 2, 'gore');
   function charge(e, sp, passes, name) { e.w8T = null; sfx('roar'); let dir = e.facing, pass = 1, wait = 0;
     act(e, name, (h, dt, e) => { e.w8k = h.el; e.walk += dt * 14;
-      if (wait > 0) { wait -= dt; if (wait <= 0) { h.hit = 0; } else { e.y += clamp(P.y - e.y, -50 * dt, 50 * dt); return false; } }
+      if (wait > 0) { wait -= dt; if (wait <= 0) { h.hit = 0; } else { if (wait > .6) e.y += clamp(P.y - e.y, -60 * dt, 60 * dt); return false; } }
       e.x += dir * sp * dt; e.facing = dir; if (Math.random() < .7) dust(e.x - dir * 20, e.y, 1);
       if (!h.hit && Math.abs(P.x - e.x) < e.hw + 14 && Math.abs(P.y - e.y) < 22 && P.z < 30) { h.hit = 1; hitP(Math.round(edmg(e) * 1.3), e.x, true, { kind: 'melee', e }); }
       if ((dir > 0 && e.x > arenaR() - 30) || (dir < 0 && e.x < arenaL() + 30)) { e.x = clamp(e.x, arenaL() + 30, arenaR() - 30); shakeMag = 9; sfx('slam');
-        if (pass < passes) { pass++; dir = -dir; wait = .55; h.lane = 1; return false; }
+        if (pass < passes) { pass++; dir = -dir; wait = .9; h.lane = 1; return false; }
         floatText(e.x, e.y, e.hh + 40, 'HIS HORNS ARE STUCK', '#E8D8B0', 14); e.state = 'down'; e.t = 1.5; e.plan = null; return true; }
       if (h.el > 3.5) { recover(e, .6); return true; } return false; },
-      { draw(h, t) { if (wait > 0) lane(h.e.x, -h.e.facing > 0 ? arenaR() : arenaL(), h.e.y, 22, 1 - wait / .55); } }); }
+      { draw(h, t) { if (wait > 0) lane(h.e.x, dir > 0 ? arenaR() : arenaL(), h.e.y, 22, 1 - wait / .9); } }); }
   // THE BLEAT: crowded, he throws his head back and bleats, and the sound goes out round him along the ground (jump it)
   TELL_FX.w8bleat = (e, t, k) => { ring(e.x, e.y, 130, k * .6, false); };
   PLAN_FX.w8bleat = (e) => { sfx('roar'); tn(180, .6, 'sawtooth', .06, 120);
@@ -2040,7 +2039,7 @@
       else { ctx.strokeStyle = C('#5A4A36'); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(e.x - 10, e.y - 2); ctx.lineTo(e.x + 12, e.y - 4); ctx.stroke(); }
     } else if (d === 'w8crack') { // the shell splits and the two halves fall apart; what was in it runs out gold
       const u = sm(k / .5); ctx.fillStyle = C('#E8B040'); ell(e.x + 4, e.y, 6 + u * 16, 2 + u * 4); ctx.fill(); outline(1);
-      for (const s of [-1, 1]) { ctx.save(); ctx.translate(e.x + s * u * 14, e.y - 10 * (1 - u)); ctx.rotate(s * u * 1.4); ctx.beginPath(); ctx.rect(s < 0 ? -30 : 0, -60, 30, 64); ctx.clip(); ctx.translate(0, 0); ctx.scale(e.facing, 1); ctx.translate(0, 28 * u); W8.kit.cel(W8.kit.PB([0, -24, 11, -20, 15, -4, 12, 12, 0, 17, -12, 12, -15, -4, -11, -20]), '#ECE4D2', { d: 2, r: 1, w: 1.5 }); ctx.restore(); }
+      for (const s of [-1, 1]) { ctx.save(); ctx.translate(e.x + s * u * 16, e.y + lerp(-44, -12, u)); ctx.rotate(s * u * 1.4); ctx.beginPath(); ctx.rect(s < 0 ? -20 : 0, -30, 20, 52); ctx.clip(); W8.kit.cel(W8.kit.PB([0, -24, 11, -20, 15, -4, 12, 12, 0, 17, -12, 12, -15, -4, -11, -20]), '#ECE4D2', { d: 2, r: 1, w: 1.5 }); ctx.restore(); }
       ctx.strokeStyle = C('#C88A74'); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(e.x - 6, e.y - 2); ctx.lineTo(e.x - 20, e.y - 4); ctx.moveTo(e.x + 8, e.y - 1); ctx.lineTo(e.x + 22, e.y - 2); ctx.stroke();
     } else if (d === 'w8bellfall') { // the bell comes off him and rolls over on its side, and the man in it is not there at all
       const u = sm(k / .8); ctx.save(); ctx.translate(e.x + e.facing * u * 18, e.y - 2); ctx.rotate(e.facing * u * 1.45); W8.art.bell(0, 0, 1, 2, k < .9 ? (1 - k) : 0, t); ctx.restore();
@@ -2093,7 +2092,7 @@
       // the hill and its castle, white and blue in the cold, its roofs blue slate, a pennon of Lorraine
       const hy = h * .5;
       ctx.fillStyle = '#C8D0D4'; ctx.beginPath(); ctx.moveTo(0, hy + h * .06); ctx.quadraticCurveTo(w * .3, hy - h * .12, w * .62, hy - h * .02); ctx.quadraticCurveTo(w * .85, hy + h * .04, w, hy + h * .02); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
-      const cx = w * .36, cy = hy - h * .07;
+      const cx = w * .36, cy = hy - h * .015;
       for (const [dx, tw, th] of [[-.12, .06, .2], [-.04, .1, .15], [.06, .06, .24], [.13, .05, .17]]) { const x = cx + dx * w, wt = tw * w, ht = th * h; ctx.fillStyle = '#EEECE4'; ctx.fillRect(x - wt / 2, cy - ht, wt, ht); ctx.fillStyle = '#B8C0C8'; ctx.fillRect(x - wt / 2, cy - ht, wt * .3, ht);
         ctx.fillStyle = '#3A5A96'; poly([x - wt * .62, cy - ht, x, cy - ht - wt * 1.1, x + wt * .62, cy - ht]); ctx.fill(); ctx.fillStyle = '#1E1812'; ctx.fillRect(x - wt * .12, cy - ht * .7, wt * .24, ht * .12); }
       ctx.strokeStyle = '#1E1812'; ctx.lineWidth = Math.max(.6, w * .006); ctx.beginPath(); ctx.moveTo(cx + .06 * w, cy - .24 * h - .066 * w); ctx.lineTo(cx + .06 * w, cy - .24 * h - .13 * w); ctx.stroke();
@@ -2106,7 +2105,7 @@
       ctx.save(); ctx.translate(w * .58, h * .8); const s = w / 230; ctx.scale(s, s);
       const bob = Math.sin(t * 6) * 1.2; ctx.translate(0, bob);
       W8.horse('back', { t, walk: t * 6, gallop: 0 });
-      const L = heroLook(); ctx.save(); ctx.translate(0, -36); ctx.scale(.62, .62); drawHumanoid(L, { arm: .5, Y: .3, weapon: 'rapier' }); ctx.restore();
+      const L = heroLook(); ctx.save(); ctx.translate(0, -36); drawHumanoid(L, { arm: .5, Y: .3, weapon: 'rapier' }); ctx.restore();
       W8.horse('front', { t, walk: t * 6, legCol: L.legs || '#2A2422', bootCol: L.boots || '#3A2618' });
       ctx.restore();
       // snow, falling

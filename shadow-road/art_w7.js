@@ -226,10 +226,10 @@
     });
     // the balustrade along the back of the landing: a heavy rail on fat balusters, a newel-post every so far
     const rail = T - 28; W7.newels = [];
-    ctx.fillStyle = '#8A9A94'; ctx.fillRect(0, rail, AW_W, 6); ctx.fillStyle = '#D8E4DC'; ctx.fillRect(0, rail, AW_W, 2); ctx.fillStyle = '#3E4E4C'; ctx.fillRect(0, rail + 6, AW_W, 1.6);
+    ctx.fillStyle = '#6E7E7A'; ctx.fillRect(0, rail, AW_W, 6); ctx.fillStyle = '#C8D8D0'; ctx.fillRect(0, rail, AW_W, 2); ctx.fillStyle = '#3E4E4C'; ctx.fillRect(0, rail + 6, AW_W, 1.6);
     for (let x = 6; x < AW_W; x += 13) { // the balusters, each a swelled vase, lit from above
       const b = (y) => 2.2 + Math.sin(((y - rail - 8) / 20) * Math.PI) * 2.6;
-      ctx.fillStyle = '#7E8E88'; ctx.beginPath(); ctx.moveTo(x - 2, rail + 7); for (let y = rail + 7; y <= T - 2; y += 2) ctx.lineTo(x - b(y), y); for (let y = T - 2; y >= rail + 7; y -= 2) ctx.lineTo(x + b(y), y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#5E6E6A'; ctx.beginPath(); ctx.moveTo(x - 2, rail + 7); for (let y = rail + 7; y <= T - 2; y += 2) ctx.lineTo(x - b(y), y); for (let y = T - 2; y >= rail + 7; y -= 2) ctx.lineTo(x + b(y), y); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(220,240,232,.6)'; ctx.fillRect(x - 1.6, rail + 9, 1.2, 14);
       ctx.fillStyle = 'rgba(8,24,28,.45)'; ctx.fillRect(x + 1.4, rail + 10, 1, 12);
     }
@@ -255,7 +255,7 @@
   // the landing: great slabs of sea-worn marble; the stair drops a step every so far (risers across the floor, so it
   // goes down as you go on); a mosaic runner down its middle; sand drifted against the risers; shells; a drowned helm
   function stairFloor(rnd, th) {
-    { const g = ctx.createLinearGradient(0, T - 2, 0, VH); g.addColorStop(0, '#5E8A86'); g.addColorStop(.35, '#7A9E96'); g.addColorStop(.8, '#4E706E'); g.addColorStop(1, '#2A4446'); ctx.fillStyle = g; ctx.fillRect(0, T - 2, AW_W, VH - T + 2); }
+    { const g = ctx.createLinearGradient(0, T - 2, 0, VH); g.addColorStop(0, '#3E6462'); g.addColorStop(.35, '#557A72'); g.addColorStop(.8, '#2E4A4A'); g.addColorStop(1, '#14262A'); ctx.fillStyle = g; ctx.fillRect(0, T - 2, AW_W, VH - T + 2); }
     // the slabs: joints across and along, each slab its own tone, veined
     let y = T + 2; const rows = [10, 13, 16, 20, 25, 30];
     for (const h of rows) {
@@ -302,9 +302,9 @@
   }
   W7.surge = 0; // the ninth wave: -1 the undertow drawing down the stair, +1 the surge driving up it (the 'w7surge' rule)
   THEMES.rebma = {
-    name: 'faiella-bionin', sky: ['#7CC4B4', '#1E6270', '#0E3C50', '#082A3A'], sun: [0.5, -0.32, '210,246,232'], haze: '70,150,150',
+    name: 'faiella-bionin', sky: ['#5EA89C', '#164E5E', '#0A2E40', '#061E2C'], sun: [0.5, -0.32, '210,246,232'], haze: '70,150,150',
     floorA: '#7A9E96', floorB: '#2A4446', path: '#C89A3A', skyKind: 'none',
-    grade: { desat: .1, top: 'rgba(120,230,210,.34)', bot: 'rgba(8,30,60,.5)', vig: 'rgba(2,12,20,.72)' },
+    grade: { desat: .1, top: 'rgba(90,200,190,.2)', bot: 'rgba(8,30,60,.5)', vig: 'rgba(2,12,20,.72)' },
     liveSky(camX, t) { surfaceBand(camX, t); },
     liveFloor(camX, t) {
       // the torches on the newel-posts, streaming with the water (they lean down the stair in the undertow, up it in the surge)
@@ -335,7 +335,7 @@
     const rows = Math.max(1, Math.floor((h - 24) / 30));
     for (let r2 = 0; r2 < rows; r2++) for (let c = 0; c < 2; c++) { const wx = x + w * (.2 + c * .38), wy = top + 10 + r2 * 30, ww = w * .22, wh = 18;
       ctx.fillStyle = '#0A1622'; ctx.beginPath(); ctx.moveTo(wx, wy + wh); ctx.lineTo(wx, wy + ww * .5); ctx.quadraticCurveTo(wx, wy - ww * .3, wx + ww / 2, wy - ww * .5); ctx.quadraticCurveTo(wx + ww, wy - ww * .3, wx + ww, wy + ww * .5); ctx.lineTo(wx + ww, wy + wh); ctx.closePath(); ctx.fill();
-      if (rnd() < .65) { ctx.save(); ctx.clip(); for (let q = 0; q < 6; q++) { ctx.fillStyle = GLASS[Math.floor(rnd() * GLASS.length)]; ctx.globalAlpha = .75 + rnd() * .25; ctx.fillRect(wx + (q % 2) * ww / 2, wy - ww * .5 + Math.floor(q / 2) * (wh + ww * .5) / 3, ww / 2, (wh + ww * .5) / 3); }
+      if (rnd() < .65) { ctx.save(); ctx.clip(); for (let q = 0; q < 6; q++) { ctx.fillStyle = GLASS[Math.floor(rnd() * GLASS.length)]; ctx.globalAlpha = .45 + rnd() * .25; ctx.fillRect(wx + (q % 2) * ww / 2, wy - ww * .5 + Math.floor(q / 2) * (wh + ww * .5) / 3, ww / 2, (wh + ww * .5) / 3); }
         ctx.globalAlpha = 1; ctx.strokeStyle = '#0A1014'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(wx + ww / 2, wy - ww * .5); ctx.lineTo(wx + ww / 2, wy + wh); ctx.moveTo(wx, wy + wh * .4); ctx.lineTo(wx + ww, wy + wh * .4); ctx.stroke(); ctx.restore();
         glowM(wx + ww / 2, wy + wh * .4, 16, '255,220,170', .16); } }
     ctx.fillStyle = '#0A1218'; ctx.fillRect(x + w * .38, base - 22, w * .24, 22); ctx.beginPath(); ctx.arc(x + w * .5, base - 22, w * .12, Math.PI, 0); ctx.fill(); // the door
@@ -373,15 +373,16 @@
     for (let i = 0; i < 2; i++) awWR(320 + i * 640 + rnd() * 60, 110, rnd, (x, r) => moirePalace(x, hz - 6, r));
     for (let i = 0; i < 16; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => { if (r() < .5) pearlTower(x, hz, 40 + r() * 50, 4 + r() * 3, r, .9); else rebDome(x, hz, 9 + r() * 7, r); });
     hazeBand(f, th.haze, 110, hz, .45);
-    for (let i = 0; i < 12; i++) awWR(i * 107 + rnd() * 30, 50, rnd, (x, r) => rebHouse(x, T - 6, 34 + r() * 16, 50 + r() * 40, r, ['#9AB0B4', '#B8C4BE', '#8EA6A8'][i % 3]));
+    for (let i = 0; i < 12; i++) awWR(i * 107 + rnd() * 30, 50, rnd, (x, r) => rebHouse(x, T - 6, 34 + r() * 16, 50 + r() * 40, r, ['#5E7A86', '#6E8A92', '#56727E'][i % 3]));
     hazeBand(f, th.haze, 150, T - 6, .3);
     for (let i = 0; i < 3; i++) awWR(200 + i * 420 + rnd() * 60, 200, rnd, (x, r) => goldRays(x, Y_OFF, T - 30, 6, 90, .14, r));
   }
   function cityMid(rnd) {
     AW_SUN = 1;
     // the near houses lining the street, close together, their stained glass lit
-    for (let x = 0; x < AW_W;) { const w = 54 + rnd() * 26, h = 92 + rnd() * 50, tone = ['#C8D0C8', '#B4C4C0', '#D2D2C6', '#A8BCBC'][Math.floor(rnd() * 4)];
+    for (let x = 0; x < AW_W;) { const w = 54 + rnd() * 26, h = 92 + rnd() * 50, tone = ['#8EA4A6', '#7E989C', '#9AACA8', '#729096'][Math.floor(rnd() * 4)];
       const x0 = x; awWrap(x0, w + 10, (xx) => rebHouse(xx, T - 2, w, h, mulberry(Math.floor(x0 * 7)), tone)); x += w + 2 + rnd() * 6; }
+    { const g = ctx.createLinearGradient(0, T - 150, 0, T); g.addColorStop(0, 'rgba(10,40,60,.35)'); g.addColorStop(1, 'rgba(10,40,60,.05)'); ctx.fillStyle = g; ctx.fillRect(0, T - 160, AW_W, 160); }
     // arcade piers in front of them, every so often, carrying lamps of pearl on chains
     W7.lamps = [];
     for (let i = 0; i < 7; i++) { const x = 60 + i * 183 + rnd() * 30; W7.lamps.push(x);
@@ -430,9 +431,9 @@
     if (W7.bellRing > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 3; k++) { const q = (1 - W7.bellRing) + k * .2; if (q > 1) continue; ctx.strokeStyle = `rgba(220,255,230,${.5 * (1 - q)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, by + 14 * s, 20 * s + q * 140, 10 * s + q * 70, 0, 0, TAU); ctx.stroke(); } ctx.restore(); }
   }
   THEMES.rebma2 = {
-    name: 'the streets of rebma', sky: ['#5AA8A8', '#1A4E66', '#103852', '#0A2638'], sun: [0.55, -0.3, '220,246,236'], haze: '70,120,150',
+    name: 'the streets of rebma', sky: ['#4A9898', '#144660', '#0C3048', '#081E30'], sun: [0.55, -0.3, '220,246,236'], haze: '70,120,150',
     floorA: '#6A7C78', floorB: '#2E3E40', path: '#C89A3A', skyKind: 'none',
-    grade: { desat: .08, top: 'rgba(110,200,220,.3)', bot: 'rgba(14,26,70,.5)', vig: 'rgba(2,10,22,.72)' },
+    grade: { desat: .08, top: 'rgba(90,180,210,.2)', bot: 'rgba(14,26,70,.5)', vig: 'rgba(2,10,22,.72)' },
     liveSky(camX, t) {
       surfaceBand(camX, t, .8);
       const sp = .08, W = 900, x0 = ((300 - camX * sp) % W + W) % W - 150; // the campanile, far up the street (always one in view)
@@ -531,12 +532,25 @@
   // turning in the Maelstrom and its coming apart are all done as it is drawn) ----------------
   const PAT_R = 300;
   W7.patPts = null;
-  function patternPoints() { // one line, coiling in and out of itself, as the Pattern does; turned the other way, as Rebma's is
+  function patternPoints() { // a single line laid as the old labyrinths in the cathedral floors are: in from the rim, then back
+    // and forth across seven rings in each quarter, turning on itself in tight hairpins (the Veils), and at last to the centre.
+    // Rebma's is turned the other way about: it winds widdershins
     if (W7.patPts) return W7.patPts;
-    const pts = [], N = 2200, turns = 9;
-    for (let i = 0; i <= N; i++) { const u = i / N, th = -u * turns * TAU, k = 1 - u * .92;
-      const r = PAT_R * (k * .86 + .1 * Math.sin(u * 61) * k + .05 * Math.sin(th * 3 + u * 9)) * (1 + .12 * Math.sin(th * 5) * Math.min(1, u * 3));
-      pts.push(Math.cos(th) * r, Math.sin(th) * r); }
+    const pts = [], N = 7, r0 = PAT_R * .2, r1 = PAT_R * .96, rr = (i) => lerp(r0, r1, i / (N - 1)), DIR = -1;
+    const P_ = (r, a) => { const w = 1 + .025 * Math.sin(a * 9); pts.push(Math.cos(DIR * a) * r * w, Math.sin(DIR * a) * r * w); };
+    const arc = (r, a0, a1) => { const n = Math.max(4, Math.ceil(Math.abs(a1 - a0) * r / 6)); for (let k = 0; k <= n; k++) P_(r, lerp(a0, a1, k / n)); };
+    const hair = (rA, rB, a, side) => { const rm = (rA + rB) / 2, hw = Math.abs(rB - rA) / 2; for (let k = 1; k < 8; k++) { const q = k / 8 * Math.PI, rq = rm - Math.cos(q) * hw * Math.sign(rB - rA); P_(rq, a + side * Math.sin(q) * hw / rm); } }; // a hairpin turn
+    const Q = Math.PI / 2, gap = .36;
+    P_(PAT_R * 1.05, 0); // the way in, from the rim
+    let ring = N - 1;
+    for (let q = 0; q < 4; q++) {
+      const a0 = q * Q + gap, a1 = (q + 1) * Q - gap, outward = q % 2 === 1; let at = a0;
+      const order = outward ? [...Array(N).keys()] : [...Array(N).keys()].reverse();
+      order.forEach((ri, j) => { const to = at === a0 ? a1 : a0; arc(rr(ri), at, to); if (j < N - 1) hair(rr(ri), rr(order[j + 1]), to, to === a1 ? 1 : -1); at = to; });
+      if (q < 3) { const last = order[N - 1]; arc(rr(last), at, at + gap * 2); }
+      ring = order[N - 1];
+    }
+    arc(rr(0), 4 * Q - gap, 4 * Q + .4); for (let k = 0; k <= 6; k++) P_(rr(0) * (1 - k / 6), 4 * Q + .4 + k * .3); // and in, to the centre
     return (W7.patPts = pts);
   }
   W7.patC = null; W7.patK = 0;
@@ -568,6 +582,35 @@
     liveFloor(camX, t) { snow(camX, t, 18, '200,220,255', .4); },
   };
   AW_FAR.rebmaBoss = hallFar; AW_MID.rebmaBoss = hallMid; AW_FLOOR.rebmaBoss = hallFloor;
+
+  // ======================================================================================================
+  // THE TRUMP OF REBMA: the picture on the card (branch.js frames it): the underside of the sea with its light, the
+  // stair Faiella-bionin going down through the blue with its green torches, the towers of Rebma at its foot and the
+  // same towers hanging upside down in the mirror of the surface, gold rays let down through the water
+  // ======================================================================================================
+  W7.cardDraw = (g, w, h, t) => {
+    const old = ctx; ctx = g;
+    try {
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
+      const S = Math.min(w / 62, h / 100); ctx.scale(w / 62, h / 100); // drawn in 62 x 100
+      const bg = ctx.createLinearGradient(0, 0, 0, 100); bg.addColorStop(0, '#A8DCCC'); bg.addColorStop(.18, '#2E7C80'); bg.addColorStop(.6, '#0E3A50'); bg.addColorStop(1, '#061A26'); ctx.fillStyle = bg; ctx.fillRect(0, 0, 62, 100);
+      // the city upside down in the mirror of the surface
+      ctx.globalAlpha = .35; for (let i = 0; i < 7; i++) { const x = 8 + i * 8, hh = 6 + hsh(i) * 10; ctx.fillStyle = '#E6F2EE'; ctx.fillRect(x - 1.4, 6, 2.8, hh); ctx.beginPath(); ctx.moveTo(x - 2, 6 + hh); ctx.quadraticCurveTo(x, 10 + hh, x + 2, 6 + hh); ctx.fill(); } ctx.globalAlpha = 1;
+      // the surface, rippling
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 3; k++) { ctx.strokeStyle = `rgba(230,255,248,${.55 - k * .14})`; ctx.lineWidth = .7; ctx.beginPath(); for (let x = 0; x <= 62; x += 3) ctx.lineTo(x, 3 + k * 2.4 + Math.sin(x * .3 + t * 1.4 + k) * .8); ctx.stroke(); }
+      for (let i = 0; i < 7; i++) { const x1 = 6 + i * 9 + Math.sin(t * .5 + i) * 2; const gr = ctx.createLinearGradient(0, 4, 0, 80); gr.addColorStop(0, 'rgba(255,214,140,.5)'); gr.addColorStop(1, 'rgba(255,214,140,0)'); ctx.strokeStyle = gr; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(31, 2); ctx.lineTo(x1, 80); ctx.stroke(); } ctx.restore();
+      // the stair going down in flights, its torches burning green
+      const fl = [[8, 30, 40, 44], [40, 44, 14, 60], [14, 60, 46, 76]];
+      for (const [x0, y0, x1, y1] of fl) { ctx.strokeStyle = '#C8DCD4'; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.strokeStyle = '#2E4E52'; ctx.lineWidth = .8; for (let q = 0; q < 8; q++) { const x = lerp(x0, x1, q / 8), y = lerp(y0, y1, q / 8); ctx.beginPath(); ctx.moveTo(x - 1.6, y + 1.2); ctx.lineTo(x + 1.6, y + 1.2); ctx.stroke(); }
+        for (let q = 0; q <= 2; q++) { const x = lerp(x0, x1, q / 2), y = lerp(y0, y1, q / 2) - 3; ctx.fillStyle = '#5E6E66'; ctx.fillRect(x - .4, y, .8, 3); const f = 1 + Math.sin(t * 6 + q + x) * .3; ctx.fillStyle = '#9AF0B0'; ctx.beginPath(); ctx.ellipse(x, y - 1.2 * f, .9, 1.6 * f, 0, 0, TAU); ctx.fill(); glowM(x, y - 1, 4, '170,255,190', .4); } }
+      // Rebma at the foot of the stair
+      for (let i = 0; i < 9; i++) { const x = 10 + i * 5.4, hh = 8 + (4 - Math.abs(i - 4)) * 3.4 + hsh(i + 3) * 3; const gt = ctx.createLinearGradient(x - 1.6, 0, x + 1.6, 0); gt.addColorStop(0, '#9AB8C0'); gt.addColorStop(.5, '#F2F4EE'); gt.addColorStop(1, '#5A7A88'); ctx.fillStyle = gt; ctx.fillRect(x - 1.6, 96 - hh, 3.2, hh); ctx.beginPath(); ctx.moveTo(x - 2.2, 96 - hh); ctx.quadraticCurveTo(x, 92 - hh - 2, x + 2.2, 96 - hh); ctx.fill(); ctx.fillStyle = '#FFE6A8'; ctx.fillRect(x - .4, 98 - hh + 3, .8, 1); }
+      glowM(31, 92, 22, '236,232,246', .25);
+      // a few bubbles going up
+      for (let i = 0; i < 6; i++) { const q = (t * .3 + hsh(i)) % 1; ctx.strokeStyle = `rgba(230,250,248,${.7 * (1 - q)})`; ctx.lineWidth = .4; ctx.beginPath(); ctx.arc(10 + hsh(i + 2) * 42 + Math.sin(t * 2 + i), 92 - q * 80, .6 + hsh(i + 4) * .8, 0, TAU); ctx.stroke(); }
+      ctx.restore();
+    } finally { ctx = old; }
+  };
 
   // ======================================================================================================
   // THE FOLK OF REBMA AND ITS STAIR: drawn as the figures in a sea-chart's margin are, outlined in ink and laid in with
@@ -989,11 +1032,17 @@
     else if (pk === 'cast') { lA = -1.2 + Math.sin(t * 6) * .1; rA = -1.2 - Math.sin(t * 6) * .1; mouth = .5; }
     ctx.rotate(lean);
     const SY = -78 + br * .8; // the shoulders
+    // the chlamys: the emperors' cloak of lapis, pinned at the shoulder, its gold tablion, its hem drifting in the water
+    const ch = Math.sin(t * 1.1) * 4;
+    cel(PB([-24, SY - 2, 20, SY - 4, 28, SY + 30, 30 + ch, -8, 10, -2 + ch * .5, -14, -6, -32 - ch * .6, -10, -30, SY + 30]), '#1E3A78', { d: 3.6, dark: '#0E1C40', lite: '#4A6AB8', w: 1.5, tex: () => {
+      ctx.fillStyle = PAL.gold; ctx.fillRect(-27, SY + 34, 14, 16); ctx.fillStyle = '#C8343A'; ctx.fillRect(-24, SY + 37, 8, 10); // the tablion
+      ctx.strokeStyle = PAL.gold; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-32 - ch * .6, -10); ctx.quadraticCurveTo(-10, -2, 30 + ch, -8); ctx.stroke();
+      ctx.fillStyle = '#F2EEF6'; for (let i = 0; i < 12; i++) { circle(-30 + i * 5.2 + ch * (i / 12), -8 + Math.sin(i) * 1.4, .9); ctx.fill(); } } });
     // the far arm (left)
     const la = seg2(-12, SY + 4, lA, 18, lA - .5, 16, 9, 7.5, KG.robe, { col2: KG.skin, lit: KG.robeL, lit2: KG.skinL });
     ctx.fillStyle = C(KG.skin); ell(la.ex, la.ey, 4.6, 4); ctx.fill(); outline(1);
     // the robe of green glass below the loros, its skirts going into the water
-    cel(PB([-22, SY + 2, 22, SY + 2, 26, SY + 30, 24, -24, 16, -12, 0, -16, -16, -12, -24, -24, -26, SY + 30]), KG.glass, { d: 3.4, dark: KG.glassD, lite: KG.glassL, w: 1.6, tex: () => {
+    cel(PB([-25, SY + 1, 25, SY + 1, 23, SY + 22, 15, SY + 46, 22, -26, 14, -12, 0, -16, -14, -12, -22, -26, -16, SY + 46, -24, SY + 22]), KG.glass, { d: 3.4, dark: KG.glassD, lite: KG.glassL, w: 1.6, tex: () => {
       ctx.strokeStyle = 'rgba(230,255,248,.35)'; ctx.lineWidth = 1.2; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 7, SY + 20); ctx.quadraticCurveTo(i * 9, -40, i * 8 + Math.sin(t + i) * 2, -14); ctx.stroke(); }
       ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(-20, SY + 6, 4, 50); } });
     // the loros: the great jewelled band of the emperors, gold set with pearls and red and blue stones, crossing the breast
@@ -1442,7 +1491,7 @@
       up(o, T) { if (T < o.fire || T > o.fire + .6) return; const A = arena(), q = cl01((T - o.fire) / .35); for (const y of o.lanes) for (const s of [-1, 1]) { const x = e.x + s * (s < 0 ? e.x - A.L : A.R - e.x) * q; ctx.save(); ctx.translate(x, y - 22); ctx.scale(s, 1); W7.kingTrident(0, 0); ctx.restore(); } } };
   };
   KA.undertow = (e) => ({ dur: 2.7, step(o, dt, T) {
-      if (T < 1.55) { e.w7pose = { k: 'inhale', u: T / 1.55 }; if (!['dodge', 'dead'].includes(P.state)) { const dx = e.x - P.x, dy = e.y - P.y; P.x += Math.sign(dx) * Math.min(Math.abs(dx), 88 * dt); P.y += Math.sign(dy) * Math.min(Math.abs(dy), 30 * dt); } if (!o.s) { o.s = 1; if (sfxOn && actx) noise(1.5, .07, 300); } }
+      if (T < 1.55) { e.w7pose = { k: 'inhale', u: T / 1.55 }; if (!['dodge', 'dead'].includes(P.state)) { const dx = e.x - P.x, dy = e.y - P.y; P.x += Math.sign(dx) * Math.min(Math.abs(dx), 76 * dt); P.y += Math.sign(dy) * Math.min(Math.abs(dy), 30 * dt); } if (!o.s) { o.s = 1; if (sfxOn && actx) noise(1.5, .07, 300); } }
       else { e.w7pose = { k: 'exhale', u: 1 }; if (!o.blown) { o.blown = 1; sfx('whoosh'); sfx('slam', .7); shakeMag = Math.max(shakeMag, 9);
         if (Math.hypot(P.x - e.x, (P.y - e.y) * 2.2) < 74 && P.z < 60) { hitP(edmg(e), e.x, true); if (tookHit()) P.vx = Math.sign(P.x - e.x || 1) * 420; }
         for (let i = 0; i < (e.phase >= 2 ? 2 : 1); i++) hazards.push({ kind: 'ring', x: e.x, y: e.y, r: 20, delay: i * .4, speed: 250, dmg: Math.round(edmg(e) * .8), t: 9, max: 9 }); bubbles(e.x, e.y, 60, 30, 160); } } },
@@ -1450,9 +1499,9 @@
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + T, q = 1 - ((T * 1.4 + hsh(i)) % 1), r = 60 + q * 260; ctx.strokeStyle = `rgba(210,250,240,${.35 * (1 - q) + .1})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * r, e.y + Math.sin(a) * r * .35); ctx.lineTo(e.x + Math.cos(a) * (r - 24), e.y + Math.sin(a) * (r - 24) * .35); ctx.stroke(); } ctx.restore(); } });
   KA.anchors = (e) => { const n = e.hp < e.maxHp * .8 ? 4 : 3; return { dur: 2.2, step(o, dt, T) { e.w7pose = { k: 'point', u: Math.min(1, T * 2) };
       for (let i = 0; i < n; i++) if (T >= i * .35 && !(o['a' + i])) { o['a' + i] = 1; const A = arena(); hazards.push({ kind: 'w7anchor', x: clamp(P.x + (i ? rand(-90, 90) : 0), A.L + 20, A.R - 20), y: clamp(P.y + (i ? rand(-34, 34) : 0), FLOOR_TOP + 10, FLOOR_BOT - 4), el: 0, t: 3, max: 3, dmg: Math.round(edmg(e) * .9), rot: rand(-.4, .4) }); } } }; };
-  KA.sweep = (e) => ({ dur: 1.35, step(o, dt, T) { e.w7pose = { k: 'sweep', u: T < .85 ? 0 : cl01((T - .85) / .3) };
-      if (T >= .9 && T < 1.15 && !o.hit && Math.hypot(P.x - e.x, (P.y - e.y) * 2.4) < 124 && P.z < 30) { o.hit = 1; hitP(Math.round(edmg(e) * 1.1), e.x, true); } if (T >= .9 && !o.s) { o.s = 1; sfx('whoosh'); } },
-    draw(o, T) { if (T > 1.15) return; const k = Math.min(1, T / .85); ctx.fillStyle = tellCol(k, .55); ell(e.x, e.y, 124, 124 / 2.4); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(e.x, e.y, 124, 124 / 2.4); ctx.stroke(); } });
+  KA.sweep = (e) => ({ dur: 1.5, step(o, dt, T) { e.w7pose = { k: 'sweep', u: T < 1 ? 0 : cl01((T - 1) / .3) };
+      if (T >= 1.05 && T < 1.3 && !o.hit && Math.hypot(P.x - e.x, (P.y - e.y) * 2.4) < 124 && P.z < 30) { o.hit = 1; hitP(Math.round(edmg(e) * 1.1), e.x, true); } if (T >= 1.05 && !o.s) { o.s = 1; sfx('whoosh'); } },
+    draw(o, T) { if (T > 1.3) return; const k = Math.min(1, T / 1); ctx.fillStyle = tellCol(k, .55); ell(e.x, e.y, 124, 124 / 2.4); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(e.x, e.y, 124, 124 / 2.4); ctx.stroke(); } });
   reg('w7anchor', { // a drowned ship's anchor, let fall: it sinks slowly (the water bears it), its shadow marks where
     update(h, dt) { h.el += dt; if (h.el >= 1.25 && !h.down) { h.down = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 6); bubbles(h.x, h.y, 4, 10, 70); dust(h.x, h.y, 8); if (inEll(P.x, P.y, h.x, h.y, 34) && P.z < 30) hitP(h.dmg, h.x, true); } if (h.el > 2.6) h.t = -1; },
     draw(h) { if (h.down) return; const k = cl01(h.el / 1.25); ctx.fillStyle = tellCol(k); ell(h.x, h.y, 34 * (.4 + .6 * k), 15 * (.4 + .6 * k)); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.8; ell(h.x, h.y, 34, 15); ctx.stroke(); },
@@ -1488,7 +1537,7 @@
     draw(o, T) { if (T < .9) { const k = T / .9, A = arena(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 3; ctx.setLineDash([6, 6]); ell(A.cx, A.cy, (A.R - A.L) * .42, 42); ctx.stroke(); ctx.setLineDash([]); } },
     up(o, T) { if (!o.thrown || o.x == null) return; ctx.save(); ctx.translate(o.x, o.y - 26); ctx.rotate(T * 14); W7.kingTrident(10, .5); ctx.restore(); } });
   KA.drain = (e) => ({ dur: 3.4, step(o, dt, T) { e.w7pose = { k: 'cast', u: 1 }; G.eye = T < 1 ? T : T > 3.1 ? (3.4 - T) / .3 : 1;
-      if (T >= 1 && T < 3.1) { const A = arena(); if (!['dodge', 'dead'].includes(P.state)) { const dx = A.cx - P.x, dy = A.cy - P.y; P.x += Math.sign(dx) * Math.min(Math.abs(dx), 140 * dt); P.y += Math.sign(dy) * Math.min(Math.abs(dy), 40 * dt); }
+      if (T >= 1 && T < 3.1) { const A = arena(); if (!['dodge', 'dead'].includes(P.state)) { const dx = A.cx - P.x, dy = A.cy - P.y; P.x += Math.sign(dx) * Math.min(Math.abs(dx), 95 * dt); P.y += Math.sign(dy) * Math.min(Math.abs(dy), 40 * dt); }
         o.tick = (o.tick || 0) - dt; if (o.tick <= 0 && inEll(P.x, P.y, A.cx, A.cy, 66) && P.z < 40) { o.tick = .45; hitP(Math.round(edmg(e) * .5), A.cx, false); } } },
     draw(o, T) { const A = arena(), k = Math.min(1, T); ctx.fillStyle = tellCol(k, .7); ell(A.cx, A.cy, 66, 30); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2; ell(A.cx, A.cy, 66, 30); ctx.stroke(); } });
   // ---------------- Through the Glass ----------------
@@ -1729,7 +1778,7 @@
         sfx('hit-goo', .3); bubbles(P.x + P.facing * 30, P.y, P.z + 40, 4, 30); return; }
       const fl = e.phase === 1 ? .665 : e.phase === 2 ? .335 : 0, buf = fl ? 1e7 : 0; // (no single blow carries him through a shape: each must be lived through)
       e.hp += buf; let r; try { r = _strike(e, base, dir, m, echo); } finally { e.hp -= buf; }
-      if (!e.dead && fl && e.hp < e.maxHp * fl) e.hp = Math.ceil(e.maxHp * fl);
+      if (!e.dead && fl && e.hp < e.maxHp * fl) e.hp = Math.floor(e.maxHp * fl);
       return r;
     }
     if (e.type === 'w7bellk' && !e.dead && e.state !== 'enter') {
