@@ -47,7 +47,7 @@
   };
 
   // the last world is harder again, and pays better (see the matching entries in world.js and game.js)
-  WORLD_DIFF.push({ hp: 4.2, boss: 2.3, dmg: 3, cd: .5 }); // (the last world: every foe tougher and harder-hitting than the dream's)
+  WORLD_DIFF.push({ hp: 4.2, boss: 2.3, dmg: 3.9, cd: .5 }); // (the last world: every foe tougher and harder-hitting than the dream's)
 
   STAGES.push({ name: "Tir-na Nog'th", sub: 'THE CITY IN THE SKY · THE LAST SHADOW', theme: 'moon', len: 3000,
     pods: [760, 1700], drop: [.95, .6],
