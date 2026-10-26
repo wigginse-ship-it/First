@@ -416,7 +416,8 @@ function drawDeath(e, t) {
   const el = e.corpse ? (e.dmax || 1) : e.dmax - e.t, dl = (e.dir || 1) * e.facing; // dl: knock direction in the enemy's own facing space
   const a = { walk: 0, t: e.deadAt || t, wind: 0, atk: false, hurt: true }; // the clock stops: no whirring rotors or flapping wings
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') a.pose = { arm: -1, lean: -.3 };
-  const draw = () => CREATURES[e.def.draw](e, a);
+  const draw = () => { CREATURES[e.def.draw](e, a); if (e.arrows) for (const s of e.arrows) { // an arrow that killed it, still in the body: its head buried, the shaft and fletching standing out behind
+    ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.d, 1); ctx.rotate(s.a); ctx.translate(7, 0); drawArrowShape(s.lvl, 26); ctx.restore(); } };
   shadow(e.x, e.y, e.hw * 1.1);
   ctx.save(); ctx.globalAlpha = e.fade !== undefined ? e.fade : 1;
   ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); if (e.boss) ctx.scale(e.size, e.size); else if (e.champ) ctx.scale(1.3, 1.3);

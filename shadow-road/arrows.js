@@ -86,7 +86,13 @@ function arrowHit(p) {
   }
   if (!best) return false;
   p.hit.add(best); if (best === p.tgt) p.tgt = null;
+  const wasDead = best.dead;
   strike(best, p.dmg, Math.sign(p.vx), { dmg: p.dmg, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .08 + p.crit * .7 });
+  if (best.dead && !wasDead) { // the killing arrow stays in the body, where it went in (in the foe's own frame: x along its facing, up negative)
+    const sc = best.boss ? best.size || 1 : best.champ ? 1.3 : 1, f = best.facing || 1;
+    (best.arrows = best.arrows || []).push({ x: clamp((p.x - best.x) * f / sc, -best.hw * .5, best.hw * .5), y: clamp(-(p.z - best.z) / sc, -best.hh * .92, -best.hh * .12),
+      a: Math.atan2(-(p.vz || 0), Math.abs(p.vx)), d: Math.sign(p.vx) * f, lvl: p.arrow || 1 });
+  }
   burst(best.x, best.y, p.z, ['#FFFFFF', '#E8D8B0'], 8, 'spark', Math.sign(p.vx));
   if (p.blast) { // rune and starfall arrows burst where they land
     fx.push({ kind: 'ring', x: best.x, y: best.y, z: 4, t: .35, max: .35, r: p.blast * 1.4, col: p.arrow >= 5 ? '#E8E0FF' : '#9FE8F0', flat: 1 });
@@ -95,34 +101,172 @@ function arrowHit(p) {
   if (p.pierce > 0) { p.pierce--; return false; }
   return true;
 }
-// what an arrow looks like at each level: in flight, on the ground and on its forge card
+// what an arrow looks like at each level: in flight, on the ground, on its forge card and stuck in the fallen.
+// Each level is a finer arrow: ash with barred goose feathers and a lashed iron leaf; walnut, crimson-on-black vanes and
+// a twice-barbed steel head; a sapphire-lacquered shaft ringed in gold, blue-and-white fletching and a vented silver
+// broadhead; an ebony shaft whose cut runes pulse, teal-and-violet vanes and a faceted crystal point; a midnight shaft
+// wound with gold and set with stars, iridescent plumes and a star-forged tip that twinkles. The light in them is small
+// and crisp (never a halo), and is left off under FLASH or TINT, when only the silhouette is wanted.
+const ARROW_TIP = [8, 10, 11, 11.5, 12.5]; // how far ahead of the shaft's end each head reaches
+function arrowVane(x0, x1, s, h) { // the path of one feather vane, tail (x0) to front (x1), above (s -1) or below (s 1) the shaft
+  ctx.beginPath(); ctx.moveTo(x1, s * .5); ctx.quadraticCurveTo(x0 + (x1 - x0) * .45, s * h * 1.08, x0 + .6, s * h);
+  ctx.lineTo(x0 - 1.4, s * h * .78); ctx.lineTo(x0, s * .5); ctx.closePath();
+}
+function arrowStar(x, y, r, ri, n = 4, rot = 0) { // an n-pointed star's path
+  ctx.beginPath(); for (let i = 0; i < n * 2; i++) { const a = rot + i / (n * 2) * TAU, q = i % 2 ? ri : r; ctx.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } ctx.closePath();
+}
+function arrowBand(x, w, col, h = 1.25) { ctx.beginPath(); ctx.rect(x, -h, w, h * 2); ctx.fillStyle = C(col); ctx.fill(); outline(.35); } // a ring, lashing or ferrule round the shaft
+function arrowHead(pts, top, bot) { // a symmetric head from its upper outline (x, y pairs from the point back): lit above, shadowed below
+  ctx.beginPath(); ctx.moveTo(pts[0], 0); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], -pts[i + 1]); ctx.lineTo(pts[pts.length - 2], 0); ctx.closePath(); ctx.fillStyle = C(top); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(pts[0], 0); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.lineTo(pts[pts.length - 2], 0); ctx.closePath(); ctx.fillStyle = C(bot); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(pts[0], 0); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], -pts[i + 1]); for (let i = pts.length - 2; i >= 2; i -= 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); outline(.6);
+}
 function drawArrowShape(lvl, len = 30) {
-  const shaft = ['#A88A5E', '#6E6A70', '#D8DCE6', '#3A3048', '#E8E0FF'][lvl - 1], fl = ['#E8E0D0', '#5A5A66', '#C8CEDA', '#7FD8E8', '#B8A8FF'][lvl - 1], head = ['#8E96A8', '#B8BEC8', '#E8ECF4', '#9FE8F0', '#FFFFFF'][lvl - 1];
-  if (lvl >= 4) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = lvl >= 5 ? 'rgba(200,190,255,.5)' : 'rgba(159,232,240,.4)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(4, 0); ctx.stroke(); ctx.restore(); }
-  ctx.strokeStyle = C(OUT); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(0, 0); ctx.stroke();
-  ctx.strokeStyle = C(shaft); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(0, 0); ctx.stroke();
-  if (lvl === 4) { ctx.fillStyle = C('#9FE8F0'); for (const x of [-20, -14, -8]) ctx.fillRect(x, -.6, 2, 1.2); } // runes in the shaft
-  ctx.fillStyle = C(fl); for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-len, 0); ctx.lineTo(-len - 4, s * 4); ctx.lineTo(-len + 7, s * 1.2); ctx.closePath(); ctx.fill(); outline(.6); } // fletching
-  ctx.fillStyle = C(head); ctx.beginPath(); // the head: a little leaf, barbs, a broadhead, a rune point, a star
-  if (lvl === 1) { ctx.moveTo(6, 0); ctx.lineTo(-1, -2); ctx.lineTo(-1, 2); }
-  else if (lvl === 2) { ctx.moveTo(7, 0); ctx.lineTo(-1, -2.6); ctx.lineTo(1, 0); ctx.lineTo(-1, 2.6); }
-  else if (lvl === 3) { ctx.moveTo(8, 0); ctx.lineTo(-1, -3.6); ctx.lineTo(0, 0); ctx.lineTo(-1, 3.6); }
-  else if (lvl === 4) { ctx.moveTo(8, 0); ctx.lineTo(1, -3); ctx.lineTo(-2, 0); ctx.lineTo(1, 3); }
-  else { for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = i % 2 ? 1.6 : 4.6; ctx.lineTo(3 + Math.cos(a) * r, Math.sin(a) * r); } }
-  ctx.closePath(); ctx.fill(); outline(.7);
+  lvl = Math.max(1, Math.min(5, lvl | 0 || 1));
+  const fine = !FLASH && !TINT, t = performance.now() / 1000, L = len;
+  const fb = -L + 1.2, ff = -L + Math.max(8, L * .42); // the fletching's tail and front
+  ctx.save(); ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+  // the shaft, with a lit edge along its top
+  const SH = [['#B8945E', '#E6CC98'], ['#5E3C2A', '#9A6A4E'], ['#24398A', '#6A88E0'], ['#211A2E', '#54426E'], ['#1C1848', '#5650B0']][lvl - 1], thick = lvl >= 4 ? 1.8 : 1.5;
+  ctx.beginPath(); ctx.moveTo(-L - .5, 0); ctx.lineTo(0, 0); ctx.strokeStyle = C(OUT); ctx.lineWidth = thick + 1.3; ctx.stroke();
+  ctx.strokeStyle = C(SH[0]); ctx.lineWidth = thick; ctx.stroke();
+  if (fine) { ctx.strokeStyle = SH[1]; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(-L, -thick * .28); ctx.lineTo(-1, -thick * .28); ctx.stroke(); }
+  // what is set in the shaft
+  if (lvl === 2) { arrowBand(ff + 1, .8, '#A8AEBA'); arrowBand(ff + 2.6, .8, '#A8AEBA'); }
+  else if (lvl === 3) { for (const x of [ff + 1, -L * .48, -5.2]) arrowBand(x, 1, '#E8C060', 1.2); if (fine) { ctx.fillStyle = '#F4F6FF'; for (const x of [ff + 1, -L * .48, -5.2]) ctx.fillRect(x + .2, -1, .5, .7); } }
+  else if (lvl === 4) { // runes cut in the ebony, their light running up the shaft toward the head
+    arrowBand(ff + .6, 1, '#C89A3A', 1.2);
+    const x0 = ff + 3.4, n = Math.max(2, Math.floor((-4 - x0) / 4.2));
+    for (let i = 0; i < n; i++) { const x = x0 + i * 4.2 + 1;
+      ctx.beginPath(); const g = i % 4;
+      if (g === 0) { ctx.moveTo(x - .8, 1.1); ctx.lineTo(x - .8, -1.1); ctx.lineTo(x + .8, 0); ctx.lineTo(x - .8, .4); }
+      else if (g === 1) { ctx.moveTo(x - .8, -1.1); ctx.lineTo(x + .8, 1.1); ctx.moveTo(x - .8, 1.1); ctx.lineTo(x + .8, -1.1); }
+      else if (g === 2) { ctx.moveTo(x + .8, -1.1); ctx.lineTo(x - .7, 0); ctx.lineTo(x + .8, 1.1); ctx.moveTo(x - .9, -1.1); ctx.lineTo(x - .9, 1.1); }
+      else { ctx.moveTo(x, -1.2); ctx.lineTo(x + .9, 0); ctx.lineTo(x, 1.2); ctx.lineTo(x - .9, 0); ctx.closePath(); }
+      ctx.strokeStyle = C('#4FC8DC'); ctx.lineWidth = .7; ctx.stroke();
+      if (fine) { const b = .5 + .5 * Math.sin(t * 7 - i * 1.2); if (b > .45) { ctx.globalAlpha = Math.min(1, (b - .45) * 2.2); ctx.strokeStyle = '#E8FFFF'; ctx.lineWidth = .5; ctx.stroke(); ctx.globalAlpha = 1; } } }
+  } else if (lvl === 5) { // a gold wire wound round it, and little stars set between the turns
+    ctx.beginPath(); for (let x = ff + 1; x < -4; x += 2.4) { ctx.moveTo(x, 1.1); ctx.lineTo(x + 1.3, -1.1); }
+    ctx.strokeStyle = C('#F0C860'); ctx.lineWidth = .6; ctx.stroke();
+    if (fine) for (let i = 0, x = ff + 3.6; x < -6; x += 7.2, i++) { const b = .55 + .45 * Math.sin(t * 5 + i * 2.1); ctx.globalAlpha = b; ctx.fillStyle = '#FFFFFF'; arrowStar(x, 0, .9 + .5 * b, .25); ctx.fill(); ctx.globalAlpha = 1; }
+  }
+  // the fletching
+  if (lvl === 1) { // goose feathers, grey-barred, lashed with red thread
+    for (const s of [-1, 1]) { arrowVane(fb, ff, s, 3.4); ctx.fillStyle = C('#DCD3C2'); ctx.fill();
+      if (fine) { ctx.save(); ctx.clip(); ctx.strokeStyle = '#7A6048'; ctx.lineWidth = .9; ctx.beginPath(); for (let x = fb + 1; x < ff - 1; x += (ff - fb) / 3.6) { ctx.moveTo(x, 0); ctx.lineTo(x - 1.6, s * 4); } ctx.stroke(); ctx.restore(); }
+      arrowVane(fb, ff, s, 3.4); outline(.5); }
+    arrowBand(ff - .4, 1.5, '#B4382C', 1.1); arrowBand(-3.6, 1.4, '#B4382C', 1.1);
+  } else if (lvl === 2) { // black vanes with crimson vanes laid over them and a white edge
+    for (const s of [-1, 1]) { arrowVane(fb - 1, ff, s, 4.1); ctx.fillStyle = C('#2A2630'); ctx.fill(); outline(.5);
+      if (fine) { ctx.strokeStyle = '#F0E8E0'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(fb - 2.2, s * 3.1); ctx.lineTo(fb - .3, s * 4); ctx.stroke(); }
+      arrowVane(fb + 1.4, ff - .6, s, 2.7); ctx.fillStyle = C('#C8303A'); ctx.fill(); outline(.4); }
+    ctx.fillStyle = C('#C8303A'); ctx.fillRect(fb + 1, -.5, ff - fb - 2, 1);
+  } else if (lvl === 3) { // sapphire vanes, white ones over them with blue bars, a gold quill between
+    for (const s of [-1, 1]) { arrowVane(fb - 1.6, ff, s, 4.5); ctx.fillStyle = C('#3460D0'); ctx.fill(); outline(.5);
+      arrowVane(fb + .8, ff - 1, s, 3.1); ctx.fillStyle = C('#F2F4FA'); ctx.fill();
+      if (fine) { ctx.save(); ctx.clip(); ctx.strokeStyle = '#4A78E0'; ctx.lineWidth = .8; ctx.beginPath(); for (const u of [.3, .62]) { const x = fb + .8 + (ff - fb - 1.8) * u; ctx.moveTo(x, 0); ctx.lineTo(x - 1.4, s * 3.6); } ctx.stroke(); ctx.restore(); }
+      arrowVane(fb + .8, ff - 1, s, 3.1); outline(.4); }
+    ctx.fillStyle = C('#E8C060'); ctx.fillRect(fb, -.45, ff - fb - 1, .9);
+  } else if (lvl === 4) { // teal vanes edged with rune-light, violet ones over them
+    for (const s of [-1, 1]) { arrowVane(fb - 1.6, ff, s, 4.7); ctx.fillStyle = C('#22A8B8'); ctx.fill(); outline(.5);
+      if (fine) { ctx.strokeStyle = '#C8FFFF'; ctx.lineWidth = .45; ctx.beginPath(); ctx.moveTo(ff - 1.5, s * 1.4); ctx.quadraticCurveTo(fb + (ff - fb) * .45, s * 4.6, fb - .6, s * 4.2); ctx.stroke(); }
+      arrowVane(fb + .6, ff - .8, s, 3.2); ctx.fillStyle = C('#6C48D0'); ctx.fill(); outline(.4); }
+    ctx.fillStyle = C('#9A78F0'); ctx.fillRect(fb, -.45, ff - fb - 1, .9);
+  } else { // iridescent plumes, three deep, their colours slowly turning
+    const sw = fine ? Math.sin(t * 1.8) * 18 : 0;
+    const cols = fine ? [`hsl(${262 + sw},82%,62%)`, `hsl(${320 + sw},85%,68%)`, `hsl(${44 + sw * .5},100%,70%)`] : ['#7C4CF0', '#F068C0', '#FFD266'];
+    for (const s of [-1, 1]) {
+      arrowVane(fb - 3, ff, s, 5.2); ctx.fillStyle = C(cols[0]); ctx.fill(); outline(.5);
+      arrowVane(fb - 1.4, ff - 1, s, 3.8); ctx.fillStyle = C(cols[1]); ctx.fill(); outline(.4);
+      arrowVane(fb + .2, ff - 2, s, 2.4); ctx.fillStyle = C(cols[2]); ctx.fill(); outline(.35);
+      if (fine) { ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = .4; ctx.beginPath(); ctx.moveTo(ff - 1.5, s * 1.6); ctx.quadraticCurveTo(fb - 3 + (ff - fb + 3) * .45, s * 5.1, fb - 2.4, s * 5.1); ctx.stroke(); }
+    }
+    ctx.fillStyle = C('#FFE08A'); ctx.fillRect(fb - 1, -.45, ff - fb, .9);
+  }
+  // the nock
+  ctx.beginPath(); ctx.rect(-L - 2.2, -1.2, 2.4, 2.4); ctx.fillStyle = C(['#6A4A2E', '#B8BEC8', '#D8DEE8', '#C89A3A', '#FFD266'][lvl - 1]); ctx.fill(); outline(.4);
+  ctx.fillStyle = C(OUT); ctx.fillRect(-L - 2.3, -.35, 1.2, .7);
+  // the head
+  if (lvl === 1) { // a hand-forged iron leaf with a ridge down it
+    arrowHead([8, 0, 5.5, 1.9, 2.5, 2.4, .2, 1.6, -1.2, 1], '#A6AEBE', '#6E7486');
+    if (fine) { ctx.strokeStyle = '#E2E8F0'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(-.6, -.15); ctx.lineTo(7, -.15); ctx.stroke(); }
+  } else if (lvl === 2) { // a steel spike with two pairs of swept barbs
+    arrowBand(-3.4, 1, '#C8303A', 1.1); arrowBand(-2.4, 2.2, '#9AA0AE', 1.15);
+    arrowHead([10, 0, 4, 1.9, 1.3, 3.9, 2.6, 1.35, .6, 1.5, -.9, 3.1, .3, 1.05, -1.4, 1], '#C4CAD6', '#7E8494');
+    if (fine) { ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(9.4, -.25); ctx.lineTo(4, -1.7); ctx.lineTo(1.6, -3.5); ctx.stroke(); }
+  } else if (lvl === 3) { // a wide silver broadhead, vented, with a gold ridge
+    arrowBand(-3.6, 3, '#D8DEE8', 1.2);
+    arrowHead([11, 0, 6, 2.6, 1.8, 4.5, -.9, 4.9, 1, 1.4, -1.6, 1.2], '#EEF1F7', '#A4ACC0');
+    ctx.fillStyle = C('#2A2440'); for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(5.6, s * .95); ctx.lineTo(2.7, s * 2.6); ctx.lineTo(2.5, s * .95); ctx.closePath(); ctx.fill(); }
+    ctx.strokeStyle = C('#E8C060'); ctx.lineWidth = .75; ctx.beginPath(); ctx.moveTo(-1.4, 0); ctx.lineTo(9.6, 0); ctx.stroke();
+    if (fine) { ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(10.4, -.3); ctx.lineTo(6, -2.35); ctx.lineTo(2.2, -4.2); ctx.stroke(); }
+  } else if (lvl === 4) { // a faceted crystal point in a gold collar
+    arrowBand(-3, 2.6, '#C89A3A', 1.35);
+    const P4 = [11.5, 0, 6, 2.9, .6, 2.5, -1.4, 0];
+    ctx.beginPath(); ctx.moveTo(11.5, 0); ctx.lineTo(6, -2.9); ctx.lineTo(.6, -2.5); ctx.lineTo(-1.4, 0); ctx.closePath(); ctx.fillStyle = C('#BFF8FF'); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(11.5, 0); ctx.lineTo(6, 2.9); ctx.lineTo(.6, 2.5); ctx.lineTo(-1.4, 0); ctx.closePath(); ctx.fillStyle = C('#2E98B8'); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(11.5, 0); ctx.lineTo(6, -.9); ctx.lineTo(.6, -.8); ctx.lineTo(-1.4, 0); ctx.lineTo(.6, .8); ctx.lineTo(6, .9); ctx.closePath(); ctx.fillStyle = C('#6FDCEE'); ctx.fill();
+    ctx.beginPath(); for (let i = 0; i < P4.length; i += 2) ctx.lineTo(P4[i], -P4[i + 1]); for (let i = P4.length - 4; i >= 2; i -= 2) ctx.lineTo(P4[i], P4[i + 1]); ctx.closePath(); outline(.6);
+    if (fine) { const u = (t * .9) % 1.6; if (u < 1) { const x = .8 + u * 9.5, h = x < 6 ? 2.5 + (x - .6) / 5.4 * .4 : 2.9 * (11.5 - x) / 5.5; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(x - .3, -.9); ctx.lineTo(x + .4, -h * .85); ctx.stroke(); } } // a glint crossing the facet
+  } else { // star-forged: a long gold spike rising from a star, with a twinkle at its point
+    arrowBand(-3.8, 1.6, '#E8B84A', 1.3);
+    arrowHead([12.5, 0, 3.4, 1.5, 1.4, 1.1], '#FFF2C0', '#E0A840');
+    arrowStar(2.6, 0, 4.6, 1.25, 4); ctx.fillStyle = C('#FFD86A'); ctx.fill(); outline(.55);
+    arrowStar(2.6, 0, 2.7, .9, 4, TAU / 8); ctx.fillStyle = C('#FFF6D8'); ctx.fill(); outline(.35);
+    if (fine) {
+      ctx.fillStyle = '#FFFFFF'; circle(2.6, 0, .75); ctx.fill();
+      ctx.fillStyle = '#B48CFF'; ctx.fillRect(-3.4, -.5, .9, 1); // a violet stone in the collar
+      const k = Math.pow(Math.max(0, Math.sin(t * 3.4)), 6); if (k > .05) { ctx.globalAlpha = k; ctx.fillStyle = '#FFFFFF'; arrowStar(12.5, 0, 1 + 2.6 * k, .3, 4, t * .8); ctx.fill(); ctx.globalAlpha = 1; }
+    }
+  }
+  ctx.restore();
+}
+// the light an arrow leaves behind in flight, behind its fletching: speed lines for plain arrows, a silver streak,
+// twin rune ribbons that weave, a tapering starfall ribbon shedding sparks. Thin and crisp, never a glow.
+function drawArrowTrail(p) {
+  if (FLASH || TINT) return;
+  const lv = Math.max(1, Math.min(5, p.arrow | 0 || 1)), t = performance.now() / 1000, ph = (p.x || 0) * .07, x0 = -31, len = p.full ? 1 : .75;
+  ctx.save(); ctx.lineCap = 'round';
+  if (lv <= 2) {
+    if (!p.full && lv === 1) { ctx.restore(); return; }
+    ctx.lineWidth = .8; ctx.strokeStyle = 'rgba(255,248,232,.38)'; ctx.beginPath(); ctx.moveTo(x0 - 3, -2.6); ctx.lineTo(x0 - 3 - 30 * len, -2.6); ctx.moveTo(x0 - 6, 2.6); ctx.lineTo(x0 - 6 - 22 * len, 2.6); ctx.stroke();
+    if (lv === 2) { ctx.strokeStyle = 'rgba(210,50,60,.5)'; ctx.beginPath(); ctx.moveTo(x0 - 2, 0); ctx.lineTo(x0 - 2 - 26 * len, 0); ctx.stroke(); }
+  } else if (lv === 3) {
+    const g = ctx.createLinearGradient(x0, 0, x0 - 70 * len, 0); g.addColorStop(0, 'rgba(240,244,255,.65)'); g.addColorStop(1, 'rgba(240,244,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(x0 - 70 * len, -.7, 70 * len, 1.4);
+    ctx.lineWidth = .7; ctx.strokeStyle = 'rgba(90,130,240,.45)'; ctx.beginPath(); ctx.moveTo(x0 - 2, -3); ctx.lineTo(x0 - 2 - 34 * len, -3); ctx.moveTo(x0 - 2, 3); ctx.lineTo(x0 - 2 - 34 * len, 3); ctx.stroke();
+  } else if (lv === 4) { // two ribbons, cyan and violet, weaving round each other
+    const n = 14, span = 72 * len;
+    for (const [s, col] of [[1, '127,232,248'], [-1, '150,110,240']]) {
+      ctx.lineWidth = 1.1; let px = x0, py = 0;
+      for (let i = 1; i <= n; i++) { const u = i / n, x = x0 - u * span, y = s * 2.8 * Math.min(1, u * 2.2) * Math.sin(u * 8 - t * 14 + ph);
+        ctx.strokeStyle = `rgba(${col},${(.75 * (1 - u)).toFixed(3)})`; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke(); px = x; py = y; }
+    }
+    ctx.fillStyle = '#D8FFFF'; for (let i = 0; i < 3; i++) { const d = (t * 95 + i * 24 + ph * 9) % 66, a = 1 - d / 66; ctx.globalAlpha = a; ctx.fillRect(x0 - 4 - d, Math.sin(d * .2 + i) * 3 - .6, 1.2, 1.2); } // rune sparks
+  } else { // a tapering ribbon, gold to rose to violet, and little stars falling from it
+    const n = 12, span = 92 * len, top = [], bot = [];
+    for (let i = 0; i <= n; i++) { const u = i / n, x = x0 + 2 - u * span, y = 1.8 * u * Math.sin(u * 6 - t * 10 + ph), w = 1.7 * (1 - u) + .15; top.push(x, y - w); bot.push(x, y + w); }
+    ctx.beginPath(); ctx.moveTo(top[0], top[1]); for (let i = 2; i < top.length; i += 2) ctx.lineTo(top[i], top[i + 1]); for (let i = bot.length - 2; i >= 0; i -= 2) ctx.lineTo(bot[i], bot[i + 1]); ctx.closePath();
+    const g = ctx.createLinearGradient(x0, 0, x0 - span, 0); g.addColorStop(0, 'rgba(255,232,150,.9)'); g.addColorStop(.35, 'rgba(255,120,200,.7)'); g.addColorStop(.7, 'rgba(140,100,255,.45)'); g.addColorStop(1, 'rgba(120,90,255,0)');
+    ctx.fillStyle = g; ctx.fill();
+    for (let i = 0; i < 4; i++) { const d = (t * 80 + i * 21 + ph * 9) % 80, a = 1 - d / 80; ctx.globalAlpha = a; ctx.fillStyle = i % 2 ? '#FFFFFF' : '#FFE08A'; arrowStar(x0 - 6 - d, (i % 2 ? -1 : 1) * (1.5 + d * .06), 1.6 * a + .5, .35); ctx.fill(); }
+  }
+  ctx.restore();
 }
 function drawArrowProj(p) {
   const ang = Math.atan2(p.vz || 0, Math.abs(p.vx));
   const x = p.x, y = p.y - p.z;
   ctx.save(); shadow(p.x, p.y, 4); ctx.translate(x, y); ctx.scale(Math.sign(p.vx), 1); ctx.rotate(-ang);
-  if (p.arrow >= 3 || p.full) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(-70, 0, 0, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, p.arrow >= 5 ? 'rgba(220,210,255,.6)' : 'rgba(230,240,255,.4)'); ctx.fillStyle = g; ctx.fillRect(-70, -1.5, 70, 3); ctx.restore(); } // its streak of light
+  drawArrowTrail(p); // its streak of light
   drawArrowShape(p.arrow); ctx.restore();
 }
-function drawArrowLoot(k, t) { // an arrow stuck in the ground, gleaming
-  const x = k.x, y = k.y - k.z;
+function drawArrowLoot(k, t) { // an arrow stuck in the ground, a glint winking at its point
+  const x = k.x, y = k.y - k.z, lv = Math.min(5, save.alv || 1), tip = ARROW_TIP[lv - 1];
   shadow(k.x, k.y, 5);
-  ctx.save(); ctx.translate(x, y - 4); ctx.rotate(-1.1); drawArrowShape(Math.min(5, save.alv || 1), 22); ctx.restore();
-  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .4 + .3 * Math.sin(t * 5 + k.x); ctx.fillStyle = '#FFF0C0'; circle(x + 4, y - 14, 2); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(x, y - 4); ctx.rotate(-1.1); drawArrowShape(lv, 22);
+  if (!FLASH && !TINT) { const a = .35 + .65 * Math.pow(.5 + .5 * Math.sin(t * 4 + k.x), 3); ctx.globalAlpha = a; ctx.fillStyle = ['#FFF0C0', '#FFFFFF', '#FFFFFF', '#D8FFFF', '#FFF2B0'][lv - 1];
+    arrowStar(tip, 0, 1.6 + 1.8 * a, .35, 4, 1.1 + t * .6); ctx.fill(); }
+  ctx.restore();
 }
 // the short bow, drawn in his hand while he looses
 function drawShortBow(pose) {
