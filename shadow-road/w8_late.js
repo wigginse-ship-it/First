@@ -429,7 +429,7 @@
     } catch (e) {}
     const per = .5; return { ph: (performance.now() / 1000 / per) % 1, per, src: 'fixed' };
   };
-  W8.onBeat = () => { const b = W8.beat(); return Math.min(b.ph, 1 - b.ph) * b.per < .09; };
+  W8.onBeat = () => { const b = W8.beat(); return Math.min(b.ph, 1 - b.ph) * b.per < Math.min(.09, b.per * .12); };
 
   // ---------------- the horn itself ----------------
   // drawn along a curve from the mouthpiece (0,0) to the bell (len,0), bowed by bend; dark at the tip, ivory at the bell

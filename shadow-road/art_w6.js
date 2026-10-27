@@ -570,7 +570,7 @@
     const windB = st === 'wind' && e.plan === 'w6brolly' ? wind : 0, windA = st === 'wind' && e.plan === 'w6apple' ? wind : 0, windD = st === 'wind' && e.plan === 'w6drop' ? wind : 0;
     // the umbrella flight: held up over his head (rising on it, drifting down under it, or coming down out of the sky on it)
     const golc = st === 'enter' && e.ent && e.ent.kind === 'w6golconda' && !e.ent.l, over = kD >= 0 || golc, hang = over ? cl01(open * 1.6) * cl01(e.z / 14) : 0;
-    const fall = kD >= .855 ? sm((kD - .855) / .05) : golc && e.ent.t > .9 ? sm(1 - open * 2) : 0; // furled again for the last drop: the arm comes down to plant it like a cane
+    const fall = kD >= .82 ? sm((kD - .82) / .03) : golc && e.ent.t > .9 ? sm(1 - open * 2) : 0; // furled again for the last drop: the arm comes down to plant it like a cane
     if (e.w6tuck) { e.w6tuckAt = t; e.w6tuck = 0; } // landed: a twirl, and tucked under the arm
     const tk = e.w6tuckAt != null && !over && st !== 'wind' && !hurt ? (t - e.w6tuckAt) / 1.3 : 9;
     // the twirl of the wind-up: spun like a cane, the hat doffed with the other hand, then the umbrella swung up overhead
@@ -1085,24 +1085,24 @@
   };
   // THE DROP: (his wind-up: the umbrella twirled like a cane, the hat doffed, the umbrella swung up overhead) he snaps it
   // open, the panels blooming out from the middle with a puff of cloud, and the open canopy catches the air and lifts him
-  // into the sky; a shadow follows you over the floor; he drifts down on it under the open canopy, swaying, then snaps
-  // it shut and drops the last of the way onto the mark. The timings of the tell, the lock and the landing are as they were
+  // into the sky, where he hangs swaying under it; a shadow follows you over the floor; then he snaps it shut and plunges
+  // onto the mark, as fast as ever, and lands in a splash. The timings of the tell, the lock, the fall and the landing are as they were
   PLAN_FX.w6drop = (e) => { sfx('whoosh');
     act(e, 'drop', 2.2, (h, dt, e, k) => {
       const el = h.el;
       if (el < .2) { e.w6open = el < .16 ? 1.12 * sm(el / .16) : lerp(1.12, 1, (el - .16) / .04); e.z = el < .1 ? 0 : 30 * sm((el - .1) / .1); // the snap open, and the lift as it fills
         if (el > .1 && !h.pop) { h.pop = 1; sfx('hit-goo', .5); puff(e.x + e.facing * 2, e.y, 92, ['#F4F2EC', '#E2EAF4', '#C8D8EC'], 7, 50); } }
       else if (el < .6) { e.w6open = 1; e.z = 30 + 270 * (1 - Math.pow(1 - (el - .2) / .4, 2)); } // borne up, fast and then slowing
-      else if (el < 1.0) { e.w6open = 1; e.z = 300 + Math.sin((el - .6) * 6) * 5; }
-      else if (el < 1.86) { e.w6open = 1; e.z = lerp(300, 66, sm((el - 1.0) / .86)); } // drifting down under the canopy
-      else if (el < 2.0) { const u = (el - 1.86) / .14; e.w6open = Math.max(0, 1 - u * 2.6); e.z = 66 * (1 - u * u); // snapped shut, and down he comes
+      else if (el < 1.8) { e.w6open = 1; e.z = 300 + Math.sin((el - .6) * 5) * 5; } // hanging up there under the canopy, swaying
+      else if (el < 2.0) { const u = (el - 1.8) / .2; e.w6open = Math.max(0, 1 - u * 4); e.z = 300 * (1 - sm(u)); // snapped shut, and down he plunges
         if (!h.snap) { h.snap = 1; sfx('pick', .5); } }
       if (el >= .55 && el < 1.55) { e.x = lerp(e.x, xClamp(P.x), Math.min(1, dt * 3)); e.y = lerp(e.y, yClamp(P.y), Math.min(1, dt * 3)); h.mx = e.x; h.my = e.y; }
-      if (el >= 2.0) { if (!h.land) { h.land = 1; e.z = 0; e.w6open = 0; e.w6tuck = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 6); dust(e.x, e.y, 10); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .35, max: .35, r: 50, col: '#F4EAD8', flat: 1 });
-        if (inEll(P.x, P.y, e.x, e.y, 40) && P.z < 26) hitP(Math.round(edmg(e) * 1.2), e.x, true); } }
+      if (el >= 2.0) { if (!h.land) { h.land = 1; e.z = 0; e.w6open = 0; e.w6tuck = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 6); dust(e.x, e.y, 14); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .4, max: .4, r: 58, col: '#F4EAD8', flat: 1 });
+        for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + rand(-.15, .15), v = rand(130, 180); parts.push({ x: e.x + Math.cos(a) * 10, y: e.y + Math.sin(a) * 4.5, z: 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .45, vz: rand(40, 120), life: .38, max: .38, col: pick(['#F4EAD8', '#E8DCC4', '#BFD4EC']), size: rand(2.2, 3.6), shape: 'blob', rot: 0, vr: 0 }); } // a splash of paint out to the edge of the mark
+        if (inEll(P.x, P.y, e.x, e.y, 50) && P.z < 26) hitP(Math.round(edmg(e) * 1.2), e.x, true); } }
       return false; }, { rec: 1, abort: (h, e) => { e.z = 0; e.w6open = 0; },
       draw(h, t) { const e = h.e; if (h.el < .55 || h.el >= 2) return; const k = h.el < 1.55 ? .4 : cl01((h.el - 1.55) / .45); // the shadow he will fall on
-        ctx.fillStyle = `rgba(20,14,30,${.25 + .35 * k})`; ell(e.x, e.y, 18 + k * 10, 6 + k * 3); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(e.x, e.y, 32, 11); ctx.stroke(); } });
+        ctx.fillStyle = `rgba(20,14,30,${.25 + .35 * k})`; ell(e.x, e.y, 18 + k * 20, 6 + k * 8); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(e.x, e.y, 50, 22.7); ctx.stroke(); } });
   };
 
   // ---------------- MANNEQUIN OF THE MUSES ----------------
