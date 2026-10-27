@@ -71,7 +71,7 @@ function drawGrayblade(pose) {
     const hi = G.lvl >= 2, k = G.k;
     ctx.fillStyle = G.lvl >= 3 ? 'rgba(190,170,255,.8)' : hi ? 'rgba(255,238,244,.85)' : 'rgba(228,236,255,.55)';
     ctx.fillRect(x0 + 2, -w * .62, len * .8, hi ? 1.3 : 1);
-    if (k < 1) { // a bead of light from the guard to the point, the second one brighter and longer
+    if (k < 1 && G.lvl < 3) { // a bead of light from the guard to the point, the second one brighter and longer
       const gx = x0 + 4 + (tip - x0 - 4) * k, L = hi ? 9 : 6, a = Math.sin(Math.PI * Math.min(1, k * 1.15 + .08));
       const g = ctx.createLinearGradient(gx - L, 0, gx + L, 0);
       g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, `rgba(255,255,255,${((hi ? 1 : .85) * a).toFixed(2)})`); g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -79,6 +79,12 @@ function drawGrayblade(pose) {
       if (hi && k > .75) { ctx.fillStyle = '#FFF4F8'; gbStar(tip, 0, 2.6 * Math.sin(Math.PI * span(k, .75, 1)), .9); } // (a tiny wink at the point, no bigger than the blade is wide)
     }
   });
+  if (G && G.lvl >= 3 && G.k < 1.4 && !FLASH && !TINT) { // the third glint is a dark one: a ripple of Shadow running down the steel to the point
+    const k = Math.min(1, G.k / 1.3), gx = x0 + 4 + (tip - x0 - 4) * k, L = 11, a = Math.sin(Math.PI * Math.min(1, k * 1.1 + .05));
+    ctx.save(); ctx.globalAlpha = .85 * a; ctx.strokeStyle = '#2A1840'; ctx.lineWidth = 1.6; ctx.lineCap = 'round'; ctx.beginPath();
+    for (let x = gx - L; x <= gx + L; x += 1) { const y = Math.sin((x - gx) * .9 + k * 9) * w * 1.1 * (1 - Math.abs(x - gx) / L); x === gx - L ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.stroke(); ctx.globalAlpha = .45 * a; ctx.fillStyle = '#4A2E70'; ctx.beginPath(); ctx.ellipse(gx, 0, L * .8, w * 1.5, 0, 0, TAU); ctx.fill(); ctx.restore();
+  }
   if (pose.glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = pose.glow; rrect(16, -8, len + 12, 16, 7); ctx.fill(); ctx.restore(); }
   if (!pose.noHand) gripHand(pose.glove || '#2E2C36');
 }

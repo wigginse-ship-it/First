@@ -53,26 +53,40 @@ function moveExtras(m, k, dt, airborne) {
         fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .55, ang: rand(-.3, .3), t: .3, max: .3, size: 34 + e.hw, col: '#C8D0FF' }); sfx('slice');
       }
     }
+    if (P.blinkDouble && k >= m.h[0]) { // the third glint: every one he steps to is run through twice, the second thrust a beat after the first
+      const off = Math.min(slot * .45, .15 / m.dur), j = Math.floor((k - m.h[0] - off) / slot);
+      if (j >= (P.blinkJ || 0) && j < n && j < P.blinkI) {
+        P.blinkJ = j + 1; const e = P.blinkList[j];
+        if (!e.dead && enemies.includes(e)) {
+          const hs = hitstop; strike(e, m.dmg * wMult(P.w) * .65, P.facing, m); P.hits.set(e, P.t);
+          hitstop = Math.max(hs, Math.min(hitstop, .06));
+          fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .6, ang: rand(-.3, .3) + 1.2, t: .26, max: .26, size: 28 + e.hw, col: '#E8D8FF' }); sfx('slice');
+        }
+      }
+    }
   }
   if (m.twinAt && !P.twinDone && k >= m.twinAt) rapierTwin(m);
   return false;
 }
 // ---------- the rapier's charge (game.js, state 'charge'): two glints down the blade, then the Rose Thrust ----------
-function rapierChime(lvl) { // a small clear chime for each glint, a note higher and brighter for the second
+function rapierChime(lvl) { // a small clear chime for each glint, a note higher and brighter for the second, and a deeper, darker one for the third
   if (typeof sfxOn === 'undefined' || !sfxOn || !actx) return;
-  try { (lvl >= 3 ? [1568, 2093, 2794] : lvl === 2 ? [1976, 2637, 3322] : [1760, 2349]).forEach((f, i) => tone(f, .24 - i * .04, 'sine', lvl === 2 ? .07 : .055, 0, i * .05)); } catch (err) {}
+  try { if (lvl >= 3) [523, 784, 1047, 1568].forEach((f, i) => tone(f, .36 - i * .05, i ? 'sine' : 'triangle', .07, 0, i * .06)); else (lvl === 2 ? [1976, 2637, 3322] : [1760, 2349]).forEach((f, i) => tone(f, .24 - i * .04, 'sine', lvl === 2 ? .07 : .055, 0, i * .05)); } catch (err) {}
 }
 function rapierChargeCue(lvl) {
   rapierChime(lvl);
   const hx = P.x + P.facing * 24, hz = P.z + 56; // about where the guard is, drawn back by his shoulder
   if (lvl === 2) for (let i = 0; i < 4; i++) parts.push({ x: hx + P.facing * rand(0, 8), y: P.y + rand(-2, 2), z: hz + rand(-3, 3), vx: P.facing * rand(30, 110), vy: rand(-8, 8), vz: rand(70, 150), life: rand(.45, .7), max: .7, col: pick(['#C8506A', '#E07890', '#F2A8B8']), size: rand(2, 3), shape: 'tuft', rot: rand(0, TAU), vr: rand(-9, 9) }); // a flick of rose petals off the guard
+  if (lvl === 3) for (let i = 0; i < 5; i++) parts.push({ x: hx + rand(-4, 4), y: P.y + rand(-3, 3), z: hz + rand(-4, 4), vx: rand(-20, 20), vy: 0, vz: rand(10, 40), life: .4, max: .4, col: pick(['rgba(42,24,64,.7)', 'rgba(90,60,140,.6)']), size: rand(2.5, 4), shape: 'puff', rot: 0, vr: 0 }); // a breath of Shadow off the guard
 }
 function rapierRelease(lvl) { // let go: a tap is the Lunge; charged, the charged lunge or Rose Thrust, or once it is learned the Hellride
   const T = WEAPONS.rapier.tree;
   if (lvl < 1) { begin(T.H); return; }
   const on = enemies.filter(e => !e.dead && e.x > camX - e.hw && e.x < camX + VW + e.hw);
   const foe = lvl >= 2 && on.length === 1 ? on[0] : null; // the second glint, and exactly one on screen (a boss counts): the blade strikes them twice
-  if (unlocked(T.HC)) { // Hellride: the first glint rides as it always has; the second, against a lone foe, steps out of Shadow beside them twice
+  if (unlocked(T.HC)) { // Hellride: the first glint rides as it always has; the second, against a lone foe, steps out of Shadow beside them twice;
+    // the third (held past 1.5 s) runs every one of them through twice
+    if (lvl >= 3) { begin(T.HC); P.blinkDouble = true; P.blinkJ = 0; return; }
     begin(foe ? Object.assign({}, T.HC, { dur: .7, h: [.12, .62] }) : T.HC);
     if (foe && P.blinkList && P.blinkList.length === 1 && P.blinkList[0] === foe) { P.blinkList.push(foe); P.blinkTwin = true; }
     return;
