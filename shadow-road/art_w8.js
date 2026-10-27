@@ -1455,7 +1455,11 @@
   // healing is stopped in the grey, and its own take a third of every blow there
   { const _ld = updateLoot; updateLoot = function (dt) { if (mech && mech.kind === 'w8edge' && P && W8.inGrey(P.x, P.y)) { const hp0 = P.hp; _ld(dt); if (P.hp > hp0) { P.hp = hp0; floatText(P.x, P.y, 80, 'NOTHING HEALS IN THE GREY', '#C8C2B4', 11); } return; } return _ld(dt); }; }
   W8.strikeGate = (e, m) => { if (mech && mech.kind === 'w8edge' && !e.boss && W8.inGrey(e.x, e.y) && !m.trump) { m.w8grey = 1; } return true; };
-  { const _h = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) { if (m && m.w8grey) { dmg = Math.max(1, Math.round(dmg * .34)); if (!(e.w8msg > performance.now())) { e.w8msg = performance.now() + 900; floatText(e.x, e.y, e.hh + 26, 'THE GREY SHIELDS IT', '#C8C2B4', 11); } } return _h(e, dmg, dir, m, crit); }; }
+  // a blow the grey turns aside: its damage number carries a small grey shield beside it (draw.js draws n.icon)
+  { const _h = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) { if (!(m && m.w8grey)) return _h(e, dmg, dir, m, crit);
+      dmg = Math.max(1, Math.round(dmg * .34)); const n0 = nums.length, r = _h(e, dmg, dir, m, crit);
+      for (let i = n0; i < nums.length; i++) if (/^\d+!?$/.test(String(nums[i].txt))) nums[i].icon = 'shield';
+      return r; }; }
   // an iron cresset on a post: cold and black, or burning
   function watchfire(f, t, grey) {
     ctx.save(); ctx.translate(f.x, f.y); ctx.lineCap = 'round';

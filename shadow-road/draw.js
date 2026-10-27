@@ -636,6 +636,12 @@ function drawScene(t) {
     ctx.font = `700 ${Math.round(n.size * pop)}px Cinzel, Georgia, serif`;
     ctx.lineWidth = 4; ctx.strokeStyle = OUT; ctx.strokeText(n.txt, n.x, n.y - n.z);
     ctx.fillStyle = n.col; ctx.fillText(n.txt, n.x, n.y - n.z);
+    if (n.icon === 'shield') { // a small grey heater shield beside the number: the blow was turned aside
+      const sz = Math.round(n.size * pop), sx = n.x + ctx.measureText(n.txt).width / 2 + sz * .45, sy = n.y - n.z - sz * .72, w = sz * .62, h = sz * .78;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + w, sy); ctx.lineTo(sx + w, sy + h * .45); ctx.quadraticCurveTo(sx + w, sy + h * .85, sx + w / 2, sy + h); ctx.quadraticCurveTo(sx, sy + h * .85, sx, sy + h * .45); ctx.closePath();
+      ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke(); ctx.fillStyle = '#B8B2A6'; ctx.fill();
+      ctx.strokeStyle = '#E8E2D6'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx + w / 2, sy + h * .12); ctx.lineTo(sx + w / 2, sy + h * .82); ctx.moveTo(sx + w * .18, sy + h * .32); ctx.lineTo(sx + w * .82, sy + h * .32); ctx.stroke();
+    }
   }
   ctx.globalAlpha = 1;
   ctx.restore();
