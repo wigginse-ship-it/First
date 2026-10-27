@@ -140,7 +140,7 @@ const WEAPONS = {
       // HC2 against a lone foe (exactly one on screen) takes its 'lone' values and strikes twice: the lunge, then a
       // second stab at twinAt for twinDmg of the damage (moves.js)
       HC1:  { dur: .46, h: [.3, .5], x0: 0, x1: 112, dmg: 20, kb: 250, arc: [.04, .04], lunge: 345, power: 1, wall: 1, depth: 22 },
-      HC2:  { name: 'Rose Thrust', seq: ['HOLD'], desc: 'Hold Heavy to charge twice: a silver glint runs down the blade, then a second. Let go for a longer, harder lunge; at full charge it runs through everyone in a line, and against a lone foe the blade strikes twice.',
+      HC2:  { name: 'Rose Thrust', seq: ['HOLD'], desc: 'Hold Heavy to charge twice: a silver glint runs down the blade, then a second. Let go for a longer, harder lunge; at full charge it runs through everyone in a line, and against a lone foe the blade strikes twice. Once the Hellride is learned, the charge rides through Shadow instead.',
               dur: .56, h: [.28, .46], x0: 0, x1: 128, dmg: 30, kb: 330, arc: [.04, .04], lunge: 400, power: 2, wall: 1, depth: 26,
               lone: { dur: .6, h: [.22, .32], x1: 116, kb: 55, lunge: 250, wall: 0, power: 1, twinAt: .46, twinDmg: .65, twinKb: 320 } },
       HHH:  { name: 'Starfall Flurry', dur: .72, h: [.14, .82], x0: 0, x1: 88, dmg: 4, kb: 60, arc: [.04, .04], multi: .055, lunge: 63, power: 1, flurry: 1 }, // a storm of thrusts, each a point of light
@@ -161,7 +161,7 @@ const WEAPONS = {
       RH:   { lvl: 3, name: 'Blade Dance', how: 'Heavy out of a dodge', desc: 'Pirouette twice through the crowd, the blade a silver ring around you.', dur: .7, h: [.1, .9], x0: 0, x1: 74, dmg: 6, kb: 135, arc: [-P_, 3 * P_], around: 1, multi: .08, spin: 2, lunge: 154, power: 1 },
       AH:   { lvl: 4, name: 'Falling Star', how: 'Hold Heavy in the air', desc: 'Dive point-first like a falling star; where you land, it bursts into light.', dur: .5, h: [.1, .97], x0: 0, x1: 62, dmg: 16, kb: 150, arc: [.95, .95], dive: 1, shock: 72, bounce: 1, power: 2 },
       DH:   { lvl: 5, name: 'Shadow Flèche', how: 'Heavy while running', desc: 'Step through Shadow past everything in your way; a heartbeat later, every one of them is cut.', dur: .5, h: [.1, .55], x0: -40, x1: 64, dmg: 19, kb: 195, arc: [.02, .02], lunge: 602, power: 2, delayed: 1 },
-      HC:   { lvl: 7, name: 'Hellride', how: 'Hold Heavy past the second glint, then let go', desc: 'Ride through Shadow: vanish, and step out of the air beside each enemy around you in turn, running every one of them through. Every thrust is a critical.', dur: 1, h: [.1, .9], x0: -10, x1: 80, dmg: 14, kb: 220, arc: [.03, .03], blink: 6, crit: 1, power: 2 },
+      HC:   { lvl: 7, name: 'Hellride', how: 'Hold Heavy to the first glint, then let go', desc: 'Ride through Shadow: vanish, and step out of the air beside each enemy around you in turn, running every one of them through. Every thrust is a critical. Hold on to the second glint, and a lone foe is run through twice.', dur: 1, h: [.1, .9], x0: -10, x1: 80, dmg: 14, kb: 220, arc: [.03, .03], blink: 6, crit: 1, power: 2 },
       HHHH: { lvl: 6, name: 'The Pattern Walked', how: 'A fourth Heavy', desc: 'Trace the Pattern with the point: a blur of thrusts as you advance, every one leaving its mark, all of them landing at once.', dur: .8, h: [.1, .7], x0: 0, x1: 92, dmg: 9, kb: 120, arc: [.03, .03], multi: .08, flurry: 1, delayed: 1, lunge: 220, power: 2 },
     } },
 };

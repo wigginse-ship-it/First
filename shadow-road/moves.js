@@ -48,7 +48,7 @@ function moveExtras(m, k, dt, airborne) {
         const side = i % 2 ? 1 : -1;
         P.x = e.x + side * (e.hw + 26); P.y = e.y; P.facing = -side; P.vx = 0;
         addGhost(true);
-        const hs = hitstop; strike(e, m.dmg * wMult(P.w), P.facing, m); P.hits.set(e, P.t);
+        const hs = hitstop; strike(e, m.dmg * wMult(P.w) * (P.blinkTwin && i > 0 ? .65 : 1), P.facing, m); P.hits.set(e, P.t); // (the twin ride's second thrust is the lighter one)
         if (P.blinkI > 1) hitstop = Math.max(hs, Math.min(hitstop, .06)); // only the first thrust gets the full crit freeze: the rest keep the ride moving
         fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .55, ang: rand(-.3, .3), t: .3, max: .3, size: 34 + e.hw, col: '#C8D0FF' }); sfx('slice');
       }
@@ -66,14 +66,18 @@ function rapierChargeCue(lvl) {
   rapierChime(lvl);
   const hx = P.x + P.facing * 24, hz = P.z + 56; // about where the guard is, drawn back by his shoulder
   if (lvl === 2) for (let i = 0; i < 4; i++) parts.push({ x: hx + P.facing * rand(0, 8), y: P.y + rand(-2, 2), z: hz + rand(-3, 3), vx: P.facing * rand(30, 110), vy: rand(-8, 8), vz: rand(70, 150), life: rand(.45, .7), max: .7, col: pick(['#C8506A', '#E07890', '#F2A8B8']), size: rand(2, 3), shape: 'tuft', rot: rand(0, TAU), vr: rand(-9, 9) }); // a flick of rose petals off the guard
-  if (lvl === 3) for (let i = 0; i < 5; i++) parts.push({ x: hx + rand(-6, 6), y: P.y + rand(-3, 3), z: hz + rand(-6, 6), vx: rand(-20, 20), vy: 0, vz: rand(10, 40), life: .4, max: .4, col: pick(['rgba(42,24,64,.7)', 'rgba(90,60,140,.6)']), size: rand(3, 5), shape: 'puff', rot: 0, vr: 0 }); // Shadow gathering: the Hellride is ready
 }
-function rapierRelease(lvl) { // let go: the plain Lunge, the charged lunge, the Rose Thrust, or (learned) the Hellride
+function rapierRelease(lvl) { // let go: a tap is the Lunge; charged, the charged lunge or Rose Thrust, or once it is learned the Hellride
   const T = WEAPONS.rapier.tree;
-  if (lvl >= 3 && unlocked(T.HC)) { begin(T.HC); return; }
-  if (lvl < 2) { begin(lvl === 1 ? T.HC1 : T.H); return; }
+  if (lvl < 1) { begin(T.H); return; }
   const on = enemies.filter(e => !e.dead && e.x > camX - e.hw && e.x < camX + VW + e.hw);
-  const foe = on.length === 1 ? on[0] : null; // exactly one on screen (a boss counts): the blade strikes them twice
+  const foe = lvl >= 2 && on.length === 1 ? on[0] : null; // the second glint, and exactly one on screen (a boss counts): the blade strikes them twice
+  if (unlocked(T.HC)) { // Hellride: the first glint rides as it always has; the second, against a lone foe, steps out of Shadow beside them twice
+    begin(foe ? Object.assign({}, T.HC, { dur: .7, h: [.12, .62] }) : T.HC);
+    if (foe && P.blinkList && P.blinkList.length === 1 && P.blinkList[0] === foe) { P.blinkList.push(foe); P.blinkTwin = true; }
+    return;
+  }
+  if (lvl === 1) { begin(T.HC1); return; }
   if (foe && Math.abs(foe.x - P.x) < 300) P.facing = Math.sign(foe.x - P.x) || P.facing;
   begin(foe ? Object.assign({}, T.HC2, T.HC2.lone, { lone: null }) : T.HC2);
   P.twinE = foe; P.twinDone = false;

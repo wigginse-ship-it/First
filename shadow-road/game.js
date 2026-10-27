@@ -31,7 +31,7 @@ function begin(m) {
   if (m === 'charge') { P.state = 'charge'; P.ct = 0; P.clvl = 0; P.seq = 'H'; return; }
   if (!m) { P.state = 'idle'; return; }
   if (m.rise && P.z > 2) m = Object.assign({}, m, { rise: 0, hop: 0, dur: .5, h: [.36, .58] }); // the rising uppercut only ever leaves from the street: no climbing the sky on it
-  P.state = m.dive || (P.z > 0 && !m.hop && P.state !== 'dodge') ? 'air' : 'atk'; P.move = m; P.t = 0; P.moveId = (P.moveId || 0) + 1; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false; P.finDone = false; P.turned = false; P.vaultVx = undefined; P.stormed = false; P.blinkList = null; P.twinE = null; P.twinDone = false;
+  P.state = m.dive || (P.z > 0 && !m.hop && P.state !== 'dodge') ? 'air' : 'atk'; P.move = m; P.t = 0; P.moveId = (P.moveId || 0) + 1; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false; P.finDone = false; P.turned = false; P.vaultVx = undefined; P.stormed = false; P.blinkList = null; P.blinkTwin = false; P.twinE = null; P.twinDone = false;
   if (Math.abs(input.mx) > 0.3 && !m.dive) P.facing = Math.sign(input.mx);
   P.vx = (m.lunge || 0) * P.facing; P.dodgeCarry = 0;
   P.hopQ = 0; if (m.hop) { if (m.prep) P.hopQ = m.hop; else P.vz = m.hop; } // a loaded move leaves the ground only once the knees have bent
@@ -116,8 +116,8 @@ function updatePlayer(dt) {
     case 'charge': {
       P.ct += dt;
       const maxL = save.wl.sword >= 7 ? 4 : save.wl.sword >= 2 ? 3 : 2; // Shadow Cleave is the sword's first upgrade, the Judgement of Amber its last
-      // the rapier charges twice (a glint at .4 s, a second at .9 s), and once Hellride is learned a third time at 1.5 s
-      const lvl = w.charge2 ? (P.ct >= 1.5 && unlocked(w.tree.HC) ? 3 : P.ct >= .9 ? 2 : P.ct >= .4 ? 1 : 0) : !w.charge ? (P.ct >= .45 ? 1 : 0) : P.ct >= 2.05 && maxL === 4 ? 4 : P.ct >= 1.5 && maxL >= 3 ? 3 : P.ct >= .95 ? 2 : P.ct >= .45 ? 1 : 0;
+      // the rapier charges twice: a glint at .4 s, a second at .9 s (what each releases: rapierRelease, moves.js)
+      const lvl = w.charge2 ? (P.ct >= .9 ? 2 : P.ct >= .4 ? 1 : 0) : !w.charge ? (P.ct >= .45 ? 1 : 0) : P.ct >= 2.05 && maxL === 4 ? 4 : P.ct >= 1.5 && maxL >= 3 ? 3 : P.ct >= .95 ? 2 : P.ct >= .45 ? 1 : 0;
       if (lvl > P.clvl && w.charge2) { P.clvl = lvl; P.clAt = P.ct; rapierChargeCue(lvl); }
       if (lvl > P.clvl) { P.clvl = lvl; sfx('charge', lvl); burst(P.x - P.facing * 6, P.y, 56, lvl === 4 ? ['#FFE9A0', '#FFFFFF'] : lvl === 3 ? '#C8607A' : '#D8AA55', 8 + lvl * 4, 'spark'); zoom = Math.max(zoom, .02 + (lvl === 4 ? .02 : 0)); }
       if (Math.abs(mx) > 0.3) P.facing = Math.sign(mx);
