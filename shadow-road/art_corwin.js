@@ -369,7 +369,7 @@ const CORWIN = (() => {
   function targets(L, g) {
     const { Y, CS, HIP, SHO, HX, LEAN, walk, sw, pose, gait, t } = g, cl = Math.cos(LEAN), sl = Math.sin(LEAN);
     const flow = clamp(pose.flow || 0, -12, 20), down = pose.down ? 1 : 0;
-    const trail = 6.5 + flow * 1.05 + (gait ? (pose.run ? 7 : 2 + Math.abs(sw) * 1.6) : 0) + FO * 9;
+    const trail = (6.5 + flow * 1.05 + (gait ? (pose.run ? 7 : 2 + Math.abs(sw) * 1.6) : 0) + FO * 9) * .87; // (the whole cloak a little smaller: its trail, its flare and its length)
     const br = pose.breath || 0, air = Math.sin(t * 1.1);
     // a wind off the road while he stands: slow gusts that never quite die away (three slow sines, so it never
     // repeats or flickers), and a billow running down the cloth from the shoulders to the hem with each gust
@@ -382,8 +382,8 @@ const CORWIN = (() => {
       const fxa = -6.4 * cp + 1.2 - front * 1.5, lza = 11.2 * sp * (1 - front * .22), ya = SHO - 1.6 + (1 - Math.abs(sp)) * .8 - front * 1.8; // (round the front, the edges come in toward the throat)
       DEP[i] = fxa * Y + lza * CS; // how far toward us this strand hangs from (> 0: in front of his body)
       const ax0 = fxa * CS - lza * Y, ax = HX + ax0 * cl - (ya - HIP) * sl, ay = HIP + ax0 * sl + (ya - HIP) * cl;
-      const len = (45 + 3.5 * cp - 5 * front) * 1.24 * (1 - down * .1), // (longer again: to the ankle)
-         fl = 21 + .36 * Math.abs(flow) + FO * 13 + down * 4 + (pose.stance && !walk ? 6 : 0); // standing, it spreads wide round him; every burst of speed flares it
+      const len = (45 + 3.5 * cp - 5 * front) * 1.17 * (1 - down * .1), // (longer again: to the ankle)
+         fl = (21 + .36 * Math.abs(flow) + FO * 13 + down * 4 + (pose.stance && !walk ? 6 : 0)) * .86; // standing, it spreads wide round him; every burst of speed flares it
       for (let j = 0; j <= M; j++) {
         const o = ix(i, j); if (!j) { tgt[o] = ax; tgt[o + 1] = ay; continue; }
         const v = j / M, vf = Math.pow(v, .85);
@@ -657,7 +657,7 @@ const CORWIN = (() => {
       const u = u0 + (u1 - u0) * (m + .2 + .6 * hsh(sd)) / nh, v = .8 + hsh(sd + 1) * .14; uv(Pt, u, v - .12); const ax = UX, ay = UY; uv(Pt, u, v);
       let tx = UX - ax, ty = UY - ay; const tl = Math.hypot(tx, ty) || 1; let ox = UX - cx, oy = UY - cy; const ol = Math.hypot(ox, oy) || 1, j = (hsh(sd + 2) - .5) * .5;
       let dx = tx / tl * .85 + ox / ol * .45 + trx * 1.2 + j, dy = ty / tl * .85 + oy / ol * .45 + try_ * 1.2 - j * .3; const dl = Math.hypot(dx, dy) || 1;
-      emit(UX, UY, dx / dl, dy / dl, (13 + Math.pow(hsh(sd + 3), .8) * 26) * (1 + sp * .7) * e * (pose.down ? .4 : 1), (5 + hsh(sd + 4) * 7) * (.55 + .45 * e) * Math.min(1, e * 4), sd); }
+      emit(UX, UY, dx / dl, dy / dl, (11 + Math.pow(hsh(sd + 3), .9) * 21) * (1 + sp * .7) * e * (pose.down ? .4 : 1), (4.4 + hsh(sd + 4) * 6.2) * (.55 + .45 * e) * Math.min(1, e * 4), sd); }
     // off the outer edges, row by row down the cloth: wherever the cloth stands out past his body, out from it and down
     const i0 = Math.ceil(u0 * (S - 1) - 1e-3), i1 = Math.floor(u1 * (S - 1) + 1e-3), per = pose.down ? 0 : fine ? 2 : 1; // (knocked flat, only a few short smears off the hem)
     for (let r = 0; r < 5; r++) { const v = .24 + r * .16; let xn = 1e9, yn = 0, xx = -1e9, yx = 0;
@@ -665,7 +665,7 @@ const CORWIN = (() => {
       for (const sg of [-1, 1]) { const x = sg < 0 ? xn : xx, y = sg < 0 ? yn : yx, out = clamp((x * sg - 9) / 6, 0, 1); if (!out) continue; // (growing in as the cloth stands out past him, not popping)
         for (let k = 0; k < per; k++) { const [e, sd] = life(r * 13.1 + (sg + 1) * 41 + k * 7.7 + salt); if (e < .08) continue;
           const j = (hsh(sd + 2) - .5) * .5, dy0 = .2 + hsh(sd + 5) * .45 + v * .25; let dx = sg + trx * 1.3 + j * .3, dy = dy0 + try_ * 1.3; const dl = Math.hypot(dx, dy) || 1;
-          emit(x - sg * 1.5, y + (hsh(sd + 6) - .5) * 7, dx / dl, dy / dl, (10 + Math.pow(hsh(sd + 3), .8) * 22) * (.7 + v * .7) * (1 + sp * .8) * e * out, (4.5 + hsh(sd + 4) * 6.5) * (.55 + .45 * e) * Math.min(1, e * 4), sd); } } }
+          emit(x - sg * 1.5, y + (hsh(sd + 6) - .5) * 7, dx / dl, dy / dl, (8.5 + Math.pow(hsh(sd + 3), .9) * 18) * (.7 + v * .7) * (1 + sp * .8) * e * out, (4 + hsh(sd + 4) * 5.7) * (.55 + .45 * e) * Math.min(1, e * 4), sd); } } }
     const cols = [C(lining ? (L.cloakLining || '#0B0A0E') : L.cloak), C(L.cloakSlate)], base = [lining ? .84 : .92, .78]; // (at its root, where it leaves the cloth, a stroke is nearly as solid as the cloth itself)
     const FADE = [[0, 1], [.22, .86], [.45, .56], [.7, .34], [1, .2]], stops = cols.map((h, c) => FADE.map(([f, a]) => [f, rgbaOf(h, base[c] * a)])); // solid, thinning, then faint to its dry end
     const draw = () => { for (const k of strokes) { const g = ctx.createLinearGradient(k.x0, k.y0, k.x1, k.y1), st = stops[k.c]; for (const [f, cs] of st) g.addColorStop(f, cs); ctx.fillStyle = g; ctx.fill(k.p); } };
