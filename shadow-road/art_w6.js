@@ -1587,7 +1587,14 @@
   // THE ALARM: a bell clock jumps about in front of it, ringing, and the ringing rolls out in rings to jump
   reg('w6bell', {
     update(h) { const e = SB(); if (e) { h.x = e.x + 40; h.y = e.y + 14; } },
-    ups(h, list, t) { list.push([h.y, () => { const a = Math.min(1, (h.max - h.t) / .2, Math.max(0, h.t) / .3); shadow(h.x, h.y, 14); ctx.save(); ctx.globalAlpha = a; ctx.translate(h.x, h.y - Math.abs(Math.sin(t * 22)) * 6); ctx.scale(1.7, 1.7); clockArt(h.t); ctx.restore(); }]); },
+    // just before each ring goes out the clock flashes white and shakes harder (the rings leave at .35, 1.25 and 2.15 s)
+    ups(h, list, t) { list.push([h.y, () => { const a = Math.min(1, (h.max - h.t) / .2, Math.max(0, h.t) / .3), el = h.max - h.t;
+      let fk = 0; for (const R of [.35, 1.25, 2.15]) if (el > R - .32 && el < R + .04) fk = Math.max(fk, cl01((el - (R - .32)) / .3));
+      const flick = fk > 0 ? (Math.sin(t * 60) > -.2 ? 1 : .35) * fk : 0;
+      shadow(h.x, h.y, 14); ctx.save(); ctx.globalAlpha = a; ctx.translate(h.x + (fk ? Math.sin(t * 90) * 2.5 * fk : 0), h.y - Math.abs(Math.sin(t * 22)) * (6 + 6 * fk)); ctx.scale(1.7 + .2 * fk, 1.7 + .2 * fk); clockArt(h.t);
+      if (flick > 0) { const F = FLASH; FLASH = true; ctx.globalAlpha = a * flick; clockArt(h.t); FLASH = F; // the whole clock goes white
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * flick; ctx.fillStyle = 'rgba(255,250,235,.9)'; circle(0, -19, 15); ctx.fill(); ctx.strokeStyle = 'rgba(255,240,210,.9)'; ctx.lineWidth = 2; circle(0, -19, 19 + 4 * fk); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+      ctx.restore(); }]); },
     box(h, box) { box(h.x, h.y, 0, 40, 80); },
   });
   // THE FALL: it dreams that it is falling, and jerks awake: the whole bed jolts. Be off it (jump) when the count runs out
