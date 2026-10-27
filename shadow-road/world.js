@@ -252,8 +252,7 @@ function wind(e, t) {
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
   if (!e.paired) recruitPartner(e); e.paired = false;
 }
-// big numbers: each new cycle every blow of yours lands for more (ngPow), and every foe has that much more health on top
-// of its own increase, so the fights get harder while the damage numbers climb
+// each new cycle every foe has that much more health again (on top of its own increase)
 const ngPow = () => 1 + .5 * (save.cycle || 0);
 const ngCd = () => Math.max(.72, 1 - .09 * (save.cycle || 0)); // in later cycles foes press their attacks sooner
 function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]) * worldDiff().cd * ngCd(); }

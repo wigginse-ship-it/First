@@ -324,7 +324,7 @@ function critChance(e) {
   return Math.min(.35 * Math.max(1, fast) + gearStat('crit'), c * fast);
 }
 function strike(e, base, dir, m, echo) {
-  let raw = base * rand(.9, 1.1) * (stillT > 0 ? (TL('stillness') >= 3 ? 3 : 2) : 1) * ngPow(); // (later cycles: bigger blows for bigger foes, world.js)
+  let raw = base * rand(.9, 1.1) * (stillT > 0 ? (TL('stillness') >= 3 ? 3 : 2) : 1);
   if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
   let dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' || m.arrow ? 1 : .78)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
