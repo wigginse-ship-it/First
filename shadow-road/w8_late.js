@@ -51,8 +51,8 @@
   }
   // a rider: a horse in Lorraine's caparison, and on it Corwin, or Ganelon
   function rider(x, y, s, look, f, t, walk, gal, lift = 0) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s * f, s); const o = { t, walk, gallop: gal, legCol: look.legs, bootCol: look.boots };
-    W8.horse("back", o); ctx.save(); ctx.translate(0, -36); drawHumanoid(look, { arm: lift ? -1.6 : .6, Y: .25, weapon: lift ? 'fists' : 'rapier' }); if (lift) W8.hornDraw(10, -58, .8, t, 1, -1.1); ctx.restore(); W8.horse('front', o); ctx.restore();
+    ctx.save(); ctx.translate(x, y); ctx.scale(s * f, s); const o = { t, walk, gallop: gal, legCol: look.legs, bootCol: look.boots, coat: look.corwin ? 'grey' : 'bay' };
+    W8.horse("back", o); ctx.save(); ctx.translate(0, -36 + W8.horseLift(o)); drawHumanoid(look, { arm: lift ? -1.6 : .6, Y: .25, weapon: lift ? 'fists' : 'rapier' }); if (lift) W8.hornDraw(10, -58, .8, t, 1, -1.1); ctx.restore(); W8.horse('front', o); ctx.restore();
   }
   function renderEnding(t) {
     const now = performance.now(), dt = Math.min(.05, (now - END.last) / 1000); END.last = now; END.t += dt; const T = END.t;
@@ -289,8 +289,8 @@
     ctx.restore(); }
   function drawRider(r, t) { // a rider of Lorraine's dead: horse and man the grey-blue of the Circle's mist, see-through, trailing it
     onMain(() => { const o = { t, walk: t * 14, gallop: 1, legCol: '#6A7A96', bootCol: '#4A566E' }, look = Object.assign({}, heroLook(), { cloak: '#5A6A86', body: '#7A8AA6', legs: '#6A7A96', boots: '#4A566E' });
-      for (let i = 3; i >= 0; i--) { ctx.save(); ctx.translate(r.x - r.f * i * 22, r.y); ctx.scale(r.f * 1.05, 1.05); ctx.globalAlpha = i ? .12 : .55; TINT = i ? '#C8D4EA' : null;
-        W8.horse('back', o); ctx.save(); ctx.translate(0, -36); drawHumanoid(look, { arm: -.6, Y: .3, weapon: 'sword' }); ctx.restore(); W8.horse('front', o); TINT = null; ctx.restore(); }
+      for (let i = 2; i >= 0; i--) { ctx.save(); ctx.translate(r.x - r.f * i * 24, r.y); ctx.scale(r.f * 1.05, 1.05); ctx.globalAlpha = i ? .12 : .55; TINT = i ? '#C8D4EA' : null;
+        W8.horse('back', o); ctx.save(); ctx.translate(0, -36 + W8.horseLift(o)); drawHumanoid(look, { arm: -.6, Y: .3, weapon: 'sword' }); ctx.restore(); W8.horse('front', o); TINT = null; ctx.restore(); }
       ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = 'rgba(150,170,210,.25)'; ctx.beginPath(); ctx.ellipse(r.x, r.y - 50, 60, 50, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); }
 
   // ---------------- the HUD: an illuminated scroll with the verses held ----------------
@@ -570,8 +570,8 @@
       else if (m.k === 'ember') { const x = m.x + Math.sin(t * 6 + m.ph) * 3; ctx.fillStyle = `rgba(255,${150 + Math.round(70 * (1 - u))},70,${a})`; ctx.beginPath(); ctx.arc(x, m.y, 1.4 + (1 - u), 0, Math.PI * 2); ctx.fill(); }
       else if (m.k === 'arms') { ctx.translate(m.x, m.y); ctx.globalAlpha = .7 * a; ctx.scale(.9 + u * .3, .9 + u * .3); W8.arms(0, 0, 22, 26, { ow: .6 }); }
       else if (m.k === 'rider' && W8.horse) { const o = { t, walk: t * 14, gallop: 1, legCol: '#6A7A96', bootCol: '#4A566E' }, look = Object.assign({}, heroLook(), { cloak: '#5A6A86', body: '#7A8AA6', legs: '#6A7A96', boots: '#4A566E' });
-        for (let i = 2; i >= 0; i--) { ctx.save(); ctx.translate(m.x - m.f * i * 16, m.y); ctx.scale(m.f * .72, .72); ctx.globalAlpha = (i ? .1 : .42) * a; TINT = '#C8D4EA';
-          try { W8.horse('back', o); ctx.save(); ctx.translate(0, -36); drawHumanoid(look, { arm: -.6, Y: .3, weapon: 'sword', noCloak: 1 }); ctx.restore(); W8.horse('front', o); } finally { TINT = null; } ctx.restore(); } }
+        for (let i = 1; i >= 0; i--) { ctx.save(); ctx.translate(m.x - m.f * i * 18, m.y); ctx.scale(m.f * .72, .72); ctx.globalAlpha = (i ? .1 : .42) * a; TINT = '#C8D4EA';
+          try { W8.horse('back', o); ctx.save(); ctx.translate(0, -36 + W8.horseLift(o)); drawHumanoid(look, { arm: -.6, Y: .3, weapon: 'sword', noCloak: 1 }); ctx.restore(); W8.horse('front', o); } finally { TINT = null; } ctx.restore(); } }
       ctx.restore();
     }
   }
