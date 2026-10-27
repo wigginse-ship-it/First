@@ -485,9 +485,13 @@ function drawDeath(e, t) {
     }
     if (el > .25) { // the wounds stay: round holes punched clean through, most taken from the edge of the body, the street showing through
       const mat = e.def.mat, base = (MAT_COL[mat] || MAT_COL.fur)[0], g = ease(Math.min(1, (el - .25) / .14)); // (each opens in a quick punch)
-      const kind = { fur: 'blood', flesh: 'blood', metal: 'oil', goo: 'ooze', rock: 'sunk', crystal: 'sunk', china: 'sunk', spark: 'glow', ghost: 'glow', dream: 'glow' }[mat] || 'blood';
+      const kind = { fur: 'blood', flesh: 'blood', metal: 'oil', goo: 'ooze', rock: 'sunk', crystal: 'sunk', china: 'sunk', spark: 'ooze', ghost: 'ooze', dream: 'ooze', w7brine: 'ooze', w7glass: 'sunk', w7bronze: 'sunk', w7nacre: 'sunk', ash: 'sunk', wood: 'sunk' }[mat] || 'blood';
       const geo = (w) => [w.x * e.hw, -w.y * e.hh, clamp(e.hw * .2, 2.6, 5.5) * (w.r || 1) * g];
-      ctx.save(); ctx.globalCompositeOperation = 'destination-out'; for (const w of e.wounds || []) { const [x, y, R] = geo(w); circle(x, y, R); ctx.fill(); } ctx.restore(); // cut through: perfectly round
+      // the puncture: a dark cavity in the body's own colour (not a see-through hole, which showed the paper behind as a white disc)
+      if (!FLASH && !TINT) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; for (const w of e.wounds || []) { const [x, y, R] = geo(w); if (R < .5) continue;
+        const cg = ctx.createRadialGradient(x - R * .25, y - R * .3, 0, x, y, R); const deep = kind === 'blood' ? '#2A0408' : kind === 'oil' ? '#060508' : shade(base, -.78);
+        cg.addColorStop(0, deep); cg.addColorStop(.7, kind === 'blood' ? '#4A060C' : kind === 'oil' ? '#0C0A10' : shade(base, -.6)); cg.addColorStop(1, kind === 'blood' ? '#6A0A12' : kind === 'oil' ? '#141018' : shade(base, -.45));
+        ctx.fillStyle = cg; circle(x, y, R); ctx.fill(); } ctx.restore(); }
       if (!FLASH && !TINT) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; // (the rim only where the body is left: nothing hangs in the air)
         for (const w of e.wounds || []) { const [x, y, R] = geo(w); if (R < 1) continue; const h = (k) => { const v = Math.sin((w.s || 1) * 91.3 + k * 12.9898) * 43758.5; return v - Math.floor(v); }; // (its own rough edge, the same every frame)
           const rough = (col, n, d0, d1, s0, s1) => { ctx.fillStyle = col; n = Math.ceil(n * .5); d1 = d0 + (d1 - d0) * .45; s0 *= .6; s1 *= .55; for (let i = 0; i < n; i++) { const a = h(i) * TAU, d = R + d0 + h(i + 40) * (d1 - d0), r = s0 + h(i + 80) * (s1 - s0); circle(x + Math.cos(a) * d, y + Math.sin(a) * d, r); ctx.fill(); } };
