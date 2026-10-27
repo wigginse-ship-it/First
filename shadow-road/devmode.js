@@ -7,15 +7,18 @@
 (() => {
   const BACKUP = 'shadowroad-devbackup', OPTS = 'shadowroad-devopts';
   const DEV = window.DEV = { god: false };
-  let opts = { god: false, arsenal: false, relic: '', cycle: 0, card: '', clv: 1 };
+  let opts = { god: false, elites: false, arsenal: false, relic: '', cycle: 0, card: '', clv: 1 };
   try { Object.assign(opts, JSON.parse(localStorage.getItem(OPTS) || '{}')); } catch (e) {}
   if (opts.relics || (opts.arm && opts.pearl && opts.horn)) opts.relic = 'all'; else if (opts.arm || opts.pearl || opts.horn) opts.relic = opts.arm ? 'arm' : opts.pearl ? 'pearl' : 'horn';
   delete opts.relics; delete opts.arm; delete opts.pearl; delete opts.horn; // (the older switches)
   const keepOpts = () => { try { localStorage.setItem(OPTS, JSON.stringify(opts)); } catch (e) {} };
-  DEV.god = !!opts.god;
+  DEV.god = !!opts.god; DEV.elites = !!opts.elites;
 
   // invincible: blows land (and flash) but take nothing off
   { const _pd = playerDamage; playerDamage = function (dmg, fromX, big) { if (DEV.god && P) { const hp = P.hp; _pd(dmg, fromX, big); P.hp = Math.max(hp, P.hp); return; } return _pd(dmg, fromX, big); }; }
+
+  // every foe armored: each one comes in an elite, its breakable armor on, in any world
+  { const _sp = spawnEnemy; spawnEnemy = function (type, side, isBoss) { const e = _sp(type, side, isBoss); if (DEV.elites && e && !e.boss && !e.elite) { e.elite = true; e.guardMax = e.guard = 3; } return e; }; }
 
   const backup = () => { try { if (!localStorage.getItem(BACKUP)) localStorage.setItem(BACKUP, localStorage.getItem(SAVE_KEY) || JSON.stringify(freshSave())); } catch (e) {} };
   function restore() {
@@ -67,6 +70,7 @@
     </style><div class="box"><h3>DEV MODE · JUMP TO A LEVEL</h3>
       <div class="opts">
         <label><input type="checkbox" data-o="god"> Invincible</label>
+        <label><input type="checkbox" data-o="elites"> Every foe armored</label>
         <label><input type="checkbox" data-o="arsenal"> All weapons, max level, best arrows</label>
         <label>Relic <select data-o="relic"><option value="">None</option><option value="arm">The Silver Arm (equipped)</option><option value="pearl">The Pearl of Judgement</option><option value="horn">The Horn of Lorraine</option><option value="all">All three</option></select></label>
         <label>Card <select data-o="card"><option value="">(as saved)</option>${TRUMP_ORDER.map(k => `<option value="${k}">${TRUMPS[k].name}</option>`).join('')}</select></label>
@@ -85,7 +89,7 @@
     });
     for (const c of el.querySelectorAll('[data-o]')) {
       const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'card' || k === 'relic' ? String(opts[k] || '') : String(opts[k] | 0);
-      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' ? c.value : +c.value; DEV.god = !!opts.god; keepOpts(); });
+      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' ? c.value : +c.value; DEV.god = !!opts.god; DEV.elites = !!opts.elites; keepOpts(); });
     }
     el.addEventListener('click', (ev) => {
       const b = ev.target.closest('button'); if (!b) { if (ev.target === el) close(); return; }

@@ -61,6 +61,34 @@ function makeElite(e) {
   e.elite = true; e.guardMax = e.guard = stageIdx >= 2 ? 4 : 3;
   e.hp = e.maxHp = Math.round(e.hp * 1.5); e.dmg = Math.round(e.dmg * 1.15);
 }
+// ---------- breakable armor: what an elite's guard looks like on its body, and what breaking it does ----------
+// ARMOR[type] = {
+//   draw(e, a)        the armor, drawn in the creature's own space right after the creature (only while e.guard > 0);
+//   pieces            [{ x, y, fn, w? }]: the bits that fly off when it breaks, each drawn by fn() about its own middle,
+//                     x, y where it sits on the body (creature space, feet at 0, up is negative);
+//   cols              the colours of the shards it breaks into;
+//   onBreak(e, dir)   optional: anything more the break does (the new form, a changed stat, sounds);
+// }
+// When the guard breaks the pieces tumble away and e.bare = 1, which the creature's own drawing may read to show what was
+// underneath. A killed elite whose guard still held sheds its armor the same way.
+const ARMOR = {};
+function armorBreak(e, dir) {
+  const A = ARMOR[e.type]; if (!A || e.bare) return; e.bare = 1;
+  const s = e.size || 1, sx = e.sqx || 1, sy = e.sqy || 1;
+  for (const p of A.pieces || []) {
+    const bx = e.x + p.x * e.facing * s * sx, bz = e.z - p.y * s * sy;
+    hazards.push({ kind: 'armorbit', fn: p.fn, x: bx, y: e.y + rand(-2, 2), z: bz, vx: dir * rand(90, 200) + rand(-40, 40), vz: rand(160, 300), rot: 0, vr: dir * rand(5, 11), sc: s, facing: e.facing, t: 2.2, max: 2.2, bounced: 0 });
+  }
+  if (A.cols) burst(e.x, e.y, e.z + e.hh * .6, A.cols, 18, 'crystal', dir, true);
+  if (A.onBreak) A.onBreak(e, dir);
+}
+HAZARD_FX.armorbit = {
+  update(h, dt) { h.vz -= 900 * dt; h.x += h.vx * dt; h.z += h.vz * dt; h.rot += h.vr * dt;
+    if (h.z <= 0) { h.z = 0; if (h.vz < -60 && h.bounced < 2) { h.bounced++; h.vz = -h.vz * .35; h.vx *= .5; h.vr *= .5; } else { h.vz = 0; h.vx *= Math.pow(.02, dt); h.vr *= Math.pow(.02, dt); } } },
+  draw(h, t) { const a = Math.min(1, h.t / .5); if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha *= .3 * a; ctx.fillStyle = '#000'; ell(h.x, h.y, 10 * h.sc, 3 * h.sc); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.globalAlpha *= a; ctx.translate(h.x, h.y - h.z); ctx.rotate(h.rot); ctx.scale(h.facing * h.sc, h.sc); try { h.fn(); } finally { ctx.restore(); } },
+};
 function spawnEnemy(type, side, isBoss) {
   let forceElite = false;
   if (!isBoss && type.endsWith('*')) { type = type.slice(0, -1); forceElite = stageIdx >= 1; }
@@ -70,7 +98,7 @@ function spawnEnemy(type, side, isBoss) {
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
     dmg: Math.round(def.dmg * ngDmgK() * (isBoss ? 1.6 : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
-  if (!isBoss && (forceElite || (stageIdx >= 1 && def.move !== 'fly' && Math.random() < [0, .15, .22, .3, .36][Math.min(stageIdx, 4)]))) makeElite(e);
+  if (!isBoss && (forceElite || (stageIdx >= 1 && def.move !== 'fly' && Math.random() < [0, 0, .3, .38, .44][Math.min(stageIdx, 4)]))) makeElite(e);
   if (isBoss) { e.phase = 1; e.baseDmg = e.dmg; e.size = 1.15; e.hw = def.hw * e.size; e.hh = def.hh * e.size; e.rageT = 0; e.staggers = 0; }
   enemies.push(e); return e;
 }

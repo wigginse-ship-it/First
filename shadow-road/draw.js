@@ -392,6 +392,7 @@ function drawEnemy(e, t) {
   if (e.state === 'down' && e.def.move === 'hop') ctx.scale(1.3, .55);
   FLASH = e.flash > 0 || (e.state === 'wind' && e.t < .25 && Math.floor(t * 20) % 2 === 0);
   CREATURES[e.def.draw](e, a);
+  if (e.elite && e.guard > 0 && !e.bare && ARMOR[e.type]) ARMOR[e.type].draw(e, a); // its breakable armor
   FLASH = false;
   ctx.restore();
   if (!e.dead) hatchActor(e.x, e.y - e.z, e.hw * scale, e.hh * scale);

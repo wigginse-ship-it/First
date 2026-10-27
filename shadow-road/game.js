@@ -353,6 +353,7 @@ function strike(e, base, dir, m, echo) {
   if (broke && !e.dead) { // the guard shatters and leaves it reeling
     e.state = 'down'; e.t = 1.3; e.vx = dir * 60; e.plan = null; hitstop = Math.max(hitstop, .14); shakeMag = Math.max(shakeMag, 7); sfx('break');
     floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD BREAK!', '#FFD27A', 18); burst(e.x, e.y, e.z + e.hh * .6, ['#EED48A', '#FFFFFF', '#D8AA55'], 24, 'crystal', dir, true);
+    armorBreak(e, dir);
   }
   if (m === P.move && dir === P.facing && !m.around && !(m.lunge >= 300)) P.carry = Math.max(P.carry || 0, Math.min(Math.abs(e.vx) * (e.air ? 1.4 : .8), 340));
   if (brandT > 0 && !m.trump && !m.el && !e.dead) { if (TL('brand') >= 3) { const keep = brandEl; for (const el of ['fire', 'frost', 'storm']) { brandEl = el; if (!e.dead) applyElement(e, base, dir); } brandEl = keep; } else applyElement(e, base, dir); }
@@ -413,6 +414,7 @@ function hurtEnemy(e, dmg, dir, m, crit) {
 // each weapon finishes enemies its own way: the sword cuts them in two, the staff caves them in, the hammer flattens them
 const DEATH_BY = { sword: 'slice', staff: 'crumple', hammer: 'splat', rapier: 'pierce' };
 function killEnemy(e, dir, m) {
+  if (e.elite && e.guard > 0) armorBreak(e, dir); // (its armor comes off it as it falls)
   e.dead = true; e.state = 'dying'; e.dir = dir; e.deadAt = performance.now() / 1000;
   e.death = m.trump ? 'pop' : P.w === 'hammer' ? (m.smash ? 'splat' : 'pop') : DEATH_BY[P.w] || 'pop'; // the hammer only splats on a downward smash
   hitstop = Math.max(hitstop, .13); zoom = Math.max(zoom, .05); flashT = .06;
