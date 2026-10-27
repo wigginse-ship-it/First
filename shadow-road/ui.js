@@ -3,9 +3,12 @@
 const hpEl = $('#hp'), bossHpEl = $('#bosshp'), tbarEl = $('#tbar'), trumpBtn = $('#trumpBtn');
 let bannerT = 0;
 function banner(title, sub, dur) { $('#bt').textContent = title; $('#bs').textContent = sub || ''; $('#banner').classList.add('on'); bannerT = dur; }
+// the health bar grows with his max health: armor and other health buffs make it visibly longer (up to twice the base)
+let hpBarK = 0;
+function sizeHpBar() { const k = Math.round(clamp(maxHp() / BASE_HP, 1, 2) * 100) / 100; if (k === hpBarK) return; hpBarK = k; hpEl.parentElement.style.width = `calc(clamp(110px, 24vw, 190px) * ${k})`; hpEl.parentElement.style.maxWidth = '46vw'; }
 function refreshHud(full) {
   if (!P) return;
-  hpEl.style.width = (100 * P.hp / maxHp()) + '%';
+  sizeHpBar(); hpEl.style.width = (100 * P.hp / maxHp()) + '%';
   $('#shards').textContent = save.shards; $('#sigils').textContent = save.sigils;
   if (full) {
     $('#wname').textContent = WEAPONS[P.w].name.toUpperCase();
@@ -24,7 +27,7 @@ function refreshCombo(hit) {
   lastCombo = comboN;
 }
 function hudTick() {
-  hpEl.style.width = (100 * P.hp / maxHp()) + '%';
+  sizeHpBar(); hpEl.style.width = (100 * P.hp / maxHp()) + '%';
   if (boss) bossHpEl.style.width = Math.max(0, 100 * boss.hp / boss.maxHp) + '%';
   if (save.trump) {
     tbarEl.style.width = (100 * trumpCharge / TRUMP_CHARGE) + '%';
