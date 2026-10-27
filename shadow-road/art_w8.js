@@ -947,10 +947,20 @@
     if (DET() || FLASH) { ctx.fillStyle = C(GL.eye); ell(4, -5, 2.8, 2); ctx.fill(); ctx.fillStyle = C('#0E0A06'); ctx.fillRect(2.4, -5.5, 3.2, 1); }
     if (rage > 0 && DET()) glowM(4, -5, 6, '255,200,90', .35 * rage);
     horn(0, -10, -6 * hs, -30 * hs, -20 * hs, -36 * hs, 7, .9, GL.horn, 1.4, '#141210'); // the near horn, ridged
+    if (o.charge > 0) { gather(-20 * hs, -36 * hs, o.charge, o.t || 0, 4); gather(-22 * hs, -6 * hs, o.charge * .8, (o.t || 0) + .37, 3.4); } // (without his crozier the bleat gathers in his horns)
     if (DET()) { ctx.strokeStyle = 'rgba(150,140,128,.55)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 1; i < 7; i++) { const u = i / 7, px = lerp(0, -20 * hs, u * u) + lerp(0, -6 * hs, u * (1 - u)) * 2, py = lerp(-10, -36 * hs, u) + Math.sin(u * 3) * 4; ctx.moveTo(px - 3, py + 2); ctx.lineTo(px + 3, py - 1); } ctx.stroke(); }
     ctx.restore();
   }
   // the crozier: an iron staff with a crook bent round into a ring, the ring the Circle
+  // the bleat gathering at a point (the crozier's ring, or the tips of his horns): grey motes of the Circle spiral in,
+  // a pale light grows in it and threads crackle off it
+  function gather(rx, ry, charge, t, core) {
+      for (let i = 0; i < 12; i++) { const q = (t * (1.1 + charge * 1.6) + i / 12) % 1, r = 9 + (1 - q) * (22 + 14 * charge), a = i * 2.4 + q * 4.2;
+        ctx.fillStyle = `rgba(${i % 3 ? '214,206,190' : '236,214,150'},${(.25 + .6 * q) * charge})`; circle(rx + Math.cos(a) * r, ry + Math.sin(a) * r, .8 + q * 1.4); ctx.fill(); }
+      const g = ctx.createRadialGradient(rx, ry, 0, rx, ry, core); g.addColorStop(0, `rgba(250,240,214,${.95 * charge})`); g.addColorStop(.55 * charge + .2, `rgba(214,200,170,${.7 * charge})`); g.addColorStop(1, 'rgba(12,10,8,0)'); ctx.fillStyle = g; circle(rx, ry, core); ctx.fill();
+      if (charge > .35) { ctx.strokeStyle = `rgba(240,228,200,${.8 * charge})`; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = Math.floor(t * 18 + i * 7) * 1.7 + i * 2.1, L2 = 9 + 8 * charge; ctx.moveTo(rx + Math.cos(a) * 8, ry + Math.sin(a) * 8); ctx.lineTo(rx + Math.cos(a + .3) * (8 + L2 * .5), ry + Math.sin(a + .3) * (8 + L2 * .5)); ctx.lineTo(rx + Math.cos(a - .1) * (8 + L2), ry + Math.sin(a - .1) * (8 + L2)); } ctx.stroke(); }
+      glowM(rx, ry, 10 + 6 * charge, '240,226,190', .3 * charge);
+  }
   function crozier(x0, y0, ang, L, glow, charge = 0, t = 0) {
     const x1 = x0 + Math.cos(ang) * L, y1 = y0 + Math.sin(ang) * L;
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 4.4; ctx.beginPath(); ctx.moveTo(x0 - Math.cos(ang) * 12, y0 - Math.sin(ang) * 12); ctx.lineTo(x1, y1); ctx.stroke();
@@ -960,12 +970,7 @@
     if (DET()) { ctx.strokeStyle = C(GL.ironLt); ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(rx, ry, 9, -2.4, -.6); ctx.stroke(); }
     ctx.fillStyle = C('#0C0A08'); circle(rx, ry, 7); ctx.fill(); // the ring is a hole: you see nothing through it
     if (glow > 0) glowM(rx, ry, 18, '210,200,180', .25 * glow);
-    if (charge > 0) { // the bleat gathering in the crook: grey motes of the Circle spiral into the ring, its hole fills with a pale, growing light, and threads crackle off it
-      for (let i = 0; i < 12; i++) { const q = (t * (1.1 + charge * 1.6) + i / 12) % 1, r = 9 + (1 - q) * (22 + 14 * charge), a = i * 2.4 + q * 4.2;
-        ctx.fillStyle = `rgba(${i % 3 ? '214,206,190' : '236,214,150'},${(.25 + .6 * q) * charge})`; circle(rx + Math.cos(a) * r, ry + Math.sin(a) * r, .8 + q * 1.4); ctx.fill(); }
-      const g = ctx.createRadialGradient(rx, ry, 0, rx, ry, 7); g.addColorStop(0, `rgba(250,240,214,${.95 * charge})`); g.addColorStop(.55 * charge + .2, `rgba(214,200,170,${.7 * charge})`); g.addColorStop(1, 'rgba(12,10,8,0)'); ctx.fillStyle = g; circle(rx, ry, 7); ctx.fill();
-      if (charge > .35) { ctx.strokeStyle = `rgba(240,228,200,${.8 * charge})`; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = Math.floor(t * 18 + i * 7) * 1.7 + i * 2.1, L2 = 9 + 8 * charge; ctx.moveTo(rx + Math.cos(a) * 8, ry + Math.sin(a) * 8); ctx.lineTo(rx + Math.cos(a + .3) * (8 + L2 * .5), ry + Math.sin(a + .3) * (8 + L2 * .5)); ctx.lineTo(rx + Math.cos(a - .1) * (8 + L2), ry + Math.sin(a - .1) * (8 + L2)); } ctx.stroke(); }
-      glowM(rx, ry, 10 + 6 * charge, '240,226,190', .3 * charge); }
+    if (charge > 0) gather(rx, ry, charge, t, 7); // the bleat gathering in the crook
     return [rx, ry];
   }
   // his cope: a great semicircle of vermilion silk, its orphrey bands of gold worked with black goats; in his third
@@ -1003,7 +1008,7 @@
     cope(sw * .4 - kneel * 2, burn, form >= 3 ? 6 : 0);
     // the morse: a gold clasp holding the cope at his breast, set with a black stone
     cel(PE(1, -62, 5, 4), '#C9982E', { d: 1, r: .6, w: 1.2, lite: '#FFE8A0' }); ctx.fillStyle = C('#140E0A'); circle(1, -62, 2.2); ctx.fill();
-    goatHead(4, -76, 1, { horns: hs, rage: form >= 3 ? 1 : 0, open: o.open || 0, tilt: o.tilt || 0 });
+    goatHead(4, -76, 1, { horns: hs, rage: form >= 3 ? 1 : 0, open: o.open || 0, tilt: o.tilt || 0, charge: o.book ? o.charge || 0 : 0, t: o.t });
     ctx.restore();
     if (!kneel) goatLeg(3, hip[1], sw + 5, 0, '#3E342C', true);
     // the near arm and the crozier (or, kneeling, the book)
@@ -1649,7 +1654,7 @@
   // its warning shows the whole reach of the sound: the ground darkens out to where the ring will die, and rings of
   // dust run outward along it, faster as the bleat comes
   // the warning itself is on his crozier (the bleat gathers in its crook: a6_boss.js); the floor only shows, faintly, how far it will reach
-  function bleatTell(x, y, k, t) { ctx.save(); ctx.globalAlpha = .25 + .35 * k; ctx.setLineDash([6, 8]); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(x, y, 260, 260 / 2.2); ctx.stroke(); ctx.restore(); }
+  function bleatTell() {} // (nothing on the floor: the warning is all in the crozier, or the horns)
   TELL_FX.w8bleat = (e, t, k) => { bleatTell(e.x, e.y, k, t); };
   // the same warning when he bleats without a wind-up of his own (at the engine, and when spent): he throws his head back first
   function bleatWarn(e, after) { e.w8a = 'bleat'; e.state = 'w8act'; hazards.push({ kind: 'w8bleattell', e, x: e.x, y: e.y, t: .8, max: .8, after }); sfx('charge', .6); }
