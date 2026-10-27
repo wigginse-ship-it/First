@@ -83,10 +83,10 @@ function rapierTwin(m) { // out of the lunge he recovers half a step and runs th
   if (!e || e.dead || !enemies.includes(e)) return;
   const dx = (e.x - P.x) * P.facing;
   if (dx > e.hw + 70) P.x += P.facing * Math.min(50, dx - e.hw - 70); // (a short step after them if the first thrust drove them back)
-  P.vx = P.facing * 160;
+  P.vx = dx > e.hw + 50 ? P.facing * 160 : 0; // (already close: he stabs from where he stands)
   const d2 = (e.x - P.x) * P.facing;
   if (d2 < -e.hw - 10 || d2 > m.x1 + e.hw + 40 || Math.abs(e.y - P.y) > 44 || !zOverlap(P.z - 6, 90, e.z, e.hh)) return;
-  const m2 = Object.assign({}, m, { kb: m.twinKb || m.kb, twinAt: 0, lunge: 0 });
+  const m2 = Object.assign({}, m, { kb: m.twinKb || m.kb, twinAt: 0, lunge: 0, power: 2, wall: 1 }); // (the first stab only pins them; the second is the heavy one)
   strike(e, m.dmg * (m.twinDmg || .65) * wMult(P.w), P.facing, m2); P.hits.set(e, P.t);
   fx.push({ kind: 'slash', x: e.x - P.facing * e.hw * .3, y: e.y, z: e.z + e.hh * .55, ang: 0, t: .22, max: .22, size: 26 + e.hw * .5, col: '#F2E4EC' }); sfx('slice');
 }
