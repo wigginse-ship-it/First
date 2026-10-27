@@ -41,7 +41,7 @@ function ngDmgK() {
   const t0 = clamp((stageIdx || 0) + 1, 1, 5), setDef = (T) => GEAR_SLOTS.reduce((a, s) => a + GEAR_DEF[s][Math.min(T, 5) - 1] * pastTop(T, .3), 0);
   const setHp = (T) => BASE_HP + GEAR_SLOTS.length * GEAR_HP[Math.min(T, 5) - 1] * pastTop(T, .32);
   const taken = (T) => (1 - gearDR(setDef(T))) / setHp(T); // the share of your health one point of damage takes, in full gear of tier T
-  return taken(t0) / taken(t0 + 5 * q) * (1 + .25 * q);
+  return taken(t0) / taken(t0 + 5 * q) * (1 + .6 * q); // (a cycle carries the relics of the road's ends: each one hits that much harder)
 }
 // each world is harder than the last: enemies take more hits to bring down, hit a little harder and attack more often.
 // Your own damage doesn't change, so leveling your weapons is what keeps pace.
@@ -65,7 +65,7 @@ function spawnEnemy(type, side, isBoss) {
   let forceElite = false;
   if (!isBoss && type.endsWith('*')) { type = type.slice(0, -1); forceElite = stageIdx >= 1; }
   const def = isBoss ? BOSSES[type] : EDEF[type];
-  const wd = worldDiff(), hp = Math.round(scaleStat(def.hp, .5) * (isBoss ? wd.boss : wd.hp) * (!isBoss && def.ranged && !def.poise ? .65 : 1)); // shooters are fragile: close the gap and they drop fast (the armored tank isn't)
+  const wd = worldDiff(), hp = Math.round(scaleStat(def.hp, .8) * ngPow() * (isBoss ? wd.boss : wd.hp) * (!isBoss && def.ranged && !def.poise ? .65 : 1)); // shooters are fragile: close the gap and they drop fast (the armored tank isn't)
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
     dmg: Math.round(def.dmg * ngDmgK() * (isBoss ? 1.6 : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
@@ -252,7 +252,11 @@ function wind(e, t) {
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
   if (!e.paired) recruitPartner(e); e.paired = false;
 }
-function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]) * worldDiff().cd; }
+// big numbers: each new cycle every blow of yours lands for more (ngPow), and every foe has that much more health on top
+// of its own increase, so the fights get harder while the damage numbers climb
+const ngPow = () => 1 + .5 * (save.cycle || 0);
+const ngCd = () => Math.max(.72, 1 - .09 * (save.cycle || 0)); // in later cycles foes press their attacks sooner
+function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]) * worldDiff().cd * ngCd(); }
 // extension points: other files can add attack plans (PLAN_FX[plan](e)), their tells (TELL_FX[plan](e, t, k)) and hazard kinds
 // (HAZARD_FX[kind] = { update(h, dt), draw(h, t) }) without touching this file
 const PLAN_FX = {}, TELL_FX = {}, HAZARD_FX = {};
