@@ -366,7 +366,7 @@
     const open = atk ? -.05 : .18 + wd * .55 + Math.sin(t * 3) * .04;
     seg(14, -12, 19, -8 + rear * .4, 5.6, 5, CH.b, 1);
     shard(17.5, -10.5, 4, -1.3, 2.6, ICE, .8);
-    crabClaw(18.5, -11 + rear * .3, -.22 - wd * .4 + (atk ? .2 : 0), open, atk ? 1.12 : 1.04, false);
+    crabClaw(18.5, -11 + rear * .3, -.22 - wd * .4 + (atk ? .2 : 0), open, (atk ? 1.12 : 1.04) * (e.bare ? 1.18 : 1), false); // (out of its borrowed shell, armor_a.js, the claw swells)
     ctx.restore();
   };
 

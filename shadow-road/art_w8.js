@@ -633,7 +633,9 @@
     const open = wM ? .5 + Math.sin(t * 20) * .3 : peck ? .2 : 0;
     cel(PP([19, -12, 33, -9 - open * 3, 19, -8]), '#3A3430', { d: .6, r: .5, w: 1.2, lite: '#8A8478' });
     cel(PP([19, -8, 31, -7 + open * 4, 19, -6]), '#2E2A26', { d: .6, r: .4, w: 1.1 });
-    bead(16, -12, 1.1);
+    if (e.bare) { ctx.fillStyle = C('#F2EAD8'); ell(16, -12, 2.2, 1.6); ctx.fill(); outline(.6); if (DET()) { ctx.fillStyle = '#5A7A9A'; circle(16.8, -12, 1); ctx.fill(); ctx.fillStyle = '#0A0806'; circle(16.9, -12, .5); ctx.fill(); } } // a man's eye, under the iron
+    else bead(16, -12, 1.1);
+    if (W8.armor.armed(e)) { ctx.save(); ctx.translate(14, -10); W8.armor.crowMask(); ctx.restore(); }
     ctx.save(); ctx.translate(13, -16); ctx.rotate(-.35);
     cel(PP([-8, 0, 8, 0, 2, -14, 1.4, -20, -.6, -20, -1.4, -14]), '#8A8E90', { d: 1.4, r: .8, w: 1.3, lite: '#E0E4E2', tex: () => { ctx.strokeStyle = 'rgba(30,30,34,.5)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(-6, -3); ctx.lineTo(6, -3); ctx.stroke(); } }); // the funnel
     ctx.restore();
@@ -657,15 +659,27 @@
       fillPoly([f[0] - 2, f[1] - 2, f[0] + 6, f[1] - 1.4, f[0] + 7, f[1] + .4, f[0] - 2.4, f[1] + .4], near ? '#D49880' : '#B47A66', 1); };
     leg(false);
     ctx.save(); ctx.translate(0, bodyY); if (roll) ctx.rotate(t * 14 * e.facing * 0 + k * 26); else ctx.rotate(Math.sin(t * 2.2) * .05 + (wK ? -.2 * wind : 0));
-    const egg = PB([0, -24, 11, -20, 15, -4, 12, 12, 0, 17, -12, 12, -15, -4, -11, -20]);
+    const egg = PB([0, -24, 11, -20, 15, -4, 12, 12, 0, 17, -12, 12, -15, -4, -11, -20]), hatched = e.bare;
+    const RIM = [-16, -4, -11, -8, -7, -3, -3, -9, 1, -4, 5, -9, 9, -4, 13, -8, 17, -3];
+    if (hatched) { ctx.fillStyle = C('#2A2018'); ell(0, -5, 13, 3.4); ctx.fill(); // what came out of it: a plucked thing with the old man's face, and no use for its wings
+      if (!roll) { const fl = Math.sin(t * (ph ? 16 : 7)) * .5;
+        for (const s of [-1, 1]) { ctx.save(); ctx.translate(s * 7, -15); ctx.rotate(s * (.6 + fl)); cel(PB([0, 0, s * 4, -3, s * 7, 1, s * 3, 3]), '#E0A08A', { d: .6, r: .3, w: 1 }); ctx.restore(); }
+        cel(PE(1, -12, 8, 8.6), '#E8AC94', { d: 1.6, r: .7, w: 1.3, dark: '#B47A66', lite: '#FFD8C4', tex: () => { ctx.fillStyle = 'rgba(160,80,60,.4)'; for (let i = 0; i < 12; i++) { circle(-5 + hsh(i + 51) * 12, -18 + hsh(i + 53) * 12, .5); ctx.fill(); } } });
+        strip(2, -18, 4, -24, 3 + fl, -28, 4.6, 3.6, '#E8AC94', { d: .6, r: .3, w: 1.1 });
+        cel(PE(4 + fl, -32, 5, 4.4), '#D8A88A', { d: .9, r: .4, w: 1.1 }); fillPoly([8 + fl, -32, 11.4 + fl, -30.6, 8 + fl, -29.6], '#E8B040', .8);
+        if (DET()) { bead(6 + fl, -33.4, .7); bead(3.4 + fl, -33.6, .6); ctx.fillStyle = C('#E8E2D6'); for (let i = 0; i < 3; i++) { circle(1.6 + i * 1.6 + fl, -36 - i * .3, .9); ctx.fill(); } } }
+      ctx.save(); ctx.beginPath(); ctx.moveTo(-30, 30); ctx.lineTo(-30, RIM[1]); for (let i = 0; i < RIM.length; i += 2) ctx.lineTo(RIM[i], RIM[i + 1]); ctx.lineTo(30, RIM[RIM.length - 1]); ctx.lineTo(30, 30); ctx.closePath(); ctx.clip(); }
     cel(egg, '#ECE4D2', { d: 3, r: 1.2, w: 1.6, dark: '#B4A890', lite: '#FFFDF6', tex: () => {
       for (let i = 0; i < 8; i++) { ctx.fillStyle = 'rgba(160,140,110,.35)'; circle(-8 + hsh(i) * 16, -16 + hsh(i + 2) * 28, .6 + hsh(i + 5)); ctx.fill(); } // speckles
       if (crack) { ctx.strokeStyle = 'rgba(40,30,20,.85)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-6, 4); ctx.lineTo(-2, -2); ctx.lineTo(4, 6); ctx.lineTo(12, 2); ctx.stroke(); }
     } });
+    if (hatched) { ctx.restore(); ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(RIM[0], RIM[1]); for (let i = 2; i < RIM.length; i += 2) ctx.lineTo(RIM[i], RIM[i + 1]); ctx.stroke(); }
     // the broken top, and the face looking out of the hole
-    ctx.fillStyle = C('#2A2018'); ell(2, -19, 8, 3.4); ctx.fill();
-    if (!roll) { cel(PE(3, -21, 5, 4.4), '#D8A88A', { d: .9, r: .4, w: 1.1 }); if (DET()) { bead(5, -22.4, .7); bead(2.4, -22.6, .6); ctx.strokeStyle = C('#5A2A1E'); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(2.6, -19.4); ctx.lineTo(5.6, -19.6); ctx.stroke(); ctx.fillStyle = C('#E8E2D6'); for (let i = 0; i < 3; i++) { circle(.6 + i * 1.6, -25 - i * .3, .9); ctx.fill(); } } } // wisps of white hair
-    ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-6, -18); for (let i = 0; i <= 6; i++) ctx.lineTo(-6 + i * 2.4, -20 + (i % 2 ? -2.6 : 0)); ctx.stroke(); // the jagged rim of the shell
+    else if (!W8.armor.armed(e)) { ctx.fillStyle = C('#2A2018'); ell(2, -19, 8, 3.4); ctx.fill(); }
+    if (W8.armor.armed(e)) { ctx.save(); ctx.translate(1, -20.5); W8.armor.eggLid(); ctx.restore(); ctx.save(); ctx.translate(0, -3); W8.armor.eggHoop(); ctx.restore(); }
+    else if (hatched) {}
+    else if (!roll) { cel(PE(3, -21, 5, 4.4), '#D8A88A', { d: .9, r: .4, w: 1.1 }); if (DET()) { bead(5, -22.4, .7); bead(2.4, -22.6, .6); ctx.strokeStyle = C('#5A2A1E'); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(2.6, -19.4); ctx.lineTo(5.6, -19.6); ctx.stroke(); ctx.fillStyle = C('#E8E2D6'); for (let i = 0; i < 3; i++) { circle(.6 + i * 1.6, -25 - i * .3, .9); ctx.fill(); } } } // wisps of white hair
+    if (!hatched && !W8.armor.armed(e)) { ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-6, -18); for (let i = 0; i <= 6; i++) ctx.lineTo(-6 + i * 2.4, -20 + (i % 2 ? -2.6 : 0)); ctx.stroke(); } // the jagged rim of the shell
     ctx.restore();
     leg(true);
     ctx.restore();
@@ -719,12 +733,20 @@
       howl(-5, -22, .8, bark, 1); howl(7, -40, .6, bark, .6); // faces grown into the bark
     } });
     ctx.fillStyle = C('#0C0806'); ctx.beginPath(); ctx.moveTo(-1, -54); ctx.bezierCurveTo(6, -46, 6, -30, 2, -18); ctx.bezierCurveTo(-3, -28, -4, -44, -1, -54); ctx.fill(); // the hollow
-    if (DET()) { ctx.fillStyle = 'rgba(232,222,200,.9)'; circle(1.4, -38, .9); ctx.fill(); circle(3.6, -37.6, .8); ctx.fill(); }
+    if (e.bare) { // the plate came off and the trunk split wider: the one it took is still in there, and wants out
+      ctx.fillStyle = C('#0C0806'); ctx.beginPath(); ctx.moveTo(-2, -58); ctx.bezierCurveTo(9, -48, 9, -26, 3, -14); ctx.bezierCurveTo(-6, -26, -7, -46, -2, -58); ctx.fill(); outline(1);
+      cel(PE(1.6, -40, 3.4, 4.4), '#CFC2AE', { d: 1, r: .5, w: 1, dark: '#8A7E6C' });
+      if (DET()) { ctx.fillStyle = '#140C08'; circle(.6, -41, .7); ctx.fill(); circle(3, -41, .7); ctx.fill(); ell(1.8, -37.6, .9, 1.3 + Math.abs(Math.sin(t * 3)) * .6); ctx.fill(); }
+      const rch = Math.sin(t * 2.2 + (e.slot || 0)) * 2; strip(2, -32, 6, -30, 10 + rch, -26, 2.6, 2, '#C8BAA4', { d: .8, r: .4, w: 1 });
+      for (const d of [-.5, 0, .5]) horn(10 + rch, -26, 11.6 + rch, -26 + d * 2, 13 + rch, -25 + d * 3, 1.2, .3, '#C8BAA4', .7); } // (its fingers, through the split)
+    else if (DET()) { ctx.fillStyle = 'rgba(232,222,200,.9)'; circle(1.4, -38, .9); ctx.fill(); circle(3.6, -37.6, .8); ctx.fill(); }
+    if (W8.armor.armed(e)) { ctx.save(); ctx.translate(1, -33); ctx.rotate(-.04); W8.armor.breastplate(); ctx.restore(); } // an elite wears what it took off a man-at-arms
     // the head: a broken-off stump with a villager's face half grown over, its mouth stretched in a knot-hole
     const hx = 3, hy = -68;
     cel(PB([hx - 7, hy + 6, hx - 8, hy - 3, hx - 3, hy - 9, hx + 5, hy - 8, hx + 8, hy - 1, hx + 6, hy + 7]), '#7A6C5E', { d: 1.4, r: .8, w: 1.4, dark: barkDk });
     howl(hx + 2, hy, 1.1, '#8A7A68', wF || fl ? 1.4 : .9);
-    for (const [x1, y1] of [[hx - 6, hy - 14], [hx + 1, hy - 16], [hx + 7, hy - 12]]) horn(hx - 1, hy - 7, (hx + x1) / 2, y1 + 2, x1, y1, 2, .3, barkDk, .9); // splinters for hair
+    if (W8.armor.armed(e)) { ctx.save(); ctx.translate(hx, hy - 6); ctx.rotate(-.12); W8.armor.kettleHat(); ctx.restore(); }
+    else for (const [x1, y1] of e.bare ? [[hx - 10, hy - 20], [hx - 3, hy - 24], [hx + 3, hy - 22], [hx + 10, hy - 17]] : [[hx - 6, hy - 14], [hx + 1, hy - 16], [hx + 7, hy - 12]]) horn(hx - 1, hy - 7, (hx + x1) / 2, y1 + 2, x1, y1, 2, .3, barkDk, .9); // splinters for hair (grown to thorns, the helm knocked off)
     // the arms: two branches; the near one is a club of knotted wood
     branch(-6, -50, -18 + Math.sin(t) * 1.5, -34, 4, bark);
     let ang = .9 + Math.sin(t * 1.2) * .06; if (wF) ang = lerp(.9, -2.4, sm(wind)); if (fl) ang = lerp(-2.4, .8, sm(k * 1.7)); if (gr || wG) ang = .1;
@@ -751,11 +773,20 @@
       ctx.fillStyle = C('#3A3028'); for (const x of [-22, 4]) { ctx.beginPath(); ctx.ellipse(x, -34, 1.4, 2.6, 0, 0, TAU); ctx.fill(); } // holes torn for arms
     } });
     ctx.fillStyle = 'rgba(200,190,170,.85)'; ctx.beginPath(); ctx.moveTo(-32, -21); for (let x = -32; x <= 32; x += 4) ctx.lineTo(x, -18 + (x % 8 ? 2 : -1)); ctx.lineTo(32, -21); ctx.closePath(); ctx.fill(); // the ragged hem
+    if (e.bare) { // the chain held the sheet shut: it has torn open, and under it they are one body, backs and ribs and another face
+      const rip = PB([-14, -40, -4, -44 + bob(2), 8, -42, 14, -30, 6, -22, -8, -22, -16, -30]);
+      cel(rip, '#B8706A', { d: 2.4, r: .8, w: 1.4, dark: '#6A2A2A', lite: '#E8A89A', tex: () => {
+        ctx.strokeStyle = 'rgba(80,20,20,.55)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-12 + i * 6, -38); ctx.quadraticCurveTo(-10 + i * 6, -30, -12 + i * 6, -23); } ctx.stroke(); // the backs, grown together
+        ctx.fillStyle = 'rgba(240,210,190,.7)'; for (let i = 0; i < 5; i++) { ell(-2 + i * .4, -39 + i * 3.6, 1.4, .9); ctx.fill(); } } }); // a spine
+      howl(7, -31, .75, '#C88A80', 1 + Math.abs(Math.sin(t * 3)) * .6);
+      ctx.strokeStyle = C('#D8D0BC'); ctx.lineWidth = 1.2; ctx.beginPath(); for (let i = 0; i < 6; i++) { const a2 = i / 6 * TAU, x = Math.cos(a2) * 15, y = -32 + Math.sin(a2) * 10; ctx.moveTo(x, y); ctx.lineTo(x * 1.15, y + Math.sin(a2) * 2); } ctx.stroke(); } // the torn edges
+    if (W8.armor.armed(e)) W8.armor.chainLinks(-31, -36, 0, -18, 31, -34, 13);
     // three hooded heads on long necks, pushing up out of the front of the sheet, one turned the wrong way round
     const heads = [[14, -62, 0], [24, -54, 1], [4, -70, 2]];
     for (const [hx, hy, i] of heads) { const sway = Math.sin(t * 1.6 + i * 2) * 2 + (wL || wF ? wind * 3 : 0);
       ctx.strokeStyle = C(OUT); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(hx - 6, -44); ctx.quadraticCurveTo(hx - 4 + sway, (hy - 44) / 2 - 22, hx + sway, hy + 6); ctx.stroke(); ctx.strokeStyle = C('#D0C8B4'); ctx.lineWidth = 4; ctx.stroke();
       cel(PB([hx - 5 + sway, hy + 6, hx - 5 + sway, hy - 4, hx + sway, hy - 13, hx + 5 + sway, hy - 4, hx + 5 + sway, hy + 6]), i === 2 ? '#6A6256' : '#E2DAC6', { d: 1.2, r: .6, w: 1.3, dark: '#9A9280' });
+      if (W8.armor.armed(e)) { ctx.save(); ctx.translate(hx + sway, hy - 6); W8.armor.potHelm(.95); ctx.restore(); }
       if (DET()) { ctx.fillStyle = C('#120C08'); if (i !== 2) { ctx.beginPath(); ctx.ellipse(hx + 1.6 + sway, hy - 1, .9, 1.4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(hx + 3.8 + sway, hy - 1, .8, 1.3, 0, 0, TAU); ctx.fill(); } else { ctx.strokeStyle = 'rgba(20,12,8,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(hx - 3 + sway, hy - 3); ctx.lineTo(hx + 3 + sway, hy + 3); ctx.stroke(); } } }
     // the scourges: arms come out of the holes in the sheet; each has a scourge
     const arms = [[-22, -34, 0], [4, -34, 1], [20, -36, 2], [-10, -40, 3]];
@@ -793,14 +824,17 @@
       const ear = PB([0, 0, -10 * side, -8, -14 * side, -26, -8 * side, -42, 2 * side, -44, 8 * side, -32, 6 * side, -14]);
       cel(ear, side < 0 ? '#C89A86' : flesh, { d: 3, r: 1.2, w: 1.6, dark: fleshDk, lite: fleshLt, tex: () => {
         ctx.fillStyle = 'rgba(140,60,60,.45)'; ctx.beginPath(); ctx.moveTo(-4 * side, -10); ctx.bezierCurveTo(-9 * side, -20, -7 * side, -34, -1 * side, -38); ctx.bezierCurveTo(-4 * side, -30, -5 * side, -18, -1 * side, -10); ctx.fill(); // the inner whorl
-        ctx.strokeStyle = 'rgba(150,40,50,.5)'; ctx.lineWidth = .5; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-2 * side, -4 - i * 8); ctx.quadraticCurveTo(-8 * side, -8 - i * 8, -11 * side, -14 - i * 7); } ctx.stroke(); // veins
+        ctx.strokeStyle = e.bare ? 'rgba(190,40,50,.7)' : 'rgba(150,40,50,.5)'; ctx.lineWidth = e.bare ? .75 : .5; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-2 * side, -4 - i * 8); ctx.quadraticCurveTo(-8 * side, -8 - i * 8, -11 * side, -14 - i * 7); } ctx.stroke(); // veins (swollen and red, once the iron is off them)
       } });
+      if (W8.armor.armed(e)) { ctx.save(); ctx.translate(-5 * side, -32); W8.armor.earPlate(side); ctx.restore(); }
       ctx.restore(); }
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-22, -54); ctx.lineTo(26, -50); ctx.stroke(); ctx.strokeStyle = C('#6A4A2A'); ctx.lineWidth = 1.4; ctx.stroke(); // the arrow through them
     W8.kit.fillPoly([26, -53, 32, -50, 26, -47], '#8A8E92', 1); W8.kit.fillPoly([-22, -54, -28, -58, -26, -52], '#E8DCC4', .8); W8.kit.fillPoly([-22, -54, -28, -50, -26, -55], '#C8BCA4', .8);
     // where they join: a lump of flesh with a single small eye in it, watching you
     cel(PE(2, -24, 12, 8), fleshDk, { d: 1.6, r: .8, w: 1.4, lite: flesh });
-    if (DET()) { ctx.fillStyle = C('#F2EAD8'); ctx.beginPath(); ctx.ellipse(8, -25, 2.6, 1.8, 0, 0, TAU); ctx.fill(); ctx.fillStyle = C('#1A120C'); circle(9, -25, 1.1); ctx.fill(); }
+    if (e.bare) for (const [ex, ey, er] of [[8, -25, 1], [2, -28, .7], [-4, -24, .6], [3, -21, .55], [10, -21, .5]]) { ctx.fillStyle = C('#F2EAD8'); ctx.beginPath(); ctx.ellipse(ex, ey, 2.6 * er, 1.8 * er, 0, 0, TAU); ctx.fill(); outline(.6); if (DET()) { ctx.fillStyle = '#1A120C'; circle(ex + .9 * er + Math.sin(t * 2 + ex) * .4 * er, ey, 1.1 * er); ctx.fill(); } } // the visor off, its other eyes open
+    else if (DET()) { ctx.fillStyle = C('#F2EAD8'); ctx.beginPath(); ctx.ellipse(8, -25, 2.6, 1.8, 0, 0, TAU); ctx.fill(); ctx.fillStyle = C('#1A120C'); circle(9, -25, 1.1); ctx.fill(); }
+    if (W8.armor.armed(e)) { ctx.save(); ctx.translate(3, -25); W8.armor.eyeVisor(); ctx.restore(); }
     if (DET() && th && k < .35) add(() => { ctx.fillStyle = 'rgba(240,244,246,.3)'; ctx.fillRect(-30, -40, 60, 3); });
     ctx.restore(); ctx.restore();
   };
@@ -827,6 +861,11 @@
     for (let i = 0; i < 14; i++) { if (i >= teeth && i % 2) continue; const u = (i % 7) / 6, x = lerp(-ow * .7, ow * .74, u), top = i < 7, y = top ? -oh + .6 : oh - .6;
       ctx.fillStyle = C(i % 3 ? '#F0E6D0' : '#D8C8A0'); ctx.beginPath(); ctx.moveTo(x - 1.8, y); ctx.lineTo(x + 1.8, y); ctx.lineTo(x + .6, y + (top ? 3 : -3)); ctx.lineTo(x - .6, y + (top ? 3 : -3)); ctx.closePath(); ctx.fill(); if (DET()) { ctx.strokeStyle = 'rgba(60,30,20,.6)'; ctx.lineWidth = .4; ctx.stroke(); } }
     if (DET()) { ctx.strokeStyle = 'rgba(255,230,220,.6)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-ow * .6, -oh - 5); ctx.quadraticCurveTo(0, -oh - 8, ow * .5, -oh - 5); ctx.stroke(); } // the shine on the upper lip
+    if (e.bare) { // the bridle off: a second row of teeth behind the first, and the tongue let out at last
+      for (let i = 0; i < 6; i++) { const x = lerp(-ow * .45, ow * .5, i / 5), y = -oh * .45; ctx.fillStyle = C('#E2D4B4'); ctx.beginPath(); ctx.moveTo(x - 1.4, y - 1); ctx.lineTo(x + 1.4, y - 1); ctx.lineTo(x, y + 2.4); ctx.closePath(); ctx.fill(); }
+      const lw = Math.sin(t * 4 + (e.slot || 0)) * 2.4;
+      cel(PB([-7, oh * .2, 7, oh * .1, 12, oh + 5 + lw * .4, 12, oh + 15 + lw, 6, oh + 19 + lw, 1, oh + 13 + lw, -3, oh + 5]), '#C84A58', { d: 1.6, r: .7, w: 1.3, dark: '#7A2030', lite: '#F08A90', tex: () => { ctx.strokeStyle = 'rgba(90,20,30,.6)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(2, oh * .3); ctx.quadraticCurveTo(8, oh + 6, 7, oh + 15 + lw); ctx.stroke(); } }); }
+    if (W8.armor.armed(e)) { W8.armor.bridleBand(ow, oh); ctx.save(); ctx.translate(ow + 7, 1); W8.armor.padlock(); ctx.restore(); }
     ctx.restore();
     finger(-6, -1, 1.5, true); finger(14, 1, 2.5, true);
     if (aim && DET()) { ctx.fillStyle = 'rgba(200,190,170,.7)'; for (let i = 0; i < 3; i++) { circle(28 + i * 3, body + Math.sin(t * 9 + i) * 2, .9); ctx.fill(); } } // spittle
@@ -834,7 +873,7 @@
   };
   // ---------------- THE HURDY-GURDY ----------------
   // its case: blows from in front ring off the wood (as the Bellman's bronze did: the 'w8crack' counter splits it)
-  function gurdy(x, y, s, crack, drone, t, crank) {
+  function gurdy(x, y, s, crack, drone, t, crank, open) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
     const jit = drone ? Math.sin(t * 70) * drone * .7 : 0; ctx.translate(jit, 0);
     const body = PB([-26, 0, -30, -16, -24, -32, -6, -38, 14, -36, 28, -26, 30, -10, 22, 0]);
@@ -843,6 +882,18 @@
       ctx.fillStyle = '#1A0C06'; for (const [rx, ry] of [[-14, -18], [10, -20]]) { ctx.beginPath(); ctx.ellipse(rx, ry, 4, 2.4, .2, 0, TAU); ctx.fill(); } // its sound-holes, shaped like screaming mouths
       if (crack) { ctx.strokeStyle = 'rgba(10,4,2,.9)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-6, -36); ctx.lineTo(-2, -24); ctx.lineTo(-8, -12); ctx.lineTo(-4, -2); if (crack > 1) { ctx.moveTo(18, -30); ctx.lineTo(14, -18); ctx.lineTo(22, -8); } ctx.stroke(); }
     } });
+    if (open) { // its front stove in: the wheel inside, and the small grey thing that turns it, looking out at you
+      const hole = PB([-16, -8, -19, -20, -12, -30, 2, -31, 13, -26, 15, -12, 8, -4, -6, -3]);
+      hole(0, 0); ctx.fillStyle = C('#140A04'); ctx.fill();
+      ctx.save(); hole(0, 0); ctx.clip();
+      ctx.save(); ctx.translate(-4, -17); ctx.rotate(crank); ctx.strokeStyle = C('#8A6A44'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, 0, 10, 0, TAU); for (let i = 0; i < 6; i++) { ctx.moveTo(0, 0); ctx.lineTo(Math.cos(i / 6 * TAU) * 10, Math.sin(i / 6 * TAU) * 10); } ctx.stroke(); ctx.restore(); // the wheel
+      cel(PE(7, -15, 4.4, 5.6), '#8E887E', { d: 1, r: .5, w: 1, dark: '#4A443C' }); cel(PE(7.6, -23, 3.6, 3.4), '#A8A094', { d: .8, r: .4, w: 1 }); // the grey thing
+      if (DET()) { ctx.fillStyle = '#F2E8D0'; circle(9, -23.4, .8); ctx.fill(); circle(6.4, -23.6, .7); ctx.fill(); ctx.fillStyle = '#140804'; circle(9.2, -23.4, .35); ctx.fill(); circle(6.6, -23.6, .35); ctx.fill(); }
+      strip(5, -16, 0, -18, -4 + Math.cos(crank) * 6, -17 + Math.sin(crank) * 6, 1.8, 1.4, '#8E887E', { d: .5, r: .3, w: .8 });
+      ctx.restore();
+      ctx.strokeStyle = C('#C8884A'); ctx.lineWidth = 1.2; ctx.beginPath(); for (let i = 0; i < 9; i++) { const a2 = i / 9 * TAU, x = -2 + Math.cos(a2) * 16, y = -17 + Math.sin(a2) * 13; ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a2) * 3, y + Math.sin(a2) * 2.6); } ctx.stroke(); // splinters round the hole
+      hole(0, 0); outline(1.2);
+    }
     // the keybox along its top, the keys like teeth; something small and grey turns the wheel from inside
     cel(PP([-18, -36, 22, -34, 22, -44, -18, -46]), '#5A3418', { d: 1, r: .6, w: 1.3 });
     for (let i = 0; i < 9; i++) { const x = -15 + i * 4.2, down = drone && (Math.floor(t * 12) + i) % 3 === 0; ctx.fillStyle = C(i % 2 ? '#E8DCC0' : '#C8B898'); ctx.fillRect(x, -44 + (down ? 2 : 0), 2.6, 5); }
@@ -863,7 +914,10 @@
     const leg = (x, i, near) => { const s = Math.sin(ph * .6 + i * 1.6) * 5, f = [x + s, 0], kk = knee(x, by + 2, f[0], f[1] - 1, 16, i % 2 ? 1 : -1); limb3(x, by + 2, kk[0], kk[1], f[0], f[1] - 4, 7, 4.6, 3.6, near ? '#6A5444' : '#4A3A30'); W8.kit.fillPoly([f[0] - 3, 0, f[0] + 3, 0, f[0] + 2.4, -4, f[0] - 2.4, -4], '#1A140E', 1); };
     leg(-16, 0, false); leg(14, 1, false);
     const crank = t * (to || wT ? 9 : 2.4);
-    gurdy(0, by, 1, e.w8crack || 0, to ? 1 - k : 0, t, crank);
+    gurdy(0, by, 1, e.w8crack || 0, to ? 1 - k : 0, t, crank, e.bare);
+    if (W8.armor.armed(e)) { ctx.save(); ctx.translate(0, by); for (const [x, h] of [[-15, 32], [3, 38], [19, 32]]) { ctx.save(); ctx.translate(x, -19); W8.armor.hoop(h); ctx.restore(); }
+      ctx.save(); ctx.translate(27, -12); W8.armor.padlock(); ctx.restore();
+      ctx.save(); ctx.translate(38, -22); ctx.rotate(Math.sin(t * 3 + (to ? t * 9 : 0)) * .3); ctx.translate(0, 9); W8.armor.handBell(); ctx.restore(); ctx.restore(); } // bound in iron, and a cracked bell hung on it
     leg(-10, 2, true); leg(20, 3, true);
     if (to && DET()) for (let i = 0; i < 3; i++) { const r = 18 + ((k * 3 + i / 3) % 1) * 34; ctx.strokeStyle = `rgba(255,220,170,${.5 * (1 - (k * 3 + i / 3) % 1)})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(30, by - 20, r, -.6, .6); ctx.stroke(); }
     // a man's arm grows out of its side, holding the bow it plays itself with (swung as a club)
@@ -916,6 +970,101 @@
     ctx.restore();
   };
   Object.assign(W8.art, { gurdy, howl });
+  // ======================================================================================================
+  // THE ARMOUR OF THE CIRCLE'S ELITE: what they have taken off the dead of Lorraine's wars (rusted plate, pot-helms, a
+  // scold's bridle, iron hoops) and worn without understanding it. Each piece is painted about its own middle, so the
+  // creature can wear it in its own layers and armor_c.js can throw it off when the guard breaks; what was under it is
+  // drawn by the creature when e.bare is set
+  // ======================================================================================================
+  const armed = (e) => !!(e && e.elite && e.guard > 0 && !e.bare);
+  const IRON = '#6E665C', IRONL = '#B4AA98', IROND = '#2E2822', RUST = '#9A4E2A';
+  const rivet = (x, y, r = .9) => { ctx.fillStyle = C('#C8BCA8'); circle(x, y, r); ctx.fill(); if (DET()) { ctx.fillStyle = 'rgba(30,20,14,.6)'; circle(x + r * .3, y + r * .3, r * .5); ctx.fill(); } };
+  const rustTex = (seed, w, h) => () => {
+    for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? 'rgba(154,78,42,.55)' : 'rgba(110,50,24,.45)'; ell((hsh(seed + i) - .5) * w, (hsh(seed + i + 7) - .5) * h, 1.4 + hsh(seed + i * 3) * 2.4, 1 + hsh(seed + i) * 1.4); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(120,56,26,.5)'; ctx.lineWidth = .8; for (let i = 0; i < 3; i++) { const x = (hsh(seed + i * 5) - .5) * w; ctx.beginPath(); ctx.moveTo(x, -h * .2); ctx.lineTo(x + .6, h * .45); ctx.stroke(); } }; // where it has run
+  // a kettle-hat (chapel de fer): a dome and a broad brim, dented, rust coming through
+  function kettleHat(s = 1) {
+    ctx.save(); ctx.scale(s, s);
+    cel(PB([-12, 3, -7, -1, -6, -8, 0, -11, 6, -8, 7, -1, 12, 3, 0, 5.4]), IRON, { d: 1.8, r: 1, w: 1.4, dark: IROND, lite: IRONL, tex: rustTex(5, 18, 10) });
+    if (DET()) { ctx.strokeStyle = 'rgba(30,24,20,.6)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-6.6, -.6); ctx.quadraticCurveTo(0, 1.4, 6.6, -.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, -10.6); ctx.lineTo(0, -1); ctx.stroke(); }
+    ctx.restore();
+  }
+  // a breastplate off a dead man-at-arms, the double cross of Lorraine still in red on it, and the strap that holds it on
+  function breastplate() {
+    cel(PB([-10, -13, -3, -15, 3, -15, 10, -13, 11, 0, 8, 12, 0, 14, -8, 12, -11, 0]), IRON, { d: 2.6, r: 1.2, w: 1.5, dark: IROND, lite: IRONL, tex: () => {
+      rustTex(9, 18, 22)();
+      ctx.strokeStyle = 'rgba(232,226,210,.5)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-1, -13); ctx.lineTo(-.4, 12); ctx.stroke(); // the ridge
+      ctx.fillStyle = 'rgba(166,42,38,.85)'; ctx.fillRect(-.9, -10, 2.4, 16); ctx.fillRect(-4.4, -7, 9.4, 2); ctx.fillRect(-5.6, -2.6, 11.8, 2); } }); // the cross of Lorraine
+    for (const [x, y] of [[-8, -11], [8, -11], [-8, 9], [7, 9]]) rivet(x, y);
+    ctx.fillStyle = C('#4A3222'); ctx.fillRect(-11, -1, 3, 4); ctx.fillRect(8, -1, 3, 4);
+  }
+  // a little pot-helm, for each of the Procession's heads
+  function potHelm(s = 1) {
+    ctx.save(); ctx.scale(s, s);
+    cel(PB([-6.6, 3, -6.6, -4, -3, -8, 3, -8, 6.6, -4, 6.6, 3]), IRON, { d: 1.2, r: .7, w: 1.2, dark: IROND, lite: IRONL, tex: rustTex(13, 10, 8) });
+    ctx.fillStyle = C(IROND); ctx.fillRect(-7, 1.6, 14, 2.2); rivet(-4, 2.6, .6); rivet(4, 2.6, .6);
+    ctx.restore();
+  }
+  // a length of rusted chain (the Procession is bound together with it)
+  function chainLinks(x0, y0, cx, cy, x1, y1, n = 9) {
+    for (let i = 0; i < n; i++) { const u = (i + .5) / n, iu = 1 - u, x = iu * iu * x0 + 2 * iu * u * cx + u * u * x1, y = iu * iu * y0 + 2 * iu * u * cy + u * u * y1;
+      const dx = 2 * iu * (cx - x0) + 2 * u * (x1 - cx), dy = 2 * iu * (cy - y0) + 2 * u * (y1 - cy), a = Math.atan2(dy, dx) + (i % 2 ? Math.PI / 2 * .0 : 0);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.lineWidth = i % 2 ? 1.4 : 2.2; ctx.strokeStyle = C(OUT); ctx.beginPath(); ctx.ellipse(0, 0, 3.4, i % 2 ? .9 : 1.9, 0, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = C(i % 2 ? IRON : '#8A5A3A'); ctx.lineWidth = i % 2 ? .8 : 1.1; ctx.stroke(); ctx.restore(); }
+  }
+  function chainPiece() { chainLinks(-14, -2, 0, 4, 14, -2, 7); }
+  // Knife-Ears: an iron shell riveted over each ear, and a visor over its eye
+  function earPlate(side) { // (about its middle: in the ear's own frame it sits at (-5 * side, -32))
+    ctx.save(); ctx.scale(side, 1);
+    cel(PB([4, 12, -6, 9, -9, -2, -4, -12, 4, -13, 8, -4]), IRON, { d: 2, r: 1, w: 1.4, dark: IROND, lite: IRONL, tex: () => { rustTex(17, 12, 22)(); ctx.strokeStyle = 'rgba(30,24,20,.55)'; ctx.lineWidth = .7; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-8, -6 + i * 6); ctx.quadraticCurveTo(-2, -8 + i * 6, 6, -6 + i * 6); ctx.stroke(); } } });
+    for (const [x, y] of [[-4, -9], [2, -11], [-6, 6], [3, 9]]) rivet(x, y, .8);
+    ctx.restore();
+  }
+  function eyeVisor() {
+    cel(PB([-11, 5, -12, -3, -6, -8, 6, -8, 13, -3, 12, 5, 0, 8]), IRON, { d: 1.6, r: .8, w: 1.4, dark: IROND, lite: IRONL, tex: rustTex(23, 20, 10) });
+    ctx.fillStyle = C('#0E0806'); ctx.fillRect(2, -2.2, 10, 1.8); // the slit
+    if (DET()) { ctx.fillStyle = 'rgba(255,90,60,.9)'; circle(8, -1.3, .8); ctx.fill(); }
+    for (const x of [-8, -3, 8]) rivet(x, 4, .7);
+  }
+  // the Crawling Mouth's scold's bridle: an iron band round its lips, a strap over, a padlock
+  function bridleBand(ow, oh) {
+    ctx.lineCap = 'round';
+    const band = (w, c) => { ctx.strokeStyle = C(c); ctx.lineWidth = w; ctx.beginPath(); ctx.ellipse(2, 0, ow + 3, oh + 7.4, 0, 0, TAU); ctx.stroke(); };
+    band(4.4, OUT); band(2.6, IRON); if (DET()) { ctx.strokeStyle = 'rgba(154,78,42,.7)'; ctx.lineWidth = 1; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.ellipse(2, 0, ow + 3, oh + 7.4, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+    for (const x of [-10, 13]) { const yy = (oh + 7.4) * Math.sqrt(Math.max(0, 1 - ((x - 2) / (ow + 3)) ** 2)); ctx.strokeStyle = C(OUT); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, -yy); ctx.lineTo(x, yy); ctx.stroke(); ctx.strokeStyle = C(IRON); ctx.lineWidth = 2.4; ctx.stroke(); rivet(x, -yy, .9); rivet(x, yy, .9); }
+  }
+  function padlock() {
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.arc(0, -3, 2.6, Math.PI, 0); ctx.stroke(); ctx.strokeStyle = C(IRONL); ctx.lineWidth = 1.2; ctx.stroke();
+    cel(PB([-4, -3, 4, -3, 4.4, 4, 0, 5, -4.4, 4]), '#7A5A34', { d: 1, r: .5, w: 1.1, dark: '#3A2410', lite: '#C8A060' });
+    ctx.fillStyle = C('#140C08'); ctx.fillRect(-.5, 0, 1, 2.4);
+  }
+  function bridlePiece(side) { ctx.save(); ctx.scale(side, 1); ctx.lineCap = 'round'; ctx.strokeStyle = C(OUT); ctx.lineWidth = 4.4; ctx.beginPath(); ctx.ellipse(10, 0, 12, 10, 0, Math.PI * .5, Math.PI * 1.5); ctx.stroke(); ctx.strokeStyle = C(IRON); ctx.lineWidth = 2.6; ctx.stroke(); rivet(-2, 0, .9); ctx.restore(); }
+  // the Hurdy-Gurdy's iron: hoops round its case, a hasp and padlock, and a cracked hand-bell hung off its scroll
+  function hoop(h = 36) { ctx.lineCap = 'round'; const p = () => { ctx.beginPath(); ctx.moveTo(-1.4, -h / 2); ctx.quadraticCurveTo(2.4, 0, -1.4, h / 2); };
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 5; p(); ctx.stroke(); ctx.strokeStyle = C(IRON); ctx.lineWidth = 3.2; p(); ctx.stroke(); if (DET()) { ctx.strokeStyle = 'rgba(154,78,42,.8)'; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]); p(); ctx.stroke(); ctx.setLineDash([]); }
+    for (const y of [-h / 2 + 4, 0, h / 2 - 4]) rivet(.4, y, 1); }
+  function handBell() {
+    cel(PB([-5, 4, -4.4, -2, -2, -6, 2, -6, 4.4, -2, 5, 4]), '#8A6A3A', { d: 1.2, r: .6, w: 1.2, dark: '#4A3218', lite: '#D8B070', tex: () => { ctx.fillStyle = 'rgba(70,120,90,.5)'; ell(-2, 0, 2, 3); ctx.fill(); } });
+    ctx.fillStyle = C('#3A2410'); circle(0, 5.2, 1.4); ctx.fill(); ctx.strokeStyle = C(OUT); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, -9); ctx.stroke();
+  }
+  // the Walking Egg's lid: the top of its shell put back over the hole and held down by an iron hoop
+  function eggLid() {
+    cel(PB([-10, 2, -9, -4, -4, -8, 3, -8.4, 9, -5, 11, 1, 6, 3, 2, .4, -2, 3.6, -6, .6]), '#ECE4D2', { d: 2, r: 1, w: 1.4, dark: '#B4A890', lite: '#FFFDF6', tex: () => { for (let i = 0; i < 4; i++) { ctx.fillStyle = 'rgba(160,140,110,.35)'; circle(-6 + hsh(i + 31) * 12, -6 + hsh(i + 33) * 6, .7); ctx.fill(); } } });
+    if (DET()) { ctx.strokeStyle = 'rgba(40,30,20,.7)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-8, 1); ctx.lineTo(-4, -2); ctx.lineTo(-1, 1); ctx.stroke(); }
+  }
+  function eggHoop() { ctx.lineCap = 'round';
+    const p = () => { ctx.beginPath(); ctx.moveTo(-15, 0); ctx.quadraticCurveTo(0, 5, 15, 0); };
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 5; p(); ctx.stroke(); ctx.strokeStyle = C(IRON); ctx.lineWidth = 3.2; p(); ctx.stroke();
+    for (const x of [-9, 0, 9]) rivet(x, x ? 2 : 2.5, .9); }
+  function eggStrap() { ctx.lineCap = 'round'; const p = () => { ctx.beginPath(); ctx.moveTo(-1, -12); ctx.quadraticCurveTo(2, 0, -1, 12); };
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 4.4; p(); ctx.stroke(); ctx.strokeStyle = C(IRON); ctx.lineWidth = 2.6; p(); ctx.stroke(); rivet(.4, -10, .8); }
+  // the crow's iron mask: a beaked visor of the kind the plague-doctors will wear, riveted over its head
+  function crowMask() {
+    cel(PB([-7, 6, -8, -3, -3, -7, 4, -6, 9, -3, 20, 1, 9, 4, 4, 7]), IRON, { d: 1.4, r: .8, w: 1.3, dark: IROND, lite: IRONL, tex: rustTex(41, 22, 10) });
+    ctx.fillStyle = C('#0E0806'); circle(2, -1.6, 1.8); ctx.fill(); if (DET()) { ctx.fillStyle = 'rgba(255,190,90,.9)'; circle(2.4, -1.8, .7); ctx.fill(); }
+    rivet(-4, 3, .7); rivet(7, 2, .7);
+  }
+  W8.armor = { armed, kettleHat, breastplate, potHelm, chainLinks, chainPiece, earPlate, eyeVisor, bridleBand, padlock, bridlePiece, hoop, handBell, eggLid, eggHoop, eggStrap, crowMask, rivet };
 
   // ======================================================================================================
   // THE GOAT-LORD OF THE CIRCLE: the thing that came in through the hole Corwin's curse made, and has held the Circle

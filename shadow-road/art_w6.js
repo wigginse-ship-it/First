@@ -564,6 +564,26 @@
     }
     ctx.restore();
   }
+  // a white dove, sitting (about its feet, facing +x): where the bowler's hat was before its stone broke (armor_b.js); now
+  // and then it shakes out its wings
+  function dove(x, y, s, t, seed, startled) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    const fl = startled ? 1 : Math.max(0, Math.sin(t * 1.3 + seed * 2) * 4 - 3), up = fl * (.5 + .5 * Math.sin(t * 30));
+    cel(PB([-7, -2, -3, -5.6, 2, -5.4, 5, -3, 4, -.4, -2, 0]), '#F6F4EE', { d: 1, r: .5, w: 1, dark: '#B8BCC8', lite: '#FFFFFF' }); // its body
+    fillPoly([-6, -3, -11, -3.6 - up * 2, -10, -1.4], '#E8E8EE', .8); // the tail
+    cel(PE(4.6, -6.4, 2.6, 2.4), '#F8F6F0', { d: .6, r: .3, w: .9 }); // the head
+    fillPoly([6.8, -6.8, 9, -6.2, 6.8, -5.6], '#E8A060', .6); ctx.fillStyle = C('#1A1418'); circle(5.4, -7, .6); ctx.fill(); // beak, eye
+    ctx.save(); ctx.translate(-1, -4.6); ctx.rotate(-up * 1.6 - .1); fillPoly([0, 0, -7, -1.6, -5, 1.8], '#ECECF2', .8); ctx.restore(); // the wing
+    ctx.restore();
+  }
+  function birdcageChest(x, y, w, h, t, e) {
+    ctx.save(); ctx.fillStyle = C('#8ABCE8'); rrect(x, y, w, h, 2); ctx.fill();
+    if (DET()) { ctx.save(); rrect(x, y, w, h, 2); ctx.clip(); const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#5E9AD8'); g.addColorStop(1, '#D8E8F4'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = 'rgba(255,255,255,.9)'; circle(x + w * .3, y + h * .3, 2); ctx.fill(); circle(x + w * .5, y + h * .26, 2.6); ctx.fill(); ctx.restore(); }
+    dove(x + w * .5, y + h - 1.4, .6, t, (e.slot || 0) + 3, false);
+    ctx.strokeStyle = C('#C8A048'); ctx.lineWidth = .7; ctx.beginPath(); for (let i = 1; i < 5; i++) { ctx.moveTo(x + w * i / 5, y); ctx.lineTo(x + w * i / 5, y + h); } ctx.moveTo(x, y + h * .5); ctx.lineTo(x + w, y + h * .5); ctx.stroke();
+    rrect(x, y, w, h, 2); outline(1.1); ctx.restore();
+  }
   CREATURES.w6bowler = function (e, a) {
     a = a || {}; const t = a.t || 0, ph = a.walk || 0, moving = ph ? 1 : 0, st = e.state, wind = a.wind || 0, hurt = a.hurt;
     const br = breath(e, t, 2.1), kB = actK(e, 'brolly'), kA = actK(e, 'apple'), kD = actK(e, 'drop'), open = e.w6open || 0;
@@ -582,6 +602,7 @@
     const swing = hang * (Math.sin(t * 2.3 + (e.slot || 0)) * .12 + Math.sin(t * 5.1) * .025);
     ctx.save(); ctx.translate(3, -73); ctx.rotate(swing); ctx.translate(-3, 73);
     ctx.save(); ctx.translate(0, hipY); ctx.rotate(lean * .45 + (hurt ? -.18 : 0)); ctx.translate(hurt ? -2 : 0, -hipY);
+    const bare = e.bare, AR = e.elite && !bare ? (e.armA = { body: ctx.getTransform() }) : null; // (armor_b.js paints his stone in these)
     // the legs: grey trousers, black shoes; planted wide for the thrust; dangling and kicking idly when he hangs in the air
     const air = kD >= 0 || e.z > 4;
     for (const side of [1, 0]) {
@@ -599,6 +620,8 @@
       ctx.strokeStyle = 'rgba(10,10,16,.6)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(1.5, sy + 4); ctx.lineTo(2.5 + lag * .1, hipY + 15 - up * .5); ctx.stroke(); // the front opening
       ctx.fillStyle = 'rgba(150,160,200,.25)'; ctx.fillRect(-9, hipY - 3, 18, 1.4); // a belted line
       for (const y of [sy + 9, sy + 15, sy + 21]) { ctx.fillStyle = '#0E0E14'; circle(3.6, y, .9); ctx.fill(); } } });
+    if (AR) AR.sy = sy;
+    if (bare) birdcageChest(-5.5, sy + 3, 11, hipY - sy - 6, t, e); // his stone broken, his coat hangs open on a birdcage, as in the Therapeutist
     // the back arm: swinging with the walk, or raised to doff the hat
     const bA1 = lerp(Math.PI / 2 + .25 - thrust * .7 + (moving ? Math.sin(ph) * .4 : 0) + windA * -.5 - hang * .3, -1.45, doff), bA2 = lerp(Math.PI / 2 + .1 - thrust * .4 - hang * .2, -1.6, doff);
     const BA = seg2(-5, sy + 3, bA1, 11, bA2, 10, 4.6, 4, '#24262F', { lit: '#5A5E78' });
@@ -614,11 +637,12 @@
     // the bowler: it lags a moment behind the head and pops up off it when he is hit; lifted off and tilted in a doff; it rides up a little in the wind of the fall
     const hatK = (e.w6hat = lerp(e.w6hat || 0, hurt ? 1 : 0, hurt ? .5 : .12)), hatY0 = hy - 5.8 - hatK * 4 - (over ? open * 1.5 + hang * Math.max(0, Math.sin(t * 7)) * .8 : 0);
     const hatX = lerp(hx, BA.ex + 2.5, doff), hatY = lerp(hatY0, BA.ey - 3, doff), hatR = hatK * -.35 + thrust * .08 - doff * .55;
-    ctx.save(); ctx.translate(hatX, hatY); ctx.rotate(hatR);
+    ctx.save(); ctx.translate(hatX, hatY); ctx.rotate(hatR); if (AR) AR.hat = ctx.getTransform();
+    if (bare) { dove(0, 1, 1, t, e.slot || 0, hurt); ctx.restore(); } else {
     cel((ox, oy, c) => { if (!c) ctx.beginPath(); ctx.moveTo(-5.4 + ox, 1 + oy); ctx.bezierCurveTo(-5.6 + ox, -6 + oy, 5.6 + ox, -6 + oy, 5.4 + ox, 1 + oy); ctx.closePath(); }, '#1A1A22', { d: 1.6, r: .8, w: 1.1, lite: '#4A4E66' });
     ctx.fillStyle = C('#121218'); ell(0, 1.2, 8.6, 1.7); ctx.fill(); outline(1);
     if (DET()) { ctx.fillStyle = '#3A2A2A'; ctx.fillRect(-5.3, -.6, 10.6, 1.4); ctx.strokeStyle = 'rgba(180,190,230,.55)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(-1, -1.5, 3.4, -2.6, -1.5); ctx.stroke(); }
-    ctx.restore();
+    ctx.restore(); }
     if (doff > .3) { ctx.fillStyle = C('#E2C8AA'); circle(BA.ex + 1, BA.ey - 1.4, 2.1); ctx.fill(); outline(.8); } // the fingers on the crown
     // the apple: hanging in the air before his face, bobbing on its own; it draws back and glows before it is thrown
     if (hasApple) { const pull = windA * 4, ax = hx + 6.2 - pull + Math.sin(t * 2.6 + 1) * .6, ay = hy + .6 + Math.sin(t * 2.3) * 1.1 + (hurt ? -2 : 0);
@@ -650,6 +674,20 @@
 
   // ---------------- MANNEQUIN OF THE MUSES: a tailor's dummy with an egg for a head and an artist's jointed wooden limbs,
   // drafting instruments strapped to its body. It moves like a puppet: a pose held, then a jerk to the next ----------------
+  // the inside of a broken mannequin, as the metaphysical painters saw it: a hollow in its chest giving on a piazza at evening,
+  // a white arcade throwing long shadows, a green sky, a little train puffing along the horizon
+  function chiricoWindow(ty, t) {
+    const hole = PB([-5, ty - 4, -6.6, ty - 13, -4.6, ty - 20, 1, ty - 22, 5.6, ty - 19, 6.4, ty - 11, 4.6, ty - 3, 0, ty - 1.6]);
+    hole(0, 0); ctx.fillStyle = C('#2A3A2E'); ctx.fill();
+    if (DET()) { ctx.save(); hole(0, 0); ctx.clip();
+      const g = ctx.createLinearGradient(0, ty - 22, 0, ty - 8); g.addColorStop(0, '#2E5A4A'); g.addColorStop(.7, '#C8C878'); g.addColorStop(1, '#F0D890'); ctx.fillStyle = g; ctx.fillRect(-8, ty - 23, 16, 16);
+      ctx.fillStyle = '#B86A3A'; ctx.fillRect(-8, ty - 9, 16, 9); // the piazza, ochre in the last of the sun
+      ctx.fillStyle = '#F0E6CC'; ctx.fillRect(-7, ty - 17, 9, 8); ctx.fillStyle = '#1E1A20'; for (let i = 0; i < 3; i++) { const ax = -6 + i * 3; ctx.beginPath(); ctx.moveTo(ax, ty - 9); ctx.lineTo(ax, ty - 13.4); ctx.arc(ax + 1, ty - 13.4, 1, Math.PI, 0); ctx.lineTo(ax + 2, ty - 9); ctx.fill(); } // the arcade
+      ctx.fillStyle = 'rgba(30,20,30,.55)'; poly([2, ty - 9, -7, ty - 9, -2, ty - 2, 8, ty - 2]); ctx.fill(); // its long shadow
+      const tx = 6 - ((t * 3) % 16); ctx.fillStyle = '#1E1A20'; ctx.fillRect(tx, ty - 11, 4, 1.6); ctx.fillRect(tx + .4, ty - 12.4, 1, 1.4); ctx.fillStyle = 'rgba(255,255,255,.8)'; circle(tx + .8, ty - 14 - Math.sin(t * 3) * .3, 1); ctx.fill(); // the train, and its puff
+      ctx.restore(); }
+    hole(0, 0); ctx.strokeStyle = C('#FFFFFF'); ctx.lineWidth = 1.6; ctx.stroke(); hole(0, 0); outline(.9); // the broken edge of the linen, and its rim
+  }
   CREATURES.w6mannequin = function (e, a) {
     a = a || {}; const t = a.t || 0, phR = a.walk || 0, st = e.state, wind = a.wind || 0, hurt = a.hurt;
     const ph = Math.floor(phR * 2.2) / 2.2 + sm((phR * 2.2) % 1) / 2.2, moving = phR ? 1 : 0; // a stepped walk: it ticks from pose to pose
@@ -668,6 +706,7 @@
     }
     const hipY = -30 + (moving ? -Math.abs(Math.sin(ph * 1)) * 1.2 : 0) + windC * 3, lean = -windS * .22 + thr * .3 + (hurt ? -.3 : 0) - windC * .1;
     ctx.save(); ctx.translate(0, hipY); ctx.rotate(lean * .4 + (kC >= 0 ? Math.sin(kC * TAU) * .05 : 0)); ctx.translate(0, -hipY);
+    const bare = e.bare, AR = e.elite && !bare ? (e.armA = { torso: ctx.getTransform() }) : null; // (armor_b.js paints its porcelain in these)
     // the legs: wooden, ball-jointed at hip, knee and ankle
     for (const side of [1, 0]) {
       let [th, sh] = gait(ph, side, .5, .7, moving);
@@ -693,12 +732,14 @@
       ctx.strokeStyle = 'rgba(120,96,70,.6)'; ctx.lineWidth = .6; ctx.setLineDash([1.4, 1]); ctx.beginPath(); ctx.moveTo(0, ty - 25); ctx.quadraticCurveTo(2, ty - 12, 0, ty); ctx.moveTo(-8.8, ty - 18); ctx.quadraticCurveTo(0, ty - 15, 9, ty - 18); ctx.stroke(); ctx.setLineDash([]);
       ctx.strokeStyle = '#E8C040'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-9, ty - 8); ctx.lineTo(8, ty - 21); ctx.stroke(); ctx.strokeStyle = '#2A1A10'; ctx.lineWidth = .4; for (let i = 0; i < 9; i++) { const u = i / 9, x = lerp(-9, 8, u), y = lerp(ty - 8, ty - 21, u); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + .6, y + .9); ctx.stroke(); } // a tape measure, worn like a sash
       ctx.fillStyle = 'rgba(30,40,80,.75)'; ctx.font = '700 4px Georgia, serif'; ctx.fillText('7', -3.6, ty - 6); } });
+    if (AR) AR.ty = ty;
+    if (bare) chiricoWindow(ty, t); // its porcelain broken off, the dummy is hollow: inside, an arcade in the late sun, and a train going by
     // a set-square strapped over the chest like a breastplate
     fillPoly([3, ty - 22, 9, ty - 22, 3, ty - 13], '#7AA8C8', .8); if (DET()) { ctx.fillStyle = 'rgba(230,250,255,.5)'; poly([3.6, ty - 21.4, 7, ty - 21.4, 3.6, ty - 17]); ctx.fill(); }
     // the neck and the egg of a head, a seam drawn round it, the shadow of a face that isn't there
     ctx.fillStyle = C(WD); ctx.fillRect(-1.6, ty - 30, 3.2, 6); ctx.fillStyle = C(BALL); circle(0, ty - 30, 2.2); ctx.fill(); outline(.7);
     const hd = twitch + (windS ? -.15 : 0) + (hurt ? -.4 : 0);
-    ctx.save(); ctx.translate(0, ty - 31); ctx.rotate(hd);
+    ctx.save(); ctx.translate(0, ty - 31); ctx.rotate(hd); if (AR) AR.head = ctx.getTransform();
     cel(PE(1, -8, 6.4, 8.6, .12), '#F4ECDC', { d: 2.2, r: .9, w: 1.3, dark: '#C8BCA4', lite: '#FFFFFF', tex: () => {
       ctx.strokeStyle = 'rgba(110,90,70,.55)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(1.6, -8, 4.2, 8.4, .12, -1.2, 1.4); ctx.stroke(); // a seam over the crown
       ctx.beginPath(); ctx.moveTo(-3, -9); ctx.quadraticCurveTo(2, -7, 6.8, -9.4); ctx.stroke();
@@ -723,7 +764,7 @@
   CREATURES.w6fish = function (e, a) {
     a = a || {}; const t = a.t || 0, ph = a.walk || 0, moving = ph ? 1 : 0, st = e.state, wind = a.wind || 0, hurt = a.hurt;
     const kF = actK(e, 'flop'), kK = actK(e, 'kick'), windF = st === 'wind' && e.plan === 'w6flop' ? wind : 0, windK = st === 'wind' && e.plan === 'w6kick' ? wind : 0;
-    const gasp = .5 + .5 * Math.sin(t * 5 + (e.slot || 0)), air = kF >= 0 && kF < .78;
+    const bare = e.bare, gasp = .5 + .5 * Math.sin(t * (bare ? 11 : 5) + (e.slot || 0)), air = kF >= 0 && kF < .78; // (its bowl of water broken, armor_b.js: it gasps fast and its scales start to flake)
     const kick = kK >= 0 ? (kK < .25 ? sm(kK / .25) : 1 - sm((kK - .4) / .6)) : 0;
     const crouch = windF * 6 + windK * 2, hipY = -31 + crouch + (moving ? -Math.abs(Math.sin(ph)) * 2 : 0);
     // the body's angle: upright running, laid out flat in the leap, bending back to load the kick
@@ -740,16 +781,17 @@
       ctx.fillStyle = C('#B02A3A'); ell(L.ex + 1.4, L.ey + .4, 3.2, 1.6, Math.atan2(L.ey - L.ky, L.ex - L.kx) - Math.PI / 2); ctx.fill(); outline(.8); // red slippers
     }
     // the fish: a deep silver-green body with a pale belly, scales, a fin along the back, gills that flare as it gasps
-    ctx.translate(0, hipY + 2); ctx.rotate(bodyA);
+    ctx.translate(0, hipY + 2); ctx.rotate(bodyA); if (e.elite && !bare) e.armA = { body: ctx.getTransform() };
     const body = PB([-7, 2, -9, -10, -6, -24, 0, -33, 6, -34, 10, -26, 10, -12, 8, 2]);
     cel(body, '#5E8C8A', { d: 3, dark: '#2E5458', lite: '#B8E0D8', tex: () => {
       const g = ctx.createLinearGradient(-8, 0, 10, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.55, 'rgba(0,0,0,0)'); g.addColorStop(.75, 'rgba(250,240,220,.75)'); g.addColorStop(1, 'rgba(250,240,220,.9)'); ctx.fillStyle = g; ctx.fillRect(-10, -36, 22, 40); // the pale belly toward us
       ctx.strokeStyle = 'rgba(20,50,50,.45)'; ctx.lineWidth = .55; for (let y = -26; y < 2; y += 3.2) for (let x = -8 + ((y / 3.2) & 1) * 1.8; x < 8; x += 3.6) { ctx.beginPath(); ctx.arc(x, y, 1.8, .2, Math.PI - .2); ctx.stroke(); } // scales
-      ctx.fillStyle = 'rgba(255,255,255,.35)'; ell(-2, -20, 1.4, 8, .1); ctx.fill(); } });
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ell(-2, -20, 1.4, 8, .1); ctx.fill();
+      if (bare) { for (let i = 0; i < 7; i++) { const x = -6 + hsh(i + 2) * 12, y = -26 + hsh(i + 5) * 24; ctx.fillStyle = 'rgba(232,140,140,.85)'; ell(x, y, 1.6, 1.2, .3); ctx.fill(); } ctx.fillStyle = 'rgba(200,230,230,.3)'; ctx.fillRect(-10, -36, 22, 40); } } }); // dry: flakes of scale gone, the rest dulled
     // the dorsal fin, rippling
     ctx.fillStyle = C('#3E6A70'); ctx.beginPath(); ctx.moveTo(-8, -8); for (let i = 0; i <= 6; i++) { const u = i / 6; ctx.lineTo(-9 - Math.sin(u * Math.PI) * (6 + Math.sin(t * 9 + u * 6) * 1.2), -8 - u * 18); } ctx.lineTo(-6, -26); ctx.closePath(); ctx.fill(); outline(.9);
     // the gill and the pectoral fin, beating
-    ctx.strokeStyle = C('#1E3A40'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(3, -21, 5 + gasp * 1.4, .9, 2.6); ctx.stroke();
+    ctx.strokeStyle = C('#1E3A40'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(3, -21, 5 + gasp * (bare ? 3 : 1.4), .9, 2.6); ctx.stroke();
     if (DET()) { ctx.fillStyle = `rgba(220,90,90,${.25 + gasp * .35})`; ctx.beginPath(); ctx.arc(3, -21, 4.4 + gasp * 1.2, 1, 2.5); ctx.lineTo(3, -21); ctx.fill(); }
     ctx.save(); ctx.translate(3, -15); ctx.rotate(.6 + Math.sin(t * 12) * .35 + kick * -.6); fillPoly([0, 0, 9, -3, 11, 1, 8, 4], '#7AB0AA', .9); ctx.restore();
     // the head: a big eye that never blinks, a mouth opening and closing
@@ -785,7 +827,7 @@
     a = a || {}; const t = a.t || 0, ph = a.walk || 0, st = e.state, wind = a.wind || 0, hurt = a.hurt;
     const windH = st === 'wind' && e.plan === 'w6hands' ? wind : 0, windR = st === 'wind' && e.plan === 'w6rewind' ? wind : 0, kR = actK(e, 'rewind');
     const spin = (e.w6spin = (e.w6spin || 0) + (windH * 14 - windR * 18 - (kR >= 0 ? 20 : 0) + .6) / 60);
-    const minA = -Math.PI / 2 + spin * 3, hourA = -Math.PI / 2 + spin * .25 + 1.2, droop = 1 + Math.sin(t * 1.6) * .12 + (hurt ? .5 : 0);
+    const bare = e.bare, minA = -Math.PI / 2 + spin * 3, hourA = -Math.PI / 2 + spin * .25 + 1.2, droop = 1 + Math.sin(t * 1.6) * .12 + (hurt ? .5 : 0) + (bare ? .75 + Math.sin(t * 1.1) * .15 : 0); // (its hard case broken, armor_b.js: it runs right down)
     const shake = (windH + windR) * Math.sin(t * 60) * .9;
     // the slug foot: a flat run of molten gold and enamel, a ripple travelling back along it as it creeps
     const crawl = ph ? ph * .9 : t * .4, foot = [];
@@ -795,7 +837,9 @@
     // the chain trailing behind, link by link
     ctx.save(); ctx.lineWidth = 1; for (let i = 0; i < 9; i++) { const u = i / 8, x = lerp(-8, -30, u), y = lerp(-27, -1, Math.pow(u, .7)) + Math.sin(u * Math.PI) * 4; ctx.strokeStyle = C(i % 2 ? '#E8C060' : '#8A6424'); ell(x, y, 1.8, 1.1, u * 2); ctx.stroke(); } ctx.restore();
     // the face, slumped back on the foot, shuddering while it winds up
-    ctx.save(); ctx.translate(shake, 0);
+    if (bare) { cel(PE(1, -1, 19, 2.6), '#C89A44', { d: 1, r: .5, w: 1.1, dark: '#7A5420', lite: '#FFE29A' }); // a puddle of gold where it runs
+      for (let i = 0; i < 3; i++) { const x = -8 + i * 8, k = (t * .5 + i * .37) % 1; ctx.fillStyle = C('#D8A848'); ell(x, -10 + k * 9, 1.2, 1.6 + k); ctx.fill(); outline(.6); } } // drips
+    ctx.save(); ctx.translate(shake, bare ? 2 : 0); if (e.elite && !bare) e.armA = { face: ctx.getTransform() };
     clockFace(0, -17, 13, 11.5, droop, minA, hourA, windR + (kR >= 0 ? 1 : 0), e.w6handOut > 0);
     // the winder and its ring
     ctx.strokeStyle = C('#B88A3A'); ctx.lineWidth = 1.6; circle(0, -33, 3); ctx.stroke(); ctx.fillStyle = C('#D8A848'); rrect(-2, -31, 4, 3, 1); ctx.fill(); outline(.7);
@@ -817,6 +861,10 @@
       seg2(lx, -8, -Math.PI / 2 + Math.PI + out + .5 + sw * .35 - (side > 0 ? 0 : .15), 5.5, Math.PI / 2 + out * .6 + sw * .25, 7, 1.7, 1.2, side > 0 ? '#C8402E' : '#8A2A20'); }
     // the curly cord trailing back to nothing
     ctx.strokeStyle = C('#1A1A1E'); ctx.lineWidth = 1.1; ctx.beginPath(); for (let i = 0; i <= 40; i++) { const u = i / 40, x = lerp(-15, -34, u) + Math.cos(u * 40) * 1.6, y = lerp(-10, -2, u) + Math.sin(u * 40) * 1.6 + Math.sin(u * Math.PI) * 3; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    // its brass cage broken (armor_b.js), the receiver is off the hook: the lobster has got up on the phone and stands over
+    // it, bigger than it was, claws up, the cord still hanging from its tail
+    const bare = e.bare, rise = bare ? 8 + Math.sin(t * 2.2) * 1.2 : 0, bs = bare ? 1.18 : 1;
+    if (e.elite && !bare) e.armA = { root: ctx.getTransform() };
     // the base: black bakelite, a glossy dome, the dial
     const base = PB([-17, -6, -15, -18, -9, -23, 9, -23, 15, -18, 17, -6]);
     cel(base, '#1E1E26', { d: 2.4, r: 1.2, dark: '#0A0A0E', lite: '#5A5E78', tex: () => { ctx.fillStyle = 'rgba(200,210,255,.35)'; ell(-6, -20, 6, 1.4, -.1); ctx.fill(); } });
@@ -827,7 +875,8 @@
     ctx.restore();
     ctx.fillStyle = C('#0E0E12'); for (const x of [-9, 9]) { rrect(x - 2.4, -27 + jump * .2, 4.8, 5, 1.4); ctx.fill(); } // the cradle's two prongs
     // the lobster: tail fanned behind, a jointed carapace, eyes on stalks, long feelers, two great claws over the front
-    ctx.save(); ctx.translate(0, -27 - jump); ctx.rotate(ringing ? Math.sin(t * 34) * .06 : hurt ? -.15 : 0);
+    if (bare) { ctx.strokeStyle = C('#1A1A1E'); ctx.lineWidth = 1.1; ctx.beginPath(); for (let i = 0; i <= 24; i++) { const u = i / 24, x = lerp(-9, -26 * bs, u) + Math.cos(u * 30) * 1.4, y = lerp(-25, -27 - rise + 3, u) + Math.sin(u * 30) * 1.4 + Math.sin(u * Math.PI) * 5; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); }
+    ctx.save(); ctx.translate(0, -27 - jump - rise); ctx.rotate((ringing ? Math.sin(t * 34) * .06 : hurt ? -.15 : 0) - (bare ? .12 : 0)); if (bare) ctx.scale(bs, bs); if (e.elite && !bare) e.armA.lob = ctx.getTransform();
     const segs = 5; for (let i = segs - 1; i >= 0; i--) { const x = -6 - i * 3.6, w = 4.6 - i * .45, curl = i * .12 + (hurt ? .1 : 0);
       ctx.save(); ctx.translate(x, Math.sin(curl) * i * 1.4); ctx.rotate(curl); cel(PE(0, 0, 2.6, w), '#C8402E', { d: 1, r: .6, w: 1, dark: '#7A1E16', lite: '#F08A6A' }); ctx.restore(); }
     ctx.save(); ctx.translate(-25, 3); for (let k = -2; k <= 2; k++) { ctx.save(); ctx.rotate(k * .32 + Math.PI); fillPoly([0, 0, 6, -1.8, 7, 0, 6, 1.8], k % 2 ? '#B0382A' : '#D04A36', .7); ctx.restore(); } ctx.restore(); // the tail fan
@@ -837,7 +886,7 @@
     // the claws: hanging over the front edge of the phone; they rear back to load, and shoot out snapping shut
     for (const side of [0, 1]) {
       const reach = snap * (side ? 18 : 12), back = windP * (side ? -6 : -4), open = windP > 0 ? .6 * windP : snap > 0 ? (kP < .12 ? .5 : 0) : .18 + Math.sin(t * 2.5 + side) * .1;
-      const sx = 9 + side * -3, sy = 2 + side * 2, cx = 17 + reach + back, cy = 8 + side * 3 - snap * 6;
+      const sx = 9 + side * -3, sy = 2 + side * 2, cx = 17 + reach + back, cy = 8 + side * 3 - snap * 6 - (bare ? 8 + side * 4 : 0);
       seg2(sx, sy, Math.atan2(cy - sy, cx - sx) + .4, 6, Math.atan2(cy - sy, cx - sx) - .3, 6, 2.6, 2.4, side ? '#C8402E' : '#A8322A');
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(-.2 - snap * .3);
       cel(PB([0, -3.4, 8, -4, 13, -1.2, 9, 1, 0, 3.4, -2, 0]), side ? '#D84E38' : '#B83E2E', { d: 1.4, r: .8, w: 1.1, dark: '#7A1E16', lite: '#FF9A7A' }); // the big pincer
@@ -866,15 +915,18 @@
     const stoop = kS >= 0 ? sm(Math.min(1, kS * 3)) * (1 - sm((kS - .8) / .2)) : 0, windS = st === 'wind' && e.plan === 'w6stoop' ? wind : 0;
     const flap = stoop > .2 ? -.2 : Math.sin(t * (windS > 0 ? 18 : 9) + (e.slot || 0)) * (1 - stoop), tuck = Math.max(stoop, windS * .4);
     ctx.save(); ctx.translate(0, -10); ctx.scale(1.3, 1.3); ctx.rotate(stoop * .5 + (hurt ? -.4 : 0) - windS * .25 + Math.sin(t * 1.1) * .04);
-    const path = birdPath(flap, tuck);
+    const path = birdPath(flap, tuck), night = e.bare; // (its frame broken, armor_b.js: the day in it has gone to night, a moon and stars)
+    if (e.elite && !night) e.armA = { root: ctx.getTransform() };
     // the sky inside: the day, with its clouds sliding past as it moves (the hole is fixed to the world, not the bird)
     path(0, 0); ctx.fillStyle = C('#5E9AD8'); ctx.fill();
     if (DET()) {
       ctx.save(); path(0, 0); ctx.clip();
-      const g = ctx.createLinearGradient(0, -30, 0, 14); g.addColorStop(0, '#3C7EC6'); g.addColorStop(1, '#BCD8F0'); ctx.fillStyle = g; ctx.fillRect(-30, -34, 56, 50);
+      const g = ctx.createLinearGradient(0, -30, 0, 14); g.addColorStop(0, night ? '#0A1030' : '#3C7EC6'); g.addColorStop(1, night ? '#2E3E78' : '#BCD8F0'); ctx.fillStyle = g; ctx.fillRect(-30, -34, 56, 50);
       const off = ((e.x || 0) * .35 * (e.facing || 1) + t * 6) % 40;
+      if (night) { for (let i = 0; i < 14; i++) { const x = ((hsh(i) * 56 - off * .5) % 56 + 56) % 56 - 28, y = -24 + hsh(i + 20) * 30, tw = .5 + .5 * Math.sin(t * 3 + i); ctx.fillStyle = `rgba(255,250,230,${.5 + tw * .5})`; circle(x, y, .5 + hsh(i + 9) * .7); ctx.fill(); }
+        ctx.fillStyle = '#FFF6D8'; ctx.beginPath(); ctx.arc(2, -4, 4, -1.2, 1.9); ctx.arc(3.4, -4.6, 3.2, 1.9, -1.2, true); ctx.fill(); } else
       for (let i = -2; i < 3; i++) { const cx = -off + i * 40, cy = -4 + (i % 2) * 6; ctx.fillStyle = 'rgba(255,255,255,.95)'; circle(cx, cy, 5); ctx.fill(); circle(cx + 6, cy - 2, 6.5); ctx.fill(); circle(cx + 13, cy, 4.6); ctx.fill(); ctx.fillStyle = 'rgba(170,190,220,.6)'; ell(cx + 6, cy + 3.6, 10, 1.6); ctx.fill(); }
-      const sg = ctx.createRadialGradient(10, -14, 0, 10, -14, 22); sg.addColorStop(0, 'rgba(255,250,220,.6)'); sg.addColorStop(1, 'rgba(255,250,220,0)'); ctx.fillStyle = sg; ctx.fillRect(-30, -34, 60, 50); // the sun is somewhere in there
+      if (!night) { const sg = ctx.createRadialGradient(10, -14, 0, 10, -14, 22); sg.addColorStop(0, 'rgba(255,250,220,.6)'); sg.addColorStop(1, 'rgba(255,250,220,0)'); ctx.fillStyle = sg; ctx.fillRect(-30, -34, 60, 50); } // the sun is somewhere in there
       if (hurt) { ctx.strokeStyle = '#141018'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-6, -10); ctx.lineTo(0, -2); ctx.lineTo(-3, 3); ctx.lineTo(4, 7); ctx.stroke(); } // torn
       ctx.restore();
     }
@@ -892,18 +944,22 @@
     const fallen = e.w6fallen || 0, kSt = actK(e, 'stomp'), kOb = actK(e, 'obelisk'), windSt = st === 'wind' && e.plan === 'w6stomp' ? wind : 0, windOb = st === 'wind' && e.plan === 'w6obelisk' ? wind : 0;
     const raise = windSt > 0 ? sm(windSt) : kSt >= 0 ? (kSt < .18 ? 1 - sm(kSt / .18) : 0) : 0, slam = kSt >= 0 && kSt >= .18 && kSt < .5 ? 1 - (kSt - .18) / .32 : 0;
     const wob = Math.sin(t * 7) * .6 * (1 - fallen) + (hurt ? Math.sin(t * 40) * 1.5 : 0);
-    const bodyY = lerp(-112 + Math.sin(ph * 2) * 1.5 * moving + raise * -4 + slam * 3, -20, sm(fallen)), lean = raise * -.08 + slam * .1 + (hurt ? -.05 : 0) + fallen * .25;
+    // its golden bands broken (armor_b.js), its legs go soft as the clocks: it sags lower on knees that bend and wobble
+    const bare = e.bare, AR = e.elite && !bare ? (e.armA = { root: ctx.getTransform(), knees: [] }) : null;
+    const bodyY = lerp((bare ? -86 : -112) + Math.sin(ph * 2) * 1.5 * moving + raise * -4 + slam * 3, -20, sm(fallen)), lean = raise * -.08 + slam * .1 + (hurt ? -.05 : 0) + fallen * .25;
     const leg = (hx, side, front) => { // one long, thin leg with two knees, from hip to foot
       let a1, a2, len = (-bodyY - 6) / 2 * 1.04;
       if (fallen > 0) { const f = sm(fallen); a1 = lerp(Math.PI / 2, front ? -.4 : Math.PI + .4, f); a2 = lerp(Math.PI / 2, front ? .8 : Math.PI - .8, f); len = lerp(len, 26, f); }
       else { const p = ph + side * Math.PI + (front ? 0 : Math.PI / 2), sw = Math.sin(p) * .14 * moving; a1 = Math.PI / 2 - .05 + sw; a2 = Math.PI / 2 + .07 + sw * .6 + Math.max(0, Math.cos(p)) * .12 * moving;
-        if (front && side === 0) { a1 -= raise * 1.25 + slam * .15; a2 += raise * .35 - slam * .1; } }
+        if (front && side === 0) { a1 -= raise * 1.25 + slam * .15; a2 += raise * .35 - slam * .1; }
+        if (bare) { const b = (.42 + Math.sin(t * 1.7 + hx * .3 + side * 2) * .12) * (front ? 1 : -1); a1 -= b; a2 += b; len /= Math.cos(b); } }
       const L = seg2(hx, bodyY + 10, a1, len, a2, len, 3.2, 2.4, side ? '#7A6A6E' : '#5A4C52', { lit: '#C8B0A8', joint: '#6A5A60', jr: 2.4 });
+      if (AR) AR.knees.push([L.kx, L.ky, hx, bodyY + 10, L.ex, L.ey]);
       ctx.fillStyle = C(side ? '#6A5A60' : '#4A3E44'); ell(L.ex, L.ey - .4, 3.2, 1.6); ctx.fill(); outline(.8); // a small round elephant foot
       if (DET()) { ctx.fillStyle = '#E8D8C8'; for (let k = -1; k <= 1; k++) { circle(L.ex + 1 + k * 1.3, L.ey - .2, .5); ctx.fill(); } } // toenails
     };
     leg(-14, 0, false); leg(12, 0, true);
-    ctx.save(); ctx.translate(0, bodyY); ctx.rotate(lean); ctx.translate(wob * .3, 0);
+    ctx.save(); ctx.translate(0, bodyY); ctx.rotate(lean); ctx.translate(wob * .3, 0); if (AR) AR.body = ctx.getTransform();
     // the obelisk on its back, on a red saddle-cloth fringed with gold (gone while it is flying at you)
     if (!(e.w6obOut > 0)) { const lift = windOb * -6 + Math.sin(t * 60) * windOb * .8;
       ctx.save(); ctx.translate(0, -15 + lift); ctx.rotate(windOb * -.1);

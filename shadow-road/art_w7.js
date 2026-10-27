@@ -673,11 +673,21 @@
       ctx.fillStyle = 'rgba(70,110,80,.45)'; ell(-3, hipY - 2, 4, 2); ctx.fill(); } }); // a stain of weed
     ctx.fillStyle = C('#3A2A1E'); ctx.beginPath(); ctx.rect(-7, hipY - 4, 14, 2.6); ctx.fill(); outline(.8); // the belt
     barnacles(-5, sy + 2, 4, 1, 3);
+    if (e.bare) { // the reef came off and took his chest with it: the ribs, and the eel that lives in him now
+      ctx.fillStyle = C('#14201C'); ctx.beginPath(); ctx.moveTo(-4, sy + 2); ctx.lineTo(3, sy + 1); ctx.lineTo(6, sy + 7); ctx.lineTo(4, sy + 16); ctx.lineTo(-3, sy + 17); ctx.lineTo(-6, sy + 9); ctx.closePath(); ctx.fill(); outline(1);
+      ctx.strokeStyle = C('#D8DCC8'); ctx.lineWidth = 1.3; ctx.lineCap = 'round'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-1, sy + 5 + i * 3.6); ctx.quadraticCurveTo(3, sy + 3 + i * 3.6, 5, sy + 6 + i * 3.6); ctx.stroke(); }
+      const ew = Math.sin(t * 3.4 + (e.slot || 0)) * 3, ex = 13 + wH * -4 + thrust * 6 + lunge * 6, ey = sy + 3 + ew;
+      limb(0, sy + 10, 6, sy + 12 + ew, ex, ey, 4.4, 2.6, '#4E5E3A', 1, '#2A361E');
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(-.2 + ew * .05); cel(PB([-2, -2.4, 3, -2.6, 6.4, -.6, 6.4, 1.2, 2, 2.6, -2, 2]), '#5E6E44', { d: 1, r: .6, w: 1, dark: '#2A361E', lite: '#9AAA6A' });
+      if (DET()) { ctx.fillStyle = '#E8D85A'; circle(2.6, -1, .9); ctx.fill(); ctx.fillStyle = '#0A0A06'; circle(2.8, -1, .45); ctx.fill(); ctx.strokeStyle = '#1A1A10'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(6, .4); ctx.lineTo(2.4, .8); ctx.stroke(); }
+      ctx.restore(); }
+    if (W7.armor.armed(e)) { ctx.save(); ctx.translate(0, sy + 9); W7.armor.drownedPlate(); ctx.restore(); } // an elite's crust of the reef
     drift(-6, hipY - 2, 12, 1.4, '#3E7A4E', t, e.slot || 0, -.3); drift(4, hipY, 9, 1.1, '#5A9A5E', t, (e.slot || 0) + 2, .2); // weed hanging off him, floating
     // the head: hair floating up off it in strands, the eyes white
     const hdy = sy - 7 + (hurt ? 1 : 0), hxh = 1 + lunge * 3;
     for (let i = 0; i < 6; i++) drift(-4 + i * 1.8 + hxh, hdy - 6, 9 + hsh(i + 3) * 6, 2, i % 2 ? '#2A322C' : '#3E463E', t, i * 1.3 + (e.slot || 0), -.25);
     face(hxh, hdy, { skin: PAL.skin, dead: 1, mouth: (wC || lunge) ? .6 + lunge * .6 : hurt ? .5 : .15 });
+    if (W7.armor.armed(e)) { ctx.save(); ctx.translate(hxh, hdy); W7.armor.drownedHelm(); ctx.restore(); }
     // the front arm, the boathook: a long ash pole, an iron hook and spike at its end
     const fa = Math.PI / 2 - .2 - thrust * 1.2 + wH * .5 - lunge * 1.3, fl = seg2(4, sy + 2, fa, 11, fa - .5 - thrust * .2 + wH * .2, 10, 4.6, 4, '#7E8E7A', { col2: PAL.skin, lit: '#C8D8C0' });
     if (kC < 0 && wC < .3) { ctx.save(); ctx.translate(fl.ex, fl.ey); ctx.rotate(hookA - Math.PI * .1 + thrust * .25);
@@ -708,7 +718,9 @@
     ctx.save(); ctx.translate(tx, ty); ctx.rotate(stA + Math.PI / 2); // the cresset at its head
     ctx.fillStyle = C(PAL.bronze); poly([-6, -2, 6, -2, 4, 5, -4, 5]); ctx.fill(); outline(1); ctx.fillStyle = C(PAL.verd); ctx.beginPath(); ctx.rect(-6, -3, 12, 2); ctx.fill(); outline(.7);
     ctx.restore();
-    if (!out) { const fx2 = tx + Math.cos(stA) * 4, fy2 = ty + Math.sin(stA) * 4; if (DET()) { ctx.save(); const lean2 = clamp(-Math.cos(stA) * .6, -1, 1) + Math.sin(t * 3) * .1; waterFlame(fx2, fy2, .8 + wF * .35 + fling * .2, t, lean2, 1); ctx.restore(); } else { ctx.fillStyle = C(PAL.flame); circle(fx2, fy2 - 5, 4); ctx.fill(); } }
+    if (!out) { const fx2 = tx + Math.cos(stA) * 4, fy2 = ty + Math.sin(stA) * 4; if (DET()) { ctx.save(); const lean2 = clamp(-Math.cos(stA) * .6, -1, 1) + Math.sin(t * 3) * .1; waterFlame(fx2, fy2, (e.bare ? 1.35 : .8) + wF * .35 + fling * .2, t, lean2, 1); ctx.restore(); } else { ctx.fillStyle = C(PAL.flame); circle(fx2, fy2 - 5, 4); ctx.fill(); } }
+    if (W7.armor.armed(e)) { ctx.save(); ctx.translate(tx + Math.cos(stA) * 7, ty + Math.sin(stA) * 7); W7.armor.lampGlobe(); ctx.restore(); } // the elite's flame is kept in glass
+    else if (e.bare && !out && DET()) { glowM(tx + Math.cos(stA) * 6, ty + Math.sin(stA) * 6, 30, RGB.flame, .35); for (let i = 0; i < 4; i++) { const q = (t * 1.4 + i / 4) % 1; ctx.fillStyle = `rgba(200,255,210,${.8 * (1 - q)})`; circle(tx + Math.cos(stA) * 8 + Math.sin(q * 7 + i) * 5, ty + Math.sin(stA) * 8 - q * 26, 1.4 * (1 - q) + .4); ctx.fill(); } } // loose: it burns wild, and sparks go up off it
     // the robe: long, lapis, its gold border floating at the hem; slit for walking
     const hem = Math.sin(t * 1.2 + (e.slot || 0)) * 2.4, sp = moving ? Math.sin(ph) * 3 : 0;
     for (const side of [0, 1]) { const fx = side ? 4 + sp : -3 - sp; foot(fx, 0, '#2A2420', 1); }
@@ -722,16 +734,33 @@
     // the head: green-pale, the gill-slits of Rebma, the hair floating up in long locks
     const hdy = sy - 7;
     for (let i = 0; i < 7; i++) drift(-5 + i * 1.6, hdy - 5, 11 + hsh(i + 1) * 8, 2.1, i % 2 ? PAL.hair : PAL.hairL, t, i * 1.1 + (e.slot || 0), -.4);
-    face(1, hdy, { skin: PAL.rebm, gill: 1, eye: '#E8C848', mouth: wF > .5 ? .5 : 0 });
+    face(1, hdy, { skin: PAL.rebm, gill: 1, eye: e.bare ? '#7AF0A0' : '#E8C848', mouth: wF > .5 ? .5 : 0 });
+    if (e.bare) glowM(5, hdy - 1.4, 7, RGB.flame, .7); // (the loosed fire has got into his eyes)
     // the near arm on the staff
     const ax = hx - 7, ay = hy + 17;
     seg2(4, sy + 3, Math.atan2(hy - sy - 3, hx - 4) + .8, 7, Math.atan2(hy - sy - 3, hx - 4) - .3, 6, 4, 3.4, '#2E8A7A', { col2: PAL.rebm });
     mitt(hx, hy, PAL.rebm, 2.6);
+    if (W7.armor.armed(e)) { ctx.save(); ctx.translate(4, sy + 1); ctx.rotate(.15); W7.armor.scallop(1); ctx.restore(); }
     ctx.restore();
   };
 
   // ---------------- HALBERDIER OF MOIRE: a soldier of the Queen's guard in a coat of overlapping nacre scales, a helm
   // with a crest like a fin of green bronze, a scallop-shell shield; a glaive with a long curved blade ----------------
+  // under the Halberdier's conch helm there was never a man: a merrow's head, a grouper's, all mouth and eye
+  function fishHead(x, y, t, e, gape) {
+    ctx.save(); ctx.translate(x, y);
+    const fin = Math.sin(t * 3 + (e.slot || 0)) * 1.2;
+    cel(PB([-6, -6, -3 + fin, -14, 2 + fin, -16, 6, -10, 2, -8]), PAL.coral, { d: 1, r: .6, w: 1, dark: PAL.coralD, lite: PAL.coralL, tex: () => { ctx.strokeStyle = 'rgba(80,20,20,.6)'; ctx.lineWidth = .6; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-4 + i * 2.4, -7); ctx.lineTo(-3 + i * 2 + fin, -14 + Math.abs(i - 1.5)); ctx.stroke(); } } }); // the dorsal fin
+    cel(PB([-7, 7, -8, -3, -3, -10, 6, -8.6, 11.4, -3, 12, 3, 7, 8]), '#5E8A86', { d: 2.2, dark: '#2E4E52', lite: '#A8D0C4', w: 1.3, tex: () => {
+      ctx.fillStyle = 'rgba(230,240,200,.35)'; ell(4, 5, 7, 2.6); ctx.fill(); // its pale throat
+      ctx.strokeStyle = 'rgba(20,40,40,.55)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-2, -5); ctx.quadraticCurveTo(-4.4, 0, -2, 6); ctx.stroke(); // the gill-cover
+      ctx.fillStyle = 'rgba(30,60,60,.35)'; for (let i = 0; i < 6; i++) { circle(-5 + hsh(i) * 10, -6 + hsh(i + 3) * 10, .9); ctx.fill(); } } });
+    ctx.fillStyle = C('#E8C848'); circle(4.6, -3.4, 2.7); ctx.fill(); outline(.9);
+    if (DET()) { ctx.fillStyle = '#0A0A08'; circle(5.2, -3.4, 1.4); ctx.fill(); ctx.fillStyle = '#FFFFFF'; circle(4.4, -4.2, .5); ctx.fill(); }
+    const m = gape ? 3.2 : 1.6; ctx.fillStyle = C('#2A0E10'); ctx.beginPath(); ctx.moveTo(8, 2); ctx.lineTo(13, 2 - m * .6); ctx.lineTo(13, 2 + m); ctx.closePath(); ctx.fill(); outline(.8); // the gape
+    if (DET()) { ctx.strokeStyle = '#E8D8C0'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(10, 1.4); ctx.lineTo(13, 1.4 - m * .4); ctx.stroke(); }
+    ctx.restore();
+  }
   CREATURES.w7guard = function (e, a) {
     a = a || {}; const t = a.t || 0, ph = a.walk || 0, moving = ph ? 1 : 0, hurt = a.hurt, blk = e.state === 'block';
     const wG = windK(e, a, 'w7glaive'), wR = windK(e, a, 'w7reap'), kG = actK(e, 'glaive'), kR = actK(e, 'reap'), br = breath(e, t, 1.8);
@@ -767,14 +796,19 @@
     ctx.restore();
     // the head: the finned helm of green bronze over a Rebman face
     const hy = sy - 7;
+    if (W7.armor.armed(e)) { ctx.save(); ctx.translate(1, hy); W7.armor.conchHelm(); ctx.restore(); }
+    else if (e.bare) fishHead(1, hy, t, e, hurt || wG > .5 || thrust > .3 || reapA !== null);
+    else {
     face(1, hy, { skin: PAL.rebm, gill: 1, eye: '#2A2A1A', mouth: hurt ? .4 : 0 });
     cel(PB([-6, hy - 1, -6, hy - 6, -2, hy - 9.4, 4, hy - 9, 7.6, hy - 5, 7.6, hy - 2.4, 3, hy - 3.2, -2, hy - 1]), PAL.verd, { d: 1.8, dark: PAL.verdD, lite: PAL.verdL, w: 1.1 });
     const fin = Math.sin(t * 2 + (e.slot || 0)) * 1.2;
     cel(PB([-7, hy - 6, -8 + fin, hy - 15, -2 + fin, hy - 19, 4 + fin, hy - 15, 3, hy - 8.6]), PAL.gold, { d: 1.2, r: .8, w: 1, dark: PAL.goldD, lite: PAL.goldL, tex: () => { ctx.strokeStyle = 'rgba(80,50,20,.6)'; ctx.lineWidth = .6; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-1 + i * 1.4, hy - 8.6); ctx.lineTo(-5 + i * 2.4 + fin, hy - 16 + Math.abs(i - 1.5)); ctx.stroke(); } } });
     for (let i = 0; i < 3; i++) drift(-6 + i, hy - 2, 7 + i * 2, 1.8, PAL.hair, t, i + (e.slot || 0), -.6); // hair from under the helm
+    }
     // the near arm
     const na = reapA !== null ? reapA + .6 : Math.PI / 2 - .5 - thrust * .7 + wG * .4;
-    seg2(5, sy + 2, na, 10, na - .4, 9, 4.6, 4, PAL.nacre, { col2: PAL.rebm, lit: PAL.nacreL });
+    if (W7.armor.armed(e)) { ctx.save(); ctx.translate(3, sy + 5); ctx.rotate(.3); W7.armor.scallop(.9, '#F2E2D6'); ctx.restore(); }
+    seg2(5, sy + 2, na, 10, na - .4, 9, 4.6, 4, PAL.nacre, { col2: e.bare ? '#5E8A86' : PAL.rebm, lit: PAL.nacreL });
     ctx.restore();
   };
 
@@ -819,9 +853,99 @@
     // its bronze bands and the ring at its crown
     for (const [y, w] of [[-22, 23], [-46, 21.5], [-64, 15]]) { ctx.fillStyle = C(PAL.bronze); rrect(-w, y - 1.8, w * 2, 3.6, 1.6); ctx.fill(); outline(.9); if (DET()) { ctx.fillStyle = PAL.verdL; ctx.globalAlpha = .6; ctx.fillRect(-w + 2, y - 1.6, w * .6, 1); ctx.globalAlpha = 1; } }
     ctx.strokeStyle = C(PAL.bronzeD); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(0, -77, 3.6, 0, TAU); ctx.stroke();
+    if (W7.armor.armed(e)) W7.armor.bellCage(); // an elite's bell is hung in a gilt cage, and coral grows on its crown
     if (DET()) for (let i = 0; i < 3; i++) { const q = (t * .6 + i / 3 + (e.slot || 0) * .1) % 1; ctx.strokeStyle = `rgba(220,245,240,${.6 * (1 - q)})`; ctx.lineWidth = .7; circle(Math.sin(q * 9 + i) * 3, -80 - q * 26, 1 + q * 1.4); ctx.stroke(); } // air escaping from the bell's crown
     ctx.restore();
   };
+  // ======================================================================================================
+  // THE ARMOUR OF REBMA'S ELITE: what the sea has grown on them or the Queen has given them. Each piece is painted about
+  // its own middle, so the creature can wear it (drawn in its own layers, below) and armor_c.js can throw it off when the
+  // guard breaks (ARMOR[type].pieces). What was under it is drawn by the creature when e.bare is set
+  // ======================================================================================================
+  const armed = (e) => !!(e && e.elite && e.guard > 0 && !e.bare);
+  const mussel = (x, y, r, a) => { ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = C('#22304A'); ell(0, 0, r * 1.6, r); ctx.fill(); outline(.7);
+    if (DET()) { ctx.strokeStyle = 'rgba(150,180,220,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(-r * .2, -r * .2, r * 1.1, r * .55, 0, Math.PI, TAU); ctx.stroke(); } ctx.restore(); };
+  const coralSprig = (x, y, s, a, col = PAL.coral) => { ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(s, s); ctx.lineCap = 'round';
+    const br = () => { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-1, -6, 1, -11); ctx.moveTo(.2, -5); ctx.quadraticCurveTo(4, -7, 5, -10); ctx.moveTo(.6, -8.6); ctx.quadraticCurveTo(-3, -10, -4, -13); };
+    ctx.strokeStyle = C(INK); ctx.lineWidth = 3.4; br(); ctx.stroke(); ctx.strokeStyle = C(col); ctx.lineWidth = 2; br(); ctx.stroke();
+    if (DET()) { ctx.fillStyle = PAL.coralL; for (const [px, py] of [[1, -11], [5, -10], [-4, -13]]) { circle(px, py, .9); ctx.fill(); } }
+    ctx.restore(); };
+  // a crust of the reef: a lumpy grey-white shell of lime, barnacles and mussels on it, a sprig of coral
+  const crustTex = (seed, w, h) => () => {
+    ctx.fillStyle = 'rgba(90,130,90,.35)'; for (let i = 0; i < 4; i++) { ell((hsh(seed + i) - .5) * w, (hsh(seed + i + 4) - .5) * h, 3, 1.6); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(60,60,50,.45)'; ctx.lineWidth = .6; for (let i = 0; i < 5; i++) { const x = (hsh(seed + i * 2) - .5) * w, y = (hsh(seed + i * 3) - .5) * h; ctx.beginPath(); ctx.arc(x, y, 1.4 + hsh(i) * 1.4, 0, Math.PI); ctx.stroke(); } };
+  function drownedHelm() {
+    cel(PB([-8, 5, -9.5, -5, -5, -12.5, 3, -13, 8.6, -8.6, 9.4, -4.4, 4.6, -4.8, 1.2, -3.4, -2.4, 1.6, -4, 8]), '#B6B29C', { d: 2.4, dark: '#6E6E5A', lite: '#E6E2CC', w: 1.3, tex: crustTex(3, 14, 14) });
+    barnacles(-4, -7, 4, .9, 11); barnacles(4, -9, 3, .8, 17); mussel(-6, 1, 1.7, 1.2); mussel(6.4, -6.6, 1.4, -.4);
+    coralSprig(-2, -12, .7, -.3);
+  }
+  function drownedPlate() {
+    cel(PB([-9.5, -10, 0, -12, 9.5, -9.5, 10.5, 1, 7, 9, -6, 10, -10.5, 3]), '#A9A690', { d: 2.8, dark: '#62624E', lite: '#DEDAC2', w: 1.4, tex: crustTex(7, 16, 16) });
+    barnacles(-4, -6, 5, 1, 21); barnacles(5, 3, 4, .9, 29); mussel(-5, 4, 2, .5); mussel(4, -6, 1.7, -.8); mussel(1, 7, 1.5, .2);
+  }
+  // the Torchbearer's lantern: a globe of thick sea-glass round the flame, capped and caged in bronze
+  function lampGlobe() {
+    ctx.beginPath(); ctx.arc(0, 0, 8.4, 0, TAU); ctx.fillStyle = FLASH ? '#fff' : TINT || 'rgba(190,240,226,.3)'; ctx.fill();
+    if (DET()) { const g = ctx.createRadialGradient(-3, -3, 1, 0, 0, 8.4); g.addColorStop(0, 'rgba(255,255,255,.45)'); g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(40,120,110,.5)'); ctx.fillStyle = g; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(0, 0, 6, -2.6, -1.6); ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(0, 0, 8.4, 0, TAU); outline(1.2);
+    ctx.strokeStyle = C(PAL.bronze); ctx.lineWidth = 1.4; for (const k of [-.5, 0, .5]) { ctx.beginPath(); ctx.ellipse(0, 0, Math.abs(k) * 8.4 + .01, 8.4, 0, k < 0 ? Math.PI / 2 : -Math.PI / 2, k < 0 ? Math.PI * 1.5 : Math.PI / 2); ctx.stroke(); }
+    ctx.fillStyle = C(PAL.bronze); poly([-5, -7, 5, -7, 3, -10.5, -3, -10.5]); ctx.fill(); outline(.9);
+    ctx.strokeStyle = C(PAL.bronzeD); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, -12.4, 1.8, 0, TAU); ctx.stroke();
+    ctx.fillStyle = C(PAL.bronze); ctx.beginPath(); ctx.rect(-4.5, 7, 9, 2.4); ctx.fill(); outline(.8);
+  }
+  // a scallop shell worn on the shoulder, ribbed, its hinge in gold
+  function scallop(s = 1, col = '#EAD6C6') {
+    ctx.save(); ctx.scale(s, s);
+    ctx.beginPath(); ctx.moveTo(0, 6); for (let i = 0; i <= 8; i++) { const a2 = Math.PI * (1.05 + i / 8 * .9), r2 = 8.6 + (i % 2) * 1; ctx.lineTo(Math.cos(a2) * r2, 3 + Math.sin(a2) * r2 * .9); } ctx.closePath();
+    ctx.fillStyle = C(col); ctx.fill();
+    if (DET()) { ctx.strokeStyle = 'rgba(150,100,90,.65)'; ctx.lineWidth = .7; for (let i = 0; i <= 6; i++) { const a2 = Math.PI * (1.12 + i / 6 * .76); ctx.beginPath(); ctx.moveTo(0, 5.6); ctx.lineTo(Math.cos(a2) * 7.4, 3 + Math.sin(a2) * 7); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(255,250,240,.65)'; ell(-2.4, -2.4, 2.4, 1.4); ctx.fill(); ctx.fillStyle = 'rgba(120,80,110,.35)'; ell(3, 2, 3, 2); ctx.fill(); }
+    ctx.beginPath(); ctx.moveTo(0, 6); for (let i = 0; i <= 8; i++) { const a2 = Math.PI * (1.05 + i / 8 * .9), r2 = 8.6 + (i % 2) * 1; ctx.lineTo(Math.cos(a2) * r2, 3 + Math.sin(a2) * r2 * .9); } ctx.closePath(); outline(1);
+    ctx.fillStyle = C(PAL.gold); poly([-3, 5, 3, 5, 2, 8, -2, 8]); ctx.fill(); outline(.7);
+    ctx.restore();
+  }
+  // the Halberdier's great helm: a whelk's shell, spired and knobbed, closed over his whole head; a slit glows pearl-pink
+  function conchHelm() {
+    ctx.save(); ctx.translate(-1, 0);
+    cel(PB([-6, -10, -10, -20, -7, -13]), '#C8AE98', { d: 1, r: .6, w: 1.1, dark: '#8A6A58' }); // the spire, going up and back
+    cel(PB([-8.6, 8, -10, -3, -6, -12.4, 3, -14.6, 9.6, -10, 11, -1.4, 10, 6.6, 3, 9.4]), '#E6D0BA', { d: 2.6, dark: '#A88A72', lite: '#FFF4E6', w: 1.4, tex: () => {
+      ctx.strokeStyle = 'rgba(120,80,60,.55)'; ctx.lineWidth = .8; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(-2, -2 - i * 1.4, 8 - i * 2.4, 5.6 - i * 1.6, -.5, Math.PI * .9, Math.PI * 2.1); ctx.stroke(); } // the spiral's whorls
+      ctx.fillStyle = 'rgba(232,150,150,.75)'; ell(9, 1, 3.4, 6.6); ctx.fill(); // the pink lip of its mouth
+      ctx.fillStyle = 'rgba(160,110,90,.5)'; for (let i = 0; i < 5; i++) { circle(-6 + i * 3.4, -11 + Math.abs(i - 2) * 1.4, 1); ctx.fill(); } } });
+    for (const [x, y] of [[-4, -12.6], [1, -14.6], [6, -12.8]]) { ctx.fillStyle = C('#D8BEA4'); poly([x - 1.6, y + 1, x, y - 3.4, x + 1.6, y + 1]); ctx.fill(); outline(.7); } // its knobs
+    ctx.fillStyle = C('#14100E'); ctx.beginPath(); ctx.moveTo(4, -2.6); ctx.lineTo(11, -2); ctx.lineTo(11, -.6); ctx.lineTo(4, -1); ctx.closePath(); ctx.fill(); // the eye-slit
+    if (DET()) { ctx.fillStyle = 'rgba(255,220,230,.85)'; circle(8.4, -1.6, .6); ctx.fill(); }
+    ctx.restore();
+  }
+  // the bronze triton's reef: lime crust and branching coral grown over its crown and shoulders where it stood in the sea
+  function tritonCrown() {
+    coralSprig(-4, -2, 1.1, -.55); coralSprig(4, -2, 1.2, .45, '#D87A5A'); coralSprig(0, -3, 1.3, .05, PAL.coralD);
+    cel(PB([-9, 3, -8, -3, -2, -5.6, 5, -5, 9, -1, 8.4, 4, 0, 2]), '#B0A890', { d: 1.6, dark: '#6A6450', lite: '#E2DCC6', w: 1.2, tex: crustTex(41, 16, 6) });
+    barnacles(-3, -1, 3, .8, 43); barnacles(4, 0, 2, .7, 47);
+  }
+  function tritonReef(side) {
+    ctx.save(); ctx.scale(side, 1);
+    cel(PB([-8, 6, -10, -2, -4, -8, 5, -7, 9, -1, 7, 6]), '#A49C84', { d: 2, dark: '#625C48', lite: '#DCD6BE', w: 1.3, tex: crustTex(51, 14, 10) });
+    barnacles(-2, -3, 4, .9, 53); mussel(4, 2, 1.6, .6); coralSprig(-5, -5, .6, -.8);
+    ctx.restore();
+  }
+  // the gilt cage the elite bell is hung in, and the bits of the bell that fly off it
+  function bellShard(seed) { const r = (i) => hsh(seed * 13 + i);
+    const pts = [-6 - r(1) * 4, -4 - r(2) * 4, 4 + r(3) * 4, -6 - r(4) * 3, 7 + r(5) * 3, 3 + r(6) * 3, -2, 6 + r(7) * 3];
+    poly(pts); ctx.fillStyle = FLASH ? '#fff' : TINT || 'rgba(190,236,226,.55)'; ctx.fill(); outline(1);
+    if (DET()) { ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pts[0] * .6, pts[1] * .6); ctx.lineTo(pts[2] * .6, pts[3] * .6); ctx.stroke(); } }
+  function bellBand(w = 18) { ctx.fillStyle = C(PAL.gold); ctx.beginPath(); ctx.moveTo(-w, 2); ctx.quadraticCurveTo(0, -4, w, 2); ctx.lineTo(w, 5.4); ctx.quadraticCurveTo(0, -.6, -w, 5.4); ctx.closePath(); ctx.fill(); outline(.9);
+    if (DET()) { ctx.fillStyle = PAL.goldL; ctx.globalAlpha = .6; ctx.fillRect(-w * .5, -.4, w * .6, 1); ctx.globalAlpha = 1; } }
+  function bellCage() { // (drawn over the bell, in its own space: feet at 0)
+    ctx.lineCap = 'round';
+    const rib = (fn) => { ctx.strokeStyle = C(INK); ctx.lineWidth = 3.6; ctx.beginPath(); fn(); ctx.stroke(); ctx.strokeStyle = C(PAL.gold); ctx.lineWidth = 2; ctx.beginPath(); fn(); ctx.stroke(); if (DET()) { ctx.strokeStyle = PAL.goldL; ctx.lineWidth = .6; ctx.beginPath(); fn(); ctx.stroke(); } };
+    rib(() => { ctx.moveTo(0, -74); ctx.lineTo(0, -21); });
+    for (const s of [-1, 1]) rib(() => { ctx.moveTo(s * 4, -73); ctx.quadraticCurveTo(s * 16, -66, s * 16, -46); ctx.lineTo(s * 16.6, -21); });
+    ctx.fillStyle = C(PAL.gold); for (const y of [-58, -34]) for (const x of [-16, 0, 16]) { circle(x, y, 1.6); ctx.fill(); outline(.6); } // the rivets
+    coralSprig(-3, -78, .8, -.4); coralSprig(3, -78, .8, .4, '#D87A5A');
+  }
+  W7.armor = { armed, drownedHelm, drownedPlate, lampGlobe, scallop, conchHelm, tritonCrown, tritonReef, bellShard, bellBand, bellCage, mussel, coralSprig };
 
   // ======================================================================================================
   // THE CREATURES OF THE SEA-CHARTS: as the cartographers of the old world filled their empty water
@@ -923,6 +1047,13 @@
       ctx.strokeStyle = 'rgba(16,40,32,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -58); ctx.lineTo(0, -34); ctx.moveTo(-8, -46); ctx.quadraticCurveTo(-3, -42, 0, -46); ctx.quadraticCurveTo(3, -42, 8, -46); ctx.stroke();
       for (const [x, y] of [[-5, -54], [6, -52], [2, -38]]) { ctx.fillStyle = BR; ctx.globalAlpha = .55; ell(x, y, 2.4, 1.4); ctx.fill(); ctx.globalAlpha = 1; }
       ctx.fillStyle = 'rgba(200,240,220,.5)'; ctx.fillRect(-12, -40, 24, 1.2); } }); // where scales begin
+    if (e.bare) { // the reef tore the bronze open when it came away: the triton was hollow, and something has been living in it
+      const cr = [-3, -55, 3, -53, 1, -50, 6, -47, 2, -42, 4, -36, -2, -38, -5, -43, -2, -48, -6, -51];
+      poly(cr); ctx.fillStyle = C('#0A1612'); ctx.fill(); outline(1.1);
+      if (DET()) { ctx.fillStyle = '#F2C84A'; ell(0, -45, 1.4, 1); ctx.fill(); ctx.fillStyle = '#0A0806'; ctx.fillRect(-.3, -46, .6, 2); }
+      for (let i = 0; i < 3; i++) { const w = Math.sin(t * 2.6 + i * 2.1) * 6, x0 = [-2, 3, 1][i], y0 = [-50, -46, -40][i], dx = [-1, 1, 1][i];
+        const s = limb(x0, y0, x0 + dx * 10, y0 - 4 + w, x0 + dx * 14 + w * .4, y0 + 8 + w, 3.4, .8, '#C86A52', .9, '#7A3428');
+        if (DET()) { ctx.fillStyle = 'rgba(255,220,200,.8)'; for (let k = 2; k < 6; k++) { circle(s.R[k * 2], s.R[k * 2 + 1], .45); ctx.fill(); } } } }
     // the head: curled hair and beard cast in bronze, the eyes blank, the cheeks blown out round the conch
     const hy = -66 - blow * 1;
     cel(PB([-7, hy - 6, 0, hy - 10, 7, hy - 6, 8, hy + 2, 4, hy + 7, -4, hy + 7, -8, hy + 1]), BZ, { d: 2, dark: BZD, lite: BZL, w: 1.3, tex: () => {
@@ -931,6 +1062,7 @@
       ctx.fillStyle = BZL; ctx.fillRect(-5, hy - 4, 1.2, 6); ctx.fillStyle = BR; ctx.globalAlpha = .6; ell(-2, hy - 3, 2, 1.2); ctx.fill(); ctx.globalAlpha = 1;
       ctx.fillStyle = BZL; ell(4, hy - 1, 1.4, .9); ctx.fill(); // a blank eye
       if (blow > .2) { ctx.fillStyle = 'rgba(200,240,220,.45)'; circle(5, hy + 3, 2.6 * blow); ctx.fill(); } } });
+    if (W7.armor.armed(e)) { ctx.save(); ctx.translate(0, hy - 7); ctx.scale(.85, .85); W7.armor.tritonCrown(); ctx.restore(); for (const s of [-1, 1]) { ctx.save(); ctx.translate(s * 13, -55); ctx.scale(.8, .8); W7.armor.tritonReef(s); ctx.restore(); } }
     // the conch: a great whelk, spiralled, its lip pink; at its lips when it blows
     const cA = blow > .05 ? -.25 : .9, cx = blow > .05 ? 9 : 10, cy = blow > .05 ? hy + 3 : -40;
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(cA);
@@ -1985,7 +2117,7 @@
     }
     if (e.type === 'w7bellk' && !e.dead && e.state !== 'enter') {
       if (!e.w7bare) {
-        if (heavyHit(m)) { e.w7crack = (e.w7crack || 0) + (m.power === 2 || m.trump ? 2 : 1); sfx('hit-crystal', 1); if (e.w7crack >= 3) { e.w7bare = 1; e.plan = null; sfx('break'); burst(e.x, e.y, 40, ['#E8F8FF', '#BEEAD8', '#FFFFFF'], 30, 'crystal', dir, true); bubbles(e.x, e.y, 40, 24, 120); floatText(e.x, e.y, e.hh + 24, 'THE BELL SHATTERS', '#E8F8FF', 15); e.hh = 46; e.hw = 14; } else floatText(e.x, e.y, e.hh + 20, 'CRACKED', '#E8F8FF', 12); }
+        if (heavyHit(m)) { e.w7crack = (e.w7crack || 0) + (m.power === 2 || m.trump ? 2 : 1); sfx('hit-crystal', 1); if (e.w7crack >= 3) { if (e.elite && e.guard > 0 && !m.el) e.guard = Math.min(e.guard, 1); e.w7bare = 1; e.plan = null; sfx('break'); burst(e.x, e.y, 40, ['#E8F8FF', '#BEEAD8', '#FFFFFF'], 30, 'crystal', dir, true); bubbles(e.x, e.y, 40, 24, 120); floatText(e.x, e.y, e.hh + 24, 'THE BELL SHATTERS', '#E8F8FF', 15); e.hh = 46; e.hw = 14; } else floatText(e.x, e.y, e.hh + 20, 'CRACKED', '#E8F8FF', 12); }
         else { base *= .3; if (!(e.w7msg > performance.now())) { e.w7msg = performance.now() + 900; floatText(e.x, e.y, e.hh + 16, 'IT GLANCES OFF THE GLASS', '#DCEEFF', 11); } }
       } else base *= 1.3;
     }

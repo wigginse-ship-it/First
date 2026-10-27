@@ -352,7 +352,8 @@
   CREATURES.golem = function (e, a) {
     a = a || {}; const cry = !!(e && e.def && e.def.crystal), ph = a.walk || 0, t = a.t || 0, wind = a.wind || 0, atk = !!a.atk;
     const rock = cry ? '#7FB0D2' : '#8C8272', dk = cry ? '#3C5C9A' : '#5A5046', lt = cry ? '#E2F8FF' : '#C2B8A4';
-    const glowCol = cry ? '#E8FCFF' : '#FFD27A', glowRGB = cry ? '160,236,255' : '255,190,90';
+    const molten = !cry && e && e.bare; // its guard broken (armor_a.js): the rock split open on a molten core
+    const glowCol = cry ? '#E8FCFF' : molten ? '#FFB050' : '#FFD27A', glowRGB = cry ? '160,236,255' : molten ? '255,120,40' : '255,190,90';
     const moss = '#5E8A40';
     const bob = Math.abs(Math.sin(ph)) * 1.2 - wind * 2 + (atk ? 2 : 0), lean = atk ? 3 : -wind * 3;
     const rockTex = (pts) => () => { // cracks, pits and chips over a rock face
@@ -399,6 +400,12 @@
     ctx.beginPath(); ctx.moveTo(1, -50); ctx.lineTo(-3, -44); ctx.lineTo(1, -40); ctx.lineTo(-2, -33); ctx.lineTo(1.5, -40.5); ctx.lineTo(-1.5, -44); ctx.closePath();
     ctx.fillStyle = C(glowCol); ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = C(OUT); ctx.stroke();
     glow(-1, -42, 9 + wind * 4, glowRGB, .35 * pulse);
+    if (molten) { // veins of fire split out from the heart across the torso
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const veins = [[-1, -44, -8, -49, -12, -56, -17, -60], [-2, -40, -10, -38, -17, -42, -22, -47], [0, -47, 4, -55, 2, -61, 6, -65], [-1, -36, -6, -31, -12, -28], [1, -42, 6, -38, 11, -33]];
+      for (const [w, col] of [[3.4, OUT], [2.1, '#FF7A2A'], [.8, '#FFE6A0']]) { ctx.strokeStyle = C(col); ctx.lineWidth = w; ctx.beginPath(); for (const v of veins) { ctx.moveTo(v[0], v[1]); for (let i = 2; i < v.length; i += 2) ctx.lineTo(v[i], v[i + 1]); } ctx.stroke(); }
+      glow(-8, -48, 18, '255,110,40', .3 * pulse); glow(4, -58, 10, '255,110,40', .25 * pulse);
+    }
     // growth over the back and shoulders
     if (cry) {
       shardCluster(-12, -64, [[-2.1, 13, 2.6], [-1.75, 17, 3.2], [-1.4, 11, 2.4], [-2.5, 9, 2]], ['#B884D8', '#9FE0F0', '#D4A0EC']);
