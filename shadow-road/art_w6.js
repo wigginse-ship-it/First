@@ -541,46 +541,67 @@
     ctx.strokeStyle = C('#4A3018'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(x, y - r * .7); ctx.quadraticCurveTo(x + .5, y - r * 1.2, x + 1.6, y - r * 1.5); ctx.stroke();
     ctx.fillStyle = C('#3E8A2A'); ctx.beginPath(); ctx.moveTo(x + .6, y - r * 1.15); ctx.quadraticCurveTo(x + r * .9, y - r * 1.8, x + r * 1.5, y - r * 1.3); ctx.quadraticCurveTo(x + r * .8, y - r * .9, x + .6, y - r * 1.15); ctx.fill(); outline(.7);
   }
-  function umbrella(len, open, ang) { // drawn from the hand along +x (rotated by ang); open: 0 furled .. 1 open over his head
+  // the umbrella, drawn from the hand along +x (rotated by ang). open: 0 furled .. 1 open, a touch over 1 as it pops;
+  // it blooms panel by panel, the middle ribs spreading first and the outer ones after, and folds back the same way
+  function umbrella(len, open, ang, flut = 0) {
     ctx.save(); ctx.rotate(ang);
     ctx.strokeStyle = C('#5A3A20'); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(-3.2, 0, 3.2, 0, Math.PI * .9, false); ctx.stroke(); // the crook handle
-    ctx.strokeStyle = C('#2A2A30'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke(); // the shaft
-    if (open < .05) { // furled: a slim black cone with a tie
+    ctx.strokeStyle = C('#2A2A30'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len + 3, 0); ctx.stroke(); // the shaft and its spike
+    if (open < .04) { // furled: a slim black cone with a tie
       ctx.fillStyle = C('#1A1A22'); poly([4, -2.4, len * .82, -.8, len, 0, len * .82, .8, 4, 2.4]); ctx.fill(); outline(1);
       if (DET()) { ctx.strokeStyle = 'rgba(160,170,200,.45)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(6, -1.6); ctx.lineTo(len * .78, -.6); ctx.stroke(); ctx.fillStyle = '#3A3A48'; ctx.fillRect(len * .35, -2, 2, 4); }
-    } else { // open: a black dome with its ribs
-      const R = len * .62 * open, cx = len * .8;
-      ctx.fillStyle = C('#16161E'); ctx.beginPath(); ctx.moveTo(cx - R * .1, -R); for (let i = 0; i <= 8; i++) { const a = -Math.PI / 2 + (i / 8 - .5) * Math.PI * .95; const px = cx + Math.cos(a + Math.PI / 2) * R * .18, py = Math.sin(a) * R; ctx.lineTo(cx + R * .22 - Math.abs(Math.sin(a)) * R * .1 + (i % 2 ? -1.5 : 0), py); } ctx.closePath();
-      ctx.beginPath(); ctx.moveTo(cx, -R); ctx.quadraticCurveTo(cx + R * .55, -R * .2, cx + R * .45, 0); ctx.quadraticCurveTo(cx + R * .55, R * .2, cx, R); ctx.lineTo(cx - R * .08, R * .55); ctx.lineTo(cx, 0); ctx.lineTo(cx - R * .08, -R * .55); ctx.closePath(); ctx.fill(); outline(1.1);
-      if (DET()) { ctx.strokeStyle = 'rgba(140,150,190,.5)'; ctx.lineWidth = .7; for (const s of [-.6, 0, .6]) { ctx.beginPath(); ctx.moveTo(cx, 0); ctx.quadraticCurveTo(cx + R * .35, s * R * .5, cx + R * .1, s * R); ctx.stroke(); } }
+    } else {
+      const N = 6, tx = len, Lr = len * .66, over = Math.max(1, open), E = [], Q = [];
+      for (let i = 0; i <= N; i++) { const u = i / N * 2 - 1, ok = open >= 1 ? 1 : sm(open * 1.6 - Math.abs(u) * .6); // this rib's own spread
+        const ox = tx - Lr * (.5 + .14 * Math.sqrt(1 - u * u)), oy = u * Lr * .98 * over; // where its tip sits when open
+        E.push([lerp(tx - Lr * .92, ox, ok), lerp(u * 2.4, oy, ok)]); Q.push([lerp(tx - Lr * .5, tx - Lr * .08, ok), lerp(u * 2, oy * .92, ok)]); }
+      for (let j = 0; j < N; j++) { const a = E[j], b = E[j + 1], qa = Q[j], qb = Q[j + 1], mx = (a[0] + b[0]) / 2 + 1.8 + Math.sin(flut + j * 1.7) * 1.1, my = (a[1] + b[1]) / 2;
+        ctx.fillStyle = C(j % 2 ? '#20202A' : '#121218'); ctx.beginPath(); ctx.moveTo(tx, 0); ctx.quadraticCurveTo(qa[0], qa[1], a[0], a[1]); ctx.quadraticCurveTo(mx, my, b[0], b[1]); ctx.quadraticCurveTo(qb[0], qb[1], tx, 0); ctx.closePath(); ctx.fill(); outline(.9); }
+      if (DET()) { ctx.strokeStyle = 'rgba(150,160,200,.5)'; ctx.lineWidth = .6; for (let i = 1; i < N; i++) { ctx.beginPath(); ctx.moveTo(tx - 1, 0); ctx.quadraticCurveTo(Q[i][0], Q[i][1], E[i][0], E[i][1]); ctx.stroke(); } // the ribs, and the light along the crown
+        ctx.strokeStyle = 'rgba(200,210,240,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tx - 2, -1); ctx.quadraticCurveTo(Q[1][0] + 3, Q[1][1] * .8, E[1][0] + 3, E[1][1] * .85); ctx.stroke(); }
+      ctx.fillStyle = C('#B8A890'); for (const [x, y] of E) { ctx.fillRect(x - .7, y - .7, 1.4, 1.4); } // the little ferrules at the rib ends
+      ctx.strokeStyle = C('#2A2A30'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(tx - 1, 0); ctx.lineTo(len + 3.5, 0); ctx.stroke();
     }
     ctx.restore();
   }
   CREATURES.w6bowler = function (e, a) {
     a = a || {}; const t = a.t || 0, ph = a.walk || 0, moving = ph ? 1 : 0, st = e.state, wind = a.wind || 0, hurt = a.hurt;
     const br = breath(e, t, 2.1), kB = actK(e, 'brolly'), kA = actK(e, 'apple'), kD = actK(e, 'drop'), open = e.w6open || 0;
-    const windB = st === 'wind' && e.plan === 'w6brolly' ? wind : 0, windA = st === 'wind' && e.plan === 'w6apple' ? wind : 0;
+    const windB = st === 'wind' && e.plan === 'w6brolly' ? wind : 0, windA = st === 'wind' && e.plan === 'w6apple' ? wind : 0, windD = st === 'wind' && e.plan === 'w6drop' ? wind : 0;
+    // the umbrella flight: held up over his head (rising on it, drifting down under it, or coming down out of the sky on it)
+    const golc = st === 'enter' && e.ent && e.ent.kind === 'w6golconda' && !e.ent.l, over = kD >= 0 || golc, hang = over ? cl01(open * 1.6) * cl01(e.z / 14) : 0;
+    const fall = kD >= .855 ? sm((kD - .855) / .05) : golc && e.ent.t > .9 ? sm(1 - open * 2) : 0; // furled again for the last drop: the arm comes down to plant it like a cane
+    if (e.w6tuck) { e.w6tuckAt = t; e.w6tuck = 0; } // landed: a twirl, and tucked under the arm
+    const tk = e.w6tuckAt != null && !over && st !== 'wind' && !hurt ? (t - e.w6tuckAt) / 1.3 : 9;
+    // the twirl of the wind-up: spun like a cane, the hat doffed with the other hand, then the umbrella swung up overhead
+    const twirl = windD > 0 ? sm(windD / .7) : 0, upD = windD > 0 ? sm((windD - .68) / .3) : 0, doff = windD > 0 ? sm((windD - .2) / .3) * (1 - sm((windD - .78) / .2)) : 0;
     // the body's lean: back to load the thrust, forward through it, settling after; a recoil when hit
-    const thrust = kB >= 0 ? (kB < .3 ? sm(kB / .3) : 1 - sm((kB - .3) / .7)) : 0, lean = -windB * .18 + thrust * .32 + (hurt ? -.28 : 0) + moving * .05;
-    const bob = moving ? -Math.abs(Math.sin(ph)) * 1.6 : br * .5, hipY = -27 + bob + windB * 2;
+    const thrust = kB >= 0 ? (kB < .3 ? sm(kB / .3) : 1 - sm((kB - .3) / .7)) : 0, lean = -windB * .18 + thrust * .32 + (hurt ? -.28 : 0) + moving * .05 - upD * .08;
+    const bob = moving ? -Math.abs(Math.sin(ph)) * 1.6 : br * .5, hipY = -27 + bob + windB * 2 + upD * 1.5;
+    // hanging from the canopy he sways like a pendulum beneath his hand
+    const swing = hang * (Math.sin(t * 2.3 + (e.slot || 0)) * .12 + Math.sin(t * 5.1) * .025);
+    ctx.save(); ctx.translate(3, -73); ctx.rotate(swing); ctx.translate(-3, 73);
     ctx.save(); ctx.translate(0, hipY); ctx.rotate(lean * .45 + (hurt ? -.18 : 0)); ctx.translate(hurt ? -2 : 0, -hipY);
-    // the legs: grey trousers, black shoes; planted wide for the thrust
+    // the legs: grey trousers, black shoes; planted wide for the thrust; dangling and kicking idly when he hangs in the air
     const air = kD >= 0 || e.z > 4;
     for (const side of [1, 0]) {
-      let [th, sh] = air ? [Math.PI / 2 + (side ? .35 : -.15), Math.PI / 2 + (side ? .8 : .2)] : gait(ph, side, .42, .8, moving);
+      const dg = Math.sin(t * 3.1 + side * 1.9) * .2 * hang;
+      let [th, sh] = air ? [Math.PI / 2 + (side ? .3 : -.12) + dg, Math.PI / 2 + (side ? .7 : .22) + dg * 1.6 - hang * .1] : gait(ph, side, .42, .8, moving);
       if (!moving && !air) { th = Math.PI / 2 + (side ? -.12 : .1) + thrust * (side ? .4 : -.3); sh = th + .05 + thrust * (side ? -.1 : .2); }
       const L = seg2(side ? 1.5 : -1.5, hipY, th, 14, sh, 14, 5.4, 4.6, side ? '#4A4A56' : '#3A3A44', { lit: '#8A8A9A' });
       shoe(L.ex - 1, L.ey + 1.4, '#121218', 1);
     }
-    // the coat: dark, long, its hem swinging behind the stride and flaring out on the thrust (follow-through)
-    const lag = (e.w6hem = lerp(e.w6hem || 0, (moving ? Math.sin(ph - .8) * 3 : 0) - thrust * 5 + (hurt ? 4 : 0), .2)), sy = hipY - 26 + br * .6;
-    const coat = [-7.5, sy + 1, 7.5, sy + 1, 9.5, sy + 12, 10 + lag * .3, hipY + 8, 12 + lag, hipY + 15, 2, hipY + 16.5 + Math.abs(lag) * .2, -10 + lag * .6, hipY + 15, -10.5 + lag * .3, hipY + 6, -9.5, sy + 12];
+    // the coat: dark, long, its hem swinging behind the stride and flaring out on the thrust (follow-through); in the air its tails flutter up
+    const flut = hang * Math.sin(t * 13 + (e.slot || 0)) * 2.4, up = hang * (2.5 + Math.sin(t * 9.5) * 1.6);
+    const lag = (e.w6hem = lerp(e.w6hem || 0, (moving ? Math.sin(ph - .8) * 3 : 0) - thrust * 5 + (hurt ? 4 : 0) - hang * 3 + flut, .2)), sy = hipY - 26 + br * .6;
+    const coat = [-7.5, sy + 1, 7.5, sy + 1, 9.5, sy + 12, 10 + lag * .3, hipY + 8 - up * .4, 12 + lag, hipY + 15 - up, 2, hipY + 16.5 + Math.abs(lag) * .2 - up * .5, -10 + lag * .6, hipY + 15 - up * 1.2, -10.5 + lag * .3, hipY + 6 - up * .4, -9.5, sy + 12];
     cel(PB(coat), '#2A2C38', { d: 3.4, dark: '#16161E', lite: '#5A5E78', tex: () => {
-      ctx.strokeStyle = 'rgba(10,10,16,.6)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(1.5, sy + 4); ctx.lineTo(2.5 + lag * .1, hipY + 15); ctx.stroke(); // the front opening
+      ctx.strokeStyle = 'rgba(10,10,16,.6)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(1.5, sy + 4); ctx.lineTo(2.5 + lag * .1, hipY + 15 - up * .5); ctx.stroke(); // the front opening
       ctx.fillStyle = 'rgba(150,160,200,.25)'; ctx.fillRect(-9, hipY - 3, 18, 1.4); // a belted line
       for (const y of [sy + 9, sy + 15, sy + 21]) { ctx.fillStyle = '#0E0E14'; circle(3.6, y, .9); ctx.fill(); } } });
-    // the back arm
-    seg2(-5, sy + 3, Math.PI / 2 + .25 - thrust * .7 + (moving ? Math.sin(ph) * .4 : 0) + windA * -.5, 11, Math.PI / 2 + .1 - thrust * .4, 10, 4.6, 4, '#24262F', { lit: '#5A5E78' });
+    // the back arm: swinging with the walk, or raised to doff the hat
+    const bA1 = lerp(Math.PI / 2 + .25 - thrust * .7 + (moving ? Math.sin(ph) * .4 : 0) + windA * -.5 - hang * .3, -1.45, doff), bA2 = lerp(Math.PI / 2 + .1 - thrust * .4 - hang * .2, -1.6, doff);
+    const BA = seg2(-5, sy + 3, bA1, 11, bA2, 10, 4.6, 4, '#24262F', { lit: '#5A5E78' });
     // the collar, the red tie, the head
     ctx.fillStyle = C('#F2EEE6'); poly([-3, sy - 1, 3.4, sy - 1, 1, sy + 4]); ctx.fill(); outline(.7);
     ctx.fillStyle = C('#B02A2A'); poly([.2, sy, 1.6, sy, 1.9, sy + 6, .9, sy + 7.5, -.2, sy + 6]); ctx.fill(); outline(.6);
@@ -590,26 +611,39 @@
     if (DET()) { ctx.fillStyle = '#C8A688'; ell(hx - 3.4, hy + .4, 1.4, 2.2); ctx.fill(); } // an ear
     const hasApple = !(e.w6noApple > 0);
     if (!hasApple && DET()) { ctx.fillStyle = 'rgba(160,120,90,.25)'; ell(hx + 2.5, hy + .5, 2.4, 3); ctx.fill(); ctx.strokeStyle = 'rgba(120,90,70,.4)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(hx + 4.6, hy - 1); ctx.lineTo(hx + 5.4, hy + 1.5); ctx.stroke(); } // and no face at all
-    // the bowler: it lags a moment behind the head and pops up off it when he is hit
-    const hatK = (e.w6hat = lerp(e.w6hat || 0, hurt ? 1 : 0, hurt ? .5 : .12)), hatY = hy - 5.8 - hatK * 4 - (kD >= 0 ? open * 1.5 : 0), hatR = hatK * -.35 + thrust * .08;
-    ctx.save(); ctx.translate(hx, hatY); ctx.rotate(hatR);
+    // the bowler: it lags a moment behind the head and pops up off it when he is hit; lifted off and tilted in a doff; it rides up a little in the wind of the fall
+    const hatK = (e.w6hat = lerp(e.w6hat || 0, hurt ? 1 : 0, hurt ? .5 : .12)), hatY0 = hy - 5.8 - hatK * 4 - (over ? open * 1.5 + hang * Math.max(0, Math.sin(t * 7)) * .8 : 0);
+    const hatX = lerp(hx, BA.ex + 2.5, doff), hatY = lerp(hatY0, BA.ey - 3, doff), hatR = hatK * -.35 + thrust * .08 - doff * .55;
+    ctx.save(); ctx.translate(hatX, hatY); ctx.rotate(hatR);
     cel((ox, oy, c) => { if (!c) ctx.beginPath(); ctx.moveTo(-5.4 + ox, 1 + oy); ctx.bezierCurveTo(-5.6 + ox, -6 + oy, 5.6 + ox, -6 + oy, 5.4 + ox, 1 + oy); ctx.closePath(); }, '#1A1A22', { d: 1.6, r: .8, w: 1.1, lite: '#4A4E66' });
     ctx.fillStyle = C('#121218'); ell(0, 1.2, 8.6, 1.7); ctx.fill(); outline(1);
     if (DET()) { ctx.fillStyle = '#3A2A2A'; ctx.fillRect(-5.3, -.6, 10.6, 1.4); ctx.strokeStyle = 'rgba(180,190,230,.55)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(-1, -1.5, 3.4, -2.6, -1.5); ctx.stroke(); }
     ctx.restore();
+    if (doff > .3) { ctx.fillStyle = C('#E2C8AA'); circle(BA.ex + 1, BA.ey - 1.4, 2.1); ctx.fill(); outline(.8); } // the fingers on the crown
     // the apple: hanging in the air before his face, bobbing on its own; it draws back and glows before it is thrown
     if (hasApple) { const pull = windA * 4, ax = hx + 6.2 - pull + Math.sin(t * 2.6 + 1) * .6, ay = hy + .6 + Math.sin(t * 2.3) * 1.1 + (hurt ? -2 : 0);
       if (windA > 0) glowAt(ax, ay, 10 + windA * 6, '200,255,140', .35 * windA);
       apple(ax, ay, 4.4 + windA * .6); }
-    // the near arm and the umbrella: furled and tapping as he waits, cocked back to load, driven forward like a rapier
-    const armA = windB > 0 ? lerp(.9, -2.5, sm(windB)) : thrust > 0 ? lerp(-.15, -.05, thrust) : kD >= 0 ? -1.75 : .95 + (moving ? -Math.sin(ph) * .35 : br * .03);
-    const elbow = windB > 0 ? armA + 1.6 * sm(windB) : thrust > 0 ? -.05 : kD >= 0 ? -1.6 : armA - .5;
+    // the near arm and the umbrella: furled and tapping as he waits, cocked back to load, driven forward like a rapier;
+    // twirled like a cane and swung up overhead to fly; after landing, a twirl and tucked smartly under the arm
+    const UP = -Math.PI / 2 + .1, idleA = .95 + (moving ? -Math.sin(ph) * .35 : br * .03), idleU = 1.42 + Math.sin(t * 1.4) * .05;
+    let armA, elbow, uA;
+    if (windB > 0) { armA = lerp(.9, -2.5, sm(windB)); elbow = armA + 1.6 * sm(windB); uA = lerp(1.35, Math.PI + .25, sm(windB)); }
+    else if (thrust > 0) { armA = lerp(-.15, -.05, thrust); elbow = -.05; uA = lerp(Math.PI + .25, 0, sm(kB / .25)) * (1 - thrust); }
+    else if (over) { const reach = kD >= 0 && kD < .09 ? Math.sin(kD / .09 * Math.PI) * .12 : 0; // a flick up as it snaps open
+      armA = lerp(-1.75 - reach, .55, fall); elbow = lerp(-1.6 - reach, .25, fall); uA = lerp(UP + swing * -.6, 1.25, fall); }
+    else if (windD > 0) { armA = lerp(lerp(idleA, .45, twirl * (1 - upD)), -1.75, upD); elbow = lerp(lerp(idleA - .5, -.25, twirl * (1 - upD)), -1.6, upD); uA = lerp(idleU + twirl * TAU * 1.5, UP + TAU * 2, upD); }
+    else if (tk < 1) { const sp = sm(tk / .38), tu = sm((tk - .36) / .2), back = sm((tk - .82) / .18);
+      armA = lerp(lerp(.55, 1.32, tu), idleA, back); elbow = lerp(lerp(.25, .5, tu), idleA - .5, back); uA = lerp(lerp(1.25 + sp * TAU, Math.PI + .2 + TAU, tu), idleU + TAU, back); }
+    else { armA = idleA; elbow = armA - .5; uA = idleU; }
     const A = seg2(4.5, sy + 3, armA, 10.5, elbow, 10, 4.8, 4.2, '#2E3040', { lit: '#5A5E78' });
     ctx.fillStyle = C('#E2C8AA'); circle(A.ex, A.ey, 2.2); ctx.fill(); outline(.8); // the gloveless hand
     ctx.save(); ctx.translate(A.ex, A.ey);
-    const uA = kD >= 0 ? -Math.PI / 2 + .1 : windB > 0 ? lerp(1.35, Math.PI + .25, sm(windB)) : thrust > 0 ? lerp(Math.PI + .25, 0, sm(kB / .25)) * (1 - thrust) + 0 : 1.42 + Math.sin(t * 1.4) * .05;
-    umbrella(32, kD >= 0 ? open : 0, uA);
+    const spinning = (windD > 0 && twirl > .02 && twirl < .98) || (tk < .38 && tk > .02);
+    if (spinning && DET()) { ctx.strokeStyle = 'rgba(40,40,60,.28)'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, 26, uA - 1.1, uA - .1); ctx.stroke(); } // the blur of the twirl
+    umbrella(32, over ? open : 0, uA, t * 14);
     if (thrust > .3 && DET()) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,240,210,${(thrust - .3) * .8})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(40, 0); ctx.stroke(); } // the streak of the thrust
+    ctx.restore();
     ctx.restore();
     ctx.restore();
   };
@@ -1049,15 +1083,22 @@
     projs.push({ owner: 'e', x: e.x + e.facing * 12, y: e.y, z: e.z + 56, vx: e.facing * 215, dmg: edmg(e), life: 3.2, col: '#7EC850', w6apple: 1, spin: 0 });
     e.w6noApple = 3; act(e, 'apple', .3, () => false, { rec: .6 });
   };
-  // THE DROP: he opens his umbrella and rises into the sky; a shadow follows you over the floor; he comes down on it
+  // THE DROP: (his wind-up: the umbrella twirled like a cane, the hat doffed, the umbrella swung up overhead) he snaps it
+  // open, the panels blooming out from the middle with a puff of cloud, and the open canopy catches the air and lifts him
+  // into the sky; a shadow follows you over the floor; he drifts down on it under the open canopy, swaying, then snaps
+  // it shut and drops the last of the way onto the mark. The timings of the tell, the lock and the landing are as they were
   PLAN_FX.w6drop = (e) => { sfx('whoosh');
     act(e, 'drop', 2.2, (h, dt, e, k) => {
       const el = h.el;
-      if (el < .55) { e.w6open = Math.min(1, el / .25); e.z = 260 * sm(el / .55); }
-      else if (el < 1.55) { e.z = 300; e.x = lerp(e.x, xClamp(P.x), Math.min(1, dt * 3)); e.y = lerp(e.y, yClamp(P.y), Math.min(1, dt * 3)); h.mx = e.x; h.my = e.y; }
-      else if (el < 1.8) { e.z = 300; }
-      else if (el < 2.0) { e.w6open = Math.max(0, 1 - (el - 1.8) / .1); e.z = 300 * (1 - sm((el - 1.8) / .2)); }
-      else { if (!h.land) { h.land = 1; e.z = 0; e.w6open = 0; sfx('slam'); shakeMag = Math.max(shakeMag, 6); dust(e.x, e.y, 10); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .35, max: .35, r: 50, col: '#F4EAD8', flat: 1 });
+      if (el < .2) { e.w6open = el < .16 ? 1.12 * sm(el / .16) : lerp(1.12, 1, (el - .16) / .04); e.z = el < .1 ? 0 : 30 * sm((el - .1) / .1); // the snap open, and the lift as it fills
+        if (el > .1 && !h.pop) { h.pop = 1; sfx('hit-goo', .5); puff(e.x + e.facing * 2, e.y, 92, ['#F4F2EC', '#E2EAF4', '#C8D8EC'], 7, 50); } }
+      else if (el < .6) { e.w6open = 1; e.z = 30 + 270 * (1 - Math.pow(1 - (el - .2) / .4, 2)); } // borne up, fast and then slowing
+      else if (el < 1.0) { e.w6open = 1; e.z = 300 + Math.sin((el - .6) * 6) * 5; }
+      else if (el < 1.86) { e.w6open = 1; e.z = lerp(300, 66, sm((el - 1.0) / .86)); } // drifting down under the canopy
+      else if (el < 2.0) { const u = (el - 1.86) / .14; e.w6open = Math.max(0, 1 - u * 2.6); e.z = 66 * (1 - u * u); // snapped shut, and down he comes
+        if (!h.snap) { h.snap = 1; sfx('pick', .5); } }
+      if (el >= .55 && el < 1.55) { e.x = lerp(e.x, xClamp(P.x), Math.min(1, dt * 3)); e.y = lerp(e.y, yClamp(P.y), Math.min(1, dt * 3)); h.mx = e.x; h.my = e.y; }
+      if (el >= 2.0) { if (!h.land) { h.land = 1; e.z = 0; e.w6open = 0; e.w6tuck = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 6); dust(e.x, e.y, 10); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .35, max: .35, r: 50, col: '#F4EAD8', flat: 1 });
         if (inEll(P.x, P.y, e.x, e.y, 40) && P.z < 26) hitP(Math.round(edmg(e) * 1.2), e.x, true); } }
       return false; }, { rec: 1, abort: (h, e) => { e.z = 0; e.w6open = 0; },
       draw(h, t) { const e = h.e; if (h.el < .55 || h.el >= 2) return; const k = h.el < 1.55 ? .4 : cl01((h.el - 1.55) / .45); // the shadow he will fall on
@@ -1718,8 +1759,11 @@
   if (typeof ENTER_FX !== 'undefined') {
     Object.assign(ENTER_FX, {
       // a gentleman of Golconda: he comes down out of the sky like rain, standing upright under his open umbrella
-      w6golconda: { max: 1.7, start(e, n) { e.x = entranceSpot(e); n.x0 = e.x; n.z0 = e.y - Y_OFF + 60; e.z = n.z0; e.w6open = 1; sfx('whoosh'); },
-        update(e, n, dt) { const k = cl01(n.t / 1.5); e.z = n.z0 * (1 - sm(k)); e.x = n.x0 + Math.sin(n.t * 3) * 10 * (1 - k); if (k >= 1 && !n.l) { n.l = 1; e.w6open = 0; dust(e.x, e.y, 4); } return n.t >= n.max; },
+      w6golconda: { max: 1.7, start(e, n) { e.x = entranceSpot(e); n.x0 = e.x; n.z0 = e.y - Y_OFF + 60; e.z = n.z0; e.w6open = .1; sfx('whoosh'); },
+        update(e, n, dt) { const k = cl01(n.t / 1.5); e.z = n.z0 * (1 - sm(k)); e.x = n.x0 + Math.sin(n.t * 3) * 10 * (1 - k);
+          if (n.t < .3) e.w6open = .1 + 1.02 * sm(n.t / .3); else if (k < .9) e.w6open = lerp(e.w6open, 1, Math.min(1, dt * 8)); // popped open as he appears
+          else if (e.w6open > 0) { if (!n.c) { n.c = 1; sfx('pick', .4); } e.w6open = Math.max(0, e.w6open - dt * 12); } // snapped shut just above the floor
+          if (k >= 1 && !n.l) { n.l = 1; e.w6open = 0; e.w6tuck = 1; dust(e.x, e.y, 4); } return n.t >= n.max; },
         draw(e, n, t, inner) { inner(); } },
       // a soft clock: a drop of molten gold falls, splashes, and the watch heaps itself up out of the splash
       w6drip: { max: 1.4, start(e, n) { e.x = entranceSpot(e); n.z0 = e.y - Y_OFF + 30; sfx('hit-goo'); },
