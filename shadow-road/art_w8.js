@@ -1640,7 +1640,16 @@
       if (h.el > 3.5) { recover(e, .6); return true; } return false; },
       { draw(h, t) { if (wait > 0) lane(h.e.x, dir > 0 ? arenaR() : arenaL(), h.e.y, 22, 1 - wait / .9); } }); }
   // THE BLEAT: crowded, he throws his head back and bleats, and the sound goes out round him along the ground (jump it)
-  TELL_FX.w8bleat = (e, t, k) => { ring(e.x, e.y, 130, k * .6, false); };
+  // its warning shows the whole reach of the sound: the ground darkens out to where the ring will die, and rings of
+  // dust run outward along it, faster as the bleat comes
+  function bleatTell(x, y, k, t) { ring(x, y, 260, .25 + .5 * k, true);
+    ctx.save(); ctx.setLineDash([7, 6]); ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { const q = ((t * (1.2 + 2.2 * k) + i / 3) % 1), r = 20 + q * 240; ctx.strokeStyle = tellLine(Math.min(1, k + .2)); ctx.globalAlpha = (1 - q) * (.5 + .5 * k); ell(x, y, r, r / 2.2); ctx.stroke(); } ctx.restore();
+    ctx.strokeStyle = tellLine(1); ctx.lineWidth = 2.2; const R = 260 * (1 - .15 * k); ell(x, y, R, R / 2.2); ctx.stroke(); }
+  TELL_FX.w8bleat = (e, t, k) => { bleatTell(e.x, e.y, k, t); };
+  // the same warning when he bleats without a wind-up of his own (at the engine, and when spent): he throws his head back first
+  function bleatWarn(e, after) { e.w8a = 'bleat'; e.state = 'w8act'; hazards.push({ kind: 'w8bleattell', e, x: e.x, y: e.y, t: .8, max: .8, after }); sfx('charge', .6); }
+  reg('w8bleattell', { update(h, dt) { h.x = h.e.x; h.y = h.e.y; if (h.t <= dt + .001 && !h.done) { h.done = 1; if (!h.e.dead) { PLAN_FX.w8bleat(h.e); if (h.after) h.after(h.e); } } },
+    draw(h, t) { bleatTell(h.x, h.y, 1 - h.t / h.max, t); } });
   PLAN_FX.w8bleat = (e) => { sfx('roar'); tn(180, .6, 'sawtooth', .06, 120);
     hazards.push({ kind: 'w8bleatring', x: e.x, y: e.y, r: 10, t: 1, max: 1, dmg: Math.round(edmg(e) * .9) }); act(e, 'bleat', (h, dt, e) => { e.w8k = h.el; if (h.el > .6) { recover(e, .9); return true; } return false; }); };
   reg('w8bleatring', {
@@ -1668,10 +1677,10 @@
       if (e.w8lift <= 0 && Math.abs(e.x - tx) < 4) { e.w8m = 'crank'; e.w8t = 0; e.w8onEngine = 0; floatText(e.x, e.y, e.hh + 40, 'HE WINDS THE ENGINE · NOW', '#FFE0A0', 15); sfx('crunch');
       } return; }
     if (e.w8m === 'crank') { e.facing = 1; e.w8onEngine = 0; ENG.arm = 0; ENG.wind = (ENG.wind || 0) + dt; if (Math.random() < dt * 4) sfx('hit-metal', .2);
-      if (Math.abs(P.x - e.x) < e.hw + 30 && Math.abs(P.y - e.y) < 30 && (e.closeCd || 0) <= 0) { e.closeCd = 3; e.w8m = 'bleatC'; e.w8t = 0; PLAN_FX.w8bleat(e); e.state = 'w8act'; e.w8a = 'crank'; }
+      if (Math.abs(P.x - e.x) < e.hw + 30 && Math.abs(P.y - e.y) < 30 && (e.closeCd || 0) <= 0) { e.closeCd = 3; e.w8m = 'bleatC'; e.w8t = 0; bleatWarn(e, (e) => { e.state = 'w8act'; e.w8a = 'crank'; }); }
       e.closeCd = Math.max(0, (e.closeCd || 0) - dt);
       if (e.w8t > 6) { e.w8m = 'toEngine'; e.w8t = 0; } return; }
-    if (e.w8m === 'bleatC') { if (e.w8t > .9) { e.w8m = 'crank'; e.w8t = 1.2; } }
+    if (e.w8m === 'bleatC') { if (e.w8t > 1.7) { e.w8m = 'crank'; e.w8t = 1.2; } }
   }
   // burning bales of hay: one at you, the others round about; each is marked where it will land
   function throwBales(e) {
@@ -1766,7 +1775,7 @@
       if (!e.w8begun) { e.w8begun = 1; e.w8t = 0; words(e); }
       else if (e.w8t > .6 && !busy) { e.w8m = 'spent'; e.w8begun = 0; e.w8t = 0; floatText(e.x, e.y, e.hh + 50, 'HE IS SPENT · NOW', '#FFE0A0', 15); } return; }
     if (e.w8m === 'spent') { e.w8a = 'spent';
-      if (Math.abs(P.x - e.x) < e.hw + 40 && Math.abs(P.y - e.y) < 30 && e.w8t > 1.6 && !(e.w8bl > 0)) { e.w8bl = 1; PLAN_FX.w8bleat(e); e.state = 'w8act'; e.w8a = 'spent'; }
+      if (Math.abs(P.x - e.x) < e.hw + 40 && Math.abs(P.y - e.y) < 30 && e.w8t > 1.6 && !(e.w8bl > 0)) { e.w8bl = 1; bleatWarn(e, (e) => { e.state = 'w8act'; e.w8a = 'spent'; }); }
       if (e.w8t > 3.4) { e.w8m = 'curse'; e.w8t = 0; e.w8bl = 0; } }
   }
   function scrolls(e, line, r) {
