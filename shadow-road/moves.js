@@ -54,8 +54,51 @@ function moveExtras(m, k, dt, airborne) {
       }
     }
   }
+  if (m.twinAt && !P.twinDone && k >= m.twinAt) rapierTwin(m);
   return false;
 }
+// ---------- the rapier's charge (game.js, state 'charge'): two glints down the blade, then the Rose Thrust ----------
+function rapierChime(lvl) { // a small clear chime for each glint, a note higher and brighter for the second
+  if (typeof sfxOn === 'undefined' || !sfxOn || !actx) return;
+  try { (lvl >= 3 ? [1568, 2093, 2794] : lvl === 2 ? [1976, 2637, 3322] : [1760, 2349]).forEach((f, i) => tone(f, .24 - i * .04, 'sine', lvl === 2 ? .07 : .055, 0, i * .05)); } catch (err) {}
+}
+function rapierChargeCue(lvl) {
+  rapierChime(lvl);
+  const hx = P.x + P.facing * 12, hz = P.z + 40; // about where the guard is, held level in front of him
+  if (lvl === 2) for (let i = 0; i < 4; i++) parts.push({ x: hx + P.facing * rand(0, 8), y: P.y + rand(-2, 2), z: hz + rand(-3, 3), vx: P.facing * rand(30, 110), vy: rand(-8, 8), vz: rand(70, 150), life: rand(.45, .7), max: .7, col: pick(['#C8506A', '#E07890', '#F2A8B8']), size: rand(2, 3), shape: 'tuft', rot: rand(0, TAU), vr: rand(-9, 9) }); // a flick of rose petals off the guard
+  if (lvl === 3) for (let i = 0; i < 5; i++) parts.push({ x: hx + rand(-6, 6), y: P.y + rand(-3, 3), z: hz + rand(-6, 6), vx: rand(-20, 20), vy: 0, vz: rand(10, 40), life: .4, max: .4, col: pick(['rgba(42,24,64,.7)', 'rgba(90,60,140,.6)']), size: rand(3, 5), shape: 'puff', rot: 0, vr: 0 }); // Shadow gathering: the Hellride is ready
+}
+function rapierRelease(lvl) { // let go: the plain Lunge, the charged lunge, the Rose Thrust, or (learned) the Hellride
+  const T = WEAPONS.rapier.tree;
+  if (lvl >= 3 && unlocked(T.HC)) { begin(T.HC); return; }
+  if (lvl < 2) { begin(lvl === 1 ? T.HC1 : T.H); return; }
+  const on = enemies.filter(e => !e.dead && e.x > camX - e.hw && e.x < camX + VW + e.hw);
+  const foe = on.length === 1 ? on[0] : null; // exactly one on screen (a boss counts): the blade strikes them twice
+  if (foe && Math.abs(foe.x - P.x) < 300) P.facing = Math.sign(foe.x - P.x) || P.facing;
+  begin(foe ? Object.assign({}, T.HC2, T.HC2.lone, { lone: null }) : T.HC2);
+  P.twinE = foe; P.twinDone = false;
+}
+function rapierTwin(m) { // out of the lunge he recovers half a step and runs the lone foe through a second time
+  P.twinDone = true; const e = P.twinE;
+  if (!e || e.dead || !enemies.includes(e)) return;
+  const dx = (e.x - P.x) * P.facing;
+  if (dx > e.hw + 70) P.x += P.facing * Math.min(50, dx - e.hw - 70); // (a short step after them if the first thrust drove them back)
+  P.vx = P.facing * 160;
+  const d2 = (e.x - P.x) * P.facing;
+  if (d2 < -e.hw - 10 || d2 > m.x1 + e.hw + 40 || Math.abs(e.y - P.y) > 44 || !zOverlap(P.z - 6, 90, e.z, e.hh)) return;
+  const m2 = Object.assign({}, m, { kb: m.twinKb || m.kb, twinAt: 0, lunge: 0 });
+  strike(e, m.dmg * (m.twinDmg || .65) * wMult(P.w), P.facing, m2); P.hits.set(e, P.t);
+  fx.push({ kind: 'slash', x: e.x - P.facing * e.hw * .3, y: e.y, z: e.z + e.hh * .55, ang: 0, t: .22, max: .22, size: 26 + e.hw * .5, col: '#F2E4EC' }); sfx('slice');
+}
+function rapierChargePose(pose) { // en garde and drawn back: weight settling on the back leg, the point held level at them
+  const q = sstep(Math.min(1, (P.ct || 0) / .4));
+  pose.crouch = 0; pose.glow = ''; pose.walk = 0; pose.trail = 0;
+  pose.legs = { f: lerp(7, 10, q), b: lerp(-7, -12, q), fk: lerp(9, 6, q), bk: lerp(9, 13, q) }; pose.sink = lerp(2, 5, q); pose.lean = lerp(.04, -.06, q);
+  pose.arm = .05 - pose.lean * .9; pose.elbow = 0; pose.ext = lerp(-.15, -.45, q); pose.grip = 0;
+  rapierOffHand(pose, 'guard', 0, q);
+  pose.rGlint = { lvl: P.clvl || 0, k: P.clvl ? ((P.ct || 0) - (P.clAt || 0)) / .26 : 9 }; // the glint runs down the blade (art_rapier.js)
+}
+{ const _pp = playerPose; playerPose = function () { const pose = _pp(); if (P && P.state === 'charge' && P.w === 'rapier' && !pose.down) rapierChargePose(pose); return pose; }; }
 function tornadoTick(p, dt) { // the staff's whirlwind: drags whoever it touches into itself and beats at them, then throws them all
   p.vx *= Math.pow(.6, dt);
   const now = p.max - p.life, end = p.life <= dt;
@@ -423,6 +466,17 @@ const MOVE_POSE = {
     const e = ph < 0 ? -.4 * ease(k / m.h[0]) : ph < .35 ? ease(ph / .35) : 1 - .7 * ease((ph - .35) / .65), p = Math.max(0, e);
     pose.ext = e; pose.legs = { f: lerp(7, 17, p), b: lerp(-9, -17, p), fk: lerp(3, 10, p), bk: lerp(4, 0, p) }; pose.sink = lerp(3, 7, p); pose.lean = lerp(.05, .45, p);
     pose.arm = .03 - pose.lean * .9; pose.elbow = 0; rapierOffHand(pose, 'guard', p); pose.glow = 'rgba(160,140,255,.5)';
+  },
+  'rapier:HC2'(pose, m, k) { // the Rose Thrust: a deep lunge; against a lone foe he recovers half way and stabs again
+    const h0 = m.h[0], tw = m.twinAt, out = (a) => Math.min(1, (k - h0) / ((m.h[1] - h0) * a));
+    let e;
+    if (k < h0) e = -.45 * ease(k / h0);
+    else if (!tw) e = k < m.h[1] ? out(.35) : 1 - .8 * ease(span(k, m.h[1] + .08, 1));
+    else { const a = tw - .08; e = k < m.h[1] ? out(.4) : k < a ? lerp(1, .2, ease(span(k, m.h[1], a))) : k < tw ? lerp(.2, 1, sstep(span(k, a, tw))) : k < tw + .1 ? 1 : 1 - .8 * ease(span(k, tw + .1, 1)); }
+    const p = clamp(e, 0, 1);
+    pose.ext = e; pose.legs = { f: lerp(7, 19, p), b: lerp(-9, -18, p), fk: lerp(3, 11, p), bk: lerp(4, 0, p) }; pose.sink = lerp(3, 8, p); pose.lean = lerp(.05, .5, p);
+    pose.arm = .03 - pose.lean * .9; pose.elbow = 0; rapierOffHand(pose, 'guard', p);
+    if (tw && k >= tw - .03 && k <= tw + .12) pose.streak = { len: WEAPONS.rapier.reach + 30, a: .85 * (1 - span(k, tw + .04, tw + .12)), col: 'rgba(242,228,236,.95)' }; // the second stab's own streak
   },
 };
 function movePoseKey(m) { return P.w === 'sword' && m.lvl === 7 ? 'sword:J7' : P.w + ':' + m.key; }

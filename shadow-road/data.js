@@ -128,7 +128,7 @@ const WEAPONS = {
   // the prince's own blade: quick, a fencer's weapon. Cuts and long thrusts that cover ground, fancy spins, and a parry
   // in place of the backstep: dodge in place or away and a blow that lands on the guard is answered at once
   rapier: { get name() { return save.wl.rapier >= 6 ? 'Grayswandir' : 'Rapier'; }, // only at its last level does it show itself as Grayswandir
-    reach: 44, look: 'grayblade', parry: true, desc: 'Quick and precise. Dodge in place or away to parry, and answer with a riposte.',
+    reach: 44, look: 'grayblade', parry: true, charge2: 1, desc: 'Quick and precise. Dodge in place or away to parry, and answer with a riposte. Hold Heavy to charge twice.',
     tree: {
       L:    { dur: .24, h: [.3, .6], x0: 0, x1: 60, dmg: 6, kb: 45, arc: [-1.3, .9], lunge: 56, depth: 18, noStun: 1 },
       LL:   { dur: .24, h: [.3, .6], x0: 0, x1: 60, dmg: 6, kb: 45, arc: [.9, -1.1], lunge: 56, depth: 18, noStun: 1 },
@@ -136,6 +136,13 @@ const WEAPONS = {
       LLLL: { name: 'Flourish', dur: .5, h: [.18, .82], x0: 0, x1: 66, dmg: 5, kb: 128, arc: [-P_, P_], around: 1, multi: .1, spin: 1, lunge: 42, power: 1 }, // a pirouette, the blade a silver ring
       H:    { name: 'Lunge', dur: .42, h: [.36, .62], x0: 0, x1: 100, dmg: 13, kb: 195, arc: [.04, .04], lunge: 301, power: 1, wall: 1 },
       HH:   { name: 'Balestra', dur: .5, h: [.42, .66], x0: 0, x1: 96, dmg: 14, kb: 225, arc: [.02, .02], hop: 170, lunge: 182, power: 2 }, // a little jump forward into the thrust
+      // held Heavy (game.js, state 'charge'): a quick tap is the Lunge; held to the first glint it is HC1, to the second HC2.
+      // HC2 against a lone foe (exactly one on screen) takes its 'lone' values and strikes twice: the lunge, then a
+      // second stab at twinAt for twinDmg of the damage (moves.js)
+      HC1:  { dur: .46, h: [.3, .5], x0: 0, x1: 112, dmg: 20, kb: 250, arc: [.04, .04], lunge: 345, power: 1, wall: 1, depth: 22 },
+      HC2:  { name: 'Rose Thrust', seq: ['HOLD'], desc: 'Hold Heavy to charge twice: a silver glint runs down the blade, then a second. Let go for a longer, harder lunge; at full charge it runs through everyone in a line, and against a lone foe the blade strikes twice.',
+              dur: .56, h: [.28, .46], x0: 0, x1: 128, dmg: 30, kb: 330, arc: [.04, .04], lunge: 400, power: 2, wall: 1, depth: 26,
+              lone: { dur: .66, h: [.22, .34], x1: 116, kb: 55, lunge: 330, wall: 0, twinAt: .54, twinDmg: .65, twinKb: 320 } },
       HHH:  { name: 'Starfall Flurry', dur: .72, h: [.14, .82], x0: 0, x1: 88, dmg: 4, kb: 60, arc: [.04, .04], multi: .055, lunge: 63, power: 1, flurry: 1 }, // a storm of thrusts, each a point of light
       LH:   { name: 'Crescent Flick', spin: 1, spinEnd: .5, dur: .42, h: [.25, .55], x0: 0, x1: 68, dmg: 10, kb: 45, launch: 430, arc: [1.4, -2.1], hop: 120, power: 1 },
       HL:   { name: 'Moulinet', spin: 1, dur: .56, h: [.14, .86], x0: 0, x1: 68, dmg: 4, kb: 68, arc: [-P_, 3 * P_], around: 1, multi: .07, power: 1 }, // the wrist spins the blade in wheels on both sides
@@ -154,7 +161,7 @@ const WEAPONS = {
       RH:   { lvl: 3, name: 'Blade Dance', how: 'Heavy out of a dodge', desc: 'Pirouette twice through the crowd, the blade a silver ring around you.', dur: .7, h: [.1, .9], x0: 0, x1: 74, dmg: 6, kb: 135, arc: [-P_, 3 * P_], around: 1, multi: .08, spin: 2, lunge: 154, power: 1 },
       AH:   { lvl: 4, name: 'Falling Star', how: 'Hold Heavy in the air', desc: 'Dive point-first like a falling star; where you land, it bursts into light.', dur: .5, h: [.1, .97], x0: 0, x1: 62, dmg: 16, kb: 150, arc: [.95, .95], dive: 1, shock: 72, bounce: 1, power: 2 },
       DH:   { lvl: 5, name: 'Shadow Flèche', how: 'Heavy while running', desc: 'Step through Shadow past everything in your way; a heartbeat later, every one of them is cut.', dur: .5, h: [.1, .55], x0: -40, x1: 64, dmg: 19, kb: 195, arc: [.02, .02], lunge: 602, power: 2, delayed: 1 },
-      HC:   { lvl: 7, name: 'Hellride', how: 'Hold Heavy, then let go', desc: 'Ride through Shadow: vanish, and step out of the air beside each enemy around you in turn, running every one of them through. Every thrust is a critical.', dur: 1, h: [.1, .9], x0: -10, x1: 80, dmg: 14, kb: 220, arc: [.03, .03], blink: 6, crit: 1, power: 2 },
+      HC:   { lvl: 7, name: 'Hellride', how: 'Hold Heavy past the second glint, then let go', desc: 'Ride through Shadow: vanish, and step out of the air beside each enemy around you in turn, running every one of them through. Every thrust is a critical.', dur: 1, h: [.1, .9], x0: -10, x1: 80, dmg: 14, kb: 220, arc: [.03, .03], blink: 6, crit: 1, power: 2 },
       HHHH: { lvl: 6, name: 'The Pattern Walked', how: 'A fourth Heavy', desc: 'Trace the Pattern with the point: a blur of thrusts as you advance, every one leaving its mark, all of them landing at once.', dur: .8, h: [.1, .7], x0: 0, x1: 92, dmg: 9, kb: 120, arc: [.03, .03], multi: .08, flurry: 1, delayed: 1, lunge: 220, power: 2 },
     } },
 };
@@ -165,7 +172,7 @@ const STYLES = {
   hammer: { L: 'sweep', LL: 'sweepR', D: 'sweep', A: 'sweep', AA: 'sweepR', DH: 'sweep', R: 'thrust', H: 'sweep', HHH: 'sweep', DA: 'sweep', RH: 'sweep' },
   staff: { L: 'thrust', HH: 'sweep', HHH: 'thrust', M: 'thrust', AA: 'sweep', R: 'thrust', D: 'thrust', DA: 'thrust', JH: 'sweep' },
   sword: { LL: 'sweepR', DA: 'sweep', HH: 'sweep', LLL: 'thrust', D: 'thrust', A: 'sweep', AA: 'thrust', RH: 'sweep', DH: 'sweep', R: 'thrust' },
-  rapier: { HC: 'thrust', DA: 'thrust', HHHH: 'thrust', LLL: 'thrust', H: 'thrust', HH: 'thrust', HHH: 'thrust', LLH: 'thrust', D: 'thrust', R: 'thrust', RIP: 'thrust', AA: 'thrust', DH: 'thrust' },
+  rapier: { HC: 'thrust', HC1: 'thrust', HC2: 'thrust', DA: 'thrust', HHHH: 'thrust', LLL: 'thrust', H: 'thrust', HH: 'thrust', HHH: 'thrust', LLH: 'thrust', D: 'thrust', R: 'thrust', RIP: 'thrust', AA: 'thrust', DH: 'thrust' },
 };
 for (const id in STYLES) for (const k in STYLES[id]) if (WEAPONS[id].tree[k]) WEAPONS[id].tree[k].style = STYLES[id][k];
 for (const id of WEAPON_ORDER) for (const k in WEAPONS[id].tree) WEAPONS[id].tree[k].key = k;

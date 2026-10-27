@@ -102,6 +102,18 @@ function puff(s) { // a toadstool lets go a cloud of glittering spores
   fx.push({ kind: 'ring', x: s.x, y: s.y, z: 2, t: .45, max: .45, r: 150, col: '#E0B0FF', flat: 1 });
   for (let i = 0; i < 44; i++) { const a = rand(0, TAU), v = rand(60, 260); parts.push({ x: s.x + rand(-10, 10), y: s.y + rand(-6, 6), z: rand(20, 50), vx: Math.cos(a) * v, vy: Math.sin(a) * v * .4, vz: rand(20, 140), life: 1.4, max: 1.4, col: pick(['#D8A0F0', '#F0D0FF', '#B880E0']), size: rand(2, 4), shape: 'star', rot: 0, vr: 4 }); }
 }
+// the first time a toadstool is struck it drops something: shards most often, now and then a heart (rarely the great
+// one) or a powerup; it bursts in a little puff of golden spores. Later blows give nothing.
+function shroomLoot(s) {
+  s.looted = true; s.flash = .12;
+  const r = Math.random();
+  if (r < .06) loot.push(makeLoot('bigheal', s.x, s.y, 0));
+  else if (r < .2) loot.push(makeLoot('heal', s.x, s.y, 20));
+  else if (r < .3 && typeof POWER_ORDER !== 'undefined') loot.push(Object.assign(makeLoot('power', s.x, s.y, 0), { power: pick(POWER_ORDER) }));
+  const n = r < .3 ? 2 : 3 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) loot.push(makeLoot('shard', s.x, s.y, 2 + stageIdx));
+  sfx('pick'); hitstop = Math.max(hitstop, .04);
+  for (let i = 0; i < 22; i++) { const a = rand(0, TAU), v = rand(30, 120); parts.push({ x: s.x + rand(-14, 14), y: s.y + rand(-4, 4), z: rand(30, 52), vx: Math.cos(a) * v, vy: Math.sin(a) * v * .3, vz: rand(40, 150), life: 1, max: 1, col: pick(['#FFE6A0', '#F0C8FF', '#FFFFFF', '#E0B0FF']), size: rand(1.5, 3), shape: 'star', rot: 0, vr: 5 }); }
+}
 function updateMech(dt) {
   if (!mech) return;
   if (MECH_FX[mech.kind]) { MECH_FX[mech.kind].update(mech, dt); return; }
@@ -111,7 +123,9 @@ function updateMech(dt) {
       s.puff = Math.max(0, s.puff - dt); s.flash = Math.max(0, s.flash - dt); s.cd -= dt;
       const near = Math.abs(P.x - s.x) < 195 || enemies.some(e => !e.dead && Math.abs(e.x - s.x) < 150); // they go off at a fair distance: on this road you will be shrunk often
       if (s.cd <= 0 && near) puff(s);
-      if (k >= 0 && k >= P.move.h[0] && k <= P.move.h[1] && Math.abs(P.y - s.y) < 26 && (s.x - P.x) * P.facing > -10 && (s.x - P.x) * P.facing < P.move.x1 + 20 && s.cd < 3.5) puff(s); // smack one and it goes off
+      const smack = k >= 0 && k >= P.move.h[0] && k <= P.move.h[1] && Math.abs(P.y - s.y) < 26 && (s.x - P.x) * P.facing > -10 && (s.x - P.x) * P.facing < P.move.x1 + 20;
+      if (smack && !s.looted) shroomLoot(s); // the first blow knocks something loose from under its cap
+      if (smack && s.cd < 3.5) puff(s); // smack one and it goes off
     }
     for (const c of mech.clouds) {
       c.t -= dt; c.r += (c.R - c.r) * Math.min(1, dt * 7);

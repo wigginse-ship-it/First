@@ -46,7 +46,7 @@ TELL_FX.submerge = (e, t, k) => { // he hunches and draws in a breath: water rin
     if (under && !s.box) { s.box = [e.hw, e.hh]; e.hw = 22; e.hh = 50; } else if (!under && s.box) { [e.hw, e.hh] = s.box; s.box = null; }
     s.ram = Math.max(0, (s.ram || 0) - dt);
     if (under && !s.ram && P.state !== 'dead' && Math.abs(P.x - e.x) < 24 && Math.abs(P.y - e.y) < 14 && P.z < 46) { s.ram = 1.1; // the branches rake you as they pass
-      playerDamage(Math.round(edmg(e) * .6), e.x, true); burst(P.x, P.y, P.z + 30, ['#4E7A3A', '#5A4030', '#D8F0E8'], 8, 'chunk', 0); }
+      playerDamage(Math.round(edmg(e) * .6), e.x, true); burst(P.x, P.y, P.z + 30, (window.MOSS_TONE ? [MOSS_TONE(e).leaf[2], MOSS_TONE(e).bark, '#D8F0E8'] : ['#4E7A3A', '#5A4030', '#D8F0E8']), 8, 'chunk', 0); }
     if (s.t > t1 && s.t < t2) { // hunting: the wake slides after you
       const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy * 1.6) || 1, v = Math.min(SUB.speed * dt, d);
       e.x += dx / d * v; e.y = clamp(e.y + dy / d * v * .7, FLOOR_TOP + 8, FLOOR_BOT); e.facing = Math.sign(dx) || e.facing;
@@ -74,9 +74,9 @@ TELL_FX.submerge = (e, t, k) => { // he hunches and draws in a breath: water rin
     ctx.save(); ctx.globalAlpha = .5; ctx.fillStyle = 'rgba(30,60,60,.6)'; ell(x, y + 2, e.hw * .9, 10); ctx.fill(); ctx.restore();
     ctx.strokeStyle = 'rgba(225,245,240,.75)'; ctx.lineWidth = 1.6;
     for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x + f * 20, y); ctx.quadraticCurveTo(x - f * (30 + i * 18), y - 9 - i * 4, x - f * (60 + i * 26), y - 4 - i * 3); ctx.moveTo(x + f * 20, y + 2); ctx.quadraticCurveTo(x - f * (30 + i * 18), y + 11 + i * 4, x - f * (60 + i * 26), y + 6 + i * 3); ctx.stroke(); } // the V of the wake
-    ctx.fillStyle = C('#4E5A3A'); ctx.beginPath(); ctx.ellipse(x, y - 4 + bob, 30, 9, 0, Math.PI, TAU); ctx.fill(); outline(1.4); // the ridge of the shell
-    ctx.fillStyle = C('#5A4030'); ctx.fillRect(x - 3, y - 40 + bob, 6, 34); // the trunk
-    for (let i = 0; i < 5; i++) { const a = Math.PI + i / 4 * Math.PI; ctx.fillStyle = C((e.phase >= 3 ? ['#C8642E', '#E08A3A', '#9A4A22'] : ['#4E7A3A', '#5E8A44', '#3E6A32'])[i % 3]); ell(x + Math.cos(a) * 18, y - 44 + Math.sin(a) * 10 + bob, 14, 10); ctx.fill(); outline(1.1); }
+    const mp = window.MOSS_TONE ? MOSS_TONE(e) : null; ctx.fillStyle = C(mp ? shade(mp.plate, -.2) : '#4E5A3A'); ctx.beginPath(); ctx.ellipse(x, y - 4 + bob, 30, 9, 0, Math.PI, TAU); ctx.fill(); outline(1.4); // the ridge of the shell
+    ctx.fillStyle = C(mp ? mp.bark : '#5A4030'); ctx.fillRect(x - 3, y - 40 + bob, 6, 34); // the trunk
+    for (let i = 0; i < 5; i++) { const a = Math.PI + i / 4 * Math.PI; ctx.fillStyle = C((mp ? [mp.leaf[2], mp.leaf[3], mp.leaf[1]] : ['#4E7A3A', '#5E8A44', '#3E6A32'])[i % 3]); ell(x + Math.cos(a) * 18, y - 44 + Math.sin(a) * 10 + bob, 14, 10); ctx.fill(); outline(1.1); }
     if (s.t >= t2) { // stopped and churning: the spot he will burst from
       const k = Math.min(1, (s.t - t2) / SUB.churn); ctx.strokeStyle = `rgba(232,76,61,${.4 + .5 * k})`; ctx.lineWidth = 2.2;
       ctx.beginPath(); ctx.ellipse(s.bx, s.by, SUB.R, SUB.R / 2.2, 0, 0, TAU); ctx.stroke();

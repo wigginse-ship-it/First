@@ -522,6 +522,25 @@ function drawLoot(k, t) {
   if (k.kind === 'power') { drawPowerLoot(k, t); return; }
   if (k.kind === 'arrow') { drawArrowLoot(k, t); return; }
   if (k.kind === 'gear') { drawGearLoot(k, t); return; }
+  if (k.kind === 'bigheal') { // the great heart: a deep crimson heart in a gilded frame, bigger and slower in its bob, a glint running over it
+    const x = k.x, y = k.y - k.z - 14 - Math.sin(t * 3.4 + k.x) * 4, s = 1 + .06 * Math.sin(t * 5 + k.x), hp = (r) => { ctx.beginPath(); ctx.moveTo(0, r); ctx.bezierCurveTo(-r * 1.7, -r * .3, -r * .8, -r * 1.55, 0, -r * .6); ctx.bezierCurveTo(r * .8, -r * 1.55, r * 1.7, -r * .3, 0, r); ctx.closePath(); };
+    shadow(k.x, k.y, 9);
+    onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; softDab(x, y - 1, 16, '255,200,110', .16 + .06 * Math.sin(t * 4 + k.x)); ctx.restore(); });
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    hp(11.5); ctx.fillStyle = C('#8A5A1C'); ctx.fill(); outline(1.6); // the gilded frame: dark gold under, bright foil over
+    hp(10.4); ctx.fillStyle = C('#E8B848'); ctx.fill();
+    hp(8.2); ctx.fillStyle = C('#B01830'); ctx.fill(); ctx.strokeStyle = C('#5A3010'); ctx.lineWidth = .8; ctx.stroke(); // the heart itself, deep crimson
+    if (!FLASH && !TINT) {
+      ctx.save(); hp(8.2); ctx.clip();
+      ctx.fillStyle = '#6E0A1C'; ctx.beginPath(); ctx.ellipse(-4, 3, 7, 6, .4, 0, TAU); ctx.fill(); // its shaded side
+      ctx.fillStyle = '#E8485A'; ctx.beginPath(); ctx.ellipse(3.4, -4.4, 2.8, 1.8, -.5, 0, TAU); ctx.fill(); ctx.fillStyle = '#FFE0E4'; ctx.beginPath(); ctx.ellipse(3.8, -4.8, 1.1, .7, -.5, 0, TAU); ctx.fill(); // its gloss
+      const g = (t * .7 + k.x * .01) % 1.6 - .3; ctx.fillStyle = 'rgba(255,246,220,.45)'; ctx.beginPath(); ctx.moveTo(-12 + g * 24, -12); ctx.lineTo(-8 + g * 24, -12); ctx.lineTo(-14 + g * 24, 12); ctx.lineTo(-18 + g * 24, 12); ctx.fill(); // a glint sweeping over it
+      ctx.restore();
+      ctx.fillStyle = '#FFF2C0'; for (const [px, py] of [[-6.4, -6.6], [6.4, -6.6], [0, 8.2]]) { ctx.beginPath(); ctx.arc(px, py, .9, 0, TAU); ctx.fill(); } // studs on the frame
+    }
+    ctx.restore();
+    return;
+  }
   const x = k.x, y = k.y - k.z - 6 - Math.sin(t * 6 + k.x) * 2;
   shadow(k.x, k.y, 5);
   if (k.kind === 'shard') {
@@ -565,7 +584,7 @@ function drawScene(t) {
   // the fallen (and the falling) get a box sized to the body: a boss lying on its side, or cut in two and thrown, reaches far
   // past a fixed box, and was cut off at its edge wherever the prince's own box did not happen to reach
   const fallen = (c) => { const R = Math.max(110, (Math.max(c.hw || 0, c.hh || 0) * 1.7 + 80 + (c.def.tail || 0)) * (c.champ ? 1.3 : 1)); box(c.x, c.y - (c.z || 0) + R * .5, 0, R, R * 1.5); }; // (a boss's hw and hh already carry its size)
-  for (const e of enemies) { const s = e.boss ? e.size : 1; box(e.x, e.y, e.z, (e.hw + 110 + (e.def.tail || 0)) * s, (e.hh + 90) * s); if (e.dead) fallen(e); }
+  for (const e of enemies) { const s = e.boss ? e.size : 1; box(e.x, e.y, e.z, (e.hw + 110 + (e.def.tail || 0)) * s, (e.hh + (e.boss ? 140 : 90)) * s); if (e.dead) fallen(e); } // (a boss gets headroom: Old Mossback's grove stood above the box and had its crown cut flat)
   for (const c of corpses) fallen(c);
   for (const p of props) box(p.x, p.y, 0, 60, 100);
   for (const k of loot) box(k.x, k.y, k.z || 0, 40, 50);

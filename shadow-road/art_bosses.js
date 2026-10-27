@@ -55,11 +55,21 @@
   // ===================================================================================================
   // OLD MOSSBACK, the Walking Grove: an ancient tortoise with a grove of trees and standing stones on its shell
   // ===================================================================================================
+  // each phase reads at a glance: the green of the old grove; autumn, russet and amber, with shelf fungus breaking out
+  // across the shell; and a deep violet blight, the grove dead and lit only by the spores glowing in it. The accents
+  // (runes, eyes, cracks, thorns, the caps in the moss) follow the phase too, and so do his tells and his thorn rings
   const MOSS_PAL = {
-    1: { plate: '#6E8A56', seam: '#1E2A1A', rim: '#DCD2B8', skin: '#6A7E50', moss: '#4E7A3E', leaf: ['#22402F', '#355E44', '#5E8E50', '#A6C878'], bark: '#4E3A2C' },
-    2: { plate: '#6A7C4E', seam: '#1E2418', rim: '#D2C6A6', skin: '#66784C', moss: '#4A6E38', leaf: ['#22402F', '#355A40', '#5E864A', '#9EBE6E'], bark: '#4A3628' },
-    3: { plate: '#4E443A', seam: '#140E0C', rim: '#A8987E', skin: '#5A5844', moss: '#3A3426', leaf: ['#24140F', '#3E2218', '#6A3420', '#C8642A'], bark: '#2E2018' },
+    1: { plate: '#6E8A56', seam: '#1E2A1A', rim: '#DCD2B8', skin: '#6A7E50', moss: '#4E7A3E', leaf: ['#22402F', '#355E44', '#5E8E50', '#A6C878'], bark: '#4E3A2C',
+      rune: '#9FE8C8', eye: '#EED48A', crack: null, thorn: '#6A4A30', tip: null, cap: '#9FE8D8', capGlow: '#9FE8C8', lichen: '#9AAA5A', bloom: '#ECC0CE', fern: '#3E6A3E',
+      tell: '126,164,96', ring: ['#5E7A3A', '#7EA460'], sod: ['#5A4430', '#3E2E20', '#6E8A44', '#4E6A32'] },
+    2: { plate: '#8A6A3C', seam: '#2A1A0E', rim: '#E6CC9C', skin: '#7E6640', moss: '#A0782A', leaf: ['#3E1A0E', '#7A3216', '#C2602A', '#F4B44A'], bark: '#4A2C1C',
+      rune: '#FFC060', eye: '#FFB040', crack: null, thorn: '#5A3218', tip: null, cap: '#F08A3A', capGlow: '#FFB060', lichen: '#C8A040', bloom: '#E8783A', fern: '#8A5A22',
+      tell: '214,150,70', ring: ['#7A4A22', '#B07A34'], sod: ['#6A4428', '#3E2614', '#B07A34', '#8A4A20'] },
+    3: { plate: '#4E3E62', seam: '#140C1E', rim: '#B4A2C8', skin: '#544466', moss: '#3A2A50', leaf: ['#170C22', '#2E1A44', '#55327A', '#A774DA'], bark: '#2A1C34',
+      rune: '#D890FF', eye: '#E878FF', crack: '#C870FF', thorn: '#2C1A3A', tip: '#E8A8FF', cap: '#C890FF', capGlow: '#D890FF', lichen: '#6A4E86', bloom: null, fern: null,
+      tell: '186,120,236', ring: ['#3E2852', '#6A4688'], sod: ['#3A2A44', '#24182C', '#6A4688', '#4E3A62'] },
   };
+  window.MOSS_TONE = (e) => MOSS_PAL[Math.min(3, Math.max(1, (e && e.phase) || 1))]; // (for his tells, thorn rings and the dive: boss_fx.js, mossdive.js)
   // where a ray from the focus meets the shell's edge (an upper half-ellipse closed by its base line, or a full ellipse)
   function shellEdge(cx, cy, rx, ry, fx, fy, th, dome) {
     const dx = Math.cos(th), dy = Math.sin(th), ox = (fx - cx) / rx, oy = (fy - cy) / ry, ux = dx / rx, uy = dy / ry;
@@ -135,8 +145,8 @@
     detPoly([20, -80, 21, -101, 27, -109, 26, -80], '#625C54');
     if (DET()) { ctx.strokeStyle = '#B4AEA0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(28, -108); ctx.lineTo(34, -104); ctx.lineTo(36.4, -82); ctx.stroke(); line([29, -100, 31, -94, 29, -88], '#5A544C', .8); }
     poly(stone); outline(1.4);
-    ctx.fillStyle = C(P3 ? '#5A4A32' : '#9AAA5A'); ell(26, -97, 3, 1.6, .3); ctx.fill(); ell(31, -88, 2.2, 1.3); ctx.fill();
-    if (!P3) glow('#9FE8C8', 6, () => { ctx.strokeStyle = C(rage ? '#FF9A5A' : '#BFF5DC'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(28.5, -102); ctx.lineTo(28.5, -95); ctx.moveTo(26.5, -99); ctx.lineTo(30.5, -97); ctx.stroke(); }); // a rune cut into the stone
+    ctx.fillStyle = C(pal.lichen); ell(26, -97, 3, 1.6, .3); ctx.fill(); ell(31, -88, 2.2, 1.3); ctx.fill();
+    glow(pal.rune, 6, () => { ctx.strokeStyle = C(rage ? '#FF9A5A' : shade(pal.rune, .3)); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(28.5, -102); ctx.lineTo(28.5, -95); ctx.moveTo(26.5, -99); ctx.lineTo(30.5, -97); ctx.stroke(); }); // a rune cut into the stone
     for (const [x, y, w, h] of [[40, -78, 9, 6], [14, -80, 7, 5]]) { ell(x, y, w, h); ctx.fillStyle = C('#7A7468'); ctx.fill(); if (DET()) { ctx.fillStyle = '#9A9488'; ell(x + w * .25, y - h * .35, w * .55, h * .4); ctx.fill(); } ell(x, y, w, h); outline(1.2); }
     // roots gripping the shell, a gnarled twisting trunk and its limbs
     horn(-8, -82, -24, -82, -34, -72, 5, 1.2, pal.bark, 0, 1.1);
@@ -146,20 +156,22 @@
     horn(-6, -80, -18, -110, -3, -142, 12, 6, pal.bark, 0, 1.4);
     if (DET()) { ctx.strokeStyle = shade(pal.bark, -.45); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-8, -86); ctx.quadraticCurveTo(-16, -108, -6, -134); ctx.moveTo(-3, -88); ctx.quadraticCurveTo(-11, -106, -2, -126); ctx.stroke(); ctx.fillStyle = shade(pal.bark, -.55); ell(-10, -104, 1.6, 3); ctx.fill(); }
     // ferns at the foot of the tree
-    if (!P3) { ctx.strokeStyle = C('#3E6A3E'); ctx.lineWidth = 1.6; ctx.lineCap = 'round'; for (const [x, d] of [[-18, -1], [6, 1], [-26, -1]]) { ctx.beginPath(); ctx.moveTo(x, -80); ctx.quadraticCurveTo(x + d * 6, -92, x + d * 12, -90 + Math.sin(t * 2 + x) * 1); ctx.stroke(); } }
+    if (pal.fern) { ctx.strokeStyle = C(pal.fern); ctx.lineWidth = 1.6; ctx.lineCap = 'round'; for (const [x, d] of [[-18, -1], [6, 1], [-26, -1]]) { ctx.beginPath(); ctx.moveTo(x, -80); ctx.quadraticCurveTo(x + d * 6, -92, x + d * 12, -90 + Math.sin(t * 2 + x) * 1); ctx.stroke(); } }
     const clumps = [[-32, -130, 12], [-18, -146, 15], [0, -152, 15], [16, -142, 13], [-4, -134, 14], [-24, -154, 11], [10, -158, 11], [24, -132, 9]];
     canopy(clumps, pal, t, 1.6);
-    if (!P3) { // blossoms
+    if (phase === 2 && DET()) { // shelf fungus breaking out up the trunk, amber gills catching the light
+      for (const [x, y, w, d] of [[-14, -98, 7, -1], [-4, -112, 6, 1], [-12, -124, 5, -1], [-2, -92, 5, 1]]) { ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(w * .6, -w * .55, w * 1.15, -.4); ctx.quadraticCurveTo(w * .6, w * .25, 0, 1.6); ctx.closePath(); ctx.fillStyle = C('#D2843A'); ctx.fill(); outline(.9);
+        ctx.fillStyle = '#F6C070'; ell(w * .5, -w * .28, w * .36, w * .13); ctx.fill(); ctx.strokeStyle = '#7A3A16'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(w * .15, .9); ctx.quadraticCurveTo(w * .6, .6, w * 1.05, -.2); ctx.stroke(); ctx.restore(); }
+    }
+    if (pal.bloom) { // blossoms (in autumn, the last of them gone to orange)
       for (let i = 0; i < 9; i++) { const an = i * 2.1 + .5, d = 6 + (i * 7) % 18, x = -6 + Math.cos(an) * d * 1.5, y = -142 + Math.sin(an) * d * .8;
-        ctx.fillStyle = C(rage ? '#F09A5A' : '#ECC0CE'); for (let p = 0; p < 4; p++) { ell(x + Math.cos(p * 1.57) * 1.3, y + Math.sin(p * 1.57) * 1.3, 1.3, 1.3); ctx.fill(); }
+        ctx.fillStyle = C(rage ? '#F09A5A' : pal.bloom); for (let p = 0; p < 4; p++) { ell(x + Math.cos(p * 1.57) * 1.3, y + Math.sin(p * 1.57) * 1.3, 1.3, 1.3); ctx.fill(); }
         ctx.fillStyle = C('#FFF2C8'); circle(x, y, .7); ctx.fill(); }
-    } else if (!e.dead) { // phase three: the grove is ablaze
-      add(() => { for (let i = 0; i < 4; i++) { const fx = -24 + i * 14, fy = -150; const g = ctx.createRadialGradient(fx, fy, 1, fx, fy, 22); g.addColorStop(0, 'rgba(255,200,120,.55)'); g.addColorStop(1, 'rgba(255,80,30,0)'); ctx.fillStyle = g; circle(fx, fy, 22); ctx.fill(); } });
-      for (let i = 0; i < 7; i++) {
-        const bx = -27 + i * 8, by = -150 + Math.abs(Math.sin(i * 1.7)) * 8 + (i % 2) * 4, h = 15 + Math.sin(t * 9 + i * 2) * 5 + (i % 3) * 3, sx = Math.sin(t * 7 + i) * 3;
-        ctx.beginPath(); ctx.moveTo(bx - 5, by); ctx.quadraticCurveTo(bx - 6, by - h * .55, bx + sx, by - h); ctx.quadraticCurveTo(bx + 6, by - h * .5, bx + 5, by); ctx.closePath(); ctx.fillStyle = C('#FF6A2A'); ctx.fill(); outline(1);
-        ctx.beginPath(); ctx.moveTo(bx - 2.4, by); ctx.quadraticCurveTo(bx - 3, by - h * .35, bx + sx * .6, by - h * .62); ctx.quadraticCurveTo(bx + 3, by - h * .3, bx + 2.4, by); ctx.closePath(); ctx.fillStyle = C('#FFE08A'); ctx.fill();
-      }
+    } else if (!e.dead) { // phase three: the grove is blighted, its dead crown hung with glowing spore lights that drift up off it
+      add(() => { for (let i = 0; i < 3; i++) { const fx = -20 + i * 18, fy = -146; const g = ctx.createRadialGradient(fx, fy, 1, fx, fy, 16); g.addColorStop(0, 'rgba(210,140,255,.32)'); g.addColorStop(1, 'rgba(150,70,220,0)'); ctx.fillStyle = g; circle(fx, fy, 16); ctx.fill(); } });
+      for (let i = 0; i < 9; i++) { const life = (t * .35 + i / 9) % 1, x = -28 + ((i * 37) % 56) + Math.sin(t * 1.7 + i * 2.3) * 3, y = -138 - ((i * 13) % 20) - life * 26, r = 1.1 + (i % 3) * .45;
+        glow(pal.capGlow, 7, () => { ctx.globalAlpha = Math.sin(life * Math.PI); ctx.fillStyle = C(i % 3 ? pal.tip : '#FFFFFF'); circle(x, y, r); ctx.fill(); }); }
     }
   }
   function mossHead(a, pal, phase, rage, t, eyeCol, lunge, bob) {
@@ -206,10 +218,10 @@
     if (wind) add(() => { const g = ctx.createRadialGradient(10, -8, 0, 10, -8, 10); g.addColorStop(0, `rgba(255,220,140,${.5 * wind})`); g.addColorStop(1, 'rgba(255,160,80,0)'); ctx.fillStyle = g; circle(10, -8, 10); ctx.fill(); });
     fillPoly([3, -11.5, 9, -14, 15.6, -12.4, 14.4, -9.4, 6, -9.2], shade(skin, -.08), 1.1); // brow
     if (DET()) line([5, -11.4, 9, -13.2, 15, -11.8], shade(skin, .35), .8);
-    ctx.fillStyle = C(P3 ? '#6A5032' : '#9AAA5A'); ell(-4, -12, 2.6, 1.3, -.3); ctx.fill(); ell(2, -14.6, 1.6, .8); ctx.fill(); // lichen
+    ctx.fillStyle = C(pal.lichen); ell(-4, -12, 2.6, 1.3, -.3); ctx.fill(); ell(2, -14.6, 1.6, .8); ctx.fill(); // lichen
     // the near horn
     horn(-2, -12, -14, -24, -6, -44, 8, 1.4, pal.rim, 5, 1.3);
-    if (P3 && DET()) { ctx.fillStyle = 'rgba(255,120,60,.9)'; circle(-6, -44, 1.6); ctx.fill(); }
+    if (pal.tip && DET()) { ctx.fillStyle = pal.tip; circle(-6, -44, 1.6); ctx.fill(); }
     ctx.restore();
   }
   function mossLeg(x, p, col, ph, walking, bob, pal) {
@@ -240,9 +252,9 @@
     detPoly([-40, cy + 1, 40, cy - 1, 40, cy + 4, -40, cy + 6], shade(pal.rim, -.3));
     for (const x of [-30, -12, 12, 30]) { ell(x, cy + (x > 0 ? -1 : 1), 4.5, 3.2); ctx.fillStyle = C('#140C0C'); ctx.fill(); }
     ctx.restore();
-    glow(rage ? '#FF7A3A' : '#EED48A', 8, () => { ctx.fillStyle = C(phase === 3 ? '#FF5A3A' : rage ? '#FF9A5A' : '#EED48A'); ell(31, cy - 1.4, 1.8, .9); ctx.fill(); });
+    glow(rage ? '#FF7A3A' : pal.eye, 8, () => { ctx.fillStyle = C(rage ? '#FF9A5A' : pal.eye); ell(31, cy - 1.4, 1.8, .9); ctx.fill(); });
     mossPatch(sh, 14, 19, pal, t, 0);
-    if (phase >= 2) for (let k = 0; k < 24; k += 3) { const [bx, by] = sh.P(k, .98), an = Math.atan2(by - cy, bx - cx); horn(bx, by, bx + Math.cos(an) * 8, by + Math.sin(an) * 8, bx + Math.cos(an - .5) * 14, by + Math.sin(an - .5) * 14, 5, .6, phase === 3 ? '#3A2218' : '#6A4A30', 0, 1); }
+    if (phase >= 2) for (let k = 0; k < 24; k += 3) { const [bx, by] = sh.P(k, .98), an = Math.atan2(by - cy, bx - cx); horn(bx, by, bx + Math.cos(an) * 8, by + Math.sin(an) * 8, bx + Math.cos(an - .5) * 14, by + Math.sin(an - .5) * 14, 5, .6, pal.thorn, 0, 1); }
     circle(cx, cy, R); outline(2.4);
     canopy([[-6, cy - R - 2, 9], [6, cy - R - 4, 8], [0, cy - R - 8, 7]], pal, t, 1.4);
   }
@@ -250,8 +262,8 @@
     a = a || {};
     const t = a.t || 0, ph = a.walk || 0, rage = !!e.enraged, phase = Math.min(3, Math.max(1, e.phase || 1)), wind = a.wind || 0, atk = !!a.atk;
     const pal = MOSS_PAL[phase], P3 = phase === 3;
-    const eyeCol = P3 ? '#FF5A3A' : rage ? '#FF9A5A' : '#EED48A';
-    const runeCol = rage || P3 ? '#FF8A4A' : '#9FE8C8', runeA = (rage ? .95 : P3 ? .8 : .55) + Math.sin(t * 2.4) * .12 + wind * .3;
+    const eyeCol = rage ? '#FF9A5A' : pal.eye;
+    const runeCol = rage ? '#FF8A4A' : pal.rune, runeA = (rage ? .95 : P3 ? .85 : phase === 2 ? .7 : .55) + Math.sin(t * 2.4) * .12 + wind * .3;
     ctx.save(); ctx.scale(1.3, 1.3); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     if (e.state === 'dash' && e.plan === 'roll') { tuckedShell(e, a, pal, phase, rage, t, runeCol); ctx.restore(); return; }
     // the sweep (the red ring round him) is a jumping stomp, not a bite: he crouches, heaves his whole bulk up off the ground
@@ -294,19 +306,19 @@
       const cr = [[-38, -60, -30, -52, -33, -44, -26, -38], [12, -78, 16, -70, 10, -62, 14, -54], [40, -58, 34, -52, 38, -44], [-12, -48, -4, -44, -8, -38]];
       const draw = () => { ctx.beginPath(); for (const c of cr) { ctx.moveTo(c[0], c[1] + bob); for (let i = 2; i < c.length; i += 2) ctx.lineTo(c[i], c[i + 1] + bob); } };
       draw(); ctx.strokeStyle = C('#140C0A'); ctx.lineWidth = 2.2; ctx.stroke();
-      if (P3) glow('#FF6A2A', 10, () => { draw(); ctx.strokeStyle = C(`rgba(255,${150 + Math.round(60 * Math.sin(t * 6))},70,1)`); ctx.lineWidth = 1.1; ctx.stroke(); });
+      if (pal.crack) glow(pal.crack, 10, () => { draw(); ctx.globalAlpha = .75 + .25 * Math.sin(t * 4); ctx.strokeStyle = C(pal.crack); ctx.lineWidth = 1.1; ctx.stroke(); });
     }
     mossPatch(sh, 13, 17, pal, t, 0); mossPatch(sh, 18, 21, pal, t, .04); mossPatch(sh, 8, 11, pal, t, .02);
-    // glowing mushrooms in the moss
-    if (!P3) for (const [x, y, s] of [[-44, -64, 1], [-38, -66, .7], [46, -60, .8]]) {
+    // glowing mushrooms in the moss (more of them, and bigger, as the fungus takes him over)
+    for (const [x, y, s] of [[-44, -64, 1], [-38, -66, .7], [46, -60, .8], ...(phase >= 2 ? [[-20, -80, .9], [30, -76, 1.1], [52, -50, .7]] : []), ...(P3 ? [[-52, -48, 1.2], [8, -84, .8], [38, -70, .9]] : [])]) {
       ctx.fillStyle = C('#D8CFB8'); ctx.fillRect(x - .8 * s, y + bob, 1.6 * s, 4 * s);
-      glow('#9FE8C8', 8, () => { ctx.beginPath(); ctx.ellipse(x, y + bob, 3.6 * s, 2.6 * s, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = C(rage ? '#FFB07A' : '#9FE8D8'); ctx.fill(); });
+      glow(pal.capGlow, 8, () => { ctx.beginPath(); ctx.ellipse(x, y + bob, 3.6 * s, 2.6 * s, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = C(rage ? '#FFB07A' : pal.cap); ctx.fill(); });
     }
     if (phase >= 2) for (let i = 0; i < 11; i++) { // thorns burst through the shell
       const an = Math.PI + (i + .5) / 11 * Math.PI, bx = cx + Math.cos(an) * (rx - 3), by = cy + Math.sin(an) * (ry - 3);
       const nx = Math.cos(an), ny = Math.sin(an), L = 13 + (i % 3) * 4;
-      horn(bx, by, bx + nx * L * .6, by + ny * L * .6, bx + nx * L - ny * -5 - 5, by + ny * L, 6, .6, P3 ? '#3A2218' : '#6A4A30', 0, 1.1);
-      if (P3 && DET()) { ctx.fillStyle = '#FFB060'; circle(bx + nx * L - ny * -5 - 5, by + ny * L, 1.1); ctx.fill(); }
+      horn(bx, by, bx + nx * L * .6, by + ny * L * .6, bx + nx * L - ny * -5 - 5, by + ny * L, 6, .6, pal.thorn, 0, 1.1);
+      if (pal.tip && DET()) { ctx.fillStyle = pal.tip; circle(bx + nx * L - ny * -5 - 5, by + ny * L, 1.1); ctx.fill(); }
     }
     dome(); outline(2.6);
     if (DET()) { ctx.strokeStyle = shade(pal.plate, .5); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(cx, cy, rx - 2.4, ry - 2.4, 0, -1.25, -.25); ctx.stroke(); } // lit rim on the dome's shoulder

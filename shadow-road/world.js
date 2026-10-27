@@ -315,8 +315,9 @@ function execute(e) {
     burst(e.x, e.y, 60, ['#D08AB0', '#EED48A', '#FFFFFF'], 20, 'spark'); recover(e, .6);
   }
 }
-function phaseDrop(e) { // each cleared boss phase leaves a little health on the floor
+function phaseDrop(e) { // each cleared boss phase leaves a little health on the floor (and now and then a great heart)
   floatText(e.x, e.y, e.z + e.hh + 30, 'PHASE CLEARED', '#EED48A', 16);
+  if (Math.random() < BIG_HEART.phase) loot.push(makeLoot('bigheal', e.x - e.facing * 30, e.y, 0));
   for (let i = 0; i < 2; i++) loot.push(makeLoot('heal', e.x - e.facing * 30, e.y, 22));
   for (let i = 0; i < 3; i++) loot.push(makeLoot('shard', e.x, e.y, 4));
 }
@@ -335,6 +336,12 @@ function bolt(e, y) {
 }
 
 // ---------- loot ----------
+// the great heart: rarer than the little green one, and it heals half of all your health. heal: the share of your health;
+// the rest are its chances of dropping: from a foe, an elite, a champion, each cleared boss phase, and a fallen boss
+const BIG_HEART = { heal: .5, foe: .02, elite: .06, champ: .15, phase: .3, boss: .5 };
+{ const _dl = dropLoot; dropLoot = function (e) { _dl(e);
+  const p = e.boss ? BIG_HEART.boss : e.champ ? BIG_HEART.champ : e.elite ? BIG_HEART.elite : BIG_HEART.foe;
+  if (Math.random() < p) loot.push(makeLoot('bigheal', e.x, e.y, 0)); }; }
 function updateLoot(dt) {
   for (const k of loot) {
     k.t += dt;
@@ -351,6 +358,12 @@ function updateLoot(dt) {
       k.got = true; sfx('pick');
       if (k.kind === 'shard') { save.shards += k.val; runShards += k.val; }
       else if (k.kind === 'sigil') { save.sigils += k.val; runSigils += k.val; floatText(P.x, P.y, 80, '+SIGIL', '#C8607A', 14); }
+      else if (k.kind === 'bigheal') { // the great heart: half of all your health at once
+        const v = Math.max(k.val || 0, Math.round(maxHp() * BIG_HEART.heal)); P.hp = Math.min(maxHp(), P.hp + v);
+        floatText(P.x, P.y, 92, '+' + v, '#FFD27A', 20); sfx('learned'); flashT = Math.max(flashT, .05);
+        fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .45, max: .45, r: 70, col: '#FFD27A', flat: 1 });
+        burst(P.x, P.y, 50, ['#FFE8A0', '#E8B040', '#D03048', '#FFFFFF'], 18, 'spark', 0, true);
+      }
       else { P.hp = Math.min(maxHp(), P.hp + k.val); floatText(P.x, P.y, 80, '+' + k.val, '#7EC2B0', 15); }
       refreshHud();
     }

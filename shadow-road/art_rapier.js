@@ -66,6 +66,19 @@ function drawGrayblade(pose) {
     if (tier >= 5) { ctx.fillStyle = C('#4FAE6A'); circle(19, 0, 1.9); ctx.fill(); outline(.7); gbGlow(() => { ctx.fillStyle = 'rgba(110,230,150,.5)'; circle(19, 0, 3.4); ctx.fill(); }); } // a green stone, the color of his eyes
     else { ctx.fillStyle = C(tier === 4 ? '#E8C8FF' : '#FFE0D0'); circle(19, 0, 1.6); ctx.fill(); }
   }
+  const G = pose.rGlint; // a held charge (moves.js): the edge stays lit, and at each new level a glint runs down the blade
+  if (G && G.lvl) gbGlow(() => {
+    const hi = G.lvl >= 2, k = G.k;
+    ctx.fillStyle = G.lvl >= 3 ? 'rgba(190,170,255,.8)' : hi ? 'rgba(255,238,244,.85)' : 'rgba(228,236,255,.55)';
+    ctx.fillRect(x0 + 2, -w * .62, len * .8, hi ? 1.3 : 1);
+    if (k < 1) { // a bead of light from the guard to the point, the second one brighter and longer
+      const gx = x0 + 4 + (tip - x0 - 4) * k, L = hi ? 9 : 6, a = Math.sin(Math.PI * Math.min(1, k * 1.15 + .08));
+      const g = ctx.createLinearGradient(gx - L, 0, gx + L, 0);
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, `rgba(255,255,255,${((hi ? 1 : .85) * a).toFixed(2)})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(gx, 0, L, w * (hi ? 1.6 : 1.25), 0, 0, TAU); ctx.fill();
+      if (hi && k > .75) { ctx.fillStyle = '#FFF4F8'; gbStar(tip, 0, 2.6 * Math.sin(Math.PI * span(k, .75, 1)), .9); } // (a tiny wink at the point, no bigger than the blade is wide)
+    }
+  });
   if (pose.glow) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = pose.glow; rrect(16, -8, len + 12, 16, 7); ctx.fill(); ctx.restore(); }
   if (!pose.noHand) gripHand(pose.glove || '#2E2C36');
 }

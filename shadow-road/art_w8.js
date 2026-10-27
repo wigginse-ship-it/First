@@ -1493,7 +1493,7 @@
   }
   W8.greyPast = greyPast;
   // the strangers who join the first fight of the edge come only from the road actually walked (not the other Trumps' worlds)
-  { const other = () => Object.keys(EDEF).filter(k => { const w = STAGES.findIndex(st => (st.waves || []).some(wv => wv.some(tp => tp.replace(/[*!]/g, '') === k))); return (w === 5 || w === 6) && !EDEF[k].noRandom; });
+  { const other = () => Object.keys(EDEF).filter(k => { const w = STAGES.findIndex(st => (st.waves || []).some(wv => wv.some(tp => tp.replace(/[*!]/g, '') === k))); return w !== 7 && !k.startsWith("w8") && !EDEF[k].noRandom; });
     const _ss = startStage; startStage = function (i) { for (const k of Object.keys(EDEF)) if (EDEF[k].w8hid) { delete EDEF[k].noRandom; delete EDEF[k].w8hid; }
       if (STAGES[i] && STAGES[i].theme === 'lorraine') for (const k of other()) { EDEF[k].noRandom = 1; EDEF[k].w8hid = 1; }
       return _ss(i); }; }

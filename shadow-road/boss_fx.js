@@ -4,10 +4,11 @@
 // The Kaleidoscope Wyrm: it draws you in toward its heat, then bursts into a ring of fireballs.
 PLAN_FX.bramble = (e) => {
   const gap = e.thornGap ?? Math.atan2((P.y - e.y) * 2.2, P.x - e.x) + rand(-1.2, 1.2); e.thornGap = undefined; // one narrow gap runs through all three rings: find it
-  for (let i = 0; i < 3; i++) hazards.push({ kind: 'thornring', gap: gap + rand(-.12, .12), x: e.x, y: e.y, r: 20, R: 70 + i * 50, delay: i * .28, t: 1.6, max: 1.6, dmg: Math.round(edmg(e) * .9), hit: false });
+  const ring = e.def.draw === 'mossback' && window.MOSS_TONE ? MOSS_TONE(e).ring : null; // (his thorns take the colour of his phase)
+  for (let i = 0; i < 3; i++) hazards.push({ kind: 'thornring', ring, gap: gap + rand(-.12, .12), x: e.x, y: e.y, r: 20, R: 70 + i * 50, delay: i * .28, t: 1.6, max: 1.6, dmg: Math.round(edmg(e) * .9), hit: false });
   sfx('slam'); shakeMag = 8; recover(e, 1.2);
   if (e.def.draw === 'mossback') { const hx = e.x + e.facing * 80 * (e.size || 1); // the roots tear loose with him: clods, sod and splinters
-    for (let i = 0; i < 26; i++) parts.push({ x: hx + rand(-20, 20), y: e.y + rand(-6, 6), z: rand(2, 20), vx: rand(-140, 140), vy: rand(-12, 12), vz: rand(120, 300), life: 1, max: 1, col: pick(['#5A4430', '#3E2E20', '#6E8A44', '#4E6A32']), size: rand(2.5, 5.5), shape: i % 3 ? 'chunk' : 'tuft', rot: rand(0, 6), vr: rand(-8, 8) });
+    for (let i = 0; i < 26; i++) parts.push({ x: hx + rand(-20, 20), y: e.y + rand(-6, 6), z: rand(2, 20), vx: rand(-140, 140), vy: rand(-12, 12), vz: rand(120, 300), life: 1, max: 1, col: pick(window.MOSS_TONE ? MOSS_TONE(e).sod : ['#5A4430', '#3E2E20', '#6E8A44', '#4E6A32']), size: rand(2.5, 5.5), shape: i % 3 ? 'chunk' : 'tuft', rot: rand(0, 6), vr: rand(-8, 8) });
     sfx('crunch'); }
 };
 PLAN_FX.vent = (e) => {
@@ -21,7 +22,7 @@ PLAN_FX.coil = (e) => {
 // tells: each warns in its own way
 TELL_FX.bramble = (e, t, k) => { // the ground cracks in rings around him
   if (e.thornGap === undefined) e.thornGap = Math.atan2((P.y - e.y) * 2.2, P.x - e.x) + rand(-1.2, 1.2);
-  ctx.strokeStyle = `rgba(126,164,96,${.3 + .5 * k})`; ctx.lineWidth = 2;
+  ctx.strokeStyle = `rgba(${e.def.draw === 'mossback' && window.MOSS_TONE ? MOSS_TONE(e).tell : '126,164,96'},${.3 + .5 * k})`; ctx.lineWidth = 2;
   for (let i = 0; i < 3; i++) { const r = (70 + i * 50) * (.6 + .4 * k); ctx.beginPath(); ctx.ellipse(e.x, e.y, r, r / 2.2, 0, e.thornGap + .45, e.thornGap + TAU - .45); ctx.stroke(); } // the cracks leave the gap unbroken
 };
 TELL_FX.vent = (e, t, k) => { // pressure building: the vents glow and shudder
@@ -46,7 +47,7 @@ HAZARD_FX.thornring = {
     for (let i = 0; i < 22; i++) { // a ring of thorns standing up out of the ground
       const a = i / 22 * TAU + h.gap; if (Math.abs(((a - h.gap) % TAU + TAU * 1.5) % TAU - Math.PI) < .3) continue; // leave the gap clear
       const px = h.x + Math.cos(a) * h.r, py = h.y + Math.sin(a) * h.r / 2.2, hgt = (16 + (i % 3) * 6) * fade;
-      ctx.fillStyle = C(i % 2 ? '#5E7A3A' : '#7EA460'); ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.quadraticCurveTo(px + Math.cos(a) * 2, py - hgt * .6, px + Math.cos(a) * 5, py - hgt); ctx.lineTo(px + 4, py); ctx.closePath(); ctx.fill(); outline(1);
+      ctx.fillStyle = C((h.ring || ['#5E7A3A', '#7EA460'])[i % 2]); ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.quadraticCurveTo(px + Math.cos(a) * 2, py - hgt * .6, px + Math.cos(a) * 5, py - hgt); ctx.lineTo(px + 4, py); ctx.closePath(); ctx.fill(); outline(1);
     }
   },
 };
@@ -120,7 +121,7 @@ function drawBossRoom(t) { // the rising water in the Sunken Grove
   updateBossRoom = function (dt) { _upd(dt);
     const e = boss; if (!e || e.dead || e.def.draw !== 'mossback') return;
     if (e.plan === 'bramble' && e.state === 'wind' && (1 - e.t / e.windMax) > .3 && Math.random() < dt * 22) { const hx = e.x + e.facing * 80 * e.size;
-      parts.push({ x: hx + rand(-10, 10), y: e.y + rand(-4, 4), z: rand(2, 10), vx: -e.facing * rand(60, 200), vy: rand(-10, 10), vz: rand(140, 280), life: .9, max: .9, col: pick(['#5A4430', '#3E2E20', '#6E8A44']), size: rand(2, 4.5), shape: Math.random() < .3 ? 'tuft' : 'chunk', rot: rand(0, 6), vr: 6 }); }
+      parts.push({ x: hx + rand(-10, 10), y: e.y + rand(-4, 4), z: rand(2, 10), vx: -e.facing * rand(60, 200), vy: rand(-10, 10), vz: rand(140, 280), life: .9, max: .9, col: pick(MOSS_TONE(e).sod.slice(0, 3)), size: rand(2, 4.5), shape: Math.random() < .3 ? 'tuft' : 'chunk', rot: rand(0, 6), vr: 6 }); }
     const strike = e.plan === 'sweep' && e.state === 'strike';
     if (strike && !wasStrike) { shakeMag = Math.max(shakeMag, 11); hitstop = Math.max(hitstop, .05); sfx('slam'); dust(e.x, e.y, 18);
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .4, max: .4, r: (e.def.reach + e.hw) * 1.1, col: '#E8D8B0', flat: 1 }); }
