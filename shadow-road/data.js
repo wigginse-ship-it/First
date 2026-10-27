@@ -142,7 +142,7 @@ const WEAPONS = {
       HC1:  { dur: .46, h: [.3, .5], x0: 0, x1: 112, dmg: 20, kb: 250, arc: [.04, .04], lunge: 345, power: 1, wall: 1, depth: 22 },
       HC2:  { name: 'Rose Thrust', seq: ['HOLD'], desc: 'Hold Heavy to charge twice: a silver glint runs down the blade, then a second. Let go for a longer, harder lunge; at full charge it runs through everyone in a line, and against a lone foe the blade strikes twice.',
               dur: .56, h: [.28, .46], x0: 0, x1: 128, dmg: 30, kb: 330, arc: [.04, .04], lunge: 400, power: 2, wall: 1, depth: 26,
-              lone: { dur: .66, h: [.22, .34], x1: 116, kb: 55, lunge: 330, wall: 0, twinAt: .54, twinDmg: .65, twinKb: 320 } },
+              lone: { dur: .6, h: [.22, .32], x1: 116, kb: 55, lunge: 330, wall: 0, twinAt: .46, twinDmg: .65, twinKb: 320 } },
       HHH:  { name: 'Starfall Flurry', dur: .72, h: [.14, .82], x0: 0, x1: 88, dmg: 4, kb: 60, arc: [.04, .04], multi: .055, lunge: 63, power: 1, flurry: 1 }, // a storm of thrusts, each a point of light
       LH:   { name: 'Crescent Flick', spin: 1, spinEnd: .5, dur: .42, h: [.25, .55], x0: 0, x1: 68, dmg: 10, kb: 45, launch: 430, arc: [1.4, -2.1], hop: 120, power: 1 },
       HL:   { name: 'Moulinet', spin: 1, dur: .56, h: [.14, .86], x0: 0, x1: 68, dmg: 4, kb: 68, arc: [-P_, 3 * P_], around: 1, multi: .07, power: 1 }, // the wrist spins the blade in wheels on both sides

@@ -64,7 +64,7 @@ function rapierChime(lvl) { // a small clear chime for each glint, a note higher
 }
 function rapierChargeCue(lvl) {
   rapierChime(lvl);
-  const hx = P.x + P.facing * 12, hz = P.z + 40; // about where the guard is, held level in front of him
+  const hx = P.x + P.facing * 24, hz = P.z + 56; // about where the guard is, drawn back by his shoulder
   if (lvl === 2) for (let i = 0; i < 4; i++) parts.push({ x: hx + P.facing * rand(0, 8), y: P.y + rand(-2, 2), z: hz + rand(-3, 3), vx: P.facing * rand(30, 110), vy: rand(-8, 8), vz: rand(70, 150), life: rand(.45, .7), max: .7, col: pick(['#C8506A', '#E07890', '#F2A8B8']), size: rand(2, 3), shape: 'tuft', rot: rand(0, TAU), vr: rand(-9, 9) }); // a flick of rose petals off the guard
   if (lvl === 3) for (let i = 0; i < 5; i++) parts.push({ x: hx + rand(-6, 6), y: P.y + rand(-3, 3), z: hz + rand(-6, 6), vx: rand(-20, 20), vy: 0, vz: rand(10, 40), life: .4, max: .4, col: pick(['rgba(42,24,64,.7)', 'rgba(90,60,140,.6)']), size: rand(3, 5), shape: 'puff', rot: 0, vr: 0 }); // Shadow gathering: the Hellride is ready
 }
@@ -94,7 +94,7 @@ function rapierChargePose(pose) { // en garde and drawn back: weight settling on
   const q = sstep(Math.min(1, (P.ct || 0) / .4));
   pose.crouch = 0; pose.glow = ''; pose.walk = 0; pose.trail = 0;
   pose.legs = { f: lerp(7, 10, q), b: lerp(-7, -12, q), fk: lerp(9, 6, q), bk: lerp(9, 13, q) }; pose.sink = lerp(2, 5, q); pose.lean = lerp(.04, -.06, q);
-  pose.arm = .05 - pose.lean * .9; pose.elbow = 0; pose.ext = lerp(-.15, -.45, q); pose.grip = 0;
+  pose.arm = lerp(.08, .3, q) - pose.lean * .9; pose.elbow = lerp(.3, 1.2, q); pose.grip = lerp(.15, .95, q); pose.ext = lerp(-.1, -.3, q); // the sword hand drawn back by the shoulder, the blade kept level
   rapierOffHand(pose, 'guard', 0, q);
   pose.rGlint = { lvl: P.clvl || 0, k: P.clvl ? ((P.ct || 0) - (P.clAt || 0)) / .26 : 9 }; // the glint runs down the blade (art_rapier.js)
 }
@@ -472,7 +472,7 @@ const MOVE_POSE = {
     let e;
     if (k < h0) e = -.45 * ease(k / h0);
     else if (!tw) e = k < m.h[1] ? out(.35) : 1 - .8 * ease(span(k, m.h[1] + .08, 1));
-    else { const a = tw - .08; e = k < m.h[1] ? out(.4) : k < a ? lerp(1, .2, ease(span(k, m.h[1], a))) : k < tw ? lerp(.2, 1, sstep(span(k, a, tw))) : k < tw + .1 ? 1 : 1 - .8 * ease(span(k, tw + .1, 1)); }
+    else { const a = tw - .07; e = k < m.h[1] ? out(.4) : k < a ? lerp(1, .2, ease(span(k, m.h[1], a))) : k < tw ? lerp(.2, 1, sstep(span(k, a, tw))) : k < tw + .1 ? 1 : 1 - .8 * ease(span(k, tw + .1, 1)); }
     const p = clamp(e, 0, 1);
     pose.ext = e; pose.legs = { f: lerp(7, 19, p), b: lerp(-9, -18, p), fk: lerp(3, 11, p), bk: lerp(4, 0, p) }; pose.sink = lerp(3, 8, p); pose.lean = lerp(.05, .5, p);
     pose.arm = .03 - pose.lean * .9; pose.elbow = 0; rapierOffHand(pose, 'guard', p);
