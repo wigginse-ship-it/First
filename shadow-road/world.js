@@ -82,13 +82,6 @@ function armorBreak(e, dir) {
   if (A.cols) burst(e.x, e.y, e.z + e.hh * .6, A.cols, 18, 'crystal', dir, true);
   if (A.onBreak) A.onBreak(e, dir);
 }
-HAZARD_FX.armorbit = {
-  update(h, dt) { h.vz -= 900 * dt; h.x += h.vx * dt; h.z += h.vz * dt; h.rot += h.vr * dt;
-    if (h.z <= 0) { h.z = 0; if (h.vz < -60 && h.bounced < 2) { h.bounced++; h.vz = -h.vz * .35; h.vx *= .5; h.vr *= .5; } else { h.vz = 0; h.vx *= Math.pow(.02, dt); h.vr *= Math.pow(.02, dt); } } },
-  draw(h, t) { const a = Math.min(1, h.t / .5); if (a <= 0) return;
-    ctx.save(); ctx.globalAlpha *= .3 * a; ctx.fillStyle = '#000'; ell(h.x, h.y, 10 * h.sc, 3 * h.sc); ctx.fill(); ctx.restore();
-    ctx.save(); ctx.globalAlpha *= a; ctx.translate(h.x, h.y - h.z); ctx.rotate(h.rot); ctx.scale(h.facing * h.sc, h.sc); try { h.fn(); } finally { ctx.restore(); } },
-};
 function spawnEnemy(type, side, isBoss) {
   let forceElite = false;
   if (!isBoss && type.endsWith('*')) { type = type.slice(0, -1); forceElite = stageIdx >= 1; }
@@ -287,6 +280,14 @@ function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], 
 // extension points: other files can add attack plans (PLAN_FX[plan](e)), their tells (TELL_FX[plan](e, t, k)) and hazard kinds
 // (HAZARD_FX[kind] = { update(h, dt), draw(h, t) }) without touching this file
 const PLAN_FX = {}, TELL_FX = {}, HAZARD_FX = {};
+// the bits of an elite's armor tumbling away when it breaks (see armorBreak)
+HAZARD_FX.armorbit = {
+  update(h, dt) { h.vz -= 900 * dt; h.x += h.vx * dt; h.z += h.vz * dt; h.rot += h.vr * dt;
+    if (h.z <= 0) { h.z = 0; if (h.vz < -60 && h.bounced < 2) { h.bounced++; h.vz = -h.vz * .35; h.vx *= .5; h.vr *= .5; } else { h.vz = 0; h.vx *= Math.pow(.02, dt); h.vr *= Math.pow(.02, dt); } } },
+  draw(h, t) { const a = Math.min(1, h.t / .5); if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha *= .3 * a; ctx.fillStyle = '#000'; ell(h.x, h.y, 10 * h.sc, 3 * h.sc); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.globalAlpha *= a; ctx.translate(h.x, h.y - h.z); ctx.rotate(h.rot); ctx.scale(h.facing * h.sc, h.sc); try { h.fn(); } finally { ctx.restore(); } },
+};
 function execute(e) {
   const p = e.plan;
   if (PLAN_FX[p]) { PLAN_FX[p](e); return; }
