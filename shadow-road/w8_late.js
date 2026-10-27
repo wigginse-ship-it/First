@@ -126,12 +126,13 @@
 //   CHARGE     the first blow on any foe lands double and puts it on the ground (gold chevrons over the unstruck)
 //   BANNER     six blows running without being hit send a gold wave down the lane (six pips over Corwin fill)
 //   IRON       a heavy finisher cracks the ground ahead in a line, and the line breaks under everyone on it
-//   DRUM       kills close on each other beat a drum: each beat adds to every blow (rings at his feet, a count)
+//   DRUM       kills close on each other beat a drum: each beat adds to every blow; blows struck on the music's beat
+//              land harder and keep the drum going (rings at his feet pulse in time with the music, a count)
 //   HUNT       a foe brought low is marked with a red pennon and takes more from every blow
 //   THE DEAD   every few kills a rider of Lorraine's dead charges down Corwin's lane (horseshoes count toward it)
 //   WATCHFIRE  blows set foes alight; one that dies burning bursts and sets fire to those near it
-//   STANDARD   badly hurt, Corwin raises Lorraine's standard and every blow lands much harder
-// Corwin carries the march as a pennon on a short staff at his back, a band of colour for each verse; the HUD shows an
+//   STANDARD   badly hurt, Lorraine's arms burn on the ground under Corwin and every blow lands much harder
+// Corwin wears the horn at his belt (l3_horn.js), and blows it at the start of every place he comes to; the HUD shows an
 // illuminated scroll of the verses held, the forge lists them. Dev: W8.verse(id or index), W8.verses([...]), W8.march().
 (() => {
   if (!window.W8 || !W8.kit) return;
@@ -145,15 +146,20 @@
     charge:    { name: 'Verse of the Charge', col: '#D6A43A', text: () => `The first blow on any foe lands ×${(2 * NGK()).toFixed(1)} and throws it to the ground. Gold chevrons hang over every foe you have not yet struck.` },
     banner:    { name: 'Verse of the Banner', col: '#A62A26', text: () => `Six blows running without being hit send a wave of gold down your lane, hitting everything in it for ${Math.round(150 * NGK())}% of your blow. Six pips over your head fill as you go.` },
     iron:      { name: 'Verse of Iron', col: '#7A7E86', text: () => `Every heavy finisher cracks the ground ahead in a line; a breath later the line breaks under everyone on it for ${Math.round(90 * NGK())}% of the blow.` },
-    drum:      { name: 'Verse of the Drum', col: '#8A5A2E', text: () => `Each kill within three seconds of the last beats the drum: +${Math.round(12 * NGK())}% to every blow per beat, up to six beats. Rings beat at your feet.` },
+    drum:      { name: 'Verse of the Drum', col: '#8A5A2E', text: () => `Each kill within three seconds of the last beats the drum: +${Math.round(12 * NGK())}% to every blow per beat, up to six beats. Blows struck on the music's beat land +${Math.round(15 * NGK())}% and keep the drum going. Rings at your feet pulse in time.` },
     hunt:      { name: 'Verse of the Hunt', col: '#C23A1E', text: () => `A foe below a third of its health is marked with a red pennon and takes +${Math.round(60 * NGK())}% from every blow (a lord of a world, +${Math.round(25 * NGK())}%).` },
     dead:      { name: 'Verse of Lorraine\'s Dead', col: '#8EA2C0', text: () => `Every ${deadN()} kills, one of the riders who fell at the Circle charges down your lane, striking all it passes. The scroll counts the kills toward the next.` },
     watchfire: { name: 'Verse of the Watchfire', col: '#E8782A', text: () => `Your blows set foes alight. A foe that dies burning bursts into flame, burning those near it for ${Math.round(30 * NGK())}% of what it was.` },
-    standard:  { name: 'Ganelon\'s Standard', col: '#3A5A86', text: () => `Below 40% health you raise Lorraine's standard over you, and every blow lands +${Math.round(45 * NGK())}%.` },
+    standard:  { name: 'Ganelon\'s Standard', col: '#3A5A86', text: () => `Below 40% health Lorraine's arms burn on the ground beneath you, and every blow lands +${Math.round(45 * NGK())}%.` },
   };
   const ORDER = ['charge', 'banner', 'iron', 'drum', 'hunt', 'dead', 'watchfire', 'standard'];
   const deadN = () => cyc() > 0 ? 6 : 7;
   W8.VERSES = V; W8.VORDER = ORDER;
+  // one line each, for the horn's call at the start of a place (l3_horn.js)
+  const LINE = { charge: () => `First blow on a foe ×${(2 * NGK()).toFixed(1)}, and it falls`, banner: () => 'Six blows unhit: a wave of gold down the lane', iron: () => 'Heavy finishers break the ground ahead',
+    drum: () => `Kills beat the drum, +${Math.round(12 * NGK())}% a beat; strike on the music's beat`, hunt: () => `Foes under a third take +${Math.round(60 * NGK())}%`, dead: () => `Every ${deadN()} kills a dead rider charges`,
+    watchfire: () => 'Blows set foes alight; the burning burst', standard: () => `Below 40% health, +${Math.round(45 * NGK())}% to every blow` };
+  W8.VLINE = (id) => LINE[id] ? LINE[id]() : '';
   const M = () => { if (!save.w8march) save.w8march = { v: [], died: {}, c0: null }; const m = save.w8march; if (!m.v) m.v = []; if (!m.died) m.died = {}; if (owned() && (m.c0 === null || m.c0 === undefined)) m.c0 = cyc(); return m; };
   const has = (id) => owned() && M().v.includes(id);
   const cap = () => { const m = M(); return Math.min(ORDER.length, 5 + Math.max(0, cyc() - (m.c0 ?? cyc()))); };
@@ -167,6 +173,7 @@
   const reset = () => { S.banner = 0; S.drum = 0; S.drumT = 0; S.waves = []; S.cracks = []; S.riders = []; };
   const live = (e) => e && !e.dead && e.state !== 'enter';
   const standing = () => has('standard') && P && P.hp > 0 && P.hp < maxHp() * .4;
+  W8.hasVerse = has; W8.NGK = NGK; W8.standing = standing; W8.owned = owned; W8.M = M;
 
   // ---------------- every blow ----------------
   const _strike = strike;
@@ -176,6 +183,8 @@
     let k = 1; const first = has('charge') && !e.w8struck;
     if (first) k *= 2 * NGK();
     if (has('drum') && S.drum > 0) k *= 1 + .12 * NGK() * S.drum;
+    const onBeat = has('drum') && W8.onBeat && W8.onBeat();
+    if (onBeat) { k *= 1 + .15 * NGK(); if (S.drum > 0) S.drumT = 3; S.beatHit = .3; }
     if (has('hunt') && e.hp < e.maxHp / 3) k *= 1 + (e.boss ? .25 : .6) * NGK();
     if (standing()) k *= 1 + .45 * NGK();
     k = Math.min(k, e.boss ? 2.6 : 3.4); // (strong, never a one-blow kill of a lord)
@@ -216,7 +225,7 @@
   const inLane = (o, y, w) => live(o) && Math.abs(o.y - y) < w && o.z < 60;
   W8.marchStep = (dt) => {
     if (!P || typeof stage === 'undefined' || !stage) return;
-    S.ironT = Math.max(0, S.ironT - dt); S.beat = Math.max(0, S.beat - dt * 2.5);
+    S.ironT = Math.max(0, S.ironT - dt); S.beatHit = Math.max(0, (S.beatHit || 0) - dt); S.beat = Math.max(0, S.beat - dt * 2.5);
     if (S.bannerT > 0) { S.bannerT -= dt; if (S.bannerT <= 0) S.banner = 0; }
     if (S.drumT > 0) { S.drumT -= dt; if (S.drumT <= 0) S.drum = 0; }
     for (const w of S.waves) { const sp = 460 * dt; w.dist += sp; w.x += w.f * sp; if (Math.random() < .7) dust(w.x, w.y, 1);
@@ -241,7 +250,7 @@
       if (has('charge') && !e.w8struck) list.push([e.y + .2, () => onMain(() => chevron(e.x, e.y - e.z - e.hh * (e.boss ? e.size || 1 : e.champ ? 1.3 : 1) - 26, t))]);
       if (has('hunt') && e.hp < e.maxHp / 3) list.push([e.y + .2, () => onMain(() => pennon(e.x + 6, e.y - e.z - e.hh * (e.boss ? e.size || 1 : 1) - 2, t, '#C23A1E', 1.5))]);
       if (has('watchfire') && e.burn > 0 && e.w8fire) list.push([e.y + .3, () => onMain(() => flames(e.x, e.y - e.z, e.hw, t))]); }
-    if (P && P.state !== 'dead') list.push([P.y + .12, () => onMain(() => marchPennon(t))]);
+    if (P && P.state !== 'dead') { list.push([P.y - 1, () => onMain(() => marchGround(t))]); list.push([P.y + .12, () => onMain(() => marchMarks(t))]); }
     for (const w of S.waves) list.push([w.y, () => onMain(() => drawWave(w, t))]);
     for (const c of S.cracks) list.push([c.y - .5, () => onMain(() => drawCrack(c, t))]);
     for (const r of S.riders) list.push([r.y + .1, () => drawRider(r, t)]); }; }
@@ -251,23 +260,24 @@
   function pennon(x, y, t, col, s = 1) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.strokeStyle = '#2A1E14'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -20); ctx.stroke();
     const w = Math.sin(t * 6 + x) * 1.5; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, -20); ctx.quadraticCurveTo(7, -20 + w, 14, -17 + w); ctx.lineTo(9, -15); ctx.lineTo(14, -12 + w); ctx.quadraticCurveTo(7, -11, 0, -11); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(30,10,6,.8)'; ctx.lineWidth = .8; ctx.stroke(); ctx.restore(); }
   function flames(x, y, hw, t) { ctx.save(); for (let i = 0; i < 4; i++) { const fx = x + (i - 1.5) * hw * .5, fl = Math.sin(t * 11 + i * 2.1 + x); ctx.fillStyle = `rgba(${i % 2 ? '255,200,90' : '240,110,40'},.8)`; ctx.beginPath(); ctx.moveTo(fx - 3, y - 2); ctx.quadraticCurveTo(fx - 1 + fl, y - 9, fx + fl * 2, y - 15 - (i % 2) * 4); ctx.quadraticCurveTo(fx + 2, y - 7, fx + 3, y - 2); ctx.fill(); } ctx.restore(); }
-  // the march itself, on Corwin: a short staff at his back with a swallowtail pennon, a band for each verse; the banner's
-  // pips over his head; the drum's rings at his feet; and, when he is low, Lorraine's standard raised over him
-  function marchPennon(t) {
-    const v = M().v, f = P.facing, x = P.x - f * 9, y = P.y - P.z, top = y - 82;
-    ctx.save(); ctx.lineCap = 'round';
-    if (standing()) { const h = 112; ctx.strokeStyle = '#2A1E14'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x, y - 30); ctx.lineTo(x, y - h); ctx.stroke(); ctx.fillStyle = '#D6A43A'; ctx.beginPath(); ctx.moveTo(x - 1, y - h + 3); ctx.lineTo(x - 2, y - h - 3); ctx.lineTo(x + 2, y - h - 3); ctx.closePath(); ctx.fill();
-      const wv = Math.sin(t * 5) * 2; ctx.save(); ctx.translate(x, y - h + 4); ctx.scale(-f, 1); ctx.beginPath(); ctx.rect(0, 0, 28, 22 + wv * .3); ctx.clip(); W8.arms(14, 11, 30, 26, { ow: 0 }); ctx.restore();
-      ctx.strokeStyle = 'rgba(30,10,6,.85)'; ctx.lineWidth = 1; ctx.strokeRect(x - (f > 0 ? 28 : 0), y - h + 4, 28, 22); }
-    else { ctx.strokeStyle = '#2A1E14'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x, y - 40); ctx.lineTo(x, top); ctx.stroke();
-      const n = Math.max(1, v.length), w = 10 + n * 2, h = 4 + n * 2.2, wv = Math.sin(t * 6) * 1.2;
-      ctx.save(); ctx.translate(x, top + 1); ctx.scale(-f, 1);
-      const path = () => { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(w * .5, wv, w + 4, wv * 1.5); ctx.lineTo(w - 2, h / 2); ctx.lineTo(w + 4, h + wv); ctx.quadraticCurveTo(w * .5, h, 0, h); ctx.closePath(); };
-      path(); ctx.save(); ctx.clip(); v.forEach((id, i) => { ctx.fillStyle = V[id].col; ctx.fillRect(0, i * h / n, w + 6, h / n + .5); }); if (!v.length) { ctx.fillStyle = '#E8DCC0'; ctx.fillRect(0, 0, w + 6, h); } ctx.restore();
-      path(); ctx.strokeStyle = 'rgba(30,14,6,.9)'; ctx.lineWidth = .9; ctx.stroke(); ctx.restore(); }
-    if (has('banner') && S.banner > 0) for (let i = 0; i < 6; i++) { const px = P.x + (i - 2.5) * 6, py = y - 92 - (standing() ? 24 : 0); ctx.fillStyle = i < S.banner ? '#F2D06A' : 'rgba(40,24,10,.5)'; ctx.beginPath(); ctx.moveTo(px, py - 3); ctx.lineTo(px + 2.4, py); ctx.lineTo(px, py + 3); ctx.lineTo(px - 2.4, py); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#3A2410'; ctx.lineWidth = .7; ctx.stroke(); }
-    if (has('drum') && S.drum > 0) { const a = Math.min(1, S.drumT / .8); for (let i = 0; i < S.drum; i++) { const r = 16 + i * 6 + S.beat * 6; ctx.strokeStyle = `rgba(138,90,46,${(.65 - i * .07) * a})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(P.x, P.y + 1, r, r * .3, 0, 0, Math.PI * 2); ctx.stroke(); }
-      ctx.fillStyle = `rgba(242,216,144,${a})`; ctx.strokeStyle = `rgba(40,20,8,${a})`; ctx.lineWidth = 3; ctx.font = '700 10px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; const s = 'DRUM ×' + S.drum + '  +' + Math.round(12 * NGK() * S.drum) + '%'; ctx.strokeText(s, P.x, P.y + 16); ctx.fillText(s, P.x, P.y + 16); }
+  // the march itself, about Corwin (the horn at his belt is l3_horn.js): the banner's pips over his head; the drum's rings
+  // at his feet, beating in time with the music; and, when he is low, Lorraine's arms burning on the ground under him
+  function marchGround(t) {
+    const y = P.y;
+    if (standing()) { const pul = .75 + .25 * Math.sin(t * 5); ctx.save(); ctx.translate(P.x, y); ctx.scale(1, .32);
+      ctx.globalAlpha = .55 + .3 * pul; ctx.beginPath(); ctx.arc(0, 0, 34, 0, Math.PI * 2); ctx.clip(); W8.arms(0, 0, 50, 58, { ow: 0 }); ctx.restore();
+      ctx.save(); ctx.strokeStyle = `rgba(242,208,106,${.5 + .4 * pul})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(P.x, y, 35, 11.2, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(40,20,8,.7)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.ellipse(P.x, y, 37, 11.8, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    if (has('drum')) { const b = W8.beat ? W8.beat() : { ph: (t * 2) % 1 }, pulse = Math.pow(1 - b.ph, 3), act = S.drum > 0 ? Math.min(1, S.drumT / .8) : 0, n = Math.max(1, S.drum);
+      ctx.save(); for (let i = 0; i < n; i++) { const r = 16 + i * 6 + pulse * 7 + (S.beatHit > 0 ? 4 : 0); const a = act ? (.4 + .45 * pulse) * (1 - i * .08) * act : .14 + .3 * pulse;
+        ctx.strokeStyle = S.beatHit > 0 && i === 0 ? `rgba(242,208,106,${Math.min(1, a + .3)})` : `rgba(138,90,46,${a})`; ctx.lineWidth = 1.2 + pulse * 1.2; ctx.beginPath(); ctx.ellipse(P.x, y + 1, r, r * .3, 0, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.restore(); }
+  }
+  function marchMarks(t) {
+    const y = P.y - P.z; ctx.save();
+    if (has('banner') && S.banner > 0) for (let i = 0; i < 6; i++) { const px = P.x + (i - 2.5) * 6, py = y - 92; ctx.fillStyle = i < S.banner ? '#F2D06A' : 'rgba(40,24,10,.5)'; ctx.beginPath(); ctx.moveTo(px, py - 3); ctx.lineTo(px + 2.4, py); ctx.lineTo(px, py + 3); ctx.lineTo(px - 2.4, py); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#3A2410'; ctx.lineWidth = .7; ctx.stroke(); }
+    if (has('drum') && S.drum > 0) { const a = Math.min(1, S.drumT / .8), b = W8.beat ? W8.beat() : { ph: 0 }, pop = 1 + .18 * Math.pow(1 - b.ph, 4);
+      ctx.save(); ctx.translate(P.x, P.y + 16); ctx.scale(pop, pop); ctx.fillStyle = `rgba(242,216,144,${a})`; ctx.strokeStyle = `rgba(40,20,8,${a})`; ctx.lineWidth = 3; ctx.font = '700 10px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; const s = 'DRUM ×' + S.drum + '  +' + Math.round(12 * NGK() * S.drum) + '%'; ctx.strokeText(s, 0, 0); ctx.fillText(s, 0, 0); ctx.restore(); }
     ctx.restore();
   }
   function drawWave(w, t) { const a = 1 - w.dist / 330; ctx.save(); for (let i = 0; i < 3; i++) { const x = w.x - w.f * i * 12; ctx.beginPath(); ctx.moveTo(x - w.f * 8, w.y - 16); ctx.lineTo(x + w.f * 4, w.y); ctx.lineTo(x - w.f * 8, w.y + 16); ctx.strokeStyle = `rgba(58,36,16,${.8 * a})`; ctx.lineWidth = 5 - i; ctx.stroke(); ctx.strokeStyle = `rgba(242,208,106,${a * (1 - i * .25)})`; ctx.lineWidth = 3 - i * .7; ctx.stroke(); }
@@ -391,4 +401,223 @@
       const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; cv.style.cssText = 'width:32px;height:32px;flex:none'; const g = cv.getContext('2d'); verseIcon(g, id, 32, 32, 28);
       const tx = document.createElement('div'); tx.innerHTML = `<b>${V[id].name}</b><br><em>${V[id].text()}</em>`; d.appendChild(cv); d.appendChild(tx); list.appendChild(d); }
     sec.appendChild(list); }; }
+})();
+// ======================================================================================================
+// THE HORN OF LORRAINE, worn and blown. Once the Goat-Lord falls (save.w8relic), Ganelon's war-horn hangs at Corwin's
+// belt: a curved ox-horn banded in silver and gold on a leather strap, riding with his hips in every pose. At the start
+// of every place, while the Long March holds verses, he lifts it and blows: the fight waits; out of the bell pours the
+// grey mist of the Circle, and in the mist each verse's sign (gold chevrons, a wisp of gold cloth, iron sparks, drum
+// rings, a red hunting arrow, riders of the dead, embers, Lorraine's arms); a scroll says what each verse does. Any
+// button cuts it short. The drum's beat is the music's beat: W8.beat() reads the music's own step clock (music.js).
+(() => {
+  if (!window.W8 || !W8.kit || !W8.VERSES) return;
+  const { cl01, hsh } = W8.kit, V = W8.VERSES;
+  const owned = () => W8.owned(), verses = () => (owned() ? W8.M().v : []);
+  const cyc = () => (typeof save !== 'undefined' && save ? save.cycle || 0 : 0);
+
+  // ---------------- the beat clock ----------------
+  // where the music is in its beat, 0 at the beat's stroke; read back from the scheduler's next step (musicStep at
+  // musicNext) to the step sounding now; with the music off, a steady 120 a minute
+  W8.beat = () => {
+    try {
+      if (actx && musicOn && musicCur && COMPILED[musicCur]) {
+        const tr = COMPILED[musicCur], now = actx.currentTime - (actx.outputLatency || 0);
+        let s = musicStep, st = musicNext, n = 0;
+        while (st > now && n++ < 96) { s = (s - 1 + tr.steps) % tr.steps; st -= tr.sd[s]; }
+        if (n < 96) { const sd = tr.sd[s], fr = cl01((now - st) / sd); return { ph: ((s % 4) + fr) / 4, per: sd * 4, src: 'music', step: s }; }
+      }
+    } catch (e) {}
+    const per = .5; return { ph: (performance.now() / 1000 / per) % 1, per, src: 'fixed' };
+  };
+  W8.onBeat = () => { const b = W8.beat(); return Math.min(b.ph, 1 - b.ph) * b.per < .09; };
+
+  // ---------------- the horn itself ----------------
+  // drawn along a curve from the mouthpiece (0,0) to the bell (len,0), bowed by bend; dark at the tip, ivory at the bell
+  function horn(len, w1, bend, glow) {
+    const N = 10, pt = (u) => [len * u, 2 * (1 - u) * u * bend], tan = (u) => { const a = pt(Math.max(0, u - .02)), b = pt(Math.min(1, u + .02)); return Math.atan2(b[1] - a[1], b[0] - a[0]); };
+    const wd = (u) => .5 + (w1 - .5) * Math.pow(u, 1.5), L = [], R = [];
+    for (let i = 0; i <= N; i++) { const u = i / N, [x, y] = pt(u), a = tan(u) + Math.PI / 2, w = wd(u) / 2; L.push([x + Math.cos(a) * w, y + Math.sin(a) * w]); R.push([x - Math.cos(a) * w, y - Math.sin(a) * w]); }
+    ctx.beginPath(); ctx.moveTo(L[0][0], L[0][1]); for (const p of L) ctx.lineTo(p[0], p[1]); for (let i = R.length - 1; i >= 0; i--) ctx.lineTo(R[i][0], R[i][1]); ctx.closePath();
+    if (FLASH || TINT) ctx.fillStyle = C('#E8DCB8'); else { const g = ctx.createLinearGradient(0, 0, len, 0); g.addColorStop(0, '#2E2016'); g.addColorStop(.35, '#8A6A44'); g.addColorStop(.75, '#D8C49A'); g.addColorStop(1, '#F2E8CC'); ctx.fillStyle = g; }
+    ctx.fill(); outline(.6);
+    if (!FLASH && !TINT) { ctx.strokeStyle = 'rgba(255,248,230,.5)'; ctx.lineWidth = .4; ctx.beginPath(); for (let i = 3; i <= N - 1; i++) { const p = L[i]; const q = pt(i / N); const x = (p[0] + q[0]) / 2, y = (p[1] + q[1]) / 2; i === 3 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); } // the shine along its back
+    for (const [u, col] of [[.1, '#D8DCE2'], [.5, '#D6A43A'], [.96, '#D6A43A']]) { const [x, y] = pt(u), a = tan(u) + Math.PI / 2, w = wd(u) / 2 + .35; ctx.lineCap = 'butt';
+      ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * w, y + Math.sin(a) * w); ctx.lineTo(x - Math.cos(a) * w, y - Math.sin(a) * w); ctx.stroke();
+      ctx.strokeStyle = C(col); ctx.lineWidth = .9; ctx.stroke(); }
+    { const [x, y] = pt(1), a = tan(1); ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.beginPath(); ctx.ellipse(0, 0, .9, w1 / 2 + .3, 0, 0, Math.PI * 2); ctx.fillStyle = C('#3A2614'); ctx.fill(); outline(.5);
+      if (glow && !FLASH && !TINT) { ctx.fillStyle = `rgba(220,230,245,${.5 * glow})`; ctx.beginPath(); ctx.ellipse(.6, 0, .6, w1 / 2, 0, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
+    return pt;
+  }
+  W8.hornArt = horn;
+
+  // at his belt: hung by a strap from the sword belt at the back of his near hip, the bell behind him, swinging as he moves.
+  // The belt (CORWIN.parts.waist.swordbelt, wrapped here, not edited) notes where his hips are; the horn is painted just
+  // before his head, so it lies over the cloak and under his near arm
+  const SB = typeof CORWIN !== 'undefined' && CORWIN.parts && CORWIN.parts.waist && CORWIN.parts.waist.swordbelt;
+  function beltHorn(L, g) {
+    if (!owned() || W8.hornInHand || !L || !L.corwin) return;
+    const { HIP, CS, Y } = g, th = 2.3, fx = 9 * .8 * Math.cos(th), lz = 9 * Math.sin(th), x = fx * CS - lz * Y;
+    const sw = Math.sin(g.walk || 0) * (g.gait ? .16 : 0) + Math.sin((g.t || 0) * 1.3) * .03, ly = HIP + 3.4 - 3 * Math.sin(th);
+    const sx = .45 + .55 * CS;
+    ctx.save(); ctx.translate(x, ly); ctx.rotate(sw - (g.LEAN || 0) * .4);
+    const ox = 2, oy = 3, r = .95, c = Math.cos(r), si = Math.sin(r), at = (lx, lyy) => [ox - sx * (lx * c - lyy * si), oy + lx * si + lyy * c];
+    const p1 = at(2.2, -1.1), p2 = at(9.4, -3);
+    ctx.lineCap = 'round'; ctx.strokeStyle = FLASH ? '#FFFFFF' : INK; ctx.lineWidth = 1.9; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(p1[0], p1[1]); ctx.moveTo(-1.5, 0); ctx.quadraticCurveTo(p2[0] + 1, (p2[1]) * .4, p2[0], p2[1]); ctx.stroke();
+    ctx.strokeStyle = C('#6A4424'); ctx.lineWidth = 1; ctx.stroke();
+    ctx.translate(ox, oy); ctx.scale(-sx, 1); ctx.rotate(r); horn(17, 5.2, -3.4, 0);
+    ctx.restore();
+  }
+  let PEND = null;
+  if (SB && !SB.w8horn) { const _b = SB.belts; SB.w8horn = 1;
+    SB.belts = function (L, g) { _b.call(this, L, g); PEND = owned() && !W8.hornInHand && L && L.corwin ? { m: ctx.getTransform(), L, g } : null; }; }
+  const paintPend = () => { if (!PEND) return; const q = PEND; PEND = null; ctx.save(); try { ctx.setTransform(q.m); beltHorn(q.L, q.g); } catch (e) {} ctx.restore(); };
+  { const _h = drawCorwinHead; drawCorwinHead = function (look, hy) { paintPend(); return _h(look, hy); }; }
+  { const _h = drawCorwinHeadTurn; drawCorwinHeadTurn = function (look, hy, Y) { paintPend(); return _h(look, hy, Y); }; }
+
+  // in his hand: the weapon 'w8horn' is the horn held in his fist, the mouthpiece at his lips; drawn in his own upright
+  // frame so it points where the blow wants it whatever his forearm's angle; the bell's place is kept for the mist
+  const _dw = drawWeapon;
+  drawWeapon = function (kind, pose) {
+    if (kind !== 'w8horn') return _dw(kind, pose);
+    const CDw = typeof CLOAK_DRAW !== 'undefined' ? CLOAK_DRAW : null;
+    if (CDw && CDw.Binv) { try {
+      const M = ctx.getTransform(), hp = M.transformPoint(new DOMPoint(17.1, 0)), F = CDw.Binv.inverse().scale(CDw.facing, 1), hf = F.inverse().transformPoint(hp);
+      ctx.save(); ctx.setTransform(F); ctx.translate(hf.x, hf.y); ctx.rotate(pose.hornA ?? -.35);
+      const pt = horn(19, 5, -3.6, pose.hornGlow || 0), b = pt(1), bw = new DOMPoint(b[0], b[1]);
+      const bwf = new DOMMatrix().translate(hf.x, hf.y).rotate((pose.hornA ?? -.35) * 180 / Math.PI).transformPoint(bw);
+      if (pose.live) W8.bellAt = { x: CDw.wx + CDw.facing * bwf.x, y: CDw.wy + bwf.y, f: CDw.facing };
+      ctx.restore(); } catch (e) {} }
+    return _dw('fists', pose);
+  };
+
+  // ---------------- the horn's call ----------------
+  function hornCall(short) {
+    if (typeof sfxOn === 'undefined' || !sfxOn || !actx) return;
+    try {
+      const t0 = actx.currentTime + .03, lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 2; lp.connect(actx.destination);
+      const notes = short ? [[196, 0, .26], [293.7, .24, .55]] : [[196, 0, .3], [293.7, .3, .3], [392, .62, .85]];
+      lp.frequency.setValueAtTime(500, t0);
+      for (const [f, d, L] of notes) { lp.frequency.setTargetAtTime(1900, t0 + d, .05); lp.frequency.setTargetAtTime(900, t0 + d + L * .6, .1);
+        for (const [type, det, v] of [['sawtooth', 0, .055], ['sawtooth', 7, .04], ['triangle', -1200, .05]]) {
+          const o = actx.createOscillator(), g = actx.createGain(); o.type = type; o.detune.value = det;
+          o.frequency.setValueAtTime(f * .94, t0 + d); o.frequency.exponentialRampToValueAtTime(f, t0 + d + .07);
+          g.gain.setValueAtTime(.0001, t0 + d); g.gain.exponentialRampToValueAtTime(v, t0 + d + .05); g.gain.setValueAtTime(v, t0 + d + L - .1); g.gain.exponentialRampToValueAtTime(.0001, t0 + d + L);
+          o.connect(g).connect(lp); o.start(t0 + d); o.stop(t0 + d + L + .03); } }
+    } catch (e) {}
+  }
+
+  // ---------------- the call at the start of a place ----------------
+  let CINE = null, QUEUE = null, panel = null;
+  const mist = W8.mist = [];
+  W8.cine = () => CINE;
+  W8.hornCine = (full = true) => { QUEUE = { full }; return 'queued'; };
+  { const _ez = enterZone; enterZone = function (z, Zs) { const r = _ez(z, Zs); if (!QUEUE) QUEUE = { full: false }; return r; }; }
+  { const _ss = startStage; startStage = function (i) { CINE = null; endPanel(); mist.length = 0; W8.hornInHand = false; const r = _ss(i); QUEUE = { full: true }; return r; }; }
+  function begin(full) {
+    const v = verses().slice(), ng = cyc() > 0;
+    const T = full ? (ng ? 2.3 : 2.9) + Math.min(.6, v.length * .06) : (ng ? 1.4 : 1.75);
+    const a = full ? .22 : .14, b = full ? .5 : .32;
+    CINE = { t: 0, T, a, b, blow: b + .05, end: T - (full ? .38 : .26), full, v, called: false, spawn: {} };
+    W8.bellAt = null; P.state = 'idle'; P.vx = 0; P.vy = 0; clearInput(); for (const k in pressed) pressed[k] = false;
+    // the place's name waits until the call is done
+    HELD = null; if (typeof bannerT !== 'undefined' && bannerT > 0) { HELD = { t: $('#bt').textContent, s: $('#bs').textContent, d: bannerT }; bannerT = 0; $('#banner').classList.remove('on'); }
+    showPanel(v, full, T);
+  }
+  let HELD = null;
+  function finish() { CINE = null; W8.hornInHand = false; endPanel(); if (HELD && mode === 'play') banner(HELD.t, HELD.s, Math.max(1.8, HELD.d)); HELD = null; }
+  function step(dt) {
+    const c = CINE; c.t += dt;
+    if (c.t > .3 && c.t < c.end) for (const k in pressed) if (pressed[k]) { c.t = Math.max(c.t, c.end); endPanel(); break; }
+    W8.hornInHand = c.t > c.a * .75 && c.t < c.T - .06;
+    if (!c.called && c.t >= c.blow) { c.called = true; hornCall(!c.full); shakeMag = Math.max(shakeMag, 2); }
+    if (c.t >= c.blow && c.t < c.end) emit(c, dt);
+    if (c.t >= c.T) finish();
+  }
+  function emit(c, dt) {
+    const b = W8.bellAt || { x: P.x + P.facing * 22, y: P.y - 72, f: P.facing }, f = b.f, R = Math.random;
+    if (R() < dt * 34) mist.push({ k: 'mist', x: b.x, y: b.y, vx: f * (60 + R() * 70), vy: -10 + R() * 26, t: 0, max: 1.3 + R() * .6, s: 5 + R() * 5, gy: P.y });
+    const span = c.end - c.blow, n = Math.max(1, c.v.length), slot = Math.min(.55, span * .8 / n);
+    c.v.forEach((id, i) => { const t0 = c.blow + i * slot * .85, u = c.t - t0; if (u < 0 || u > slot + .15) return; motif(id, b, f, u, c.spawn, dt); });
+  }
+  function motif(id, b, f, u, sp, dt) {
+    const R = Math.random, once = (k) => { if (sp[k]) return false; sp[k] = 1; return true; }, base = { x: b.x, y: b.y, t: 0, gy: P.y };
+    if (id === 'charge' && R() < dt * 14) mist.push(Object.assign({}, base, { k: 'chev', vx: f * (150 + R() * 60), vy: -20 + R() * 40, max: .9, f }));
+    if (id === 'banner' && once('banner')) mist.push(Object.assign({}, base, { k: 'cloth', vx: f * 110, vy: -14, max: 1.3, f }));
+    if (id === 'iron' && R() < dt * 50) mist.push(Object.assign({}, base, { k: 'spark', vx: f * (80 + R() * 140), vy: -60 + R() * 60, g: 260, max: .5 + R() * .3 }));
+    if (id === 'drum' && once('drum' + Math.floor(u / Math.max(.18, W8.beat().per)))) mist.push(Object.assign({}, base, { k: 'ring', vx: f * 70, vy: 0, max: .7, f }));
+    if (id === 'hunt' && once('hunt')) mist.push(Object.assign({}, base, { k: 'arrow', vx: f * 260, vy: -8, max: .9, f }));
+    if (id === 'dead' && once('dead' + (u > .22 ? 1 : 0))) mist.push(Object.assign({}, base, { k: 'rider', x: b.x - f * 10, y: P.y + (u > .22 ? -10 : 8), vx: f * 210, vy: 0, max: 1.3, f }));
+    if (id === 'watchfire' && R() < dt * 30) mist.push(Object.assign({}, base, { k: 'ember', vx: f * (40 + R() * 70), vy: -40 - R() * 50, max: .9 + R() * .4, ph: R() * 9 }));
+    if (id === 'standard' && once('standard')) mist.push(Object.assign({}, base, { k: 'arms', vx: f * 50, vy: -24, max: 1.3, f }));
+  }
+  function stepMist(dt) {
+    for (const m of mist) { m.t += dt; m.x += m.vx * dt; m.y += m.vy * dt; if (m.g) m.vy += m.g * dt; if (m.k === 'mist') { m.vx *= 1 - dt * 1.2; m.s += dt * 14; } if (m.k === 'ember') m.vx *= 1 - dt; }
+    for (let i = mist.length - 1; i >= 0; i--) if (mist[i].t >= mist[i].max) mist.splice(i, 1);
+  }
+  function drawMist(t) {
+    for (const m of mist) {
+      const u = m.t / m.max, a = Math.min(1, m.t / .12) * (1 - u); ctx.save();
+      if (m.k === 'mist') { ctx.fillStyle = `rgba(150,164,192,${.3 * a})`; ctx.beginPath(); ctx.ellipse(m.x, m.y, m.s * 1.4, m.s, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = `rgba(236,242,252,${.24 * a})`; ctx.beginPath(); ctx.ellipse(m.x - 2, m.y - 2, m.s * .8, m.s * .55, 0, 0, Math.PI * 2); ctx.fill(); }
+      else if (m.k === 'chev') { ctx.translate(m.x, m.y); ctx.scale(m.f, 1); ctx.globalAlpha = a; ctx.lineJoin = 'round'; for (const w of [3.6, 1.8]) { ctx.beginPath(); ctx.moveTo(-3, -6); ctx.lineTo(3, 0); ctx.lineTo(-3, 6); ctx.strokeStyle = w > 2 ? '#3A2410' : '#F2D06A'; ctx.lineWidth = w; ctx.stroke(); } }
+      else if (m.k === 'cloth') { ctx.translate(m.x, m.y); ctx.scale(m.f, 1); ctx.globalAlpha = .75 * a; const L = 30 + u * 40; ctx.beginPath(); ctx.moveTo(0, 0);
+        for (let i = 0; i <= 10; i++) { const x = -L * i / 10, y = Math.sin(t * 8 + i * .8) * 3 * (i / 10); ctx.lineTo(x, y - 5); } for (let i = 10; i >= 0; i--) { const x = -L * i / 10, y = Math.sin(t * 8 + i * .8) * 3 * (i / 10); ctx.lineTo(x, y + 4 - i * .25); } ctx.closePath();
+        ctx.fillStyle = 'rgba(242,208,106,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(166,42,38,.7)'; ctx.lineWidth = 1; ctx.stroke(); }
+      else if (m.k === 'spark') { ctx.strokeStyle = `rgba(230,232,240,${a})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x - m.vx * .03, m.y - m.vy * .03); ctx.stroke(); ctx.fillStyle = `rgba(122,126,134,${a})`; ctx.fillRect(m.x - .8, m.y - .8, 1.6, 1.6); }
+      else if (m.k === 'ring') { const r = 6 + u * 30; ctx.strokeStyle = `rgba(138,90,46,${a})`; ctx.lineWidth = 2.2 * (1 - u) + .6; ctx.beginPath(); ctx.ellipse(m.x, m.y, r * .45, r, 0, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = `rgba(242,208,106,${.6 * a})`; ctx.lineWidth = .8; ctx.stroke(); }
+      else if (m.k === 'arrow') { ctx.translate(m.x, m.y); ctx.scale(m.f, 1); ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(194,58,30,.45)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(0, 0); ctx.stroke();
+        ctx.strokeStyle = '#C23A1E'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(6, 0); ctx.stroke(); ctx.fillStyle = '#C23A1E'; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(3, -3.4); ctx.lineTo(3, 3.4); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-27, -4); ctx.lineTo(-24, 0); ctx.lineTo(-27, 4); ctx.closePath(); ctx.fill(); }
+      else if (m.k === 'ember') { const x = m.x + Math.sin(t * 6 + m.ph) * 3; ctx.fillStyle = `rgba(255,${150 + Math.round(70 * (1 - u))},70,${a})`; ctx.beginPath(); ctx.arc(x, m.y, 1.4 + (1 - u), 0, Math.PI * 2); ctx.fill(); }
+      else if (m.k === 'arms') { ctx.translate(m.x, m.y); ctx.globalAlpha = .7 * a; ctx.scale(.9 + u * .3, .9 + u * .3); W8.arms(0, 0, 22, 26, { ow: .6 }); }
+      else if (m.k === 'rider' && W8.horse) { const o = { t, walk: t * 14, gallop: 1, legCol: '#6A7A96', bootCol: '#4A566E' }, look = Object.assign({}, heroLook(), { cloak: '#5A6A86', body: '#7A8AA6', legs: '#6A7A96', boots: '#4A566E' });
+        for (let i = 2; i >= 0; i--) { ctx.save(); ctx.translate(m.x - m.f * i * 16, m.y); ctx.scale(m.f * .72, .72); ctx.globalAlpha = (i ? .1 : .42) * a; TINT = '#C8D4EA';
+          try { W8.horse('back', o); ctx.save(); ctx.translate(0, -36); drawHumanoid(look, { arm: -.6, Y: .3, weapon: 'sword', noCloak: 1 }); ctx.restore(); W8.horse('front', o); } finally { TINT = null; } ctx.restore(); } }
+      ctx.restore();
+    }
+  }
+  // the pose: hand to the horn at his belt, up to his lips, the chest lifted as he blows, and back
+  function cinePose() {
+    const c = CINE, t = c.t, pose = { walk: 0, weapon: 'w8horn', tier: 1, breath: 0 };
+    const K = [[0, 1.1, 0, 0], [c.a, 1.55, .55, .02], [c.b, .55, 2.45, -.1], [c.end, .55, 2.45, -.16], [c.T, 1.25, .3, 0]];
+    let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++;
+    const [t0, a0, e0, l0] = K[i], [t1, a1, e1, l1] = K[i + 1], k = W8.kit.sm ? W8.kit.sm(cl01((t - t0) / Math.max(.01, t1 - t0))) : cl01((t - t0) / Math.max(.01, t1 - t0));
+    pose.arm = a0 + (a1 - a0) * k; pose.elbow = e0 + (e1 - e0) * k; pose.lean = l0 + (l1 - l0) * k; pose.backArm = 1.3; pose.backElbow = .3;
+    if (!W8.hornInHand) pose.weapon = 'fists';
+    const up = t > c.a ? cl01((t - c.a) / (c.b - c.a)) : 0;
+    pose.hornA = t < c.b ? .9 - 1.5 * up : t < c.end ? -.6 - .06 * Math.sin(t * 9) : -.6 + 1.5 * cl01((t - c.end) / (c.T - c.end));
+    pose.hornGlow = t >= c.blow && t < c.end ? .6 + .4 * Math.sin(t * 20) : 0;
+    return pose;
+  }
+  { const _pp = playerPose; playerPose = function () { if (CINE && P) return cinePose(); return _pp(); }; }
+  // the fight waits on the call
+  { const _up = updatePlayer; updatePlayer = function (dt) {
+      if (QUEUE && P && mode === 'play' && !(typeof zoneTrans !== 'undefined' && zoneTrans)) { const q = QUEUE; QUEUE = null; if (owned() && verses().length && P.state !== 'dead' && P.hp > 0) begin(q.full); }
+      stepMist(dt);
+      if (CINE) { if (mode !== 'play' || !P || P.state === 'dead') { finish(); return _up(dt); } step(dt); return; }
+      return _up(dt); }; }
+  { const _uw = updateWorld; updateWorld = function (dt) { if (CINE) return; return _uw(dt); }; }
+  { const _ml = mechList; mechList = function (list, t) { _ml(list, t); if (mist.length) list.push([(P ? P.y : 0) + 40, () => onMain(() => drawMist(t))]); }; }
+
+  // ---------------- the scroll that says what the horn calls ----------------
+  function showPanel(v, full, T) {
+    endPanel(); const hud = document.getElementById('hud'); if (!hud) return;
+    const el = panel = document.createElement('div'); el.id = 'w8hornCall';
+    const two = v.length > 4;
+    el.style.cssText = `position:absolute;left:50%;top:12.5%;transform:translate(-50%,-6px);width:min(94%,${two ? 560 : 360}px);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:6;` +
+      'background:linear-gradient(#F4EAD0,#DCC8A0);border:2px solid #C9982E;box-shadow:0 0 0 1px #3A2410,0 3px 10px rgba(0,0,0,.45);border-radius:4px;padding:5px 9px 6px;color:#2A1A0E;font-family:Georgia,serif;box-sizing:border-box';
+    const head = document.createElement('div'); head.style.cssText = 'text-align:center;font-family:Cinzel,Georgia,serif;font-size:clamp(9px,1.9vw,12px);letter-spacing:.16em;color:#8A2A1E;margin-bottom:3px';
+    head.innerHTML = `<span style="color:#A6802A">✦</span> THE HORN OF LORRAINE <span style="color:#A6802A">✦</span><span style="color:#5A4430;letter-spacing:.06em"> · the Long March, ${v.length} ${v.length === 1 ? 'verse' : 'verses'}</span>`;
+    el.appendChild(head);
+    const grid = document.createElement('div'); grid.style.cssText = `display:grid;grid-template-columns:${two ? '1fr 1fr' : '1fr'};gap:2px 10px`;
+    for (const id of v) { const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:5px;min-width:0';
+      const cv = document.createElement('canvas'); cv.width = 40; cv.height = 40; cv.style.cssText = 'width:17px;height:17px;flex:none'; try { W8.verseIcon(cv.getContext('2d'), id, 20, 20, 17); } catch (e) {}
+      const tx = document.createElement('div'); tx.style.cssText = 'font-size:clamp(9px,1.75vw,11.5px);line-height:1.15;min-width:0';
+      tx.innerHTML = `<b style="font-family:Cinzel,Georgia,serif;color:#6A2414">${V[id].name.replace(/^Verse of (the )?/, '')}</b> <span style="color:#3A2A1A">${W8.VLINE(id)}</span>`;
+      row.appendChild(cv); row.appendChild(tx); grid.appendChild(row); }
+    el.appendChild(grid);
+    const foot = document.createElement('div'); foot.style.cssText = 'text-align:right;font-size:8px;color:#7A6244;margin-top:2px;font-style:italic'; foot.textContent = 'any button to march on';
+    el.appendChild(foot);
+    hud.appendChild(el); setTimeout(() => { if (panel === el) { el.style.opacity = '1'; el.style.transform = 'translate(-50%,0)'; } }, 30);
+  }
+  function endPanel() { if (!panel) return; const el = panel; panel = null; el.style.opacity = '0'; setTimeout(() => el.remove(), 260); }
 })();
