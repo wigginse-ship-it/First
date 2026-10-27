@@ -180,14 +180,18 @@ function heroPaint(x, y) {
     hd.ellipse(.6, y - 3, 12.4, 13.4, 0, 0, TAU); hd.rect(-1.4, y + 4, 6.4, 8.4); // (head space: the head and hair, and the neck below)
     ctx.setTransform(1, 0, 0, 1, 0, 0); const all = new Path2D(); all.addPath(clip); all.addPath(hd, HEAD_MASK.m); ctx.clip(all, 'evenodd'); ctx.setTransform(m);
   }
-  const lg = ctx.createRadialGradient(x + 8, y - 64, 0, x + 8, y - 64, 46); // light from the upper right
-  lg.addColorStop(0, 'rgba(255,236,206,.13)'); lg.addColorStop(1, 'rgba(255,236,206,0)'); ctx.fillStyle = lg; ctx.fillRect(x - 50, y - 112, 100, 70);
-  const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.22)'); ctx.fillStyle = dg; ctx.fillRect(x - 75, y - 30, 150, 34); // the legs settle into shadow toward the street
+  // light from the upper right, and the legs settling into shadow toward the street: soft-lit onto him with the grain
+  // below, so they model his steel, leather and skin but leave his blacks black (laid straight on, the light greyed the
+  // top of the cloak and the shadow darkened its hem, splitting it into a lighter top and a darker bottom)
+  const m0 = ctx.getTransform(), lg = ctx.createRadialGradient(x + 8, y - 64, 0, x + 8, y - 64, 46);
+  lg.addColorStop(0, 'rgba(255,236,206,.34)'); lg.addColorStop(1, 'rgba(255,236,206,0)');
+  const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.4)');
   ctx.translate(x, y); ctx.scale(.5, .5);
   { // the brush grain, soft-lit onto him: it works into his steel, leather and skin but leaves his blacks black (the cloak above all)
     const L = ctx.canvas, m = ctx.getTransform();
     if (!heroBC || heroBC.width !== L.width || heroBC.height !== L.height) { retire(heroBC); [heroBC, heroBG] = texCanvas(L.width, L.height); }
     heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'source-over'; heroBG.globalAlpha = 1; heroBG.clearRect(0, 0, L.width, L.height);
+    heroBG.setTransform(m0); heroBG.fillStyle = lg; heroBG.fillRect(x - 38, y - 110, 92, 92); heroBG.fillStyle = dg; heroBG.fillRect(x - 75, y - 30, 150, 34);
     heroBG.setTransform(m); heroBG.fillStyle = texPat(heroBG, 'brush'); heroBG.fillRect(-150, -210, 300, 222);
     heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'destination-in'; heroBG.drawImage(L, 0, 0);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = .9; ctx.drawImage(heroBC, 0, 0); ctx.restore();

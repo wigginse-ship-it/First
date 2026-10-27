@@ -7,7 +7,7 @@
 // knows what feeds it: the curse he laid on Amber, blind, in Eric's dungeon. It took root here first. He goes back to
 // unmake what he made.
 //   lorraine     - The Winter Fields (waves 1-2; villagers flee across the field and the dead get up grey: rule 'w8flight')
-//   lorraine2    - The Edge of the Circle (waves 3-4, the Hangman last; the Circle breathes across the field: rule 'w8edge')
+//   lorraine2    - The Edge of the Circle (waves 3-4, the Plough last; the Circle breathes across the field: rule 'w8edge')
 //   lorraineBoss - The Heart of the Circle: the Goat-Lord in four shapes (rule 'w8heart')
 // Its relic is the Horn of Lorraine (save.w8relic) and its Long March: verses earned by clearing worlds without falling (w8_late.js).
 (() => {
@@ -16,20 +16,23 @@
   MAT_COL.ash = ['#8E887E', '#C8C2B4', '#3A3632']; MAT_SFX.ash = 'hit-flesh';
   MAT_COL.bronze = ['#C89A48', '#F2D890', '#5A8A70']; MAT_SFX.bronze = 'hit-metal';
   MAT_COL.shell = ['#F2EAD8', '#E8B040', '#C8A880']; MAT_SFX.shell = 'hit-crystal';
+  MAT_COL.wood = ['#7A4A26', '#C8884A', '#E8DCC0']; MAT_SFX.wood = 'hit-flesh';
 
   Object.assign(EDEF, {
-    // what the Circle makes of the people it takes, and the soldiers it has taken
-    w8hollow:  { name: 'Hollow', draw: 'w8hollow', mat: 'ash', move: 'ground', hp: 62, spd: 58, hw: 12, hh: 60, dmg: 13, plans: ['w8flail', 'w8grab', 'w8flail'], wind: .6, cd: [1.0, 1.8], reach: 50, weight: 1, shards: [5, 8], kind: 'human' },
-    w8halberd: { name: 'Billman of the Circle', draw: 'w8halberd', mat: 'flesh', move: 'ground', hp: 72, spd: 70, hw: 13, hh: 66, dmg: 14, plans: ['w8thrust', 'w8hook', 'w8thrust'], wind: .55, cd: [1.0, 1.7], reach: 100, weight: .9, shards: [6, 9], sigil: .15, kind: 'human' },
-    w8xbow:    { name: 'Pavise Crossbowman', draw: 'w8xbow', mat: 'flesh', move: 'ground', hp: 70, spd: 56, hw: 13, hh: 62, dmg: 14, plans: ['w8bolt', 'w8bolt'], wind: .85, cd: [1.4, 2.3], ranged: 1, reach: 210, weight: 1, shards: [6, 9], sigil: .2, kind: 'human' },
-    w8flag:    { name: 'Flagellant', draw: 'w8flag', mat: 'flesh', move: 'ground', hp: 52, spd: 98, hw: 12, hh: 64, dmg: 9, plans: ['w8lash', 'w8lash', 'w8frenzy'], wind: .45, cd: [.8, 1.5], reach: 74, weight: 1.1, shards: [5, 8], kind: 'human' },
-    // Bosch's creatures, come out of it
-    w8bell:    { name: 'Bellman', draw: 'w8bell', mat: 'bronze', move: 'ground', hp: 190, spd: 34, hw: 20, hh: 64, dmg: 19, plans: ['w8toll', 'swing', 'w8bdrop'], wind: .75, cd: [1.4, 2.4], reach: 64, weight: .4, poise: 5, shards: [12, 16], sigil: .5 },
+    // the two that were people once: a villager the Circle has had, and a penitents' procession grown into one thing
+    w8hollow:  { name: 'The Hollowed', draw: 'w8hollow', mat: 'ash', move: 'ground', hp: 62, spd: 56, hw: 13, hh: 64, dmg: 13, plans: ['w8flail', 'w8grab', 'w8flail'], wind: .6, cd: [1.0, 1.8], reach: 50, weight: 1, shards: [5, 8], kind: 'human' },
+    w8flag:    { name: 'The Procession', draw: 'w8flag', mat: 'flesh', move: 'ground', hp: 70, spd: 84, hw: 28, hh: 70, dmg: 9, plans: ['w8lash', 'w8lash', 'w8frenzy'], wind: .5, cd: [.8, 1.5], reach: 74, weight: .8, shards: [6, 9], sigil: .2, kind: 'human' },
+    // and the things out of the Circle that never were
+    w8halberd: { name: 'Knife-Ears', draw: 'w8halberd', mat: 'flesh', move: 'ground', hp: 72, spd: 78, hw: 16, hh: 60, dmg: 14, plans: ['w8thrust', 'w8hook', 'w8thrust'], wind: .55, cd: [1.0, 1.7], reach: 100, weight: .9, shards: [6, 9], sigil: .15, kind: 'creature' },
+    w8xbow:    { name: 'The Crawling Mouth', draw: 'w8xbow', mat: 'flesh', move: 'ground', hp: 70, spd: 64, hw: 22, hh: 42, dmg: 14, plans: ['w8bolt', 'w8bolt'], wind: .85, cd: [1.4, 2.3], ranged: 1, reach: 210, weight: 1, shards: [6, 9], sigil: .2, kind: 'creature' },
+    w8bell:    { name: 'The Hurdy-Gurdy', draw: 'w8bell', mat: 'wood', move: 'ground', hp: 190, spd: 36, hw: 28, hh: 66, dmg: 19, plans: ['w8toll', 'swing', 'w8bdrop'], wind: .75, cd: [1.4, 2.4], reach: 64, weight: .4, poise: 5, shards: [12, 16], sigil: .5, kind: 'creature' },
     w8crow:    { name: 'Funnel-Hat Crow', draw: 'w8crow', mat: 'fur', move: 'fly', hover: 64, hp: 42, spd: 88, hw: 18, hh: 26, dmg: 12, plans: ['w8peck', 'w8murder', 'w8peck'], wind: .6, cd: [1.3, 2.2], ranged: 1, reach: 150, weight: 1.15, shards: [5, 8], kind: 'creature' },
     w8egg:     { name: 'Walking Egg', draw: 'w8egg', mat: 'shell', move: 'ground', hp: 64, spd: 122, hw: 15, hh: 62, dmg: 13, plans: ['w8kick', 'w8roll', 'w8kick'], wind: .5, cd: [.9, 1.6], reach: 48, weight: 1, shards: [6, 9], kind: 'creature' },
-    // he waits at the gallows at the end of the edge (the last wave there; never sent anywhere else)
-    w8hangman: { name: 'The Hangman of the Circle', noRandom: 1, draw: 'w8hangman', mat: 'flesh', move: 'ground', hp: 300, spd: 72, hw: 18, hh: 88, dmg: 18, plans: ['w8noose', 'w8axe', 'w8gallows', 'w8sweep', 'w8axe'], wind: .65, cd: [.9, 1.5], reach: 82, weight: .4, poise: 7, shards: [26, 34], sigil: 1, kind: 'human' },
+    // it waits at the end of the edge (the last wave there; never sent anywhere else): an ox with a man's weeping face,
+    // a plough grown out of its back, the yoke and its chain still on it
+    w8hangman: { name: 'The Plough of the Circle', noRandom: 1, draw: 'w8hangman', mat: 'fur', move: 'ground', hp: 300, spd: 70, hw: 36, hh: 84, dmg: 18, plans: ['w8noose', 'w8axe', 'w8gallows', 'w8sweep', 'w8axe'], wind: .65, cd: [.9, 1.5], reach: 82, weight: .3, poise: 7, shards: [26, 34], sigil: 1, kind: 'creature' },
   });
+
 
   // the Goat-Lord keeps his shape in e.w8form (1-4; art_w8.js's 'w8heart' rule); world.js only ever sees phases 1-3
   const form = () => (typeof boss !== 'undefined' && boss && boss.def === BOSSES.w8goat ? boss.w8form || 1 : 1);
@@ -54,10 +57,10 @@
 
   STAGES.push({ name: 'Lorraine', sub: 'THE BLACK CIRCLE IS GROWING', theme: 'lorraine', len: 3100,
     pods: [760, 1700], drop: [.95, .6],
-    waves: [['w8hollow', 'w8halberd', 'w8crow', 'w8hollow'],
-      ['w8bell*', 'w8xbow', 'w8hollow', 'w8flag', 'w8halberd', 'w8egg', 'w8crow'],
-      ['w8flag*', 'w8xbow', 'w8egg', 'w8bell', 'w8halberd', 'w8crow', 'w8hollow', 'w8xbow'],
-      ['w8hangman', 'w8hollow', 'w8hollow']],
+    waves: [['w8halberd', 'w8hollow', 'w8crow', 'w8xbow'],
+      ['w8bell*', 'w8xbow', 'w8egg', 'w8halberd', 'w8crow', 'w8flag', 'w8egg'],
+      ['w8egg*', 'w8xbow', 'w8halberd', 'w8bell', 'w8crow', 'w8egg', 'w8halberd', 'w8xbow'],
+      ['w8hangman', 'w8egg', 'w8crow']],
     boss: 'w8goat' });
 
   ZONES.push({ trans: ['w8bells', 'w8circle'], zones: [

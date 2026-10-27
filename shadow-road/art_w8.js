@@ -528,8 +528,8 @@
   Object.assign(W8.art, { GR, sketch, hatchRect, boschForm, ringStone, goatBanner, drawPit });
 
   // ======================================================================================================
-  // THE PEOPLE OF LORRAINE AND THE MEN OF THE CIRCLE: Bruegel's figures (squat, round-headed, wrapped in wool), and the
-  // things the Circle makes of them
+  // THE PEOPLE OF LORRAINE: Bruegel's figures (squat, round-headed, wrapped in wool), running from the Circle (the things
+  // the Circle makes of them are in the next part)
   // ======================================================================================================
   // a limb from three joints, two tapered strips meeting at the middle one
   function limb3(ax, ay, bx, by, cx, cy, w0, w1, w2, col, o) { w0 *= 1.3; w1 *= 1.3; w2 *= 1.3;
@@ -602,278 +602,11 @@
   }
   W8.villager = villager;
 
-  // ---------------- THE HOLLOW: what is left of a villager the Circle has had. Grey all through, as if the painter had
-  // stopped at the underpainting; no face, only the burned ring on the brow; a threshing flail it never lets go of ------
-  CREATURES.w8hollow = function (e, a) {
-    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0;
-    const flail = (st === 'wind' && e.plan === 'w8flail'), grab = (st === 'wind' && e.plan === 'w8grab') || (st === 'w8act' && e.w8a === 'grab'), sm2 = st === 'w8act' && e.w8a === 'flail';
-    const jerk = Math.sin(t * 9 + (e.walk || 0)) * (ph ? 1.4 : .5) * (hsh(Math.floor(t * 6) + e.x * .01) > .7 ? 1 : 0); // it moves in jerks, like a thing on strings
-    const skin = '#A8A094', cloth = '#7A746A', dk = '#3E3A34';
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.translate(jerk * .4, 0);
-    const lean = grab ? .3 + (st === 'w8act' ? .2 : wind * .2) : flail ? -.2 * wind : sm2 ? .25 : .12, sw = Math.sin(ph * .8) * 7;
-    const hip = [0, -27];
-    { const f = [-sw, 0], k = knee(hip[0], hip[1], f[0], -1, 14.6); limb3(-1, hip[1], k[0], k[1], f[0], -2, 5, 3.8, 3, '#5E5850'); cel(PE(f[0] + 1.6, -1.2, 3.6, 1.6), '#2E2A26', { d: .6, r: .3, w: 1 }); } // bare feet, grey
-    // the far arm, hanging longer than an arm should
-    const sx = lean * 26 - 2, sy = -48;
-    if (!(flail || sm2)) { const r = grab ? (st === 'w8act' ? 1 : wind) : 0, ex = sx + 4 + r * 10, ey = sy + 14 - r * 10, hx = sx + 6 + r * 22, hy = sy + 26 - r * 18; limb3(sx, sy, ex, ey, hx, hy, 3.6, 3, 2.4, shade(skin, -.3)); fingers(hx, hy, r * .8 + .3, '#8E867A'); }
-    ctx.save(); ctx.translate(0, hip[1]); ctx.rotate(lean); ctx.translate(0, -hip[1]);
-    cel(PB([-7, -50, 7, -50, 10, -34, 11 - sw * .2, -18, 3, -15, -6, -19, -11 - sw * .2, -17, -9, -34]), cloth, { d: 2.6, r: .8, w: 1.5, dark: '#4A4640', tex: () => {
-      ctx.strokeStyle = 'rgba(20,18,14,.4)'; ctx.lineWidth = .6; ctx.beginPath(); for (let k = 0; k < 9; k++) { const x = -10 + k * 2.6; ctx.moveTo(x, -18 + (k % 2) * 2); ctx.lineTo(x + 1, -22); } ctx.stroke(); // its rags
-      ctx.strokeStyle = 'rgba(30,26,20,.25)'; ctx.lineWidth = .5; ctx.beginPath(); for (let k = 0; k < 12; k++) { const y = -48 + k * 2.6; ctx.moveTo(-8, y); ctx.lineTo(8, y - 4); } ctx.stroke(); // underdrawing hatching through the paint
-    } });
-    // the head: a blank oval sagging forward, two holes, the ring burned on the brow
-    const hx = 3, hy = -58;
-    cel(PB([hx - 6, hy + 5, hx - 6.6, hy - 4, hx - 1, hy - 8.4, hx + 5.6, hy - 6, hx + 7, hy + 2, hx + 3, hy + 7.6]), skin, { d: 1.4, r: .7, w: 1.4, dark: '#6E685E' });
-    if (DET()) { ctx.fillStyle = C('#1A1714'); ell(hx + 3, hy - .4, 1.3, 1.8); ctx.fill(); ell(hx + 6, hy, .9, 1.6); ctx.fill(); ell(hx + 4.6, hy + 4.4, 1.6, .9); ctx.fill();
-      ctx.strokeStyle = C('#14110E'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.ellipse(hx + 1.4, hy - 5, 3.4, 1.2, -.2, 0, TAU); ctx.stroke(); }
-    ctx.restore();
-    { const f = [sw, 0], k = knee(hip[0], hip[1], f[0], -1, 14.6); limb3(1, hip[1], k[0], k[1], f[0], -2, 5.2, 4, 3.2, '#6E685E'); cel(PE(f[0] + 1.8, -1.2, 3.8, 1.7), '#3A3630', { d: .6, r: .3, w: 1 }); }
-    // the near arm and the flail: two staves on a thong of leather, the swingle whirled up and brought down
-    { const r = flail ? wind : sm2 ? 1 : 0, k2 = sm2 ? (e.w8k || 0) : 0, nx = sx + 3, ny = sy + 2;
-      const ang = sm2 ? lerp(-2.4, .9, sm(k2 * 1.6)) : flail ? lerp(.8, -2.4, wind) : .9 + Math.sin(t * 1.3) * .08, hx2 = nx + Math.cos(ang) * 14, hy2 = ny + Math.sin(ang) * 14;
-      limb3(nx, ny, (nx + hx2) / 2 + 2, (ny + hy2) / 2 + 3, hx2, hy2, 3.8, 3.2, 2.6, skin);
-      const sa = ang - .2, s1x = hx2 + Math.cos(sa) * 16, s1y = hy2 + Math.sin(sa) * 16;
-      ctx.strokeStyle = C(OUT); ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(hx2 - Math.cos(sa) * 4, hy2 - Math.sin(sa) * 4); ctx.lineTo(s1x, s1y); ctx.stroke(); ctx.strokeStyle = C('#7A6A52'); ctx.lineWidth = 1.8; ctx.stroke();
-      const swa = sa + (sm2 ? lerp(-1.5, 1.2, sm(k2 * 1.6)) : flail ? -1.4 * wind : 1.4 + Math.sin(t * 2) * .2), s2x = s1x + Math.cos(swa) * 13, s2y = s1y + Math.sin(swa) * 13;
-      ctx.strokeStyle = C('#2A2420'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(s1x, s1y); ctx.lineTo(s1x + Math.cos(swa) * 2, s1y + Math.sin(swa) * 2); ctx.stroke();
-      ctx.strokeStyle = C(OUT); ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(s1x + Math.cos(swa) * 2, s1y + Math.sin(swa) * 2); ctx.lineTo(s2x, s2y); ctx.stroke(); ctx.strokeStyle = C('#8E7C60'); ctx.lineWidth = 2; ctx.stroke();
-      if (sm2 && k2 > .3 && k2 < .7 && DET()) add(() => { ctx.strokeStyle = 'rgba(230,226,214,.35)'; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(s1x, s1y, 13, swa - 1.2, swa); ctx.stroke(); });
-      fingers(hx2, hy2, .1, '#8E867A'); }
-    ctx.restore();
-  };
-  function fingers(x, y, open, col) { ctx.strokeStyle = C(OUT); ctx.lineWidth = 2.6; ctx.beginPath(); for (let k = -1; k <= 1; k++) { const a = k * (.3 + open * .5); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * (4 + open * 2), y + Math.sin(a) * (4 + open * 2) + 1); } ctx.stroke(); ctx.strokeStyle = C(col); ctx.lineWidth = 1.2; ctx.stroke(); }
-
-  // ---------------- THE MEN OF THE CIRCLE: soldiers it has taken, corpse-pale, in the Goat's vermilion and black, their
-  // kettle-hats horned like goats. The billman carries a bill (a hooked blade on a long staff); the crossbowman plants a
-  // pavise painted with the goat and shoots from behind it ----------------
-  function goatHelm(x, y, s, horn2 = true) {
-    if (horn2) horn(x - 2 * s, y - 4 * s, x - 9 * s, y - 9 * s, x - 6 * s, y - 15 * s, 3 * s, .6 * s, '#C8B89A', 1); // the far horn
-    cel(PB([x - 9 * s, y + 1 * s, x - 8 * s, y - 6 * s, x, y - 9 * s, x + 8 * s, y - 6 * s, x + 9.5 * s, y + 1 * s, x, y + 2.4 * s]), '#6E6A64', { d: 1.4, r: .8, w: 1.3, dark: '#3A3834', lite: '#B4B0A8' });
-    cel(PB([x - 12 * s, y + 1.4 * s, x, y - .6 * s, x + 12.6 * s, y + 1.4 * s, x, y + 3.2 * s]), '#5A5650', { d: .8, r: .6, w: 1.2 }); // the brim
-    horn(x + 3 * s, y - 5 * s, x + 12 * s, y - 10 * s, x + 9 * s, y - 17 * s, 3.4 * s, .6 * s, '#DCCCAE', 1.1);
-  }
-  function goatFace(x, y, s, skin = '#B8BCA8') {
-    cel(PB([x - 5 * s, y - 4 * s, x + 5 * s, y - 4.6 * s, x + 6.6 * s, y + 2 * s, x + 4 * s, y + 7 * s, x - 2 * s, y + 6 * s, x - 5.4 * s, y + 1 * s]), skin, { d: 1.2, r: .6, w: 1.2, dark: '#7A806E' });
-    if (DET()) { ctx.fillStyle = C('#1A1612'); ctx.fillRect(x + 1 * s, y - 1.6 * s, 3.4 * s, 1 * s); ctx.fillStyle = C('#E8D040'); ctx.fillRect(x + 2.2 * s, y - 1.5 * s, 1 * s, .8 * s); } // a goat's slot of a pupil
-    fillPoly([x + 1 * s, y + 6 * s, x + 4 * s, y + 6.4 * s, x + 2.2 * s, y + 12 * s], '#3A342C', .9); // the beard
-  }
-  function surcoat(e, ph, lean, hem) {
-    const sw = Math.sin(ph) * 1.5;
-    cel(PB([-8, -50, 8, -50, 11, -32, 12 + sw, hem, 0, hem + 1, -12 + sw, hem, -10, -32]), PAL.verm, { d: 2.6, r: .9, w: 1.5, dark: '#6A1A0E', tex: () => {
-      ctx.fillStyle = C('#1C1612'); poly([-12, -32, 12, -32, 13, hem, -13, hem]); ctx.globalAlpha = .9; ctx.fill(); ctx.globalAlpha = 1; // the black lower half: the Goat's colours, per fess
-      ctx.fillStyle = C('#1C1612'); circle(1, -42, 3.4); ctx.fill(); ctx.strokeStyle = C('#1C1612'); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-1, -44.6); ctx.quadraticCurveTo(-4, -48, -2, -50); ctx.moveTo(3, -44.6); ctx.quadraticCurveTo(6, -48, 4, -50); ctx.stroke(); // the goat's head on the breast
-      ctx.strokeStyle = 'rgba(255,200,180,.25)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(-6, -36); ctx.quadraticCurveTo(-7, -26, -9, hem); ctx.stroke();
-    } });
-    cel(PP([-9, -33, 9, -33, 9, -30, -9, -30]), '#3A2A1C', { d: .5, r: .3, w: 1 }); // the belt
-  }
-  CREATURES.w8halberd = function (e, a) {
-    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0;
-    const thrust = st === 'w8act' && e.w8a === 'thrust', hook = st === 'w8act' && e.w8a === 'hook', wT = st === 'wind' && e.plan === 'w8thrust', wH = st === 'wind' && e.plan === 'w8hook', swing = st === 'strike' || (st === 'wind' && e.plan === 'swing');
-    const k = e.w8k || 0, legC = '#2A2622';
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    const sw = Math.sin(ph) * 7, lean = thrust ? .2 : wT ? -.12 * wind : hook ? -.1 : 0, hip = [0, -28];
-    { const f = [-sw - (thrust ? 8 : 0), 0], kk = knee(hip[0], hip[1], f[0], -1, 15); limb3(-1, hip[1], kk[0], kk[1], f[0], -2, 5, 4, 3.4, shade(legC, -.2)); shoe(f[0], 0, '#1A1612'); }
-    // the bill: a long ash staff, a hooked blade with a spike; held two-handed, levelled at you
-    let ang = -1.15 + Math.sin(t * 1.2) * .03, reach = 0;
-    if (wT) { ang = lerp(-1.15, -.05, sm(wind)); reach = -8 * wind; }
-    if (thrust) { ang = -.05; reach = k < .35 ? lerp(-8, 30, sm(k / .35)) : lerp(30, 0, sm((k - .35) / .65)); }
-    if (wH) { ang = lerp(-1.15, -.5, wind); reach = 6 * wind; }
-    if (hook) { ang = k < .4 ? lerp(-.5, .15, k / .4) : lerp(.15, -.4, (k - .4) / .6); reach = k < .4 ? 24 * sm(k / .4) : lerp(24, -10, sm((k - .4) / .6)); }
-    if (swing) { ang = st === 'strike' ? .4 : lerp(-1.15, -2.2, wind); }
-    const gx = 6 + reach * .5, gy = -38, ca = Math.cos(ang), sa = Math.sin(ang), back = 26, fwd = 66;
-    const shaft = () => { ctx.beginPath(); ctx.moveTo(gx - ca * back, gy - sa * back); ctx.lineTo(gx + ca * fwd, gy + sa * fwd); };
-    ctx.strokeStyle = C(OUT); ctx.lineWidth = 3.8; shaft(); ctx.stroke(); ctx.strokeStyle = C('#8A6E48'); ctx.lineWidth = 2; shaft(); ctx.stroke();
-    { const bx = gx + ca * fwd, by = gy + sa * fwd; ctx.save(); ctx.translate(bx, by); ctx.rotate(ang);
-      cel(PP([-2, -2, 16, -1, 22, 0, 16, 1, -2, 2]), '#A8ACB0', { d: .6, r: .5, w: 1.1, lite: '#E8ECEE' }); // the spike
-      cel(PB([-6, 0, -4, 8, 4, 11, 9, 8, 2, 6, -1, 2]), '#9A9EA2', { d: .8, r: .5, w: 1.1, lite: '#E0E4E6' }); // the blade, curved
-      horn(2, -1, 4, -7, 9, -9, 2.4, .4, '#9A9EA2', 1); // the hook
-      if (DET() && (thrust && k < .4 || hook && k < .45)) add(() => { ctx.fillStyle = 'rgba(240,244,246,.35)'; ctx.fillRect(-40, -2, 40, 4); });
-      ctx.restore(); }
-    ctx.save(); ctx.translate(0, hip[1]); ctx.rotate(lean); ctx.translate(0, -hip[1]);
-    // mail at the arms and skirt, the surcoat over it
-    cel(PB([-9, -30, 9, -30, 11, -16, -11, -16]), '#7A7E80', { d: 1, r: .5, w: 1.2, tex: () => { ctx.strokeStyle = 'rgba(30,30,34,.5)'; ctx.lineWidth = .5; ctx.beginPath(); for (let y = -28; y < -16; y += 2) { ctx.moveTo(-10, y); ctx.lineTo(10, y); } ctx.stroke(); } });
-    surcoat(e, ph, lean, -18);
-    const hx = 2, hy = -58; goatFace(hx + 1, hy, 1); goatHelm(hx, hy - 3, 1);
-    ctx.restore();
-    { const f = [sw + (thrust ? 6 : 0), 0], kk = knee(hip[0], hip[1], f[0], -1, 15); limb3(1, hip[1], kk[0], kk[1], f[0], -2, 5.2, 4.2, 3.6, legC); shoe(f[0], 0, '#1A1612'); }
-    // both arms on the staff
-    for (const [d, col] of [[-12, '#6E7276'], [10, '#8A8E92']]) { const hx = gx + ca * d, hy = gy + sa * d, sx = lean * 24 + (d < 0 ? -2 : 4), sy = -49; limb3(sx, sy, (sx + hx) / 2 + 2, (sy + hy) / 2 + 4, hx, hy, 4, 3.4, 3, col); fist(hx, hy, '#A6AA98', .95); }
-    ctx.restore();
-  };
-  // the pavise: a tall shield of planks, rounded at the head, painted vermilion with the goat in a black roundel
-  function pavise(x, y, s, hp, t) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    const path = PB([-8, 0, -9, -28, -6, -40, 0, -43, 6, -40, 9, -28, 8, 0]);
-    cel(path, PAL.verm, { d: 2, r: .8, w: 1.5, dark: '#6A1A0E', tex: () => {
-      ctx.strokeStyle = 'rgba(40,10,4,.5)'; ctx.lineWidth = .7; ctx.beginPath(); for (const x of [-3, 3]) { ctx.moveTo(x, -42); ctx.lineTo(x, 0); } ctx.stroke(); // the planks
-      ctx.fillStyle = C('#1C1612'); circle(0, -24, 5.4); ctx.fill(); ctx.fillStyle = C('#E8DCC4'); ell(0, -23, 2.4, 3); ctx.fill(); horn(-1, -27, -4, -30, -3, -33, 1.6, .3, '#E8DCC4', 0); horn(1, -27, 4, -30, 3, -33, 1.6, .3, '#E8DCC4', 0);
-      if (hp < 3) { ctx.strokeStyle = 'rgba(20,10,6,.85)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-2, -40); ctx.lineTo(1, -30); ctx.lineTo(-3, -18); if (hp < 2) { ctx.moveTo(5, -36); ctx.lineTo(2, -24); ctx.lineTo(6, -10); } ctx.stroke(); }
-      for (let i = 0; i < 6; i++) { ctx.fillStyle = 'rgba(255,220,200,.2)'; circle(-5 + hsh(i) * 10, -38 + hsh(i + 3) * 36, .8); ctx.fill(); }
-    } });
-    ctx.fillStyle = C('#3A3632'); ctx.fillRect(-1, 0, 2, 4); // the spike it is planted on
-    ctx.restore();
-  }
-  CREATURES.w8xbow = function (e, a) {
-    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0;
-    const aim = st === 'wind' && e.plan === 'w8bolt', shot = st === 'w8act' && e.w8a === 'bolt', crank = (st === 'w8act' && e.w8a === 'crank') || (st === 'recover' && e.w8span);
-    const planted = (e.w8pav || 0) > 0 && !ph;
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    const sw = Math.sin(ph) * 6, hip = [0, -27], kneel = aim || shot ? 1 : 0;
-    { const f = kneel ? [-10, 0] : [-sw, 0], kk = knee(hip[0], hip[1], f[0], -1, 15); limb3(-1, hip[1] + kneel * 4, kk[0], kk[1] + kneel * 3, f[0], -2, 5, 4, 3.4, '#1E1A18'); shoe(f[0], 0, '#141210'); }
-    ctx.save(); ctx.translate(0, kneel * 5);
-    cel(PB([-9, -30, 9, -30, 10, -17, -10, -17]), '#7A7E80', { d: 1, r: .5, w: 1.2 });
-    surcoat(e, ph, 0, -19);
-    const hx = 3, hy = -58; goatFace(hx + 1, hy, .95); goatHelm(hx, hy - 3, .95);
-    // the crossbow: a stock of dark wood, a steel prod, the string spanned (or slack after the shot), a bolt on it
-    const ax = 4, ay = aim || shot ? -46 : crank ? -30 : -36, ang = aim || shot ? 0 : crank ? .9 : .5;
-    ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang);
-    const spanned = !shot && !crank;
-    ctx.strokeStyle = C(OUT); ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(16, 0); ctx.stroke(); ctx.strokeStyle = C('#5A3E26'); ctx.lineWidth = 2; ctx.stroke();
-    ctx.strokeStyle = C(OUT); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(16, -10); ctx.quadraticCurveTo(spanned ? 12 : 18, 0, 16, 10); ctx.stroke(); ctx.strokeStyle = C('#B8BCC0'); ctx.lineWidth = 1.3; ctx.stroke();
-    ctx.strokeStyle = C('#E8E0C8'); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(16, -10); ctx.lineTo(spanned ? 4 : 14, 0); ctx.lineTo(16, 10); ctx.stroke();
-    if (spanned) { ctx.strokeStyle = C('#3A2A1C'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(4, -.8); ctx.lineTo(20, -.8); ctx.stroke(); fillPoly([20, -2.2, 24, -.8, 20, .6], '#9A9EA2'); }
-    ctx.restore();
-    fist(ax + 2, ay + 1, '#A6AA98');
-    ctx.restore();
-    { const f = kneel ? [8, 0] : [sw, 0], kk = knee(hip[0], hip[1] + kneel * 5, f[0], -1 - kneel * 6, 15); limb3(1, hip[1] + kneel * 5, kk[0], kk[1], f[0], -2 - kneel * 6, 5.2, 4.2, 3.6, '#2A2622'); if (!kneel) shoe(f[0], 0, '#141210'); }
-    if ((e.w8pav || 0) > 0) pavise(e.w8pavX ?? 18, 0, 1, e.w8pav, t); // planted in front of him (or carried while he walks)
-    ctx.restore();
-  };
-
-  // ---------------- THE FLAGELLANT: a hooded penitent of the plague years, his back laid open, scourging himself as he
-  // walks; turned on you, the scourge is a fast thing ----------------
-  CREATURES.w8flag = function (e, a) {
-    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0;
-    const lash = st === 'w8act' && e.w8a === 'lash', frenzy = st === 'w8act' && e.w8a === 'frenzy', wL = st === 'wind' && e.plan === 'w8lash', wF = st === 'wind' && e.plan === 'w8frenzy';
-    const k = e.w8k || 0;
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    if (frenzy) { ctx.scale(Math.cos(k * TAU * 3) >= 0 ? 1 : -1, 1); }
-    const sw = Math.sin(ph) * 7, hip = [0, -25], lean = .35 + (wL ? -.2 * wind : 0);
-    { const f = [-sw, 0], kk = knee(hip[0], hip[1], f[0], -1, 13.6); limb3(-1, hip[1], kk[0], kk[1], f[0], -2, 4.4, 3.4, 2.8, '#C8A080'); cel(PE(f[0] + 1.4, -1, 3.2, 1.4), '#8A6A50', { d: .5, r: .3, w: 1 }); } // bare legs
-    ctx.save(); ctx.translate(0, hip[1]); ctx.rotate(lean); ctx.translate(0, -hip[1]);
-    // the robe of undyed wool, cut away at the back; the back itself, striped with welts
-    cel(PB([-7, -46, 6, -47, 9, -30, 10, -12, 0, -10, -10, -12, -9, -30]), '#D6CCB4', { d: 2.4, r: .8, w: 1.5, dark: '#9A8E78', tex: () => {
-      ctx.fillStyle = C('#C89A80'); poly([-8, -44, -2, -45, -1, -26, -8, -28]); ctx.fill();
-      ctx.strokeStyle = 'rgba(150,30,24,.85)'; ctx.lineWidth = .9; ctx.beginPath(); for (let i = 0; i < 6; i++) { const y = -43 + i * 3; ctx.moveTo(-8, y); ctx.lineTo(-2, y + 2.4); } ctx.stroke();
-      ctx.strokeStyle = 'rgba(40,30,20,.35)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(2 + i * 2, -40); ctx.quadraticCurveTo(3 + i * 2, -24, 2 + i * 2.6, -11); } ctx.stroke();
-    } });
-    cel(PP([-9, -30, 9, -30, 9, -28, -9, -28]), '#5A4A34', { d: .5, r: .3, w: .9 }); // the rope girdle
-    // the tall pointed hood with its eyeholes, the long tail of it down his back
-    cel(PB([-6, -44, -4, -56, 0, -66, 3, -71, 7, -56, 9, -46, 2, -42]), '#E2DAC6', { d: 1.6, r: .7, w: 1.4, dark: '#A89E88' });
-    if (DET()) { ctx.fillStyle = C('#140E0A'); ell(4.8, -53, 1.1, 1.5); ctx.fill(); ell(7.4, -53, .8, 1.4); ctx.fill(); }
-    ctx.restore();
-    { const f = [sw, 0], kk = knee(hip[0], hip[1], f[0], -1, 13.6); limb3(1, hip[1], kk[0], kk[1], f[0], -2, 4.6, 3.6, 3, '#D8B090'); cel(PE(f[0] + 1.6, -1, 3.4, 1.5), '#9A7A5E', { d: .5, r: .3, w: 1 }); }
-    // the scourge: a short handle, five knotted cords (in the act they stream out at you)
-    const sx = lean * 22 + 2, sy = -44;
-    let ang = -2.2 + Math.sin(t * 4) * .3, cord = 14;
-    if (wL) ang = lerp(-2.2, -3.0, wind);
-    if (lash) { const n = Math.floor(k * 3), u = (k * 3) % 1; ang = lerp(-2.8, .5, sm(u * 1.8)) + n * .15; cord = 14 + Math.sin(u * Math.PI) * 26; }
-    if (wF) ang = -1.6 + wind * 6;
-    if (frenzy) { ang = k * TAU * 3; cord = 34; }
-    const hx = sx + Math.cos(ang) * 13, hy = sy + Math.sin(ang) * 13;
-    limb3(sx, sy, (sx + hx) / 2, (sy + hy) / 2 + 2, hx, hy, 3.4, 3, 2.6, '#D0A888');
-    ctx.strokeStyle = C(OUT); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + Math.cos(ang) * 6, hy + Math.sin(ang) * 6); ctx.stroke(); ctx.strokeStyle = C('#5A3A20'); ctx.lineWidth = 1.6; ctx.stroke();
-    const ox = hx + Math.cos(ang) * 6, oy = hy + Math.sin(ang) * 6;
-    for (let i = 0; i < 5; i++) { const ca = ang + (i - 2) * .14 + Math.sin(t * 7 + i) * .1 + (lash || frenzy ? 0 : .9), ex = ox + Math.cos(ca) * cord, ey = oy + Math.sin(ca) * cord + (lash || frenzy ? 0 : 6);
-      ctx.strokeStyle = C('#3A2A1A'); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.quadraticCurveTo((ox + ex) / 2, (oy + ey) / 2 + 3, ex, ey); ctx.stroke();
-      ctx.fillStyle = C('#2A1A10'); for (const u of [.5, 1]) { circle(lerp(ox, ex, u), lerp(oy, ey, u) + (u < 1 ? 1.5 : 0), 1.1); ctx.fill(); } }
-    if (DET() && (lash && (k * 3) % 1 < .5 || frenzy)) add(() => { ctx.strokeStyle = 'rgba(255,230,210,.22)'; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(ox, oy, cord * .8, ang - .8, ang); ctx.stroke(); });
-    fist(hx, hy, '#D8B090', .9);
-    ctx.restore();
-  };
-
-  // ---------------- THE HANGMAN OF THE CIRCLE (the edge's last fight): a head taller than a man, hooded in black, a
-  // leather apron, a headsman's axe as long as he is, and a coil of rope with its noose already tied ----------------
-  CREATURES.w8hangman = function (e, a) {
-    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0, k = e.w8k || 0;
-    const wN = st === 'wind' && e.plan === 'w8noose', noose = st === 'w8act' && e.w8a === 'noose', wA = st === 'wind' && e.plan === 'w8axe', axe = st === 'w8act' && e.w8a === 'axe', wS = st === 'wind' && e.plan === 'w8sweep', swp = st === 'w8act' && e.w8a === 'sweep', wG = st === 'wind' && e.plan === 'w8gallows';
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.18, 1.18);
-    const sw = Math.sin(ph) * 7, hip = [0, -30], lean = axe ? lerp(-.15, .35, sm(k * 2)) : wA ? -.18 * wind : swp ? .1 : 0;
-    { const f = [-sw - (axe ? 6 : 0), 0], kk = knee(hip[0], hip[1], f[0], -1, 16); limb3(-1, hip[1], kk[0], kk[1], f[0], -2, 6, 4.6, 3.8, '#2A2420'); shoe(f[0], 0, '#141210', 1.1); }
-    // the far arm: the coil of rope, or the noose swung round over his head and thrown
-    const sx0 = -3, sy0 = -54;
-    if (wN || noose) { const r = wN ? wind : 1, ex = sx0 + 2, ey = sy0 - 10 * r, hx = sx0 + 4, hy = sy0 - 20 * r;
-      limb3(sx0, sy0, ex, ey, hx, hy, 4.6, 3.8, 3.2, '#C8A080'); fist(hx, hy, '#C8A080');
-      if (wN) { const a2 = t * 12, rx = hx + Math.cos(a2) * 12, ry = hy - 6 + Math.sin(a2) * 4; ctx.strokeStyle = C('#8A7A5A'); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(rx, ry); ctx.stroke(); ctx.beginPath(); ctx.ellipse(rx, ry, 4, 3, a2, 0, TAU); ctx.stroke(); }
-    } else { limb3(sx0, sy0, sx0 - 2, sy0 + 12, sx0, sy0 + 22, 4.6, 3.8, 3.2, shade('#C8A080', -.2)); for (let i = 0; i < 4; i++) { ctx.strokeStyle = C(i % 2 ? '#8A7A5A' : '#6A5A40'); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(sx0 - 2, sy0 + 26, 6 - i * .5, 8 - i * .4, .2, 0, TAU); ctx.stroke(); } }
-    ctx.save(); ctx.translate(0, hip[1]); ctx.rotate(lean); ctx.translate(0, -hip[1]);
-    // bare chest and belly, a leather apron down to the knee, the black hood with its slits
-    cel(PB([-10, -58, 10, -58, 12, -44, 11, -30, -11, -30, -12, -44]), '#C8A080', { d: 2.6, r: .9, w: 1.5, dark: '#8A6448', tex: () => { ctx.strokeStyle = 'rgba(90,50,30,.4)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-6, -48); ctx.quadraticCurveTo(0, -44, 6, -48); ctx.moveTo(0, -44); ctx.lineTo(0, -34); ctx.stroke(); } });
-    cel(PB([-11, -36, 11, -36, 12, -10, 0, -8, -12, -10]), '#5A3A22', { d: 2, r: .7, w: 1.4, dark: '#3A2414', tex: () => { ctx.strokeStyle = 'rgba(20,10,4,.45)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(-6 + i * 5, -34); ctx.lineTo(-7 + i * 6, -10); } ctx.stroke(); ctx.fillStyle = 'rgba(120,20,10,.5)'; for (let i = 0; i < 4; i++) { ell(-4 + hsh(i) * 10, -26 + hsh(i + 2) * 14, 1.6, 2.6); ctx.fill(); } } }); // stained
-    cel(PB([-8, -58, -9, -68, -4, -76, 3, -77, 8, -70, 8, -60, 4, -56]), '#16120F', { d: 1.4, r: .9, w: 1.4, lite: '#3E3630' });
-    if (DET()) { ctx.fillStyle = C('#E8D8B0'); ctx.fillRect(2, -69, 4.2, 1.1); ctx.fillStyle = C('#C83A2A'); ctx.fillRect(3.4, -68.9, 1, .9); }
-    ctx.restore();
-    { const f = [sw + (axe ? 8 : 0), 0], kk = knee(hip[0], hip[1], f[0], -1, 16); limb3(1, hip[1], kk[0], kk[1], f[0], -2, 6.2, 4.8, 4, '#3A322C'); shoe(f[0], 0, '#141210', 1.1); }
-    // the axe: a long haft, a broad crescent of a head
-    let ang = -1.3 + Math.sin(t * 1.1) * .04;
-    if (wA) ang = lerp(-1.3, -2.9, sm(wind));
-    if (axe) ang = k < .5 ? lerp(-2.9, .9, sm(k * 2.2)) : .9;
-    if (wS) ang = lerp(-1.3, -3.6, wind);
-    if (swp) ang = lerp(-3.6, 2.6, sm(k));
-    if (wG) ang = -1.6;
-    const sx = lean * 26 + 4, sy = -54, hx = sx + Math.cos(ang) * 14, hy = sy + Math.sin(ang) * 14, L = 54;
-    limb3(sx, sy, (sx + hx) / 2 + 2, (sy + hy) / 2 + 3, hx, hy, 5, 4.2, 3.6, '#C8A080');
-    const ex = hx + Math.cos(ang) * L, ey = hy + Math.sin(ang) * L;
-    ctx.strokeStyle = C(OUT); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(hx - Math.cos(ang) * 6, hy - Math.sin(ang) * 6); ctx.lineTo(ex, ey); ctx.stroke(); ctx.strokeStyle = C('#6A4E30'); ctx.lineWidth = 2.2; ctx.stroke();
-    ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang);
-    cel(PB([-8, 0, -6, 7, 0, 16, 6, 18, 9, 10, 6, 1]), '#8E9296', { d: 1.2, r: .8, w: 1.3, lite: '#E2E6E8', dark: '#4E5256' });
-    if (DET()) { ctx.strokeStyle = 'rgba(250,252,255,.8)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(0, 16); ctx.quadraticCurveTo(7, 17, 9, 10); ctx.stroke(); }
-    ctx.restore();
-    if (DET() && (axe && k < .5 || swp)) add(() => { ctx.strokeStyle = 'rgba(240,230,220,.14)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(sx, sy, L + 12, ang - (swp ? 1.4 : .9), ang); ctx.stroke(); });
-    fist(hx, hy, '#C8A080', 1.1);
-    ctx.restore();
-  };
-  Object.assign(W8.art, { limb3, knee, shoe, fist, peasantHead, goatHelm, goatFace, pavise });
+  Object.assign(W8.art, { limb3, knee, shoe, fist, peasantHead });
 
   // ======================================================================================================
-  // BOSCH'S CREATURES, come out of the Circle: a man who wears a church bell, a crow in a funnel hat, an egg on legs
+  // BOSCH'S CREATURES, come out of the Circle: a crow in a funnel hat, an egg on legs
   // ======================================================================================================
-  // ---------------- THE BELLMAN: a great bronze bell worn as a hauberk, crown to thigh, with a crack in it to see out of;
-  // thick legs in striped hose under it, arms out through two holes, and the clapper torn out for a club. Blows from
-  // in front ring off the bronze: take him from behind, or break the bell open with heavy blows ----------------
-  function bell(x, y, s, crack, ring, t) {
-    const path = PB([x - 15 * s, y, x - 14 * s, y - 14 * s, x - 11 * s, y - 32 * s, x - 7 * s, y - 40 * s, x, y - 42 * s, x + 7 * s, y - 40 * s, x + 11 * s, y - 32 * s, x + 14 * s, y - 14 * s, x + 15 * s, y]);
-    const jit = ring ? Math.sin(t * 90) * ring * .8 : 0; ctx.save(); ctx.translate(jit, 0);
-    cel(path, '#8A6A34', { d: 3.4, r: 1.4, w: 1.7, dark: '#4A3416', lite: '#D8B060', tex: () => {
-      const g = ctx.createLinearGradient(x - 15 * s, 0, x + 15 * s, 0); g.addColorStop(0, 'rgba(30,20,8,.4)'); g.addColorStop(.62, 'rgba(255,230,160,.25)'); g.addColorStop(.75, 'rgba(255,250,220,.4)'); g.addColorStop(1, 'rgba(30,20,8,.3)'); ctx.fillStyle = g; ctx.fillRect(x - 16 * s, y - 44 * s, 32 * s, 46 * s); // round bronze
-      ctx.fillStyle = 'rgba(60,140,110,.35)'; for (let i = 0; i < 10; i++) { ell(x + (hsh(i) - .5) * 24 * s, y - hsh(i + 4) * 38 * s, 1.6 * s, 2.6 * s); ctx.fill(); } // verdigris
-      ctx.strokeStyle = 'rgba(40,26,10,.75)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 14.6 * s, y - 6 * s); ctx.quadraticCurveTo(x, y - 3 * s, x + 14.6 * s, y - 6 * s); ctx.moveTo(x - 12 * s, y - 28 * s); ctx.quadraticCurveTo(x, y - 25 * s, x + 12 * s, y - 28 * s); ctx.stroke(); // its mouldings
-      ctx.fillStyle = 'rgba(40,26,10,.6)'; ctx.font = `700 ${4 * s}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillText('O REX GLORIE', x, y - 16 * s); // the founder's inscription, as on every bell of the age
-    } });
-    // the crown of the bell: its canons, the loops it once hung by
-    for (const dx of [-4, 0, 4]) { ctx.strokeStyle = C(OUT); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + dx * s, y - 43 * s, 2.4 * s, Math.PI, 0); ctx.stroke(); ctx.strokeStyle = C('#B08840'); ctx.lineWidth = 1.4; ctx.stroke(); }
-    // the crack he sees out through, and his eye in it
-    ctx.fillStyle = C('#140C06'); poly([x + 3 * s, y - 36 * s, x + 7 * s, y - 31 * s, x + 6 * s, y - 27 * s, x + 9 * s, y - 22 * s, x + 7.4 * s, y - 21.6 * s, x + 4 * s, y - 27 * s, x + 5 * s, y - 31 * s]); ctx.fill();
-    if (DET()) { ctx.fillStyle = C(crack ? '#FFE0A0' : '#E8C860'); circle(x + 5.6 * s, y - 29.6 * s, .9 * s); ctx.fill(); }
-    if (crack > 0) { ctx.strokeStyle = C('#140C06'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(x - 4 * s, y - 40 * s); ctx.lineTo(x - 1 * s, y - 30 * s); ctx.lineTo(x - 6 * s, y - 20 * s); ctx.lineTo(x - 3 * s, y - 8 * s); if (crack > 1) { ctx.moveTo(x + 10 * s, y - 14 * s); ctx.lineTo(x + 6 * s, y - 8 * s); ctx.lineTo(x + 11 * s, y - 1 * s); } ctx.stroke(); }
-    ctx.restore();
-  }
-  CREATURES.w8bell = function (e, a) {
-    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0, k = e.w8k || 0;
-    const wT = st === 'wind' && e.plan === 'w8toll', toll = st === 'w8act' && e.w8a === 'toll', wS = st === 'wind' && e.plan === 'w8bdrop', drop = st === 'w8act' && e.w8a === 'bdrop', swing = st === 'strike' || (st === 'wind' && e.plan === 'swing');
-    const crack = e.w8crack || 0;
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    const sw = Math.sin(ph * .7) * 6, squat = wS ? wind * 6 : drop ? (k < .5 ? 6 * (1 - k * 2) : 0) : 0, bob = Math.abs(Math.sin(ph * .7)) * 1.6;
-    const legs = (near) => { const f = near ? [sw + 5, 0] : [-sw - 5, 0], hp = [near ? 5 : -5, -24 + squat], kk = knee(hp[0], hp[1], f[0], -1, 14, 1); for (const [col, w0] of [[near ? '#E8DCC0' : '#C8BCA0', 7]]) limb3(hp[0], hp[1], kk[0], kk[1], f[0], -2, w0, 5.6, 4.4, col, { tex: () => { ctx.fillStyle = 'rgba(160,40,30,.7)'; for (let i = -30; i < 0; i += 4) ctx.fillRect(-20, i, 40, 1.8); } }); shoe(f[0], 0, '#2A1E14', 1.3); };
-    legs(false);
-    // the far arm, out of its hole in the bronze
-    const by = -20 + squat - bob;
-    { const sx = -9, sy = by - 18, hx = sx - 6, hy = sy + 14; limb3(sx, sy, sx - 5, sy + 7, hx, hy, 5, 4.4, 3.8, '#9A8670'); fist(hx, hy, '#B89A7A', 1.2); }
-    legs(true);
-    bell(0, by + 4, 1, crack, toll ? (1 - k) : drop && k > .5 ? .7 : 0, t);
-    if (toll && DET()) for (let i = 0; i < 3; i++) { const r = 18 + ((k * 3 + i / 3) % 1) * 30; ctx.strokeStyle = `rgba(255,230,170,${.5 * (1 - (k * 3 + i / 3) % 1)})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(14, by - 18, r, -.7, .7); ctx.stroke(); } // the note going out of it
-    // the near arm with the clapper: an iron club as long as a leg, its ball scarred bright
-    let ang = .7 + Math.sin(t * 1.4) * .05;
-    if (wT) ang = lerp(.7, -2.2, sm(wind)); if (toll) ang = k < .25 ? lerp(-2.2, -.4, sm(k * 4)) : -.4;
-    if (swing) ang = st === 'strike' ? .5 : lerp(.7, -1.8, wind);
-    if (wS) ang = -1.6; if (drop) ang = -1.2;
-    const sx = 9, sy = by - 18, hx = sx + Math.cos(ang) * 12, hy = sy + Math.sin(ang) * 12;
-    limb3(sx, sy, (sx + hx) / 2 + 2, (sy + hy) / 2 + 2, hx, hy, 5.4, 4.6, 4, '#B09A80');
-    { const ex = hx + Math.cos(ang - .2) * 24, ey = hy + Math.sin(ang - .2) * 24; ctx.strokeStyle = C(OUT); ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.strokeStyle = C('#4A4440'); ctx.lineWidth = 3; ctx.stroke(); cel(PE(ex, ey, 5.4, 5), '#5A5450', { d: 1.2, r: .8, w: 1.3, lite: '#C8C0B4' }); }
-    fist(hx, hy, '#C8AA88', 1.25);
-    ctx.restore();
-  };
-
   // ---------------- THE FUNNEL-HAT CROW: a crow the size of a man, with a man's legs in red hose dangling under it and
   // a funnel worn upside down on its head (the hat of folly, in every one of Bosch's crowds). It comes down at you
   // beak first, and calls its murder to fly at you across the field ----------------
@@ -937,7 +670,252 @@
     leg(true);
     ctx.restore();
   };
-  Object.assign(W8.art, { bell });
+
+  // ======================================================================================================
+  // THE HORRORS OF THE CIRCLE, out of the right wing of Bosch's Garden and his Temptation of St Anthony. Only two of
+  // them were ever people, and the Circle has not left them much of it:
+  //   THE HOLLOWED      a villager the Circle has had: the body is a split, hollow tree, faces in the bark, roots for feet
+  //   THE PROCESSION    a penitents' procession grown together under one shroud: many legs, three hooded heads, scourges
+  // and the rest never were:
+  //   KNIFE-EARS        two great ears pierced by an arrow, a butcher's blade between them, scuttling on insect legs
+  //   THE CRAWLING MOUTH a mouth as big as a calf on ten long fingers; it spits its own teeth
+  //   THE HURDY-GURDY   an instrument the size of a cart on ox legs; its drone is a wall; its case turns blows
+  //   THE PLOUGH        (the Edge's last fight) an ox with a man's weeping face, a plough grown out of its back, the yoke
+  //                     and its chain still on it
+  // ======================================================================================================
+
+  const bark = '#5E5248', barkDk = '#2E2620', barkLt = '#9A8C7A', flesh = '#D8B49A', fleshDk = '#9A6A5A', fleshLt = '#F2D8C4', gum = '#8A3A3A';
+  // a face pressed out of bark or flesh: two holes, a howling mouth (the souls in Bosch's trees)
+  function howl(x, y, s, col, open = 1) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.fillStyle = C(shade(col, .2)); ctx.beginPath(); ctx.ellipse(0, 0, 4.6, 6, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = C('#140C08'); ctx.beginPath(); ctx.ellipse(-1.8, -1.6, 1, 1.4, -.2, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(1.8, -1.6, 1, 1.4, .2, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 2.6, 1.4, 1.2 + open * 1.4, 0, 0, TAU); ctx.fill();
+    if (DET()) { ctx.strokeStyle = 'rgba(20,12,8,.45)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.ellipse(0, 0, 4.6, 6, 0, 0, TAU); ctx.stroke(); }
+    ctx.restore();
+  }
+  // a twig-fingered branch: tapered, crooked, with three claws at the end
+  function branch(x0, y0, x1, y1, w0, col) {
+    const mx = (x0 + x1) / 2 + (y1 - y0) * .15, my = (y0 + y1) / 2 - (x1 - x0) * .15;
+    horn(x0, y0, mx, my, x1, y1, w0, 1.4, col, 1.1, barkDk);
+    const a = Math.atan2(y1 - y0, x1 - x0);
+    for (const d of [-.6, 0, .6]) horn(x1, y1, x1 + Math.cos(a + d) * 4, y1 + Math.sin(a + d) * 4, x1 + Math.cos(a + d * 1.4) * 8, y1 + Math.sin(a + d * 1.4) * 8 + 1, 1.4, .2, col, .8, barkDk);
+  }
+  // ---------------- THE HOLLOWED ----------------
+  CREATURES.w8hollow = function (e, a) {
+    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0, k = e.w8k || 0;
+    const wF = st === 'wind' && e.plan === 'w8flail', fl = st === 'w8act' && e.w8a === 'flail', wG = st === 'wind' && e.plan === 'w8grab', gr = st === 'w8act' && e.w8a === 'grab';
+    const creak = Math.sin(t * 2 + (e.walk || 0)) * .03, lean = wF ? -.18 * wind : fl ? lerp(-.18, .3, sm(k * 1.8)) : gr ? .32 : wG ? .2 * wind : .1 + creak;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // roots for feet: it drags itself; in the grab they shoot out along the ground at you
+    const sw = Math.sin(ph * .7) * 5, reach = gr ? 60 * Math.sin(Math.min(1, k * 1.4) * Math.PI) : wG ? -6 * wind : 0;
+    for (const [dx, len, ph2] of [[-8, 16, 0], [-2, 22, 1.4], [5, 18, 2.6], [10, 14, 4]]) { const x1 = dx + len * (dx > 0 ? 1 : -.6) + (dx > 0 ? reach : 0) + Math.sin(ph + ph2) * 2 * (ph ? 1 : 0);
+      horn(dx * .5, -8, (dx + x1) / 2, -1, x1, 0, 5, .8, barkDk, 1, '#1A140E'); }
+    ctx.save(); ctx.translate(0, -8); ctx.rotate(lean); ctx.translate(0, 8);
+    // the trunk: split open, hollow; inside, in the dark, someone is still looking out
+    const trunk = PB([-10, -8, -12, -30, -10, -50, -4, -62, 6, -63, 12, -50, 13, -28, 10, -8]);
+    cel(trunk, bark, { d: 3.4, r: 1.2, w: 1.7, dark: barkDk, lite: barkLt, tex: () => {
+      ctx.strokeStyle = 'rgba(20,14,10,.55)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 7; i++) { const x = -9 + i * 3.2; ctx.moveTo(x, -8); ctx.bezierCurveTo(x + 2, -24, x - 2, -40, x + 1, -60); } ctx.stroke(); // the grain of the bark
+      howl(-5, -22, .8, bark, 1); howl(7, -40, .6, bark, .6); // faces grown into the bark
+    } });
+    ctx.fillStyle = C('#0C0806'); ctx.beginPath(); ctx.moveTo(-1, -54); ctx.bezierCurveTo(6, -46, 6, -30, 2, -18); ctx.bezierCurveTo(-3, -28, -4, -44, -1, -54); ctx.fill(); // the hollow
+    if (DET()) { ctx.fillStyle = 'rgba(232,222,200,.9)'; circle(1.4, -38, .9); ctx.fill(); circle(3.6, -37.6, .8); ctx.fill(); }
+    // the head: a broken-off stump with a villager's face half grown over, its mouth stretched in a knot-hole
+    const hx = 3, hy = -68;
+    cel(PB([hx - 7, hy + 6, hx - 8, hy - 3, hx - 3, hy - 9, hx + 5, hy - 8, hx + 8, hy - 1, hx + 6, hy + 7]), '#7A6C5E', { d: 1.4, r: .8, w: 1.4, dark: barkDk });
+    howl(hx + 2, hy, 1.1, '#8A7A68', wF || fl ? 1.4 : .9);
+    for (const [x1, y1] of [[hx - 6, hy - 14], [hx + 1, hy - 16], [hx + 7, hy - 12]]) horn(hx - 1, hy - 7, (hx + x1) / 2, y1 + 2, x1, y1, 2, .3, barkDk, .9); // splinters for hair
+    // the arms: two branches; the near one is a club of knotted wood
+    branch(-6, -50, -18 + Math.sin(t) * 1.5, -34, 4, bark);
+    let ang = .9 + Math.sin(t * 1.2) * .06; if (wF) ang = lerp(.9, -2.4, sm(wind)); if (fl) ang = lerp(-2.4, .8, sm(k * 1.7)); if (gr || wG) ang = .1;
+    const sx = 8, sy = -50, L = 34, ex = sx + Math.cos(ang) * L, ey = sy + Math.sin(ang) * L;
+    branch(sx, sy, ex, ey, 6.4, '#6A5C4E');
+    cel(PE(sx + Math.cos(ang) * L * .7, sy + Math.sin(ang) * L * .7, 5, 4, ang), '#5A4C40', { d: 1, r: .5, w: 1.1 }); // a burl
+    if (DET() && fl && k > .25 && k < .6) add(() => { ctx.strokeStyle = 'rgba(232,222,200,.18)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(sx, sy, L, ang - 1, ang); ctx.stroke(); });
+    ctx.restore(); ctx.restore();
+  };
+  // ---------------- THE PROCESSION ----------------
+  CREATURES.w8flag = function (e, a) {
+    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0, k = e.w8k || 0;
+    const wL = st === 'wind' && e.plan === 'w8lash', la = st === 'w8act' && e.w8a === 'lash', wF = st === 'wind' && e.plan === 'w8frenzy', fr = st === 'w8act' && e.w8a === 'frenzy';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // eight bare legs under the hem, none of them in step with any other
+    for (let i = 0; i < 8; i++) { const x = -26 + i * 7.4, s = Math.sin(ph * 1.1 + i * 2.3) * (ph ? 4 : 1.2), near = i % 2;
+      limb3(x, -22, x + s * .4 + 1, -11, x + s, -1, 3.2, 2.6, 2.2, near ? '#C8A88A' : '#9A7A64'); cel(PE(x + s + 1.2, -1, 2.6, 1.1), near ? '#8A6A50' : '#6A4E3A', { d: .4, r: .3, w: .9 }); }
+    // the shroud, one long dirty sheet over all of them, lumped where shoulders press up under it
+    const bob = (i) => Math.sin(t * 2.4 + i * 1.7) * 1.4;
+    const sh = PB([-32, -20, -30, -38 + bob(0), -18, -46 + bob(1), -6, -42 + bob(2), 6, -48 + bob(3), 18, -44 + bob(4), 30, -40, 32, -20, 0, -17]);
+    cel(sh, '#D8D0BC', { d: 3, r: 1, w: 1.6, dark: '#8E8676', lite: '#F4EEDE', tex: () => {
+      ctx.strokeStyle = 'rgba(60,50,40,.35)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 9; i++) { const x = -28 + i * 7; ctx.moveTo(x, -40); ctx.quadraticCurveTo(x + 2, -30, x - 1, -20); } ctx.stroke();
+      ctx.fillStyle = 'rgba(120,40,30,.4)'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(-20 + i * 10, -30 + (i % 2) * 6, 2.4, 3.6, .3, 0, TAU); ctx.fill(); } // where the blood came through
+      ctx.fillStyle = C('#3A3028'); for (const x of [-22, 4]) { ctx.beginPath(); ctx.ellipse(x, -34, 1.4, 2.6, 0, 0, TAU); ctx.fill(); } // holes torn for arms
+    } });
+    ctx.fillStyle = 'rgba(200,190,170,.85)'; ctx.beginPath(); ctx.moveTo(-32, -21); for (let x = -32; x <= 32; x += 4) ctx.lineTo(x, -18 + (x % 8 ? 2 : -1)); ctx.lineTo(32, -21); ctx.closePath(); ctx.fill(); // the ragged hem
+    // three hooded heads on long necks, pushing up out of the front of the sheet, one turned the wrong way round
+    const heads = [[14, -62, 0], [24, -54, 1], [4, -70, 2]];
+    for (const [hx, hy, i] of heads) { const sway = Math.sin(t * 1.6 + i * 2) * 2 + (wL || wF ? wind * 3 : 0);
+      ctx.strokeStyle = C(OUT); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(hx - 6, -44); ctx.quadraticCurveTo(hx - 4 + sway, (hy - 44) / 2 - 22, hx + sway, hy + 6); ctx.stroke(); ctx.strokeStyle = C('#D0C8B4'); ctx.lineWidth = 4; ctx.stroke();
+      cel(PB([hx - 5 + sway, hy + 6, hx - 5 + sway, hy - 4, hx + sway, hy - 13, hx + 5 + sway, hy - 4, hx + 5 + sway, hy + 6]), i === 2 ? '#6A6256' : '#E2DAC6', { d: 1.2, r: .6, w: 1.3, dark: '#9A9280' });
+      if (DET()) { ctx.fillStyle = C('#120C08'); if (i !== 2) { ctx.beginPath(); ctx.ellipse(hx + 1.6 + sway, hy - 1, .9, 1.4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(hx + 3.8 + sway, hy - 1, .8, 1.3, 0, 0, TAU); ctx.fill(); } else { ctx.strokeStyle = 'rgba(20,12,8,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(hx - 3 + sway, hy - 3); ctx.lineTo(hx + 3 + sway, hy + 3); ctx.stroke(); } } }
+    // the scourges: arms come out of the holes in the sheet; each has a scourge
+    const arms = [[-22, -34, 0], [4, -34, 1], [20, -36, 2], [-10, -40, 3]];
+    for (const [ax, ay, i] of arms) {
+      let ang = -1.8 + Math.sin(t * 3 + i) * .4, cord = 12;
+      if (wL) ang = lerp(-1.8, -2.7, wind); if (la) { const u = (k * 3 + i * .25) % 1; ang = lerp(-2.6, .4, sm(u * 1.7)); cord = 14 + Math.sin(u * Math.PI) * 22; }
+      if (wF) ang = -1.8 + wind * 4 + i; if (fr) { ang = k * TAU * 3 + i * 1.6; cord = 28; }
+      const hx = ax + Math.cos(ang) * 12, hy = ay + Math.sin(ang) * 12;
+      limb3(ax, ay, (ax + hx) / 2, (ay + hy) / 2 + 1, hx, hy, 2.8, 2.4, 2, '#C8A088');
+      for (let c = 0; c < 3; c++) { const ca = ang + (c - 1) * .18 + (la || fr ? 0 : .9), ex = hx + Math.cos(ca) * cord, ey = hy + Math.sin(ca) * cord + (la || fr ? 0 : 5);
+        ctx.strokeStyle = C('#3A2A1A'); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo((hx + ex) / 2, (hy + ey) / 2 + 2, ex, ey); ctx.stroke(); ctx.fillStyle = C('#2A1A10'); circle(ex, ey, 1); ctx.fill(); } }
+    if (DET() && (la || fr)) add(() => { ctx.strokeStyle = 'rgba(255,230,210,.16)'; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(0, -36, 34, -.9, .4); ctx.stroke(); });
+    ctx.restore();
+  };
+  // ---------------- KNIFE-EARS ----------------
+  CREATURES.w8halberd = function (e, a) {
+    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0, k = e.w8k || 0;
+    const wT = st === 'wind' && e.plan === 'w8thrust', th = st === 'w8act' && e.w8a === 'thrust', wH = st === 'wind' && e.plan === 'w8hook', hk = st === 'w8act' && e.w8a === 'hook';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // six legs like a beetle's, black and jointed, scuttling
+    const lift = ph ? 1 : .2;
+    for (let i = 0; i < 6; i++) { const x = -14 + (i % 3) * 13, s = Math.sin(ph * 1.6 + i * 2.1) * 4 * lift, far = i < 3;
+      ctx.strokeStyle = C(OUT); ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(x, -20); ctx.lineTo(x - 6 + s, -12); ctx.lineTo(x - 3 + s * 1.4, 0); ctx.stroke(); ctx.strokeStyle = C(far ? '#1E1814' : '#3A302A'); ctx.lineWidth = 2; ctx.stroke(); }
+    // the blade: a butcher's knife driven between the ears, its edge down; it is what the thing has for a mouth
+    let push = 0; if (wT) push = -10 * wind; if (th) push = k < .3 ? lerp(-10, 34, sm(k / .3)) : lerp(34, 0, sm((k - .3) / .7));
+    let tilt = 0; if (wH) tilt = -.2 * wind; if (hk) tilt = k < .4 ? -.2 : lerp(-.2, .15, (k - .4) / .6);
+    ctx.save(); ctx.translate(push * .4, 0); ctx.rotate(tilt);
+    ctx.save(); ctx.translate(10 + push * .6, -38);
+    cel(PP([-6, -3, 40, -4, 52, 2, 40, 5, -6, 4]), '#B4B8BC', { d: 1.2, r: .8, w: 1.4, lite: '#F2F4F6', dark: '#6A6E72', tex: () => { ctx.fillStyle = 'rgba(120,30,20,.55)'; ctx.fillRect(20, 1, 18, 3); } });
+    cel(PP([-16, -2.6, -6, -3, -6, 4, -16, 3.4]), '#3A2A1C', { d: .5, r: .3, w: 1.1 }); // the handle, out of the back
+    ctx.restore();
+    // the two ears: pale, veined, enormous, standing up either side of the blade; an arrow through both
+    const flap = hk ? Math.sin(Math.min(1, k * 2) * Math.PI) * .35 : wH ? wind * .3 : Math.sin(t * 1.5) * .04;
+    for (const side of [-1, 1]) { ctx.save(); ctx.translate(2 + side * 6, -30); ctx.rotate(side * (.18 + flap));
+      const ear = PB([0, 0, -10 * side, -8, -14 * side, -26, -8 * side, -42, 2 * side, -44, 8 * side, -32, 6 * side, -14]);
+      cel(ear, side < 0 ? '#C89A86' : flesh, { d: 3, r: 1.2, w: 1.6, dark: fleshDk, lite: fleshLt, tex: () => {
+        ctx.fillStyle = 'rgba(140,60,60,.45)'; ctx.beginPath(); ctx.moveTo(-4 * side, -10); ctx.bezierCurveTo(-9 * side, -20, -7 * side, -34, -1 * side, -38); ctx.bezierCurveTo(-4 * side, -30, -5 * side, -18, -1 * side, -10); ctx.fill(); // the inner whorl
+        ctx.strokeStyle = 'rgba(150,40,50,.5)'; ctx.lineWidth = .5; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-2 * side, -4 - i * 8); ctx.quadraticCurveTo(-8 * side, -8 - i * 8, -11 * side, -14 - i * 7); } ctx.stroke(); // veins
+      } });
+      ctx.restore(); }
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-22, -54); ctx.lineTo(26, -50); ctx.stroke(); ctx.strokeStyle = C('#6A4A2A'); ctx.lineWidth = 1.4; ctx.stroke(); // the arrow through them
+    W8.kit.fillPoly([26, -53, 32, -50, 26, -47], '#8A8E92', 1); W8.kit.fillPoly([-22, -54, -28, -58, -26, -52], '#E8DCC4', .8); W8.kit.fillPoly([-22, -54, -28, -50, -26, -55], '#C8BCA4', .8);
+    // where they join: a lump of flesh with a single small eye in it, watching you
+    cel(PE(2, -24, 12, 8), fleshDk, { d: 1.6, r: .8, w: 1.4, lite: flesh });
+    if (DET()) { ctx.fillStyle = C('#F2EAD8'); ctx.beginPath(); ctx.ellipse(8, -25, 2.6, 1.8, 0, 0, TAU); ctx.fill(); ctx.fillStyle = C('#1A120C'); circle(9, -25, 1.1); ctx.fill(); }
+    if (DET() && th && k < .35) add(() => { ctx.fillStyle = 'rgba(240,244,246,.3)'; ctx.fillRect(-30, -40, 60, 3); });
+    ctx.restore(); ctx.restore();
+  };
+  // ---------------- THE CRAWLING MOUTH ----------------
+  CREATURES.w8xbow = function (e, a) {
+    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0, k = e.w8k || 0;
+    const aim = st === 'wind' && e.plan === 'w8bolt', spit = st === 'w8act' && e.w8a === 'bolt', chew = st === 'w8act' && e.w8a === 'crank';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const body = -30 + Math.sin(t * 2) * .8, open = aim ? .3 + wind * .7 : spit ? 1 - sm(k) * .6 : chew ? .25 + .25 * Math.sin(t * 18) : .12 + .06 * Math.sin(t * 2.6);
+    // ten fingers for legs, long and knuckled, nails cracked; they pick their way over the ground
+    // (each finger: up from the lip to a high knuckle, a second knuckle, and down to the nail on the ground, like a spider's leg)
+    const finger = (bx, side, i, near) => { const s = Math.sin(ph * 1.5 + i * 1.9) * (ph ? 5 : .6), fx = bx + side * (18 + i * 9) + s, kx = bx + side * (8 + i * 5), ky = body - 16 - (i % 2) * 5, jx = (kx + fx) / 2 + side * 3, jy = body - 6;
+      const col = near ? '#E2BEA4' : '#A88472'; strip(bx, body, (bx + kx) / 2, ky - 2, kx, ky, 3.6, 3, col, { d: 1, r: .5, w: 1.2 }); strip(kx, ky, (kx + jx) / 2 + side * 2, ky, jx, jy, 3, 2.6, col, { d: 1, r: .5, w: 1.2 }); strip(jx, jy, (jx + fx) / 2, jy + 2, fx, -1, 2.6, 2, col, { d: 1, r: .5, w: 1.1 });
+      if (DET()) { ctx.strokeStyle = 'rgba(90,50,40,.6)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(kx - 1.4, ky + 1); ctx.lineTo(kx + 1.4, ky + 1); ctx.moveTo(jx - 1.2, jy); ctx.lineTo(jx + 1.2, jy); ctx.stroke(); } // the knuckle creases
+      cel(PE(fx + side * .8, -1.4, 2, 1.3), '#F2E6D2', { d: .3, r: .2, w: .8 }); };
+    for (let i = 0; i < 4; i++) { finger(-10 + i * 2, -1, i, false); finger(16 - i * 2, 1, i, false); }
+    // the lips: swollen, wet, the colour of a bruise at their edges; inside, the teeth and a tongue
+    ctx.save(); ctx.translate(4, body);
+    const ow = 22, oh = 4 + open * 12;
+    cel(PB([-ow, 0, -ow * .6, -oh - 6, 0, -oh - 8, ow * .6, -oh - 6, ow + 4, 0, ow * .6, oh + 6, 0, oh + 8, -ow * .6, oh + 6]), '#C86A6A', { d: 2.4, r: 1, w: 1.6, dark: '#7A2A30', lite: '#F2A8A0' });
+    ctx.fillStyle = C('#2A0806'); ctx.beginPath(); ctx.ellipse(1, 0, ow * .78, oh, 0, 0, TAU); ctx.fill();
+    if (oh > 5) { ctx.fillStyle = C('#B84A50'); ctx.beginPath(); ctx.ellipse(2, oh * .45, ow * .5, oh * .4, 0, 0, TAU); ctx.fill(); }
+    const teeth = chew ? 8 + Math.floor(k * 6) : spit && k < .3 ? 11 : 14; // it spits one of its own; then it grows them back
+    for (let i = 0; i < 14; i++) { if (i >= teeth && i % 2) continue; const u = (i % 7) / 6, x = lerp(-ow * .7, ow * .74, u), top = i < 7, y = top ? -oh + .6 : oh - .6;
+      ctx.fillStyle = C(i % 3 ? '#F0E6D0' : '#D8C8A0'); ctx.beginPath(); ctx.moveTo(x - 1.8, y); ctx.lineTo(x + 1.8, y); ctx.lineTo(x + .6, y + (top ? 3 : -3)); ctx.lineTo(x - .6, y + (top ? 3 : -3)); ctx.closePath(); ctx.fill(); if (DET()) { ctx.strokeStyle = 'rgba(60,30,20,.6)'; ctx.lineWidth = .4; ctx.stroke(); } }
+    if (DET()) { ctx.strokeStyle = 'rgba(255,230,220,.6)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-ow * .6, -oh - 5); ctx.quadraticCurveTo(0, -oh - 8, ow * .5, -oh - 5); ctx.stroke(); } // the shine on the upper lip
+    ctx.restore();
+    finger(-6, -1, 1.5, true); finger(14, 1, 2.5, true);
+    if (aim && DET()) { ctx.fillStyle = 'rgba(200,190,170,.7)'; for (let i = 0; i < 3; i++) { circle(28 + i * 3, body + Math.sin(t * 9 + i) * 2, .9); ctx.fill(); } } // spittle
+    ctx.restore();
+  };
+  // ---------------- THE HURDY-GURDY ----------------
+  // its case: blows from in front ring off the wood (as the Bellman's bronze did: the 'w8crack' counter splits it)
+  function gurdy(x, y, s, crack, drone, t, crank) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    const jit = drone ? Math.sin(t * 70) * drone * .7 : 0; ctx.translate(jit, 0);
+    const body = PB([-26, 0, -30, -16, -24, -32, -6, -38, 14, -36, 28, -26, 30, -10, 22, 0]);
+    cel(body, '#7A4A26', { d: 3.4, r: 1.4, w: 1.8, dark: '#3A2010', lite: '#C8884A', tex: () => {
+      ctx.strokeStyle = 'rgba(30,14,6,.5)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 7; i++) { ctx.moveTo(-28, -4 - i * 5); ctx.quadraticCurveTo(0, -2 - i * 5.6, 28, -6 - i * 4); } ctx.stroke(); // the staves
+      ctx.fillStyle = '#1A0C06'; for (const [rx, ry] of [[-14, -18], [10, -20]]) { ctx.beginPath(); ctx.ellipse(rx, ry, 4, 2.4, .2, 0, TAU); ctx.fill(); } // its sound-holes, shaped like screaming mouths
+      if (crack) { ctx.strokeStyle = 'rgba(10,4,2,.9)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-6, -36); ctx.lineTo(-2, -24); ctx.lineTo(-8, -12); ctx.lineTo(-4, -2); if (crack > 1) { ctx.moveTo(18, -30); ctx.lineTo(14, -18); ctx.lineTo(22, -8); } ctx.stroke(); }
+    } });
+    // the keybox along its top, the keys like teeth; something small and grey turns the wheel from inside
+    cel(PP([-18, -36, 22, -34, 22, -44, -18, -46]), '#5A3418', { d: 1, r: .6, w: 1.3 });
+    for (let i = 0; i < 9; i++) { const x = -15 + i * 4.2, down = drone && (Math.floor(t * 12) + i) % 3 === 0; ctx.fillStyle = C(i % 2 ? '#E8DCC0' : '#C8B898'); ctx.fillRect(x, -44 + (down ? 2 : 0), 2.6, 5); }
+    goldLine(() => { ctx.moveTo(-18, -36.5); ctx.lineTo(22, -34.5); }, 1);
+    // the crank handle at its tail, turning
+    ctx.save(); ctx.translate(-30, -18); ctx.rotate(crank); ctx.strokeStyle = C(OUT); ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, 0); ctx.lineTo(-10, -7); ctx.stroke(); ctx.strokeStyle = C('#8A8E92'); ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+    // its scroll-head, carved as a face with its tongue out (the luthier's joke, gone wrong)
+    cel(PB([24, -30, 34, -38, 42, -34, 40, -24, 30, -20]), '#6A3E20', { d: 1, r: .6, w: 1.4, lite: '#B07A44' });
+    if (DET()) { ctx.fillStyle = C('#140804'); circle(36, -33, 1.2); ctx.fill(); ctx.fillStyle = C(gum); ctx.beginPath(); ctx.ellipse(40, -25, 2.6, 1.4, .4, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+  CREATURES.w8bell = function (e, a) {
+    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0, k = e.w8k || 0;
+    const wT = st === 'wind' && e.plan === 'w8toll', to = st === 'w8act' && e.w8a === 'toll', wD = st === 'wind' && e.plan === 'w8bdrop', dr = st === 'w8act' && e.w8a === 'bdrop', sw = st === 'strike' || (st === 'wind' && e.plan === 'swing');
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const squat = wD ? wind * 6 : dr && k < .5 ? 6 * (1 - k * 2) : 0, by = -26 + squat + Math.abs(Math.sin(ph * .6)) * 1.4;
+    // four ox legs under it, hooves split, hair on the shanks
+    const leg = (x, i, near) => { const s = Math.sin(ph * .6 + i * 1.6) * 5, f = [x + s, 0], kk = knee(x, by + 2, f[0], f[1] - 1, 16, i % 2 ? 1 : -1); limb3(x, by + 2, kk[0], kk[1], f[0], f[1] - 4, 7, 4.6, 3.6, near ? '#6A5444' : '#4A3A30'); W8.kit.fillPoly([f[0] - 3, 0, f[0] + 3, 0, f[0] + 2.4, -4, f[0] - 2.4, -4], '#1A140E', 1); };
+    leg(-16, 0, false); leg(14, 1, false);
+    const crank = t * (to || wT ? 9 : 2.4);
+    gurdy(0, by, 1, e.w8crack || 0, to ? 1 - k : 0, t, crank);
+    leg(-10, 2, true); leg(20, 3, true);
+    if (to && DET()) for (let i = 0; i < 3; i++) { const r = 18 + ((k * 3 + i / 3) % 1) * 34; ctx.strokeStyle = `rgba(255,220,170,${.5 * (1 - (k * 3 + i / 3) % 1)})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(30, by - 20, r, -.6, .6); ctx.stroke(); }
+    // a man's arm grows out of its side, holding the bow it plays itself with (swung as a club)
+    let ang = .8 + Math.sin(t * 1.3) * .05; if (wT) ang = lerp(.8, -1.6, wind); if (to) ang = -1.6 + Math.sin(t * 20) * .3; if (sw) ang = st === 'strike' ? .5 : lerp(.8, -1.8, wind); if (wD || dr) ang = -1.2;
+    const sx = 16, sy = by - 22, hx = sx + Math.cos(ang) * 12, hy = sy + Math.sin(ang) * 12;
+    limb3(sx, sy, (sx + hx) / 2 + 2, (sy + hy) / 2 + 2, hx, hy, 4.6, 4, 3.4, '#C8A088');
+    const ex = hx + Math.cos(ang - .3) * 30, ey = hy + Math.sin(ang - .3) * 30; ctx.strokeStyle = C(OUT); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.strokeStyle = C('#4A3018'); ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.strokeStyle = C('#E8E0C8'); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(hx + 2, hy + 2); ctx.lineTo(ex + 1, ey + 2); ctx.stroke();
+    W8.art.fist(hx, hy, '#C8A088', 1.1);
+    ctx.restore();
+  };
+  // ---------------- THE PLOUGH ----------------
+  CREATURES.w8hangman = function (e, a) {
+    a = a || {}; const t = a.t || 0, st = e.state, ph = a.walk || 0, wind = a.wind || 0, k = e.w8k || 0;
+    const wN = st === 'wind' && e.plan === 'w8noose', no = st === 'w8act' && e.w8a === 'noose', wA = st === 'wind' && e.plan === 'w8axe', ax = st === 'w8act' && e.w8a === 'axe', wS = st === 'wind' && e.plan === 'w8sweep', swp = st === 'w8act' && e.w8a === 'sweep', wG = st === 'wind' && e.plan === 'w8gallows';
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.scale(1.12, 1.12);
+    const rear = wA ? sm(wind) * .22 : ax ? (k < .4 ? .22 * (1 - sm(k / .4)) : 0) : 0;
+    ctx.translate(-26, 0); ctx.rotate(-rear); ctx.translate(26, 0);
+    const legs = (near) => { for (const [x, i] of near ? [[-22, 0], [22, 1]] : [[-16, 2], [28, 3]]) { const s = Math.sin(ph * .8 + i * 1.7) * 6, f = [x + s, 0], kk = knee(x, -32, f[0], f[1] - 1, 19, x > 0 ? 1 : -1);
+      limb3(x, -32, kk[0], kk[1], f[0], f[1] - 4, 8, 5, 3.8, near ? '#5A3E2A' : '#3E2A1C'); W8.kit.fillPoly([f[0] - 3.4, 0, f[0] + 3.4, 0, f[0] + 2.6, -5, f[0] - 2.6, -5], '#140E0A', 1); } };
+    legs(false);
+    // the ox: a great brown barrel of a body, ribs showing, galls where the harness rubbed
+    cel(PB([-34, -54, -6, -62, 24, -60, 38, -50, 36, -32, 14, -26, -18, -26, -36, -34]), '#6A4A30', { d: 3.6, r: 1.4, w: 1.8, dark: '#3A2618', lite: '#A07A54', tex: () => {
+      ctx.strokeStyle = 'rgba(30,18,10,.5)'; ctx.lineWidth = .9; ctx.beginPath(); for (let i = 0; i < 6; i++) { const x = -12 + i * 6; ctx.moveTo(x, -56); ctx.quadraticCurveTo(x + 3, -44, x, -32); } ctx.stroke();
+      ctx.fillStyle = 'rgba(140,40,30,.55)'; for (const [x, y] of [[20, -56], [-20, -52], [6, -36]]) { ctx.beginPath(); ctx.ellipse(x, y, 4, 2.4, .3, 0, TAU); ctx.fill(); }
+    } });
+    // the plough, grown up out of its back where the hide has closed round the wood: the beam, the stilts, the share
+    let pa = -.5 + Math.sin(t * .8) * .03; if (wA) pa = lerp(-.5, -1.5, sm(wind)); if (ax) pa = k < .45 ? lerp(-1.5, .7, sm(k / .45)) : .7; if (wS) pa = lerp(-.5, -1.2, wind); if (swp) pa = -.5 + Math.sin(k * Math.PI) * .5; if (wG) pa = .3;
+    ctx.save(); ctx.translate(-14, -60); ctx.rotate(pa);
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(56, -4); ctx.stroke(); ctx.strokeStyle = C('#7A5A34'); ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-10, -22); ctx.moveTo(14, -1); ctx.lineTo(0, -24); ctx.stroke(); ctx.strokeStyle = C('#8A6A44'); ctx.lineWidth = 2.4; ctx.stroke(); // the stilts, like arms raised
+    cel(PP([50, -6, 66, -2, 74, 10, 58, 8]), '#8E9296', { d: 1, r: .7, w: 1.4, lite: '#E2E6E8', dark: '#4E5256', tex: () => { ctx.fillStyle = 'rgba(120,40,20,.5)'; ctx.fillRect(58, 2, 12, 4); } }); // the share, rusted red
+    ctx.restore();
+    // the hide grows up round the root of the beam
+    cel(PB([-22, -60, -16, -70, -6, -66, -8, -58]), '#6A4A30', { d: 1, r: .5, w: 1.2 });
+    // the yoke on its neck, the chain hanging off it (thrown out at you in the noose)
+    cel(PP([26, -66, 34, -70, 50, -60, 46, -56]), '#5A3A1E', { d: .8, r: .5, w: 1.3 });
+    if (!no) { ctx.strokeStyle = C('#5A5650'); ctx.lineWidth = 1.6; ctx.setLineDash([2.4, 1.6]); ctx.beginPath(); ctx.moveTo(44, -58); ctx.quadraticCurveTo(46 + (wN ? Math.cos(t * 12) * 12 : 0), -38 + (wN ? Math.sin(t * 12) * 6 : 0), 40, -28); ctx.stroke(); ctx.setLineDash([]); }
+    // the head: an ox's skull and horns, and on the front of it a man's face, weeping, as if he were looking out of it
+    ctx.save(); ctx.translate(46, -58); ctx.rotate(wA || ax ? .3 : wS || swp ? -.2 : .1);
+    cel(PB([-4, -6, 10, -10, 20, -2, 18, 10, 6, 12, -4, 6]), '#5A3E28', { d: 1.6, r: .8, w: 1.5, lite: '#8A6A48' });
+    horn(2, -8, -4, -20, -14, -22, 4, .6, '#D8CCB0', 1.1); horn(10, -9, 18, -20, 26, -18, 4, .6, '#E8DCC4', 1.1);
+    cel(PE(12, 2, 7, 8), '#D4AC8E', { d: 1.2, r: .6, w: 1.2, dark: '#9A7058', lite: '#F2D2BC' }); // the face
+    if (DET()) { ctx.fillStyle = C('#1A100A'); ctx.beginPath(); ctx.ellipse(10, 0, 1, 1.4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(15, 0, 1, 1.4, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,220,240,.8)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(10, 1.6); ctx.lineTo(9.6, 5); ctx.moveTo(15, 1.6); ctx.lineTo(15.4, 5.4); ctx.stroke(); // tears
+      ctx.fillStyle = C('#3A1210'); ctx.beginPath(); ctx.ellipse(12.6, 6.4, 2 + (wN || wA ? 1.4 : 0), 1 + (wN || wA ? 1.4 : 0), 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(80,50,30,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(8, -3); ctx.lineTo(11, -3.6); ctx.moveTo(14, -3.6); ctx.lineTo(17, -3); ctx.stroke(); }
+    ctx.restore();
+    legs(true);
+    if (DET() && (ax && k < .5 || swp)) add(() => { ctx.strokeStyle = 'rgba(240,230,220,.14)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(-14, -60, 66, pa - .8, pa); ctx.stroke(); });
+    ctx.restore();
+  };
+  Object.assign(W8.art, { gurdy, howl });
 
   // ======================================================================================================
   // THE GOAT-LORD OF THE CIRCLE: the thing that came in through the hole Corwin's curse made, and has held the Circle
@@ -1131,7 +1109,7 @@
   Object.assign(W8, { goatLord, goatPose, goatHead, crozier, mangonel, horse, GL });
 
   // ======================================================================================================
-  // ATTACKS: plans for the Circle's people and creatures, the Hangman and the Goat-Lord, their tells and the hazards they
+  // ATTACKS: plans for the Circle's people and creatures, the Plough and the Goat-Lord, their tells and the hazards they
   // leave. They plug into world.js, zones.js and game.js, which load after this file: data_w8.js calls W8.late()
   // ======================================================================================================
   const HZ = W8.HZ = {}; // this world's hazards: { update(h, dt), draw(h, t) on the floor, ups(h, list, t) upright, box(h, box) }
@@ -1175,35 +1153,35 @@
   const chill = (s, txt) => { if (!alive()) return; if (!(P.w8slow > 0) && txt) floatText(P.x, P.y, 86, txt, '#C8C2B4', 13); P.w8slow = Math.max(P.w8slow || 0, s); };
   W8.chill = chill;
 
-  // ---------------- HOLLOW: THE FLAIL, brought down in front of it ----------------
+  // ---------------- THE HOLLOWED: THE BRANCH, its club of an arm brought down in front of it ----------------
   TELL8.w8flail = (e, t, k) => { lane(e.x, e.x + e.facing * 74, e.y, 16, k); };
   PLAN_FX.w8flail = (e) => { sfx('swing');
     act(e, 'flail', (h, dt, e) => { const k = h.el / .55; e.w8k = k;
       if (!h.hit && k > .35 && k < .62) { const f = fwdOf(e); if (f > 4 && f < 74 && Math.abs(P.y - e.y) < 18 && P.z < 40) { h.hit = 1; hitP(edmg(e), e.x, false, { kind: 'melee', e }); } }
       if (k > .5 && !h.thud) { h.thud = 1; dust(e.x + e.facing * 56, e.y, 5); sfx('slam', .4); }
       if (k >= 1) { recover(e, .8); return true; } return false; }); };
-  // ---------------- HOLLOW: THE GRAB, a lurch with both arms out: the grey cold goes into whoever it holds ----------------
+  // ---------------- THE HOLLOWED: THE ROOTS, shot out along the ground at you: the grey cold goes into whoever they hold ----------------
   TELL8.w8grab = (e, t, k) => { lane(e.x, e.x + e.facing * 90, e.y, 14, k); };
   PLAN_FX.w8grab = (e) => { sfx('growl');
     act(e, 'grab', (h, dt, e) => { const k = h.el / .5; e.w8k = k; if (k < .8) e.x += e.facing * 170 * dt;
       if (!h.hit && Math.abs(P.x - e.x) < e.hw + 16 && fwdOf(e) > -6 && Math.abs(P.y - e.y) < 15 && P.z < 30) { h.hit = 1; if (hitP(Math.round(edmg(e) * .8), e.x, false, { kind: 'melee', e })) chill(1.6, 'THE CIRCLE\'S COLD'); }
       if (k >= 1) { recover(e, 1); return true; } return false; }); };
 
-  // ---------------- BILLMAN: THE THRUST, the bill driven straight down his lane at you ----------------
+  // ---------------- KNIFE-EARS: THE BLADE, driven straight down its lane at you ----------------
   TELL8.w8thrust = (e, t, k) => { lane(e.x + e.facing * 10, e.x + e.facing * 132, e.y, 12, k); };
   PLAN_FX.w8thrust = (e) => { sfx('whoosh');
     act(e, 'thrust', (h, dt, e) => { const k = h.el / .5; e.w8k = k; if (k < .35) e.x += e.facing * 60 * dt;
       if (!h.hit && k > .14 && k < .45) { const f = fwdOf(e); if (f > 0 && f < 132 && Math.abs(P.y - e.y) < 13 && P.z < 40) { h.hit = 1; hitP(Math.round(edmg(e) * 1.1), e.x, true, { kind: 'melee', e }); } }
       if (k >= 1) { recover(e, .7); return true; } return false; }); };
-  // ---------------- BILLMAN: THE HOOK, reached out and hauled back: it pulls you off your feet to him ----------------
+  // ---------------- KNIFE-EARS: THE LISTENING, the ears clap shut and draw you in off your feet ----------------
   TELL8.w8hook = (e, t, k) => { lane(e.x + e.facing * 20, e.x + e.facing * 110, e.y, 15, k); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(e.x + e.facing * 104, e.y - 4, 6, -1, 2); ctx.stroke(); };
   PLAN_FX.w8hook = (e) => { sfx('swing');
     act(e, 'hook', (h, dt, e) => { const k = h.el / .75; e.w8k = k;
-      if (!h.hit && k > .22 && k < .42) { const f = fwdOf(e); if (f > 18 && f < 110 && Math.abs(P.y - e.y) < 15 && P.z < 30) { h.hit = 1; if (hitP(Math.round(edmg(e) * .8), e.x, true, { kind: 'melee', e })) { h.haul = 1; floatText(P.x, P.y, 80, 'HOOKED', '#E8C8A0', 14); } } }
+      if (!h.hit && k > .22 && k < .42) { const f = fwdOf(e); if (f > 18 && f < 110 && Math.abs(P.y - e.y) < 15 && P.z < 30) { h.hit = 1; if (hitP(Math.round(edmg(e) * .8), e.x, true, { kind: 'melee', e })) { h.haul = 1; floatText(P.x, P.y, 80, 'DRAWN IN', '#E8C8A0', 14); } } }
       if (h.haul && k < .8 && P.state !== 'dead') { P.x += (e.x + e.facing * 34 - P.x) * Math.min(1, dt * 9); P.y += (e.y - P.y) * Math.min(1, dt * 6); }
       if (k >= 1) { recover(e, .8); return true; } return false; }); };
 
-  // ---------------- PAVISE CROSSBOWMAN: THE BOLT, aimed down a line; it locks a moment before he looses ----------------
+  // ---------------- THE CRAWLING MOUTH: THE TOOTH, spat down a line; the aim locks a moment before it spits ----------------
   AIM8.w8bolt = (e, k) => { const T0 = targets(e, () => ({ y: P.y })); if (k < .6) T0.y = P.y; };
   TELL8.w8bolt = (e, t, k) => { const T0 = e.w8T; if (!T0 || T0.plan !== e.plan) return; const y = clamp(T0.y, e.y - 40, e.y + 40), x0 = e.x + e.facing * 20, x1 = e.facing > 0 ? camX + VW : camX;
     ctx.strokeStyle = k < .6 ? `rgba(255,140,110,${.35 + .3 * k})` : `rgba(255,70,50,${.7 + .3 * Math.sin(t * 30)})`; ctx.lineWidth = k < .6 ? 1 : 2; ctx.setLineDash(k < .6 ? [4, 4] : []); ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.setLineDash([]); };
@@ -1214,13 +1192,13 @@
     e.w8span = 1;
     act(e, 'bolt', (h, dt, e) => { e.w8k = h.el / .3; if (h.el > .3) { act(e, 'crank', (h2, dt2, e2) => { e2.w8k = h2.el / 1.1; if (h2.el >= 1.1) { e2.w8span = 0; recover(e2, .5); return true; } return false; }); } return false; }); };
 
-  // ---------------- FLAGELLANT: THE LASH, three cuts of the scourge, each a little further ----------------
+  // ---------------- THE PROCESSION: THE LASH, all its scourges at once, three times, each a little further ----------------
   TELL8.w8lash = (e, t, k) => { lane(e.x, e.x + e.facing * 88, e.y, 16, k * .7); };
   PLAN_FX.w8lash = (e) => {
     act(e, 'lash', (h, dt, e) => { const k = h.el / 1.0; e.w8k = k; e.x += e.facing * 30 * dt;
       for (let i = 0; i < 3; i++) { const at = .2 + i * .3; if (k > at && !h['l' + i]) { h['l' + i] = 1; sfx('swing'); const f = fwdOf(e); if (f > 0 && f < 88 && Math.abs(P.y - e.y) < 17 && P.z < 45) hitP(Math.round(edmg(e) * .7), e.x, i === 2, { kind: 'melee', e }); } }
       if (k >= 1) { recover(e, .9); return true; } return false; }); };
-  // ---------------- FLAGELLANT: THE FRENZY, the scourge whirled round and round as he comes at you ----------------
+  // ---------------- THE PROCESSION: THE FRENZY, every scourge whirled round as it comes at you ----------------
   TELL8.w8frenzy = (e, t, k) => { ring(e.x, e.y, 76, k); };
   PLAN_FX.w8frenzy = (e) => { sfx('whoosh');
     act(e, 'frenzy', (h, dt, e) => { const k = h.el / 1.4; e.w8k = k; e.x += Math.sign(P.x - e.x) * 55 * dt; e.y += Math.sign(P.y - e.y) * 25 * dt;
@@ -1228,7 +1206,7 @@
       if (k >= 1) { recover(e, 1.1); return true; } return false; },
       { draw(h, t) { const e = h.e; ctx.save(); ctx.strokeStyle = 'rgba(120,40,30,.35)'; ctx.lineWidth = 2; ell(e.x, e.y, 76, 76 / 2.2); ctx.stroke(); ctx.restore(); } }); };
 
-  // ---------------- BELLMAN: THE TOLL, the clapper brought against his own bronze: the note goes out of the mouth of the bell
+  // ---------------- THE HURDY-GURDY: THE DRONE, its wheel cranked hard: the note goes out of it
   // in front of him, and it hits like a wall (and leaves you half deaf, heavy on your feet) ----------------
   const cone = (e, L) => (x, y) => { const f = (x - e.x) * e.facing; return f > 0 && f < L && Math.abs(y - e.y) < 14 + f * .26; };
   TELL8.w8toll = (e, t, k) => { const L = 176; ctx.fillStyle = tellCol(k); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(e.x, e.y - 14); ctx.lineTo(e.x + e.facing * L, e.y - 14 - L * .26); ctx.lineTo(e.x + e.facing * L, e.y + 14 + L * .26); ctx.lineTo(e.x, e.y + 14); ctx.closePath(); ctx.fill(); ctx.stroke(); };
@@ -1238,7 +1216,7 @@
         if (cone(e, 176)(P.x, P.y) && P.z < 50) { if (hitP(edmg(e), e.x, true, { kind: 'melee', e })) chill(1.6, 'DEAFENED'); }
         fx.push({ kind: 'ring', x: e.x + e.facing * 30, y: e.y, z: 40, t: .5, max: .5, r: 120, col: '#E8D098' }); }
       if (k >= 1) { recover(e, 1.1); return true; } return false; }); };
-  // ---------------- BELLMAN: THE BELL DROPS, he jumps and comes down bell-first where you stood ----------------
+  // ---------------- THE HURDY-GURDY: THE FALL, it jumps and comes down on its belly where you stood ----------------
   AIM8.w8bdrop = (e, k) => { targets(e, () => ({ x: xClamp(P.x), y: yClamp(P.y) })); };
   TELL8.w8bdrop = (e, t, k) => { const T0 = e.w8T; if (!T0 || T0.plan !== e.plan) return; ring(T0.x, T0.y, 62, k); };
   PLAN_FX.w8bdrop = (e) => { const T0 = e.w8T && e.w8T.plan === 'w8bdrop' ? e.w8T : { x: xClamp(P.x), y: yClamp(P.y) }; e.w8T = null; sfx('jump');
@@ -1286,23 +1264,23 @@
       if ((e.x < leftWall() + 10 && dir < 0) || (e.x > rightWall() - 10 && dir > 0)) { if (bounced) { recover(e, 1); return true; } bounced = 1; dir = -dir; h.hit = 0; sfx('slam', .5); shakeMag = Math.max(shakeMag, 4); }
       if (h.el > 3) { recover(e, 1); return true; } return false; }); };
 
-  // ---------------- THE HANGMAN: THE NOOSE, swung round his head and thrown down his lane: if it takes you, he hauls you in ----------------
+  // ---------------- THE PLOUGH: THE YOKE-CHAIN, swung and thrown down its lane: if it takes you, it hauls you in under the share ----------------
   TELL8.w8noose = (e, t, k) => { lane(e.x + e.facing * 16, e.x + e.facing * 270, e.y, 13, k); };
   PLAN_FX.w8noose = (e) => { sfx('whoosh');
     act(e, 'noose', (h, dt, e) => { const k = h.el; const reach = k < .35 ? 270 * sm(k / .35) : 270 * (1 - sm((k - .35) / .4)); h.reach = reach;
-      if (!h.caught && k < .4) { const f = fwdOf(e); if (f > 0 && f < reach && Math.abs(P.y - e.y) < 13 && P.z < 45 && P.state !== 'dodge' && !(P.inv > 0)) { h.caught = 1; floatText(P.x, P.y, 86, 'NOOSED', '#E8C8A0', 16); sfx('hurt'); } }
+      if (!h.caught && k < .4) { const f = fwdOf(e); if (f > 0 && f < reach && Math.abs(P.y - e.y) < 13 && P.z < 45 && P.state !== 'dodge' && !(P.inv > 0)) { h.caught = 1; floatText(P.x, P.y, 86, 'CHAINED TO THE YOKE', '#E8C8A0', 15); sfx('hurt'); } }
       if (h.caught && alive()) { P.state = 'hurt'; P.t = .3; P.knocked = false; P.vx = 0; P.x += (e.x + e.facing * 44 - P.x) * Math.min(1, dt * 8); P.y += (e.y - P.y) * Math.min(1, dt * 6); h.rx = P.x; }
       if (k >= .78) { if (h.caught) { e.plan = 'w8axe'; e.w8hauled = 1; wind(e, .5); } else recover(e, .8); return true; } return false; },
-      { up(h, t) { const e = h.e, x = h.caught ? (h.rx ?? P.x) : e.x + e.facing * (h.reach || 0); onMain(() => { ctx.strokeStyle = 'rgba(120,100,70,.95)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(e.x + e.facing * 10, e.y - 70); ctx.quadraticCurveTo((e.x + x) / 2, e.y - 40, x, e.y - 30); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x, e.y - 30, 5, 7, 0, 0, TAU); ctx.stroke(); }); }, uy: e.y + 1 }); };
-  // ---------------- THE HANGMAN: THE AXE, lifted as high as it will go and brought down; it bites into the ground and
+      { up(h, t) { const e = h.e, x = h.caught ? (h.rx ?? P.x) : e.x + e.facing * (h.reach || 0); onMain(() => { const x0 = e.x + e.facing * 50, y0 = e.y - 64; ctx.setLineDash([3, 2]); ctx.strokeStyle = 'rgba(30,26,22,.95)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x) / 2, e.y - 34, x, e.y - 30); ctx.stroke(); ctx.strokeStyle = 'rgba(140,136,128,.95)'; ctx.lineWidth = 1.6; ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#5A5650'; ctx.beginPath(); ctx.moveTo(x - 4, e.y - 34); ctx.lineTo(x + 5, e.y - 30); ctx.lineTo(x - 4, e.y - 26); ctx.closePath(); ctx.fill(); }); }, uy: e.y + 1 }); };
+  // ---------------- THE PLOUGH: THE SHARE, the plough on its back reared up and brought down; it bites into the ground and
   // sticks there a moment: hit him then ----------------
   TELL8.w8axe = (e, t, k) => { lane(e.x + e.facing * 6, e.x + e.facing * 110, e.y, 22, k); };
   PLAN_FX.w8axe = (e) => { sfx('whoosh'); e.w8hauled = 0;
     act(e, 'axe', (h, dt, e) => { const k = h.el / .6; e.w8k = k;
       if (!h.hit && k > .28 && k < .46) { const f = fwdOf(e); if (f > 0 && f < 112 && Math.abs(P.y - e.y) < 22 && P.z < 50) { h.hit = 1; hitP(Math.round(edmg(e) * 1.6), e.x, true, { kind: 'melee', e }); } }
       if (k > .4 && !h.bite) { h.bite = 1; shakeMag = 9; sfx('slam'); dust(e.x + e.facing * 80, e.y, 10); }
-      if (k >= 1) { floatText(e.x, e.y, e.hh + 30, 'THE AXE STICKS', '#E8D8B0', 12); recover(e, 1.5); return true; } return false; }); };
-  // ---------------- THE HANGMAN: THE GALLOWS, which come up out of the ground under you ----------------
+      if (k >= 1) { floatText(e.x, e.y, e.hh + 30, 'THE SHARE STICKS IN THE GROUND', '#E8D8B0', 12); recover(e, 1.5); return true; } return false; }); };
+  // ---------------- THE PLOUGH: THE FURROW, thrown up out of the ground under you, full of ploughshares ----------------
   AIM8.w8gallows = (e, k) => { const T0 = targets(e, () => ({ x: xClamp(P.x), y: yClamp(P.y) })); if (k < .55) { T0.x = xClamp(P.x); T0.y = yClamp(P.y); } };
   TELL8.w8gallows = (e, t, k) => { const T0 = e.w8T; if (!T0 || T0.plan !== e.plan) return; ring(T0.x, T0.y, 36, k); };
   PLAN_FX.w8gallows = (e) => { const T0 = e.w8T && e.w8T.plan === 'w8gallows' ? e.w8T : { x: xClamp(P.x), y: yClamp(P.y) }; e.w8T = null;
@@ -1311,11 +1289,12 @@
     update(h, dt) { h.el += dt; if (h.el >= h.at && !h.up) { h.up = 1; sfx('crunch'); shakeMag = Math.max(shakeMag, 7); dust(h.x, h.y, 12); if (inEll(P.x, P.y, h.x, h.y, 36) && P.z < 30) { if (hitP(h.dmg, h.x, true)) P.vz = 300; } } },
     draw(h, t) { if (h.el < h.at) ring(h.x, h.y, 36, h.el / h.at); },
     ups(h, list, t) { if (!h.up) return; list.push([h.y, () => { const u = sm((h.el - h.at) / .2) * (1 - sm((h.el - h.max + .5) / .5)); ctx.save(); ctx.translate(h.x, h.y); ctx.scale(h.f, u);
-      ctx.strokeStyle = C(OUT); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-6, -84); ctx.lineTo(28, -84); ctx.moveTo(-6, -66); ctx.lineTo(12, -84); ctx.stroke(); ctx.strokeStyle = C('#3A2A1C'); ctx.lineWidth = 3.6; ctx.stroke();
-      ctx.strokeStyle = C('#8A7A5A'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(24, -84); ctx.lineTo(24, -64); ctx.stroke(); ctx.beginPath(); ctx.ellipse(24, -60, 3.4, 4.4, 0, 0, TAU); ctx.stroke(); ctx.restore(); }]); },
+      W8.kit.cel(W8.kit.PB([-30, 0, -20, -14, -6, -20, 8, -18, 24, -10, 30, 0]), '#5A4634', { d: 2, r: .8, w: 1.4, lite: '#8A7254' }); // the furrow thrown up
+      for (const [x, h2, a2] of [[-12, 40, -.3], [2, 52, .05], [16, 36, .35]]) { ctx.save(); ctx.translate(x, -8); ctx.rotate(a2); W8.kit.cel(W8.kit.PP([-5, 0, 5, 0, 2, -h2, -1, -h2 - 6, -4, -h2]), '#8E9296', { d: .8, r: .6, w: 1.2, lite: '#E2E6E8', dark: '#4E5256' }); ctx.restore(); } // ploughshares up out of it like teeth
+      ctx.restore(); }]); },
     box(h, box) { box(h.x, h.y, 0, 50, 100); },
   });
-  // ---------------- THE HANGMAN: THE SWEEP, the axe swung flat all the way round him (jump it) ----------------
+  // ---------------- THE PLOUGH: THE TURN, the share dragged flat all the way round it (jump it) ----------------
   TELL8.w8sweep = (e, t, k) => { ring(e.x, e.y, 100, k); };
   PLAN_FX.w8sweep = (e) => { sfx('whoosh');
     act(e, 'sweep', (h, dt, e) => { const k = h.el / .65; e.w8k = k;
@@ -1343,28 +1322,19 @@
     if ((P.w8slow || 0) > 0) { P.w8slow -= dt; if (P.state !== 'dodge') { P.x = x0 + (P.x - x0) * .55; P.y = y0 + (P.y - y0) * .55; } }
     if (W8.afterPlayer) W8.afterPlayer(dt, x0, y0);
   };
-  // ---------------- the Bellman's bronze and the crossbowman's pavise turn blows from the front ----------------
+  // ---------------- the Hurdy-Gurdy's case turns blows from the front ----------------
   const heavyM = (m) => m && (m.trump || m.power === 2 || m.launch || m.smash || m.shock || (m.key && m.key.includes('H')) || m.key === 'X');
   const msg = (e, s, col = '#E8D8B0') => { if (!(e.w8msg > performance.now())) { e.w8msg = performance.now() + 700; floatText(e.x, e.y, e.hh + 16, s, col, 12); } };
   const _strike = strike;
   strike = function (e, base, dir, m, echo) {
     m = m || {};
     if (e.type === 'w8bell' && !e.dead && (e.w8crack || 0) < 2 && !m.trump && !m.el && Math.sign(P.x - e.x) === e.facing && e.state !== 'down') {
-      if (heavyM(m)) { e.w8crack = (e.w8crack || 0) + 1; sfx('hit-metal'); tn(220 + e.w8crack * 40, .9, 'sine', .1); burst(e.x, e.y, 40, MAT_COL.bronze, 10, 'metal', dir); msg(e, e.w8crack >= 2 ? 'THE BELL BREAKS OPEN' : 'CRACKED', '#F2D890'); }
-      else { base *= .3; m = Object.assign({}, m, { kb: (m.kb || 0) * .2, launch: 0, noStun: 1 }); tn(330 + Math.random() * 40, .5, 'sine', .05); msg(e, 'CLANG'); }
-    }
-    if (e.type === 'w8xbow' && !e.dead && (e.w8pav || 0) > 0 && !m.trump && Math.sign(P.x - e.x) === e.facing && !e.w8pavCarry) {
-      if (heavyM(m)) { e.w8pav = Math.max(0, e.w8pav - 2); base *= .5; } else { e.w8pav--; sfx('hit-flesh', .3); burst(e.x + e.facing * 18, e.y, 30, ['#C23A1E', '#8A5A3A', '#E8DCC4'], 6, 'rock', dir); msg(e, 'PAVISE'); if (e.w8pav > 0) return; }
-      if (e.w8pav <= 0) { msg(e, 'PAVISE BROKEN', '#F2C090'); sfx('break'); burst(e.x + e.facing * 18, e.y, 30, ['#C23A1E', '#6A3A22', '#E8DCC4'], 18, 'rock', dir, true); }
-      if (!heavyM(m)) return;
+      if (heavyM(m)) { e.w8crack = (e.w8crack || 0) + 1; sfx('hit-metal'); tn(220 + e.w8crack * 40, .9, 'sine', .1); burst(e.x, e.y, 40, MAT_COL.bronze, 10, 'rock', dir); msg(e, e.w8crack >= 2 ? 'THE CASE SPLITS OPEN' : 'SPLIT', '#F2D890'); }
+      else { base *= .3; m = Object.assign({}, m, { kb: (m.kb || 0) * .2, launch: 0, noStun: 1 }); tn(147 + Math.random() * 20, .5, 'sawtooth', .04); msg(e, 'THE CASE TAKES IT'); }
     }
     if (W8.strikeGate && W8.strikeGate(e, m) === false) return;
     return _strike(e, base, dir, m, echo);
   };
-  // the crossbowman carries his pavise while he walks, and plants it when he stops to shoot
-  { const _u2 = updateEnemy; updateEnemy = function (e, dt) { const r = _u2(e, dt);
-    if (e.type === 'w8xbow' && !e.dead) { if (e.w8pav === undefined) e.w8pav = 3; const moving = (e.walk || 0) > 0 && e.state === 'idle'; e.w8pavCarry = moving; e.w8pavX = lerp(e.w8pavX ?? 18, moving ? 8 : 18, Math.min(1, dt * 8)); }
-    return r; }; }
 
   // ---------------- tells and upright effects, painted in depth with the figures (secret rooms too) ----------------
   const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); for (const h of hazards) if (HZ8()[h.kind] && HZ8()[h.kind].box) HZ8()[h.kind].box(h, box); if (W8.boxes) W8.boxes(box); };
@@ -1952,7 +1922,7 @@
   const yC = (y) => clamp(y, FLOOR_TOP + 10, FLOOR_BOT - 2);
   // ---------------- how each of them comes on ----------------
   if (typeof ENTRY !== 'undefined') Object.assign(ENTRY, {
-    w8hollow: ['w8rise'], w8halberd: ['w8march'], w8xbow: ['w8march'], w8flag: ['w8march'], w8bell: ['w8belfry'], w8crow: ['w8swoop'], w8egg: ['w8rollin'], w8hangman: ['w8rope'],
+    w8hollow: ['w8rise'], w8halberd: ['w8march'], w8xbow: ['w8march'], w8flag: ['w8march'], w8bell: ['w8march'], w8crow: ['w8swoop'], w8egg: ['w8rollin'], w8hangman: ['w8furrow'],
   });
   const edgeIn = (e, n, dur) => { n.x1 = entranceSpot(e); n.dir = P.x > n.x1 ? 1 : -1; n.x0 = n.dir > 0 ? camX - 40 : camX + VW + 40; if (Math.abs(n.x1 - n.x0) < 120) n.x1 = n.x0 + n.dir * 160; e.x = n.x0; e.facing = n.dir; n.y = yC(e.y); };
   if (typeof ENTER_FX !== 'undefined') Object.assign(ENTER_FX, {
@@ -1960,11 +1930,11 @@
     w8rise: { max: 1.5, start(e, n) { if (!n.keep) e.x = entranceSpot(e); sfx('crunch'); },
       update(e, n, dt) { if (Math.random() < .4) dust(e.x + rand(-10, 10), e.y, 1); if (n.t > .3 && !n.s) { n.s = 1; sfx('growl'); } return n.t >= n.max; },
       draw(e, n, t, inner) { const k = sm((n.t - .15) / 1.2); ctx.save(); ctx.fillStyle = 'rgba(40,36,32,.45)'; ell(e.x, e.y, 18, 5); ctx.fill(); ctx.beginPath(); ctx.rect(e.x - 80, e.y - 200, 160, 201); ctx.clip(); ctx.translate(0, (1 - k) * e.hh * 1.05); inner(); ctx.restore(); } },
-    // the Circle's soldiers march in from the edge of the field to a drum
+    // they come in from the edge of the field to a slow drum (Knife-Ears, the Mouth, the Procession, the Hurdy-Gurdy)
     w8march: { max: 1.6, keepFace: 1, start(e, n) { edgeIn(e, n); let k = 0; const drum = () => { if (k++ < 4 && sfxOn && actx) { tn(90, .12, 'sine', .12, 60); setTimeout(drum, 300); } }; drum(); },
       update(e, n, dt) { const k = cl01(n.t / n.max); e.x = lerp(n.x0, n.x1, k); e.walk += dt * 9; return n.t >= n.max; },
       draw(e, n, t, inner) { inner(); } },
-    // a bellman is let down out of a belfry that is not there: the bell first, with its legs hanging under it
+    // (unused now: something let down out of the sky on a rope)
     w8belfry: { max: 1.4, keepFace: 1, start(e, n) { e.x = entranceSpot(e); n.z0 = e.y - Y_OFF + 40; e.z = n.z0; sfx('whoosh'); },
       update(e, n, dt) { const k = cl01(n.t / .9); e.z = n.z0 * (1 - k * k); if (k >= 1 && !n.l) { n.l = 1; e.z = 0; shakeMag = Math.max(shakeMag, 8); sfx('slam'); tn(147, 1.4, 'sine', .12); tn(294, 1, 'sine', .05); dust(e.x, e.y, 12); } return n.t >= n.max; },
       draw(e, n, t, inner) { if (!n.l) { ctx.strokeStyle = 'rgba(60,44,30,.8)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(e.x, Y_OFF); ctx.lineTo(e.x, e.y - e.z - 60); ctx.stroke(); } inner(); } },
@@ -1977,9 +1947,10 @@
       update(e, n, dt) { const k = cl01(n.t / 1); e.x = lerp(n.x0, n.x1, sm(k)); if (Math.random() < .5 && k < 1) dust(e.x, e.y, 1); return n.t >= n.max; },
       draw(e, n, t, inner) { const s = e.state; if (n.t < 1.1) { e.state = 'w8act'; e.w8a = 'roll'; e.w8k = n.t; } try { inner(); } finally { e.state = s; } } },
     // the hangman lets himself down on a rope out of the sky, with the noose over his shoulder
-    w8rope: { max: 2, keepFace: 1, start(e, n) { e.x = clamp(P.x + (P.x < camX + VW / 2 ? 220 : -220), camX + 80, camX + VW - 80); n.z0 = e.y - Y_OFF + 100; e.z = n.z0; e.facing = Math.sign(P.x - e.x) || 1; sfx('roar'); banner('The Hangman of the Circle', 'HE KEEPS THE GALLOWS AT THE EDGE', 2.2); },
-      update(e, n, dt) { const k = sm(cl01(n.t / 1.6)); e.z = n.z0 * (1 - k); if (k >= 1 && !n.l) { n.l = 1; shakeMag = 9; sfx('slam'); dust(e.x, e.y, 14); } return n.t >= n.max; },
-      draw(e, n, t, inner) { ctx.strokeStyle = 'rgba(120,100,70,.9)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(e.x - 4, Y_OFF); ctx.lineTo(e.x - 4, e.y - e.z - 90); ctx.stroke(); inner(); } },
+    // the plough comes in from the edge of the field at a lumbering run, cutting a furrow behind it
+    w8furrow: { max: 2, keepFace: 1, start(e, n) { edgeIn(e, n); sfx('roar'); banner('The Plough of the Circle', 'IT STILL PLOUGHS THE FIELD IT WAS YOKED TO', 2.2); },
+      update(e, n, dt) { const k = cl01(n.t / 1.7); e.x = lerp(n.x0, n.x1, sm(k)); e.walk += dt * 6; if (Math.random() < .8) dust(e.x - n.dir * 30, e.y, 2); if (k >= 1 && !n.l) { n.l = 1; shakeMag = 9; sfx('slam'); } return n.t >= n.max; },
+      draw(e, n, t, inner) { ctx.strokeStyle = 'rgba(60,44,30,.6)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(n.x0, e.y + 2); ctx.lineTo(e.x - n.dir * 30, e.y + 2); ctx.stroke(); inner(); } },
   });
   // ---------------- the end of each area: the way on ----------------
   if (typeof THRESH !== 'undefined') {
@@ -2026,7 +1997,7 @@
     _kill(e, dir, m);
     const cd = CUSTOM_DEATH[e.type];
     if (cd && !e.boss) { const wasPop = e.death === 'pop'; e.death = cd; e.air = false; e.spin = 0; e.rotA = 0; e.vx = 0; e.vz = 0; e.z = 0; e.t = e.dmax = 1.6; if (wasPop) dropLoot(e);
-      if (cd === 'w8ash') { W8.akit.ash(e.x, e.y, 20, 18); sfx('crunch', .4); } if (cd === 'w8crack') { sfx('break'); } if (cd === 'w8bellfall') { tn(196, 2, 'sine', .12); tn(311, 1.4, 'sine', .05); } }
+      if (cd === 'w8ash') { W8.akit.ash(e.x, e.y, 20, 18); sfx('crunch', .4); } if (cd === 'w8crack') { sfx('break'); } if (cd === 'w8bellfall') { tn(110, 2, 'sawtooth', .07, 70); tn(165, 1.4, 'sawtooth', .04, 100); } }
   };
   const _dd = drawDeath;
   drawDeath = function (e, t) {
@@ -2041,9 +2012,10 @@
       const u = sm(k / .5); ctx.fillStyle = C('#E8B040'); ell(e.x + 4, e.y, 6 + u * 16, 2 + u * 4); ctx.fill(); outline(1);
       for (const s of [-1, 1]) { ctx.save(); ctx.translate(e.x + s * u * 16, e.y + lerp(-44, -12, u)); ctx.rotate(s * u * 1.4); ctx.beginPath(); ctx.rect(s < 0 ? -20 : 0, -30, 20, 52); ctx.clip(); W8.kit.cel(W8.kit.PB([0, -24, 11, -20, 15, -4, 12, 12, 0, 17, -12, 12, -15, -4, -11, -20]), '#ECE4D2', { d: 2, r: 1, w: 1.5 }); ctx.restore(); }
       ctx.strokeStyle = C('#C88A74'); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(e.x - 6, e.y - 2); ctx.lineTo(e.x - 20, e.y - 4); ctx.moveTo(e.x + 8, e.y - 1); ctx.lineTo(e.x + 22, e.y - 2); ctx.stroke();
-    } else if (d === 'w8bellfall') { // the bell comes off him and rolls over on its side, and the man in it is not there at all
-      const u = sm(k / .8); ctx.save(); ctx.translate(e.x + e.facing * u * 18, e.y - 2); ctx.rotate(e.facing * u * 1.45); W8.art.bell(0, 0, 1, 2, k < .9 ? (1 - k) : 0, t); ctx.restore();
-      if (u < .6) { ctx.save(); ctx.translate(e.x, e.y); ctx.globalAlpha *= 1 - u / .6; ctx.fillStyle = C('#E8DCC0'); ctx.fillRect(-6, -22, 4, 22); ctx.fillRect(3, -22, 4, 22); ctx.restore(); }
+    } else if (d === 'w8bellfall') { // the hurdy-gurdy: its legs go from under it, it comes down on its side and its strings let go one by one
+      const u = sm(k / .8); ctx.save(); ctx.translate(e.x, e.y - 4 - 22 * (1 - u)); ctx.scale(e.facing, 1); ctx.rotate(u * .5); W8.art.gurdy(0, 0, 1, 2, k < .9 ? (1 - k) * .6 : 0, t, 1.2); ctx.restore();
+      ctx.strokeStyle = C('#4A3A30'); ctx.lineWidth = 3; ctx.beginPath(); for (const x of [-14, -6, 10, 18]) { ctx.moveTo(e.x + x, e.y - 1); ctx.lineTo(e.x + x + 8 * u, e.y - 6 + 4 * u); } ctx.stroke();
+      if (k < .8) for (let i = 0; i < 4; i++) { const sx = e.x - 10 + i * 7; ctx.strokeStyle = `rgba(232,224,200,${.8 - k})`; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(sx, e.y - 30); ctx.quadraticCurveTo(sx + 10 * u, e.y - 40 - 20 * u, sx + 20 * u, e.y - 20); ctx.stroke(); }
     } else if (d === 'w8fall') { // the Goat-Lord: he goes forward onto his face, and goes to grey ash from the horns down; the horn is left
       const u = sm(k / .7); ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.facing * (e.size || 1), e.size || 1);
       if (u < 1) { ctx.globalAlpha *= 1 - sm((k - .5) / .5); ctx.rotate(u * .25); W8.goatLord({ form: 4, kneel: 1, book: 0, tilt: .4 + u * .6, lean: .3 + u * .4, t, crook: 1.4 }); }
@@ -2053,12 +2025,11 @@
     }
     ctx.restore();
   };
-  // the crossbow bolt: a quarrel with a square head and leather fletching
+  // the Mouth's spit: one of its own teeth, turning over as it comes, a thread of spittle after it
   const _dp = drawProj;
-  drawProj = function (p, t) { if (!p.w8bolt) return _dp(p, t); const d = Math.sign(p.vx) || 1; shadow(p.x, p.y, 5); ctx.save(); ctx.translate(p.x, p.y - p.z); ctx.scale(d, 1);
-    ctx.strokeStyle = C(OUT); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(6, 0); ctx.stroke(); ctx.strokeStyle = C('#6A4A2A'); ctx.lineWidth = 1.2; ctx.stroke();
-    W8.kit.fillPoly([6, -2, 11, 0, 6, 2], '#9A9EA2', 1); W8.kit.fillPoly([-14, 0, -9, -3, -8, 0], '#5A3A22', .8); W8.kit.fillPoly([-14, 0, -9, 3, -8, 0], '#4A2A18', .8);
-    ctx.restore(); if (DET()) { ctx.strokeStyle = 'rgba(255,240,220,.25)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x - d * 30, p.y - p.z); ctx.lineTo(p.x - d * 12, p.y - p.z); ctx.stroke(); } };
+  drawProj = function (p, t) { if (!p.w8bolt) return _dp(p, t); const d = Math.sign(p.vx) || 1; shadow(p.x, p.y, 4); ctx.save(); ctx.translate(p.x, p.y - p.z); ctx.rotate(t * 14 * d);
+    W8.kit.cel(W8.kit.PB([-4, -5, 4, -5, 5, 0, 3, 6, 0, 3, -3, 6, -5, 0]), '#F0E6D0', { d: 1, r: .5, w: 1.2, lite: '#FFFFFF', dark: '#B8A888' }); ctx.restore();
+    if (DET()) { ctx.strokeStyle = 'rgba(220,210,190,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x - d * 30, p.y - p.z + 2); ctx.quadraticCurveTo(p.x - d * 16, p.y - p.z + 5, p.x - d * 6, p.y - p.z); ctx.stroke(); } };
   };
 
   // ======================================================================================================
