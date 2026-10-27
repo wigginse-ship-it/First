@@ -666,9 +666,9 @@ const CORWIN = (() => {
         for (let k = 0; k < per; k++) { const [e, sd] = life(r * 13.1 + (sg + 1) * 41 + k * 7.7 + salt); if (e < .08) continue;
           const j = (hsh(sd + 2) - .5) * .5, dy0 = .2 + hsh(sd + 5) * .45 + v * .25; let dx = sg + trx * 1.3 + j * .3, dy = dy0 + try_ * 1.3; const dl = Math.hypot(dx, dy) || 1;
           emit(x - sg * 1.5, y + (hsh(sd + 6) - .5) * 7, dx / dl, dy / dl, (10 + Math.pow(hsh(sd + 3), .8) * 22) * (.7 + v * .7) * (1 + sp * .8) * e * out, (4.5 + hsh(sd + 4) * 6.5) * (.55 + .45 * e) * Math.min(1, e * 4), sd); } } }
-    const cols = [C(lining ? (L.cloakLining || '#0B0A0E') : L.cloak), C(L.cloakSlate)], base = [lining ? .36 : .44, .34];
-    const stops = cols.map((h, c) => [rgbaOf(h, base[c]), rgbaOf(h, base[c] * .74), rgbaOf(h, base[c] * .42)]);
-    const draw = () => { for (const k of strokes) { const g = ctx.createLinearGradient(k.x0, k.y0, k.x1, k.y1), st = stops[k.c]; g.addColorStop(0, st[0]); g.addColorStop(.5, st[1]); g.addColorStop(1, st[2]); ctx.fillStyle = g; ctx.fill(k.p); } };
+    const cols = [C(lining ? (L.cloakLining || '#0B0A0E') : L.cloak), C(L.cloakSlate)], base = [lining ? .84 : .92, .78]; // (at its root, where it leaves the cloth, a stroke is nearly as solid as the cloth itself)
+    const FADE = [[0, 1], [.22, .86], [.45, .56], [.7, .34], [1, .2]], stops = cols.map((h, c) => FADE.map(([f, a]) => [f, rgbaOf(h, base[c] * a)])); // solid, thinning, then faint to its dry end
+    const draw = () => { for (const k of strokes) { const g = ctx.createLinearGradient(k.x0, k.y0, k.x1, k.y1), st = stops[k.c]; for (const [f, cs] of st) g.addColorStop(f, cs); ctx.fillStyle = g; ctx.fill(k.p); } };
     if (!layer) { draw(); return; }
     const m = ctx.getTransform(), a = ctx.globalAlpha;
     if (HERO_LATE.length < 8) HERO_LATE.push(() => { ctx.save(); ctx.setTransform(m); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'destination-over'; draw(); ctx.restore(); });
