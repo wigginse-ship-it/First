@@ -615,35 +615,41 @@ const CORWIN = (() => {
   // (paint.js) they are laid in under him after his ink line (HERO_LATE), so they show only past his silhouette and are
   // never inked solid; anywhere else they are drawn at once, behind him with the rest of the back of the cloak.
   // each stroke is a broad, loaded flat brush: its width held right to the end, where it lifts off square and dry, the
-  // bristles splitting into bands that stop at slightly different lengths (FR_BAND across it: offset, reach); it fades
-  // along its length (FR_A) but keeps enough paint at its end to read as a fat brush mark, never a needle point
-  const FR_A = [1, .9, .78, .66, .54, .42], FR_NS = FR_A.length, FR_NB = 5;
+  // bristles splitting into bands that stop at slightly different lengths; it fades
+  // along its length but keeps enough paint at its end to read as a fat brush mark, never a needle point
+  const FR_NS = 8, FR_NB = 5; // samples along a stroke, bands across it
   const FRX = new Float32Array(FR_NS + 1), FRY = new Float32Array(FR_NS + 1), FRNX = new Float32Array(FR_NS + 1), FRNY = new Float32Array(FR_NS + 1);
-  function fstroke(paths, c, x, y, Dx, Dy, Ex, Ey, w) { // C(f) = (x, y) + D f + E f^2, w wide; split into bands across it, each segment into its own fade bucket
+  // one stroke as one path (its bands, each a single outline, unioned when filled, so there are no seams inside it), faded
+  // smoothly from its loaded start to its dry end by a gradient along it; its bands' lengths come from its own seed (sd),
+  // so they hold still from frame to frame however the cloth moves
+  function fstroke(list, c, x, y, Dx, Dy, Ex, Ey, w, sd) { // C(f) = (x, y) + D f + E f^2, w wide
     for (let q = 0; q <= FR_NS; q++) { const f = q / FR_NS, tx = Dx + 2 * Ex * f, ty = Dy + 2 * Ey * f, tl = Math.hypot(tx, ty) || 1;
       FRX[q] = x + Dx * f + Ex * f * f; FRY[q] = y + Dy * f + Ey * f * f; FRNX[q] = -ty / tl; FRNY[q] = tx / tl; }
-    const bw = w / FR_NB, sd = x * 3.1 + y * 1.7;
+    const bw = w / FR_NB, p = new Path2D(), hw = (f) => bw * .5 * (f > .5 ? 1.15 - .45 * (f - .5) : 1.15); // (overlapping, so the body is solid; parting a little toward the end, where the brush runs dry)
     for (let b = 0; b < FR_NB; b++) {
-      const o = (b + .5) * bw - w / 2, r = .8 + .2 * hsh(sd + b * 5.3), lo = b === 0 || b === FR_NB - 1 ? .82 : 1; // (the outer bristles a little shorter: the corners of the brush round off)
-      const reach = r * lo;
-      for (let q = 0; q < FR_NS; q++) { const fa = q / FR_NS, fb = (q + 1) / FR_NS; if (fa >= reach) break; const t = Math.min(1, (reach - fa) / (fb - fa)), p = paths[c * FR_NS + q];
-        const ha = bw * .5 * (fa > .5 ? 1.15 - .45 * (fa - .5) : 1.15), hb = bw * .5 * (fb > .5 ? 1.15 - .45 * (fb - .5) : 1.15); // (overlapping, so the body is solid; parting a little toward the end, where the brush runs dry)
-        const ax = FRX[q] + FRNX[q] * o, ay = FRY[q] + FRNY[q] * o;
-        const ex = FRX[q] + (FRX[q + 1] - FRX[q]) * t, ey = FRY[q] + (FRY[q + 1] - FRY[q]) * t, enx = FRNX[q] + (FRNX[q + 1] - FRNX[q]) * t, eny = FRNY[q] + (FRNY[q + 1] - FRNY[q]) * t, bx = ex + enx * o, by = ey + eny * o;
-        p.moveTo(ax + FRNX[q] * ha, ay + FRNY[q] * ha); p.lineTo(bx + enx * hb, by + eny * hb); p.lineTo(bx - enx * hb, by - eny * hb); p.lineTo(ax - FRNX[q] * ha, ay - FRNY[q] * ha); p.closePath(); }
+      const o = (b + .5) * bw - w / 2, reach = (.8 + .2 * hsh(sd + b * 5.3 + 77)) * (b === 0 || b === FR_NB - 1 ? .82 : 1); // (the outer bristles a little shorter: the corners of the brush round off)
+      const n = Math.max(1, Math.ceil(reach * FR_NS - 1e-6)), at = (q, side) => { // a point on this band's edge at sample q (the last one cut at its reach)
+        let f = q / FR_NS, X = FRX[q], Y = FRY[q], nx = FRNX[q], ny = FRNY[q];
+        if (q === n) { const k = n - 1, t = (reach * FR_NS - k); f = reach; X = FRX[k] + (FRX[n] - FRX[k]) * t; Y = FRY[k] + (FRY[n] - FRY[k]) * t; nx = FRNX[k] + (FRNX[n] - FRNX[k]) * t; ny = FRNY[k] + (FRNY[n] - FRNY[k]) * t; }
+        const h = hw(f) * side; return [X + nx * (o + h), Y + ny * (o + h)]; };
+      for (let q = 0; q <= n; q++) { const [px, py] = at(q, 1); q ? p.lineTo(px, py) : p.moveTo(px, py); }
+      for (let q = n; q >= 0; q--) { const [px, py] = at(q, -1); p.lineTo(px, py); }
+      p.closePath();
     }
+    list.push({ p, c, x0: x, y0: y, x1: x + Dx + Ex, y1: y + Dy + Ey });
   }
+  const rgbaOf = (hex, a) => !/^#[0-9a-f]{6}$/i.test(hex) ? hex : 'rgba(' + parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16) + ',' + parseInt(hex.slice(5, 7), 16) + ',' + a.toFixed(3) + ')';
   function fringe(L, Pt, u0, u1, lining, sp) {
     const CD = CLOAK_DRAW, pose = CLOAK_GEO.pose, layer = typeof heroG !== 'undefined' && heroG && ctx === heroG && typeof HERO_LATE !== 'undefined';
     if (!layer && pose.down) return; // (knocked flat, the near half is drawn over him: off his own layer the fringe would cover him)
     const fine = FINE(), pc = SIM.pc, mv = Math.min(1, sp), ln = Math.hypot(LVX, LVY) || 1, trx = -LVX / ln * mv, try_ = -LVY / ln * mv;
-    const gy = (CD ? CD.z : 0) + 1.5, salt = (lining ? 500 : 0) + (u0 >= .5 ? 250 : 0), paths = []; for (let k = 0; k < 2 * FR_NS; k++) paths.push(new Path2D());
+    const gy = (CD ? CD.z : 0) + 1.5, salt = (lining ? 500 : 0) + (u0 >= .5 ? 250 : 0), strokes = [];
     uv(Pt, (u0 + u1) / 2, .4); const cx = UX, cy = UY;
     const life = (sd) => { const cyc = pc * (.22 + hsh(sd + .5) * .3) + hsh(sd + .7), gen = Math.floor(cyc); return [Math.sqrt(Math.sin(Math.PI * (cyc - gen))), sd + gen * 37.3]; };
     const emit = (x, y, dx, dy, len, w, s) => { // a stroke from x, y along dx, dy (unit), bending, and swept back along the flight
-      let Dx = dx * len, Dy = dy * len; if (y + Dy > gy) { Dy = Math.max(gy - y, Dy * .2); Dx += Math.sign(Dx || -1) * len * .35; } // along the street it flattens into a smear
+      let Dx = dx * len, Dy = dy * len; const ex = y + Dy - gy; if (ex > 0) { Dy -= ex * .8; Dx += (Dx < 0 ? -1 : 1) * ex * .5; } // along the street it flattens into a smear (by as much as it would go under, so it never jumps)
       const bend = (hsh(s + 11) - .5) * .5 * len, lag = .45 * len;
-      fstroke(paths, hsh(s + 12) < .27 ? 1 : 0, x, y, Dx, Dy, -dy * bend + trx * lag, dx * bend + try_ * lag, w);
+      fstroke(strokes, hsh(s + 12) < .27 ? 1 : 0, x, y, Dx, Dy, -dy * bend + trx * lag, dx * bend + try_ * lag, w, s);
     };
     // off the hem: down the fall of the cloth and out from it
     const nh = Math.round((u1 - u0) * (fine ? 16 : 8));
@@ -651,17 +657,18 @@ const CORWIN = (() => {
       const u = u0 + (u1 - u0) * (m + .2 + .6 * hsh(sd)) / nh, v = .8 + hsh(sd + 1) * .14; uv(Pt, u, v - .12); const ax = UX, ay = UY; uv(Pt, u, v);
       let tx = UX - ax, ty = UY - ay; const tl = Math.hypot(tx, ty) || 1; let ox = UX - cx, oy = UY - cy; const ol = Math.hypot(ox, oy) || 1, j = (hsh(sd + 2) - .5) * .5;
       let dx = tx / tl * .85 + ox / ol * .45 + trx * 1.2 + j, dy = ty / tl * .85 + oy / ol * .45 + try_ * 1.2 - j * .3; const dl = Math.hypot(dx, dy) || 1;
-      emit(UX, UY, dx / dl, dy / dl, (13 + Math.pow(hsh(sd + 3), .8) * 26) * (1 + sp * .7) * e * (pose.down ? .4 : 1), (5 + hsh(sd + 4) * 7) * (.55 + .45 * e), sd); }
+      emit(UX, UY, dx / dl, dy / dl, (13 + Math.pow(hsh(sd + 3), .8) * 26) * (1 + sp * .7) * e * (pose.down ? .4 : 1), (5 + hsh(sd + 4) * 7) * (.55 + .45 * e) * Math.min(1, e * 4), sd); }
     // off the outer edges, row by row down the cloth: wherever the cloth stands out past his body, out from it and down
     const i0 = Math.ceil(u0 * (S - 1) - 1e-3), i1 = Math.floor(u1 * (S - 1) + 1e-3), per = pose.down ? 0 : fine ? 2 : 1; // (knocked flat, only a few short smears off the hem)
     for (let r = 0; r < 5; r++) { const v = .24 + r * .16; let xn = 1e9, yn = 0, xx = -1e9, yx = 0;
       for (let i = i0 - 1; i <= i1 + 1; i++) { const u = clamp(i / (S - 1), u0, u1); uv(Pt, u, v); if (UX < xn) { xn = UX; yn = UY; } if (UX > xx) { xx = UX; yx = UY; } }
-      for (const sg of [-1, 1]) { const x = sg < 0 ? xn : xx, y = sg < 0 ? yn : yx; if (x * sg < 9) continue;
+      for (const sg of [-1, 1]) { const x = sg < 0 ? xn : xx, y = sg < 0 ? yn : yx, out = clamp((x * sg - 9) / 6, 0, 1); if (!out) continue; // (growing in as the cloth stands out past him, not popping)
         for (let k = 0; k < per; k++) { const [e, sd] = life(r * 13.1 + (sg + 1) * 41 + k * 7.7 + salt); if (e < .08) continue;
           const j = (hsh(sd + 2) - .5) * .5, dy0 = .2 + hsh(sd + 5) * .45 + v * .25; let dx = sg + trx * 1.3 + j * .3, dy = dy0 + try_ * 1.3; const dl = Math.hypot(dx, dy) || 1;
-          emit(x - sg * 1.5, y + (hsh(sd + 6) - .5) * 7, dx / dl, dy / dl, (10 + Math.pow(hsh(sd + 3), .8) * 22) * (.7 + v * .7) * (1 + sp * .8) * e, (4.5 + hsh(sd + 4) * 6.5) * (.55 + .45 * e), sd); } } }
+          emit(x - sg * 1.5, y + (hsh(sd + 6) - .5) * 7, dx / dl, dy / dl, (10 + Math.pow(hsh(sd + 3), .8) * 22) * (.7 + v * .7) * (1 + sp * .8) * e * out, (4.5 + hsh(sd + 4) * 6.5) * (.55 + .45 * e) * Math.min(1, e * 4), sd); } } }
     const cols = [C(lining ? (L.cloakLining || '#0B0A0E') : L.cloak), C(L.cloakSlate)], base = [lining ? .36 : .44, .34];
-    const draw = () => { const ga = ctx.globalAlpha; for (let c = 0; c < 2; c++) { ctx.fillStyle = cols[c]; for (let q = 0; q < FR_NS; q++) { ctx.globalAlpha = ga * base[c] * FR_A[q]; ctx.fill(paths[c * FR_NS + q]); } } ctx.globalAlpha = ga; };
+    const stops = cols.map((h, c) => [rgbaOf(h, base[c]), rgbaOf(h, base[c] * .74), rgbaOf(h, base[c] * .42)]);
+    const draw = () => { for (const k of strokes) { const g = ctx.createLinearGradient(k.x0, k.y0, k.x1, k.y1), st = stops[k.c]; g.addColorStop(0, st[0]); g.addColorStop(.5, st[1]); g.addColorStop(1, st[2]); ctx.fillStyle = g; ctx.fill(k.p); } };
     if (!layer) { draw(); return; }
     const m = ctx.getTransform(), a = ctx.globalAlpha;
     if (HERO_LATE.length < 8) HERO_LATE.push(() => { ctx.save(); ctx.setTransform(m); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'destination-over'; draw(); ctx.restore(); });
