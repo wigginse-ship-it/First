@@ -103,6 +103,8 @@ function drawCorwinHead(look, hy) {
 // the tips give a little with his motion (HAIR_SWAY, in head space). Crown locks stand up and sweep back and to one
 // side; locks fall over the ears; jagged ends lie on the nape; a few strands fall over the brow.
 let HAIR_SWAY = [0, 0];
+// set while an armored foe is drawn (armor_a.js): drawHumanoid / drawAutomaton call it inside the body, before the front arm
+let ARMOR_MID = null;
 const HAIR_LOCKS = (() => {
   // base (phi, e) on the skull, tip (phi + dp, te) at radius R + out, base half-width w (radians); k: which group.
   // A full, shaggy mop as in the sheet: locks falling from the crown over the brow, the ears and down to the collar
@@ -918,6 +920,7 @@ function drawHumanoid(look, pose) {
     ctx.restore();
   }
   ctx.restore();
+  if (ARMOR_MID && !CW) ARMOR_MID({ HIP, SHO, NECK, hy, cr, LEAN, head: () => { ctx.translate(1, NECK); ctx.rotate(-LEAN * .3); ctx.scale(.9, .9); ctx.translate(-1, -NECK); } }); // breakable armor worn on the body (armor_a.js)
   if (BACK && atkVis) frontArm(); // (still in the upper body's frame)
   if (across) { farArm(); farGrip(false); if (arms) farPauldron(() => arms.pauldron(look, bsx, bsy - 1, bpA, true, .5), Y >= 0 ? Y : 1); } // (still in the upper body's frame here)
   if (!BACK) frontArm();

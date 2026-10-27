@@ -468,6 +468,7 @@
     if (DET()) { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(6.6, hy - 3.4, 2.8, .9); }
     plate(() => { ctx.moveTo(-.4, hy - 6.6); ctx.lineTo(10, hy - 6.4); ctx.lineTo(11.4, hy - 4); ctx.lineTo(.4, hy - 4.4); ctx.closePath(); }, L.dark, { sd: .7, hd: .5, ow: 1 });
     if (L.moss) mossClump(-1.4, hy - 9.6, 3.4, L);
+    if (ARMOR_MID) ARMOR_MID({ HIP, SHO, hy, cr, LEAN: pose.lean || 0, head: () => {} }); // breakable armor worn on the body (armor_a.js)
     // ---- front arm + weapon: plated upper arm, a ball elbow, a forearm with its piston, a steel gauntlet
     const arm = pose.arm ?? (1.1 - sw * .35);
     if (pose.trail) drawTrail(0, SHO + 2, pose);
