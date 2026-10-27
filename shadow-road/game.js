@@ -331,24 +331,24 @@ function strike(e, base, dir, m, echo) {
   // what counts as a heavy blow: it breaks blocks and guards
   const heavy = m.trump || m.power === 2 || m.launch || m.smash || m.shock || (m.key && m.key.includes('H')) || m.key === 'X';
   if (!e.boss && !m.trump && !m.el && !heavy && e.state === 'block' && Math.sign(P.x - e.x) === e.facing) { // a raised guard turns a light hit aside
-    e.t = Math.max(e.t, .25); floatText(e.x, e.y, e.z + e.hh + 10, 'BLOCKED', '#C8CCD8', 13); sfx('hit-metal', .3);
+    e.t = Math.max(e.t, .25); floatIcon(e.x, e.y, e.z + e.hh + 10, 'shield', 15); sfx('hit-metal', .3);
     burst(e.x - dir * e.hw * .6, e.y, e.z + e.hh * .6, ['#FFFFFF', '#C8CCD8'], 6, 'spark', -dir); P.vx = -dir * 140; hitstop = Math.max(hitstop, .05); return;
   }
   if (!e.boss && stageIdx >= 2 && !heavy && !m.trump && !m.el && ['idle', 'recover'].includes(e.state) && (e.def.draw === 'human' || e.def.draw === 'knight') && Math.sign(P.x - e.x) === e.facing && Math.random() < .25) {
-    e.state = 'block'; e.t = .55; e.plan = null; floatText(e.x, e.y, e.z + e.hh + 10, 'BLOCKED', '#C8CCD8', 13); sfx('hit-metal', .3); // third-world fighters raise a guard
+    e.state = 'block'; e.t = .55; e.plan = null; floatIcon(e.x, e.y, e.z + e.hh + 10, 'shield', 15); sfx('hit-metal', .3); // third-world fighters raise a guard
     burst(e.x - dir * e.hw * .6, e.y, e.z + e.hh * .6, ['#FFFFFF', '#C8CCD8'], 6, 'spark', -dir); P.vx = -dir * 140; hitstop = Math.max(hitstop, .05); return;
   }
-  let broke = false;
+  let broke = false, guardPips;
   if (e.elite && e.guard > 0 && !m.el) {
-    if (heavy) { e.guard -= m.power === 2 || m.trump ? 2 : 1; if (e.guard <= 0) { e.guard = 0; broke = true; } else { floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD ' + '◆'.repeat(e.guard), '#EED48A', 11); sfx('hit-metal', .6); } }
-    else { dmg = Math.max(1, Math.round(dmg * .25)); m = Object.assign({}, m, { kb: (m.kb || 0) * .15, launch: 0, noStun: 1 }); sfx('hit-metal', .2); } // light hits glance off the guard
+    if (heavy) { e.guard -= m.power === 2 || m.trump ? 2 : 1; if (e.guard <= 0) { e.guard = 0; broke = true; } else { guardPips = e.guard; sfx('hit-metal', .6); } }
+    else { guardPips = e.guard; dmg = Math.max(1, Math.round(dmg * .25)); m = Object.assign({}, m, { kb: (m.kb || 0) * .15, launch: 0, noStun: 1 }); sfx('hit-metal', .2); } // light hits glance off the guard
   }
   if (e.shrink < .8) { dmg = Math.round(dmg * 1.4); m = Object.assign({}, m, { kb: (m.kb || 0) * 2.4 + 120, launch: (m.launch || 0) * 1.5 + 140 }); } // a shrunken foe is punted
   if (P.shrink < .8) dmg = Math.max(1, Math.round(dmg * .75)); // and a shrunken prince hits softer
   if (pw('might') && !m.trump) dmg = Math.round(dmg * 1.3);
   if (pw('leech') && !m.trump && !e.boss) P.hp = Math.min(maxHp(), P.hp + 1 + dmg * .03);
   if (!m.trump && P.hp > 0 && gearStat('leech')) { P.leechAcc = (P.leechAcc || 0) + dmg * gearStat('leech'); if (P.leechAcc >= 1) { const h = Math.floor(P.leechAcc); P.leechAcc -= h; P.hp = Math.min(maxHp(), P.hp + h); } } // armor that drinks
-  hurtEnemy(e, dmg, dir, m, crit);
+  { const n0 = nums.length; hurtEnemy(e, dmg, dir, m, crit); if (guardPips) iconNums(n0, 'guard', guardPips); } // (a guarded blow: the guard's diamonds beside the number)
   if (P.specialHit && (m === P.move || (P.move && m.key === P.move.key))) learnedFirstHit(e, dir);
   if (broke && !e.dead) { // the guard shatters and leaves it reeling
     e.state = 'down'; e.t = 1.3; e.vx = dir * 60; e.plan = null; hitstop = Math.max(hitstop, .14); shakeMag = Math.max(shakeMag, 7); sfx('break');

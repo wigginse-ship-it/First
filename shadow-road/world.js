@@ -12,6 +12,8 @@ function burst(x, y, z, cols, n, mat, dir = 0, big) {
 }
 function dust(x, y, n) { for (let i = 0; i < n; i++) parts.push({ x: x + rand(-8, 8), y, z: 1, vx: rand(-60, 60), vy: rand(-8, 8), vz: rand(20, 70), life: .45, max: .45, col: 'rgba(255,255,255,.7)', size: rand(3, 6), shape: 'puff', rot: 0, vr: 0 }); }
 function floatText(x, y, z, txt, col, size = 14) { nums.push({ x, y, z, txt, col, size, t: .85, max: .85 }); }
+function floatIcon(x, y, z, icon, size = 14) { nums.push({ x, y, z, txt: '', col: '#FFFFFF', size, t: .85, max: .85, icon }); } // a blow turned aside: just the icon, no words
+function iconNums(n0, icon, pips) { for (let i = n0; i < nums.length; i++) if (/^\d+!?$/.test(String(nums[i].txt))) { nums[i].icon = icon; if (pips !== undefined) nums[i].pips = pips; } } // tag the damage numbers a hit just made
 function updateFx(dt) {
   for (const p of parts) {
     p.life -= dt;

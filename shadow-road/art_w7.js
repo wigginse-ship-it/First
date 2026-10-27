@@ -1990,7 +1990,7 @@
       } else base *= 1.3;
     }
     if (e.type === 'w7guard' && !e.dead && !heavyHit(m) && !m.el && ['idle', 'recover'].includes(e.state) && Math.sign(P.x - e.x) === e.facing && Math.random() < .3) {
-      e.state = 'block'; e.t = .5; e.plan = null; floatText(e.x, e.y, e.z + e.hh + 10, 'BLOCKED', '#E8DCD4', 13); sfx('hit-metal', .3); P.vx = -dir * 140; hitstop = Math.max(hitstop, .05); return; }
+      e.state = 'block'; e.t = .5; e.plan = null; floatIcon(e.x, e.y, e.z + e.hh + 10, 'shield', 15); sfx('hit-metal', .3); P.vx = -dir * 140; hitstop = Math.max(hitstop, .05); return; }
     return _strike(e, base, dir, m, echo);
   };
   // your blows on the King's reflection
