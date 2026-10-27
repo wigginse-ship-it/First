@@ -2019,11 +2019,11 @@
     const d = e.death; if (!d || !/^w7/.test(d)) return _dd(e, t);
     const el = e.corpse ? (e.dmax || 1) : e.dmax - e.t, k = cl01(el / (e.dmax || 1)), a = { walk: 0, t: e.deadAt || t, wind: 0, hurt: true };
     const draw = (fn) => { ctx.save(); ctx.globalAlpha *= e.fade !== undefined ? e.fade : 1; try { fn(); } finally { ctx.restore(); } };
-    if (d === 'w7float') draw(() => { if (k >= .999) return; ctx.translate(e.x, e.y - e.z - el * 50); ctx.rotate(-Math.min(1, el / 1.8) * 1.2 * e.facing); ctx.scale(e.facing, 1); CREATURES[e.def.draw](e, a); });
+    if (d === 'w7float') draw(() => { if (k >= .999) return; ctx.translate(e.x, e.y - e.z - el * 50); ctx.rotate(-el / 1.8 * 1.2 * e.facing); ctx.scale(e.facing, 1); CREATURES[e.def.draw](e, a); });
     else if (d === 'w7douse') draw(() => { e.w7out = 1; ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-sm(Math.min(1, k * 1.6)) * 1.4); ctx.globalAlpha *= 1 - sm((k - .6) / .4) * .4; CREATURES.w7lamp(e, a); });
     else if (d === 'w7foam') draw(() => { if (k < .5) { ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); ctx.globalAlpha *= 1 - k * 2; CREATURES.w7siren(e, a); }
       if (k < .999) onMain(() => { for (let i = 0; i < 24; i++) { const q = cl01(k * 1.4 - hsh(i) * .4), x = e.x + (hsh(i + 2) - .5) * 30, y = e.y - e.z - 20 - q * 70 + (hsh(i + 5) - .5) * 20; ctx.strokeStyle = `rgba(240,250,250,${.8 * Math.sin(q * Math.PI)})`; ctx.lineWidth = .8; circle(x, y, 1 + hsh(i + 7) * 3); ctx.stroke(); } }); });
-    else if (d === 'w7drift') draw(() => { if (k >= .999) return; ctx.translate(e.x - e.facing * el * 30, e.y - e.z - el * 60); ctx.rotate(Math.min(1, el / 1.2) * Math.PI * .85 * e.facing); ctx.scale(e.facing, 1); CREATURES[e.def.draw](e, a); }); // (belly up, it goes up through the water at a steady pace until it is gone)
+    else if (d === 'w7drift') draw(() => { if (k >= .999) return; ctx.translate(e.x - e.facing * el * 30, e.y - e.z - el * 60); ctx.rotate(el / 1.2 * Math.PI * .85 * e.facing); ctx.scale(e.facing, 1); CREATURES[e.def.draw](e, a); }); // (it goes up through the water at a steady pace, turning over at a steady rate, until it is gone)
     else if (d === 'w7flee') draw(() => { if (k >= .999) return; ctx.translate(e.x + e.facing * -el * 144, e.y - e.z - el * 67); ctx.scale(-e.facing, 1); CREATURES.w7hippo(e, a); });
     else if (d === 'w7flood') draw(() => { e.w7bare = 1; ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-sm(Math.min(1, k * 2)) * 1.4); CREATURES.w7bellk(e, a); });
     else if (d === 'w7topple') draw(() => { ctx.translate(e.x, e.y); ctx.scale(e.facing, 1); ctx.rotate(-Math.pow(sm(Math.min(1, k * 1.4)), 2) * 1.5); CREATURES.w7triton(e, a); });
