@@ -951,7 +951,7 @@
     ctx.restore();
   }
   // the crozier: an iron staff with a crook bent round into a ring, the ring the Circle
-  function crozier(x0, y0, ang, L, glow) {
+  function crozier(x0, y0, ang, L, glow, charge = 0, t = 0) {
     const x1 = x0 + Math.cos(ang) * L, y1 = y0 + Math.sin(ang) * L;
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 4.4; ctx.beginPath(); ctx.moveTo(x0 - Math.cos(ang) * 12, y0 - Math.sin(ang) * 12); ctx.lineTo(x1, y1); ctx.stroke();
     ctx.strokeStyle = C(GL.iron); ctx.lineWidth = 2.6; ctx.stroke(); ctx.strokeStyle = C(GL.ironLt); ctx.lineWidth = .7; ctx.stroke();
@@ -960,6 +960,12 @@
     if (DET()) { ctx.strokeStyle = C(GL.ironLt); ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(rx, ry, 9, -2.4, -.6); ctx.stroke(); }
     ctx.fillStyle = C('#0C0A08'); circle(rx, ry, 7); ctx.fill(); // the ring is a hole: you see nothing through it
     if (glow > 0) glowM(rx, ry, 18, '210,200,180', .25 * glow);
+    if (charge > 0) { // the bleat gathering in the crook: grey motes of the Circle spiral into the ring, its hole fills with a pale, growing light, and threads crackle off it
+      for (let i = 0; i < 12; i++) { const q = (t * (1.1 + charge * 1.6) + i / 12) % 1, r = 9 + (1 - q) * (22 + 14 * charge), a = i * 2.4 + q * 4.2;
+        ctx.fillStyle = `rgba(${i % 3 ? '214,206,190' : '236,214,150'},${(.25 + .6 * q) * charge})`; circle(rx + Math.cos(a) * r, ry + Math.sin(a) * r, .8 + q * 1.4); ctx.fill(); }
+      const g = ctx.createRadialGradient(rx, ry, 0, rx, ry, 7); g.addColorStop(0, `rgba(250,240,214,${.95 * charge})`); g.addColorStop(.55 * charge + .2, `rgba(214,200,170,${.7 * charge})`); g.addColorStop(1, 'rgba(12,10,8,0)'); ctx.fillStyle = g; circle(rx, ry, 7); ctx.fill();
+      if (charge > .35) { ctx.strokeStyle = `rgba(240,228,200,${.8 * charge})`; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = Math.floor(t * 18 + i * 7) * 1.7 + i * 2.1, L2 = 9 + 8 * charge; ctx.moveTo(rx + Math.cos(a) * 8, ry + Math.sin(a) * 8); ctx.lineTo(rx + Math.cos(a + .3) * (8 + L2 * .5), ry + Math.sin(a + .3) * (8 + L2 * .5)); ctx.lineTo(rx + Math.cos(a - .1) * (8 + L2), ry + Math.sin(a - .1) * (8 + L2)); } ctx.stroke(); }
+      glowM(rx, ry, 10 + 6 * charge, '240,226,190', .3 * charge); }
     return [rx, ry];
   }
   // his cope: a great semicircle of vermilion silk, its orphrey bands of gold worked with black goats; in his third
@@ -1010,7 +1016,7 @@
       fist(bx, by, form >= 3 ? '#1C1816' : GL.skin, 1.2);
     } else { const ca = o.crook ?? -1.3, hx = nsh[0] + Math.cos(ca + .6) * 16, hy = nsh[1] + Math.sin(ca + .6) * 16;
       limb3(nsh[0], nsh[1], (nsh[0] + hx) / 2 + 3, (nsh[1] + hy) / 2 + 4, hx, hy, 6.4, 5.4, 4.4, GL.cope);
-      W8.crookAt = crozier(hx, hy, ca, o.crookL || 62, o.crookGlow || 0);
+      W8.crookAt = crozier(hx, hy, ca, o.crookL || 62, o.crookGlow || 0, o.charge || 0, o.t || 0);
       fist(hx, hy, form >= 3 ? '#1C1816' : GL.skin, 1.3); }
     ctx.restore();
   }
@@ -1025,7 +1031,7 @@
     if (A('bind')) { o.farUp = 1; o.sign = 1; o.crook = -1.5; }
     if (W('w8butt')) { o.lean = .3 * wind; o.tilt = .5 * wind; o.crook = -2.2; }
     if (A('butt')) { o.lean = .42; o.tilt = .6; o.crook = -2.4; o.walk = (e.walk || 0); }
-    if (W('w8bleat') || A('bleat')) { o.tilt = -.5; o.open = 1; o.farUp = .6; o.sign = 0; }
+    if (W('w8bleat') || A('bleat')) { o.tilt = -.5; o.open = 1; o.farUp = .6; o.sign = 0; o.crook = -2.1; o.charge = W('w8bleat') ? sm(wind) : Math.max(0, e.w8bleatK || 0); } // (the crozier raised, the bleat gathering in its crook)
     if (A('crank')) { o.crook = -1.0; o.farUp = .5 + Math.sin(t * 8) * .4; o.lean = .1; o.sign = 0; }
     if (A('lever') || W('w8bales') || W('w8mill')) { o.farUp = .9; o.sign = 0; o.crook = -1.9; }
     if (W('w8gore')) { o.lean = .35 * wind; o.tilt = .6 * wind; }
@@ -1642,13 +1648,12 @@
   // THE BLEAT: crowded, he throws his head back and bleats, and the sound goes out round him along the ground (jump it)
   // its warning shows the whole reach of the sound: the ground darkens out to where the ring will die, and rings of
   // dust run outward along it, faster as the bleat comes
-  function bleatTell(x, y, k, t) { ring(x, y, 260, .25 + .5 * k, true);
-    ctx.save(); ctx.setLineDash([7, 6]); ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { const q = ((t * (1.2 + 2.2 * k) + i / 3) % 1), r = 20 + q * 240; ctx.strokeStyle = tellLine(Math.min(1, k + .2)); ctx.globalAlpha = (1 - q) * (.5 + .5 * k); ell(x, y, r, r / 2.2); ctx.stroke(); } ctx.restore();
-    ctx.strokeStyle = tellLine(1); ctx.lineWidth = 2.2; const R = 260 * (1 - .15 * k); ell(x, y, R, R / 2.2); ctx.stroke(); }
+  // the warning itself is on his crozier (the bleat gathers in its crook: a6_boss.js); the floor only shows, faintly, how far it will reach
+  function bleatTell(x, y, k, t) { ctx.save(); ctx.globalAlpha = .25 + .35 * k; ctx.setLineDash([6, 8]); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(x, y, 260, 260 / 2.2); ctx.stroke(); ctx.restore(); }
   TELL_FX.w8bleat = (e, t, k) => { bleatTell(e.x, e.y, k, t); };
   // the same warning when he bleats without a wind-up of his own (at the engine, and when spent): he throws his head back first
   function bleatWarn(e, after) { e.w8a = 'bleat'; e.state = 'w8act'; hazards.push({ kind: 'w8bleattell', e, x: e.x, y: e.y, t: .8, max: .8, after }); sfx('charge', .6); }
-  reg('w8bleattell', { update(h, dt) { h.x = h.e.x; h.y = h.e.y; if (h.t <= dt + .001 && !h.done) { h.done = 1; if (!h.e.dead) { PLAN_FX.w8bleat(h.e); if (h.after) h.after(h.e); } } },
+  reg('w8bleattell', { update(h, dt) { h.x = h.e.x; h.y = h.e.y; h.e.w8bleatK = 1 - h.t / h.max; if (h.t <= dt + .001 && !h.done) { h.done = 1; h.e.w8bleatK = 0; if (!h.e.dead) { PLAN_FX.w8bleat(h.e); if (h.after) h.after(h.e); } } },
     draw(h, t) { bleatTell(h.x, h.y, 1 - h.t / h.max, t); } });
   PLAN_FX.w8bleat = (e) => { sfx('roar'); tn(180, .6, 'sawtooth', .06, 120);
     hazards.push({ kind: 'w8bleatring', x: e.x, y: e.y, r: 10, t: 1, max: 1, dmg: Math.round(edmg(e) * .9) }); act(e, 'bleat', (h, dt, e) => { e.w8k = h.el; if (h.el > .6) { recover(e, .9); return true; } return false; }); };
