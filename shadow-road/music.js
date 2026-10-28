@@ -46,6 +46,14 @@ function H(a, b) { return a + ' -'.repeat(7) + ' ' + b + ' -'.repeat(7); } // tw
 function R(n) { return '.' + ' .'.repeat((n || 16) - 1); } // a bar of rest
 
 // shared bars
+const BLOOM2_A = ['F#4 - - - . . C#5 - A4 - - - . . G#4 A4', 'C#5 - - - - - - - B4 - A4 - G#4 - F#4 -', 'A4 - - - D5 - - - F#5 - - - E5 - D5 -', 'C#5 - - - - - - - G#4 - - - E#4 - - -',
+  'F#5 - - - . . A5 - G#5 - F#5 - E5 - C#5 -', 'D5 - - - F#5 - - - B5 - - - A5 - F#5 -', 'G5 - - - - - F#5 - D5 - - - B4 - G4 -', 'G#4 - - - B4 - - - E#5 - - - G#5 - - -'];
+const BLOOM2_B = ['F#5 - - - E5 - D5 - C#5 - D5 - B4 - - -', 'C#5 - - - A4 - - - F#4 - G#4 - A4 - - -', 'B4 - D5 - F#5 - - - E5 - D5 - C#5 - B4 -', 'C#5 - - - - - - - . . . . G#4 - C#5 -',
+  'D5 - - - F#5 - A5 - - - G#5 - A5 - F#5 -', 'E5 - - - C#5 - - - A4 - - - E5 - - -', 'D5 - - - C#5 - B4 - A#4 - B4 - D5 - - -', 'C#5 - - - E#5 - - - G#5 - - - B5 - A5 G#5'];
+const BBOSS_A = [H('F5', 'Db5'), 'C5 - - - - - Db5 - Bb4 - - - - - - -', 'Bb4 - - - Db5 - - - Gb5 - - - - - - -', 'F5 - - - - - - - E5 - - - C5 - - -',
+  'Db5 - - - F5 - - - Bb5 - - - - - - -', 'Ab5 - - - Gb5 - - - - - - - Eb5 - - -', 'Db5 - - - - - - - Bb4 - Db5 - Gb5 - - -', 'F5 - - - - - - - - - - - . . . .'];
+const MOSS_A = ['C4 - - Eb4 - - F4 - G4 - - - - - Bb4 -', 'C5 - - Bb4 - - G4 - F4 - Eb4 - F4 - - -', 'Eb4 - - F4 - - Ab4 - C5 - - - Bb4 - Ab4 -', 'G4 - - - - - - - F4 - - - D4 - - -',
+  'C4 - - Eb4 - - F4 - G4 - - - - - Bb4 -', 'C5 - - Eb5 - - F5 - G5 - - - F5 - Eb5 -', 'Eb5 - - - Bb4 - - - G4 - Bb4 - Eb5 - - -', 'F5 - - - Eb5 - C5 - Bb4 - - - G4 - - -'];
 const TITLE_A = ['D5 - - - F5 - - - A5 - - - - - G5 -', 'F5 - - - - - D5 - Bb4 - - - - - - -', 'G4 - - - Bb4 - - - D5 - - - G5 - - -', 'E5 - - - - - - - C#5 - - - A4 - - -'];
 
 return {
@@ -70,32 +78,61 @@ return {
                 'G4 - - Bb4 - - D5 - - D5 - Bb4', 'C5 - - - - - E5 - - - - -', 'C5 - - - - - F4 - - A4 - -', 'A3 - - - - - - - - . . .'] } } },
 
   // ---- world 1: Bloomwild Vale ----
-  // G major, bright and striding, with a bVII (F) lift in the second half
-  bloom: { bpm: 132, style: 'drive', duty: .25, vib: 12,
-    chords: ['G', 'D/F#', 'Em', 'C', 'G', 'Bm', 'C', 'D', 'C', 'D', 'Em', 'Em/D', 'C', 'D', 'F', 'D'],
-    lead: ['D5 - G5 - A5 - B5 - - - A5 - G5 - D5 -', 'F#5 - - - E5 - D5 - E5 - F#5 - A5 - - -', 'G5 - - - F#5 - E5 - B4 - - - E5 - G5 -', 'E5 - - - D5 - C5 - D5 - E5 - G5 - - -',
-           'D5 - G5 - A5 - B5 - - - D6 - B5 - G5 -', 'F#5 - - - D5 - F#5 - B5 - A5 - F#5 - D5 -', 'E5 - G5 - C6 - B5 - A5 - G5 - E5 - C5 -', 'D5 - - - - - F#5 - A5 - - - C6 - B5 A5',
-           'E5 - - - - - - - G5 - - - E5 - C5 -', 'D5 - - - - - - - F#5 - A5 - - - F#5 -', 'G5 - - - - - - - B5 - - - A5 - G5 -', 'F#5 - - - E5 - - - D5 - - - B4 - - -',
-           'C5 - E5 - G5 - C6 - - - B5 - G5 - E5 -', 'F#5 - A5 - D6 - - - C6 - A5 - F#5 - D5 -', 'F5 - - - A5 - C6 - - - - - A5 - F5 -', 'F#5 - - - A5 - - - D5 - E5 - F#5 - A5 -'],
-    harm: [R(), R(), R(), R(), R(), R(), R(), R(), H('G4', 'C5'), H('A4', 'D5'), H('B4', 'E5'), H('A4', 'F#4'), H('E4', 'G4'), H('A4', 'D5'), H('A4', 'C5'), H('A4', 'D5')] },
+  // G major, bright and striding, with a bVII (F) lift in the second half. Shuffled: eight-bar parts drawn at random
+  // (A and A2 share chords with new contours, B and B2 the same for the lift, D a hushed breakdown that builds back)
+  bloom: { bpm: 132, style: 'drive', duty: .25, vib: 12, shuffle: true,
+    start: ['A', 'A', 'A2', 'D'],
+    next: { A: ['B', 'B', 'B2', 'A2', 'D'], A2: ['B', 'B2', 'B2', 'D'], B: ['A', 'A', 'A2', 'B2', 'D'], B2: ['A', 'A2', 'A2', 'D'], D: ['A', 'A2', 'B'] },
+    arr: [{}, {}, { duty: .125 }, { arpDuty: .25, av: .05 }],
+    orn: { scale: [7, 9, 11, 0, 2, 4, 6], pass: .3, turn: .25, dv: .3, arpP: .35,
+      dvar: [{ k: '..............x.' }, { h: '...............g' }, { k: '......x.........' }, { s: '.......g.......g' }],
+      fills: [{ s: '............xxxx' }, { s: '........x.x.xxxx' }, { s: '............x.xx', k: '............x...' }, { t: '..........x.x.xx', s: '............x...' }],
+      arps: ['0-2-4-2-3-2-4-2-', '0-2-3-2-4-3-2-1-', '0-1-2-4-2-1-0-2-'] },
+    parts: {
+      A: { chords: ['G', 'D/F#', 'Em', 'C', 'G', 'Bm', 'C', 'D'],
+        lead: ['D5 - G5 - A5 - B5 - - - A5 - G5 - D5 -', 'F#5 - - - E5 - D5 - E5 - F#5 - A5 - - -', 'G5 - - - F#5 - E5 - B4 - - - E5 - G5 -', 'E5 - - - D5 - C5 - D5 - E5 - G5 - - -',
+               'D5 - G5 - A5 - B5 - - - D6 - B5 - G5 -', 'F#5 - - - D5 - F#5 - B5 - A5 - F#5 - D5 -', 'E5 - G5 - C6 - B5 - A5 - G5 - E5 - C5 -', 'D5 - - - - - F#5 - A5 - - - C6 - B5 A5'] },
+      A2: { chords: ['G', 'D/F#', 'Em', 'C', 'G', 'Bm', 'C', 'D'],
+        lead: ['B5 - - - A5 - G5 - D5 - - - G5 - B5 -', 'A5 - - - F#5 - D5 - - - E5 - F#5 - A5 -', 'G5 - - - - - B5 - A5 - G5 - E5 - - -', 'E5 - G5 - C6 - - - B5 - G5 - E5 - D5 -',
+               'D5 - - - G5 - B5 - D6 - - - B5 - G5 -', 'F#5 - - - B5 - - - D6 - - - B5 - A5 -', 'G5 - E5 - C5 - E5 - G5 - - - A5 - B5 -', 'C6 - - - B5 - A5 - - - F#5 - D5 - - -'] },
+      B: { chords: ['C', 'D', 'Em', 'Em/D', 'C', 'D', 'F', 'D'],
+        lead: ['E5 - - - - - - - G5 - - - E5 - C5 -', 'D5 - - - - - - - F#5 - A5 - - - F#5 -', 'G5 - - - - - - - B5 - - - A5 - G5 -', 'F#5 - - - E5 - - - D5 - - - B4 - - -',
+               'C5 - E5 - G5 - C6 - - - B5 - G5 - E5 -', 'F#5 - A5 - D6 - - - C6 - A5 - F#5 - D5 -', 'F5 - - - A5 - C6 - - - - - A5 - F5 -', 'F#5 - - - A5 - - - D5 - E5 - F#5 - A5 -'],
+        harm: [H('G4', 'C5'), H('A4', 'D5'), H('B4', 'E5'), H('A4', 'F#4'), H('E4', 'G4'), H('A4', 'D5'), H('A4', 'C5'), H('A4', 'D5')] },
+      B2: { chords: ['C', 'D', 'Em', 'Em/D', 'C', 'D', 'F', 'D'], arp: '0-2-3-2-4-3-2-3-',
+        lead: ['G5 - - - E5 - G5 - C6 - - - B5 - G5 -', 'A5 - - - F#5 - A5 - D6 - - - C6 - A5 -', 'B5 - - - G5 - B5 - E6 - - - D6 - B5 -', 'A5 - - - G5 - F#5 - - - E5 - D5 - - -',
+               'E5 - - - G5 - - - C6 - - - E6 - D6 -', 'D6 - - - C6 - A5 - F#5 - - - A5 - - -', 'C6 - - - A5 - - - F5 - - - A5 - C6 -', 'D6 - - - - - - - A5 - F#5 - D5 - - -'],
+        harm: [H('E4', 'G4'), H('F#4', 'A4'), H('G4', 'B4'), H('G4', 'B4'), H('G4', 'C5'), H('F#4', 'A4'), H('F4', 'A4'), H('F#4', 'A4')] },
+      D: { chords: ['Em', 'C', 'G', 'D', 'Em', 'C', 'Am', 'D'], duty: .5, arp: '0...2...4...2...', bass: 'R-------R---O---',
+        drums: { k: 'x.......x.......', h: '..g...g...g...g.' }, fillEvery: 8, fill: { k: 'x.......x...x...', s: '........x.x.xxxx' }, orn: { dv: 0, fills: null, turn: .15 },
+        lead: ['B4 - - - - - - - E5 - - - G5 - - -', 'G5 - - - - - - - E5 - - - C5 - - -', 'D5 - - - - - - - G5 - - - B5 - - -', 'A5 - - - - - - - - - - - F#5 - - -',
+               'G5 - - - - - - - B5 - - - E6 - - -', 'C6 - - - - - - - B5 - - - G5 - - -', 'A5 - - - - - - - C6 - - - E5 - - -', 'F#5 - - - - - - - A5 - B5 - C6 - B5 A5'] } } },
   // F# minor, hushed pizzicato steps through the dark wood; the bII (G) and a lydian G# keep it uneasy
-  bloom2: { bpm: 100, vol: 1.2, style: 'creep', duty: .25, kit: 'soft', echo: .25, vib: 14,
-    chords: ['F#m', 'F#m', 'D', 'C#', 'F#m', 'Bm', 'G', 'C#', 'Bm', 'F#m', 'Bm', 'C#', 'D', 'A/C#', 'Bm', 'C#7'],
-    lead: ['F#4 - - - . . C#5 - A4 - - - . . G#4 A4', 'C#5 - - - - - - - B4 - A4 - G#4 - F#4 -', 'A4 - - - D5 - - - F#5 - - - E5 - D5 -', 'C#5 - - - - - - - G#4 - - - E#4 - - -',
-           'F#5 - - - . . A5 - G#5 - F#5 - E5 - C#5 -', 'D5 - - - F#5 - - - B5 - - - A5 - F#5 -', 'G5 - - - - - F#5 - D5 - - - B4 - G4 -', 'G#4 - - - B4 - - - E#5 - - - G#5 - - -',
-           'F#5 - - - E5 - D5 - C#5 - D5 - B4 - - -', 'C#5 - - - A4 - - - F#4 - G#4 - A4 - - -', 'B4 - D5 - F#5 - - - E5 - D5 - C#5 - B4 -', 'C#5 - - - - - - - . . . . G#4 - C#5 -',
-           'D5 - - - F#5 - A5 - - - G#5 - A5 - F#5 -', 'E5 - - - C#5 - - - A4 - - - E5 - - -', 'D5 - - - C#5 - B4 - A#4 - B4 - D5 - - -', 'C#5 - - - E#5 - - - G#5 - - - B5 - A5 G#5'] },
+  // shuffled by halves: A and B, a hushed A over a bare heartbeat, and B doubled an octave down
+  bloom2: { bpm: 100, vol: 1.2, style: 'creep', duty: .25, kit: 'soft', echo: .25, vib: 14, shuffle: true,
+    start: ['A', 'A', 'Aq'], next: { A: ['B', 'B', 'Bd'], Aq: ['B', 'Bd'], B: ['A', 'Aq', 'Bd'], Bd: ['A', 'Aq'] },
+    orn: { scale: [6, 8, 9, 11, 1, 2, 4], pass: .25, turn: .15, dv: .25,
+      dvar: [{ t: '..............x.' }, { h: 'g...............' }, { k: '...........x....' }],
+      fills: [{ t: '............x.xx' }, { t: '..........x.x.x.' }, { t: '............xxxx', k: '............x...' }] },
+    parts: {
+      A: { chords: ['F#m', 'F#m', 'D', 'C#', 'F#m', 'Bm', 'G', 'C#'], lead: BLOOM2_A },
+      Aq: { chords: ['F#m', 'F#m', 'D', 'C#', 'F#m', 'Bm', 'G', 'C#'], lead: BLOOM2_A, arp: '0.......2.......', drums: { k: 'x.......x.......', h: '..g...g...g...g.' }, fill: false, orn: { dv: 0 } },
+      B: { chords: ['Bm', 'F#m', 'Bm', 'C#', 'D', 'A/C#', 'Bm', 'C#7'], lead: BLOOM2_B },
+      Bd: { chords: ['Bm', 'F#m', 'Bm', 'C#', 'D', 'A/C#', 'Bm', 'C#7'], lead: BLOOM2_B, double: -12 } } },
   // Bb minor, slow and drowned: a heartbeat under hollow flute tones and long echoes
-  bloomBoss: { bpm: 66, style: 'ambient', duty: .5, kit: 'soft', echo: .4, echoSteps: 4, vib: 14, arpDuty: .25, av: .055,
-    chords: ['Bbm', 'Bbm', 'Gb', 'F', 'Bbm', 'Ebm', 'Gb', 'F', 'Ebm', 'Bbm/Db', 'Cdim', 'F'],
-    lead: [H('F5', 'Db5'), 'C5 - - - - - Db5 - Bb4 - - - - - - -', 'Bb4 - - - Db5 - - - Gb5 - - - - - - -', 'F5 - - - - - - - E5 - - - C5 - - -',
-           'Db5 - - - F5 - - - Bb5 - - - - - - -', 'Ab5 - - - Gb5 - - - - - - - Eb5 - - -', 'Db5 - - - - - - - Bb4 - Db5 - Gb5 - - -', 'F5 - - - - - - - - - - - . . . .',
-           'Gb4 - - - Bb4 - - - Eb5 - - - - - - -', H('F5', 'Db5'), H('Eb5', 'Gb5'), 'E5 - - - - - - - A4 - - - C5 - - -'] },
+  bloomBoss: { bpm: 66, style: 'ambient', duty: .5, kit: 'soft', echo: .4, echoSteps: 4, vib: 14, arpDuty: .25, av: .055, shuffle: true,
+    next: { A: ['B'], A2: ['B'], B: ['A', 'A2'] }, start: ['A', 'A2'],
+    orn: { scale: [10, 0, 1, 3, 5, 6, 8], pass: .2, turn: .2, dv: .3, dvar: [{ k: '........x.......' }, { k: '........x..g....' }] },
+    parts: {
+      A: { chords: ['Bbm', 'Bbm', 'Gb', 'F', 'Bbm', 'Ebm', 'Gb', 'F'], lead: BBOSS_A },
+      A2: { chords: ['Bbm', 'Bbm', 'Gb', 'F', 'Bbm', 'Ebm', 'Gb', 'F'], lead: BBOSS_A, arp: '0---1---2---3---', double: -12 },
+      B: { chords: ['Ebm', 'Bbm/Db', 'Cdim', 'F'], lead: ['Gb4 - - - Bb4 - - - Eb5 - - - - - - -', H('F5', 'Db5'), H('Eb5', 'Gb5'), 'E5 - - - - - - - A4 - - - C5 - - -'] } } },
   // C minor, a stomping half-time beast: pentatonic riffs in parallel fifths over toms
-  boss_mossback: { bpm: 116, vol: .88, style: 'tribal', kit: 'heavy', duty: .5, lv: .2, form: ['A', 'B'], parts: {
-    A: { double: -7, chords: ['C5', 'C5', 'Ab5', 'Bb5', 'C5', 'C5', 'Eb5', 'F5'],
-         lead: ['C4 - - Eb4 - - F4 - G4 - - - - - Bb4 -', 'C5 - - Bb4 - - G4 - F4 - Eb4 - F4 - - -', 'Eb4 - - F4 - - Ab4 - C5 - - - Bb4 - Ab4 -', 'G4 - - - - - - - F4 - - - D4 - - -',
-                'C4 - - Eb4 - - F4 - G4 - - - - - Bb4 -', 'C5 - - Eb5 - - F5 - G5 - - - F5 - Eb5 -', 'Eb5 - - - Bb4 - - - G4 - Bb4 - Eb5 - - -', 'F5 - - - Eb5 - C5 - Bb4 - - - G4 - - -'] },
+  boss_mossback: { bpm: 116, vol: .88, style: 'tribal', kit: 'heavy', duty: .5, lv: .2, shuffle: true, start: ['A'], next: { A: ['B', 'B', 'A2'], A2: ['B'], B: ['A', 'A2'] },
+    orn: { scale: [0, 2, 3, 5, 7, 8, 10], pass: .2, turn: .15, dv: .3, dvar: [{ t: '..............x.' }, { k: '...........x....' }, { u: '.............x..' }],
+      fills: [{ t: '........x.x.xxxx', u: '.........x.x....' }, { t: '............xxxx', u: '........x.x.....' }, { t: '........xxxx....', s: '............x.xx' }] }, parts: {
+    A: { double: -7, chords: ['C5', 'C5', 'Ab5', 'Bb5', 'C5', 'C5', 'Eb5', 'F5'], lead: MOSS_A },
+    A2: { double: -12, chords: ['C5', 'C5', 'Ab5', 'Bb5', 'C5', 'C5', 'Eb5', 'F5'], lead: MOSS_A },
     B: { double: -12, chords: ['Ab', 'Bb', 'Cm', 'Cm', 'Ab', 'Bb', 'G', 'G'],
          lead: ['C5 - - - - - - - Eb5 - - - C5 - Ab4 -', 'D5 - - - - - - - F5 - - - D5 - Bb4 -', H('Eb5', 'G5'), 'F5 - Eb5 - D5 - C5 - Bb4 - - - G4 - - -',
                 'C5 - - - Eb5 - - - Ab5 - - - G5 - F5 -', 'F5 - - - D5 - - - Bb4 - - - D5 - F5 -', 'G5 - - - - - - - F5 - Eb5 - D5 - - -', 'B4 - - - - - - - D5 - - - G4 - - -'] } } },
@@ -236,7 +273,16 @@ function musChord(sym, tp) { // {root: midi in octave 3, iv: intervals, bass: mi
 }
 const musTokens = (s) => s.trim().split(/\s+/).filter(t => t !== '|');
 const musPick = (p, b) => Array.isArray(p) ? p[b % p.length] : p;
-function compile(tr) {
+const musAny = (a, rnd) => a[Math.floor(rnd() * a.length) % a.length];
+function musBarScale(scale, c) { // the key's pitch classes, bent to fit a chord that borrows a note (an F in G major)
+  const sc = new Set(scale);
+  for (const iv of c.iv) { const pc = (c.root + iv) % 12; if (!sc.has(pc)) { sc.delete((pc + 1) % 12); sc.delete((pc + 11) % 12); sc.add(pc); } }
+  return sc;
+}
+// opt (for shuffled tracks): { rnd, orn } where orn may set scale (pitch classes of the key), pass / turn (odds of a
+// passing note between notes a third apart, or a turn on a long note), dv + dvar (odds per bar of one drum overlay),
+// fills (fill bars pick one at random), arps + arpP (odds per 4 bars of an alternate arpeggio). A part's own orn wins.
+function compile(tr, opt) {
   const parts = tr.parts || { A: tr }, form = tr.form || ['A'], bars = [];
   for (const f of form) {
     const m = /^(\w+?)([+-]\d+)?$/.exec(f), p = parts[m[1]], tp = +(m[2] || 0);
@@ -245,12 +291,14 @@ function compile(tr) {
     const get = (k) => p[k] !== undefined ? p[k] : tr[k] !== undefined ? tr[k] : st[k];
     const harm = get('harm');
     if (harm && harm.length !== p.lead.length) throw new Error('harm and lead differ in length');
-    p.lead.forEach((lead, b) => bars.push({ get, b, tp, n: get('n') || 16, lead, harm: harm && harm[b], chord: get('chords')[b % get('chords').length] }));
+    p.lead.forEach((lead, b) => bars.push({ p, get, b, tp, n: get('n') || 16, lead, harm: harm && harm[b], chord: get('chords')[b % get('chords').length] }));
   }
   const kit = MUS_KITS[tr.kit] || MUS_KITS.std, vol = tr.vol || 1, ev = [], sd = [], off = [];
-  let at = 0;
+  const rnd = (opt && opt.rnd) || Math.random, ornAt = [], sclAt = [];
+  let at = 0, arpAlt = null;
   bars.forEach((bar, bi) => {
     const { get, b, tp, n } = bar, bpm = get('bpm'), dur = 60 / bpm / 4, sw = tr.swing || 0;
+    const O = opt && opt.orn ? Object.assign({}, opt.orn, bar.p.orn || {}) : null;
     for (let i = 0; i < n; i++) { sd.push(dur); off.push(sw * dur * [0, .5, 1, .5][i % 4]); }
     // the tune and its voices
     const line = (str, ch, v, d, dbl) => {
@@ -270,7 +318,9 @@ function compile(tr) {
     // the chords, the arpeggio and the bass
     const segs = bar.chord.trim().split(/\s+/).map(c => musChord(c, tp));
     const nextBar = bars[(bi + 1) % bars.length], nextFirst = musChord(nextBar.chord.trim().split(/\s+/)[0], nextBar.tp);
-    const arp = musPick(get('arp'), b), bass = musPick(get('bass'), b), arpOct = get('arpOct') || 0;
+    if (b % 4 === 0) arpAlt = O && O.arps && bar.p.arp === undefined && rnd() < (O.arpP || 0) ? musAny(O.arps, rnd) : null;
+    if (O && O.scale) for (let i = 0; i < n; i++) { ornAt[at + i] = O; sclAt[at + i] = musBarScale(O.scale, segs[Math.floor(i * segs.length / n)]); }
+    const arp = arpAlt || musPick(get('arp'), b), bass = musPick(get('bass'), b), arpOct = get('arpOct') || 0;
     const ad = get('arpDuty') || .125, av = (get('av') || .06) * vol, bv = (get('bv') || .3) * vol;
     const hold = (pat, i) => { let len = 1; while (pat[(i + len) % pat.length] === '-' && i + len < n) len++; return len; };
     for (let i = 0; i < n; i++) {
@@ -288,18 +338,46 @@ function compile(tr) {
     // drums
     const drums = musPick(get('drums'), b);
     if (drums) {
-      const fe = get('fillEvery') || 4, fill = get('fill') === undefined ? { s: '............xxxx' } : get('fill');
+      const fe = get('fillEvery') || 4;
+      let fill = get('fill') === undefined ? { s: '............xxxx' } : get('fill');
       const doFill = fill && bi % fe === fe - 1;
+      if (doFill && O && O.fills) fill = musAny(O.fills, rnd);
+      const over = !doFill && O && O.dvar && rnd() < (O.dv || 0) ? musAny(O.dvar, rnd) : null;
       for (let i = 0; i < n; i++) {
         const hit = {};
         for (const lane in drums) { const c = drums[lane][i]; if (c === 'x' || c === 'X' || c === 'g') hit[lane] = c; }
         if (doFill) for (const lane in fill) { const c = fill[lane][i]; if (c === 'x' || c === 'X' || c === 'g') hit[lane] = c; }
+        if (over) for (const lane in over) { const c = over[lane][i]; if ((c === 'x' || c === 'g') && !hit[lane]) hit[lane] = c; }
         if (hit.s && hit.h) delete hit.h;
         for (const lane in hit) ev.push({ s: at + i, ch: lane, v: (hit[lane] === 'X' ? 1.35 : hit[lane] === 'g' ? .45 : 1) * vol });
       }
     }
     at += n;
   });
+  if (opt && opt.orn) { // ornaments on the tune: a passing note between notes a third apart, a turn on a long note
+    const lead = ev.filter(e => e.ch === 'lead').sort((x, y) => x.s - y.s), dbl = {};
+    for (const e of ev) if (e.ch === 'dbl') dbl[e.s] = e;
+    for (let i = 0; i + 1 < lead.length; i++) {
+      const e = lead[i], nx = lead[i + 1], d = nx.midi - e.midi, O = ornAt[e.s];
+      if (!O || nx.s !== e.s + e.len || e.len < 4) continue; // only between notes that touch
+      const sc = sclAt[e.s + e.len - 2], inKey = (m) => sc.has(((m % 12) + 12) % 12);
+      let ins = null;
+      if ((Math.abs(d) === 3 || Math.abs(d) === 4) && rnd() < (O.pass || 0)) {
+        for (let k = 1; k < Math.abs(d); k++) { const m = e.midi + Math.sign(d) * k; if (inKey(m)) { ins = [[m, 2]]; break; } }
+      } else if (e.len >= 6 && Math.abs(d) <= 2 && rnd() < (O.turn || 0)) {
+        const u = inKey(e.midi + 1) ? e.midi + 1 : inKey(e.midi + 2) ? e.midi + 2 : 0;
+        if (u) ins = [[u, 1], [e.midi, 1]];
+      }
+      if (!ins) continue;
+      const dd = dbl[e.s]; e.len -= 2; if (dd) dd.len -= 2;
+      let s = e.s + e.len;
+      for (const [m, len] of ins) {
+        ev.push({ s, ch: 'lead', midi: m, len, v: e.v, d: e.d });
+        if (dd) ev.push({ s, ch: 'dbl', midi: m + dd.midi - e.midi, len, v: dd.v, d: dd.d });
+        s += len;
+      }
+    }
+  }
   const by = [...Array(at)].map(() => []);
   for (const e of ev) by[e.s].push(e);
   return { steps: at, by, sd, off, stepDur: sd[0], once: tr.once, duty: tr.duty, kit, echo: tr.echo || 0, echoSteps: tr.echoSteps || 3, vib: tr.vib || 0 };
@@ -307,6 +385,19 @@ function compile(tr) {
 
 // ---------- playing ----------
 const COMPILED = {};
+// a shuffled track ({ shuffle: true, parts, next, start, arr, orn }) plays one part at a time, each a fresh compile with
+// its own ornaments; when a part ends the next is drawn from next[part] (or any part), never the same one twice running.
+// Each time it starts it draws a starting part from start and one arrangement from arr (small tone changes).
+function musPhrase(name, prev) {
+  const T = TRACKS[name], rnd = Math.random, keys = Object.keys(T.parts);
+  const st = prev ? prev.dyn : { arr: T.arr ? musAny(T.arr, rnd) : null, last: null, n: 0 };
+  let opts = ((prev ? T.next && T.next[st.last] : T.start) || keys).filter(k => k !== st.last && T.parts[k]);
+  if (!opts.length) opts = keys.filter(k => k !== st.last);
+  const k = musAny(opts, rnd);
+  const c = compile(Object.assign({}, T, st.arr || {}, { form: [k] }), { rnd, orn: T.orn });
+  c.dyn = { arr: st.arr, last: k, n: st.n + 1 }; c.part = k;
+  return c;
+}
 let musicOn = true, musicWant = null, musicCur = null, musicStep = 0, musicNext = 0, musicTimer = null, musicGain = null, waves = {};
 let echoIn = null, echoDelay = null, echoWet = null;
 try { musicOn = localStorage.getItem('shadowroad-music') !== '0'; } catch (e) {}
@@ -353,7 +444,7 @@ function drum(t, kind, v, kit) {
 }
 function musicTick() {
   if (!actx || !musicCur) return;
-  const tr = COMPILED[musicCur];
+  let tr = COMPILED[musicCur];
   while (musicNext < actx.currentTime + .15) {
     const sd = tr.sd[musicStep], t = musicNext + tr.off[musicStep];
     for (const e of tr.by[musicStep]) {
@@ -365,7 +456,11 @@ function musicTick() {
       else drum(t, e.ch, e.v, tr.kit);
     }
     musicNext += sd; musicStep++;
-    if (musicStep >= tr.steps) { if (tr.once) { musicCur = null; return; } musicStep = 0; }
+    if (musicStep >= tr.steps) {
+      if (tr.once) { musicCur = null; return; }
+      if (tr.dyn) tr = COMPILED[musicCur] = musPhrase(musicCur, tr); // the next part of a shuffled track; every part keeps the tempo
+      musicStep = 0;
+    }
   }
 }
 function musicBus() { // master gain -> a gentle low-pass (no squeal), with a feedback echo send
@@ -381,7 +476,8 @@ function playMusic(name) { // switch tracks; waits for the first touch before an
   if (!actx || !musicOn) return;
   if (name === musicCur) return;
   if (!TRACKS[name]) return;
-  if (!COMPILED[name]) COMPILED[name] = compile(TRACKS[name]);
+  if (TRACKS[name].shuffle) COMPILED[name] = musPhrase(name); // a new start every time it comes on
+  else if (!COMPILED[name]) COMPILED[name] = compile(TRACKS[name]);
   if (!musicGain) musicBus();
   const tr = COMPILED[name];
   echoDelay.delayTime.setValueAtTime(Math.min(1.4, tr.echoSteps * tr.sd[0]), actx.currentTime);
