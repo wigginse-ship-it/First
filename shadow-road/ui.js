@@ -300,7 +300,7 @@ function layout() {
   if (!land) { joyId = null; joyMx = joyMy = 0; knob.style.transform = ''; clearInput(); }
   VW = clamp(Math.round(cw / ch * VIEW_H), 480, 680);
   const s = Math.min(cw / VW, ch / VIEW_H), gw = VW * s, gh = VIEW_H * s;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, RES_CAP)); // (RES_CAP: the sharpest the canvas is drawn; it steps down on a slow device)
   K = s * dpr;
   cv.width = Math.round(gw * dpr); cv.height = Math.round(gh * dpr);
   Object.assign(cv.style, { width: gw + 'px', height: gh + 'px', left: (cw - gw) / 2 + 'px', top: (ch - gh) / 2 + 'px' });

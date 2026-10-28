@@ -14,7 +14,7 @@
 // Everything lives inside this closure so nothing collides with the other files; the late parts are handed to data_w5.js.
 (() => {
   const T = FLOOR_TOP;
-  const DET = () => !FLASH && !TINT; // fine shading is skipped in a hit flash or a flat afterimage tint
+  const DET = () => !FLASH && !TINT && !LITE; // fine shading is skipped in a hit flash or a flat afterimage tint
   const add = (fn) => { if (!DET()) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
   const addB = (fn) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); }; // light, at build time
   const poly = (pts) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); };

@@ -3,7 +3,7 @@
 // brass automaton (and its mossy cousin, the sentinel). Light falls from the upper right; every plate gets a hard
 // shadow plane on its lower-left, a rim of light on its upper-right, rivets, panel lines and a little grime.
 (function () {
-  const DET = () => !FLASH && !TINT;
+  const DET = () => !FLASH && !TINT && !LITE;
   // a cel-shaded plate. build() adds the outline of the shape to the current path (no beginPath).
   // The shadow plane is the part of the shape that the shape, slid up and to the right, no longer covers.
   function plate(build, col, o) {

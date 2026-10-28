@@ -122,7 +122,12 @@ function wobbleInto(src, dst, tmp, tg, px, o, amp) { // src -> tmp (rows shift s
 // ---------- the figure layer ----------
 let inkC = null, inkG = null, silC = null, silG = null, rimC = null, rimG = null, mainCtx = null;
 // paint quality steps down by itself if the phone can't keep up: 1 = painted figures, 0 = figures drawn straight onto the page
-let PAINT_Q = 1, perfN = 0, perfT = 0, perfSkip = 60, perfPrev = 0, perfLock = false;
+let PAINT_Q = 1, perfN = 0, perfT = 0, perfSkip = 60, perfPrev = 0, perfLock = false, perfUndo = null;
+// how sharp the canvas is drawn, in device pixels per screen pixel. A phone starts at 1.5 (most phone screens pack 3; the
+// paint reads just as well at half that, for a quarter of the pixels); anything else at 2
+let RES_CAP = (window.matchMedia && matchMedia('(pointer: coarse)').matches) ? 1.5 : 2;
+// Every 90 frames of play: if the game is running slow, first draw the canvas a step softer (down to one device pixel
+// per screen pixel), and only then fall back to the plain renderer
 function paintPerf(rawDt) {
   if (perfLock) return;
   if (perfSkip > 0) { perfSkip--; return; } // ignore the first second after starting or a change
@@ -130,12 +135,14 @@ function paintPerf(rawDt) {
   perfN++; perfT += rawDt;
   if (perfN < 90) return;
   const avg = perfT / perfN; perfN = perfT = 0;
-  // stepping down didn't speed anything up: the frame rate is capped (Low Power Mode runs at 30), so put the art back
-  if (perfPrev && avg > perfPrev * .9) { PAINT_Q++; perfLock = true; return; }
-  perfPrev = 0;
-  if (avg > 1 / 42 && PAINT_Q > 0) { PAINT_Q--; perfPrev = avg; perfSkip = 30; }
+  // stepping down didn't speed anything up: the frame rate is capped (Low Power Mode runs at 30), so put it back
+  if (perfPrev && avg > perfPrev * .9) { if (perfUndo) perfUndo(); perfLock = true; return; }
+  perfPrev = 0; perfUndo = null;
+  const dpr = window.devicePixelRatio || 1;
+  if (avg > 1 / 50 && Math.min(dpr, RES_CAP) > 1.01) { const was = RES_CAP; RES_CAP = Math.max(1, Math.min(dpr, RES_CAP) - .25); layout(); perfUndo = () => { RES_CAP = was; layout(); }; perfPrev = avg; perfSkip = 30; return; }
+  if (avg > 1 / 42 && PAINT_Q > 0) { PAINT_Q--; perfUndo = () => { PAINT_Q++; }; perfPrev = avg; perfSkip = 30; }
 }
-const IB = { x: 0, y: 0, w: 0, h: 0 }; // the screen box the figures occupy; all the work stays inside it
+const IB = { x: 0, y: 0, w: 0, h: 0 }, IBS = []; // the screen box the figures occupy (all the work stays inside it), and the separate boxes inside that
 // The prince is painted on a layer of his own inside the figure layer, after the reference sheet: a fine dark ink line
 // instead of the thick contour, no pale rim, and his own brushwork (dry, mostly vertical strokes, a few specks, umber
 // modelling on the side away from the light). His box on screen is HB; inkEnd leaves him out of its contour and rim.
@@ -210,6 +217,15 @@ function inkBegin(boxes) {
   const pad = 8 * K;
   IB.x = Math.max(0, Math.floor(x0 * m.a + m.e - pad)); IB.y = Math.max(0, Math.floor(y0 * m.d + m.f - pad));
   IB.w = Math.max(0, Math.min(cv.width, Math.ceil(x1 * m.a + m.e + pad)) - IB.x); IB.h = Math.max(0, Math.min(cv.height, Math.ceil(y1 * m.d + m.f + pad)) - IB.y);
+  // the same boxes on screen, merged where they overlap: the ink work is done box by box, so a crowd spread across the
+  // screen costs the area of its figures rather than one box from the leftmost to the rightmost
+  const R = [];
+  for (const b of boxes) { const r = [Math.max(0, Math.floor(b[0] * m.a + m.e - pad)), Math.max(0, Math.floor(b[1] * m.d + m.f - pad)), Math.min(cv.width, Math.ceil(b[2] * m.a + m.e + pad)), Math.min(cv.height, Math.ceil(b[3] * m.d + m.f + pad))]; if (r[2] - r[0] >= 2 && r[3] - r[1] >= 2) R.push(r); }
+  const area = (r) => (r[2] - r[0]) * (r[3] - r[1]);
+  for (let merged = true; merged;) { merged = false;
+    for (let i = 0; i < R.length && !merged; i++) for (let j = i + 1; j < R.length; j++) { const A = R[i], B = R[j], U = [Math.min(A[0], B[0]), Math.min(A[1], B[1]), Math.max(A[2], B[2]), Math.max(A[3], B[3])];
+      if (A[0] < B[2] && B[0] < A[2] && A[1] < B[3] && B[1] < A[3] || area(U) < (area(A) + area(B)) * 1.15) { R[i] = U; R.splice(j, 1); merged = true; break; } } } // (overlapping boxes, or ones whose union wastes little, become one)
+  IBS.length = 0; for (const r of R) IBS.push({ x: r[0], y: r[1], w: r[2] - r[0], h: r[3] - r[1] });
   inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.clearRect(0, 0, inkC.width, inkC.height); HB.on = false; HERO_HATCHED = false;
   inkG.setTransform(m);
   ctx = inkG;
@@ -239,19 +255,30 @@ function blit(g, src, dx, dy) { const { x, y, w, h } = IB; g.drawImage(src, x, y
 const CONTOUR = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([a, b]) => [a * 1.15, b * 1.15]);
 function inkEnd() {
   ctx = mainCtx; if (PAINT_Q === 0) return;
-  const { x, y, w, h } = IB; if (w < 2 || h < 2) return;
-  silG.setTransform(1, 0, 0, 1, 0, 0); silG.globalCompositeOperation = 'copy'; blit(silG, inkC, 0, 0);
+  if (IB.w < 2 || IB.h < 2) return;
+  if (!rimC || rimC.width !== inkC.width || rimC.height !== inkC.height) [rimC, rimG] = texCanvas(inkC.width, inkC.height);
+  const keep = { x: IB.x, y: IB.y, w: IB.w, h: IB.h };
+  for (const B of IBS) { Object.assign(IB, B); inkBox(); }
+  Object.assign(IB, keep);
+}
+// the ink work for one box. Every layer is clipped to the box first: the 'in' and 'copy' blends otherwise reach over the
+// whole canvas, clearing all of it outside what they draw, which made each of them a full-screen pass
+function inkBox() {
+  const { x, y, w, h } = IB, hb = HB.on && HB.x < x + w && x < HB.x + HB.w && HB.y < y + h && y < HB.y + HB.h;
+  const boxClip = (g) => { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.beginPath(); g.rect(x, y, w, h); g.clip(); };
+  boxClip(silG); silG.clearRect(x, y, w, h); silG.globalCompositeOperation = 'source-over'; blit(silG, inkC, 0, 0);
   silG.globalCompositeOperation = 'source-in'; silG.fillStyle = '#1A100C'; silG.fillRect(x, y, w, h);
   // light catching every figure's upper-right edges, and shadow gathering along the lower-left: gives each one volume
-  if (!rimC || rimC.width !== inkC.width || rimC.height !== inkC.height) [rimC, rimG] = texCanvas(inkC.width, inkC.height);
   for (const [dx, dy, col, al] of [[-1.4, 1.4, '#FFF0D2', .55]]) {
-    rimG.setTransform(1, 0, 0, 1, 0, 0); rimG.globalCompositeOperation = 'copy'; blit(rimG, silC, 0, 0);
+    boxClip(rimG); rimG.clearRect(x, y, w, h); rimG.globalCompositeOperation = 'source-over'; blit(rimG, silC, 0, 0);
     rimG.globalCompositeOperation = 'destination-out'; blit(rimG, silC, dx * K, dy * K);
     rimG.globalCompositeOperation = 'source-in'; rimG.fillStyle = col; rimG.fillRect(x, y, w, h);
-    if (HB.on) { rimG.globalCompositeOperation = 'destination-out'; rimG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x, HB.y, HB.w, HB.h); } // (none on the prince)
-    inkG.save(); inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.globalCompositeOperation = 'source-atop'; inkG.globalAlpha = al; blit(inkG, rimC, 0, 0); inkG.restore();
+    if (hb) { rimG.globalCompositeOperation = 'destination-out'; rimG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x, HB.y, HB.w, HB.h); } // (none on the prince)
+    rimG.restore();
+    inkG.save(); inkG.setTransform(1, 0, 0, 1, 0, 0); inkG.beginPath(); inkG.rect(x, y, w, h); inkG.clip(); inkG.globalCompositeOperation = 'source-atop'; inkG.globalAlpha = al; blit(inkG, rimC, 0, 0); inkG.restore();
   }
-  if (HB.on) { silG.globalCompositeOperation = 'destination-out'; silG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x, HB.y, HB.w, HB.h); silG.globalCompositeOperation = 'source-over'; } // he carries his own fine line (the mask is made solid, so no fringe of his edge is left to be contoured)
+  if (hb) { silG.globalCompositeOperation = 'destination-out'; silG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x, HB.y, HB.w, HB.h); } // he carries his own fine line (the mask is made solid, so no fringe of his edge is left to be contoured)
+  silG.restore();
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   // a firm, steady contour all the way round, the way figures were outlined before the paint went on
   ctx.globalAlpha = .95; for (const [dx, dy] of CONTOUR) blit(ctx, silC, dx * K, dy * K);

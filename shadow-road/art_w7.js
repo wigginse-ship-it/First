@@ -19,7 +19,7 @@
 // Everything lives in this closure; the late parts are handed to data_w7.js.
 (() => {
   const T = FLOOR_TOP;
-  const DET = () => !FLASH && !TINT;
+  const DET = () => !FLASH && !TINT && !LITE;
   const add = (fn) => { if (!DET()) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
   const poly = (pts) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); };
   const fillPoly = (pts, col, ow) => { poly(pts); ctx.fillStyle = C(col); ctx.fill(); if (ow) outline(ow); };

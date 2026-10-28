@@ -5,7 +5,7 @@
 // Where the armor has to follow a moving part (a head, a wing, a hat), the creature's drawing leaves that part's transform
 // in e.armA (only for an armored elite), and the armor here paints in it.
 (() => {
-  const DET = () => !FLASH && !TINT;
+  const DET = () => !FLASH && !TINT && !LITE;
   const add = (fn) => { if (!DET()) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
   const poly = (pts) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); };
   const fillPoly = (pts, col, ow) => { poly(pts); ctx.fillStyle = C(col); ctx.fill(); if (ow) outline(ow); };

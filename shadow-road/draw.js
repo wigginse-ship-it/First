@@ -571,6 +571,7 @@ function drawStag(s, t) {
   ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(28, -70); ctx.lineTo(20, -96); ctx.lineTo(10, -104); ctx.moveTo(22, -88); ctx.lineTo(34, -100); ctx.moveTo(32, -70); ctx.lineTo(44, -92); ctx.lineTo(56, -96); ctx.stroke();
   ctx.restore();
 }
+let CROWD = false; // (set each frame in drawScene: enough foes on screen to draw them lighter)
 function drawScene(t) {
   ctx.save();
   if (shakeMag > 0) ctx.translate(rand(-1, 1) * shakeMag + shakeDir * shakeMag * .4, rand(-1, 1) * shakeMag * .6);
@@ -597,11 +598,13 @@ function drawScene(t) {
   for (const s of stags) box(s.x, s.y, 0, 90, 130);
   mechBoxes(box); secretBoxes(box);
   inkBegin(boxes);
-  corpses.forEach((c, i) => { c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; drawDeath(c, t); });
+  corpses.forEach((c, i) => { c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; LITE = CROWD && !c.boss; try { drawDeath(c, t); } finally { LITE = false; } });
   const list = [];
   for (const p of props) list.push([p.y, () => { FLASH = p.flash > 0; drawPod(p, t); FLASH = false; }]);
   for (const k of loot) list.push([k.y, () => drawLoot(k, t)]);
-  for (const e of enemies) list.push([e.y, () => drawEnemy(e, t)]);
+  // a crowd: with many foes on screen they leave out their finest shading (LITE), which keeps a big fight smooth on a phone
+  { let n = 0; for (const e of enemies) if (!e.dead && e.x > camX - 40 && e.x < camX + VW + 40) n++; CROWD = n >= (CROWD ? 5 : 7); }
+  for (const e of enemies) list.push([e.y, () => { LITE = CROWD && !e.boss; try { drawEnemy(e, t); } finally { LITE = false; } }]);
   // afterimages are light, not ink, so they are painted straight onto the page
   for (const g of ghosts) list.push([g.y - .1, () => onMain(() => { // light afterimages glow; shadow ones are dark doubles of him
     g.pose.noCloak = 1; // (afterimages leave the cloak out: its dark mass, many times over, would only smear the trail)

@@ -3,7 +3,7 @@
 // Everything lives in this closure so nothing here collides with the other art files.
 // Light falls from the upper right: hard-edged shadow planes sit lower-left, a lit rim runs along top/right edges.
 (() => {
-  const DET = () => !FLASH && !TINT; // detail shading is skipped in a hit-flash or a flat afterimage tint
+  const DET = () => !FLASH && !TINT && !LITE; // detail shading is skipped in a hit-flash or a flat afterimage tint
   const LX = .6, LY = -.8;          // direction toward the light
   const poly = (pts) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); };
   const fillPoly = (pts, col, ow) => { poly(pts); ctx.fillStyle = C(col); ctx.fill(); if (ow) outline(ow); };

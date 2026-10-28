@@ -16,7 +16,7 @@
 // Everything is inside one closure; data_w8.js calls W8.late() (attacks and rules), w8_late.js calls W8.dom() (hooks).
 (() => {
   const T = FLOOR_TOP;
-  const DET = () => !FLASH && !TINT;
+  const DET = () => !FLASH && !TINT && !LITE;
   const tn = (...a) => { if (typeof sfxOn !== 'undefined' && sfxOn && typeof actx !== 'undefined' && actx) tone(...a); }; // a note, when there is sound
   const add = (fn) => { if (!DET()) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
   const poly = (pts) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); };

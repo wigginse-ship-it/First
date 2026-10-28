@@ -3,7 +3,7 @@
 // cel-shaded style. Light comes from the UPPER RIGHT: hard shadow planes sit lower-left, a lit rim runs along top/right edges.
 (function () {
   const LX = .6, LY = -.8; // direction toward the light
-  const DET = () => !FLASH && !TINT;
+  const DET = () => !FLASH && !TINT && !LITE;
   const poly = (pts) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let k = 2; k < pts.length; k += 2) ctx.lineTo(pts[k], pts[k + 1]); ctx.closePath(); };
   const fillPoly = (pts, col) => { poly(pts); ctx.fillStyle = C(col); ctx.fill(); };
   // cel shading for any closed path: base fill, a hard crescent of shadow on the lower-left, an optional deeper core,

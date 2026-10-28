@@ -38,6 +38,8 @@ try {
 } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
+let LITE = false; // crowd mode: while it is set (drawing a foe in a crowded fight) the art leaves out its finest shading
+
 // ---------- sound (synthesized, starts on first touch) ----------
 let actx = null, noiseBuf = null, sfxOn = true;
 try { sfxOn = localStorage.getItem('shadowroad-sfx') !== '0'; } catch (e) {}

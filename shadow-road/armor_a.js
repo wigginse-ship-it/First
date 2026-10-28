@@ -6,7 +6,7 @@
 // The bare forms are drawn here too, over the creature (ARMOR[type].bare) or inside its body before the front arm
 // (ARMOR[type].mid / bareMid, called through ARMOR_MID from drawHumanoid and drawAutomaton).
 (function () {
-  const DET = () => !FLASH && !TINT;
+  const DET = () => !FLASH && !TINT && !LITE;
   const BIG = () => ctx.rect(-600, -600, 1200, 1200);
   // P(...) builds a reusable path: M x y | L x y | Q cx cy x y | C c1x c1y c2x c2y x y | Z | E cx cy rx ry rot
   function P(...c) {
