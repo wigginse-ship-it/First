@@ -144,6 +144,13 @@ function updateEnemy(e, dt) {
     e.z += (e.def.hover + Math.sin(performance.now() / 300 + e.walk) * 6 - e.z) * Math.min(1, dt * 3);
   }
   e.x = clamp(e.x, camX - 60, camX + VW + 60);
+  // knocked back, knocked down, dodging or swinging, a foe stops at the edge of the view instead of sliding out past it
+  // (and staying there, out of reach): only walking in, its own special moves and dying take it beyond. In the air it is
+  // held at the wall itself, after a hard enough throw has bounced off it (above)
+  if (!e.boss && !e.dead && ['hurt', 'down', 'recover', 'evade', 'block', 'wind', 'strike', 'charge', 'pounce', 'leap'].includes(e.state)) {
+    const m = e.air ? 0 : Math.min(e.hw * .6, 30), lo = leftWall() + m, hi = rightWall() - m;
+    if (e.x < lo) { e.x = lo; if (e.vx < 0) e.vx = 0; } else if (e.x > hi) { e.x = hi; if (e.vx > 0) e.vx = 0; }
+  }
   const dxp = P.x - e.x, dyp = P.y - e.y;
   switch (e.state) {
     case 'dying':
@@ -234,7 +241,7 @@ function enemyLand(e) {
   if (e.state === 'dying') { if (e.death === 'pop' && !e.popped) { e.popped = true; popEnemy(e); toCorpse(e, 'lie'); } return; }
   if (e.bounce) { e.bounce = false; e.vz = 300 * (e.boss ? .4 : e.def.weight); e.air = true; shakeMag = Math.max(shakeMag, 5); dust(e.x, e.y, 8); sfx('slam'); return; }
   if (e.state === 'leap') { slamLand(e); return; }
-  if (e.state === 'pounce') { dust(e.x, e.y, 5); recover(e, .6); return; }
+  if (e.state === 'pounce') { dust(e.x, e.y, 5); e.vx = 0; recover(e, .6); return; } // (the pounce is spent: its speed must not carry into the hops after it)
   if (e.air) { e.air = false; e.spin = 0; e.state = 'down'; e.t = e.stagger || .85; e.stagger = 0; e.walls = 0; dust(e.x, e.y, 8); shakeMag = Math.max(shakeMag, 2.5); }
   if (e.def.move === 'hop') { e.sq = .7; }
 }
@@ -243,7 +250,7 @@ function approach(e, tx, ty, dt, k) {
   const moving = Math.abs(dx) > 3 || Math.abs(dy) > 3;
   if (e.def.move === 'hop') { // jellybloom-style hopping
     e.sq += (1 - e.sq) * Math.min(1, dt * 8);
-    if (e.z <= 0 && moving) { e.hopT -= dt; if (e.hopT <= 0) { e.vz = 230; e.hopT = rand(.35, .6); e.sq = 1.25; } }
+    if (e.z <= 0 && moving) { e.hopT -= dt; if (e.hopT <= 0) { e.vz = 230; e.vx = 0; e.hopT = rand(.35, .6); e.sq = 1.25; } }
     if (e.z <= 0) return;
   }
   if (Math.abs(dx) > 3) e.x += Math.sign(dx) * Math.min(Math.abs(dx), sp * dt * (e.def.move === 'hop' ? 1.7 : 1));
