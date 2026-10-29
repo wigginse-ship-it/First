@@ -30,7 +30,7 @@ const WEAPONS = {
       A:    { dur: .28, h: [.2, .6], x0: 0, x1: 38, dmg: 7, kb: 60, arc: [.9, -.2] },
       AA:   { dur: .3,  h: [.2, .6], x0: 0, x1: 40, dmg: 8, kb: 60, kick: 1 },
       AAA:  { dur: .4,  h: [.2, .65], x0: 0, x1: 42, dmg: 12, kb: 120, arc: [-2.4, 1.4], spike: 1, power: 1 },
-      D:    { name: 'Running Haymaker', dur: .5, h: [.4, .62], prep: 1, x0: 0, x1: 44, dmg: 12, kb: 280, lunge: 360, hop: 180, power: 1 }, // Attack off the run: the fist cocked back behind his head, then a little hop and a big looping overhand, his weight falling in behind it
+      D:    { name: 'Running Haymaker', dur: .5, h: [.4, .62], prep: 1, x0: 0, x1: 44, dmg: 12, kb: 280, lunge: 360, hop: 180, power: 1 }, // Attack off the run: the fist raised high above his head, then a little hop and a short overhand down and forward, his weight falling in behind it
       DX:   { name: 'Charging Front Kick', dur: .44, h: [.18, .68], x0: 0, x1: 42, dmg: 15, kb: 340, kick: 1, lunge: 440, power: 2, wall: 1 }, // Heavy off the run: a stepping front kick driven in off the run
       R:    { name: 'Slipping Cross', dur: .4, h: [.28, .62], x0: 0, x1: 46, dmg: 14, kb: 280, lunge: 330, power: 1 }, // out of the dodge he stays low and drives in behind a long rear-hand punch
       RH:   { name: 'Flying Side Kick', dur: .55, h: [.26, .66], x0: 0, x1: 50, dmg: 16, kb: 120, launch: 380, kick: 1, flyside: 1, lunge: 330, hop: 260, power: 1 }, // out of the dodge he leaps at them, the back knee tucked, the lead heel driven out flat: it launches
