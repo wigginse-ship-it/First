@@ -791,7 +791,20 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   }
   else { const mid = { hammer: 30, staff: 15, sword: 40, rapier: 38 }[id] || 30, sc = { hammer: .95, staff: .62, sword: .72, rapier: .78 }[id] || .8; ctx.translate(32, 32); ctx.rotate(-.8); ctx.scale(sc, sc); ctx.translate(-mid, 0); drawWeapon(id, { tier, noHand: 1 }); }
   ctx = old;
+  centerArt(canvas);
   paintCard(canvas, s * .7);
+}
+// slide what was drawn on a card so the middle of its drawn shape sits in the middle of the card (each weapon is a
+// different shape, and grows with its level, so no fixed offset centres them all)
+function centerArt(canvas) {
+  const g = canvas.getContext('2d'), w = canvas.width, h = canvas.height; if (!w || !h) return;
+  let d; try { d = g.getImageData(0, 0, w, h).data; } catch (e) { return; }
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return;
+  const dx = Math.round((w - (x0 + x1 + 1)) / 2), dy = Math.round((h - (y0 + y1 + 1)) / 2); if (!dx && !dy) return;
+  const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').drawImage(canvas, 0, 0);
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.drawImage(tmp, dx, dy); g.restore();
 }
 
 function drawHazard(h, t) {
