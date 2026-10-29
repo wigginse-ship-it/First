@@ -55,7 +55,7 @@ function itemHtml(it, where) {
 function statsHtml() {
   const st = statsFor(save.gear.eq), rows = [`<b>Defense ${st.def}</b>: blows land ${pct(gearDR(st.def))} softer`, `<b>Max health ${maxHp()}</b>`];
   const lines = [];
-  for (const k of AFFIX_IDS) if (k === 'hp' ? st.hp - (st.pieceHp || 0) > .5 : st[k]) { const A = AFFIXES[k]; if (k === 'hp') { lines.push(`+${Math.round(st.hp - st.pieceHp)} max health from enchantments`); continue; } lines.push(A.flag ? `rise at ${pct(st[k])} ${A.txt}` : A.inv ? `${A.txt}: ${st[k].toFixed(1)}s` : A.pct ? `+${pct(st[k])} ${A.txt}` : A.sec ? `+${st[k].toFixed(2)}s ${A.txt}` : `+${Math.round(st[k])} ${A.txt}`); }
+  for (const k of AFFIX_IDS) if (k === 'hp' ? st.hp - (st.pieceHp || 0) > .5 : st[k]) { const A = AFFIXES[k]; if (k === 'hp') { lines.push(`+${Math.round(st.hp - st.pieceHp)} max health from enchantments`); continue; } lines.push(A.flag ? `rise at ${pct(st[k])} ${A.txt}` : A.inv ? `${A.txt}: ${st[k].toFixed(1)}s` : A.pct ? `+${pct(st[k])} ${A.txt}${st.capped && st.capped[k] ? ' (the most armor can give' + (st.over && st.over[k] ? `; your pieces add up to ${pct(st.over[k])}` : '') + ')' : ''}` : A.sec ? `+${st[k].toFixed(2)}s ${A.txt}` : `+${Math.round(st[k])} ${A.txt}`); }
   const n = setCounts(save.gear.eq), sets = Object.keys(n).sort((a, b) => n[b] - n[a]);
   let h = `<div class="inv-totals">${rows.join(' · ')}</div>`;
   if (lines.length) h += `<div class="inv-aff">${lines.map(esc).join(' · ')}</div>`;

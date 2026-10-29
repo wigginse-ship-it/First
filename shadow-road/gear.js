@@ -98,7 +98,7 @@ const AFFIXES = {
   phoenix:   { v: [.5, .5, .5, .5, .5], pct: 1, flag: 1, min: 11, rare: 1, txt: 'health: once in each place, a killing blow sets you burning and you rise again', suf: 'of the Firebird', pre: 'Undying' },
 };
 const AFFIX_IDS = Object.keys(AFFIXES);
-const STAT_CAP0 = { crit: .3, speed: .3, resist: .5, leech: .1, iframes: .25, reflect: .6, twin: .45, blink: .3 }, STAT_CAP = Object.assign({}, STAT_CAP0); // (the caps loosen a little with every cycle)
+const STAT_CAP0 = { speed: .3, resist: .5, leech: .1, iframes: .25, reflect: .6, twin: .45, blink: .3 }, STAT_CAP = Object.assign({}, STAT_CAP0); // (the caps loosen a little with every cycle)
 
 // ---------- the save: what is worn and what is carried ----------
 const freshGear = () => ({ eq: { mail: null, pants: null, gauntlets: null, waist: null }, bag: [], pity: 0, uid: 1 });
@@ -145,7 +145,7 @@ function statsFor(eq) {
     if (n[id] >= 4) for (const k in S.b4.s) add(k, sc(k, S.b4.s[k]));
   }
   const cy = Math.min(5, save.cycle || 0); for (const k in STAT_CAP0) STAT_CAP[k] = STAT_CAP0[k] * (1 + .2 * cy);
-  for (const k in STAT_CAP) if (st[k] > STAT_CAP[k]) st[k] = STAT_CAP[k];
+  st.capped = {}; for (const k in STAT_CAP) if (st[k] >= STAT_CAP[k] - 1e-9 && st[k] > 0) { if (st[k] > STAT_CAP[k] + 1e-9) st.over = Object.assign(st.over || {}, { [k]: st[k] }); st[k] = STAT_CAP[k]; st.capped[k] = true; } // (capped stats are marked, for the inventory to say so)
   return st;
 }
 const SET_SCALES = { speed: 1, shards: 1, resist: 1, reflect: 1, thorns: 1, regen: 1, dodgeFast: 1 };
