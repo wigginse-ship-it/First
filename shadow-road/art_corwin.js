@@ -331,13 +331,13 @@ const CORWIN = (() => {
   // A long heavy cloth in slow motion: soft springs, the hem softest (so it drifts and lags rather than whips), damped
   // against his own motion (DAMP, near critical at the hem) so it settles without bouncing, and a little air drag
   // (DRAG_X/Y, against the world) so it still streams out behind a run and lifts as he falls
-  const KJ = [0, 130, 88, 58, 38, 24];       // spring stiffness down a strand (1/s^2)
-  const GRAVITY = 230, DRAG_X = 1.25, DRAG_Y = 1.15, DAMP = 6.5, H = 1 / 120, VLIM = 7; // (VLIM: the fastest a point may fly, per step)
-  const CARRY_X = .55, CARRY_Y = .72; // how much of his own speeding up (and falling) the cloth is carried along with: the rest it lags, gently, on its soft springs
+  const KJ = [0, 150, 100, 66, 44, 30];       // spring stiffness down a strand (1/s^2)
+  const GRAVITY = 230, DRAG_X = 1.25, DRAG_Y = 1.15, DAMP = 5.2, H = 1 / 120, VLIM = 7; // (VLIM: the fastest a point may fly, per step)
+  const CARRY_X = .72, CARRY_Y = .72; // how much of his own speeding up (and falling) the cloth is carried along with: the rest it lags, gently, on its soft springs
   // and before any of that the shape the pose asks for is itself eased: each segment's hang (its angle from straight
   // down) and length drift toward the pose's over TAU0 + TAU1 * v seconds (v: down the strand), so a turn, a spin or a
   // sudden lunge never throws the cloth round at once: it swings through hanging down, the hem last
-  const TAU0 = .24, TAU1 = .22;
+  const TAU0 = .18, TAU1 = .17;
   const tgt = new Float32Array(NP * 2), loc = new Float32Array(NP * 2), rest = new Float32Array(NP), DEP = new Float32Array(S);
   const ix = (i, j) => (i * (M + 1) + j) * 2;
   const SIM = { pts: new Float32Array(NP * 2), sp: new Float32Array((M + 1) * 2), sq: new Float32Array((M + 1) * 2), dA: new Float32Array(M + 1), ok: false, wx: 0, wy: 0, at: 0, acc: 0, f: 1,
@@ -366,13 +366,13 @@ const CORWIN = (() => {
     if (frozen) dt = 0; else if (typeof slowmo !== 'undefined' && slowmo > 0) dt *= .3;
     SIM.dt = dt; let mx = CD.wx - SIM.mwx, my = CD.wy - SIM.mwy; SIM.mwx = CD.wx; SIM.mwy = CD.wy;
     if (!dt) return; if (Math.abs(mx) > 60 || Math.abs(my) > 60 || !(now - SIM.seen < 400)) mx = my = 0; // moved somewhere at once
-    const q = Math.min(1, dt * 6), ox = SIM.bvx, oy = SIM.bvy; SIM.bvx += (mx / dt - SIM.bvx) * q; SIM.bvy += (my / dt - SIM.bvy) * q;
+    const q = Math.min(1, dt * 14), ox = SIM.bvx, oy = SIM.bvy; SIM.bvx += (mx / dt - SIM.bvx) * q; SIM.bvy += (my / dt - SIM.bvy) * q;
     const qa = Math.min(1, dt * 10); SIM.bax += (clamp((SIM.bvx - ox) / dt, -3000, 3000) - SIM.bax) * qa; SIM.bay += (clamp((SIM.bvy - oy) / dt, -3000, 3000) - SIM.bay) * qa; // how hard he is speeding up (or falling)
     const sv = ((g.pose.spin || 0) - SIM.spin) / dt; SIM.spin = g.pose.spin || 0;
     const sp = Math.hypot(SIM.bvx, SIM.bvy), fa = clamp(Math.hypot(SIM.bvx * .0036, SIM.bvy * .0026) + Math.min(.3, Math.abs(sv) * .008), 0, 1.3); // (a spin only stirs it a little)
-    SIM.fv += Math.min(4, Math.hypot(SIM.bvx - ox, SIM.bvy - oy) * .008); // every burst of speed (a lunge, a dodge, a leap, a landing) nudges it out
-    SIM.fv += (16 * (fa - SIM.fo) - 7.2 * SIM.fv) * dt; SIM.fo = clamp(SIM.fo + SIM.fv * dt, -.3, 1.8); // (slow, and damped near critical: it swells and settles, never snaps)
-    SIM.wv += (11 * (wrapAim(g, CD.z, sp) - SIM.wr) - 6 * SIM.wv) * dt; SIM.wr = clamp(SIM.wr + SIM.wv * dt, -.15, 1.1);
+    if (sp > Math.hypot(ox, oy)) SIM.fv += Math.min(4, Math.hypot(SIM.bvx - ox, SIM.bvy - oy) * .008); // every burst of speed (a lunge, a dodge, a leap) nudges it out; slowing down lets it settle
+    SIM.fv += (36 * (fa - SIM.fo) - 10.5 * SIM.fv) * dt; SIM.fo = clamp(SIM.fo + SIM.fv * dt, -.3, 1.8); // (slow, and damped near critical: it swells and settles, never snaps)
+    SIM.wv += (18 * (wrapAim(g, CD.z, sp) - SIM.wr) - 7.6 * SIM.wv) * dt; SIM.wr = clamp(SIM.wr + SIM.wv * dt, -.15, 1.1);
     SIM.pc += dt * (.3 + Math.min(SIM.spd, 320) / 48); // its paint stirs slowly while it hangs still, and boils as it flies
   }
   function targets(L, g) {
@@ -458,7 +458,7 @@ const CORWIN = (() => {
     const out = SIM.pts, dA = SIM.dA;
     for (let j = 1; j <= M; j++) { const o = j * 2, p = o - 2;
       let d = Math.atan2(P[o + 1] - P[p + 1], P[o] - P[p]) - Math.atan2(spT[o + 1] - spT[p + 1], spT[o] - spT[p]); d = Math.atan2(Math.sin(d), Math.cos(d));
-      if (!fresh) { const e = d - dA[j]; d = clamp(dA[j] + Math.atan2(Math.sin(e), Math.cos(e)), -2.9, 2.9); } // followed on from last frame's, never wrapped round (half of a wrap on the edge strands flung them over)
+      const ad = Math.abs(d); if (ad > 2) d *= clamp((Math.PI - ad) / (Math.PI - 2), 0, 1); // (thrown nearly back on itself, a segment is laid on less and less, so where its turn wraps round no strand is flung over)
       dA[j] = d; }
     for (let i = 0; i < S; i++) {
       const w = WGT[i], o0 = ix(i, 0); out[o0] = tb[o0]; out[o0 + 1] = tb[o0 + 1];

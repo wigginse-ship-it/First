@@ -11,6 +11,87 @@ function burst(x, y, z, cols, n, mat, dir = 0, big) {
   }
 }
 function dust(x, y, n) { for (let i = 0; i < n; i++) parts.push({ x: x + rand(-8, 8), y, z: 1, vx: rand(-60, 60), vy: rand(-8, 8), vz: rand(20, 70), life: .45, max: .45, col: 'rgba(255,255,255,.7)', size: rand(3, 6), shape: 'puff', rot: 0, vr: 0 }); }
+// ---------- bits of a hard material, thrown up when a hard thing is smashed or its armor chips and breaks ----------
+// kinds: 'machine' (gears, bolts and plate: a smashed automaton), 'metal' (plate and rivets: a helm or cuirass), 'glass',
+// 'crystal', 'stone', 'porcelain'. Each bit is a small solid thing that tumbles, bounces and settles on the floor.
+const MAT_BITS = {
+  machine: { shapes: ['gear', 'plate', 'bolt', 'plate'], cols: ['#8A909C', '#C4CAD4', '#C89A52', '#5A5E6A'], size: [2.8, 4.8] },
+  metal: { shapes: ['plate', 'bolt', 'plate'], cols: ['#8A909C', '#C4CAD4', '#5A5E6A'], size: [2.6, 4.4] },
+  glass: { shapes: ['glass'], cols: ['#DCEEFF', '#A8D0E0', '#FFFFFF'], size: [2.6, 4.6] },
+  crystal: { shapes: ['shard', 'glass'], cols: ['#9FD8E0', '#D8A0C8', '#FFFFFF'], size: [2.2, 4] },
+  stone: { shapes: ['chip'], cols: ['#8E8478', '#B4AA9A', '#6A6258'], size: [2.4, 4.4] },
+  porcelain: { shapes: ['plate', 'plate', 'glass'], cols: ['#F6F0E6', '#E2D8C8', '#C8B49A'], size: [2.6, 4.4] },
+};
+// what an enemy's own body is made of, if it is hard enough to burst (soft things, goo, fur, flesh, ghosts and dreams do not)
+const MAT_KIND = { metal: 'machine', bronze: 'machine', w7bronze: 'machine', crystal: 'crystal', w7glass: 'glass', rock: 'stone', china: 'porcelain', shell: 'porcelain' };
+// an armor's material (ARMOR[type].mat) as a kind of bits; wood and cloth give none
+const ARMOR_KIND = { metal: 'metal', iron: 'metal', brass: 'metal', bronze: 'metal', glass: 'glass', crystal: 'crystal', stone: 'stone', porcelain: 'porcelain' };
+function matBurst(x, y, z, kind, n, dir = 0, cols, small) {
+  const B = MAT_BITS[kind]; if (!B || n <= 0) return;
+  cols = cols && cols.length ? cols : B.cols;
+  for (let i = 0; i < n && parts.length < 420; i++) {
+    const a = rand(0, TAU), sp = small ? rand(30, 110) : rand(50, 190), life = rand(1.6, 2.8);
+    parts.push({ x: x + rand(-4, 4), y: y + rand(-4, 4), z, vx: Math.cos(a) * sp + dir * rand(20, small ? 90 : 150), vy: Math.sin(a) * sp * .22, vz: small ? rand(90, 220) : rand(170, 380),
+      life, max: life, col: pick(cols), size: rand(B.size[0], B.size[1]) * (small ? .8 : 1), shape: B.shapes[i % B.shapes.length], rot: rand(0, TAU), vr: rand(-14, 14), rest: false });
+  }
+}
+// a chip off an armor as one pip of its guard goes (the struck side), or the whole of it bursting as the guard breaks
+function armorChip(e, dir) {
+  const A = ARMOR[e.type], kind = A && ARMOR_KIND[A.mat]; if (!kind || e.bare) return;
+  matBurst(e.x - dir * e.hw * .35, e.y, e.z + e.hh * .62, kind, CROWD ? 3 : 5, -dir * .4, A.cols && A.cols.slice(0, 3), true);
+  if (kind === 'metal') burst(e.x - dir * e.hw * .4, e.y, e.z + e.hh * .62, ['#FFE6A0', '#FFFFFF'], 3, 'spark', -dir);
+}
+
+// ---------- the hammer's mark: a dent pressed into the floor where a body was smashed flat ----------
+// It is painted onto the floor itself (under every figure, outside the ink), and fades after a few seconds. Each world's
+// floor takes it its own way: stone, wood and street crack; moss, earth and mud give under it in a soft dent with the dirt
+// thrown up round it; the sea floor puffs up silt; the dream floor ripples like water.
+let craters = [];
+function floorKind(id) {
+  id = id || '';
+  if (/^dream/.test(id)) return 'ripple';
+  if (/^rebma/.test(id)) return 'silt';
+  if (/^(bloom|lorraine)/.test(id)) return 'soft';
+  return 'crack';
+}
+function floorTone(th, y) { // the floor's own colour where the mark is, as #rrggbb (the gradient it is painted with)
+  const hx = (c) => { if (typeof c !== 'string') return null; if (/^#[0-9a-f]{6}$/i.test(c)) return c; const m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/); return m ? '#' + [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, '0')).join('') : null; };
+  const a = hx(th && th.floorA) || '#7A7060', b = hx(th && th.floorB) || shade(a, -.4), k = clamp((y - FLOOR_TOP) / Math.max(1, VH - FLOOR_TOP), 0, 1);
+  const na = parseInt(a.slice(1), 16), nb = parseInt(b.slice(1), 16), ch = (s) => Math.round(lerp((na >> s) & 255, (nb >> s) & 255, k));
+  return '#' + [16, 8, 0].map(ch).map(v => v.toString(16).padStart(2, '0')).join('');
+}
+function makeCrater(e, dir) {
+  const id = stage ? stage.theme : '', th = THEMES[id], kind = floorKind(id), base = floorTone(th, e.y);
+  const r = clamp(e.hw * 1.5 + 10, 24, 62) * (e.boss ? 1.3 : 1), sd = Math.random() * 1000;
+  const c = { x: e.x, y: e.y, r, kind, wet: /^lorraine/.test(id), grain: /^sky/.test(id), t: 0, max: kind === 'ripple' ? 3.6 : 4.6, sd,
+    dark: shade(base, -.62), deep: shade(base, -.8), lite: shade(base, .5), dust: shade(base, .32), clod: shade(base, -.3), cracks: [], chips: [], clods: [] };
+  const h = (n) => { const v = Math.sin(sd + n * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  const jag = kind === 'crack' ? .16 : .06; c.rim = [];
+  for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, q = 1 + (h(i + 80) - .5) * jag * 2; c.rim.push([Math.cos(a) * q, Math.sin(a) * q * .36]); } // its edge, broken on hard floors
+  if (kind === 'crack') {
+    const n = 6 + Math.floor(h(1) * 2);
+    for (let i = 0; i < n; i++) { // jagged lines out from the rim; on the deck they run along the planks
+      let a = (i + h(i + 3) * .7) / n * TAU; if (c.grain) a = (h(i + 9) < .5 ? 0 : Math.PI) + (h(i + 5) - .5) * .7;
+      const len = r * (.45 + h(i + 7) * .6), pts = [], segs = 3 + Math.floor(h(i + 11) * 2);
+      for (let k = 0; k <= segs; k++) { const d = r * .92 + len * k / segs, j = k ? (h(i * 7 + k) - .5) * .5 : 0; pts.push([Math.cos(a + j) * d, Math.sin(a + j) * d * .36]); }
+      c.cracks.push(pts);
+      if (h(i + 21) < .45) { const m = pts[1 + Math.floor(h(i + 23) * (pts.length - 2))], b = a + (h(i + 25) < .5 ? -1 : 1) * (.5 + h(i + 27) * .4), l = len * .4; // a branch
+        c.cracks.push([m, [m[0] + Math.cos(b) * l * .5, m[1] + Math.sin(b) * l * .18 + 1], [m[0] + Math.cos(b) * l, m[1] + Math.sin(b) * l * .36]]); }
+    }
+    for (let i = 0; i < 5; i++) { const a = h(i + 40) * TAU, d = r * (.95 + h(i + 41) * .5); c.chips.push([Math.cos(a) * d, Math.sin(a) * d * .36, 1.4 + h(i + 42) * 1.6, h(i + 43) * 3]); }
+  } else if (kind === 'soft' || kind === 'silt') {
+    for (let i = 0; i < 11; i++) { const a = (i + h(i + 60) * .8) / 11 * TAU, d = r * (1.02 + h(i + 61) * .32); c.clods.push([Math.cos(a) * d, Math.sin(a) * d * .36, 2.4 + h(i + 62) * 3.4]); }
+  }
+  craters.push(c); if (craters.length > 8) craters.shift();
+  // pebbles or clods hop up off the floor round it (none on the dream's water-floor; the sea floor puffs up silt and bubbles)
+  if (kind === 'crack' || kind === 'soft') {
+    const cols = kind === 'soft' ? [c.clod, shade(base, -.45), shade(base, .15)] : [shade(base, -.2), shade(base, .25), c.dark];
+    for (let i = 0, n = CROWD ? 3 : 6; i < n && parts.length < 420; i++) { const a = rand(0, TAU), life = rand(1, 1.8);
+      parts.push({ x: e.x + Math.cos(a) * r * .8, y: e.y + Math.sin(a) * r * .3, z: 1, vx: Math.cos(a) * rand(40, 120) + dir * rand(0, 40), vy: Math.sin(a) * rand(10, 30), vz: rand(110, 230), life, max: life, col: pick(cols), size: rand(1.8, 3.2), shape: 'chip', rot: rand(0, TAU), vr: rand(-12, 12), rest: false }); }
+  }
+  if (kind === 'silt' && window.W7 && W7.bubbles) W7.bubbles(e.x, e.y, 4, CROWD ? 5 : 9, 60);
+  return c;
+}
 function floatText(x, y, z, txt, col, size = 14) { nums.push({ x, y, z, txt, col, size, t: .85, max: .85 }); }
 function floatIcon(x, y, z, icon, size = 14) { nums.push({ x, y, z, txt: '', col: '#FFFFFF', size, t: .85, max: .85, icon }); } // a blow turned aside: just the icon, no words
 function iconNums(n0, icon, pips) { for (let i = n0; i < nums.length; i++) if (/^\d+!?$/.test(String(nums[i].txt))) { nums[i].icon = icon; if (pips !== undefined) nums[i].pips = pips; } } // tag the damage numbers a hit just made
@@ -26,6 +107,8 @@ function updateFx(dt) {
     }
   }
   parts = parts.filter(p => p.life > 0);
+  if (craters.length) { if (hitstop <= 0) for (const c of craters) c.t += dt; // (the mark is pressed in as the body flattens, after the hit freeze)
+    craters = craters.filter(c => c.t < c.max); }
   for (const f of fx) f.t -= dt; fx = fx.filter(f => f.t > 0);
   for (const n of nums) { n.t -= dt; n.z += 30 * dt; } nums = nums.filter(n => n.t > 0);
   for (const g of ghosts) g.a -= dt * 1.6; ghosts = ghosts.filter(g => g.a > 0);
@@ -67,6 +150,8 @@ function makeElite(e) {
 //   pieces            [{ x, y, fn, w? }]: the bits that fly off when it breaks, each drawn by fn() about its own middle,
 //                     x, y where it sits on the body (creature space, feet at 0, up is negative);
 //   cols              the colours of the shards it breaks into;
+//   mat               what it is made of: 'metal' | 'glass' | 'stone' | 'porcelain' | 'crystal' (these chip off a few bits
+//                     with each pip of guard lost and burst into bits as it breaks: matBurst) | 'wood' | 'cloth' (no bits);
 //   onBreak(e, dir)   optional: anything more the break does (the new form, a changed stat, sounds);
 // }
 // When the guard breaks the pieces tumble away and e.bare = 1, which the creature's own drawing may read to show what was
@@ -79,7 +164,9 @@ function armorBreak(e, dir) {
     const bx = e.x + p.x * e.facing * s * sx, bz = e.z - p.y * s * sy;
     hazards.push({ kind: 'armorbit', fn: p.fn, x: bx, y: e.y + rand(-2, 2), z: bz, vx: dir * rand(90, 200) + rand(-40, 40), vz: rand(160, 300), rot: 0, vr: dir * rand(5, 11), sc: s, facing: e.facing, t: 2.2, max: 2.2, bounced: 0 });
   }
-  if (A.cols) burst(e.x, e.y, e.z + e.hh * .6, A.cols, 18, 'crystal', dir, true);
+  const kind = ARMOR_KIND[A.mat]; // a hard armor bursts into bits of what it was made of; anything else into its shards
+  if (kind) { matBurst(e.x, e.y, e.z + e.hh * .6, kind, CROWD ? 8 : 14, dir, A.cols && A.cols.slice(0, 3)); if (kind === 'metal') burst(e.x, e.y, e.z + e.hh * .6, ['#FFE6A0', '#FFFFFF', '#FFB050'], 6, 'spark', dir); }
+  else if (A.cols) burst(e.x, e.y, e.z + e.hh * .6, A.cols, 18, 'crystal', dir, true);
   if (A.onBreak) A.onBreak(e, dir);
 }
 function spawnEnemy(type, side, isBoss) {
@@ -425,7 +512,7 @@ function gainWeapon(id, lvl = 1) {
 function startStage(i) {
   stageIdx = i; stage = baseStage = STAGES[i]; runFoundW = false; zoneTrans = null;
   P = newPlayer();
-  enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; corpses = [];
+  enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; corpses = []; craters = [];
   setZoom(VIEW_NORMAL);
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;

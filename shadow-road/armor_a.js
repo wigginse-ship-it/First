@@ -145,7 +145,7 @@
     ctx.beginPath(); p(0, 0); outline(1.5);
     ctx.restore();
   }
-  reg('slime', {
+  reg('slime', { mat: 'glass',
     draw(e, a) { const { w, h, lean } = slimeDims(e, a); candy(w, h, lean, wear(e)); },
     pieces: [
       bit(-9, -17, () => { ctx.save(); ctx.beginPath(); ctx.rect(-40, -60, 33, 60); ctx.clip(); candy(15.5, 25, 0, 0); ctx.restore(); }),
@@ -192,7 +192,7 @@
     cel(m, BARK, { d: 1.8, r: .8, w: 1.4, lite: '#9A8268', tex: barkTex(11, -34, 29, -24), k, seed: 13, box: [11, -35, 18, 11] });
     thorn(15, -33.6, -1.9, 7, 1.8, '#4E6A34', -.5); thorn(20, -32.6, -1.3, 6, 1.6, '#5E7A3E', -.4);
   }
-  reg('boar', {
+  reg('boar', { mat: 'wood',
     draw(e, a) { const k = wear(e); ctx.save(); boarFrame(a); boarBack(k); boarHead(a); boarMask(k); ctx.restore(); },
     pieces: [bit(-15, -24, () => cel(boarSlabs[0].p, boarSlabs[0].c, { w: 1.6 })), bit(0, -29, () => cel(boarSlabs[1].p, boarSlabs[1].c, { w: 1.6 })),
       bit(15, -28, () => cel(boarSlabs[2].p, boarSlabs[2].c, { w: 1.6 })), bit(20, -29, () => boarMask(0))],
@@ -224,7 +224,7 @@
     rivet(19, -30, '#C8964C', .7); rivet(28, -22, '#C8964C', .7);
     thorn(19.5, -31.8, -1.7, 5, 1.6, '#E8C060', .2); // a brass spike between the horns
   }
-  reg('cloudram', {
+  reg('cloudram', { mat: 'metal',
     draw(e, a) { const k = wear(e); ctx.save(); boarFrame(Object.assign({}, a, {})); ramSaddle(k);
       const wind = a.wind || 0, ph = a.walk || 0, hr = .3 * wind + (a.atk ? .18 : 0) + Math.sin(ph * 2) * .03;
       ctx.translate(13, -22); ctx.rotate(hr); ctx.translate(-13, 22); ramChanfron(k); ctx.restore(); },
@@ -279,7 +279,7 @@
     ctx.fillStyle = C('#FFD27A'); ctx.fillRect(22, -61.8 + hb, 5, 1.4);
     ctx.fillStyle = C(OUT); ctx.beginPath(); ctx.moveTo(20.5, -55 + hb); ctx.quadraticCurveTo(24.5, -57 + hb, 28.5, -54.5 + hb); ctx.lineTo(28, -53.4 + hb); ctx.quadraticCurveTo(24.5, -55.4 + hb, 21, -53.8 + hb); ctx.closePath(); ctx.fill(); // a carved scowl
   }
-  reg('golem', {
+  reg('golem', { mat: 'stone',
     draw(e, a) { const k = wear(e); ctx.save(); golemFrame(a); golemShell(k); golemMask(k, (a.wind || 0) * 1.5); ctx.restore(); },
     pieces: [bit(-19, -52, () => cel(golemBlocks[0].p, STONE, { w: 1.8 })), bit(-9, -65, () => cel(golemBlocks[1].p, STONE, { w: 1.8 })),
       bit(-18, -35, () => cel(golemBlocks[2].p, STONE, { w: 1.8 })), bit(24, -61, () => golemMask(0, 0))],
@@ -306,7 +306,7 @@
       cel(rindLump(cx, y, rx, ry, n, sd), RIND, { d: 2.6, r: 1, w: 1.6, lite: '#B8AC9C', tex: rindTex(cx, y, rx, ry), k, seed: 60 + i, box: [cx - rx, y - ry, rx * 2, ry * 2] });
       if (DET() && k > .3) glow(cx, y, rx, '160,236,255', k * .35); }); // light leaking from inside as it cracks
   }
-  reg('cgolem', {
+  reg('cgolem', { mat: 'stone',
     draw(e, a) { ctx.save(); golemFrame(a); cgRind(wear(e), (a.wind || 0) * 1.5); ctx.restore(); },
     pieces: cgParts.map((p, i) => bit(p[0], p[1], () => cgRind(0, 0, i))),
     cols: ['#8C7E72', '#B8AC9C', '#9FE0F0', '#D4A0EC'],
@@ -357,7 +357,7 @@
       ctx.strokeStyle = `rgba(${rgb},${1 - q})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * r, y + Math.sin(an) * r + q * q * 8); ctx.lineTo(x + Math.cos(an) * (r + 2.4), y + Math.sin(an) * (r + 2.4) + q * q * 8); ctx.stroke(); }
     ctx.restore();
   }
-  reg('spider', {
+  reg('spider', { mat: 'metal',
     draw(e, a) { const k = wear(e); ctx.save(); const by = spiderFrame(a); spiderDome(k, by); spiderHelm(k, by); ctx.restore(); },
     pieces: [bit(-9, -28, () => spiderDome(0, -19)), bit(9, -25, () => spiderHelm(0, -19))],
     cols: ['#5E6474', '#A8B0C0', '#C99B55', '#FFFFFF'],
@@ -396,7 +396,7 @@
     thorn(34.5, -15, -.2, 6, 1.8, '#9AA2B4', 0); thorn(36, -7, .05, 6, 1.8, '#9AA2B4', 0);
     rivet(29.5, -15, PLATE, .8); rivet(30, -6, PLATE, .8);
   }
-  reg('tank', {
+  reg('tank', { mat: 'metal',
     draw(e, a) { const k = wear(e); ctx.save(); tankFrame(a); tankCowl(k); tankRam(k); ctx.restore(); },
     pieces: [bit(-10, -47, () => tankCowl(0)), bit(31, -11, () => tankRam(0))],
     cols: ['#6A7282', '#B4BCCA', '#3A3236', '#FFB04A'],
@@ -433,7 +433,7 @@
       ctx.strokeStyle = '#E8C060'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-10, SHO + 1.6); ctx.quadraticCurveTo(0, SHO - 2.2, 11.4, SHO + 1.2); ctx.stroke(); } });
     gearAt(1, SHO + 9, 4.4, 8, .2, '#D8AA55'); // the cog of its house
   }
-  reg('knight', {
+  reg('knight', { mat: 'metal',
     mid(e, a, f) { const k = wear(e); knightPlate(k, f.SHO, f.HIP); ctx.save(); f.head(); knightHelm(k, f.hy, true); ctx.restore(); },
     pieces: [bit(1, -60, () => knightHelm(0, -61, true)), bit(0, -38, () => knightPlate(0, -49, -30))],
     cols: ['#B8BEC8', '#3E8A84', '#B8303A', '#E8C060'],
@@ -475,7 +475,7 @@
     }
     ctx.fillStyle = C('#6E9A4E'); ell(-6, SHO + 2, 3, 1.4, -.3); ctx.fill(); outline(.8); ell(8, HIP - 6, 2.6, 1.2, .3); ctx.fill(); outline(.8);
   }
-  reg('sentinel', {
+  reg('sentinel', { mat: 'wood',
     mid(e, a, f) { const k = wear(e); sentChest(k, f.SHO, f.HIP); ctx.save(); f.head(); sentHelm(k, f.hy); ctx.restore(); },
     pieces: [bit(1, -61, () => sentHelm(0, -61)), bit(0, -40, () => sentChest(0, -49, -30))],
     cols: ['#6E5A42', '#A08868', '#4E7A3E', '#C84A3A'],
@@ -521,7 +521,7 @@
         thorn(x, y, -1.2 - q * .9 + i, 3.4, 1.1, '#C8C070', .2); }
       ctx.fillStyle = C('#E07A9A'); circle(v[6] + sw, v[7], 1.5); ctx.fill(); outline(.7); });
   }
-  reg('bandit', {
+  reg('bandit', { mat: 'metal',
     mid(e, a, f) { const k = wear(e); banditJerkin(k, f); ctx.save(); f.head(); banditHat(k, f.hy); ctx.restore(); },
     pieces: [bit(0, -77, () => { HUM.head(); banditHat(0, -61); }), bit(0, -40, () => banditJerkin(0, HUM))],
     cols: ['#7E8088', '#7A5A3A', '#C8B080', '#FFFFFF'],
@@ -551,7 +551,7 @@
     for (const [w, col] of [[3.6, OUT], [2, '#E8DCC0']]) { ctx.strokeStyle = C(col); ctx.lineWidth = w; ctx.beginPath(); for (const v of tines) { ctx.moveTo(v[0], v[1]); for (let i = 2; i < v.length; i += 2) ctx.lineTo(v[i], v[i + 1]); } ctx.stroke(); }
     if (DET()) for (const [x, y] of [[-12, hy - 24], [-11, hy - 27], [0, hy - 26], [7, hy - 22], [-1, hy - 22]]) glow(x, y, 4, '170,255,170', g * .6);
   }
-  reg('archer', {
+  reg('archer', { mat: 'wood',
     mid(e, a, f) { const k = wear(e); leafMantle(k, f); ctx.save(); f.head(); stagMask(k, f.hy); ctx.restore(); },
     pieces: [bit(6, -61, () => { HUM.head(); stagMask(0, -61); }), bit(0, -48, () => leafMantle(0, HUM))],
     cols: ['#D8C8A0', '#7A9A48', '#5E7A3E', '#FFF6DA'],
@@ -570,7 +570,7 @@
     torsoPlate(f.SHO, f.HIP, '#A8B0BC', '#E8EEF4', k, 147, () => { ctx.strokeStyle = 'rgba(60,60,80,.5)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(4, f.SHO - 2); ctx.quadraticCurveTo(6, f.SHO + 8, 4, f.HIP - 2); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,.55)'; ell(8, f.SHO + 4, 1.4, 4); ctx.fill(); });
     studs([-8, f.SHO + 2, 9, f.SHO + 2, -6, f.HIP - 5, 7, f.HIP - 5], '#D8AA55');
   }
-  reg('corsair', {
+  reg('corsair', { mat: 'metal',
     mid(e, a, f) { const k = wear(e); cuirass(k, f); ctx.save(); f.head(); tricorn(k, f.hy); ctx.restore(); },
     pieces: [bit(0, -74, () => { HUM.head(); tricorn(0, -61); }), bit(0, -40, () => cuirass(0, HUM))],
     cols: ['#A8B0BC', '#2A2230', '#D8AA55', '#FFFFFF'],
@@ -598,7 +598,7 @@
     ctx.strokeStyle = C('#6E4A2A'); ctx.lineWidth = 3; ctx.stroke();
     for (let i = 0; i < 5; i++) { const u = (i + .5) / 5, x = -9 + 17 * u, y = f.SHO + 1 + (f.HIP - 4 - f.SHO) * u; ctx.fillStyle = C('#9FE8F0'); rrect(x - .9, y - 2, 1.8, 3.2, .6); ctx.fill(); outline(.6); }
   }
-  reg('gunner', {
+  reg('gunner', { mat: 'metal',
     mid(e, a, f) { const k = wear(e); bandolier(k, f); ctx.save(); f.head(); gunHelm(k, f.hy); ctx.restore(); },
     pieces: [bit(1, -61, () => { HUM.head(); gunHelm(0, -61); }), bit(0, -40, () => bandolier(0, HUM))],
     cols: ['#C8964C', '#5A6A7A', '#9FE8F0', '#FFFFFF'],
@@ -623,7 +623,7 @@
       tex: () => { ctx.strokeStyle = '#C878A8'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-1, hy - 26); ctx.lineTo(-1.4, hy - 11.4); ctx.moveTo(-7, hy - 12.6); ctx.quadraticCurveTo(0, hy - 14.4, 6.4, hy - 12.8); ctx.stroke(); } });
     shard(-1, hy - 24, 5, -1.57, 3, ROSE, .9);
   }
-  reg('cultist', {
+  reg('cultist', { mat: 'porcelain',
     mid(e, a, f) { const k = wear(e); ctx.save(); f.head(); mitre(k, f.hy); cultMask(k, f.hy); ctx.restore(); },
     pieces: [bit(7, -61, () => { HUM.head(); cultMask(0, -61); }), bit(0, -78, () => { HUM.head(); mitre(0, -61); })],
     cols: ['#F2ECF0', '#4A2A5A', '#C878A8', '#FFFFFF'],
@@ -649,7 +649,7 @@
       shard(x, y + 2, 7, an * .25 - 1.57, 3.2, i % 2 ? ICE : { lt: '#F0F4FF', mid: '#B8C4E8', dk: '#5A6898', deep: '#2E3460' }, 1); }
     if (k > 0) cracks(k * .6, 177, [-11, f.SHO - 8, 22, 8]);
   }
-  reg('witch', {
+  reg('witch', { mat: 'glass',
     mid(e, a, f) { const k = wear(e); wardMirrors(k, f, a.t || 0); ctx.save(); f.head(); witchHat(k, f.hy); ctx.restore(); },
     pieces: [bit(0, -80, () => { HUM.head(); witchHat(0, -61); }), bit(-6, -52, () => wardMirrors(0, HUM, 0))],
     cols: ['#283460', '#8CC8D0', '#E4FCFF', '#B8C4E8'],
@@ -680,7 +680,7 @@
     ctx.strokeStyle = C('#4A4E5A'); ctx.lineWidth = 1.4; ctx.setLineDash([1.8, 1.2]); ctx.beginPath(); ctx.moveTo(sx - 3, sy + 3); ctx.quadraticCurveTo(sx - 8, sy + 8, sx - 12, sy + 6); ctx.stroke(); ctx.setLineDash([]);
     shard(sx + .4, sy + 4, 3.2, 1.57, 2.6, ROSE, .8); // the crystal lock
   }
-  reg('imp', {
+  reg('imp', { mat: 'metal',
     draw(e, a) { const k = wear(e); ctx.save(); const F = impFrame(e, a); impCollar(k, F.sx, F.sy); ctx.translate(F.hdx, F.hdy); ctx.rotate(F.rot); impMuzzle(k); ctx.restore(); },
     pieces: [bit(14, -27, () => { ctx.translate(14, -27); impMuzzle(0); }), bit(5, -22, () => impCollar(0, 5, -22.5))],
     cols: ['#6E7282', '#A8B0C0', '#E29AE0', '#FFFFFF'],
@@ -706,7 +706,7 @@
         if (DET()) { const g = ctx.createLinearGradient(-20, -40, 10, -18); g.addColorStop(0, 'rgba(160,220,255,.25)'); g.addColorStop(.5, 'rgba(255,200,240,.25)'); g.addColorStop(1, 'rgba(200,255,220,.2)'); ctx.fillStyle = g; ctx.fillRect(-30, -50, 50, 40); } } }); // nacre sheen
     for (const [x, y, an] of [[-20, -34, -2.4], [-10, -41.5, -1.8], [2, -41, -1.2], [11, -33, -.7]]) thorn(x, y, an, 5, 1.8, '#E8C8D0', .3);
   }
-  reg('shardling', {
+  reg('shardling', { mat: 'porcelain',
     draw(e, a) { ctx.save(); crabFrame(a); conch(wear(e)); ctx.restore(); },
     pieces: [bit(-6, -28, () => conch(0))],
     cols: ['#EADCCC', '#E8A8C0', '#FFFFFF', '#9FD8E0'],
@@ -729,7 +729,7 @@
     cel(P('M', -5.6, -6.6, 'C', -1, -10.4, 5, -9, 5.6, -4, 'C', 6, .6, 2.6, 4, -1.4, 3.6, 'C', -5.6, 3, -7, -2, -5.6, -6.6, 'Z'), '#A87A4A', { d: 1.6, r: .7, w: 1.3, lite: '#D8B080', k, seed: 205, box: [-6, -9, 12, 12],
       tex: () => { ctx.strokeStyle = 'rgba(70,40,20,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(0, -8.6); ctx.quadraticCurveTo(1.6, -2, -.6, 3.4); ctx.moveTo(-4, -5); ctx.quadraticCurveTo(-2, -3, -4, 0); ctx.moveTo(3.6, -5); ctx.quadraticCurveTo(2, -2.6, 4, 0); ctx.stroke(); } });
   }
-  reg('wisp', {
+  reg('wisp', { mat: 'wood',
     draw(e, a) { const k = wear(e); ctx.save(); wispFrame(a); walnut(k); ctx.translate(1.5, -11); ctx.scale(1.3, 1.3); acorn(k); ctx.restore(); },
     pieces: [bit(1.5, -30, () => { ctx.translate(1.5, -23); ctx.scale(1.3, 1.3); acorn(0); }), bit(0, -14, () => { ctx.translate(0, -12); walnut(0); })],
     cols: ['#8A5A32', '#D8B080', '#FFE07A', '#FFFFFF'],
@@ -746,7 +746,7 @@
     cel(c, col, { d: 2.6, r: 1.1, w: 1.6, lite, k, seed: 211, box: [-17, -14, 34, 14], tex: () => { ctx.strokeStyle = 'rgba(30,30,40,.5)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-9, -11); ctx.quadraticCurveTo(-12, -5, -10, -1); ctx.stroke(); } });
     for (const [x, y] of [[-13, -2], [-10, -8.6], [-3, -12], [5, -11.6], [11, -9]]) rivet(x, y, col, .75);
   }
-  reg('drone', {
+  reg('drone', { mat: 'metal',
     draw(e, a) { ctx.save(); droneFrame(a); droneCowl(wear(e), '#6A7282', '#B4BCCA'); ctx.restore(); },
     pieces: [bit(0, -19, () => { ctx.translate(0, -12); droneCowl(0, '#6A7282', '#B4BCCA'); })],
     cols: ['#6A7282', '#B4BCCA', '#5EEAD8', '#FFFFFF'],
@@ -767,7 +767,7 @@
     cel(P('M', -9, -8.4, 'Q', -1, -15.6, 9, -8.6, 'Q', 0, -10.4, -9, -8.4, 'Z'), '#4A4038', { d: 1.4, r: .7, w: 1.3, lite: '#8A7A68', k, seed: 221, box: [-9, -15, 18, 7] });
     for (const x of [-5, 0, 5]) thorn(x, -10.6 - (x ? 0 : 1.4), -1.57, 5, 1.4, '#3A3028', 0);
   }
-  reg('lantern', {
+  reg('lantern', { mat: 'metal',
     draw(e, a) { const k = wear(e); ctx.save(); droneFrame(a); lanternCage(k, a); lanternCap(k); ctx.restore(); },
     pieces: [bit(-1, 11, () => { ctx.translate(0, -12); lanternCage(0, {}); }), bit(0, -23, () => { ctx.translate(0, -12); lanternCap(0); })],
     cols: ['#4A4038', '#8A7A68', '#FFB04A', '#FFE6A0'],
@@ -785,7 +785,7 @@
     pl.forEach((p, i) => cel(p, '#3E3654', { d: 2, r: .9, w: 1.5, lite: '#6E6488', k, seed: 231 + i, box: i ? [4, -13, 12, 12] : [-16, -12, 13, 22] }));
     for (const [x, y] of [[-12, -1], [-7, -9], [-6, 5], [9, -8], [13, -3.6]]) rivet(x, y, '#8C82A8', .8);
   }
-  reg('sdrone', {
+  reg('sdrone', { mat: 'metal',
     draw(e, a) { ctx.save(); droneFrame(a); sdroneCase(wear(e)); ctx.restore(); },
     pieces: [bit(-8, -12, () => { ctx.translate(0, -12); sdroneCase(0); })],
     cols: ['#3E3654', '#6E6488', '#F07AE8', '#E4FCFF'],
@@ -801,7 +801,7 @@
     cel(c, '#F0E2D0', { d: 2.4, r: 1, w: 1.5, lite: '#FFFFFF', dark: '#C8A890', k, seed: 241, box: [-bw, cy - bh * 1.3, bw * 2, bh], tex: () => {
       ctx.strokeStyle = 'rgba(170,90,60,.75)'; ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = 0; i < 5; i++) { const x = -bw * .7 + i * bw * .38; ctx.moveTo(x, cy - bh * .5); ctx.quadraticCurveTo(x + 2, cy - bh * .9, x + 5, cy - bh * 1.1); } ctx.stroke(); } }); // tiger stripes
   }
-  reg('jelly', {
+  reg('jelly', { mat: 'porcelain',
     draw(e, a) { const { bw, bh, cy } = jellyDims(a); nautilus(wear(e), bw, bh, cy); },
     pieces: [bit(0, -28, () => nautilus(0, 16.5, 15, -15))],
     cols: ['#F0E2D0', '#C8A890', '#9FE8F0', '#FFFFFF'],
@@ -817,7 +817,7 @@
     cel(P('M', -8, -4, 'Q', -2, -10, 6, -6.6, 'L', 6, -4.6, 'Q', -1, -6, -8, -2.6, 'Z'), '#8A2E3A', { d: 1, r: .6, w: 1.2 });
     cel(P('M', -5, -6, 'Q', -2, -11, 3, -8.6, 'L', 3, -6.4, 'Q', -1, -7.6, -5, -4.6, 'Z'), '#C8964C', { d: 1, r: .6, w: 1.2, lite: '#F4D890', k, seed: 253, box: [-5, -11, 8, 6] });
   }
-  reg('skyray', {
+  reg('skyray', { mat: 'metal',
     draw(e, a) { ctx.save(); rayFrame(a); rayBarding(wear(e)); ctx.restore(); },
     pieces: [bit(6, -18, () => { ctx.translate(0, -13); rayBarding(0); })],
     cols: ['#C8964C', '#F4D890', '#8A2E3A', '#FFFFFF'],

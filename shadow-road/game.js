@@ -341,7 +341,7 @@ function strike(e, base, dir, m, echo) {
   }
   let broke = false, guardPips;
   if (e.elite && e.guard > 0 && !m.el) {
-    if (heavy) { e.guard -= m.power === 2 || m.trump ? 2 : 1; if (e.guard <= 0) { e.guard = 0; broke = true; } else { guardPips = e.guard; sfx('hit-metal', .6); } }
+    if (heavy) { e.guard -= m.power === 2 || m.trump ? 2 : 1; if (e.guard <= 0) { e.guard = 0; broke = true; } else { guardPips = e.guard; sfx('hit-metal', .6); armorChip(e, dir); } } // (a chip of the armor flies off with each pip)
     else { guardPips = e.guard; dmg = Math.max(1, Math.round(dmg * .25)); m = Object.assign({}, m, { kb: (m.kb || 0) * .15, launch: 0, noStun: 1 }); sfx('hit-metal', .2); } // light hits glance off the guard
   }
   if (e.shrink < .8) { dmg = Math.round(dmg * 1.4); m = Object.assign({}, m, { kb: (m.kb || 0) * 2.4 + 120, launch: (m.launch || 0) * 1.5 + 140 }); } // a shrunken foe is punted
@@ -353,7 +353,7 @@ function strike(e, base, dir, m, echo) {
   if (P.specialHit && (m === P.move || (P.move && m.key === P.move.key))) learnedFirstHit(e, dir);
   if (broke && !e.dead) { // the guard shatters and leaves it reeling
     e.state = 'down'; e.t = 1.3; e.vx = dir * 60; e.plan = null; hitstop = Math.max(hitstop, .14); shakeMag = Math.max(shakeMag, 7); sfx('break');
-    floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD BREAK!', '#FFD27A', 18); burst(e.x, e.y, e.z + e.hh * .6, ['#EED48A', '#FFFFFF', '#D8AA55'], 24, 'crystal', dir, true);
+    floatText(e.x, e.y, e.z + e.hh + 26, 'GUARD BREAK!', '#FFD27A', 18); burst(e.x, e.y, e.z + e.hh * .6, ['#EED48A', '#FFFFFF', '#D8AA55'], ARMOR[e.type] && ARMOR_KIND[ARMOR[e.type].mat] ? 10 : 24, 'crystal', dir, true); // (fewer gold glints when the armor bursts into its own bits)
     armorBreak(e, dir);
   }
   if (m === P.move && dir === P.facing && !m.around && !(m.lunge >= 300)) P.carry = Math.max(P.carry || 0, Math.min(Math.abs(e.vx) * (e.air ? 1.4 : .8), 340));
@@ -442,10 +442,10 @@ function killEnemy(e, dir, m) {
       burst(e.x, e.y, cy, cols, 14, e.def.mat === 'flesh' ? 'rock' : e.def.mat, dir);
       sfx('crunch'); shakeMag = Math.max(shakeMag, 5);
     } else if (e.death === 'splat') {
-      e.z = 0; e.splat = [...Array(11)].map((_, i) => ({ a: i / 11 * TAU + rand(-.2, .2), l: rand(.8, 1.6), w: rand(3, 6) }));
-      for (let i = 0; i < 26; i++) parts.push({ x: e.x, y: e.y + rand(-6, 6), z: 2, vx: Math.cos(i / 26 * TAU) * rand(120, 260), vy: Math.sin(i / 26 * TAU) * rand(20, 60), vz: rand(60, 200), life: rand(1.5, 3), max: 3, col: pick(cols), size: rand(3, 6), shape: e.def.mat === 'metal' ? 'bolt' : e.def.mat === 'crystal' ? 'shard' : 'blob', rot: 0, vr: rand(-10, 10) });
-      fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 60 + e.hw * 1.5, col: cols[0], flat: 1 });
-      sfx('slam'); sfx('hit-goo'); shakeMag = Math.max(shakeMag, 9);
+      e.z = 0; makeCrater(e, dir); // the floor gives under it: a dent with cracks, or a soft dent, a puff of silt or a ripple, by the world
+      const kind = MAT_KIND[e.def.mat]; // a hard thing bursts into bits of what it was made of; soft things only go flat
+      if (kind) matBurst(e.x, e.y, 6 + e.hh * .1, kind, Math.min(14, CROWD ? 8 : 12 + (e.boss ? 2 : 0)), dir, kind === 'glass' || kind === 'crystal' ? MAT_COL[e.def.mat] : null);
+      sfx('slam'); sfx(kind ? MAT_SFX[e.def.mat] || 'hit-metal' : 'hit-goo'); shakeMag = Math.max(shakeMag, 6);
     }
   }
   const last = !enemies.some(o => !o.dead) && !spawnQ.length;

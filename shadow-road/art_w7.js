@@ -2117,7 +2117,7 @@
     }
     if (e.type === 'w7bellk' && !e.dead && e.state !== 'enter') {
       if (!e.w7bare) {
-        if (heavyHit(m)) { e.w7crack = (e.w7crack || 0) + (m.power === 2 || m.trump ? 2 : 1); sfx('hit-crystal', 1); if (e.w7crack >= 3) { if (e.elite && e.guard > 0 && !m.el) e.guard = Math.min(e.guard, 1); e.w7bare = 1; e.plan = null; sfx('break'); burst(e.x, e.y, 40, ['#E8F8FF', '#BEEAD8', '#FFFFFF'], 30, 'crystal', dir, true); bubbles(e.x, e.y, 40, 24, 120); floatText(e.x, e.y, e.hh + 24, 'THE BELL SHATTERS', '#E8F8FF', 15); e.hh = 46; e.hw = 14; } else floatText(e.x, e.y, e.hh + 20, 'CRACKED', '#E8F8FF', 12); }
+        if (heavyHit(m)) { e.w7crack = (e.w7crack || 0) + (m.power === 2 || m.trump ? 2 : 1); sfx('hit-crystal', 1); if (e.w7crack >= 3) { if (e.elite && e.guard > 0 && !m.el) e.guard = Math.min(e.guard, 1); e.w7bare = 1; e.plan = null; sfx('break'); if (!(e.elite && e.guard > 0)) { burst(e.x, e.y, 40, ['#E8F8FF', '#BEEAD8', '#FFFFFF'], 16, 'crystal', dir, true); if (typeof matBurst === 'function') matBurst(e.x, e.y, 40, 'glass', 12, dir, ['#E8F8FF', '#BEEAD8', '#FFFFFF']); } bubbles(e.x, e.y, 40, 24, 120); floatText(e.x, e.y, e.hh + 24, 'THE BELL SHATTERS', '#E8F8FF', 15); e.hh = 46; e.hw = 14; } else { floatText(e.x, e.y, e.hh + 20, 'CRACKED', '#E8F8FF', 12); if (!(e.elite && e.guard > 0) && typeof armorChip === 'function') armorChip(e, dir); } }
         else { base *= .3; if (!(e.w7msg > performance.now())) { e.w7msg = performance.now() + 900; floatText(e.x, e.y, e.hh + 16, 'IT GLANCES OFF THE GLASS', '#DCEEFF', 11); } }
       } else base *= 1.3;
     }

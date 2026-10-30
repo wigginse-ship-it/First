@@ -510,11 +510,7 @@ function drawDeath(e, t) {
   } else { // splat
     const c = Math.min(1, el / .07), settle = Math.sin(el * 32) * .05 * Math.exp(-el * 6);
     FLASH = false;
-    ctx.save(); ctx.scale(e.facing, 1); // the splatter is drawn flat on the floor
-    const col = MAT_COL[e.def.mat][0];
-    for (const s of e.splat) { ctx.fillStyle = col; ctx.save(); ctx.scale(1, .32); ctx.rotate(s.a); ctx.beginPath(); ctx.ellipse(e.hw * .9 + s.l * 14, 0, s.l * 14, s.w, 0, 0, TAU); ctx.fill(); circle(e.hw * .9 + s.l * 30, 0, s.w * .8); ctx.fill(); ctx.restore(); }
-    ctx.fillStyle = col; ell(0, 0, e.hw * 1.6, e.hw * .45); ctx.fill();
-    ctx.restore();
+    ctx.translate(0, 2.5 * c); // (flattened down into the dent the blow left: drawCrater paints that on the floor under it)
     FLASH = el < .06;
     ctx.scale(lerp(1, 1.9, c) - settle, Math.max(.08, lerp(1, .14, c) + settle));
     draw();
@@ -581,6 +577,7 @@ function drawScene(t) {
   drawBossRoom(t);
   ctx.translate(-camX, 0);
   // resting debris lies flat on the floor under everything
+  for (const c of craters) drawCrater(c);
   for (const p of parts) if (p.rest) drawPart(p);
   for (const h of hazards) if (h.kind !== 'beam') drawHazard(h, t);
   for (const e of enemies) if (e.boss && e.state === 'wind' && e.plan !== 'roar') drawTell(e, t);
@@ -630,6 +627,7 @@ function drawScene(t) {
   list.sort((a, b) => a[0] - b[0]).forEach(o => o[1]());
   inkEnd(t);
   drawGearAura(t, true); // an enchanted piece's motes circle in front of him as well as behind
+  for (const c of craters) if (c.t < 1.8) drawCraterDust(c);
   for (const p of parts) if (!p.rest) drawPart(p);
   for (const h of hazards) if (h.kind === 'beam') drawHazard(h, t);
   for (const f of fx) drawFx(f);
@@ -674,6 +672,66 @@ function drawScene(t) {
   if (zoneTrans) drawZoneTrans(t);
   paperFrame();
 }
+// ---------- the hammer's mark on the floor (craters: world.js makeCrater) ----------
+// painted straight onto the floor under every figure: a shallow dent (its far inner wall in shadow, its near inner wall
+// and far rim catching the light), and by the floor: cracks with pale edges and chips of rubble; a ring of thrown-up dirt;
+// rings rippling out over the dream's floor. It fades after a few seconds.
+function drawCrater(c) {
+  if (c.x < camX - 140 || c.x > camX + VW + 140) return;
+  const t = c.t, A = Math.min(1, (c.max - t) / 1.6) * (c.kind === 'ripple' ? .55 : 1), s = .55 + .45 * ease(t / .09), x = c.x, y = c.y, rx = c.r * s, ry = rx * .36, lite = !CROWD;
+  if (A <= 0) return;
+  ctx.save();
+  const rim = (k, dy = 0) => { ctx.beginPath(); c.rim.forEach(([px, py], i) => ctx[i ? 'lineTo' : 'moveTo'](x + px * rx * k, y + py * rx * k + dy)); ctx.closePath(); };
+  const arc = (top, k, dy) => { ctx.beginPath(); let on = false; for (let i = 0; i <= 16; i++) { const [px, py] = c.rim[i % 16], up = py < 0 || (top ? i % 16 === 0 || i % 16 === 8 : false); // (the far half of the rim, or the near half)
+    if (up === top) { ctx[on ? 'lineTo' : 'moveTo'](x + px * rx * k, y + py * rx * k + dy); on = true; } else on = false; } };
+  // the floor pressed down round it, then the dent: its floor, the shadow under its far wall, the light on its near wall
+  ctx.globalAlpha = A * .16; ctx.fillStyle = c.dark; rim(1.18, .5); ctx.fill();
+  ctx.globalAlpha = A * (c.wet ? .6 : .4); rim(1); ctx.fill();
+  ctx.save(); rim(1); ctx.clip();
+  ctx.globalAlpha = A * .62; ctx.fillStyle = c.deep; ell(x, y - ry * .85, rx * 1.15, ry); ctx.fill();
+  ctx.globalAlpha = A * .32; ctx.fillStyle = c.lite; ell(x + rx * .12, y + ry * 1.05, rx * .8, ry * .55); ctx.fill();
+  if (c.wet) { ctx.globalAlpha = A * .45; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x + rx * .1, y + ry * .1, rx * .55, ry * .45, 0, .4, 1.5); ctx.stroke(); } // a wet sheen on mud
+  ctx.restore();
+  if (c.kind === 'crack' || c.kind === 'ripple') { // the rim: lit along its far edge, a dark line along its near one
+    ctx.lineJoin = 'round'; ctx.globalAlpha = A * .75; ctx.strokeStyle = c.lite; ctx.lineWidth = 1.5; arc(true, 1.02, -.7); ctx.stroke();
+    ctx.globalAlpha = A * .55; ctx.strokeStyle = c.deep; ctx.lineWidth = 1.1; arc(false, 1, 0); ctx.stroke();
+  }
+  if (c.kind === 'crack') { // the cracks run out as the floor gives
+    const g = ease(t / .14), path = (dx, dy, upto) => { ctx.beginPath(); for (const pts of c.cracks) { const n = upto ? Math.min(upto, pts.length) : pts.length; ctx.moveTo(x + pts[0][0] * s + dx, y + pts[0][1] * s + dy); for (let k = 1; k < n; k++) ctx.lineTo(x + (pts[0][0] + (pts[k][0] - pts[0][0]) * g) * s + dx, y + (pts[0][1] + (pts[k][1] - pts[0][1]) * g) * s + dy); } };
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (lite) { ctx.globalAlpha = A * .55; ctx.strokeStyle = c.lite; ctx.lineWidth = 1; path(.4, 1.1); ctx.stroke(); } // the pale lip on each crack's lit side
+    ctx.globalAlpha = A * .85; ctx.strokeStyle = c.deep; ctx.lineWidth = 1.2; path(0, 0); ctx.stroke();
+    ctx.lineWidth = 2.2; path(0, 0, 2); ctx.stroke(); // (wider where it leaves the dent)
+    if (lite && c.chips.length) { ctx.globalAlpha = A; ctx.fillStyle = c.dark; ctx.beginPath(); for (const [cx, cy, r, an] of c.chips) { ctx.moveTo(x + cx - r, y + cy + .6); ctx.lineTo(x + cx + Math.cos(an) * r * .4, y + cy - r * .7 + .6); ctx.lineTo(x + cx + r, y + cy + .6); ctx.lineTo(x + cx, y + cy + r * .5 + .6); } ctx.fill();
+      ctx.fillStyle = c.lite; ctx.beginPath(); for (const [cx, cy, r, an] of c.chips) { ctx.moveTo(x + cx - r * .8, y + cy); ctx.lineTo(x + cx + Math.cos(an) * r * .4, y + cy - r * .7); ctx.lineTo(x + cx + r * .7, y + cy - .2); ctx.lineTo(x + cx, y + cy + r * .1); } ctx.fill(); }
+  } else if (c.kind === 'soft' || c.kind === 'silt') { // the dirt (or silt) it pushed out, heaped round the rim: shadowed clods, lit on top
+    const g = .5 + .5 * ease(t / .2);
+    ctx.globalAlpha = A * .8; ctx.fillStyle = c.kind === 'silt' ? c.lite : c.clod; ctx.beginPath(); for (const [cx, cy, r] of c.clods) { ctx.moveTo(x + cx * s + r * g, y + cy * s + 1); ctx.ellipse(x + cx * s, y + cy * s + 1, r * g, r * g * .5, 0, 0, TAU); } ctx.fill();
+    if (lite) { ctx.globalAlpha = A * .6; ctx.fillStyle = c.lite; ctx.beginPath(); for (const [cx, cy, r] of c.clods) { ctx.moveTo(x + cx * s + r * g * .6 + .6, y + cy * s - .4); ctx.ellipse(x + cx * s + .6, y + cy * s - .4, r * g * .6, r * g * .26, 0, 0, TAU); } ctx.fill(); }
+  }
+  if (c.kind === 'ripple') for (let i = 0; i < 4; i++) { // the dream floor is not solid: rings go out over it as over water
+    const k = (t - i * .3) / 1.6; if (k <= 0 || k >= 1) continue;
+    const R = c.r * (.9 + ease(k) * 2.6), q = (1 - k) * (1 - k);
+    ctx.globalAlpha = q * .7; ctx.strokeStyle = c.lite; ctx.lineWidth = .8 + 2.2 * q; ctx.beginPath(); ctx.ellipse(x, y - .8, R, R * .36, 0, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = q * .45; ctx.strokeStyle = c.deep; ctx.lineWidth = .8 + q; ctx.beginPath(); ctx.ellipse(x, y + 1.2, R * .98, R * .35, 0, .15, Math.PI - .15); ctx.stroke();
+  }
+  ctx.restore();
+}
+// the dust thrown out along the ground as it lands (over the figures, as the debris is): a ring of puffs bursting outward;
+// under the sea, a slower, bigger cloud of silt that rises and hangs
+function drawCraterDust(c) {
+  if (c.kind === 'ripple' || c.x < camX - 140 || c.x > camX + VW + 140) return;
+  const silt = c.kind === 'silt', D = silt ? 1.8 : .75, k = c.t / D; if (k >= 1) return;
+  const n = CROWD ? 6 : 10, e = ease(k), sc = c.r / 40;
+  ctx.save(); ctx.fillStyle = c.dust;
+  for (let pass = 0; pass < 2; pass++) {
+    ctx.globalAlpha = (1 - k) * (silt ? .45 : .55) * (pass ? .7 : 1); ctx.beginPath();
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + c.sd + pass * .3, d = c.r * (pass ? .55 : .8) + c.r * (silt ? .9 : 1.4) * e * (pass ? .7 : 1), r = (3 + (silt ? 14 : 9) * e) * sc * (pass ? 1.2 : 1);
+      const px = c.x + Math.cos(a) * d, py = c.y + Math.sin(a) * d * .36 - (silt ? 22 : 7) * e - (pass ? r * .5 : 0); ctx.moveTo(px + r, py); ctx.arc(px, py, r, 0, TAU); }
+    ctx.fill();
+  }
+  ctx.restore();
+}
 function drawPart(p) {
   const a = p.rest ? Math.min(1, p.life / .6) : Math.min(1, p.life / Math.min(.3, p.max));
   ctx.globalAlpha = a; ctx.fillStyle = p.col;
@@ -685,6 +743,18 @@ function drawPart(p) {
     case 'shard': ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ctx.beginPath(); ctx.moveTo(0, -s * 1.3); ctx.lineTo(s * .6, 0); ctx.lineTo(0, s * 1.3); ctx.lineTo(-s * .6, 0); ctx.closePath(); ctx.fill(); ctx.restore(); break;
     case 'chunk': ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); rrect(-s / 2, -s / 2, s, s * .8, 1.5); ctx.fill(); ctx.restore(); break;
     case 'tuft': ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ell(0, 0, s, s * .4); ctx.fill(); ctx.restore(); break;
+    case 'gear': { ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ctx.scale(1, .45 + .55 * Math.abs(Math.cos(p.rot * .6))); // a little cog, tumbling
+      ctx.fillRect(-s, -s * .26, s * 2, s * .52); ctx.fillRect(-s * .26, -s, s * .52, s * 2); ctx.rotate(.785); ctx.fillRect(-s, -s * .26, s * 2, s * .52); ctx.fillRect(-s * .26, -s, s * .52, s * 2);
+      circle(0, 0, s * .74); ctx.fill(); ctx.fillStyle = '#2A2630'; circle(0, 0, s * .28); ctx.fill(); ctx.restore(); break; }
+    case 'plate': { ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ctx.scale(1, .3 + .7 * Math.abs(Math.cos(p.rot * .8))); // a bent shard of plate, flashing as it turns
+      ctx.beginPath(); ctx.moveTo(-s, -s * .45); ctx.lineTo(s * .7, -s * .7); ctx.lineTo(s, s * .35); ctx.lineTo(-s * .5, s * .6); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(30,20,30,.6)'; ctx.lineWidth = .7; ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-s * .8, -s * .42); ctx.lineTo(s * .6, -s * .62); ctx.stroke(); ctx.restore(); break; }
+    case 'glass': { ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ctx.scale(1, .35 + .65 * Math.abs(Math.cos(p.rot * .9))); // a sliver of glass with a glint along it
+      ctx.globalAlpha = a * .85; ctx.beginPath(); ctx.moveTo(-s * .5, -s * 1.3); ctx.lineTo(s * .7, s * .2); ctx.lineTo(-s * .2, s * 1.1); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-s * .5, -s * 1.3); ctx.lineTo(s * .7, s * .2); ctx.stroke(); ctx.restore(); break; }
+    case 'chip': { ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); // a stone chip or pebble: its shadowed underside, then its lit top
+      ctx.beginPath(); ctx.moveTo(-s, 0); ctx.lineTo(-s * .4, -s * .7); ctx.lineTo(s * .6, -s * .6); ctx.lineTo(s, s * .2); ctx.lineTo(s * .1, s * .7); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(20,12,20,.32)'; ctx.beginPath(); ctx.moveTo(-s, 0); ctx.lineTo(s, s * .2); ctx.lineTo(s * .1, s * .7); ctx.closePath(); ctx.fill(); ctx.restore(); break; }
     case 'puff': circle(x, y, s * (1.6 - p.life / p.max)); ctx.fill(); break;
     default: ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ctx.fillRect(-s / 2, -s * .15, s, s * .3); ctx.fillRect(-s * .15, -s / 2, s * .3, s); ctx.restore();
   }

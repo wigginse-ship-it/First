@@ -143,7 +143,7 @@
     crackIn(p, n, 31 + x0, x0 + 4, HIP + 5, 4, 5);
     ctx.strokeStyle = C(GILT); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(x0, HIP + 9.4); ctx.lineTo(x0 + 4, HIP + 11); ctx.lineTo(x0 + 8.4, HIP + 9); ctx.stroke();
   }
-  ARMOR.chknight = {
+  ARMOR.chknight = { mat: 'glass',
     draw(e, a) {
       const t = a.t || 0, n = nCracks(e), hot = e.state === 'wind' || e.state === 'strike';
       humanAt(e, a, false, (F) => { knightTasset(F.HIP, t, n, -9); knightTasset(F.HIP, t, n, 0); });
@@ -175,7 +175,7 @@
     const p = PP([0, -r * 1.3, r * .55, -r * .2, r * .2, r * 1.1, -r * .5, r * .3]);
     glassCel(p, { d: 1, r: .6, w: 1 }); chaosSheen(p, t, seed, -r, -r * 1.3, r, r * 1.1, .5); crackIn(p, n, 50 + seed, 0, 0, r * .5, r);
   }
-  ARMOR.chadept = {
+  ARMOR.chadept = { mat: 'glass',
     draw(e, a) {
       const t = a.t || 0, n = nCracks(e);
       const orbit = (front) => humanAt(e, a, false, (F) => { for (let i = 0; i < 3; i++) { const an = t * 1.4 + i * TAU / 3, s = Math.sin(an); if ((s > 0) !== front) continue;
@@ -217,7 +217,7 @@
     ctx.fillStyle = C('#140A10'); ell(4.4, -3.4, 2.6, 2, -.2); ctx.fill();
     horn(0, -6, -4, -12, -12, -15, 3.8, .4, '#E0D4B8', 1.1);
   }
-  ARMOR.chhound = {
+  ARMOR.chhound = { mat: 'glass',
     draw(e, a) { const t = a.t || 0, n = nCracks(e);
       at(e, 'body', () => houndBarding(e.armA.by, t, n));
       at(e, 'head', () => houndChamfron(t, n)); },
@@ -247,7 +247,7 @@
     ctx.fillStyle = C(GILT); for (let i = 0; i < 8; i++) { const an = i / 8 * TAU + .2; circle(1 + Math.cos(an) * (ER + 2.4), EY + Math.sin(an) * (ER * .86 + 2.4), .9); ctx.fill(); }
     if (n && DET()) { ctx.strokeStyle = 'rgba(255,190,120,.9)'; ctx.lineWidth = .7; for (let i = 0; i < n; i++) { const an = hsh(i + 3) * TAU; ctx.beginPath(); ctx.moveTo(1 + Math.cos(an) * (ER + 1), EY + Math.sin(an) * (ER * .86 + 1)); ctx.lineTo(1 + Math.cos(an + .08) * (ER + 4), EY + Math.sin(an + .08) * (ER * .86 + 4)); ctx.stroke(); } }
   }
-  ARMOR.cheye = {
+  ARMOR.cheye = { mat: 'glass',
     draw(e, a) { const t = a.t || 0, n = nCracks(e), w = a.wind || 0;
       at(e, 'root', () => { ctx.save(); ctx.translate(0, -w * 2.4); eyeShutter(true, t, n); ctx.restore(); ctx.save(); ctx.translate(0, w * 2.4); eyeShutter(false, t, n); ctx.restore(); eyeRing(n); }); },
     pieces: [
@@ -272,7 +272,7 @@
     glassCel(p, { d: 1, r: .6, w: 1.1 }); chaosSheen(p, t, 13, 4, cy - 7, 12, cy, .45); crackIn(p, n, 111, 8, cy - 3, 3, 2);
     horn(7, cy - 6, 6, cy - 11, 3, cy - 13, 2, .3, GILT, .8);
   }
-  ARMOR.chmoth = {
+  ARMOR.chmoth = { mat: 'glass',
     draw(e, a) { const t = a.t || 0, n = nCracks(e);
       at(e, 'wingF', () => mothEdge(t, n)); at(e, 'wingN', () => mothEdge(t, n)); at(e, 'body', () => mothHelm(e.armA.cy, t, n)); },
     pieces: [
@@ -306,7 +306,7 @@
     if (n && DET()) { ctx.strokeStyle = 'rgba(255,200,140,.9)'; ctx.lineWidth = .6; for (let i = 0; i < n; i++) { const x = -4 + hsh(i + 9) * 14; ctx.beginPath(); ctx.moveTo(x, -9); ctx.lineTo(x + 1.5, -5); ctx.stroke(); } }
     if (hot) glowAt(5.6, -3.2, 8, EMB, .5);
   }
-  ARMOR.chbrute = {
+  ARMOR.chbrute = { mat: 'glass',
     draw(e, a) { const t = a.t || 0, n = nCracks(e);
       at(e, 'root', () => bruteYoke(e.armA.SH, t, n));
       at(e, 'head', () => bruteCage(t, n, (a.wind || 0) > .3)); },
@@ -349,7 +349,7 @@
     leaf(() => ctx.ellipse(0, -1.6, 6, 1.8, 0, 0, TAU), 1.4); leaf(() => { ctx.moveTo(0, -3.6); ctx.lineTo(0, -7); }, 1.2);
     ctx.fillStyle = C(SILVL); circle(0, -7.6, 1.4); ctx.fill(); outline(.8);
   }
-  ARMOR.w5courtier = {
+  ARMOR.w5courtier = { mat: 'glass',
     draw(e, a) { const t = a.t || 0, n = nCracks(e); at(e, 'root', () => courtierCage(t, n)); at(e, 'lantern', () => courtierGlobe(t, n)); },
     pieces: [
       { x: 0, y: -18, fn: () => leaf(() => ctx.ellipse(0, 0, 14.2, 1.8, 0, 0, Math.PI), 1.3) },
@@ -372,7 +372,7 @@
     horn(1, -80, -4, -84, -9, -82, 3, .4, SILV, .9, SILVD); horn(1, -80, 6, -84, 11, -82, 3, .4, SILV, .9, SILVD);
     ctx.fillStyle = C(SILVL); ctx.beginPath(); ctx.arc(1, -84, 3.4, -1.1, 2); ctx.arc(1.8, -84.4, 2.4, 2, -1.1, true); ctx.fill(); outline(.8);
   }
-  ARMOR.w5reflect = {
+  ARMOR.w5reflect = { mat: 'glass',
     draw(e, a) { const t = a.t || 0, n = nCracks(e);
       at(e, 'root', () => { moonGlass(MIR, -20, -80, 22, 2, .14); crackIn(MIR, n + (n ? 1 : 0), 221, 1, -39, 16, 30, 'rgba(255,255,255,.95)', 'rgba(40,46,70,.45)'); mirrorFrame(t, n); mirrorCrest();
         leaf(() => { ctx.moveTo(-14, 3); ctx.lineTo(16, 3); }, 2.2); }); }, // its foot
@@ -401,7 +401,7 @@
     if (DET()) { ctx.fillStyle = 'rgba(255,255,255,.7)'; poly([-6, y + 2, -6.4, y - 2, -3.6, y, 0, y - 4, 0, y + 2]); ctx.fill(); ctx.fillStyle = '#5A6EB0'; circle(0, y + .6, 1.2); ctx.fill(); }
     glowAt(0, y - 1, 8, PALE, .35);
   }
-  ARMOR.w5knave = {
+  ARMOR.w5knave = { mat: 'glass',
     draw(e, a) { const t = a.t || 0, n = nCracks(e); at(e, 'card', () => { knaveCase(t, n); knaveCrown(t); }); },
     pieces: [
       { x: 0, y: -64, fn: piece(0, -CH5 - 7, () => knaveCrown(0)) },
@@ -430,7 +430,7 @@
     cel(p, '#AEB6C8', { d: 2, r: 1, w: 1.6, dark: STND, lite: STNL, tex: () => { ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-21, -7, 42, 1.6); ctx.strokeStyle = 'rgba(70,80,110,.6)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-21, -3); ctx.lineTo(21, -3); ctx.stroke(); } });
     crackIn(p, n, 251, 0, -1, 18, 4, 'rgba(225,235,255,.9)', 'rgba(50,58,90,.6)');
   }
-  ARMOR.w5statue = {
+  ARMOR.w5statue = { mat: 'stone',
     draw(e, a) { const n = nCracks(e); at(e, 'base', () => statuePlinth(n)); at(e, 'root', () => statueVeil(n)); },
     pieces: [
       { x: 2, y: -62, fn: piece(2, -62, () => statueVeil(1)) },
@@ -458,7 +458,7 @@
     horn(2, -7, 6, -12, 11, -15, 2.4, .3, SILVL, .9, SILVD); // a horn of silver on its brow
     crackIn(p, n, 271, 6, -5, 6, 2, 'rgba(255,255,255,.95)', 'rgba(40,46,70,.6)');
   }
-  ARMOR.w5hound = {
+  ARMOR.w5hound = { mat: 'cloth',
     draw(e, a) { const n = nCracks(e); at(e, 'body', () => houndCaparison(e.armA.by, n)); at(e, 'head', () => houndChamfronS(n)); },
     pieces: [
       { x: 0, y: -24, fn: piece(-1, -26, () => houndCaparison(-22, 1)) },
@@ -479,7 +479,7 @@
     crackIn(FW, n, 281, -11, -14, 8, 10, 'rgba(255,255,255,.95)', 'rgba(40,46,70,.5)');
   }
   function mothDiadem(cy) { ctx.fillStyle = C(SILVL); ctx.beginPath(); ctx.arc(6.4, cy - 6, 2.4, -.6, Math.PI + .6, true); ctx.arc(6.4, cy - 7, 2.2, Math.PI + .5, -.5); ctx.fill(); outline(.7); glowAt(6.4, cy - 7, 5, PALE, .4); }
-  ARMOR.w5moth = {
+  ARMOR.w5moth = { mat: 'glass',
     draw(e, a) { const n = nCracks(e); at(e, 'wingF', () => mothPanes(n)); at(e, 'wingN', () => mothPanes(n)); at(e, 'body', () => mothDiadem(e.armA.cy)); },
     pieces: [
       { x: -12, y: -40, fn: piece(-11, -14, () => mothPanes(1)) },
@@ -512,7 +512,7 @@
     lichen([-6, sy + 3, 5, sy + 5]);
     crackIn(p, n, 311, 0, sy + 3, 8, 5, 'rgba(255,250,240,.9)', 'rgba(50,46,40,.7)');
   }
-  ARMOR.w6bowler = {
+  ARMOR.w6bowler = { mat: 'stone',
     draw(e, a) { const n = nCracks(e); at(e, 'body', () => { if (e.armA.sy != null) stoneMantle(e.armA.sy, n); }); at(e, 'hat', () => stoneHat(n)); },
     pieces: [
       { x: 1, y: -66, fn: piece(0, -2, () => stoneHat(1)) },
@@ -544,7 +544,7 @@
     ctx.strokeStyle = C(GLD); ctx.lineWidth = .7; p(0, 0); ctx.stroke();
     crackIn(p, n, 331, 5, -8, 3, 5, 'rgba(60,60,80,.9)', 'rgba(255,255,255,.6)');
   }
-  ARMOR.w6mannequin = {
+  ARMOR.w6mannequin = { mat: 'porcelain',
     draw(e, a) { const n = nCracks(e), t = a.t || 0; at(e, 'torso', () => { if (e.armA.ty != null) chinaCuirass(e.armA.ty, n, t); }); at(e, 'head', () => chinaMask(n)); },
     pieces: [
       { x: -3, y: -45, fn: () => cel(PB([-5, -7, 3, -8, 5, 0, 2, 8, -5, 6]), GLAZE, { d: 1.6, r: .8, w: 1.2, dark: '#C8C4D4', tex: () => { ctx.strokeStyle = DELFT; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-3, 4); ctx.quadraticCurveTo(0, -2, 2, -5); ctx.stroke(); } }) },
@@ -568,7 +568,7 @@
     ctx.strokeStyle = C('rgba(220,240,255,.9)'); ctx.lineWidth = 1; BOWLG(0, 0); ctx.stroke(); BOWLG(0, 0); outline(.9);
     ctx.fillStyle = C(GLD); ell(3, -13.4, 9, 2.4); ctx.fill(); outline(1); if (DET()) { ctx.fillStyle = GLDL; ctx.fillRect(-3, -14.6, 8, .8); } // its brass collar
   }
-  ARMOR.w6fish = {
+  ARMOR.w6fish = { mat: 'glass',
     draw(e, a) { const n = nCracks(e); at(e, 'body', () => fishbowl(a.t || 0, n)); },
     pieces: [
       { x: -4, y: -64, fn: () => { const p = PP([-6, -5, 5, -7, 4, 5, -5, 3]); moonGlass(p, -6, -7, 5, 5, .35); p(0, 0); outline(.8); } },
@@ -594,7 +594,7 @@
     ctx.save(); ctx.beginPath(); ctx.ellipse(0, -17, 13.8, 12.6, 0, 0, TAU); crackIn((ox, oy, c) => { if (!c) ctx.beginPath(); ctx.ellipse(ox, -17 + oy, 13.8, 12.6, 0, 0, TAU); }, n, 351, 0, -17, 10, 9, 'rgba(255,250,230,.95)', 'rgba(90,60,20,.7)'); ctx.restore();
     fillPoly([-14.4, -19, -16.4, -20, -16.4, -14, -14.4, -15], GLDD, .8); // the hinge
   }
-  ARMOR.w6clock = {
+  ARMOR.w6clock = { mat: 'metal',
     draw(e, a) { const n = nCracks(e); at(e, 'face', () => hunterLid(n)); },
     pieces: [
       { x: -6, y: -18, fn: () => { ctx.fillStyle = C(GLD); ctx.beginPath(); ctx.arc(0, 0, 12, Math.PI * .5, Math.PI * 1.5); ctx.arc(0, 0, 5, Math.PI * 1.5, Math.PI * .5, true); ctx.closePath(); ctx.fill(); outline(1.1); } },
@@ -616,7 +616,7 @@
     for (const x of [-3, 5]) { rrect(x - 1.6, -6.8, 3.2, 12.6, 1); ctx.fillStyle = C(GLD); ctx.fill(); outline(.9); if (DET()) { ctx.fillStyle = GLDL; ctx.fillRect(x - .9, -6, 1, 11); } ctx.fillStyle = C(GLDD); circle(x, -5, .7); ctx.fill(); circle(x, 4, .7); ctx.fill(); }
     if (n && DET()) { ctx.strokeStyle = 'rgba(255,250,230,.95)'; ctx.lineWidth = .6; for (let i = 0; i < n; i++) { const x = i % 2 ? 5 : -3, y = -4 + hsh(i + 1) * 8; ctx.beginPath(); ctx.moveTo(x - 1.6, y); ctx.lineTo(x + 1.6, y + 1); ctx.stroke(); } }
   }
-  ARMOR.w6lobster = {
+  ARMOR.w6lobster = { mat: 'metal',
     draw(e, a) { const n = nCracks(e); at(e, 'root', () => { gong(-15, -24, n); gong(15, -24, n); }); at(e, 'lob', () => lobsterStraps(n)); },
     pieces: [
       { x: -15, y: -22, fn: piece(-15, -24, () => gong(-15, -24, 1)) },
@@ -641,7 +641,7 @@
     for (const [cx, cy] of [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]) { ctx.fillStyle = C(GLD); circle(cx, cy, 3.2); ctx.fill(); outline(.9); ctx.fillStyle = C(GLDD); circle(cx, cy, 1.2); ctx.fill(); } // its rosettes
     if (n && DET()) { ctx.strokeStyle = 'rgba(40,24,8,.9)'; ctx.lineWidth = .9; for (let i = 0; i < n; i++) { const u = hsh(i + 4), side = i % 4, px = side === 0 ? x + u * w : side === 1 ? x + w : side === 2 ? x + u * w : x, py = side === 0 ? y : side === 1 ? y + u * h : side === 2 ? y + h : y + u * h; ctx.beginPath(); ctx.moveTo(px - 1.6, py - 1.6); ctx.lineTo(px + 1.6, py + 1.6); ctx.stroke(); } }
   }
-  ARMOR.w6skybird = {
+  ARMOR.w6skybird = { mat: 'wood',
     draw(e, a) { const n = nCracks(e); at(e, 'root', () => giltFrame(n)); },
     pieces: [
       { x: 0, y: -46, fn: () => giltSide(-25, 0, 25, 0) }, { x: 0, y: -2, fn: () => giltSide(-25, 0, 25, 0) },
@@ -667,7 +667,7 @@
     horn(26, -19, 24, -25, 19, -28, 2.8, .4, '#E8705A', .8, '#A8302A'); // a plume
     crackIn(p, n, 371, 27, -13, 6, 5, 'rgba(255,250,230,.95)', 'rgba(90,60,20,.7)');
   }
-  ARMOR.w6elephant = {
+  ARMOR.w6elephant = { mat: 'metal',
     draw(e, a) { const n = nCracks(e);
       at(e, 'root', () => { (e.armA.knees || []).forEach((k, i) => { goldBand(k[0], k[1], Math.atan2(k[1] - k[3], k[0] - k[2]) + Math.PI / 2, n, i); goldBand(lerp(k[0], k[4], .55), lerp(k[1], k[5], .55), Math.atan2(k[5] - k[1], k[4] - k[0]) + Math.PI / 2, n, i + 7); }); });
       at(e, 'body', () => headdress(n)); },
