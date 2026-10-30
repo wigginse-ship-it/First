@@ -441,7 +441,7 @@ const CORWIN = (() => {
         const wx0 = x - Q[o], wy0 = y - Q[o + 1]; // its step through the world; damped against the air a little, and against his own motion a lot
         let vx = wx0 - wx0 * DRAG_X * H - (wx0 - SIM.bvx * H) * DAMP * H, vy = wy0 - wy0 * DRAG_Y * H - (wy0 - SIM.bvy * H) * DAMP * H;
         vx = clamp(vx, -VLIM, VLIM); vy = clamp(vy, -VLIM, VLIM);
-        const ax = k * (spT[o] - x) + SIM.bax * CARRY_X, ay = k * (spT[o + 1] - GRAVITY / KJ[j] - y) + GRAVITY + SIM.bay * CARRY_Y;
+        const ax = k * (spT[o] - x) + SIM.bax * CARRY_X, ay = k * (spT[o + 1] - GRAVITY / KJ[j] - y) + GRAVITY + (SIM.bay > 0 ? SIM.bay * CARRY_Y : SIM.bay * .12); // (carried down with him as he falls, but a landing or a leap's push hardly throws it upward)
         Q[o] = x; Q[o + 1] = y; P[o] = x + vx + ax * H * H; P[o + 1] = y + vy + ay * H * H;
       }
       for (let j = 1; j <= M; j++) { // each point stays within reach of the one above it
