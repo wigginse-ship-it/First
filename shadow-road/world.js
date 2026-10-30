@@ -569,7 +569,8 @@ function updateWorld(dt) {
 
   updateMech(dt); updateShrink(P, dt); updateBossRoom(dt); updateSecret(dt);
   for (const e of enemies) { updateShrink(e, dt); const k = e.shrink || 1;
-    if (k >= 1) { updateEnemy(e, dt); continue; }
+    if (e.punted && !['hurt', 'down'].includes(e.state) && !e.air) e.punted = false; // (a punt lasts until it is back on its feet)
+    if (k >= 1 || e.punted) { updateEnemy(e, dt); continue; } // (punted by a full-size prince: it flies the full distance)
     // shrunk by the spores, a foe moves in proportion to its size: every step, lunge, knockback and arc covers a scaled-down
     // stretch of ground in the same time, so it looks as fast as it did at full size, only smaller
     const x0 = e.x, y0 = e.y, z0 = e.z; updateEnemy(e, dt);

@@ -344,7 +344,10 @@ function strike(e, base, dir, m, echo) {
     if (heavy) { e.guard -= m.power === 2 || m.trump ? 2 : 1; if (e.guard <= 0) { e.guard = 0; broke = true; } else { guardPips = e.guard; sfx('hit-metal', .6); armorChip(e, dir); } } // (a chip of the armor flies off with each pip)
     else { guardPips = e.guard; dmg = Math.max(1, Math.round(dmg * .25)); m = Object.assign({}, m, { kb: (m.kb || 0) * .15, launch: 0, noStun: 1 }); sfx('hit-metal', .2); } // light hits glance off the guard
   }
-  if (e.shrink < .8) dmg = Math.round(dmg * 1.4); // a shrunken foe is easier to hurt (its knockback is scaled down with it, in updateWorld)
+  if (e.shrink < .8) { dmg = Math.round(dmg * 1.4); // a shrunken foe is easier to hurt
+    // and if he is still full size it is punted, flying far across the street; when he is tiny too, it is knocked back as
+    // usual and its flight is scaled down with it (updateWorld), so two small fighters trade blows at their own scale
+    if (!(P.shrink < .8)) { m = Object.assign({}, m, { kb: (m.kb || 0) * 2.4 + 120, launch: (m.launch || 0) * 1.5 + 140 }); e.punted = true; } }
   if (P.shrink < .8) dmg = Math.max(1, Math.round(dmg * .75)); // and a shrunken prince hits softer
   if (pw('might') && !m.trump) dmg = Math.round(dmg * 1.3);
   if (pw('leech') && !m.trump && !e.boss) P.hp = Math.min(maxHp(), P.hp + 1 + dmg * .03);
