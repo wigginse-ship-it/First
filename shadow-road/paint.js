@@ -148,19 +148,28 @@ const IB = { x: 0, y: 0, w: 0, h: 0 }, IBS = []; // the screen box the figures o
 // modelling on the side away from the light). His box on screen is HB; inkEnd leaves him out of its contour and rim.
 const HB = { x: 0, y: 0, w: 0, h: 0, on: false };
 let heroC = null, heroG = null, heroSC = null, heroSG = null, heroBC = null, heroBG = null, HERO_HATCHED = false;
+// his weapon's shape on his layer, stamped as it is drawn: his brushwork and hatching are cut away from it (laid over the
+// weapon too, they streaked its metal and dulled its colours)
+let heroWC = null, heroWG = null, heroWOn = false;
+{ const _dw = drawWeapon; drawWeapon = function (kind, pose) {
+  _dw(kind, pose);
+  if (heroWOn && heroWG && ctx === heroG && !FLASH && !TINT) { const c = ctx; heroWG.setTransform(c.getTransform()); heroWG.globalAlpha = 1; heroWG.globalCompositeOperation = 'source-over'; ctx = heroWG; try { _dw(kind, pose); } finally { ctx = c; } }
+}; }
 function heroInk(cx, cy, fn) {
   if (PAINT_Q === 0 || ctx !== inkG || HB.on || TINT || FLASH) { fn(); return; }
   const m = ctx.getTransform(); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const [px, py] of [[cx - 135, cy - 150], [cx + 135, cy - 150], [cx - 135, cy + 18], [cx + 135, cy + 18]]) { const X = m.a * px + m.c * py + m.e, Y = m.b * px + m.d * py + m.f; x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); }
   x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(inkC.width, Math.ceil(x1)); y1 = Math.min(inkC.height, Math.ceil(y1));
   const w = x1 - x0, h = y1 - y0; if (w < 4 || h < 4) { fn(); return; }
-  if (!heroC || heroC.width < w || heroC.height < h) { retire(heroC); retire(heroSC); [heroC, heroG] = texCanvas(w + 64, h + 64); [heroSC, heroSG] = texCanvas(w + 64, h + 64); }
+  if (!heroC || heroC.width < w || heroC.height < h) { retire(heroC); retire(heroSC); retire(heroWC); [heroC, heroG] = texCanvas(w + 64, h + 64); [heroSC, heroSG] = texCanvas(w + 64, h + 64); [heroWC, heroWG] = texCanvas(w + 64, h + 64); }
+  heroWG.setTransform(1, 0, 0, 1, 0, 0); heroWG.clearRect(0, 0, w + 2, h + 2);
   Object.assign(HB, { x: x0, y: y0, w, h, on: true });
   heroG.setTransform(1, 0, 0, 1, 0, 0); heroG.globalCompositeOperation = 'source-over'; heroG.globalAlpha = 1; heroG.clearRect(0, 0, w + 2, h + 2);
   heroG.setTransform(m.a, m.b, m.c, m.d, m.e - x0, m.f - y0);
   const prev = ctx; ctx = heroG;
   HEAD_MASK = null;
-  try { fn(); heroPaint(cx, cy); } finally { ctx = prev; }
+  heroWOn = true;
+  try { fn(); heroWOn = false; heroPaint(cx, cy); } finally { ctx = prev; heroWOn = false; }
   // the ink line: his own silhouette, a fine stroke's width all round, laid under him on his layer
   const r = .5 * K;
   heroSG.setTransform(1, 0, 0, 1, 0, 0); heroSG.globalCompositeOperation = 'copy'; heroSG.drawImage(heroC, 0, 0, w, h, 0, 0, w, h);
@@ -201,10 +210,18 @@ function heroPaint(x, y) {
     heroBG.setTransform(m0); heroBG.fillStyle = lg; heroBG.fillRect(x - 38, y - 110, 92, 92); heroBG.fillStyle = dg; heroBG.fillRect(x - 75, y - 30, 150, 34);
     heroBG.setTransform(m); heroBG.fillStyle = texPat(heroBG, 'brush'); heroBG.fillRect(-150, -210, 300, 222);
     heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'destination-in'; heroBG.drawImage(L, 0, 0);
+    if (heroWC) { heroBG.globalCompositeOperation = 'destination-out'; heroBG.drawImage(heroWC, 0, 0); } // (none on his weapon)
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = .9; ctx.drawImage(heroBC, 0, 0); ctx.restore();
   }
-  ctx.fillStyle = texPat(ctx, 'hatch');
-  for (let i = 0; i < 2; i++) { const k = 1 - i * .3; ctx.globalAlpha = .2 * (.6 + i * .3); ell((-hw * .9 - i * hw * .2) * 2, (-hh * .35 + i * hh * .08) * 2, hw * 1.7 * k * 2, hh * .85 * k * 2); ctx.fill(); }
+  { // the hatching in his shadow side: built on the scratch layer, kept to him and off his weapon, then laid on
+    const L = ctx.canvas, m = ctx.getTransform();
+    heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'source-over'; heroBG.globalAlpha = 1; heroBG.clearRect(0, 0, L.width, L.height);
+    heroBG.setTransform(m); heroBG.fillStyle = texPat(heroBG, 'hatch');
+    for (let i = 0; i < 2; i++) { const k = 1 - i * .3; heroBG.globalAlpha = .2 * (.6 + i * .3); heroBG.beginPath(); heroBG.ellipse((-hw * .9 - i * hw * .2) * 2, (-hh * .35 + i * hh * .08) * 2, hw * 1.7 * k * 2, hh * .85 * k * 2, 0, 0, TAU); heroBG.fill(); }
+    heroBG.globalAlpha = 1; heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'destination-in'; heroBG.drawImage(L, 0, 0);
+    if (heroWC) { heroBG.globalCompositeOperation = 'destination-out'; heroBG.drawImage(heroWC, 0, 0); }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(heroBC, 0, 0); ctx.restore();
+  }
   ctx.restore();
 }
 const DETAIL_OK = () => !FLASH && !TINT;
