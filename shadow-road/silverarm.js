@@ -53,7 +53,7 @@
     JH:   { name: 'Moon Hook', dur: .55, h: [.36, .66], x0: 0, x1: 50, dmg: 18, kb: 320, power: 2, wall: 1, hook: 1 },
     DA:   { name: 'Comet', dur: .5, h: [.22, .64], x0: 0, x1: 86, depth: 24, dmg: 20, kb: 420, arc: [.1, .1], fly: 1, power: 2, wall: 1 },
     D:    { name: 'Rocket Ride', dur: .66, h: [.1, .82], x0: 0, x1: 54, depth: 26, dmg: 7, kb: 260, multi: .09, lunge: 640, power: 1, wall: 1, ride: 1 },
-    DX:   { name: 'Silver Haymaker', dur: .55, h: [.4, .62], prep: 1, x0: 0, x1: 80, depth: 28, dmg: 26, kb: 480, lunge: 380, hop: 150, power: 2, wall: 1 }, // Heavy off the run: the bare-handed haymaker, with a fist the size of a barrel
+    DX:   { name: 'Silver Haymaker', dur: .55, h: [.4, .62], prep: 1, x0: 0, x1: 80, depth: 28, dmg: 26, kb: 480, lunge: 380, power: 2, wall: 1 }, // Heavy off the run: the bare-handed haymaker, with a fist the size of a barrel
     R:    { name: 'Silver Crescent', dur: .42, h: [.28, .62], x0: 0, x1: 50, dmg: 17, kb: 300, lunge: 330, power: 1, crescent: 1 },
     RH:   { name: 'The Snap', dur: .5, h: [.3, .4], x0: 0, x1: 70, dmg: 18, kb: 300, around: 1, power: 2, snap: 1 },
     HC:   { name: 'Rock, Paper, Scissors', dur: .7, h: [.42, .6], x0: 0, x1: 120, depth: 34, dmg: 30, kb: 300, power: 2, janken: 1 },

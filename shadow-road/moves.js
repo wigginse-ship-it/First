@@ -250,8 +250,8 @@ const MOVE_POSE = {
       pose.arm = lerp(-.5, 1, q); pose.elbow = lerp(1.2, 1.9, q); pose.backArm = lerp(1.5, 1.3, q); pose.backElbow = lerp(2.45, 2, q);
     }
   },
-  'fists:D'(pose, m, k) { // Running Haymaker: pulled up off the run with the lead fist raised high, cocked above his head, then a little
-    // hop forward and one short overhand, the fist coming down from that upward angle and on into them, his weight falling in behind it
+  'fists:D'(pose, m, k) { // Running Haymaker: pulled up off the run with the lead fist raised high, cocked above his head, then one short
+    // overhand, the fist coming down from that upward angle and on into them, his whole body pitched forward behind it like a dash
     const h0 = m.h[0], h1 = m.h[1], air = P.z > 2;
     pose.trail = 0; pose.streak = null; delete pose.sweep; pose.spin = 0; pose.rot = 0; pose.ext = 0; delete pose.kick; delete pose.kickK;
     if (k < h0) { const q = ease(k / h0); // the wind-up: the weight back on the rear foot, the chest turned away, the fist raised high
@@ -260,16 +260,16 @@ const MOVE_POSE = {
       pose.lean = lerp(.3, -.08, q); pose.yaw = -.25 * q; pose.sink = 2 + 4 * q; pose.shift = -1.6 * q;
       pose.legs = { f: lerp(9, 13, q), b: lerp(-9, -12, q), fk: lerp(5, 7, q), bk: lerp(4, 7, q) }; pose.flow = 8;
     } else if (k < h1 + .06) { const q = sstep((k - h0) / (h1 + .06 - h0)); // the throw: down from above and forward, the hips and chest turning through
-      pose.lean = lerp(-.08, .45, q); pose.yaw = lerp(-.25, .55, q); pose.sink = lerp(6, 3, q); pose.shift = lerp(-1.6, 2.6, q);
+      pose.lean = lerp(-.08, .8, q); pose.yaw = lerp(-.25, .55, q); pose.sink = lerp(6, 9, q); pose.shift = lerp(-1.6, 4, q); // pitched forward, low, the weight thrown over the front foot
       pose.arm = lerp(5.15, TAU + .1, q); pose.elbow = lerp(1.1, .15, q) + .25 * Math.sin(Math.PI * q); // the elbow kept a little bent on the way down, straightening into them
       pose.backArm = lerp(.55, 2.5, q); pose.backElbow = lerp(1.1, .7, q); // the rear arm flung back for balance
       pose.backReach = 0; pose.flow = 14;
-      pose.legs = air ? { f: 14, b: -15, fk: 10, bk: 6, fl: 6 * q } : { f: lerp(13, 15, q), b: lerp(-12, -15, q), fk: 8, bk: 3, bh: .7 * q };
+      pose.legs = air ? { f: 14, b: -15, fk: 10, bk: 6, fl: 6 * q } : { f: lerp(13, 17, q), b: lerp(-12, -21, q), fk: lerp(8, 12, q), bk: lerp(3, 0, q), bh: .7 * q }; // the front knee driving forward, the back leg long behind
     } else { const q = sstep((k - h1 - .06) / (1 - h1 - .06)), r = sstep(span(k, .8, 1)); // the follow-through, landing on the front foot, then back to the guard
-      pose.lean = lerp(.45, .2, r); pose.yaw = lerp(.55, .15, r); pose.sink = lerp(3, 5, q) * (1 - r) + 2 * r; pose.shift = 2.6 * (1 - r);
+      pose.lean = lerp(.8, .2, r); pose.yaw = lerp(.55, .15, r); pose.sink = 9 * (1 - r) + 2 * r; pose.shift = 4 * (1 - r);
       pose.arm = lerp(TAU + .1, TAU + .35, q) * (1 - r) + (TAU + 1) * r; pose.elbow = lerp(.15, .4, q) * (1 - r) + 1.9 * r; // (TAU + 1 is the guard: the fist settles down into it)
       pose.backArm = lerp(2.5, 1.3, r); pose.backElbow = lerp(.7, 2, r); pose.flow = 10 * (1 - r);
-      pose.legs = air ? { f: 14, b: -14, fk: 9, bk: 7 } : { f: lerp(15, 10, r), b: lerp(-15, -10, r), fk: lerp(8, 5, r), bk: lerp(3, 4, r), bh: .7 * (1 - r) };
+      pose.legs = air ? { f: 14, b: -14, fk: 9, bk: 7 } : { f: lerp(17, 10, r), b: lerp(-21, -10, r), fk: lerp(12, 5, r), bk: lerp(0, 4, r), bh: .7 * (1 - r) };
     }
   },
   'fists:DA'(pose, m, k) { // Superman Punch: laid out in the air, the rear hand thrown long, the lead hand pulled back to the hip
