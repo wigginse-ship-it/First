@@ -312,7 +312,7 @@ window.addEventListener('resize', layout);
 if (window.ResizeObserver) new ResizeObserver(layout).observe(app);
 
 // ---------- main loop ----------
-let last = performance.now();
+let last = performance.now(); const hsGroup = { id: -1, at: 0, spent: 0 }; // (the swing whose hit freeze is running, see step)
 function frame(now) {
   requestAnimationFrame(frame); // ask for the next frame first, so nothing that goes wrong below can stop the game
   try { step(now); } catch (e) { // a drawing failure falls back to the plain renderer rather than freezing
@@ -330,10 +330,16 @@ function step(now) {
     if (input.light) P.holdL = (P.holdL || 0) + rawDt; else { P.holdL = 0; P.holdUsed = false; } // real time, so hit freezes don't stall a held button
     P.holdH = input.heavy ? (P.holdH || 0) + rawDt : 0;
     if (slowmo > 0) { slowmo -= dt; dt *= .3; }
-    const froze = hitstop > 0;
-    if (froze) hitstop -= dt;
+    // one swing, one hit freeze: a blow that lands on a crowd connects with each foe a frame or two apart, and every hit
+    // used to start a fresh freeze as the last ran out, stalling the fight. Now a swing (or anything within half a second
+    // when he isn't swinging) freezes only as long as its single biggest hit asks; each new swing in a combo freezes in full
+    const froze = hitstop > 0, hs0 = hitstop;
+    if (froze) { hitstop -= dt; hsGroup.spent += dt; }
     else if (zoneTrans) updateZoneTrans(dt);
     else { updatePlayer(dt); updateWorld(dt); }
+    if (hitstop > hs0 + 1e-6) { const id = (P.state === 'atk' || P.state === 'air') && P.move ? P.moveId || 0 : -2; // (a blow on him is its own group, not part of his last swing)
+      if (id !== hsGroup.id || now - hsGroup.at > 500) { hsGroup.id = id; hsGroup.at = now; hsGroup.spent = 0; }
+      hitstop = Math.max(hs0, hitstop - hsGroup.spent); }
     updateFx(hitstop > 0 ? dt * .25 : dt);
     shakeMag = Math.max(0, shakeMag - dt * 30); zoom = Math.max(0, zoom - dt * .25);
     flashT = Math.max(0, flashT - dt); hurtFlash = Math.max(0, hurtFlash - dt);

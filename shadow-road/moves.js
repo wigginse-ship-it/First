@@ -363,6 +363,47 @@ const MOVE_POSE = {
       if (k < h0 + .16) { pose.trail = 68; pose.trailFrom = -2.6; pose.trailCol = tcolOf(m); pose.trailW = 10; }
     }
   },
+  'hammer:R'(pose, m, k) { // Overhead Drive, the dodge counter's heavy form (the light Lunging Drive keeps draw.js's plain dodge lunge and is left alone):
+    // the hammer whipped back behind him, up over his head and down into the same forward drive, held there, then eased out of it
+    if (!m.overhead) return;
+    const end = .82, a0 = 2.7, fwd = m.arc[0] - .6 * .9; // a0: the forward dodge's flung-back arms; fwd: the drive's forward position (draw.js's thrust at full lean, .6)
+    const body = (e, lean) => { // draw.js's dodge lunge, at extension e
+      pose.lean = lean; pose.sink = 6 - 2 * e; pose.legs = { f: 12 + 5 * e, b: -14 - 5 * e, fk: 8, bk: 0, bh: .6 * e }; pose.shift = 2.6 * e; pose.yaw = .2 * e; pose.backArm = lerp(1.4, 2.6, e); pose.flow = 14 * e; pose.ext = e;
+    };
+    pose.elbow = 0; pose.grip = 0; pose.trail = 0;
+    if (k < .31) { // back, up and over: one quick wheel, slow behind him and fast over the top
+      const q = span(k, 0, .31), w = q < .3 ? .22 * sstep(q / .3) : .22 + .78 * Math.pow((q - .3) / .7, 1.4);
+      const a = lerp(a0, TAU + fwd, w); pose.arm = a > Math.PI ? a - TAU : a;
+      const up = Math.sin(Math.PI * Math.min(1, w * 1.35)); // most upright with the hammer over his head
+      body(.3 * w + .7 * Math.pow(w, 3), lerp(.42, .6, w) - .5 * up); pose.ext = Math.max(0, w * 1.2 - .2); pose.streak = null;
+      if (w > .3) { pose.trail = 66; pose.trailFrom = pose.arm - Math.min(2.3, (w - .2) * 4.5); pose.trailCol = tcolOf(m); pose.trailW = 9; }
+    } else if (k < end) { // driven in and held there, the whole body stretched out behind the head
+      body(1, .6); pose.arm = fwd;
+      if (k < .4) { pose.trail = 66; pose.trailFrom = fwd - 2.3 * (1 - span(k, .31, .4)); pose.trailCol = tcolOf(m); pose.trailW = 9; }
+      if (k > m.h[1] + .1) pose.streak = null;
+    } else { const e = 1 - sstep(span(k, end, 1)); body(e, .3 + .3 * e); pose.arm = m.arc[0] - pose.lean * .9; pose.streak = null; }
+  },
+  'hammer:D'(pose, m, k) { // Battering Run: off the run the hammer trails behind him at the waist; the hips and chest turn and it is swept round
+    // flat in front of him, level, at full stretch, and carried on across his body before he gathers it back
+    delete pose.kick; pose.streak = null; pose.trail = 0; pose.spin = 0; pose.crouch = 0; pose.elbow = 0; pose.grip = 0; pose.flat = null;
+    const w0 = .08, s1 = .36, s2 = .56; // wound by w0, in front of him at s1, the follow-through spent by s2
+    // th: the hammer's way round him, seen from above: 0 straight behind, PI/2 out to our side, PI in front, past PI across to the far side
+    const th = k < w0 ? 0 : k < s1 ? Math.PI * Math.pow(span(k, w0, s1), 1.35) : k < s2 ? Math.PI + 1.05 * Math.sin(Math.PI / 2 * span(k, s1, s2)) : Math.PI + 1.05 * (1 - sstep(span(k, .7, 1)));
+    // the sweep turns the arm's whole line about the shoulder (swept back it points along arm + PI), so to keep the head a little
+    // below his shoulder all the way round, against his forward lean, the arm reads -.5 behind him and .14 in front;
+    // past the front the swing's own weight lifts it a little round toward his far shoulder
+    const lv = th <= Math.PI ? lerp(-.5, .14, (1 - Math.cos(th)) / 2) : .14 - .5 * (th - Math.PI);
+    pose.sweep = -Math.cos(th); pose.ext = .5 + .5 * Math.sin(th / 2);
+    if (k < w0) { pose.sweep = 1; pose.arm = lerp(1.9, Math.PI - .5, sstep(k / w0)); } // from the run's trailing carry back to the waist (unswept, the same place as -.5 swept fully back)
+    else pose.arm = k > .7 ? lerp(lv, .95, sstep(span(k, .7, 1))) : lv; // and at the end let down in front
+    const turn = k < w0 ? sstep(k / w0) : 1, g = sstep(span(k, w0, s2)), r = sstep(span(k, .72, 1)); // wound, swung through, recovered
+    pose.yaw = (lerp(-.5, .6, g) * turn) * (1 - r) + .1 * r; // turned away to wind, then the hips and chest open to us as it comes through
+    pose.lean = (k < w0 ? lerp(.36, .14, turn) : lerp(.14, .26, Math.sin(Math.PI * g))) * (1 - r) + .1 * r;
+    pose.sink = lerp(3, 6, Math.sin(Math.PI * Math.min(1, g * 1.4))) * (1 - r) + 2 * r; pose.shift = lerp(-1.5, 3, g) * (1 - r);
+    pose.legs = { f: lerp(12, 15, g) * (1 - r) + 9 * r, b: lerp(-13, -15, g) * (1 - r) - 9 * r, fk: 7 - 3 * r, bk: lerp(5, 2, g) * (1 - r) + 3 * r, bh: .5 * g * (1 - r) };
+    pose.backArm = lerp(1.7, 2.6, g); pose.flow = 12 * (1 - r);
+    if (k > w0 + .02 && k < s2 + .08) pose.flat = { r: 68, k: clamp(th / Math.PI, 0, 1) * (k > s2 ? 1 - span(k, s2, s2 + .08) : 1), rev: false, col: tcolOf(m), w: 9 };
+  },
   'hammer:LLLL'(pose, m, k) { // Worldbreaker: a great wheel back over the shoulder, both hands, and down onto one knee
     pose.trail = 0;
     if (k < .56) { const q = sstep(span(k, 0, .56));

@@ -137,8 +137,8 @@ function updatePlayer(dt) {
       break;
     case 'dodge':
       P.t -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
-      if (pressed.light) P.dq = 'L'; if (pressed.heavy) P.dq = unlocked(w.tree.RH) ? 'H' : 'L'; // attack out of a roll
-      if (P.dq && P.t < .2) { const k = P.dq, dv = Math.abs(P.dvx); P.dq = false; P.inv = Math.max(P.inv, .15); begin(k === 'H' ? w.tree.RH : w.tree.R); if (k !== 'H' && P.w === 'rapier' && Math.sign(P.dvx) === P.facing) { P.vx = P.facing * Math.max(Math.abs(P.vx), dv * 1.2); P.dodgeCarry = 1; } break; } // a dodge-attack keeps the dodge's momentum
+      if (pressed.light) P.dq = 'L'; if (pressed.heavy) P.dq = unlocked(w.tree.RH) ? 'H' : w.tree.R && w.tree.R.heavyAlt ? 'HA' : 'L'; // attack out of a roll (HA: the dodge counter's own heavy form, data.js heavyAlt)
+      if (P.dq && P.t < .2) { const k = P.dq, dv = Math.abs(P.dvx); P.dq = false; P.inv = Math.max(P.inv, .15); begin(k === 'H' ? w.tree.RH : k === 'HA' ? Object.assign({}, w.tree.R, w.tree.R.heavyAlt, { heavyAlt: null }) : w.tree.R); if (k === 'L' && P.w === 'rapier' && Math.sign(P.dvx) === P.facing) { P.vx = P.facing * Math.max(Math.abs(P.vx), dv * 1.2); P.dodgeCarry = 1; } break; } // a dodge-attack keeps the dodge's momentum
       P.ghostT -= dt;
       if (P.ghostT <= 0) { // the forward lunge drags a dark trail of afterimages; the backstep leaves a couple of pale ones
         if (P.dk === 'fwd') { P.ghostT = .022; addGhost(true); if (Math.random() < .6) fx.push({ kind: 'speed', x: P.x, y: P.y, z: rand(10, 50), dir: P.facing, t: .22, max: .22 }); }
@@ -179,14 +179,15 @@ function onLand() {
     const m = P.move;
     if (m.shock && !P.shocked) shockwave(P.x + P.facing * 20, P.y, m.shock, m);
     if (P.state === 'air') { P.state = 'idle'; P.airUsed = false; P.t = 0; }
-    else P.t = Math.max(P.t, m.dur * m.h[1]);
+    else { P.t = Math.max(P.t, m.dur * m.h[1]); if (m.airCarry) P.vx = 0; } // (the slam plants him where the hammer hits)
   }
   else if (P.state === 'hurt' && P.knocked) { P.state = 'down'; P.t = .6; shakeMag = Math.max(shakeMag, 3); }
 }
 function runMove(dt) {
   let m = P.move; P.t += dt * (pw('haste') ? 1.2 : 1); const k = P.t / m.dur;
   if (P.hopQ && k >= m.h[0] * .8) { P.vz = P.hopQ; P.hopQ = 0; dust(P.x, P.y, 5); }
-  P.x += P.vx * dt; P.vx *= Math.pow(P.dodgeCarry && m.key === 'R' ? .3 : m.lunge > 300 ? .05 : .004, dt);
+  const carried = m.airCarry && (P.z > 0 || P.vz > 0); // a leap that keeps the run's speed: only a light drag while he is in the air (stopped dead by the landing: onLand)
+  P.x += P.vx * dt; P.vx *= Math.pow(carried ? .4 : P.dodgeCarry && m.key === 'R' ? .3 : m.lunge > 300 ? .05 : .004, dt);
   if (m.slide && P.z <= 2 && Math.abs(P.vx) > 40 && Math.random() < .6) dust(P.x - P.facing * 8, P.y, 1); // the slide kicks up the street
   if (m.lunge > 250 || m.rot || m.spin) { P.ghostT -= dt; if (P.ghostT <= 0) { P.ghostT = .035; addGhost(); } }
   const airborne = P.z > 0;

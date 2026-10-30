@@ -322,19 +322,19 @@ function drawWeapon(kind, pose) {
   const poly = (pts, col, w = 1.4) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let k = 2; k < pts.length; k += 2) ctx.lineTo(pts[k], pts[k + 1]); ctx.closePath(); ctx.fillStyle = typeof col === 'string' ? C(col) : col; ctx.fill(); outline(w); };
   const vgrad = (y0, y1, col) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, C(shade(col, .35))); g.addColorStop(.5, C(col)); g.addColorStop(1, C(shade(col, -.3))); return g; };
   if (kind === 'hammer') {
-    // each level is a different hammer: 1 an iron maul, 2 a steel war hammer with a beak, 3 a gilded, flanged maul with a ruby,
+    // each level is a different hammer: 1 an iron maul, 2 a blued-steel war hammer with a beak, oxblood wraps and a bronze rivet, 3 a gilded, flanged maul with a ruby,
     // 4 a stormforged anvil-head with a spike and cyan runes, 5 the Shadow Breaker, black crystal crowned with spikes in a violet haze
     const L = tier >= 4 ? 48 : 44;
     const haft = ['#9A6234', '#6A4A30', '#4A2A1E', '#2A3444', '#1A1622'][tier - 1];
     limb([4, 0, L, 0], haft, 4);
-    if (tier >= 2) { ctx.fillStyle = C(['', '#3A2A20', '#D8AA55', '#9FE8F0', '#8A6ACF'][tier - 1]); for (let x = 8; x < 30; x += 5) ctx.fillRect(x, -2.4, 1.8, 4.8); } // wraps and bands up the haft
+    if (tier >= 2) { ctx.fillStyle = C(['', '#7A3328', '#D8AA55', '#9FE8F0', '#8A6ACF'][tier - 1]); for (let x = 8; x < 30; x += 5) ctx.fillRect(x, -2.4, 1.8, 4.8); } // wraps and bands up the haft
     if (tier >= 3) { ctx.fillStyle = C(tier >= 5 ? '#8A6ACF' : tier >= 4 ? '#7F9AB8' : '#D8AA55'); circle(3, 0, 3.4); ctx.fill(); outline(1); } // pommel
     if (tier === 1) { rrect(36, -12, 18, 24, 4); ctx.fillStyle = vgrad(-12, 12, '#7E8494'); ctx.fill(); outline(); ctx.fillStyle = C('#5A606E'); ctx.fillRect(38, -12, 14, 2); }
     else if (tier === 2) {
-      poly([38, 12, 52, 12, 45, 23], '#8E96A8', 1.3); // the beak behind
-      rrect(36, -12, 18, 24, 3); ctx.fillStyle = vgrad(-12, 12, '#AAB2C2'); ctx.fill(); outline();
-      ctx.fillStyle = C('#E8ECF4'); ctx.fillRect(37, -12, 16, 2.2); // bright striking face
-      ctx.fillStyle = C('#5A606E'); circle(45, 0, 2.2); ctx.fill();
+      poly([38, 12, 52, 12, 45, 23], '#7C93AE', 1.3); // the beak behind
+      rrect(36, -12, 18, 24, 3); ctx.fillStyle = vgrad(-12, 12, '#93AAC6'); ctx.fill(); outline(); // blued steel: a cool blue sheen the iron maul hasn't got
+      ctx.fillStyle = C('#E2ECF8'); ctx.fillRect(37, -12, 16, 2.2); // bright striking face
+      ctx.fillStyle = C('#B9823E'); circle(45, 0, 2.4); ctx.fill(); outline(.8); // a bronze rivet
     } else if (tier === 3) {
       poly([35, -10, 38, -15, 52, -15, 55, -10, 55, 10, 52, 15, 38, 15, 35, 10], vgrad(-15, 15, '#B8BCC8'), 1.6); // flanged, eight-sided head
       ctx.fillStyle = C('#D8AA55'); ctx.fillRect(36, -15, 3, 30); ctx.fillRect(51, -15, 3, 30); ctx.fillRect(38, -2, 14, 4);
