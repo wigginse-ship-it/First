@@ -328,12 +328,20 @@ const CORWIN = (() => {
   // drifting over the cloth, faster the faster it moves, smeared along its motion, and flung off its edges as ragged
   // dry-brush flicks when it whips.
   const S = 9, M = 5, NP = S * (M + 1), MID = (S - 1) / 2;
-  const KJ = [0, 280, 190, 128, 84, 52];     // spring stiffness down a strand (1/s^2): the hem softest, so it whips
-  const GRAVITY = 230, DRAG_X = 2.7, DRAG_Y = 2.5, DAMP = 1.15, H = 1 / 120;
+  // A long heavy cloth in slow motion: soft springs, the hem softest (so it drifts and lags rather than whips), damped
+  // against his own motion (DAMP, near critical at the hem) so it settles without bouncing, and a little air drag
+  // (DRAG_X/Y, against the world) so it still streams out behind a run and lifts as he falls
+  const KJ = [0, 130, 88, 58, 38, 24];       // spring stiffness down a strand (1/s^2)
+  const GRAVITY = 230, DRAG_X = 1.25, DRAG_Y = 1.15, DAMP = 6.5, H = 1 / 120, VLIM = 7; // (VLIM: the fastest a point may fly, per step)
+  const CARRY_X = .55, CARRY_Y = .72; // how much of his own speeding up (and falling) the cloth is carried along with: the rest it lags, gently, on its soft springs
+  // and before any of that the shape the pose asks for is itself eased: each segment's hang (its angle from straight
+  // down) and length drift toward the pose's over TAU0 + TAU1 * v seconds (v: down the strand), so a turn, a spin or a
+  // sudden lunge never throws the cloth round at once: it swings through hanging down, the hem last
+  const TAU0 = .24, TAU1 = .22;
   const tgt = new Float32Array(NP * 2), loc = new Float32Array(NP * 2), rest = new Float32Array(NP), DEP = new Float32Array(S);
   const ix = (i, j) => (i * (M + 1) + j) * 2;
   const SIM = { pts: new Float32Array(NP * 2), sp: new Float32Array((M + 1) * 2), sq: new Float32Array((M + 1) * 2), dA: new Float32Array(M + 1), ok: false, wx: 0, wy: 0, at: 0, acc: 0, f: 1,
-    dt: 0, mwx: 0, mwy: 0, bvx: 0, bvy: 0, fo: 0, fv: 0, wr: 1, wv: 0, spin: 0, vx: 0, vy: 0, spd: 0, pc: 0 };
+    dt: 0, mwx: 0, mwy: 0, bvx: 0, bvy: 0, fo: 0, fv: 0, wr: 1, wv: 0, fr: 0, bh: 1, bax: 0, bay: 0, spin: 0, vx: 0, vy: 0, spd: 0, pc: 0 };
   let CLOAK_GEO = null, WR = 1, FO = 0, SPD = 0, LVX = 0, LVY = 0, CUTF = -1, CUTN = 2;
   // the hem is torn: teeth and notches along it, fixed once so they never shimmer (JN of them across the cloth)
   const JN = 48, JAG = []; for (let k = 0; k <= JN; k++) JAG.push(k % 3 === 1 ? 2.2 + hsh(k) * 3 : k % 5 === 3 ? -1.2 - hsh(k + 9) : hsh(k + 40) * .9);
@@ -358,12 +366,13 @@ const CORWIN = (() => {
     if (frozen) dt = 0; else if (typeof slowmo !== 'undefined' && slowmo > 0) dt *= .3;
     SIM.dt = dt; let mx = CD.wx - SIM.mwx, my = CD.wy - SIM.mwy; SIM.mwx = CD.wx; SIM.mwy = CD.wy;
     if (!dt) return; if (Math.abs(mx) > 60 || Math.abs(my) > 60 || !(now - SIM.seen < 400)) mx = my = 0; // moved somewhere at once
-    const q = Math.min(1, dt * 14), ox = SIM.bvx, oy = SIM.bvy; SIM.bvx += (mx / dt - SIM.bvx) * q; SIM.bvy += (my / dt - SIM.bvy) * q;
+    const q = Math.min(1, dt * 6), ox = SIM.bvx, oy = SIM.bvy; SIM.bvx += (mx / dt - SIM.bvx) * q; SIM.bvy += (my / dt - SIM.bvy) * q;
+    const qa = Math.min(1, dt * 10); SIM.bax += (clamp((SIM.bvx - ox) / dt, -3000, 3000) - SIM.bax) * qa; SIM.bay += (clamp((SIM.bvy - oy) / dt, -3000, 3000) - SIM.bay) * qa; // how hard he is speeding up (or falling)
     const sv = ((g.pose.spin || 0) - SIM.spin) / dt; SIM.spin = g.pose.spin || 0;
-    const sp = Math.hypot(SIM.bvx, SIM.bvy), fa = clamp(Math.hypot(SIM.bvx * .0036, SIM.bvy * .0026) + Math.min(.8, Math.abs(sv) * .03), 0, 1.3);
-    SIM.fv += Math.min(14, Math.hypot(SIM.bvx - ox, SIM.bvy - oy) * .022); // every burst of speed (a lunge, a dodge, a leap, a landing) kicks it out
-    SIM.fv += (55 * (fa - SIM.fo) - 7 * SIM.fv) * dt; SIM.fo = clamp(SIM.fo + SIM.fv * dt, -.3, 1.8);
-    SIM.wv += (34 * (wrapAim(g, CD.z, sp) - SIM.wr) - 7.5 * SIM.wv) * dt; SIM.wr = clamp(SIM.wr + SIM.wv * dt, -.15, 1.1);
+    const sp = Math.hypot(SIM.bvx, SIM.bvy), fa = clamp(Math.hypot(SIM.bvx * .0036, SIM.bvy * .0026) + Math.min(.3, Math.abs(sv) * .008), 0, 1.3); // (a spin only stirs it a little)
+    SIM.fv += Math.min(4, Math.hypot(SIM.bvx - ox, SIM.bvy - oy) * .008); // every burst of speed (a lunge, a dodge, a leap, a landing) nudges it out
+    SIM.fv += (16 * (fa - SIM.fo) - 7.2 * SIM.fv) * dt; SIM.fo = clamp(SIM.fo + SIM.fv * dt, -.3, 1.8); // (slow, and damped near critical: it swells and settles, never snaps)
+    SIM.wv += (11 * (wrapAim(g, CD.z, sp) - SIM.wr) - 6 * SIM.wv) * dt; SIM.wr = clamp(SIM.wr + SIM.wv * dt, -.15, 1.1);
     SIM.pc += dt * (.3 + Math.min(SIM.spd, 320) / 48); // its paint stirs slowly while it hangs still, and boils as it flies
   }
   function targets(L, g) {
@@ -411,14 +420,17 @@ const CORWIN = (() => {
     const Mrel = CD.Binv.multiply(ctx.getTransform()), a = Mrel.a, b = Mrel.b, c = Mrel.c, d = Mrel.d, e = Mrel.e, f = Mrel.f;
     const tb = loc; // targets in B
     for (let k = 0; k < NP; k++) { const x = tgt[k * 2], y = tgt[k * 2 + 1]; tb[k * 2] = a * x + c * y + e; tb[k * 2 + 1] = b * x + d * y + f; }
-    for (let i = 0; i < S; i++) for (let j = 1; j <= M; j++) { const o = ix(i, j), p = ix(i, j - 1); rest[o / 2] = Math.hypot(tb[o] - tb[p], tb[o + 1] - tb[p + 1]); }
-    for (let j = 0; j <= M; j++) { spT[j * 2] = tb[ix(MID, j)]; spT[j * 2 + 1] = tb[ix(MID, j) + 1]; }
     const now = SIM.at, dt = SIM.dt;
     const P = SIM.sp, Q = SIM.sq, mx = CD.wx - SIM.wx, my = CD.wy - SIM.wy;
-    if (!SIM.ok || Math.abs(mx) > 60 || Math.abs(my) > 60 || !(now - SIM.seen < 400)) { P.set(spT); Q.set(spT); SIM.ok = true; SIM.acc = 0; SIM.fo = SIM.fv = SIM.wv = 0; SIM.spd = 0; } // a fresh start, or he was moved somewhere at once
+    const fresh = !SIM.ok || Math.abs(mx) > 60 || Math.abs(my) > 60 || !(now - SIM.seen < 400);
+    easeShape(tb, dt, fresh, g.pose.down ? .45 : (g.pose.spin || g.pose.rot) ? 2.2 : 1); // (knocked flat, it falls over him sooner; through a spin or a flip it barely follows the turn, and hangs)
+    for (let i = 0; i < S; i++) for (let j = 1; j <= M; j++) { const o = ix(i, j), p = ix(i, j - 1); rest[o / 2] = Math.hypot(tb[o] - tb[p], tb[o + 1] - tb[p + 1]); }
+    for (let j = 0; j <= M; j++) { spT[j * 2] = tb[ix(MID, j)]; spT[j * 2 + 1] = tb[ix(MID, j) + 1]; }
+    if (fresh) { P.set(spT); Q.set(spT); SIM.ok = true; SIM.acc = 0; SIM.fo = SIM.fv = SIM.wv = 0; SIM.bax = SIM.bay = 0; SIM.spd = 0; } // a fresh start, or he was moved somewhere at once
     else if (mx || my) for (let j = 0; j <= M; j++) { P[j * 2] -= mx; P[j * 2 + 1] -= my; Q[j * 2] -= mx; Q[j * 2 + 1] -= my; } // the cloth stays where it was in the world
     SIM.wx = CD.wx; SIM.wy = CD.wy; SIM.seen = now; SIM.f = CD.facing;
     const pose = g.pose, free = pose.down || pose.rot || pose.spin, soft = pose.down ? .55 : free ? .5 : 1, ground = CD.z - .4;
+    SIM.fr = fresh ? (free ? 1 : 0) : SIM.fr + ((free ? 1 : 0) - SIM.fr) * (1 - Math.exp(-dt / .35)); // how free of his shoulders it is, eased in and out so it never snaps back down
     SIM.acc += dt; let n = 0; const hx = P[M * 2], hy = P[M * 2 + 1];
     if (pose.down) SIM.acc = 0; // (knocked flat: no swing, see below)
     while (SIM.acc >= H && n < 7) {
@@ -426,9 +438,10 @@ const CORWIN = (() => {
       P[0] = Q[0] = spT[0]; P[1] = Q[1] = spT[1];
       for (let j = 1; j <= M; j++) {
         const o = j * 2, k = KJ[j] * soft, x = P[o], y = P[o + 1];
-        let vx = (x - Q[o]) * (1 - (DRAG_X + DAMP) * H), vy = (y - Q[o + 1]) * (1 - (DRAG_Y + DAMP) * H);
-        const lim = 22; vx = clamp(vx, -lim, lim); vy = clamp(vy, -lim, lim);
-        const ax = k * (spT[o] - x), ay = k * (spT[o + 1] - GRAVITY / KJ[j] - y) + GRAVITY;
+        const wx0 = x - Q[o], wy0 = y - Q[o + 1]; // its step through the world; damped against the air a little, and against his own motion a lot
+        let vx = wx0 - wx0 * DRAG_X * H - (wx0 - SIM.bvx * H) * DAMP * H, vy = wy0 - wy0 * DRAG_Y * H - (wy0 - SIM.bvy * H) * DAMP * H;
+        vx = clamp(vx, -VLIM, VLIM); vy = clamp(vy, -VLIM, VLIM);
+        const ax = k * (spT[o] - x) + SIM.bax * CARRY_X, ay = k * (spT[o + 1] - GRAVITY / KJ[j] - y) + GRAVITY + SIM.bay * CARRY_Y;
         Q[o] = x; Q[o + 1] = y; P[o] = x + vx + ax * H * H; P[o + 1] = y + vy + ay * H * H;
       }
       for (let j = 1; j <= M; j++) { // each point stays within reach of the one above it
@@ -444,19 +457,34 @@ const CORWIN = (() => {
     // edges), so the strands fan out from one another however far the cloth is thrown, and keep their lengths
     const out = SIM.pts, dA = SIM.dA;
     for (let j = 1; j <= M; j++) { const o = j * 2, p = o - 2;
-      let d = Math.atan2(P[o + 1] - P[p + 1], P[o] - P[p]) - Math.atan2(spT[o + 1] - spT[p + 1], spT[o] - spT[p]); d = Math.atan2(Math.sin(d), Math.cos(d)); dA[j] = d; }
+      let d = Math.atan2(P[o + 1] - P[p + 1], P[o] - P[p]) - Math.atan2(spT[o + 1] - spT[p + 1], spT[o] - spT[p]); d = Math.atan2(Math.sin(d), Math.cos(d));
+      if (!fresh) { const e = d - dA[j]; d = clamp(dA[j] + Math.atan2(Math.sin(e), Math.cos(e)), -2.9, 2.9); } // followed on from last frame's, never wrapped round (half of a wrap on the edge strands flung them over)
+      dA[j] = d; }
     for (let i = 0; i < S; i++) {
       const w = WGT[i], o0 = ix(i, 0); out[o0] = tb[o0]; out[o0 + 1] = tb[o0 + 1];
       for (let j = 1; j <= M; j++) {
         const o = ix(i, j), p = ix(i, j - 1), r = rest[o / 2], ta = Math.atan2(tb[o + 1] - tb[p + 1], tb[o] - tb[p]) + dA[j] * w;
         let x = out[p] + Math.cos(ta) * r, y = out[p + 1] + Math.sin(ta) * r;
-        if (!free && y < out[o0 + 1] + j * 2) y = out[o0 + 1] + j * 2; // never thrown up over his own shoulders
+        const yl = out[o0 + 1] + j * 2; if (y < yl) y = yl + (y - yl) * SIM.fr; // never thrown up over his own shoulders (unless spinning, flipping or felled)
         if (y > ground) y = ground;
         out[o] = x; out[o + 1] = y;
       }
     }
     toLocal(Mrel, out, 1);
     const iv = Mrel.inverse(); LVX = iv.a * SIM.vx + iv.c * SIM.vy; LVY = iv.b * SIM.vx + iv.d * SIM.vy; SPD = SIM.spd; // its flight, in his own frame
+  }
+  // the eased shape of the cloth (see TAU0): every segment of every strand, as its hang from straight down and its length.
+  // The angle is eased as a plain number, never the short way round, so a cloak streaming one way that is asked to stream
+  // the other (he turns) always swings down through hanging straight, never up over him
+  const SA = new Float32Array(NP), SR = new Float32Array(NP);
+  function easeShape(tb, dt, fresh, fast) {
+    for (let i = 0; i < S; i++) for (let j = 1; j <= M; j++) {
+      const o = ix(i, j), p = ix(i, j - 1), n = o / 2, dx = tb[o] - tb[p], dy = tb[o + 1] - tb[p + 1], an = Math.atan2(dx, dy), r = Math.hypot(dx, dy);
+      if (fresh) { SA[n] = an; SR[n] = r; continue; }
+      const q = 1 - Math.exp(-dt / ((TAU0 + TAU1 * j / M) * fast));
+      SA[n] += (an - SA[n]) * q; SR[n] += (r - SR[n]) * q;
+    }
+    for (let i = 0; i < S; i++) for (let j = 1; j <= M; j++) { const o = ix(i, j), p = ix(i, j - 1), n = o / 2; tb[o] = tb[p] + Math.sin(SA[n]) * SR[n]; tb[o + 1] = tb[p + 1] + Math.cos(SA[n]) * SR[n]; }
   }
   function toLocal(Mrel, src, fx) { // B frame -> his own drawing frame
     const iv = Mrel.inverse(), a = iv.a, b = iv.b, c = iv.c, d = iv.d, e = iv.e, f = iv.f;
@@ -473,8 +501,8 @@ const CORWIN = (() => {
   // limit that eases the cloth up to the edge rather than creasing it there. The strands wrapped round his front (DEP > 0)
   // are free: they fall over his shoulders and down his chest. Seen side-on or from behind it is left free; flips, spins
   // and falls too.
-  function behind(g) {
-    const { Y, HX, HIP, SHO, LEAN, pose } = g; if (pose.down || pose.rot || pose.spin || Y <= 0) return;
+  function behind(g, kb) { // (kb: how strongly, 0..1)
+    const { Y, HX, HIP, SHO, LEAN } = g; if (kb < .002 || Y <= 0) return;
     const on = clamp(Y / .35, 0, 1), TWc = .62 + .38 * Math.abs(Y), slack = (1 - on) * 40, cl = Math.cos(LEAN), sl = Math.sin(LEAN), S0 = 2.4;
     const edge = (yu) => { const d = yu - SHO; return (d < 7 ? lerp(9.4, 8.8, d / 7) : d < 14.5 ? lerp(8.8, 6, (d - 7) / 7.5) : d < 19 ? lerp(6, 5.6, (d - 14.5) / 4.5) : 5.8) * TWc - 1.2; };
     for (let k = 0; k < NP; k++) {
@@ -482,7 +510,7 @@ const CORWIN = (() => {
       const x = loc[k * 2] - HX, y = loc[k * 2 + 1] - HIP, xu = x * cl + y * sl, yu = -x * sl + y * cl + HIP; // into the upper body's frame
       const lim = edge(Math.max(SHO, yu)) + slack, a = lim - S0; if (xu <= a) continue;
       const xn = a + S0 * (1 - Math.exp(-(xu - a) / S0)), dx = xn - xu; // eased up to the edge, never past it
-      loc[k * 2] += dx * cl; loc[k * 2 + 1] += dx * sl;
+      loc[k * 2] += dx * cl * kb; loc[k * 2 + 1] += dx * sl * kb;
     }
   }
   // work out where the cloak is this frame; returns the points in his drawing frame
@@ -496,7 +524,9 @@ const CORWIN = (() => {
     if (live) simulate(g, CD);
     else if (CD && (CD.live || g.pose.cloakS)) { const Mrel = CD.Binv.multiply(ctx.getTransform()); if (CD.live && SIM.ok) toLocal(Mrel, SIM.pts, 1); else toLocal(Mrel, g.pose.cloakS, CD.facing); }
     else { loc.set(tgt); if (!g.pose.rot && !g.pose.down) { const gr = (CD ? CD.z : 0) - .5; for (let k = 0; k < NP; k++) if (loc[k * 2 + 1] > gr) loc[k * 2 + 1] = gr; } }
-    behind(g);
+    let kb = g.pose.down || g.pose.rot || g.pose.spin ? 0 : 1;
+    if (live) kb = SIM.bh += (kb - SIM.bh) * (1 - Math.exp(-SIM.dt / .2)); // (the live cloak eases into and out of it, so a spin never lets it jump)
+    behind(g, kb);
     // where the cloth crosses from behind him to in front of him, on each side (in u, across the cloth): the parts round
     // his front are drawn over his body (after his torso, under the weapon arm), the rest behind him
     CUTF = -1; CUTN = 2; const thr = 2.5;
