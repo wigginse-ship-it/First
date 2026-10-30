@@ -484,12 +484,14 @@ function drawDeath(e, t) {
       if (el > .3 && el < .6) { const q = (el - .3) / .3; ctx.strokeStyle = `rgba(232,236,255,${1 - q})`; ctx.lineWidth = 2.4; ctx.beginPath(); const r = e.hw * 1.2; ctx.moveTo(-r, -e.hh * .75); ctx.lineTo(r, -e.hh * .25); ctx.moveTo(r, -e.hh * .75); ctx.lineTo(-r, -e.hh * .25); ctx.stroke(); }
       ctx.restore();
     }
-    if (el > .25) { // the wounds stay: round holes punched clean through, most taken from the edge of the body, the street showing through
+    if (el > .25) { // the wounds stay: punctures through the chest, and sometimes a round bite out of the side with the street showing through
       const mat = e.def.mat, base = (MAT_COL[mat] || MAT_COL.fur)[0], g = ease(Math.min(1, (el - .25) / .14)); // (each opens in a quick punch)
       const kind = { fur: 'blood', flesh: 'blood', metal: 'oil', goo: 'ooze', rock: 'sunk', crystal: 'sunk', china: 'sunk', spark: 'ooze', ghost: 'ooze', dream: 'ooze', w7brine: 'ooze', w7glass: 'sunk', w7bronze: 'sunk', w7nacre: 'sunk', ash: 'sunk', wood: 'sunk' }[mat] || 'blood';
-      const geo = (w) => [w.x * e.hw, -w.y * e.hh, clamp(e.hw * .2, 2.6, 5.5) * (w.r || 1) * g];
+      const geo = (w) => [w.x * e.hw, -w.y * e.hh, (w.bite ? clamp(e.hw * .5, 6.5, 14) : clamp(e.hw * .2, 2.6, 5.5)) * (w.r || 1) * g]; // (a bite is a big round chunk)
+      // a bite out of the side: the chunk is cut clean away, so the body's own outline is notched; the raw edge is drawn below
+      if ((e.wounds || []).some(w => w.bite)) { ctx.save(); ctx.globalCompositeOperation = 'destination-out'; for (const w of e.wounds) if (w.bite) { const [x, y, R] = geo(w); if (R > .5) { circle(x, y, R); ctx.fill(); } } ctx.restore(); }
       // the puncture: a dark cavity in the body's own colour (not a see-through hole, which showed the paper behind as a white disc)
-      if (!FLASH && !TINT) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; for (const w of e.wounds || []) { const [x, y, R] = geo(w); if (R < .5) continue;
+      if (!FLASH && !TINT) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; for (const w of e.wounds || []) { const [x, y, R] = geo(w); if (R < .5 || w.bite) continue; // (a bite is open: no cavity in it)
         const cg = ctx.createRadialGradient(x - R * .25, y - R * .3, 0, x, y, R); const deep = kind === 'blood' ? '#2A0408' : kind === 'oil' ? '#060508' : shade(base, -.78);
         cg.addColorStop(0, deep); cg.addColorStop(.7, kind === 'blood' ? '#4A060C' : kind === 'oil' ? '#0C0A10' : shade(base, -.6)); cg.addColorStop(1, kind === 'blood' ? '#6A0A12' : kind === 'oil' ? '#141018' : shade(base, -.45));
         ctx.fillStyle = cg; circle(x, y, R); ctx.fill(); } ctx.restore(); }

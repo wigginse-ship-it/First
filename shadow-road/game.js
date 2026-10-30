@@ -344,7 +344,7 @@ function strike(e, base, dir, m, echo) {
     if (heavy) { e.guard -= m.power === 2 || m.trump ? 2 : 1; if (e.guard <= 0) { e.guard = 0; broke = true; } else { guardPips = e.guard; sfx('hit-metal', .6); armorChip(e, dir); } } // (a chip of the armor flies off with each pip)
     else { guardPips = e.guard; dmg = Math.max(1, Math.round(dmg * .25)); m = Object.assign({}, m, { kb: (m.kb || 0) * .15, launch: 0, noStun: 1 }); sfx('hit-metal', .2); } // light hits glance off the guard
   }
-  if (e.shrink < .8) { dmg = Math.round(dmg * 1.4); m = Object.assign({}, m, { kb: (m.kb || 0) * 2.4 + 120, launch: (m.launch || 0) * 1.5 + 140 }); } // a shrunken foe is punted
+  if (e.shrink < .8) dmg = Math.round(dmg * 1.4); // a shrunken foe is easier to hurt (its knockback is scaled down with it, in updateWorld)
   if (P.shrink < .8) dmg = Math.max(1, Math.round(dmg * .75)); // and a shrunken prince hits softer
   if (pw('might') && !m.trump) dmg = Math.round(dmg * 1.3);
   if (pw('leech') && !m.trump && !e.boss) P.hp = Math.min(maxHp(), P.hp + 1 + dmg * .03);
@@ -413,6 +413,20 @@ function hurtEnemy(e, dmg, dir, m, crit) {
   }
 }
 // each weapon finishes enemies its own way: the sword cuts them in two, the staff caves them in, the hammer flattens them
+// where Grayswandir went through a fallen foe: two or three punctures through the chest, and sometimes (two kills in five)
+// one of them a bigger round bite taken out of the side of the body. Each is placed clear of the others, rims and all
+function rapierWounds(e) {
+  const out = [], n = 2 + (Math.random() < .5 ? 1 : 0), bite = Math.random() < .4 ? Math.floor(Math.random() * n) : -1;
+  const px = (w) => w.bite ? clamp(e.hw * .5, 6.5, 14) * w.r : clamp(e.hw * .2, 2.6, 5.5) * w.r; // (its radius on the body, as drawDeath sizes it)
+  for (let i = 0; i < n; i++) {
+    for (let tries = 0; tries < 30; tries++) {
+      const w = i === bite ? { bite: 1, x: (Math.random() < .5 ? -1 : 1) * rand(.82, .98), y: rand(.38, .7), r: rand(.9, 1.1), s: rand(0, TAU) }
+        : { x: rand(-.3, .3), y: rand(.36, .74), r: rand(.85, 1.1), s: rand(0, TAU) };
+      if (out.every(o => Math.hypot((o.x - w.x) * e.hw, (o.y - w.y) * e.hh) > px(o) + px(w) + 7)) { out.push(w); break; } // (a clear gap between the rough rims)
+    }
+  }
+  return out;
+}
 const DEATH_BY = { sword: 'slice', staff: 'crumple', hammer: 'splat', rapier: 'pierce' };
 function killEnemy(e, dir, m) {
   if (e.elite && e.guard > 0) armorBreak(e, dir); // (its armor comes off it as it falls)
@@ -427,7 +441,7 @@ function killEnemy(e, dir, m) {
     e.air = false; e.spin = 0; e.rotA = 0; e.vz = 0; e.dmax = e.t = e.death === 'splat' ? 2.4 : 2;
     e.vx = dir * (e.death === 'crumple' ? 170 : e.death === 'slice' ? 40 : 0) * (e.boss ? .3 : 1);
     if (e.death === 'pierce') { // run through: they stiffen, points of light open where the blade went in, then they fold and fall, and a silver rose is left on them
-      e.dmax = e.t = 1.6; e.vx = 0; e.wounds = [0, 1, 2].slice(0, 2 + (Math.random() < .5 ? 1 : 0)).map((_, i) => ({ x: [-.12, .2, -.28][i] + rand(-.08, .08), y: [.58, .44, .7][i] + rand(-.04, .04), r: rand(.85, 1.1), s: rand(0, TAU) })); // (clean punctures through the chest, spaced apart, never bitten out of the edge)
+      e.dmax = e.t = 1.6; e.vx = 0; e.wounds = rapierWounds(e); // (clean punctures through the chest, and now and then a round bite out of the side; never overlapping)
       for (let i = 0; i < 8; i++) parts.push({ x: e.x + dir * 6, y: e.y + rand(-4, 4), z: e.z + e.hh * .55, vx: dir * rand(40, 140), vy: rand(-10, 10), vz: rand(20, 110), life: rand(.6, 1), max: 1, col: pick(cols), size: rand(1.6, 2.6), shape: 'blob' }); // a few flecks out the far side
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .55, ang: 0, t: .3, max: .3, size: 30 + e.hw, col: '#E8ECFF' }); sfx('slice');
     }

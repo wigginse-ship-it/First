@@ -568,7 +568,12 @@ function updateWorld(dt) {
   camX = clamp(camX, 0, Math.max(0, stage.len - VW));
 
   updateMech(dt); updateShrink(P, dt); updateBossRoom(dt); updateSecret(dt);
-  for (const e of enemies) { updateShrink(e, dt); updateEnemy(e, dt); }
+  for (const e of enemies) { updateShrink(e, dt); const k = e.shrink || 1;
+    if (k >= 1) { updateEnemy(e, dt); continue; }
+    // shrunk by the spores, a foe moves in proportion to its size: every step, lunge, knockback and arc covers a scaled-down
+    // stretch of ground in the same time, so it looks as fast as it did at full size, only smaller
+    const x0 = e.x, y0 = e.y, z0 = e.z; updateEnemy(e, dt);
+    e.x = x0 + (e.x - x0) * k; e.y = y0 + (e.y - y0) * k; if (e.z > 0 || z0 > 0) e.z = Math.max(0, z0 + (e.z - z0) * k); }
   enemies = enemies.filter(e => !e.remove);
   if (stillT <= 0) for (const p of projs) {
     if (p.orbit) {
