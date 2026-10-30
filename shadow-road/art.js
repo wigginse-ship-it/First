@@ -331,9 +331,10 @@ function drawWeapon(kind, pose) {
     if (tier >= 3) { ctx.fillStyle = C(tier >= 5 ? '#8A6ACF' : tier >= 4 ? '#7F9AB8' : '#D8AA55'); circle(3, 0, 3.4); ctx.fill(); outline(1); } // pommel
     if (tier === 1) { rrect(36, -12, 18, 24, 4); ctx.fillStyle = vgrad(-12, 12, '#7E8494'); ctx.fill(); outline(); ctx.fillStyle = C('#5A606E'); ctx.fillRect(38, -12, 14, 2); }
     else if (tier === 2) {
-      poly([38, 12, 52, 12, 45, 23], '#7C93AE', 1.3); // the beak behind
-      rrect(36, -12, 18, 24, 3); ctx.fillStyle = vgrad(-12, 12, '#93AAC6'); ctx.fill(); outline(); // blued steel: a cool blue sheen the iron maul hasn't got
-      ctx.fillStyle = C('#E2ECF8'); ctx.fillRect(37, -12, 16, 2.2); // bright striking face
+      poly([38, 12, 52, 12, 45, 23], '#5F82B0', 1.3); // the beak behind
+      rrect(36, -12, 18, 24, 3); ctx.fillStyle = vgrad(-12, 12, '#7C9DCB'); ctx.fill(); outline(); // blued steel: a cool blue sheen the iron maul hasn't got
+      ctx.fillStyle = C('rgba(214,232,255,.55)'); ctx.fillRect(37.5, -9, 2, 18); // a cold highlight down its near edge
+      ctx.fillStyle = C('#DCEAFF'); ctx.fillRect(37, -12, 16, 2.2); // bright striking face
       ctx.fillStyle = C('#B9823E'); circle(45, 0, 2.4); ctx.fill(); outline(.8); // a bronze rivet
     } else if (tier === 3) {
       poly([35, -10, 38, -15, 52, -15, 55, -10, 55, 10, 52, 15, 38, 15, 35, 10], vgrad(-15, 15, '#B8BCC8'), 1.6); // flanged, eight-sided head
