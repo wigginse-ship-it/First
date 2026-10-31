@@ -363,6 +363,7 @@ const MOVE_POSE = {
       if (k < h0 + .16) { pose.trail = 68; pose.trailFrom = -2.6; pose.trailCol = tcolOf(m); pose.trailW = 10; }
     }
   },
+  'hammer:RHH'(pose, m, k) { MOVE_POSE['hammer:DX'](pose, m, k); }, // Thunderfall: the Leaping Slam's heave up over the head and drive down, thrown from the top of the Uplift
   'hammer:R'(pose, m, k) { // Overhead Drive, the dodge counter's heavy form (the light Lunging Drive keeps draw.js's plain dodge lunge and is left alone):
     // the hammer whipped back behind him, up over his head and down into the same forward drive, held there, then eased out of it
     if (!m.overhead) return;
