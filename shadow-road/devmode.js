@@ -39,6 +39,7 @@
   function go(i, zone) {
     backup(); applyOpts(); close();
     save.stage = i; save.done = false; save.atChoice = false; save.branch = i >= 5 ? i : null;
+    if (window.PEARLNG) PEARLNG.devJump(i); // (with the Pearl in New Game+: grown about as far as an ordinary road would have it by this world, its shape to choose)
     persist(); play(i, zone);
     if (DEV.god && P) P.hp = maxHp();
   }
@@ -77,6 +78,11 @@
         <label>Card level <select data-o="clv">${[1, 2, 3].map(l => `<option value="${l}">${['I', 'II', 'III'][l - 1]}</option>`).join('')}</select></label>
         <label>Cycle <select data-o="cycle">${[0, 1, 2, 3].map(c => `<option value="${c}">${c ? 'NG+' + c : 'first'}</option>`).join('')}</select></label>
       </div>
+      <div class="opts" title="The Pearl of Judgement in New Game+: pick the Pearl as the relic and a cycle of NG+1 or more">
+        <label><input type="checkbox" data-p="grow"> Pearl: growing pearl</label>
+        <label><input type="checkbox" data-p="currents"> Pearl: currents</label>
+        <label><input type="checkbox" data-p="legacy"> Pearl: old whirlpools &amp; splash</label>
+      </div>
       <div class="list"></div>
       <div class="foot"><span class="note">Jumping changes your save; the first jump keeps a copy of it.</span>
         <span><button data-a="restore">Restore my save</button> <button data-a="close">Close</button></span></div></div>`;
@@ -90,6 +96,10 @@
     for (const c of el.querySelectorAll('[data-o]')) {
       const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'card' || k === 'relic' ? String(opts[k] || '') : String(opts[k] | 0);
       c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' ? c.value : +c.value; DEV.god = !!opts.god; DEV.elites = !!opts.elites; keepOpts(); });
+    }
+    for (const c of el.querySelectorAll('[data-p]')) { // the Pearl's New Game+ switches (PEARL_NG, w7_late.js): they take effect at once
+      const k = c.dataset.p; c.checked = !!(window.PEARL_NG && PEARL_NG[k]);
+      c.addEventListener('change', () => { if (window.pearlNG) pearlNG(k, c.checked); });
     }
     el.addEventListener('click', (ev) => {
       const b = ev.target.closest('button'); if (!b) { if (ev.target === el) close(); return; }

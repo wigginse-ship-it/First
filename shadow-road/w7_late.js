@@ -19,11 +19,21 @@
 // and at dawn he climbs Faiella-bionin up out of the sea, with Amber on Kolvir above the water and Rebma in it below,
 // each the other's reflection, the right way round. A few lines, the credits, and the win card (ui.js, from the card's words).
 // ======================================================================================================
+// THE PEARL IN NEW GAME+: its switches. In a later cycle (save.cycle >= 1) the Pearl changes how the whole run plays
+// (pearl_ng.js): THE GROWING PEARL (grow) and CURRENTS, NOT FOOTSTEPS (currents), each its own mechanic. legacy is the
+// Pearl as it first was (the undertow and the splash, below), kept but switched off for now. The dev panel has a box for
+// each (devmode.js); in the console, pearlNG('currents', false) and the like. They are remembered in this browser.
+const PEARL_NG = (() => { const d = { grow: true, currents: true, legacy: false };
+  try { const s = JSON.parse(localStorage.getItem('shadowroad-pearlng') || '{}'); for (const k in d) if (typeof s[k] === 'boolean') d[k] = s[k]; } catch (e) {}
+  return d; })();
+window.PEARL_NG = PEARL_NG;
+window.pearlNG = (k, on) => { if (k in PEARL_NG) { PEARL_NG[k] = !!on; try { localStorage.setItem('shadowroad-pearlng', JSON.stringify(PEARL_NG)); } catch (e) {} } return Object.assign({}, PEARL_NG); };
 (() => {
   if (!window.W7) { console.error('w7_late.js: art_w7.js missing'); return; }
   const cl01 = (k) => clamp(k, 0, 1), sm = (k) => { k = cl01(k); return k * k * (3 - 2 * k); };
   const hsh = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
   const has = () => !!(typeof save !== 'undefined' && save && save.w7relic);
+  const legacy = () => has() && PEARL_NG.legacy; // (the undertow and the splash: off unless switched back on)
   const PW = () => (save.cycle > 0 ? 1.6 + .25 * Math.min(3, save.cycle - 1) : 1); // how strongly the tide answers: far more in New Game+
   const bub = (x, y, z, n, sp) => { if (W7.bubbles) W7.bubbles(x, y, z, n, sp); };
   window.w7relic = (on = true) => { save.w7relic = !!on; if (typeof persist === 'function') persist(); if (typeof refreshHud === 'function' && P) refreshHud(true); return on ? 'the Pearl of Judgement is yours' : 'the Pearl is put away'; };
@@ -36,7 +46,7 @@
   const POOL_CD = .8;
   // UNDERTOW: every dodge leaves a whirlpool where he stood
   { const _sd = startDodge; startDodge = function () { const x = P.x, y = P.y; _sd();
-    if (has() && P.state === 'dodge' && R.poolCd <= 0 && !R.pools.length) { const k = PW(); R.poolCd = POOL_CD; R.pools.push({ x, y, t: 0, max: .9 + .55 * k, r: 54 * Math.sqrt(k), tick: 0 }); sfx('hit-goo', .4); bub(x, y, 10, 8, 50); } }; }
+    if (legacy() && P.state === 'dodge' && R.poolCd <= 0 && !R.pools.length) { const k = PW(); R.poolCd = POOL_CD; R.pools.push({ x, y, t: 0, max: .9 + .55 * k, r: 54 * Math.sqrt(k), tick: 0 }); sfx('hit-goo', .4); bub(x, y, 10, 8, 50); } }; }
   // THE SPLASH: whatever falls bursts in a crown of seawater that strikes everything near it and pushes it back a little.
   // A foe the splash kills splashes in its turn, but only twice over (so a crowd can go up in a chain, never a whole road)
   const SPLASH_DEPTH = 2;
@@ -54,7 +64,7 @@
       strike(o, d, dr, { dmg: d, kb: 140, launch: 0, power: 1, el: 1, w7splash: depth + 1 }); }
   }
   { const _kill = killEnemy; killEnemy = function (e, dir, m) { const was = e.dead; _kill(e, dir, m);
-    if (!was && e.dead && has() && mode === 'play') { const depth = (m && m.w7splash) || 0; if (depth <= SPLASH_DEPTH) splash(e, dir, depth); } }; }
+    if (!was && e.dead && legacy() && mode === 'play') { const depth = (m && m.w7splash) || 0; if (depth <= SPLASH_DEPTH) splash(e, dir, depth); } }; }
   // the undertow's grind: a plain tick of damage, a white number and a flinch of light; never a critical, never boosted by
   // powers or cards, and no hit freeze or shake (it ticks on every foe in it, all the time)
   function poolTick(e, d, dir) {
@@ -116,11 +126,13 @@
   function hudBadge() {
     if (!hudCv) { const card = document.querySelector('.wcard'); if (!card) return; hudCv = document.createElement('canvas'); hudCv.id = 'w7pearlHud'; hudCv.width = 40; hudCv.height = 40; hudCv.title = 'The Pearl of Judgement';
       hudCv.style.cssText = 'position:absolute;right:-12px;top:-10px;width:20px;height:20px;pointer-events:none'; card.appendChild(hudCv); }
-    hudCv.hidden = !has(); if (!has()) return;
+    hudCv.hidden = !legacy(); if (!legacy()) return;
     pearlIcon(hudCv.getContext('2d'), 1, R.pools.length ? 0 : 1 - R.poolCd / POOL_CD, performance.now() / 1000); // (one whirlpool at a time: the next waits until it has run out)
   }
   { const _ht = hudTick; hudTick = function () { _ht(); try { hudBadge(); } catch (e) {} }; }
-  const RELIC_TEXT = () => `The sea's reflection of the Jewel of Judgement, out of the King in the Glass. Whatever you fight with: every dodge leaves an undertow that drags foes in and grinds at them, and every foe that falls bursts in a splash of seawater that strikes the foes round it and pushes them back (a splash can set off another, two deep).${save.cycle > 0 ? ' In this cycle the tide runs strong: wider, harder whirlpools and splashes.' : ' In New Game+ it is far stronger.'}`;
+  // the forge row and the move list: the New Game+ Pearl's own words (pearl_ng.js), and the old undertow's only if it is on
+  const RELIC_TEXT = () => { const ng = W7.ngText ? W7.ngText() : ''; return !ng ? LEGACY_TEXT() : PEARL_NG.legacy ? ng + ' And as it first was: ' + LEGACY_TEXT() : ng; };
+  const LEGACY_TEXT = () => `The sea's reflection of the Jewel of Judgement, out of the King in the Glass. Whatever you fight with: every dodge leaves an undertow that drags foes in and grinds at them, and every foe that falls bursts in a splash of seawater that strikes the foes round it and pushes them back (a splash can set off another, two deep).${save.cycle > 0 ? ' In this cycle the tide runs strong: wider, harder whirlpools and splashes.' : ' In New Game+ it is far stronger.'}`;
   { const _of = openForge; openForge = function (kicker) { _of(kicker);
     let row = document.getElementById('w7relicRow');
     if (!has()) { if (row) row.remove(); return; }

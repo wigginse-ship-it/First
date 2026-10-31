@@ -67,8 +67,8 @@
     draw(ctx2, w, h, t) { if (window.W7 && W7.cardDraw) W7.cardDraw(ctx2, w, h, t); },
     go: 'He steps through the card, and the sea closes over his head, and he finds that here he can breathe it.',
     win: { kicker: 'THE TIDE HAS TURNED', title: 'You came up out of Rebma',
-      text: "The King in the Glass is broken, the Pattern of Rebma runs the right way again, and the Pearl of Judgement is yours: its undertow and its splash go with you into every world, whatever you fight with, and far more strongly in a new cycle. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels, cards and relics come with you." },
-    relic: { key: 'w7relic', name: 'The Pearl of Judgement', desc: "The sea's reflection of the Jewel: every dodge leaves a whirlpool, and every foe that falls bursts in a splash of seawater that strikes and pushes back the foes round it. Far stronger in New Game+." },
+      text: "The King in the Glass is broken, the Pattern of Rebma runs the right way again, and the Pearl of Judgement is yours. In a new cycle it wakes: a pearl at your side that grows with every foe you fell and takes a new shape in each world, and a tide that carries you where your feet once did. Walking the road again starts a harder cycle: enemies hit harder and have more health, but drop more shards. Your weapons, levels, cards and relics come with you." },
+    relic: { key: 'w7relic', name: 'The Pearl of Judgement', desc: "The sea's reflection of the Jewel. In New Game+ it wakes: a pearl at your side that grows with every foe you fell and takes a shape you choose in each world (a blade, a moon, a mirror, a tide-bomb), and currents that carry you instead of your feet, to fling yourself through them like a pinball." },
   });
 })();
 // the attacks, rules and passages (art_w7.js) register now that world.js and zones.js have loaded; the entrances, the

@@ -13,7 +13,7 @@
     3: { move: 'fly', hover: 34, tail: 0, reachDown: 34 },       // the Mask of a Thousand Faces, hanging over the floor in its mantle
   };
   // how close it closes before it starts each attack (it hunts up close as a wolf, keeps its distance as the others)
-  const STANDOFF = { w4rake: 150, w4howl: 170, w4clap: 170, w4faces: 190, w4swoop: 230, w4flame: 200, w4gust: 170, w4maw: 60 };
+  const STANDOFF = { w4rake: 150, w4howl: 170, w4clap: 170, w4faces: 190, w4swoop: 230, w4flame: 200, w4gust: 170, w4maw: 60, w4beam: 170, w4spit: 200, w4bite: 120, w4breath: 60 };
 
   Object.assign(EDEF, {
     // humans of the Courts
@@ -30,13 +30,19 @@
   BOSSES.tyiga = {
     close: 'w4maw', name: "The Ty'iga", title: 'SHIFTER OF SHAPES', draw: 'tyiga', mat: 'flesh',
     get move() { return FORM[tyPhase()].move; }, get hover() { return FORM[tyPhase()].hover; },
-    get tail() { return FORM[tyPhase()].tail; }, get reachDown() { return FORM[tyPhase()].reachDown; },
+    get tail() { return FORM[tyPhase()].tail; },
+    // the Drake's hit box always reaches the floor, so a blow from the ground still connects with it; while it is high those
+    // blows only glance off (the strike rule in art_w4.js), and only a blow from the air lands in full
+    get reachDown() { const p = tyPhase(); return p === 2 && boss ? Math.max(FORM[2].reachDown, boss.z) : FORM[p].reachDown; },
     get reach() { const p = typeof boss !== 'undefined' && boss && boss.def === BOSSES.tyiga ? boss.plan : null; return STANDOFF[p] || 70; },
     hp: 1450, spd: 64, hw: 50, hh: 66, dmg: 23, wind: .6, cd: [.45, .95], weight: .3, poise: 10, ranged: 1,
     // each form has its own attacks; the Howl of Many Shapes follows it from body to body, its pack growing with every shape it has worn
     p1: ['w4rake', 'w4leap', 'w4howl', 'w4rake', 'w4leap'],
-    p2: ['w4swoop', 'w4sweep', 'w4flame', 'w4howl', 'w4gust', 'w4sweep', 'w4leap'],
-    p3: ['w4clap', 'w4gaze', 'w4faces', 'w4howl', 'w4clap', 'w4gaze', 'w4sweep'],
+    // the Drake keeps to the air, darting and wheeling, and comes down only to strike: a dive-bomb across the arena, wing-rakes
+    // along the lanes, stoops out of a circle, a rain of burning feathers. Each leaves it low for a moment: your opening
+    p2: ['w4swoop', 'w4embers', 'w4rakes', 'w4circle', 'w4flame', 'w4swoop', 'w4gust', 'w4embers', 'w4rakes', 'w4sweep', 'w4circle', 'w4howl'],
+    // the Mask is warded, its eyes and mouth shut, except when it opens them to attack: the beam, the spit, the bite
+    p3: ['w4beam', 'w4clap', 'w4spit', 'w4bite', 'w4gaze', 'w4beam', 'w4faces', 'w4bite', 'w4spit', 'w4howl', 'w4clap', 'w4beam', 'w4sweep'],
   };
 
   STAGES.push({ name: 'The Courts of Chaos', sub: 'THE END OF THE BLACK ROAD', theme: 'chaos', len: 2900,

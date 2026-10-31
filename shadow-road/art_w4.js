@@ -1072,11 +1072,33 @@
     mix(is('w4howl', 'howl'), -.2, -.6, 1);
     mix(is('w4maw', 'maw'), .2, -1, 1);
     if (a.hurt) mix(1, -.7, .9, .3);
+    if (e.phase === 3) o *= .12 + .88 * cl01(e.w4open ?? 1); // warded, its mouth is sealed shut
     const X = e.w4ex || (e.w4ex = { s, b, o }); X.s += (s - X.s) * .2; X.b += (b - X.b) * .2; X.o += (o - X.o) * .2;
     return X;
   }
+  // the Mask's ward, drawn over the face in its own frame: shut, a pale shimmer of glaze runs over it and a ring of runes turns
+  // round it; open, its eyes and mouth burn gold, pulsing: the places it can be hurt
+  const MASK_PATH = [-20, -34, 0, -40, 18, -36, 27, -16, 26, 6, 20, 24, 8, 36, -6, 36, -18, 24, -26, 4, -26, -18];
+  function maskWard(fx, mx, my, op, t) {
+    const w = 1 - op;
+    if (w > .03) {
+      ctx.save(); poly(MASK_PATH); ctx.clip(); ctx.globalCompositeOperation = 'lighter';
+      const sx = -60 + ((t * 46) % 130), g = ctx.createLinearGradient(sx - 14, -40, sx + 14, 40); g.addColorStop(0, 'rgba(200,190,255,0)'); g.addColorStop(.5, `rgba(220,210,255,${.45 * w})`); g.addColorStop(1, 'rgba(200,190,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(-30, -42, 60, 82); // the sheen running over the glaze
+      if (DET()) { ctx.strokeStyle = `rgba(190,170,255,${.22 * w})`; ctx.lineWidth = .8; ctx.beginPath(); for (let i = -4; i <= 4; i++) { ctx.moveTo(i * 9 - 20, -42); ctx.lineTo(i * 9 + 20, 40); ctx.moveTo(i * 9 + 20, -42); ctx.lineTo(i * 9 - 20, 40); } ctx.stroke(); } // a lattice of warding
+      ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(200,180,255,${.5 * w})`; ctx.lineWidth = 1.6; ctx.setLineDash([5, 7]); ctx.lineDashOffset = -t * 20; ell(0, -2, 36, 44); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(230,220,255,${.7 * w})`; for (let i = 0; i < 8; i++) { const an = i / 8 * TAU + t * .6; poly([Math.cos(an) * 36, -2 + Math.sin(an) * 44 - 2.4, Math.cos(an) * 36 + 1.8, -2 + Math.sin(an) * 44, Math.cos(an) * 36, -2 + Math.sin(an) * 44 + 2.4, Math.cos(an) * 36 - 1.8, -2 + Math.sin(an) * 44]); ctx.fill(); } // runes riding the ring
+      ctx.restore();
+    }
+    if (op > .5) { const k = (op - .5) * 2, pu = .75 + .25 * Math.sin(t * 9);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (const [x, y, r] of [[fx - 10, -6, 9], [fx + 11, -6, 9], [mx, my + 3, 13]]) { glowAt(x, y, r * 1.7, SULF, .55 * k * pu); ctx.strokeStyle = `rgba(255,226,122,${.8 * k * pu})`; ctx.lineWidth = 1.6; circle(x, y, r * (1.1 + .15 * Math.sin(t * 9))); ctx.stroke(); }
+      ctx.restore(); }
+  }
   function tyMask(e, a, t) {
     const X = maskMood(e, a, t), down = e.state === 'down', live = e.w4hl && !e.dead && !(e.w4shift > 0), fierce = e.state === 'wind' || e.state === 'w4act';
+    const wo = e.dead ? 1 : cl01(e.w4open ?? 1), shut = wo < .5, tilt = (e.w4pose && e.w4pose.tilt) || 0; // the ward: shut, it is hard as glaze; open, its eyes and mouth are its weak points
     const bob = Math.sin(t * .9) * 2, cy = -64 + bob + (down ? 16 : 0), cx = 2, sw = Math.sin(t * .7) * 3;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     if (!live) maskHand(-74, -24 - bob, -2.1, .35, .92, true);
@@ -1105,7 +1127,7 @@
     } });
     smokeLobe(cx + 1, cy + 34, 11, '#0E0812', 1); // the dark under its chin
     // the mask itself
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.sin(t * .5) * .04 + (down ? .3 : 0) - X.o * .06);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.sin(t * .5) * .04 + (down ? .3 : 0) - X.o * .06 + tilt);
     const fx = 3;
     cel(PB([-20, -34, 0, -40, 18, -36, 27, -16, 26, 6, 20, 24, 8, 36, -6, 36, -18, 24, -26, 4, -26, -18]), MK.glaze, { d: 4.5, r: 1.6, w: 2.3, dark: MK.glazeDk, lite: MK.glazeLit, under: () => {
       const g = ctx.createLinearGradient(-26, 0, 26, 0); g.addColorStop(0, 'rgba(90,100,140,.32)'); g.addColorStop(.6, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(-30, -42, 60, 82);
@@ -1120,7 +1142,12 @@
     const eye = (x, y, d, sx) => { // d: which way the outer corner lies; grief lifts the inner corners, wrath drags them down, laughter narrows them to crescents
       const ix = x - d * 7 * sx, ox = x + d * 7.5 * sx, iy = y - X.b * (X.b > 0 ? 3 : 2.5), oy = y + X.b * 1.2, up = y - 5.5 + Math.max(0, -X.b) * 2.2, lo = y + 4 - Math.max(0, X.s) * 4;
       ctx.beginPath(); ctx.moveTo(ix, iy); ctx.quadraticCurveTo(x, up, ox, oy); ctx.quadraticCurveTo(x, lo, ix, iy); ctx.closePath(); ctx.fillStyle = C(MK.hole); ctx.fill(); outline(1.3);
-      if (!a.hurt && DET()) { const ey = (up + lo) / 2 + .8, eh = Math.max(.5, Math.min(1.9, (lo - up) * .28)); ctx.fillStyle = fierce ? '#FFF0A8' : TY.eye; ell(x + 1, ey, 2.4 * sx, eh); ctx.fill(); ctx.fillStyle = '#1A0606'; ell(x + 1.5, ey, .5, eh * .8); ctx.fill(); glowAt(x + 1, ey, 9, SULF, fierce ? .6 : .32); }
+      if (shut) { // the porcelain lid, drawn down over the eye: a glazed shell with a gilt lash line
+        const lid = lerp(lo, up, wo * 2); ctx.beginPath(); ctx.moveTo(ix, iy); ctx.quadraticCurveTo(x, up, ox, oy); ctx.quadraticCurveTo(x, lid + 2.4, ix, iy); ctx.closePath(); ctx.fillStyle = C(MK.glazeDk); ctx.fill(); outline(1.1);
+        if (DET()) { ctx.strokeStyle = MK.glazeLit; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(ix + d * 2, iy - 1.4); ctx.quadraticCurveTo(x, up + 1.2, ox - d * 2, oy - 1.6); ctx.stroke(); }
+        ctx.strokeStyle = C(MK.giltDk); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(ix, iy); ctx.quadraticCurveTo(x, lid + 2.4, ox, oy); ctx.stroke();
+        ctx.lineWidth = .8; ctx.beginPath(); for (let j = 1; j < 5; j++) { const u = j / 5, lx = lerp(ix, ox, u), ly = lerp(iy, oy, u) + Math.sin(u * Math.PI) * (lid + 2.4 - (iy + oy) / 2) * .9; ctx.moveTo(lx, ly); ctx.lineTo(lx + d * .8, ly + 2); } ctx.stroke();
+      } else if (!a.hurt && DET()) { const ey = (up + lo) / 2 + .8, eh = Math.max(.5, Math.min(1.9, (lo - up) * .28)); ctx.fillStyle = fierce ? '#FFF0A8' : TY.eye; ell(x + 1, ey, 2.4 * sx, eh); ctx.fill(); ctx.fillStyle = '#1A0606'; ell(x + 1.5, ey, .5, eh * .8); ctx.fill(); glowAt(x + 1, ey, 9, SULF, fierce ? .6 : .32); }
       ctx.strokeStyle = C(MK.umber); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(ix - d, iy - 5 - Math.max(0, X.b) * 1.5); ctx.quadraticCurveTo(x, up - 4 - Math.max(0, X.b) * 1.5 + Math.max(0, -X.b) * 2.4, ox + d * 1.5, oy - 4.5 + Math.max(0, -X.b) * .5); ctx.stroke(); // the painted brow
     };
     eye(fx - 10, -6, -1, .85); eye(fx + 11, -6, 1, 1);
@@ -1133,6 +1160,8 @@
     ctx.beginPath(); ctx.moveTo(mx - mw, cyc); ctx.quadraticCurveTo(mx, top, mx + mw, cyc); ctx.quadraticCurveTo(mx, my + op + X.s * 3, mx - mw, cyc); ctx.closePath(); ctx.fillStyle = C(TY.maw); ctx.fill(); outline(1.4);
     if (X.o > .3) { const mid = (cyc + top) / 2; ctx.fillStyle = C(MK.glazeLit); for (let i = -2; i <= 2; i++) { const x = mx + i * mw * .3, y = lerp(mid, cyc, (Math.abs(i) / 2.8) ** 2) + .4, L = 2 + X.o * 1.6; poly([x - 1.3, y, x, y + L, x + 1.3, y]); ctx.fill(); } glowAt(mx, my + op * .5, 12 + X.o * 8, EMBER, .25 + X.o * .4); }
     if (DET()) { ctx.strokeStyle = 'rgba(150,40,40,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(mx - mw + 1, cyc - 1); ctx.quadraticCurveTo(mx, top - 2, mx + mw - 1, cyc - 1); ctx.stroke(); } // the painted lip
+    if (shut) { ctx.strokeStyle = C(MK.giltDk); ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = -2; i <= 2; i++) { const x = mx + i * mw * .36; ctx.moveTo(x, cyc - 3); ctx.lineTo(x + .6, cyc + 3); } ctx.stroke(); } // stitched shut with gold
+    maskWard(fx, mx, cyc, wo, t);
     ctx.restore();
     if (!live) maskHand(48, -30 - bob, -1.25, .35, 1, false);
     ctx.restore();
@@ -1180,17 +1209,17 @@
     ctx.restore();
   }
   function tyDrake(e, a, t) {
-    const st = e.state, plan = e.plan, wind = a.wind || 0, act = st === 'w4act' ? e.w4a : null, down = st === 'down';
+    const st = e.state, plan = e.plan, wind = a.wind || 0, act = st === 'w4act' ? e.w4a : null, dazed = e.w4daze > 0 && !e.dead, down = st === 'down' || dazed;
     const W = (p) => (st === 'wind' && plan === p) ? wind : 0, pose = e.w4pose || {};
-    const swoop = act === 'swoop' && e.w4dash, swoopW = W('w4swoop'), flameW = W('w4flame'), flaming = act === 'flame', gustW = W('w4gust');
+    const swoop = (act === 'swoop' || act === 'circle') && e.w4dash, swoopW = W('w4swoop'), flameW = W('w4flame'), flaming = act === 'flame', gustW = W('w4gust');
     const howl = Math.max(W('w4howl'), act === 'howl' ? 1 : 0), maw = Math.max(W('w4maw'), act === 'maw' ? 1 : 0);
     const hot = flameW > .3 || flaming || maw > .3 || howl > .3;
     // the wings beat slowly and heavily at rest; it mantles them high to wind up, and the attacks drive the stroke themselves
     let beat = pose.beat ?? (.5 + .45 * Math.sin(t * 1.15));
     beat = lerp(beat, 1, Math.max(flameW, gustW, swoopW * .8, howl * .6, maw * .5));
-    if (down) beat = -.5;
-    const fold = swoop ? 1 : 0, rear = Math.max(flameW, howl * .8, gustW * .6), lunge = flaming ? 1 : maw;
-    const pitch = swoop ? .34 : flaming ? .16 : -.14 * Math.max(flameW, gustW) + (down ? .12 : 0);
+    if (down) beat = dazed ? -.3 + .25 * Math.sin(t * 2.4) : -.5;
+    const fold = swoop ? 1 : pose.fold || 0, rear = Math.max(flameW, howl * .8, gustW * .6), lunge = flaming ? 1 : maw;
+    const pitch = (swoop ? .34 : flaming ? .16 : -.14 * Math.max(flameW, gustW) + (down ? .12 : 0)) + (pose.pitch || 0);
     const B = (down ? 16 : 0) + Math.sin(t * 1.15 - .9) * 1.6 * (1 - fold); // the body lifts a little on each downstroke
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.translate(0, B);
     if (pitch) { ctx.translate(0, -44); ctx.rotate(pitch); ctx.translate(0, 44); }
@@ -1262,7 +1291,12 @@
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-1, -7.6); ctx.quadraticCurveTo(5, -9.4, 10, -6.4); ctx.stroke(); // the brow, drawn down over the eye
     ctx.restore();
     ctx.save(); ctx.translate(SH[0], SH[1]); drakeWing(false, beat, fold, hot); ctx.restore();
-    if (swoop) add(() => { ctx.strokeStyle = 'rgba(255,150,80,.35)'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = -70 + i * 11; ctx.moveTo(-40 - i * 4, y); ctx.lineTo(-90 - i * 8, y - 6); } ctx.stroke(); }); // the air torn behind it
+    if (dazed) { // knocked silly: embers wheeling round its head, and its crest hanging
+      const hx = H[0] + 2, hy = H[1] - 16;
+      for (let i = 0; i < 4; i++) { const an = t * 5.5 + i * TAU / 4, x = hx + Math.cos(an) * 15, y = hy + Math.sin(an) * 4.5, s = 2.4 + (Math.sin(an) + 1) * .9;
+        fillPoly([x, y - s * 1.6, x + s * .5, y - s * .5, x + s * 1.6, y, x + s * .5, y + s * .5, x, y + s * 1.6, x - s * .5, y + s * .5, x - s * 1.6, y, x - s * .5, y - s * .5], i % 2 ? DR.goldLit : DR.ember, .7); glowAt(x, y, 7, EMBER, .35); }
+    }
+    if (swoop || pose.streak) add(() => { ctx.strokeStyle = 'rgba(255,150,80,.35)'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = -70 + i * 11; ctx.moveTo(-40 - i * 4, y); ctx.lineTo(-90 - i * 8, y - 6); } ctx.stroke(); }); // the air torn behind it
     ctx.restore();
   }
   // ---------------------------------------------------------------- the change between shapes
