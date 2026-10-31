@@ -240,7 +240,7 @@
   }
   function spawn(S, x, y, z, dir, dmg, perfect, big = 1) {
     if (O.shots.length > 28) O.shots.shift();
-    const s = { S, k: S.kind, x, y, z, dir, dmg, perfect: !!perfect, t: 0, d: 0, hit: new Map(), spin: 0, n: 0, pools: 0 };
+    const s = { S, k: S.kind, x, y, z, tz: P.z + 22, dir, dmg, perfect: !!perfect, t: 0, d: 0, hit: new Map(), spin: 0, n: 0, pools: 0 };
     const sz = S.size;
     if (s.k === 'pearl') { s.r = 3.6 * sz; s.v = 480 * S.speed; s.max = 260 * S.range; }
     else if (s.k === 'disc') { s.r = 6.5 * sz; s.v = 520 * S.speed; s.max = 300 * S.range; }
@@ -355,7 +355,7 @@
       else { s.x += s.dir * s.v * dt; }
       s.d += s.v * dt; if (s.d > s.max || s.t > 1) { s.dead = true; return; }
     } else {
-      const v = s.v * dt; s.x += s.dir * v; s.d += v;
+      const v = s.v * dt; s.x += s.dir * v; s.d += v; s.z += (s.tz - s.z) * Math.min(1, dt * 12); // (out of the orb at his shoulder, down to the height of a blow)
       if (s.d >= s.max || s.x < camX - 40 || s.x > camX + VW + 40) { endShot(s); return; }
       if (Math.random() < dt * 30 && parts.length < 400) parts.push({ x: s.x - s.dir * 6, y: s.y, z: s.z + rand(-2, 2), vx: -s.dir * 40, vy: 0, vz: rand(-10, 20), life: .3, max: .3, col: pick(palCols(S)), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 3 });
     }
