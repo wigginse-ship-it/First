@@ -239,15 +239,35 @@
 
   // ---------------- the throw: the orb itself, from where it floats, out and back like a boomerang ----------------
   const anchor = () => held() ? { x: P.x + P.facing * ((WEAPONS[WID] && WEAPONS[WID].reach) || 50) * .6, y: P.y, z: P.z + 40 } : { x: P.x - P.facing * 21, y: P.y, z: P.z + 66 };
+  // the foe it seeks: the nearest live one ahead of him within reach, his facing and his lane favoured; failing that, any
+  // foe in reach (behind him too). skip: foes another orb of the same throw is already after (used only if none else)
+  function pickTarget(x, y, dir, reach, skip, ahead = true) {
+    let best = null, bs = 1e9;
+    for (const pass of [0, 1]) {
+      for (const e of foes()) {
+        if (skip && pass === 0 && skip.has(e)) continue;
+        const dx = (e.x - x) * dir, dy = Math.abs(e.y - y), dd = Math.hypot(e.x - x, dy * 1.6);
+        if (dd > reach * 1.15 || e.x < camX - 10 || e.x > camX + VW + 10) continue;
+        const front = dx > -12, sc = (front ? Math.max(0, dx) : 220 + Math.abs(dx)) + dy * 2.2;
+        if (ahead && !front && dd > reach * .6) continue;
+        if (sc < bs) { bs = sc; best = e; }
+      }
+      if (best) break;
+    }
+    return best;
+  }
   function fire(S, o = {}) {
     if (!P || !S || O.throws.length) return false;
     const dir = P.facing, a = anchor(), x0 = O.on ? O.x : a.x, z0 = O.on ? O.z : a.z, perfect = !!o.perfect, far = perfect ? 1.3 : 1;
     const extra = S.extraP && Math.random() < S.extraP ? (Math.random() < .4 ? 2 : 1) : 0, lanes = S.tines === 3 ? [0, -18, 18] : [0];
     for (let i = 0; i < extra; i++) lanes.push((i % 2 ? 1 : -1) * (lanes.length > 1 ? 30 : 16));
+    const taken = new Set();
     lanes.forEach((lane, i) => {
       const main = i === 0 || S.tines === 3 && i < 3, wob = S.erratic ? rand(-1, 1) : 0;
+      const tg = pickTarget(P.x, P.y + lane * .5, dir, S.dist * far * (main ? 1 : .8), taken); if (tg) taken.add(tg);
       O.throws.push({ S, k: 'throw', x: x0, y: P.y, z: z0, x0, y0: P.y, z0, dir, lane, ghost: !main, phase: 'out', u: 0, t: 0, dist: S.dist * far * (main ? 1 : .8), yOff: S.arcY * (S.erratic ? (1 + wob) : 1) * (i % 2 ? -1 : 1), wob,
-        hitOut: new Set(), hitBack: new Set(), hit: new Map(), dmg: legDmg(S, (o.mul || 1) * (main ? 1 : .6)), perfect, r: (5 + .7 * S.n) * S.size * (main ? 1 : .7), spin: 0, bounces: S.bounces, pools: 0, trail: [] });
+        hitOut: new Set(), hitBack: new Set(), hit: new Map(), dmg: legDmg(S, (o.mul || 1) * (main ? 1 : .6)), perfect, r: (5 + .7 * S.n) * S.size * (main ? 1 : .7), spin: 0, bounces: S.bounces, pools: 0, trail: [],
+        seek: tg, ex: x0 + dir * S.dist * far * (main ? 1 : .8), ey: P.y + lane, ez: P.z + 26 });
     });
     O.flash = .3; O.pop = 0;
     sfx('whoosh'); if (S.power >= 2) sfx('swing'); sfx('hit-crystal', .25);
@@ -267,7 +287,13 @@
     const S = th.S; th.t += dt; th.spin += dt * S.spin;
     if (th.phase === 'out') {
       th.u = Math.min(1, th.u + dt / S.tOut); const u = th.u, e = 1 - (1 - u) * (1 - u), s = Math.sin(Math.PI * u), w = S.erratic ? Math.sin(th.t * 23 + th.wob * 9) * 9 * s : 0;
-      th.x = th.x0 + th.dir * th.dist * e; th.y = clamp(th.y0 + th.yOff * s + th.lane * Math.min(1, u * 2) + w, FLOOR_TOP + 6, FLOOR_BOT); th.z = lerp(th.z0, P.z + 26, Math.min(1, u * 2.2)) + S.arcZ * s + (S.erratic ? Math.cos(th.t * 17) * 6 * s : 0);
+      // with a foe to seek, the end of the leg is drawn in toward it (a little past it, so it goes through), eased so the
+      // flight bends in on a curve rather than snapping; with none, it flies straight out its full reach
+      const tg = th.seek && !th.seek.dead && enemies.includes(th.seek) ? th.seek : null;
+      if (tg) { const q = Math.min(1, dt * 7), over = Math.min(34, tg.hw + 14), tx = tg.x + Math.sign(tg.x - th.x0 || th.dir) * over;
+        th.ex += (tx - th.ex) * q; th.ey += (tg.y - th.ey) * q; th.ez += (tg.z + Math.min(30, tg.hh * .5) - th.ez) * q; }
+      th.x = lerp(th.x0, th.ex, e); th.y = clamp(lerp(th.y0, th.ey, e) + th.yOff * s * (tg ? .6 : 1) + (tg ? 0 : th.lane * Math.min(1, u * 2) - th.lane * e) + w, FLOOR_TOP + 6, FLOOR_BOT);
+      th.z = lerp(th.z0, th.ez, Math.min(1, u * 2.2)) + S.arcZ * s + (S.erratic ? Math.cos(th.t * 17) * 6 * s : 0);
       if (u >= 1) {
         if (S.burst && !th.ghost) burstAt(S, th.x, th.y, 64 + 14 * S.shellN + (S.f.has('scallop') ? 18 : 0));
         if (S.f.has('corallance') && !th.ghost) { for (const e of near(th.x, th.y, 150).slice(0, 5)) shard(th, e, Math.max(1, th.dmg * .3), S); sparkle(th.x, th.y, th.z, 12, ['#E86A5A', '#FFFFFF', '#F6C2D4']); }
@@ -275,7 +301,7 @@
       }
     }
     if (th.phase === 'hop') { // an orb (or a wild one) hops on to the next foe before it turns home
-      if (!th.tgt) { const nx = th.bounces > 0 && !th.ghost ? near(th.x, th.y, 170).find(e => !th.hitOut.has(e)) : null; if (nx) { th.tgt = nx; th.bounces--; th.hx = th.x; th.hy = th.y; th.hz = th.z; th.u = 0; } else { th.phase = 'back'; th.u = 0; th.bx = th.x; th.by = th.y; th.bz = th.z; } }
+      if (!th.tgt) { const nx = th.bounces > 0 && !th.ghost ? pickTarget(th.x, th.y, th.dir, 170, null, false) : null; if (nx && th.hitOut.has(nx)) { const alt = foes().filter(e => !th.hitOut.has(e) && Math.hypot(e.x - th.x, (e.y - th.y) * 1.6) < 170).sort((a, b) => Math.hypot(a.x - th.x, (a.y - th.y) * 2.2) - Math.hypot(b.x - th.x, (b.y - th.y) * 2.2))[0]; th.hopTo = alt || null; } else th.hopTo = nx; if (th.hopTo) { th.tgt = th.hopTo; th.bounces--; th.hx = th.x; th.hy = th.y; th.hz = th.z; th.u = 0; } else { th.phase = 'back'; th.u = 0; th.bx = th.x; th.by = th.y; th.bz = th.z; } }
       if (th.tgt) { const e = th.tgt; th.u = Math.min(1, th.u + dt / .16); th.x = lerp(th.hx, e.x, th.u); th.y = lerp(th.hy, e.y, th.u); th.z = lerp(th.hz, e.z + Math.min(30, e.hh * .5), th.u) + 14 * Math.sin(Math.PI * th.u); if (th.u >= 1 || e.dead) th.tgt = null; }
     }
     if (th.phase === 'back') {
@@ -418,7 +444,7 @@
         const q = Math.max(1, Math.round(legDmg(S, .7) * (e.boss ? .5 : 1))); strike(e, q, Math.sign(e.x - P.x) || P.facing, { dmg: q, kb: 120, launch: 260, power: 2, el: 1, pearl: 1 }, true); }
       sfx('shoot'); shakeMag = Math.max(shakeMag, 6); }
   }
-  const BUSY = ['hurt', 'down', 'dead', 'dodge', 'parry'];
+  const BUSY = ['hurt', 'down', 'dead'];
   function lhInput(S, dt) {
     const now = CUR.clock;
     O.cd = Math.max(0, O.cd - dt); O.parryCd = Math.max(0, O.parryCd - dt); O.reflCd = Math.max(0, O.reflCd - dt); O.ripCd = Math.max(0, O.ripCd - dt);
@@ -432,15 +458,18 @@
       if (fire(S, pc) && pc.perfect) perfectShotFx(S);
       return;
     }
+    // the throw goes on top of whatever he is doing (a blow, a combo, the air, a dodge): nothing he is doing is cancelled
+    // and his combo runs on. Only the pair is used up: pressed together both are; pressed one after the other, the first
+    // press has already done its own work (a blow, the next link of the combo) and only the second is taken
     if (pressed.light) O.lastL = now; if (pressed.heavy) O.lastH = now;
-    if (BUSY.includes(P.state) || (P.state === 'atk' && P.move && P.move.blink)) return;
-    const both = (pressed.light && pressed.heavy) || (pressed.heavy && input.light && now - O.lastL < .16) || (pressed.light && input.heavy && now - O.lastH < .16);
-    if (!both || O.cd > 0 || O.throws.length) return;
-    pressed.light = pressed.heavy = false; P.holdUsed = true;
-    if (P.state === 'charge') { P.state = 'idle'; P.seq = ''; }
-    if (P.state === 'atk' && P.move && P.t < .14) { P.state = 'idle'; P.seq = ''; P.vx = 0; } // (the first press had just begun a blow: the shot takes its place)
-    if (S.charge) { O.chg = 0; O.gleamed = false; sfx('charge', 1); return; }
-    fire(S);
+    if (BUSY.includes(P.state)) return;
+    const same = pressed.light && pressed.heavy, lateH = !same && pressed.heavy && input.light && now - O.lastL < .16, lateL = !same && pressed.light && input.heavy && now - O.lastH < .16;
+    if (!(same || lateH || lateL) || O.cd > 0 || O.throws.length) return;
+    if (same) { pressed.light = pressed.heavy = false; } else if (lateH) pressed.heavy = false; else pressed.light = false;
+    P.holdUsed = true;
+    const busy = ['atk', 'air', 'charge', 'shoot', 'dodge'].includes(P.state);
+    if (S.charge && !busy) { O.chg = 0; O.gleamed = false; sfx('charge', 1); return; } // (the patient wind-up only while he is free; mid-blow it goes at once)
+    fire(S, S.charge ? { mul: .85 } : undefined);
   }
   // the free shots: out of a dodge (riptide), and a perfect charged Heavy (slack tide)
   { const _sd = startDodge; startDodge = function () { _sd(); const S = live() && P.state === 'dodge' ? curStats() : null; if (S && S.f.has('riptide') && O.ripCd <= 0) { O.ripCd = 1.1; fire(S, { mul: .7 }); } }; }
