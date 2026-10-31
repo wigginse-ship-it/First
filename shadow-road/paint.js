@@ -245,24 +245,35 @@ function heroPaint(x, y) {
   lg.addColorStop(0, 'rgba(255,236,206,.34)'); lg.addColorStop(1, 'rgba(255,236,206,0)');
   const dg = ctx.createLinearGradient(0, y - 30, 0, y + 2); dg.addColorStop(0, 'rgba(14,8,10,0)'); dg.addColorStop(1, 'rgba(14,8,10,.4)');
   ctx.translate(x, y); ctx.scale(.5, .5);
+  // Both passes below are built on a scratch layer the size of his whole layer, but all they paint lies in a small box
+  // about him (the brushwork's rectangles; the hatching's two ellipses): every step is clipped to that box, so each pass
+  // costs the box rather than the layer. Outside it the scratch is empty, so nothing it lays on changes
+  const L0 = ctx.canvas, boxOf = (pts) => { let a = 1e9, b = 1e9, c = -1e9, d = -1e9; for (const [px, py] of pts) { const X = m0.a * px + m0.c * py + m0.e, Y = m0.b * px + m0.d * py + m0.f; a = Math.min(a, X); c = Math.max(c, X); b = Math.min(b, Y); d = Math.max(d, Y); }
+    a = Math.max(0, Math.floor(a) - 3); b = Math.max(0, Math.floor(b) - 3); c = Math.min(L0.width, Math.ceil(c) + 3); d = Math.min(L0.height, Math.ceil(d) + 3); return [a, b, Math.max(0, c - a), Math.max(0, d - b)]; };
+  const clipTo = (g, B) => { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.beginPath(); g.rect(B[0], B[1], B[2], B[3]); g.clip(); };
   { // the brush grain, soft-lit onto him: it works into his steel, leather and skin but leaves his blacks black (the cloak above all)
-    const L = ctx.canvas, m = ctx.getTransform();
+    const L = ctx.canvas, m = ctx.getTransform(), B = boxOf([[x - 76, y - 111], [x + 76, y - 111], [x - 76, y + 7], [x + 76, y + 7]]);
     if (!heroBC || heroBC.width !== L.width || heroBC.height !== L.height) { retire(heroBC); [heroBC, heroBG] = texCanvas(L.width, L.height); }
-    heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'source-over'; heroBG.globalAlpha = 1; heroBG.clearRect(0, 0, L.width, L.height);
+    clipTo(heroBG, B);
+    heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'source-over'; heroBG.globalAlpha = 1; heroBG.clearRect(B[0], B[1], B[2], B[3]);
     heroBG.setTransform(m0); heroBG.fillStyle = lg; heroBG.fillRect(x - 38, y - 110, 92, 92); heroBG.fillStyle = dg; heroBG.fillRect(x - 75, y - 30, 150, 34);
     heroBG.setTransform(m); heroBG.fillStyle = texPat(heroBG, 'brush'); heroBG.fillRect(-150, -210, 300, 222);
     heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'destination-in'; heroBG.drawImage(L, 0, 0);
     if (heroWC) { heroBG.globalCompositeOperation = 'destination-out'; heroBG.drawImage(heroWC, 0, 0); } // (none on his weapon)
-    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = .9; ctx.drawImage(heroBC, 0, 0); ctx.restore();
+    heroBG.restore();
+    clipTo(ctx, B); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = .9; ctx.drawImage(heroBC, 0, 0); ctx.restore();
   }
   { // the hatching in his shadow side: built on the scratch layer, kept to him and off his weapon, then laid on
-    const L = ctx.canvas, m = ctx.getTransform();
-    heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'source-over'; heroBG.globalAlpha = 1; heroBG.clearRect(0, 0, L.width, L.height);
+    const L = ctx.canvas, m = ctx.getTransform(), E = [0, 1].map(i => { const k = 1 - i * .3; return [-hw * .9 - i * hw * .2, -hh * .35 + i * hh * .08, hw * 1.7 * k, hh * .85 * k]; }); // (each ellipse in his own units: centre and radii about his feet)
+    const B = boxOf(E.flatMap(([ex, ey, rx, ry]) => [[x + ex - rx, y + ey - ry], [x + ex + rx, y + ey - ry], [x + ex - rx, y + ey + ry], [x + ex + rx, y + ey + ry]]));
+    clipTo(heroBG, B);
+    heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'source-over'; heroBG.globalAlpha = 1; heroBG.clearRect(B[0], B[1], B[2], B[3]);
     heroBG.setTransform(m); heroBG.fillStyle = texPat(heroBG, 'hatch');
     for (let i = 0; i < 2; i++) { const k = 1 - i * .3; heroBG.globalAlpha = .2 * (.6 + i * .3); heroBG.beginPath(); heroBG.ellipse((-hw * .9 - i * hw * .2) * 2, (-hh * .35 + i * hh * .08) * 2, hw * 1.7 * k * 2, hh * .85 * k * 2, 0, 0, TAU); heroBG.fill(); }
     heroBG.globalAlpha = 1; heroBG.setTransform(1, 0, 0, 1, 0, 0); heroBG.globalCompositeOperation = 'destination-in'; heroBG.drawImage(L, 0, 0);
     if (heroWC) { heroBG.globalCompositeOperation = 'destination-out'; heroBG.drawImage(heroWC, 0, 0); }
-    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(heroBC, 0, 0); ctx.restore();
+    heroBG.restore();
+    clipTo(ctx, B); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(heroBC, 0, 0); ctx.restore();
   }
   ctx.restore();
 }
