@@ -557,6 +557,7 @@ function blendPose(pose) {
   const m = P.move, live = (P.state === 'atk' || P.state === 'air') && m, k = live ? P.t / m.dur : 0;
   const active = live && k >= m.h[0] - .02 && k <= m.h[1] + .04; // the strike itself stays exactly on its arc
   const twirl = live && (m.twirl || m.flurry || m.weave);
+  const armTgt = pose.arm; // (the arm as the move set it: its swing trail is measured back from there)
   if (prev && !hard) {
     for (const f in BLEND_TAU) {
       if (prev[f] === undefined) continue;
@@ -567,6 +568,9 @@ function blendPose(pose) {
       const tau = f === 'arm' && live ? .045 : BLEND_TAU[f];
       if (Math.abs(d) > 1e-4) pose[f] = prev[f] + d * (1 - Math.exp(-dt / tau));
     }
+    // a swing trail runs back from the arm along the swing: when the arm was eased (the short way round, which can put it a
+    // whole turn from where the move set it), the trail's start moves with it, or the trail would wrap all the way round him
+    if (pose.trail && pose.trailFrom !== undefined && armTgt !== undefined && pose.arm !== armTgt) pose.trailFrom += pose.arm - armTgt;
     // the legs: blended when both frames plant them; leaving a planted stance for the plain stance eases out of it too
     const st = pose.stance && !pose.walk ? { f: 7, b: -7, fk: 9, bk: 9 } : null, tl = pose.legs || (pose.kickK === undefined && !pose.walk && !pose.run ? st : null);
     if (prev.legs && tl && pose.kickK === undefined) {
