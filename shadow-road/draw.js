@@ -512,9 +512,9 @@ function drawDeath(e, t) {
   } else { // splat
     const c = Math.min(1, el / .07), settle = Math.sin(el * 32) * .05 * Math.exp(-el * 6);
     FLASH = false;
-    ctx.translate(0, 2.5 * c); // (flattened down into the dent the blow left: drawCrater paints that on the floor under it)
+    ctx.translate(0, 1 * c); // (squashed flat but still plainly there, only its underside pressed into the dent the blow left: drawCrater paints that under it)
     FLASH = el < .06;
-    ctx.scale(lerp(1, 1.9, c) - settle, Math.max(.08, lerp(1, .14, c) + settle));
+    ctx.scale(lerp(1, 1.65, c) - settle, Math.max(.18, lerp(1, .32, c) + settle));
     draw();
   }
   FLASH = false;
