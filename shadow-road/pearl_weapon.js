@@ -117,7 +117,7 @@
     if (t.JH) { t.JH.name = JNAME[spec.form]; t.JH.pe = .7; }
     const S = PN.stats(spec.picks, true);
     t.SIG = { name: S.name, key: 'SIG', seq: ['A', '+H'], dur: .3, h: [.3, .6], x0: 0, x1: 40, dmg: 1, kb: 40, arc: [.3, -.3],
-      desc: `Light and Heavy together: the Pearl's own shot, ${{ pearl: 'a pearl flung', disc: 'a spinning disc that cuts through the line', orb: 'a moon thrown out and called back', burst: 'a burst all round you that turns every shot', lance: 'a lance through the whole line' }[S.kind]}${S.charge ? ', gathered while both are held (let go in the gleam)' : ''}.` };
+      desc: `Light and Heavy together: a pearl thrown from its head out and back like a boomerang, striking all it passes on both legs${{ pearl: '', disc: ', spinning like a cutting disc', orb: ', heavy, hopping on to the next foe', burst: ', bursting at the far end to turn every shot', lance: ', straight as a lance' }[S.kind]}${S.charge ? '; gathered while both are held (let go in the gleam)' : ''}.` };
     return { tree: t, reachK, sig: S };
   }
 

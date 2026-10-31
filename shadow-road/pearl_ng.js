@@ -10,12 +10,14 @@
 //          CURRENT  its element       tide (pushes, whirlpools), nacre (shards, bleeding), storm (chains), abyss (pulls, drains)
 //          TEMPER   its feel          quick, heavy, wild (random extra shots), patient (hold to charge, a perfect window)
 //        Offers lean toward the tags he already holds (about 60%); some traits are only offered once two tags are held.
-//        Every pick adds a part to the orb, and changes what Light + Heavy pressed together fires (the Pearl's shot):
-//        the Form sets the shot (a cutting disc, a thrown orb that comes back, a burst round him, a piercing lance),
-//        the Current its element, the Temper its cadence and charge. The progress is the save's (save.pearlEvo): it is
+//        Every pick adds a part to the orb, and changes how it is thrown: Light + Heavy pressed together (or the PEARL
+//        button) throws the orb itself, out and back like a boomerang, striking each foe once on the way out and once on
+//        the way back. The Form shapes the flight (a cutting disc, a heavy moon that hops foe to foe, a shell that bursts
+//        at the far end, a straight lance, three fanned), the Current what its hits do, the Temper its reach, speed and
+//        weight (patient: hold to wind it up). Each leg lands about like a charged heavy, growing with the choices. The progress is the save's (save.pearlEvo): it is
 //        never lost to a death or a retry, and it carries on into the next cycle if the road ran out first.
 //        After the fifth pick, at the start of the road's last world, it is reforged into a weapon of its own
-//        (pearl_weapon.js), kept for good: then the companion is gone, the weapon has the shot as its signature move.
+//        (pearl_weapon.js), kept for good: then the companion is gone, the weapon throws a pearl the same way as its signature move.
 //   CURRENTS, NOT FOOTSTEPS (PEARL_NG.currents)  he does not walk: holding a direction lays a current under him and he
 //        glides on it, quick to gather speed and slow to lose it, turning in a curve. Dodge (or a double-tap) throws a
 //        strong current that flings him across the street (the dodge's own i-frames and counters are kept): whatever he
@@ -51,21 +53,21 @@
   const TRAITS = [
     // ---- FORM ----
     { id: 'crescent', ax: 'form', tag: 'edge', name: 'Nacre Crescent', part: 'crescent', adj: ['Crescent', 'Reaping'],
-      desc: 'A crescent of mother-of-pearl grows from it. Its shot becomes a spinning disc that cuts through two foes more.' },
+      desc: 'A crescent of mother-of-pearl grows from it: thrown, it wheels like a cutting disc through all it passes.' },
     { id: 'serrate', ax: 'form', tag: 'edge', name: 'Cockle Lip', part: 'serrate', adj: ['Notched', 'Biting'],
       desc: 'Its rim is notched like a cockle\'s lip: every cut it makes bites twice, a heartbeat apart.' },
     { id: 'moon', ax: 'form', tag: 'orb', name: 'The Drowned Moon', part: 'ring', adj: ['Moonlit', 'Drowned'],
-      desc: 'It swells into a ringed moon, thrown out and called back, striking all on the way, both ways, hard.' },
+      desc: 'It swells into a ringed moon: thrown, it hits harder, throws foes further and hops on to the next one before it comes home.' },
     { id: 'tether', ax: 'form', tag: 'orb', name: 'Kelp-Gold Tether', part: 'chain', adj: ['Tethered', 'Long-Chained'],
       desc: 'A chain of kelp-gold binds it to your hand: everything it does reaches a third further.' },
     { id: 'coral', ax: 'form', tag: 'shell', name: 'Coral Guard', part: 'coral', adj: ['Coral', 'Warding'],
       desc: 'Red coral grows over it: every six seconds it catches a blow meant for you and answers it.' },
     { id: 'scallop', ax: 'form', tag: 'shell', name: 'Scallop Mirror', part: 'scallop', adj: ['Mirrored', 'Scalloped'],
-      desc: 'A fan of shell held before you throws shots back; its own shot bursts round you and turns every shot in reach.' },
+      desc: 'A fan of shell held before you throws shots back; thrown, it bursts at the far end of its flight and turns every shot in reach.' },
     { id: 'narwhal', ax: 'form', tag: 'spire', name: 'Narwhal Spire', part: 'horn', adj: ['Spiralled', 'Piercing'],
-      desc: 'A long spiralled horn: its shot flies as a lance through the whole line, and reaches far.' },
+      desc: 'A long spiralled horn: it flies out straight as a lance, far, and straight back.' },
     { id: 'tines', ax: 'form', tag: 'spire', name: 'Trident Tines', part: 'tines', adj: ['Three-Tined', 'Forked'],
-      desc: 'Two more tines branch from it: its lance flies as three prongs, side by side down the street.' },
+      desc: 'Two more tines branch from it: it is thrown as three, fanned down the street, and all three come back.' },
     // ---- CURRENT ----
     { id: 'undertow', ax: 'current', tag: 'tide', name: 'Undertow', part: 'swirl', adj: ['Dragging', 'Ebbing'],
       desc: 'What it strikes, it leaves in a whirlpool that drags the crowd in and grinds at them.' },
@@ -85,30 +87,30 @@
       desc: 'It drinks: every hit gives you back a little health.' },
     // ---- TEMPER ----
     { id: 'quickwater', ax: 'temper', tag: 'quick', name: 'Quickwater', part: 'ribbons', adj: ['Darting', 'Quicksilver'],
-      desc: 'It fires twice as often, lighter shots; the weapon it becomes strikes quicker.' },
+      desc: 'A short, quick throw, lighter, back in a blink; the weapon it becomes strikes quicker.' },
     { id: 'riptide', ax: 'temper', tag: 'quick', name: 'Riptide Reflex', part: 'fin', adj: ['Riptide', 'Restless'],
-      desc: 'Out of every dodge it fires on its own, for nothing.' },
+      desc: 'Out of every dodge it throws itself, for nothing.' },
     { id: 'deep', ax: 'temper', tag: 'heavy', name: 'Deep Weight', part: 'cage', adj: ['Sunken', 'Leaden'],
-      desc: 'Slow, huge shots that hit half again as hard and throw what they strike.' },
+      desc: 'A long, slow, heavy throw that hits a third again as hard and throws what it strikes.' },
     { id: 'anchor', ax: 'temper', tag: 'heavy', name: 'Sunken Anchor', part: 'anchor', adj: ['Anchored', 'Fathom-Heavy'],
-      desc: 'Its shots land like a dropped anchor: a shockwave where they strike.' },
+      desc: 'It lands like a dropped anchor: a shockwave where it strikes.' },
     { id: 'moonstruck', ax: 'temper', tag: 'wild', name: 'Moonstruck', part: 'charm', adj: ['Moonstruck', 'Wayward'],
-      desc: 'Now and then it fires two or three at once, scattered.' },
+      desc: 'Its flight wavers wildly, it hops on to one more foe, and now and then two or three are thrown at once.' },
     { id: 'rogue', ax: 'temper', tag: 'wild', name: 'Rogue Wave', part: 'wave', adj: ['Rogue', 'Wild'],
       desc: 'Any hit may wake a Current you have not chosen.' },
     { id: 'still', ax: 'temper', tag: 'patient', name: 'Still Water', part: 'stillring', adj: ['Still', 'Waiting'],
-      desc: 'Hold Light + Heavy to gather it; let go in the gleam for a perfect shot, a sure critical.' },
+      desc: 'Hold Light + Heavy to wind it up; let go in the gleam for a perfect throw: further, harder, a sure critical.' },
     { id: 'slack', ax: 'temper', tag: 'patient', name: 'Slack Tide', part: 'dial', adj: ['Slack-Water', 'Patient'],
-      desc: 'Every perfect release of a charged Heavy fires the Pearl as well, for nothing.' },
+      desc: 'Every perfect release of a charged Heavy throws the Pearl as well, for nothing.' },
     // ---- COMBINED (offered only once both tags are held) ----
     { id: 'thunder', ax: 'form', req: ['edge', 'storm'], name: 'Thunder Lamella', part: 'thunder', adj: ['Thunder-Edged', 'Storm-Struck'],
-      desc: 'Its edges are struck with lightning: every cut chains a bolt, and its disc flies faster.' },
+      desc: 'Its edges are struck with lightning: every cut chains a bolt, and it flies faster.' },
     { id: 'maelstrom', ax: 'form', req: ['orb', 'tide'], name: 'Maelstrom Moon', part: 'maelstrom', adj: ['Maelstrom', 'Whirling'],
       desc: 'Thrown, it drags whirlpools along behind it all the way out and back.' },
     { id: 'corallance', ax: 'current', req: ['spire', 'nacre'], name: 'Coral Lance', part: 'corallance', adj: ['Coral-Tipped', 'Branching'],
-      desc: 'At the end of its flight the lance bursts into a spray of nacre shards.' },
+      desc: 'At the far end of its flight it bursts into a spray of nacre shards.' },
     { id: 'heldthunder', ax: 'temper', req: ['patient', 'storm'], name: 'Held Thunder', part: 'bolt', adj: ['Gathered', 'Thunder-Held'],
-      desc: 'A perfect shot brings lightning down on every foe near where it lands.' },
+      desc: 'A perfect throw brings lightning down on every foe in front of you.' },
   ];
   const TR = {}; for (const t of TRAITS) { t.tags = {}; if (t.tag) t.tags[t.tag] = 1; if (t.req) for (const g of t.req) t.tags[g] = 1; TR[t.id] = t; }
   const CUR_IDS = ['undertow', 'breaker', 'shardfall', 'weeping', 'static', 'squall', 'blacktide', 'drowning'];
@@ -167,28 +169,38 @@
   };
   const SHOTNAME = { pearl: 'Pearl Shot', disc: 'Nacre Disc', orb: 'Pearl Moon', burst: 'Shell Burst', lance: 'Pearl Lance' };
   const CURWORD = { tide: 'Tidal', nacre: 'Nacre', storm: 'Storm', abyss: 'Abyssal' };
+  // THE THROW'S WEIGHT. Each leg (out, and back) is meant to land about like one of his charged heavies at this point of
+  // the road: a charged heavy is about REF times the weapon's tempering (wMult), so the throw is REF times the best tempering
+  // among his weapons (fists in hand do not make it weak), grown with the choices from 58% (a bare speck) to 100% (five),
+  // 115% once reforged, and shaped by the Temper. Bosses take half, as they shrug off arrows.
+  const REF = 53;
+  const wBest = () => { let m = 1; if (typeof wMult === 'function' && save && save.owned) for (const id in save.owned) if (save.owned[id] && id !== 'fists' && save.wl[id]) m = Math.max(m, wMult(id)); return m; };
+  const legDmg = (S, mul = 1) => REF * wBest() * S.dmgK * mul;
   function stats(picks, wpn) {
     const pr = prof(picks), f = pr.has, sc = pr.sc, n = Math.min(PICKS, picks.length);
     const form = pr.form[0] || null, tmp = pr.temper[0] || null, cur = pr.current[0] || null;
     const S = { picks: picks.slice(), pr, f, n, wpn: !!wpn, form, cur, cur2: pr.current[1] || null, tmp, kind: form ? KIND[form] : 'pearl',
-      dmg: 7 + 4.5 * n + (wpn ? 7 : 0), size: 1 + .06 * n, cd: 1.05, speed: 1, range: 1 + (f.has('tether') ? .33 : 0), pierce: 0,
-      tines: f.has('tines') ? 3 : 1, rehit: f.has('serrate') ? .12 : 0, power: 1, kb: 1, charge: tmp === 'patient', extraP: 0,
-      edgeN: sc.edge || 0, shellN: sc.shell || 0, pal: PAL[cur || 'pearl'] };
-    if (S.kind === 'disc') S.pierce = 1 + 2 * (sc.edge || 0);
-    if (f.has('thunder')) S.speed *= 1.3;
+      size: 1 + .05 * n, range: 1 + (f.has('tether') ? .33 : 0), tines: f.has('tines') ? 3 : 1, rehit: f.has('serrate') ? .12 : 0, power: 1, kb: 1,
+      charge: tmp === 'patient', extraP: 0, edgeN: sc.edge || 0, shellN: sc.shell || 0, pal: PAL[cur || 'pearl'] };
+    S.dmgK = wpn ? 1.15 : .58 + .084 * n;
     if (f.has('moon')) { S.size *= 1.3; S.kb *= 1.4; }
     if (f.has('narwhal')) S.range *= 1.4;
     if (f.has('breaker')) S.kb *= 1.5;
-    // the Temper on top sets the cadence; the others add their touch
-    if (tmp === 'quick') { S.cd = .5; S.dmg *= .62; }
-    else if (tmp === 'heavy') { S.cd = 1.7; S.dmg *= 1.6; S.size *= 1.4; S.power = 2; S.kb *= 1.3; }
-    else if (tmp === 'wild') { S.cd = .95; S.extraP = .3; }
-    else if (tmp === 'patient') { S.cd = .75; }
-    if (f.has('quickwater') && tmp !== 'quick') S.cd *= .8;
-    if (f.has('deep') && tmp !== 'heavy') { S.dmg *= 1.15; S.power = 2; }
+    // the Temper on top sets the throw: its reach, its speed, the beat before it can go again, its weight
+    let D = 230, tO = .38, beat = .3;
+    if (tmp === 'quick') { D = 170; tO = .26; beat = .15; S.dmgK *= .7; }
+    else if (tmp === 'heavy') { D = 300; tO = .55; beat = .45; S.dmgK *= 1.3; S.size *= 1.3; S.power = 2; S.kb *= 1.3; }
+    else if (tmp === 'wild') { S.dmgK *= .95; S.extraP = .3; }
+    if (f.has('quickwater') && tmp !== 'quick') { beat *= .8; tO *= .9; }
+    if (f.has('deep') && tmp !== 'heavy') { S.dmgK *= 1.1; S.power = 2; }
     if (f.has('moonstruck')) S.extraP = Math.max(S.extraP, .35);
     if (f.has('still') && tmp !== 'patient') S.charge = true;
-    S.name = cur ? CURWORD[cur] + ' ' + { pearl: 'Pearl', disc: 'Disc', orb: 'Moon', burst: 'Burst', lance: 'Lance' }[S.kind] : SHOTNAME[S.kind];
+    if (f.has('thunder')) tO *= .85;
+    S.straight = form === 'spire'; S.burst = form === 'shell';
+    S.dist = D * (1 + .04 * n) * S.range * (S.straight ? 1.15 : 1); S.tOut = tO * (S.straight ? .8 : 1); S.tBack = S.tOut * 1.05; S.beat = beat; S.cd = beat;
+    S.arcY = S.straight ? 0 : S.burst ? 34 : 22; S.arcZ = S.straight ? 3 : 20; S.spin = (9 + 1.6 * n) * (form === 'edge' ? 1.8 : 1);
+    S.bounces = (form === 'orb' ? 1 + (f.has('moon') ? 1 : 0) : 0) + (tmp === 'wild' ? 1 : 0); S.erratic = tmp === 'wild';
+    S.name = (cur ? CURWORD[cur] + ' ' : '') + { pearl: 'Pearl Throw', disc: 'Disc Throw', orb: 'Moon Throw', burst: 'Shell Throw', lance: 'Lance Throw' }[S.kind];
     return S;
   }
   let statKey = '', statVal = null;
@@ -202,10 +214,10 @@
 
   // ---------------- the state of the orb, its shots and the water they leave ----------------
   const O = { a: 0, x: 0, y: 0, z: 0, r: 3, on: false, pop: 0, flash: 0, cd: 0, chg: null, gleamed: false, lastL: -1e9, lastH: -1e9,
-    shots: [], pools: [], rise: null, parryCd: 0, reflCd: 0, ripCd: 0, squall: 0, stage: null, zone: -1 };
+    shots: [], throws: [], pools: [], rise: null, parryCd: 0, reflCd: 0, ripCd: 0, squall: 0, stage: null, zone: -1 };
   const CUR = { vx: 0, vy: 0, trail: [], clock: 0, cd: new WeakMap(), wasRun: false, glide: false, lay: 0, layA: 0, bounceT: 0 };
   function resetPlace() {
-    O.shots = []; O.pools = []; O.chg = null; O.flash = 0; O.rise = null;
+    O.shots = []; O.throws = []; O.pools = []; O.chg = null; O.flash = 0; O.rise = null;
     CUR.vx = CUR.vy = 0; CUR.trail = []; CUR.cd = new WeakMap(); CUR.wasRun = false;
     if (P) { O.x = P.x - P.facing * 21; O.y = P.y; O.z = P.z + 66; }
   }
@@ -225,29 +237,69 @@
     parts.push({ x, y, z, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .3, vz: rand(20, 120), life: .35, max: .35, col: pick(cols || ['#FFFFFF', '#D8F4EC', '#F2D68A']), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 6 }); } }
   const palCols = (S) => [S.pal.edge, S.pal.b[2], S.pal.metalLt];
 
-  // ---------------- firing ----------------
+  // ---------------- the throw: the orb itself, from where it floats, out and back like a boomerang ----------------
+  const anchor = () => held() ? { x: P.x + P.facing * ((WEAPONS[WID] && WEAPONS[WID].reach) || 50) * .6, y: P.y, z: P.z + 40 } : { x: P.x - P.facing * 21, y: P.y, z: P.z + 66 };
   function fire(S, o = {}) {
-    if (!P || !S) return;
-    const dir = P.facing, fromOrb = O.on && !held();
-    const x0 = fromOrb ? O.x : P.x + dir * 26, y0 = P.y, z0 = fromOrb ? O.z : P.z + 36;
-    const dmg = S.dmg * W() * (o.mul || 1), extra = S.extraP && Math.random() < S.extraP ? (Math.random() < .4 ? 2 : 1) : 0;
-    O.flash = .3; O.pop = Math.max(O.pop, .7);
-    if (S.kind === 'burst') spawn(S, P.x, P.y, P.z + 30, dir, dmg, o.perfect, 1 + .25 * extra);
-    else for (let i = 0; i <= extra; i++) { const off = i ? (i % 2 ? 1 : -1) * 16 * Math.ceil(i / 2) : 0; spawn(S, x0, clamp(y0 + off, FLOOR_TOP + 6, FLOOR_BOT), z0, dir, dmg * (i ? .6 : 1), o.perfect); }
-    sfx(S.power >= 2 ? 'whoosh' : 'swing'); sfx('hit-crystal', .3);
+    if (!P || !S || O.throws.length) return false;
+    const dir = P.facing, a = anchor(), x0 = O.on ? O.x : a.x, z0 = O.on ? O.z : a.z, perfect = !!o.perfect, far = perfect ? 1.3 : 1;
+    const extra = S.extraP && Math.random() < S.extraP ? (Math.random() < .4 ? 2 : 1) : 0, lanes = S.tines === 3 ? [0, -18, 18] : [0];
+    for (let i = 0; i < extra; i++) lanes.push((i % 2 ? 1 : -1) * (lanes.length > 1 ? 30 : 16));
+    lanes.forEach((lane, i) => {
+      const main = i === 0 || S.tines === 3 && i < 3, wob = S.erratic ? rand(-1, 1) : 0;
+      O.throws.push({ S, k: 'throw', x: x0, y: P.y, z: z0, x0, y0: P.y, z0, dir, lane, ghost: !main, phase: 'out', u: 0, t: 0, dist: S.dist * far * (main ? 1 : .8), yOff: S.arcY * (S.erratic ? (1 + wob) : 1) * (i % 2 ? -1 : 1), wob,
+        hitOut: new Set(), hitBack: new Set(), hit: new Map(), dmg: legDmg(S, (o.mul || 1) * (main ? 1 : .6)), perfect, r: (5 + .7 * S.n) * S.size * (main ? 1 : .7), spin: 0, bounces: S.bounces, pools: 0, trail: [] });
+    });
+    O.flash = .3; O.pop = 0;
+    sfx('whoosh'); if (S.power >= 2) sfx('swing'); sfx('hit-crystal', .25);
     if (extra) floatText(P.x, P.y, P.z + 88, 'MOONSTRUCK', '#F2D68A', 11);
-    sparkle(x0, y0, z0, 6, palCols(S));
+    sparkle(x0, P.y, z0, 6, palCols(S));
+    return true;
   }
-  function spawn(S, x, y, z, dir, dmg, perfect, big = 1) {
-    if (O.shots.length > 28) O.shots.shift();
-    const s = { S, k: S.kind, x, y, z, tz: P.z + 22, dir, dmg, perfect: !!perfect, t: 0, d: 0, hit: new Map(), spin: 0, n: 0, pools: 0 };
-    const sz = S.size;
-    if (s.k === 'pearl') { s.r = 3.6 * sz; s.v = 480 * S.speed; s.max = 260 * S.range; }
-    else if (s.k === 'disc') { s.r = 6.5 * sz; s.v = 520 * S.speed; s.max = 300 * S.range; }
-    else if (s.k === 'orb') { s.r = 6 * sz; s.v = 600 * S.speed; s.max = 240 * S.range; s.back = false; }
-    else if (s.k === 'lance') { s.r = 4 * sz; s.v = 950 * S.speed; s.max = 300 * S.range; s.len = 40 * sz + (S.f.has('narwhal') ? 16 : 0); }
-    else if (s.k === 'burst') { s.R = (66 + 14 * S.shellN + (S.f.has('scallop') ? 18 : 0)) * Math.sqrt(sz) * big * S.range; s.max = .34; P.inv = Math.max(P.inv, .3); }
-    O.shots.push(s); return s;
+  function burstAt(S, x, y, R) { // the shell, at the far end of its flight: a ring that turns shots back and throws the crowd off
+    O.shots.push({ S, k: 'burst', x, y, z: 30, R: R * (1 + .06 * S.n), max: .34, t: 0, d: 0, hit: new Map(), dmg: 0, spin: 0, pools: 0 });
+  }
+  function caught(th) {
+    th.dead = true; if (th.ghost) return;
+    const a = anchor(); O.cd = th.S.beat; O.pop = 1; O.flash = .25; O.x = a.x; O.y = a.y; O.z = a.z;
+    fx.push({ kind: 'ring', x: a.x, y: a.y, z: a.z, t: .18, max: .18, r: 10 + th.r, col: '#FFFFFF' }); sfx('hit-crystal', .5);
+  }
+  function stepThrow(th, dt) {
+    const S = th.S; th.t += dt; th.spin += dt * S.spin;
+    if (th.phase === 'out') {
+      th.u = Math.min(1, th.u + dt / S.tOut); const u = th.u, e = 1 - (1 - u) * (1 - u), s = Math.sin(Math.PI * u), w = S.erratic ? Math.sin(th.t * 23 + th.wob * 9) * 9 * s : 0;
+      th.x = th.x0 + th.dir * th.dist * e; th.y = clamp(th.y0 + th.yOff * s + th.lane * Math.min(1, u * 2) + w, FLOOR_TOP + 6, FLOOR_BOT); th.z = lerp(th.z0, P.z + 26, Math.min(1, u * 2.2)) + S.arcZ * s + (S.erratic ? Math.cos(th.t * 17) * 6 * s : 0);
+      if (u >= 1) {
+        if (S.burst && !th.ghost) burstAt(S, th.x, th.y, 64 + 14 * S.shellN + (S.f.has('scallop') ? 18 : 0));
+        if (S.f.has('corallance') && !th.ghost) { for (const e of near(th.x, th.y, 150).slice(0, 5)) shard(th, e, Math.max(1, th.dmg * .3), S); sparkle(th.x, th.y, th.z, 12, ['#E86A5A', '#FFFFFF', '#F6C2D4']); }
+        th.phase = 'hop'; th.u = 0;
+      }
+    }
+    if (th.phase === 'hop') { // an orb (or a wild one) hops on to the next foe before it turns home
+      if (!th.tgt) { const nx = th.bounces > 0 && !th.ghost ? near(th.x, th.y, 170).find(e => !th.hitOut.has(e)) : null; if (nx) { th.tgt = nx; th.bounces--; th.hx = th.x; th.hy = th.y; th.hz = th.z; th.u = 0; } else { th.phase = 'back'; th.u = 0; th.bx = th.x; th.by = th.y; th.bz = th.z; } }
+      if (th.tgt) { const e = th.tgt; th.u = Math.min(1, th.u + dt / .16); th.x = lerp(th.hx, e.x, th.u); th.y = lerp(th.hy, e.y, th.u); th.z = lerp(th.hz, e.z + Math.min(30, e.hh * .5), th.u) + 14 * Math.sin(Math.PI * th.u); if (th.u >= 1 || e.dead) th.tgt = null; }
+    }
+    if (th.phase === 'back') {
+      th.u = Math.min(1, th.u + dt / S.tBack); const u = th.u, k = u * u, s = Math.sin(Math.PI * u), a = th.ghost ? { x: P.x, y: P.y, z: P.z + 40 } : anchor();
+      th.x = lerp(th.bx, a.x, k); th.y = lerp(th.by, a.y, k) - th.yOff * .7 * s; th.z = lerp(th.bz, a.z, k) + S.arcZ * .5 * s;
+      if (u >= 1 || th.t > 4) { caught(th); return; }
+    }
+    if (th.t > 5) { caught(th); return; }
+    th.trail.push(th.x, th.y - th.z); if (th.trail.length > 16) th.trail.splice(0, 2);
+    if (S.f.has('maelstrom') && th.pools < 4 && !th.ghost && th.t - (th.lastPool || 0) > .16) { th.lastPool = th.t; th.pools++; addPool(th.x, th.y, th.dmg, S); }
+    if (Math.random() < dt * 24 && parts.length < 380) parts.push({ x: th.x, y: th.y, z: th.z + rand(-3, 3), vx: rand(-20, 20), vy: 0, vz: rand(-10, 20), life: .3, max: .3, col: pick(palCols(S)), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 4 });
+    // it strikes all it passes through: each foe once on the way out and once on the way back
+    const back = th.phase === 'back', set = back ? th.hitBack : th.hitOut, reach = th.r + 5;
+    for (const e of foes()) {
+      if (set.has(e) || !touches(e, th.x, th.y, th.z, reach)) continue;
+      set.add(e); const dir = back ? -th.dir : th.dir;
+      hitFoe(th, e, dir, 1, S.form === 'orb' ? { kb: 260 * S.kb, launch: 120, wall: 1 } : S.straight ? { kb: 220 * S.kb, wall: 1 } : { kb: 190 * S.kb });
+      if (S.rehit) echoes.push({ e, dmg: Math.max(1, Math.round(th.dmg * .4 * (e.boss ? .5 : 1))), dir, m: { dmg: 1, kb: 40, power: 0, el: 1, pearl: 1 }, t: S.rehit });
+      sparkle(e.x, e.y, e.z + e.hh * .5, 6, palCols(S));
+    }
+  }
+  function throwsStep(dt) {
+    for (const th of O.throws) { try { stepThrow(th, dt); } catch (err) { th.dead = true; console.error(err); } }
+    O.throws = O.throws.filter(th => !th.dead);
   }
   function shard(from, e, dmg, S) { // a splinter of nacre, thrown at one foe
     if (O.shots.length > 34) return;
@@ -255,8 +307,8 @@
   }
   // a foe struck by the Pearl: a real blow (it can crit), then what the Current does
   function hitFoe(s, e, dir, mul = 1, extra) {
-    const S = s.S, d = Math.max(1, Math.round(s.dmg * mul * (e.boss ? .6 : 1))), hp0 = e.hp;
-    strike(e, d, dir, Object.assign({ dmg: d, el: 1, pearl: 1, kb: 170 * S.kb, power: s.k === 'shard' ? 0 : S.power, perfect: s.perfect ? 1 : 0, launch: s.k === 'orb' && S.f.has('moon') ? 140 : 0, wall: S.power >= 2 ? 1 : 0 }, extra), true);
+    const S = s.S, d = Math.max(1, Math.round(s.dmg * mul * (e.boss ? (s.k === 'throw' ? .5 : .6) : 1))), hp0 = e.hp;
+    strike(e, d, dir, Object.assign({ dmg: d, el: 1, pearl: 1, kb: 170 * S.kb, power: s.k === 'shard' ? 0 : S.power, perfect: s.perfect ? 1 : 0, launch: 0, wall: S.power >= 2 ? 1 : 0 }, extra), true);
     if (e.hp < hp0 || e.dead) { procs(s, e, d, dir); return true; }
     return false;
   }
@@ -295,7 +347,7 @@
     if (s.k === 'shard') return; // (splinters carry no Current of their own: no chains of chains)
     for (const id of CUR_IDS) if (f.has(id)) PROC[id](s, e, d, dir);
     if (f.has('rogue') && Math.random() < .25) { const pool = CUR_IDS.filter(id => !f.has(id)); if (pool.length) PROC[pick(pool)](s, e, d * .8, dir); }
-    if (f.has('thunder') && !f.has('static') && (s.k === 'disc' || s.k === 'wpn')) PROC.static(s, e, d * .7, dir);
+    if (f.has('thunder') && !f.has('static') && (S.form === 'edge' || s.k === 'wpn')) PROC.static(s, e, d * .7, dir);
     if (f.has('anchor') && !s.shocked && s.k !== 'burst') { s.shocked = 1; anchorShock(e.x, e.y, d, dir, e); }
   }
   function anchorShock(x, y, d, dir, not) {
@@ -333,47 +385,21 @@
     else if (s.k !== 'shard') sparkle(s.x, s.y, s.z, 5, palCols(S));
   }
   function stepShot(s, dt) {
-    const S = s.S, list = foes();
+    const S = s.S;
     if (s.k === 'burst') {
-      const R = s.R * sm(s.t / (s.max * .7)); s.x = P.x; s.y = P.y;
-      for (const e of list) if (!s.hit.has(e) && Math.hypot(e.x - s.x, (e.y - s.y) * 2) < R + e.hw && e.z < 100) { s.hit.set(e, s.t);
-        if (hitFoe(s, e, Math.sign(e.x - s.x) || P.facing, 1, { kb: 300 * S.kb, power: Math.max(1, S.power) }) && S.f.has('coral') && !e.dead && !e.boss) { e.state = 'hurt'; e.t = Math.max(e.t, .5); e.plan = null; } }
+      const R = s.R * sm(s.t / (s.max * .7));
+      for (const e of foes()) if (!s.hit.has(e) && Math.hypot(e.x - s.x, (e.y - s.y) * 2) < R + e.hw && e.z < 100) { s.hit.set(e, s.t); const d = legDmg(S, .6);
+        const hp0 = e.hp, q = Math.max(1, Math.round(d * (e.boss ? .5 : 1))); strike(e, q, Math.sign(e.x - s.x) || P.facing, { dmg: q, kb: 300 * S.kb, power: Math.max(1, S.power), el: 1, pearl: 1 }, true);
+        if ((e.hp < hp0 || e.dead) && S.f.has('coral') && !e.dead && !e.boss) { e.state = 'hurt'; e.t = Math.max(e.t, .5); e.plan = null; } }
       for (const p of projs) if (p.owner === 'e' && !p.ground && !p.orbit && Math.hypot(p.x - s.x, (p.y - s.y) * 2) < R + 10) turnShot(p, S, S.f.has('scallop'));
       if (s.t >= s.max) s.dead = true;
       return;
     }
-    if (s.k === 'orb') {
-      if (!s.back) { const v = s.v * dt; s.x += s.dir * v; s.d += v; s.y += (P.y - s.y) * Math.min(1, dt * 3); s.z += ((P.z + 34) - s.z) * Math.min(1, dt * 5);
-        if (s.d >= s.max || s.x < leftWall() - 20 || s.x > rightWall() + 20) { s.back = true; s.hit = new Map(); } }
-      else { const tx = P.x, ty = P.y, tz = P.z + 34, dx = tx - s.x, dy = ty - s.y, dz = tz - s.z, d = Math.hypot(dx, dy, dz), v = Math.min(d, 760 * dt);
-        s.x += dx / (d || 1) * v; s.y += dy / (d || 1) * v; s.z += dz / (d || 1) * v;
-        if (d < 16 || s.t > 3) { s.dead = true; sfx('hit-crystal', .2); return; } }
-      if (S.f.has('maelstrom') && s.pools < 4 && (s.d - (s.lastPool || 0) > 70 || (s.back && s.t - (s.lastPoolT || 0) > .2))) { s.lastPool = s.d; s.lastPoolT = s.t; s.pools++; addPool(s.x, s.y, s.dmg, S); }
-    } else if (s.k === 'shard') {
-      const e = s.tgt && !s.tgt.dead ? s.tgt : null;
-      if (e) { const tx = e.x, ty = e.y, tz = e.z + e.hh * .5, dx = tx - s.x, dy = ty - s.y, dz = tz - s.z, d = Math.hypot(dx, dy, dz) || 1, v = s.v * dt; s.x += dx / d * v; s.y += dy / d * v; s.z += dz / d * v; s.dir = Math.sign(dx) || s.dir; }
-      else { s.x += s.dir * s.v * dt; }
-      s.d += s.v * dt; if (s.d > s.max || s.t > 1) { s.dead = true; return; }
-    } else {
-      const v = s.v * dt; s.x += s.dir * v; s.d += v; s.z += (s.tz - s.z) * Math.min(1, dt * 12); // (out of the orb at his shoulder, down to the height of a blow)
-      if (s.d >= s.max || s.x < camX - 40 || s.x > camX + VW + 40) { endShot(s); return; }
-      if (Math.random() < dt * 30 && parts.length < 400) parts.push({ x: s.x - s.dir * 6, y: s.y, z: s.z + rand(-2, 2), vx: -s.dir * 40, vy: 0, vz: rand(-10, 20), life: .3, max: .3, col: pick(palCols(S)), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 3 });
-    }
-    for (const e of list) {
-      if (s.hit.has(e)) continue;
-      let hit = false;
-      if (s.k === 'lance') { const lanes = S.tines === 3 ? [-14, 0, 14] : [0], x0 = Math.min(s.x, s.x - s.dir * s.len), x1 = Math.max(s.x, s.x - s.dir * s.len);
-        hit = e.x + e.hw > x0 && e.x - e.hw < x1 && lanes.some(o => Math.abs(e.y - (s.y + o)) < 12 + e.hw * .3) && zOverlap(s.z - 10, 20, e.z - ((e.def && e.def.reachDown) || 0), e.hh + ((e.def && e.def.reachDown) || 0)); }
-      else hit = touches(e, s.x, s.y, s.z, s.r + 4);
-      if (!hit) continue;
-      s.hit.set(e, s.t); s.n++;
-      const dir = s.k === 'orb' && s.back ? -s.dir : s.k === 'shard' ? (Math.sign(e.x - s.x) || s.dir) : s.dir;
-      hitFoe(s, e, dir, 1, s.k === 'orb' ? { kb: 260 * S.kb, launch: 120, wall: 1 } : s.k === 'lance' ? { kb: 220 * S.kb, wall: 1 } : null);
-      if (S.rehit && s.k !== 'shard') echoes.push({ e, dmg: Math.max(1, Math.round(s.dmg * .5 * (e.boss ? .6 : 1))), dir, m: { dmg: 1, kb: 40, power: 0, el: 1, pearl: 1 }, t: S.rehit });
-      sparkle(e.x, e.y, e.z + e.hh * .5, 6, palCols(S));
-      if (s.k === 'pearl' || s.k === 'shard') { endShot(s); return; }
-      if (s.k === 'disc' && s.n > S.pierce) { endShot(s); return; }
-    }
+    const e = s.tgt && !s.tgt.dead ? s.tgt : null;
+    if (e) { const tx = e.x, ty = e.y, tz = e.z + e.hh * .5, dx = tx - s.x, dy = ty - s.y, dz = tz - s.z, d = Math.hypot(dx, dy, dz) || 1, v = s.v * dt; s.x += dx / d * v; s.y += dy / d * v; s.z += dz / d * v; s.dir = Math.sign(dx) || s.dir; }
+    else s.x += s.dir * s.v * dt;
+    s.d += s.v * dt; if (s.d > s.max || s.t > 1) { s.dead = true; return; }
+    for (const o of foes()) if (!s.hit.has(o) && touches(o, s.x, s.y, s.z, s.r + 4)) { s.hit.set(o, s.t); hitFoe(s, o, Math.sign(o.x - s.x) || s.dir); s.dead = true; return; }
   }
 
   // ---------------- Light + Heavy together: the shot (the second press within a short beat of the first, either way round) ----------------
@@ -389,7 +415,7 @@
     fx.push({ kind: 'ring', x: P.x, y: P.y, z: P.z + 46, t: .22, max: .22, r: 44, col: '#FFF4D0' });
     if (S.f.has('heldthunder')) { const fx0 = P.x + P.facing * 120;
       for (const e of near(fx0, P.y, 170).slice(0, 6)) { fx.push({ kind: 'bolt', x: e.x + rand(-16, 16), y: e.y, z: e.z + 240, x2: e.x, y2: e.y, z2: e.z + e.hh * .5, t: .3, max: .3, col: '#FFF2C0', seed: Math.random() * 99 });
-        const q = Math.max(1, Math.round(S.dmg * W() * .7 * (e.boss ? .6 : 1))); strike(e, q, Math.sign(e.x - P.x) || P.facing, { dmg: q, kb: 120, launch: 260, power: 2, el: 1, pearl: 1 }, true); }
+        const q = Math.max(1, Math.round(legDmg(S, .7) * (e.boss ? .5 : 1))); strike(e, q, Math.sign(e.x - P.x) || P.facing, { dmg: q, kb: 120, launch: 260, power: 2, el: 1, pearl: 1 }, true); }
       sfx('shoot'); shakeMag = Math.max(shakeMag, 6); }
   }
   const BUSY = ['hurt', 'down', 'dead', 'dodge', 'parry'];
@@ -403,18 +429,18 @@
         if (Math.random() < dt * 20 && parts.length < 400) { const a = rand(0, TAU), x = O.on ? O.x : P.x + P.facing * 22, z = O.on ? O.z : P.z + 40; parts.push({ x: x + Math.cos(a) * 18, y: P.y, z: z + Math.sin(a) * 14, vx: -Math.cos(a) * 60, vy: 0, vz: -Math.sin(a) * 50, life: .3, max: .3, col: pick(palCols(S)), size: rand(1.2, 2), shape: 'star', rot: 0, vr: 4 }); }
         return; }
       const pc = chargeTimingP(O.chg); O.chg = null; O.gleamed = false;
-      fire(S, pc); O.cd = S.cd; if (pc.perfect) perfectShotFx(S);
+      if (fire(S, pc) && pc.perfect) perfectShotFx(S);
       return;
     }
     if (pressed.light) O.lastL = now; if (pressed.heavy) O.lastH = now;
     if (BUSY.includes(P.state) || (P.state === 'atk' && P.move && P.move.blink)) return;
     const both = (pressed.light && pressed.heavy) || (pressed.heavy && input.light && now - O.lastL < .16) || (pressed.light && input.heavy && now - O.lastH < .16);
-    if (!both || O.cd > 0) return;
+    if (!both || O.cd > 0 || O.throws.length) return;
     pressed.light = pressed.heavy = false; P.holdUsed = true;
     if (P.state === 'charge') { P.state = 'idle'; P.seq = ''; }
     if (P.state === 'atk' && P.move && P.t < .14) { P.state = 'idle'; P.seq = ''; P.vx = 0; } // (the first press had just begun a blow: the shot takes its place)
     if (S.charge) { O.chg = 0; O.gleamed = false; sfx('charge', 1); return; }
-    fire(S); O.cd = S.cd;
+    fire(S);
   }
   // the free shots: out of a dodge (riptide), and a perfect charged Heavy (slack tide)
   { const _sd = startDodge; startDodge = function () { _sd(); const S = live() && P.state === 'dodge' ? curStats() : null; if (S && S.f.has('riptide') && O.ripCd <= 0) { O.ripCd = 1.1; fire(S, { mul: .7 }); } }; }
@@ -636,7 +662,7 @@
     while (CUR.trail.length && (CUR.clock - CUR.trail[0].t > .75 || CUR.trail.length > 60)) CUR.trail.shift();
     O.on = evoOn() && lv;
     if (O.on) orbStep(dt);
-    if (lv) { shotsStep(dt); poolsStep(dt); riseStep(dt); }
+    if (lv) { throwsStep(dt); shotsStep(dt); poolsStep(dt); riseStep(dt); }
   };
   // his stance on the current: no strides, leaning into the way he is carried
   { const _pp = playerPose; playerPose = function () { const pose = _pp();
@@ -838,20 +864,32 @@
     }
   }
   const shadowAt = (x, y, z, rr) => onMain(() => { ctx.fillStyle = `rgba(10,20,30,${clamp(.28 - z / 400, .06, .28)})`; ctx.beginPath(); ctx.ellipse(x, y, rr * 1.2, rr * .4, 0, 0, TAU); ctx.fill(); });
+  // the orb in flight: a ribbon of light along its path, the orb itself turning fast, an Edge's crescents wheeling round it
+  function drawThrow(th, t) {
+    const S = th.S, pal = S.pal, y = th.y - th.z, tr = th.trail;
+    shadowAt(th.x, th.y, th.z, th.r);
+    onMain(() => { if (tr.length >= 6) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        for (let i = 2; i < tr.length; i += 2) { const k = i / tr.length; ctx.strokeStyle = `rgba(${pal.glow},${(.55 * k).toFixed(2)})`; ctx.lineWidth = th.r * 1.5 * k + 1; ctx.beginPath(); ctx.moveTo(tr[i - 2], tr[i - 1]); ctx.lineTo(tr[i], tr[i + 1]); ctx.stroke(); }
+        ctx.restore(); }
+      glow(th.x, y, th.r * 3.2, pal.glow, th.perfect ? .5 : .3); });
+    if (S.form === 'edge' && !hasSpin(S.picks)) { ctx.save(); ctx.translate(th.x, y); ctx.scale(1, .6); for (let i = 0; i < 3; i++) crescentBlade(th.r * .55, th.spin + i * TAU / 3, pal, S.f.has('thunder')); ctx.restore(); }
+    blitOrb(S.picks, th.x, y, th.r, th.phase === 'back' ? -th.dir : th.dir, th.spin, th.ghost ? .8 : 1);
+  }
   function orbItems(list, t) {
     if (O.rise) { const R = O.rise, pk = ES().picks, rr = 3.6 + 1.05 * pk.length + 2 * sm(R.t / .8) * (1 - sm((R.t - 2) / 1));
       list.push([R.y + .4, () => { onMain(() => { glow(R.x, R.y - R.z, rr * 6, '220,250,240', .35); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(242,214,138,.5)'; ctx.lineWidth = 1.2; for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; ctx.beginPath(); ctx.arc(R.x, R.y - R.z, rr * (1.4 + q * 3), 0, TAU); ctx.globalAlpha = 1 - q; ctx.stroke(); } ctx.restore(); }); blitOrb(pk, R.x, R.y - R.z, rr, P.facing, t * 2); }]); }
-    if (O.on && P && !O.rise) {
+    if (O.on && P && !O.rise && !O.throws.length) {
       const pk = ES().picks, pal = palOf(pk), r = O.r * (1 + .25 * O.pop), sy = O.y - O.z, front = O.chg !== null;
       const k = O.chg !== null ? clamp(O.chg / GLEAM, 0, 1) : 0, gl = O.chg !== null && O.chg >= GLEAM && O.chg <= GLEAM + PCW();
       list.push([O.y - .02, () => { shadowAt(O.x, O.y, O.z, r); onMain(() => glow(O.x, sy, r * (3.4 + 2 * k), gl ? '255,244,200' : pal.glow, .2 + .25 * O.flash + .25 * k + (gl ? .3 : 0))); }]);
       list.push([front ? P.y + .3 : P.y - .3, () => { blitOrb(pk, O.x, sy, r, P.facing, t * 2.4);
         if (pk.includes('static') || pk.includes('thunder') || pk.includes('squall')) { if (Math.random() < .35) { ctx.save(); ctx.strokeStyle = '#E8ECFF'; ctx.lineWidth = .8; ctx.beginPath(); const a = rand(0, TAU); let x = O.x + Math.cos(a) * r, y = sy + Math.sin(a) * r; ctx.moveTo(x, y); for (let i = 0; i < 3; i++) { x += Math.cos(a) * r * .5 + rand(-2, 2); y += Math.sin(a) * r * .5 + rand(-2, 2); ctx.lineTo(x, y); } ctx.stroke(); ctx.restore(); } } }]);
     }
+    for (const th of O.throws) list.push([th.y + .05, () => drawThrow(th, t)]);
     for (const s of O.shots) list.push([s.y + .05, () => drawShot(s, t)]);
     for (const p of O.pools) list.push([p.y - .3, () => onMain(() => drawWave(p))]);
   }
-  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (O.on) box(O.x, O.y, O.z, 60, 70); if (O.rise) box(O.rise.x, O.rise.y, O.rise.z, 70, 80); for (const s of O.shots) box(s.x, s.y, s.z || 0, s.k === 'burst' ? (s.R || 60) + 20 : s.k === 'lance' ? (s.len || 40) + 30 : 50, s.k === 'burst' ? 90 : 60); for (const p of O.pools) box(p.x, p.y, 0, p.r + 20, 40); }; }
+  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (O.on) box(O.x, O.y, O.z, 60, 70); for (const th of O.throws) box(th.x, th.y, th.z, 60, 70); if (O.rise) box(O.rise.x, O.rise.y, O.rise.z, 70, 80); for (const s of O.shots) box(s.x, s.y, s.z || 0, s.k === 'burst' ? (s.R || 60) + 20 : s.k === 'lance' ? (s.len || 40) + 30 : 50, s.k === 'burst' ? 90 : 60); for (const p of O.pools) box(p.x, p.y, 0, p.r + 20, 40); }; }
   { const _ml = mechList; mechList = function (list, t) { _ml(list, t);
     if (curOn() && (CUR.trail.length > 2 || CUR.lay > .05)) list.push([FLOOR_TOP - 4, () => onMain(() => drawCurrents(t))]);
     orbItems(list, t); }; }
@@ -862,7 +900,7 @@
     if (!hudCv) { const cardEl = document.querySelector('.wcard'); if (!cardEl) return; hudCv = document.createElement('canvas'); hudCv.id = 'pearlNgHud'; hudCv.width = 64; hudCv.height = 64;
       hudCv.style.cssText = 'position:absolute;right:-13px;bottom:-11px;width:26px;height:26px;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))'; cardEl.appendChild(hudCv); }
     const S = P && (mode === 'play' || mode === 'pause') ? curStats() : null; hudCv.hidden = !S; if (!S) return;
-    const ready = O.chg !== null ? clamp(O.chg / GLEAM, 0, 1) : 1 - clamp(O.cd / Math.max(.01, S.cd), 0, 1), sig = ready.toFixed(2) + S.picks.join() + (O.chg !== null);
+    const ready = O.chg !== null ? clamp(O.chg / GLEAM, 0, 1) : O.throws.length ? 0 : 1 - clamp(O.cd / Math.max(.01, S.cd), 0, 1), sig = ready.toFixed(2) + S.picks.join() + (O.chg !== null);
     if ((hudN++ % 3) && hudCv.dataset.k === sig) return; hudCv.dataset.k = sig;
     hudCv.title = `The Pearl of Judgement: ${S.name} (Light + Heavy)${held() ? '' : ` · ${S.n} of ${PICKS} choices`}`;
     const g = hudCv.getContext('2d'), pal = S.pal;
@@ -878,8 +916,8 @@
   // ---------------- the forge: the relic row's words ----------------
   W7.ngText = () => {
     const s = save.pearlEvo && Array.isArray(save.pearlEvo.picks) ? save.pearlEvo.picks.filter(id => TR[id]) : [];
-    const evo = forged() ? `REFORGED: it is ${WEAPONS[WID] ? WEAPONS[WID].name : 'a weapon of its own'} now, kept for good, its shot its signature (Light + Heavy).`
-      : `THE EVOLVING PEARL: it hangs at your shoulder, and Light + Heavy together fires it. Each time a boss of the first five worlds falls it rises out of it and takes one of three traits (its Form, its Current, its Temper), and every one changes the shot. After the fifth, at the road's last world, it is reforged into a weapon of its own.${s.length ? ` It has taken ${s.map(id => TR[id].name).join(', ')} (${s.length} of ${PICKS}).` : ''}`;
+    const evo = forged() ? `REFORGED: it is ${WEAPONS[WID] ? WEAPONS[WID].name : 'a weapon of its own'} now, kept for good, its boomerang throw its signature (Light + Heavy).`
+      : `THE EVOLVING PEARL: it hangs at your shoulder, and Light + Heavy together throws it out and back like a boomerang, striking on both legs. Each time a boss of the first five worlds falls it rises out of it and takes one of three traits (its Form, its Current, its Temper), and every one changes the throw. After the fifth, at the road's last world, it is reforged into a weapon of its own.${s.length ? ` It has taken ${s.map(id => TR[id].name).join(', ')} (${s.length} of ${PICKS}).` : ''}`;
     const cur = 'CURRENTS, NOT FOOTSTEPS: you do not walk, you ride the sea. Hold a direction to lay a current and glide on it; Dodge (or a double-tap) flings you across the street through whatever is in the way, off the edges and the big ones like a pinball; an attack at speed carries further and hits harder.';
     const on = [SW.evolve || forged() ? evo : '', SW.currents ? cur : ''].filter(Boolean).join(' ');
     if (!owned()) return `The sea's reflection of the Jewel of Judgement, out of the King in the Glass. In New Game+ it wakes and changes the whole road. ${on || '(Its New Game+ powers are switched off.)'}`;
@@ -889,10 +927,10 @@
 
   // ---------------- for the weapon (pearl_weapon.js), the dev panel and tests ----------------
   window.PEARLNG = {
-    state: () => ({ owned: owned(), evolve: evoOn(), forged: forged(), held: held(), currents: curOn(), picks: picksNow().slice(), seed: save.pearlEvo ? save.pearlEvo.seed : null, cd: O.cd, chg: O.chg, shots: O.shots.length, pools: O.pools.length,
+    state: () => ({ owned: owned(), evolve: evoOn(), forged: forged(), held: held(), currents: curOn(), picks: picksNow().slice(), seed: save.pearlEvo ? save.pearlEvo.seed : null, cd: O.cd, chg: O.chg, shots: O.shots.length, throws: O.throws.length, pools: O.pools.length,
       vx: CUR.vx, vy: CUR.vy, speed: speedE(), orb: { on: O.on, x: O.x, y: O.y, z: O.z, r: O.r }, pending: !!(typeof stage !== 'undefined' && stage && pickPending()), card: !!card }),
     TRAITS, TR, AX, AXNAME, TAGNAME, PAL, PICKS, prof, offers, stats, curStats, ES, take, autoPick, pick: openPick, choose, card: () => card && card.opts.map(t => t.id),
-    fire: (o) => { const S = curStats(); if (!S) return false; fire(S, o); O.cd = S.cd; return true; },
+    fire: (o) => { const S = curStats(); return S ? fire(S, o) : false; }, legDmg: (S) => legDmg(S || curStats()), wBest,
     procs, hitFoe, addPool, owned, forged, held, evoOn, curOn, O, CUR, T, GLEAM,
     art: { pearlBody, drawOrb, drawOrbParts, drawSpinner, blitOrb, crescentBlade, PART, glow, withCtx, sparkle, palOf },
     devJump: (i) => { if (!evoOn()) return; const want = Math.min(PICKS, Math.max(0, i | 0)); if (ES().picks.length < want) autoPick(want); },
