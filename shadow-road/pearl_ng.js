@@ -239,20 +239,21 @@
 
   // ---------------- the throw: the orb itself, from where it floats, out and back like a boomerang ----------------
   const anchor = () => held() ? { x: P.x + P.facing * ((WEAPONS[WID] && WEAPONS[WID].reach) || 50) * .6, y: P.y, z: P.z + 40 } : { x: P.x - P.facing * 21, y: P.y, z: P.z + 66 };
-  // the foe it seeks: the nearest live one ahead of him within reach, his facing and his lane favoured; failing that, any
-  // foe in reach (behind him too). skip: foes another orb of the same throw is already after (used only if none else)
-  function pickTarget(x, y, dir, reach, skip, ahead = true) {
+  // the foe it seeks: the nearest live one in front of him (on his facing side, a small margin at his own x) within reach,
+  // his lane favoured; never one behind him (with none in front it flies straight out ahead). skip: foes another orb of the
+  // same throw is already after (taken only if there is no other). from: where the search is measured from (a hop's orb)
+  const ahead = (e) => (e.x - P.x) * P.facing > -12;
+  function pickTarget(x, y, reach, skip) {
     let best = null, bs = 1e9;
     for (const pass of [0, 1]) {
       for (const e of foes()) {
-        if (skip && pass === 0 && skip.has(e)) continue;
-        const dx = (e.x - x) * dir, dy = Math.abs(e.y - y), dd = Math.hypot(e.x - x, dy * 1.6);
+        if ((skip && pass === 0 && skip.has(e)) || !ahead(e)) continue;
+        const dd = Math.hypot(e.x - x, (e.y - y) * 1.6);
         if (dd > reach * 1.15 || e.x < camX - 10 || e.x > camX + VW + 10) continue;
-        const front = dx > -12, sc = (front ? Math.max(0, dx) : 220 + Math.abs(dx)) + dy * 2.2;
-        if (ahead && !front && dd > reach * .6) continue;
+        const sc = Math.abs(e.x - x) + Math.abs(e.y - y) * 2.2;
         if (sc < bs) { bs = sc; best = e; }
       }
-      if (best) break;
+      if (best || !skip) break;
     }
     return best;
   }
@@ -264,7 +265,7 @@
     const taken = new Set();
     lanes.forEach((lane, i) => {
       const main = i === 0 || S.tines === 3 && i < 3, wob = S.erratic ? rand(-1, 1) : 0;
-      const tg = pickTarget(P.x, P.y + lane * .5, dir, S.dist * far * (main ? 1 : .8), taken); if (tg) taken.add(tg);
+      const tg = pickTarget(P.x, P.y + lane * .5, S.dist * far * (main ? 1 : .8), taken); if (tg) taken.add(tg);
       O.throws.push({ S, k: 'throw', x: x0, y: P.y, z: z0, x0, y0: P.y, z0, dir, lane, ghost: !main, phase: 'out', u: 0, t: 0, dist: S.dist * far * (main ? 1 : .8), yOff: S.arcY * (S.erratic ? (1 + wob) : 1) * (i % 2 ? -1 : 1), wob,
         hitOut: new Set(), hitBack: new Set(), hit: new Map(), dmg: legDmg(S, (o.mul || 1) * (main ? 1 : .6)), perfect, r: (5 + .7 * S.n) * S.size * (main ? 1 : .7), spin: 0, bounces: S.bounces, pools: 0, trail: [],
         seek: tg, ex: x0 + dir * S.dist * far * (main ? 1 : .8), ey: P.y + lane, ez: P.z + 26 });
@@ -278,9 +279,11 @@
   function burstAt(S, x, y, R) { // the shell, at the far end of its flight: a ring that turns shots back and throws the crowd off
     O.shots.push({ S, k: 'burst', x, y, z: 30, R: R * (1 + .06 * S.n), max: .34, t: 0, d: 0, hit: new Map(), dmg: 0, spin: 0, pools: 0 });
   }
+  // where it is caught: in front of him (the evolving orb then drifts back to his shoulder; the weapon's is its head)
+  const catchAt = () => held() ? anchor() : { x: P.x + P.facing * 12, y: P.y, z: P.z + 54 };
   function caught(th) {
     th.dead = true; if (th.ghost) return;
-    const a = anchor(); O.cd = th.S.beat; O.pop = 1; O.flash = .25; O.x = a.x; O.y = a.y; O.z = a.z;
+    const a = catchAt(); O.cd = th.S.beat; O.pop = 1; O.flash = .25; O.x = a.x; O.y = a.y; O.z = a.z;
     fx.push({ kind: 'ring', x: a.x, y: a.y, z: a.z, t: .18, max: .18, r: 10 + th.r, col: '#FFFFFF' }); sfx('hit-crystal', .5);
   }
   function stepThrow(th, dt) {
@@ -301,11 +304,11 @@
       }
     }
     if (th.phase === 'hop') { // an orb (or a wild one) hops on to the next foe before it turns home
-      if (!th.tgt) { const nx = th.bounces > 0 && !th.ghost ? pickTarget(th.x, th.y, th.dir, 170, null, false) : null; if (nx && th.hitOut.has(nx)) { const alt = foes().filter(e => !th.hitOut.has(e) && Math.hypot(e.x - th.x, (e.y - th.y) * 1.6) < 170).sort((a, b) => Math.hypot(a.x - th.x, (a.y - th.y) * 2.2) - Math.hypot(b.x - th.x, (b.y - th.y) * 2.2))[0]; th.hopTo = alt || null; } else th.hopTo = nx; if (th.hopTo) { th.tgt = th.hopTo; th.bounces--; th.hx = th.x; th.hy = th.y; th.hz = th.z; th.u = 0; } else { th.phase = 'back'; th.u = 0; th.bx = th.x; th.by = th.y; th.bz = th.z; } }
+      if (!th.tgt) { th.hopTo = th.bounces > 0 && !th.ghost ? pickTarget(th.x, th.y, 170, th.hitOut) : null; if (th.hopTo && th.hitOut.has(th.hopTo)) th.hopTo = null; if (th.hopTo) { th.tgt = th.hopTo; th.bounces--; th.hx = th.x; th.hy = th.y; th.hz = th.z; th.u = 0; } else { th.phase = 'back'; th.u = 0; th.bx = th.x; th.by = th.y; th.bz = th.z; } }
       if (th.tgt) { const e = th.tgt; th.u = Math.min(1, th.u + dt / .16); th.x = lerp(th.hx, e.x, th.u); th.y = lerp(th.hy, e.y, th.u); th.z = lerp(th.hz, e.z + Math.min(30, e.hh * .5), th.u) + 14 * Math.sin(Math.PI * th.u); if (th.u >= 1 || e.dead) th.tgt = null; }
     }
     if (th.phase === 'back') {
-      th.u = Math.min(1, th.u + dt / S.tBack); const u = th.u, k = u * u, s = Math.sin(Math.PI * u), a = th.ghost ? { x: P.x, y: P.y, z: P.z + 40 } : anchor();
+      th.u = Math.min(1, th.u + dt / S.tBack); const u = th.u, k = u * u, s = Math.sin(Math.PI * u), a = catchAt();
       th.x = lerp(th.bx, a.x, k); th.y = lerp(th.by, a.y, k) - th.yOff * .7 * s; th.z = lerp(th.bz, a.z, k) + S.arcZ * .5 * s;
       if (u >= 1 || th.t > 4) { caught(th); return; }
     }
@@ -316,7 +319,7 @@
     // it strikes all it passes through: each foe once on the way out and once on the way back
     const back = th.phase === 'back', set = back ? th.hitBack : th.hitOut, reach = th.r + 5;
     for (const e of foes()) {
-      if (set.has(e) || !touches(e, th.x, th.y, th.z, reach)) continue;
+      if (set.has(e) || (!back && !ahead(e)) || !touches(e, th.x, th.y, th.z, reach)) continue;
       set.add(e); const dir = back ? -th.dir : th.dir;
       hitFoe(th, e, dir, 1, S.form === 'orb' ? { kb: 260 * S.kb, launch: 120, wall: 1 } : S.straight ? { kb: 220 * S.kb, wall: 1 } : { kb: 190 * S.kb });
       if (S.rehit) echoes.push({ e, dmg: Math.max(1, Math.round(th.dmg * .4 * (e.boss ? .5 : 1))), dir, m: { dmg: 1, kb: 40, power: 0, el: 1, pearl: 1 }, t: S.rehit });
