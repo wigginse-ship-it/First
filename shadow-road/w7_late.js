@@ -20,12 +20,13 @@
 // each the other's reflection, the right way round. A few lines, the credits, and the win card (ui.js, from the card's words).
 // ======================================================================================================
 // THE PEARL IN NEW GAME+: its switches. In a later cycle (save.cycle >= 1) the Pearl changes how the whole run plays
-// (pearl_ng.js): THE GROWING PEARL (grow) and CURRENTS, NOT FOOTSTEPS (currents), each its own mechanic. legacy is the
+// (pearl_ng.js): THE EVOLVING PEARL (evolve: its choices after each boss, its shot, its reforging into a weapon,
+// pearl_weapon.js) and CURRENTS, NOT FOOTSTEPS (currents), each its own mechanic. legacy is the
 // Pearl as it first was (the undertow and the splash, below), kept but switched off for now. The dev panel has a box for
 // each (devmode.js); in the console, pearlNG('currents', false) and the like. What is set there is remembered in this
 // browser, but it holds only in a game started from the dev panel (DEV.active): an ordinary game always plays with the
-// defaults, grow and currents on and legacy off, whatever was saved.
-const PEARL_NG_DEFAULT = Object.freeze({ grow: true, currents: true, legacy: false });
+// defaults, evolve and currents on and legacy off, whatever was saved.
+const PEARL_NG_DEFAULT = Object.freeze({ evolve: true, currents: true, legacy: false });
 const PEARL_NG_SAVED = (() => { const d = Object.assign({}, PEARL_NG_DEFAULT);
   try { const s = JSON.parse(localStorage.getItem('shadowroad-pearlng') || '{}'); for (const k in d) if (typeof s[k] === 'boolean') d[k] = s[k]; } catch (e) {}
   return d; })();

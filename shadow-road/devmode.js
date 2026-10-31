@@ -44,7 +44,7 @@
   function go(i, zone) {
     DEV.active = true; syncDev(); backup(); applyOpts(); close();
     save.stage = i; save.done = false; save.atChoice = false; save.branch = i >= 5 ? i : null;
-    if (window.PEARLNG) PEARLNG.devJump(i); // (with the Pearl in New Game+: grown about as far as an ordinary road would have it by this world, its shape to choose)
+    if (window.PEARLNG) PEARLNG.devJump(i); // (with the Pearl in New Game+: as many choices made as an ordinary road would have by this world, at random)
     persist(); play(i, zone);
     if (DEV.god && P) P.hp = maxHp();
   }
@@ -52,6 +52,16 @@
     DEV.active = true; syncDev(); backup(); applyOpts(); close();
     save.stage = 4; save.done = false; save.branch = null; save.atChoice = true; persist();
     if (window.BRANCH && BRANCH.resume) { play(4, 0); BRANCH.resume(); }
+  }
+
+  // the evolving Pearl's test buttons (pearl_ng.js, pearl_weapon.js): a dev game with the Pearl in New Game+ (started in
+  // the first world unless one is running), then the card, the picks, the reforging or a random weapon
+  function pearlDev(what) {
+    if (!window.PEARLW) return;
+    const running = typeof mode !== 'undefined' && mode === 'play' && DEV.active;
+    if (!running) { if (opts.relic !== 'all') opts.relic = 'pearl'; opts.cycle = Math.max(1, opts.cycle | 0); keepOpts(); if (window.pearlNG) pearlNG('evolve', true); go(0, 0); }
+    else close();
+    setTimeout(() => { const D = PEARLW.dev; const r = what === 'card' ? D.card() : what === 'auto' ? D.auto() : what === 'forge' ? D.reforge() : D.roll(); if (typeof r === 'string') console.log('pearl dev:', r); }, running ? 0 : 80);
   }
 
   // ---------------- the panel ----------------
@@ -84,9 +94,15 @@
         <label>Cycle <select data-o="cycle">${[0, 1, 2, 3].map(c => `<option value="${c}">${c ? 'NG+' + c : 'first'}</option>`).join('')}</select></label>
       </div>
       <div class="opts" title="The Pearl of Judgement in New Game+: pick the Pearl as the relic and a cycle of NG+1 or more">
-        <label><input type="checkbox" data-p="grow"> Pearl: growing pearl</label>
+        <label><input type="checkbox" data-p="evolve"> Pearl: evolving pearl</label>
         <label><input type="checkbox" data-p="currents"> Pearl: currents</label>
         <label><input type="checkbox" data-p="legacy"> Pearl: old whirlpools &amp; splash</label>
+      </div>
+      <div class="opts" title="The evolving Pearl (NG+ with the Pearl): each starts a dev game in the first world if none is running">
+        <button data-a="pearl-card">Pearl: next pick card</button>
+        <button data-a="pearl-auto">Pearl: auto-pick randomly</button>
+        <button data-a="pearl-forge">Pearl: force the reforge</button>
+        <button data-a="pearl-roll">Pearl: roll a random final weapon</button>
       </div>
       <div class="list"></div>
       <div class="foot"><span class="note">Jumping changes your save; the first jump keeps a copy of it.</span>
@@ -110,6 +126,7 @@
       const b = ev.target.closest('button'); if (!b) { if (ev.target === el) close(); return; }
       if (b.dataset.i !== undefined) { audioInit(); go(+b.dataset.i, +b.dataset.z); }
       else if (b.dataset.a === 'choice') { audioInit(); toChoice(); }
+      else if (b.dataset.a && b.dataset.a.startsWith('pearl-')) { audioInit(); pearlDev(b.dataset.a.slice(6)); }
       else if (b.dataset.a === 'restore') restore();
       else if (b.dataset.a === 'close') close();
     });

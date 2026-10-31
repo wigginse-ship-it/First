@@ -4,193 +4,527 @@
 // ------------------------------------------------------------------------------------------------------
 // In a later cycle (save.cycle >= 1) the Pearl changes how the whole run plays. Two mechanics, each with its own switch
 // (PEARL_NG, w7_late.js; the dev panel has a box for each):
-//   THE GROWING PEARL (PEARL_NG.grow)  the Pearl starts as a speck at his side and grows a layer from every foe that
-//        falls (save.pearlNG.pts; full grown at FULL, about the road's last world). Each world he chooses its shape, in
-//        the forge before he walks on or, if he did not, on a card as the world begins:
-//          blade   a spinning blade of nacre, close about him, that cuts whatever it touches
-//          moon    a big pearl on a wide, slow orbit that strikes hard; Attack + Heavy together flings it ahead
-//          mirror  a scallop of nacre held before him: it turns shots back on their throwers and parries a blow
-//                  every few seconds
-//          tide    a tide-bomb: every few seconds it drops, rolls to the nearest foe and bursts in a wave
-//        Damage, size and reach grow with it. It shows on the weapon card (its shape in a ring of gold that fills as it
-//        grows) and in the forge (the relic row, where the shape is chosen).
+//   THE EVOLVING PEARL (PEARL_NG.evolve)  the Pearl hangs at his shoulder, and when each of the first five worlds' boss
+//        falls it rises out of the boss and a card offers three traits, one on each of three axes:
+//          FORM     how it fights     edge (cuts), orb (thrown, comes back), shell (guards, counters), spire (long, thrusts)
+//          CURRENT  its element       tide (pushes, whirlpools), nacre (shards, bleeding), storm (chains), abyss (pulls, drains)
+//          TEMPER   its feel          quick, heavy, wild (random extra shots), patient (hold to charge, a perfect window)
+//        Offers lean toward the tags he already holds (about 60%); some traits are only offered once two tags are held.
+//        Every pick adds a part to the orb, and changes what Light + Heavy pressed together fires (the Pearl's shot):
+//        the Form sets the shot (a cutting disc, a thrown orb that comes back, a burst round him, a piercing lance),
+//        the Current its element, the Temper its cadence and charge. The progress is the save's (save.pearlEvo): it is
+//        never lost to a death or a retry, and it carries on into the next cycle if the road ran out first.
+//        After the fifth pick, at the start of the road's last world, it is reforged into a weapon of its own
+//        (pearl_weapon.js), kept for good: then the companion is gone, the weapon has the shot as its signature move.
 //   CURRENTS, NOT FOOTSTEPS (PEARL_NG.currents)  he does not walk: holding a direction lays a current under him and he
 //        glides on it, quick to gather speed and slow to lose it, turning in a curve. Dodge (or a double-tap) throws a
 //        strong current that flings him across the street (the dodge's own i-frames and counters are kept): whatever he
 //        passes through at speed is struck and thrown, the harder the faster; he comes off the screen's edges and off
 //        the big ones like a pinball. An attack at speed carries further and hits harder; a jump keeps the speed.
+//        It runs whenever the Pearl is his in New Game+, and whenever the reforged weapon is in his hand.
 // The old undertow and splash (PEARL_NG.legacy) are in w7_late.js, switched off.
-// Console: pearlNG('grow', false) etc. switches; PEARLNG.grow(n) adds n layers; PEARLNG.form('moon') sets the shape.
+// Console: pearlNG('evolve', false) etc. switches (dev games only); PEARLNG.take('undertow') adds a trait;
+// PEARLNG.autoPick() fills the five picks; PEARLNG.pick() shows the next card.
 // ======================================================================================================
 (() => {
   if (!window.W7 || typeof PEARL_NG === 'undefined') { console.error('pearl_ng.js: w7_late.js missing'); return; }
-  const SW = PEARL_NG;
+  const SW = PEARL_NG, WID = 'pearlw';
   const owned = () => !!(typeof save !== 'undefined' && save && save.w7relic && (save.cycle | 0) >= 1);
-  const growOn = () => owned() && SW.grow;
-  const curOn = () => owned() && SW.currents;
+  const forged = () => !!(typeof save !== 'undefined' && save && save.pearlForge && save.owned && save.owned[WID]);
+  const held = () => !!(P && (P.w === WID || P.pwProxy) && forged()); // (pwProxy: while the weapon's poses borrow another weapon's, pearl_weapon.js)
+  const evoOn = () => owned() && SW.evolve && !forged();
+  const curOn = () => !!SW.currents && (owned() || held());
   const foes = () => enemies.filter(e => !e.dead && e.state !== 'enter' && e.state !== 'w5morph' && e.state !== 'w5riddle');
   const sm = (k) => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
   const bub = (x, y, z, n, sp) => { if (W7.bubbles) W7.bubbles(x, y, z, n, sp); };
-  const live = () => typeof mode !== 'undefined' && mode === 'play' && P && stage;
+  const live = () => !!(typeof mode !== 'undefined' && mode === 'play' && P && stage);
+  const PCW = () => (typeof PC_WIN !== 'undefined' ? PC_WIN : .13);
+  const W = () => (typeof wMult === 'function' && P && save.wl[P.w] ? wMult(P.w) : 1); // (it strikes as hard as the weapon in hand is tempered)
 
   // ======================================================================================================
-  // THE GROWING PEARL: the save, the growth, the shape
+  // THE TRAITS
   // ======================================================================================================
-  const FULL = 170; // layers to full size: every foe one, an armored elite or a champion two, a boss eight (about five worlds' worth)
-  const EXPECT = [0, .1, .2, .46, .58, .74, .74, .74]; // how grown it is coming into each world, on an ordinary road (for dev jumps)
-  const FORMS = {
-    blade:  { name: 'The Nacre Blade', short: 'BLADE', desc: 'Spins close about you and cuts whatever it touches.' },
-    moon:   { name: 'The Pearl Moon', short: 'MOON', desc: 'Orbits wide and slow and strikes hard. Attack + Heavy together flings it ahead.' },
-    mirror: { name: 'The Mirror of the Sea', short: 'MIRROR', desc: 'Held before you: throws shots back and parries a blow every few seconds.' },
-    tide:   { name: 'The Tide-Bomb', short: 'TIDE-BOMB', desc: 'Every few seconds it rolls to the nearest foe and bursts in a wave.' },
-  };
-  const FORM_ORDER = ['blade', 'moon', 'mirror', 'tide'];
-  function PS() { // save.pearlNG: made fresh in each new cycle (and the first time the Pearl wakes)
-    let s = save.pearlNG;
-    if (!s || typeof s !== 'object' || s.cyc !== (save.cycle | 0)) s = save.pearlNG = { cyc: save.cycle | 0, pts: 0, form: null, formFor: -1 };
-    if (!FORMS[s.form]) s.form = null;
+  const AX = { form: ['edge', 'orb', 'shell', 'spire'], current: ['tide', 'nacre', 'storm', 'abyss'], temper: ['quick', 'heavy', 'wild', 'patient'] };
+  const AXNAME = { form: 'FORM', current: 'CURRENT', temper: 'TEMPER' };
+  const TAGNAME = { edge: 'Edge', orb: 'Orb', shell: 'Shell', spire: 'Spire', tide: 'Tide', nacre: 'Nacre', storm: 'Storm', abyss: 'Abyss', quick: 'Quick', heavy: 'Heavy', wild: 'Wild', patient: 'Patient' };
+  // id, axis, tag (or req: the two tags that must be held before it is offered), name, one line, the part it adds, words for the weapon's name
+  const TRAITS = [
+    // ---- FORM ----
+    { id: 'crescent', ax: 'form', tag: 'edge', name: 'Nacre Crescent', part: 'crescent', adj: ['Crescent', 'Reaping'],
+      desc: 'A crescent of mother-of-pearl grows from it. Its shot becomes a spinning disc that cuts through two foes more.' },
+    { id: 'serrate', ax: 'form', tag: 'edge', name: 'Cockle Lip', part: 'serrate', adj: ['Notched', 'Biting'],
+      desc: 'Its rim is notched like a cockle\'s lip: every cut it makes bites twice, a heartbeat apart.' },
+    { id: 'moon', ax: 'form', tag: 'orb', name: 'The Drowned Moon', part: 'ring', adj: ['Moonlit', 'Drowned'],
+      desc: 'It swells into a ringed moon, thrown out and called back, striking all on the way, both ways, hard.' },
+    { id: 'tether', ax: 'form', tag: 'orb', name: 'Kelp-Gold Tether', part: 'chain', adj: ['Tethered', 'Long-Chained'],
+      desc: 'A chain of kelp-gold binds it to your hand: everything it does reaches a third further.' },
+    { id: 'coral', ax: 'form', tag: 'shell', name: 'Coral Guard', part: 'coral', adj: ['Coral', 'Warding'],
+      desc: 'Red coral grows over it: every six seconds it catches a blow meant for you and answers it.' },
+    { id: 'scallop', ax: 'form', tag: 'shell', name: 'Scallop Mirror', part: 'scallop', adj: ['Mirrored', 'Scalloped'],
+      desc: 'A fan of shell held before you throws shots back; its own shot bursts round you and turns every shot in reach.' },
+    { id: 'narwhal', ax: 'form', tag: 'spire', name: 'Narwhal Spire', part: 'horn', adj: ['Spiralled', 'Piercing'],
+      desc: 'A long spiralled horn: its shot flies as a lance through the whole line, and reaches far.' },
+    { id: 'tines', ax: 'form', tag: 'spire', name: 'Trident Tines', part: 'tines', adj: ['Three-Tined', 'Forked'],
+      desc: 'Two more tines branch from it: its lance flies as three prongs, side by side down the street.' },
+    // ---- CURRENT ----
+    { id: 'undertow', ax: 'current', tag: 'tide', name: 'Undertow', part: 'swirl', adj: ['Dragging', 'Ebbing'],
+      desc: 'What it strikes, it leaves in a whirlpool that drags the crowd in and grinds at them.' },
+    { id: 'breaker', ax: 'current', tag: 'tide', name: 'Breaker', part: 'foam', adj: ['Breaking', 'Foaming'],
+      desc: 'Its blows shove like surf; a heavy one runs a breaking wave on down the street.' },
+    { id: 'shardfall', ax: 'current', tag: 'nacre', name: 'Shardfall', part: 'shards', adj: ['Splintered', 'Nacreous'],
+      desc: 'Each hit throws splinters of nacre at the two foes nearest the one struck.' },
+    { id: 'weeping', ax: 'current', tag: 'nacre', name: 'Weeping Nacre', part: 'drops', adj: ['Weeping', 'Rose-Bled'],
+      desc: 'Its cuts weep: whatever it strikes bleeds for a few seconds after.' },
+    { id: 'static', ax: 'current', tag: 'storm', name: 'Static Pearl', part: 'static', adj: ['Singing', 'Crackling'],
+      desc: 'Lightning leaps from every hit to two more foes.' },
+    { id: 'squall', ax: 'current', tag: 'storm', name: 'Eye of the Squall', part: 'cloud', adj: ['Thundering', 'Squalling'],
+      desc: 'Every fourth hit calls a bolt down out of the sky onto the one struck.' },
+    { id: 'blacktide', ax: 'current', tag: 'abyss', name: 'Black Tide', part: 'halo', adj: ['Black', 'Fathomless'],
+      desc: 'Its blows drag the foes near them in toward the one struck.' },
+    { id: 'drowning', ax: 'current', tag: 'abyss', name: 'The Drowning Deep', part: 'core', adj: ['Drinking', 'Drowning'],
+      desc: 'It drinks: every hit gives you back a little health.' },
+    // ---- TEMPER ----
+    { id: 'quickwater', ax: 'temper', tag: 'quick', name: 'Quickwater', part: 'ribbons', adj: ['Darting', 'Quicksilver'],
+      desc: 'It fires twice as often, lighter shots; the weapon it becomes strikes quicker.' },
+    { id: 'riptide', ax: 'temper', tag: 'quick', name: 'Riptide Reflex', part: 'fin', adj: ['Riptide', 'Restless'],
+      desc: 'Out of every dodge it fires on its own, for nothing.' },
+    { id: 'deep', ax: 'temper', tag: 'heavy', name: 'Deep Weight', part: 'cage', adj: ['Sunken', 'Leaden'],
+      desc: 'Slow, huge shots that hit half again as hard and throw what they strike.' },
+    { id: 'anchor', ax: 'temper', tag: 'heavy', name: 'Sunken Anchor', part: 'anchor', adj: ['Anchored', 'Fathom-Heavy'],
+      desc: 'Its shots land like a dropped anchor: a shockwave where they strike.' },
+    { id: 'moonstruck', ax: 'temper', tag: 'wild', name: 'Moonstruck', part: 'charm', adj: ['Moonstruck', 'Wayward'],
+      desc: 'Now and then it fires two or three at once, scattered.' },
+    { id: 'rogue', ax: 'temper', tag: 'wild', name: 'Rogue Wave', part: 'wave', adj: ['Rogue', 'Wild'],
+      desc: 'Any hit may wake a Current you have not chosen.' },
+    { id: 'still', ax: 'temper', tag: 'patient', name: 'Still Water', part: 'stillring', adj: ['Still', 'Waiting'],
+      desc: 'Hold Light + Heavy to gather it; let go in the gleam for a perfect shot, a sure critical.' },
+    { id: 'slack', ax: 'temper', tag: 'patient', name: 'Slack Tide', part: 'dial', adj: ['Slack-Water', 'Patient'],
+      desc: 'Every perfect release of a charged Heavy fires the Pearl as well, for nothing.' },
+    // ---- COMBINED (offered only once both tags are held) ----
+    { id: 'thunder', ax: 'form', req: ['edge', 'storm'], name: 'Thunder Lamella', part: 'thunder', adj: ['Thunder-Edged', 'Storm-Struck'],
+      desc: 'Its edges are struck with lightning: every cut chains a bolt, and its disc flies faster.' },
+    { id: 'maelstrom', ax: 'form', req: ['orb', 'tide'], name: 'Maelstrom Moon', part: 'maelstrom', adj: ['Maelstrom', 'Whirling'],
+      desc: 'Thrown, it drags whirlpools along behind it all the way out and back.' },
+    { id: 'corallance', ax: 'current', req: ['spire', 'nacre'], name: 'Coral Lance', part: 'corallance', adj: ['Coral-Tipped', 'Branching'],
+      desc: 'At the end of its flight the lance bursts into a spray of nacre shards.' },
+    { id: 'heldthunder', ax: 'temper', req: ['patient', 'storm'], name: 'Held Thunder', part: 'bolt', adj: ['Gathered', 'Thunder-Held'],
+      desc: 'A perfect shot brings lightning down on every foe near where it lands.' },
+  ];
+  const TR = {}; for (const t of TRAITS) { t.tags = {}; if (t.tag) t.tags[t.tag] = 1; if (t.req) for (const g of t.req) t.tags[g] = 1; TR[t.id] = t; }
+  const CUR_IDS = ['undertow', 'breaker', 'shardfall', 'weeping', 'static', 'squall', 'blacktide', 'drowning'];
+  const PICKS = 5; // after the first five worlds' bosses
+
+  // the tags held, each axis's tags strongest first (a tie goes to the one picked first)
+  function prof(picks) {
+    const sc = {}, first = {}, has = new Set(picks.filter(id => TR[id]));
+    picks.forEach((id, i) => { const T = TR[id]; if (!T) return; for (const g in T.tags) { sc[g] = (sc[g] || 0) + T.tags[g]; if (first[g] === undefined) first[g] = i; } });
+    const top = (ax) => AX[ax].filter(g => sc[g] > 0).sort((a, b) => sc[b] - sc[a] || first[a] - first[b]);
+    return { sc, first, has, form: top('form'), current: top('current'), temper: top('temper'), n: has.size };
+  }
+  // the three on a card: one for each axis. A combined trait whose two tags are held comes up often; otherwise about
+  // 60% lean to the axis's strongest tag, the rest open a new direction. Seeded per save and per pick, so it is fixed
+  function offers(picks, seed) {
+    const r = mulberry(((seed | 0) ^ Math.imul(picks.length + 1, 0x9E3779B1)) >>> 0), pr = prof(picks), out = [];
+    const free = (t) => !pr.has.has(t.id) && !out.includes(t) && (!t.req || t.req.every(g => pr.sc[g] > 0));
+    const one = (arr) => arr[Math.floor(r() * arr.length)];
+    for (const ax of ['form', 'current', 'temper']) {
+      const pool = TRAITS.filter(t => t.ax === ax && free(t)), combos = pool.filter(t => t.req), plain = pool.filter(t => !t.req);
+      let c = combos.length && r() < .8 ? one(combos) : null;
+      if (!c) {
+        const top = pr[ax][0], mine = plain.filter(t => t.tag === top), other = plain.filter(t => t.tag !== top);
+        const lean = top && mine.length && (r() < .6 || !other.length);
+        c = lean ? one(mine) : other.length ? one(other) : mine.length ? one(mine) : null;
+      }
+      if (!c) { const any = TRAITS.filter(free); if (any.length) c = one(any); }
+      if (c) out.push(c);
+    }
+    return out;
+  }
+
+  // ---------------- the save: never reset by a death, a retry or a new cycle ----------------
+  function ES() {
+    let s = save.pearlEvo;
+    if (!s || typeof s !== 'object') s = save.pearlEvo = { seed: (Math.random() * 2147483647) | 0, picks: [], got: {} };
+    if (!Array.isArray(s.picks)) s.picks = [];
+    if (s.picks.some(id => !TR[id])) s.picks = s.picks.filter(id => TR[id]);
+    if (!s.got || typeof s.got !== 'object') s.got = {};
+    if (!Number.isFinite(s.seed)) s.seed = 1;
     return s;
   }
-  const G = () => clamp(PS().pts / FULL, 0, 1);
-  const form = () => PS().form || 'blade';
-  const layers = () => Math.floor(PS().pts);
-  const W = () => (typeof wMult === 'function' && P ? wMult(P.w) : 1); // (it strikes as hard as the weapon in hand is tempered)
+  const picksNow = () => (held() ? (save.pearlForge.picks || []) : evoOn() ? ES().picks : []);
+  const pickKey = () => (save.cycle | 0) + ':' + stageIdx;
 
-  // ---------------- the state of the orb in the street ----------------
-  const O = { a: 0, x: 0, y: 0, z: 0, r: 2, on: false, cd: new WeakMap(), moon: null, moonCd: 0, parryCd: 0, flash: 0,
-    bomb: { st: 'home', t: 2, x: 0, y: 0, z: 0, vz: 0, tgt: null, re: 1, spin: 0 }, waves: [], stage: null, zone: -1, lastL: -1e9, lastH: -1e9, pop: 0 };
+  // ======================================================================================================
+  // THE SHOT: what Light + Heavy fires, from the picks
+  // ======================================================================================================
+  const KIND = { edge: 'disc', orb: 'orb', shell: 'burst', spire: 'lance' };
+  const PAL = {
+    pearl: { b: ['#FFFFFF', '#F4FBF7', '#D0EDE3', '#8CC6B9', '#4C8A84'], metal: '#D6AE58', metalLt: '#F2D68A', glow: '190,245,235', haft: '#2E5E5C', blade: '#DDF2EA', bladeDk: '#7CC4B4', edge: '#FFFFFF', accent: '#F6C2D4', trail: 'rgba(200,245,235,.95)' },
+    tide: { b: ['#FFFFFF', '#E2FAF3', '#9FE2D3', '#3FA39C', '#195560'], metal: '#D6AE58', metalLt: '#F2D68A', glow: '120,230,210', haft: '#1A4650', blade: '#C6F0E5', bladeDk: '#3A948F', edge: '#F2FFFC', accent: '#7FD8C8', trail: 'rgba(126,216,200,.95)' },
+    nacre: { b: ['#FFFFFF', '#FFF3F6', '#F5D3DD', '#D49EB0', '#8A5468'], metal: '#E4C27A', metalLt: '#FFF0C0', glow: '255,205,222', haft: '#5A2C3A', blade: '#FCEEF2', bladeDk: '#C68CA2', edge: '#FFFFFF', accent: '#F6C2D4', trail: 'rgba(250,206,222,.95)' },
+    storm: { b: ['#FFFFFF', '#EEF1FF', '#C2CAFF', '#7A84DE', '#2E3384'], metal: '#E2D48A', metalLt: '#FFF6C8', glow: '178,190,255', haft: '#22244A', blade: '#DAE0FF', bladeDk: '#6670CC', edge: '#FFFFFF', accent: '#FFF09A', trail: 'rgba(200,206,255,.95)' },
+    abyss: { b: ['#A8FFEA', '#5E6898', '#393266', '#211A3E', '#0B0916'], metal: '#9A8CD8', metalLt: '#D6CEFF', glow: '110,224,192', haft: '#15121E', blade: '#57508A', bladeDk: '#1E1A38', edge: '#86F2D6', accent: '#6FE0C0', trail: 'rgba(110,224,192,.95)' },
+  };
+  const SHOTNAME = { pearl: 'Pearl Shot', disc: 'Nacre Disc', orb: 'Pearl Moon', burst: 'Shell Burst', lance: 'Pearl Lance' };
+  const CURWORD = { tide: 'Tidal', nacre: 'Nacre', storm: 'Storm', abyss: 'Abyssal' };
+  function stats(picks, wpn) {
+    const pr = prof(picks), f = pr.has, sc = pr.sc, n = Math.min(PICKS, picks.length);
+    const form = pr.form[0] || null, tmp = pr.temper[0] || null, cur = pr.current[0] || null;
+    const S = { picks: picks.slice(), pr, f, n, wpn: !!wpn, form, cur, cur2: pr.current[1] || null, tmp, kind: form ? KIND[form] : 'pearl',
+      dmg: 7 + 4.5 * n + (wpn ? 7 : 0), size: 1 + .06 * n, cd: 1.05, speed: 1, range: 1 + (f.has('tether') ? .33 : 0), pierce: 0,
+      tines: f.has('tines') ? 3 : 1, rehit: f.has('serrate') ? .12 : 0, power: 1, kb: 1, charge: tmp === 'patient', extraP: 0,
+      edgeN: sc.edge || 0, shellN: sc.shell || 0, pal: PAL[cur || 'pearl'] };
+    if (S.kind === 'disc') S.pierce = 1 + 2 * (sc.edge || 0);
+    if (f.has('thunder')) S.speed *= 1.3;
+    if (f.has('moon')) { S.size *= 1.3; S.kb *= 1.4; }
+    if (f.has('narwhal')) S.range *= 1.4;
+    if (f.has('breaker')) S.kb *= 1.5;
+    // the Temper on top sets the cadence; the others add their touch
+    if (tmp === 'quick') { S.cd = .5; S.dmg *= .62; }
+    else if (tmp === 'heavy') { S.cd = 1.7; S.dmg *= 1.6; S.size *= 1.4; S.power = 2; S.kb *= 1.3; }
+    else if (tmp === 'wild') { S.cd = .95; S.extraP = .3; }
+    else if (tmp === 'patient') { S.cd = .75; }
+    if (f.has('quickwater') && tmp !== 'quick') S.cd *= .8;
+    if (f.has('deep') && tmp !== 'heavy') { S.dmg *= 1.15; S.power = 2; }
+    if (f.has('moonstruck')) S.extraP = Math.max(S.extraP, .35);
+    if (f.has('still') && tmp !== 'patient') S.charge = true;
+    S.name = cur ? CURWORD[cur] + ' ' + { pearl: 'Pearl', disc: 'Disc', orb: 'Moon', burst: 'Burst', lance: 'Lance' }[S.kind] : SHOTNAME[S.kind];
+    return S;
+  }
+  let statKey = '', statVal = null;
+  function curStats() {
+    const ph = held() ? 'w' : evoOn() ? 'e' : '';
+    if (!ph) return null;
+    const pk = picksNow(), key = ph + pk.join(',');
+    if (key !== statKey) { statKey = key; statVal = stats(pk, ph === 'w'); }
+    return statVal;
+  }
+
+  // ---------------- the state of the orb, its shots and the water they leave ----------------
+  const O = { a: 0, x: 0, y: 0, z: 0, r: 3, on: false, pop: 0, flash: 0, cd: 0, chg: null, gleamed: false, lastL: -1e9, lastH: -1e9,
+    shots: [], pools: [], rise: null, parryCd: 0, reflCd: 0, ripCd: 0, squall: 0, stage: null, zone: -1 };
   const CUR = { vx: 0, vy: 0, trail: [], clock: 0, cd: new WeakMap(), wasRun: false, glide: false, lay: 0, layA: 0, bounceT: 0 };
   function resetPlace() {
-    O.moon = null; O.waves = []; O.bomb.st = 'home'; O.bomb.t = 1.5; O.bomb.re = 1; O.flash = 0; O.cd = new WeakMap();
+    O.shots = []; O.pools = []; O.chg = null; O.flash = 0; O.rise = null;
     CUR.vx = CUR.vy = 0; CUR.trail = []; CUR.cd = new WeakMap(); CUR.wasRun = false;
-    if (P) { O.x = P.x; O.y = P.y; O.z = P.z + 30; }
+    if (P) { O.x = P.x - P.facing * 21; O.y = P.y; O.z = P.z + 66; }
   }
   const cool = (map, e, t) => { const n = CUR.clock; if ((map.get(e) || -1e9) > n) return false; map.set(e, n + t); return true; };
-
-  // every foe that falls adds a layer
-  { const _kill = killEnemy; killEnemy = function (e, dir, m) { const was = e.dead; _kill(e, dir, m);
-    if (!was && e.dead && growOn() && live()) { const s = PS(), n0 = Math.floor(s.pts); s.pts = Math.min(FULL * 1.25, s.pts + (e.boss ? 8 : e.elite || e.champ ? 2 : 1));
-      O.pop = 1; if (Math.floor(s.pts / 10) > Math.floor(n0 / 10) && s.pts <= FULL) floatText(P.x, P.y, P.z + 92, 'THE PEARL GROWS', '#BFF0E4', 11); } }; }
-
-  // the light, frequent cut (blade, moon's orbit pass): a white number and a flinch, never a critical, no hit freeze
-  function nick(e, d, dir, push) {
+  function nick(e, d, dir, push) { // a light, frequent grind: a white number and a flinch, never a critical, no hit freeze
     if (e.dead || d <= 0) return;
     e.hp -= d; e.flash = .06; floatText(e.x, e.y, e.z + e.hh + 8, String(d), '#FFFFFF', 12);
     if (!e.boss && push && !e.air) e.x += dir * push;
     if (e.hp <= 0) killEnemy(e, dir, { el: 1, kb: 160 });
   }
-  const hard = (e, d, dir, m) => { if (!e.dead) strike(e, d, dir, Object.assign({ dmg: d, el: 1, pearl: 1 }, m), true); }; // (the heavy ones: a real blow, and it can crit)
   function touches(e, x, y, z, r) {
     const down = (e.def && e.def.reachDown) || 0;
     return Math.abs(e.x - x) < e.hw + r && Math.abs(e.y - y) < 12 + r * .5 + e.hw * .3 && zOverlap(z - r, r * 2, e.z - down, e.hh + down);
   }
-  const nearestFoe = (x, y, range) => { let best = null, bd = range; for (const e of foes()) { const d = Math.hypot(e.x - x, (e.y - y) * 1.6); if (d < bd && e.x > camX - 20 && e.x < camX + VW + 20) { bd = d; best = e; } } return best; };
+  const near = (x, y, range, not) => foes().filter(o => o !== not && Math.hypot(o.x - x, (o.y - y) * 1.6) < range).sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
+  function sparkle(x, y, z, n, cols) { for (let i = 0; i < n && parts.length < 420; i++) { const a = rand(0, TAU), v = rand(40, 140);
+    parts.push({ x, y, z, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .3, vz: rand(20, 120), life: .35, max: .35, col: pick(cols || ['#FFFFFF', '#D8F4EC', '#F2D68A']), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 6 }); } }
+  const palCols = (S) => [S.pal.edge, S.pal.b[2], S.pal.metalLt];
 
-  // ---------------- each shape, stepped ----------------
-  function pearlStep(dt) {
-    const g = G(), k = form(), gs = Math.pow(g, .7), t = CUR.clock;
-    O.flash = Math.max(0, O.flash - dt); O.pop = Math.max(0, O.pop - dt * 3);
-    O.moonCd = Math.max(0, O.moonCd - dt); O.parryCd = Math.max(0, O.parryCd - dt);
-    const down = ['down', 'dead'].includes(P.state);
-    const bob = Math.sin(t * 2.6) * 2;
-    if (k === 'blade') {
-      O.a += dt * (6.5 + 2 * g); const R = 24 + 18 * gs; O.r = 2.2 + 4.6 * gs;
-      O.x = P.x + Math.cos(O.a) * R; O.y = P.y + Math.sin(O.a) * R * .42; O.z = P.z + 30 + bob * .5;
-      if (!down) { const reach = O.r * 2.4, d = Math.max(1, Math.round((3 + 10 * g) * W()));
-        for (const e of foes()) if (touches(e, O.x, O.y, O.z, reach) && cool(O.cd, e, .24)) { const dir = Math.sign(e.x - P.x) || P.facing; nick(e, e.boss ? Math.max(1, Math.round(d * .6)) : d, dir, 3);
-          sparkle(O.x, O.y, O.z, 4); if (Math.random() < .5) sfx('slice', .2); } }
-    } else if (k === 'moon') {
-      O.r = 3.5 + 9.5 * gs;
-      if (!O.moon) { O.a += dt * (2.4 + .5 * g); const R = 48 + 30 * gs, tx = P.x + Math.cos(O.a) * R, ty = P.y + Math.sin(O.a) * R * .4, tz = P.z + 34 + bob;
-        const q = Math.min(1, dt * 10); O.x += (tx - O.x) * q; O.y += (ty - O.y) * q; O.z += (tz - O.z) * q;
-        if (!down) { const d = Math.max(1, Math.round((8 + 26 * g) * W()));
-          for (const e of foes()) if (touches(e, O.x, O.y, O.z, O.r + 4) && cool(O.cd, e, .9)) { const dir = Math.sign(e.x - P.x) || P.facing; hard(e, e.boss ? Math.round(d * .6) : d, dir, { kb: 150 + 140 * g, power: 1 }); sparkle(O.x, O.y, O.z, 8); } } }
-      else moonFly(dt, g);
-    } else if (k === 'mirror') {
-      O.r = 5 + 8 * gs;
-      const tx = P.x + P.facing * (21 + 5 * gs), ty = P.y + 1, tz = P.z + 30 + bob * .4, q = Math.min(1, dt * 16);
-      O.x += (tx - O.x) * q; O.y += (ty - O.y) * q; O.z += (tz - O.z) * q;
-      if (!down) for (const p of projs) { if (p.owner !== 'e' || p.ground || p.orbit) continue;
-        if (Math.abs(p.x - O.x) < O.r * .6 + 10 && Math.abs(p.y - O.y) < 20 && Math.abs((p.z || 0) - O.z) < O.r + 22) reflect(p, g); }
-    } else if (k === 'tide') {
-      O.r = 2.6 + 5.4 * gs; bombStep(dt, g, bob);
-    }
-    // the waves of the tide-bomb run out and fade
-    for (const w of O.waves) w.t += dt;
-    O.waves = O.waves.filter(w => w.t < w.max);
+  // ---------------- firing ----------------
+  function fire(S, o = {}) {
+    if (!P || !S) return;
+    const dir = P.facing, fromOrb = O.on && !held();
+    const x0 = fromOrb ? O.x : P.x + dir * 26, y0 = P.y, z0 = fromOrb ? O.z : P.z + 36;
+    const dmg = S.dmg * W() * (o.mul || 1), extra = S.extraP && Math.random() < S.extraP ? (Math.random() < .4 ? 2 : 1) : 0;
+    O.flash = .3; O.pop = Math.max(O.pop, .7);
+    if (S.kind === 'burst') spawn(S, P.x, P.y, P.z + 30, dir, dmg, o.perfect, 1 + .25 * extra);
+    else for (let i = 0; i <= extra; i++) { const off = i ? (i % 2 ? 1 : -1) * 16 * Math.ceil(i / 2) : 0; spawn(S, x0, clamp(y0 + off, FLOOR_TOP + 6, FLOOR_BOT), z0, dir, dmg * (i ? .6 : 1), o.perfect); }
+    sfx(S.power >= 2 ? 'whoosh' : 'swing'); sfx('hit-crystal', .3);
+    if (extra) floatText(P.x, P.y, P.z + 88, 'MOONSTRUCK', '#F2D68A', 11);
+    sparkle(x0, y0, z0, 6, palCols(S));
   }
-  function sparkle(x, y, z, n) { for (let i = 0; i < n && parts.length < 420; i++) { const a = rand(0, TAU), v = rand(40, 140);
-    parts.push({ x, y, z, vx: Math.cos(a) * v, vy: Math.sin(a) * v * .3, vz: rand(20, 120), life: .35, max: .35, col: pick(['#FFFFFF', '#D8F4EC', '#F2D68A']), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 6 }); } }
-  // the moon, flung: out ahead and back, striking everything on the way once
-  function flingMoon() {
-    if (O.moon || O.moonCd > 0) return false;
-    const g = G(); O.moon = { x: O.x, y: P.y, z: P.z + 34, dir: P.facing, d: 0, out: 230 + 150 * g, back: false, hit: new Set(), t: 0 };
-    O.moonCd = 2.4 - .8 * g; sfx('whoosh'); sfx('hit-crystal', .3); floatText(P.x, P.y, P.z + 90, 'MOONFLING', '#BFF0E4', 12); return true;
+  function spawn(S, x, y, z, dir, dmg, perfect, big = 1) {
+    if (O.shots.length > 28) O.shots.shift();
+    const s = { S, k: S.kind, x, y, z, dir, dmg, perfect: !!perfect, t: 0, d: 0, hit: new Map(), spin: 0, n: 0, pools: 0 };
+    const sz = S.size;
+    if (s.k === 'pearl') { s.r = 3.6 * sz; s.v = 480 * S.speed; s.max = 260 * S.range; }
+    else if (s.k === 'disc') { s.r = 6.5 * sz; s.v = 520 * S.speed; s.max = 300 * S.range; }
+    else if (s.k === 'orb') { s.r = 6 * sz; s.v = 600 * S.speed; s.max = 240 * S.range; s.back = false; }
+    else if (s.k === 'lance') { s.r = 4 * sz; s.v = 950 * S.speed; s.max = 300 * S.range; s.len = 40 * sz + (S.f.has('narwhal') ? 16 : 0); }
+    else if (s.k === 'burst') { s.R = (66 + 14 * S.shellN + (S.f.has('scallop') ? 18 : 0)) * Math.sqrt(sz) * big * S.range; s.max = .34; P.inv = Math.max(P.inv, .3); }
+    O.shots.push(s); return s;
   }
-  function moonFly(dt, g) {
-    const m = O.moon; m.t += dt;
-    if (!m.back) { const v = 600 * dt; m.x += m.dir * v; m.d += v; m.y += (P.y - m.y) * Math.min(1, dt * 3); m.z += ((P.z + 34) - m.z) * Math.min(1, dt * 5);
-      if (m.d >= m.out || m.x < leftWall() - 20 || m.x > rightWall() + 20) { m.back = true; m.hit = new Set(); } }
-    else { const tx = P.x, ty = P.y, tz = P.z + 34, dx = tx - m.x, dy = ty - m.y, dz = tz - m.z, d = Math.hypot(dx, dy, dz), v = Math.min(d, 760 * dt);
-      m.x += dx / (d || 1) * v; m.y += dy / (d || 1) * v; m.z += dz / (d || 1) * v;
-      if (d < 16 || m.t > 3) { O.moon = null; O.x = m.x; O.y = m.y; O.z = m.z; O.a = Math.atan2((m.y - P.y) / .4, m.x - P.x); sfx('hit-crystal', .2); return; } }
-    O.x = m.x; O.y = m.y; O.z = m.z;
-    const d = Math.max(1, Math.round((9 + 26 * g) * W()));
-    for (const e of foes()) { if (m.hit.has(e) || !touches(e, m.x, m.y, m.z, O.r + 8)) continue; m.hit.add(e);
-      hard(e, e.boss ? Math.round(d * .6) : d, m.back ? -m.dir : m.dir, { kb: 300 + 160 * g, launch: 140, power: 2, wall: 1 }); sparkle(m.x, m.y, m.z, 12); }
-    if (Math.random() < dt * 50) parts.push({ x: m.x - m.dir * 6, y: m.y, z: m.z + rand(-3, 3), vx: -m.dir * 40, vy: 0, vz: rand(-10, 20), life: .3, max: .3, col: pick(['#FFFFFF', '#CFEDE3', '#F2D68A']), size: rand(1.4, 2.4), shape: 'star', rot: 0, vr: 3 });
+  function shard(from, e, dmg, S) { // a splinter of nacre, thrown at one foe
+    if (O.shots.length > 34) return;
+    O.shots.push({ S, k: 'shard', x: from.x, y: from.y, z: (from.z || 0) + 26, tgt: e, dmg, t: 0, d: 0, hit: new Map(), r: 2.6, v: 430, max: 260, dir: Math.sign(e.x - from.x) || 1, spin: rand(0, 6) });
   }
-  // the mirror: a shot that reaches it goes back the way it came, harder
-  function reflect(p, g) {
-    if (p.big && g < .5) return false;
-    if (p.big) { p.life = 0; sparkle(p.x, p.y, p.z || 30, 12); sfx('hit-crystal'); O.flash = .3; return true; } // (a great shot is only stopped)
-    p.owner = 'p'; p.vx = P.facing * Math.max(280, Math.abs(p.vx || 0) * 1.3); p.vy = 0; p.vz = 0; p.hit = new Set(); p.dmg = Math.round((p.dmg || 10) * (1.5 + 1.5 * g)); p.life = 1.6; p.reflected = true; p.col = '#BFF0E4';
-    floatText(O.x, O.y, O.z + 24, 'THROWN BACK', '#BFF0E4', 12); sfx('hit-crystal'); O.flash = .35; sparkle(O.x, O.y, O.z, 10);
-    fx.push({ kind: 'ring', x: O.x, y: O.y, z: O.z, t: .25, max: .25, r: 18 + O.r, col: '#BFF0E4' });
+  // a foe struck by the Pearl: a real blow (it can crit), then what the Current does
+  function hitFoe(s, e, dir, mul = 1, extra) {
+    const S = s.S, d = Math.max(1, Math.round(s.dmg * mul * (e.boss ? .6 : 1))), hp0 = e.hp;
+    strike(e, d, dir, Object.assign({ dmg: d, el: 1, pearl: 1, kb: 170 * S.kb, power: s.k === 'shard' ? 0 : S.power, perfect: s.perfect ? 1 : 0, launch: s.k === 'orb' && S.f.has('moon') ? 140 : 0, wall: S.power >= 2 ? 1 : 0 }, extra), true);
+    if (e.hp < hp0 || e.dead) { procs(s, e, d, dir); return true; }
+    return false;
+  }
+  // ---------------- the Currents, on a hit ----------------
+  const PROC = {
+    undertow(s, e, d) { if (s.pools < (s.k === 'burst' ? 2 : 1)) { s.pools++; addPool(e.x, e.y, d, s.S); } },
+    breaker(s, e, d, dir) {
+      if (!e.dead && !e.boss) e.vx = (e.vx || 0) + dir * 140;
+      if (!s.waved && (s.S.power >= 2 || s.perfect || s.big)) { s.waved = 1; projs.push({ owner: 'p', x: e.x, y: e.y, z: 0, vx: dir * 300, dmg: Math.max(1, Math.round(d * .5)), life: .7, hit: new Set([e]), wave: 1, quake: true }); }
+    },
+    shardfall(s, e, d) { for (const o of near(e.x, e.y, 170, e).slice(0, 2)) shard(e, o, Math.max(1, d * .35), s.S); },
+    weeping(s, e, d) { if (e.dead) return; e.bleedPer = Math.max(e.bleed > 0 ? e.bleedPer || 0 : 0, Math.max(1, d * .09)); e.bleed = 2.4; e.bleedTick = e.bleedTick > 0 ? e.bleedTick : .4; },
+    static(s, e, d, dir) {
+      const cz = e.z + e.hh * .5;
+      for (const o of near(e.x, e.y, 140, e).slice(0, 2)) {
+        fx.push({ kind: 'bolt', x: e.x, y: e.y, z: cz, x2: o.x, y2: o.y, z2: o.z + o.hh * .5, t: .2, max: .2, col: '#C8D0FF', seed: Math.random() * 99 });
+        const q = Math.max(1, Math.round(d * .4)); strike(o, q, Math.sign(o.x - e.x) || dir, { dmg: q, kb: 60, power: 0, el: 1, pearl: 1 }, true);
+      }
+      if (Math.random() < .5) sfx('shoot');
+    },
+    squall(s, e, d, dir) {
+      O.squall++; if (O.squall % 4 || e.dead) return;
+      fx.push({ kind: 'bolt', x: e.x + rand(-20, 20), y: e.y, z: e.z + 260, x2: e.x, y2: e.y, z2: e.z + e.hh * .5, t: .28, max: .28, col: '#E8ECFF', seed: Math.random() * 99 });
+      fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .3, max: .3, r: 40, col: '#C8D0FF', flat: 1 });
+      const q = Math.max(1, Math.round(d * .8)); strike(e, q, dir, { dmg: q, kb: 90, launch: 200, power: 2, el: 1, pearl: 1 }, true); sfx('shoot'); flashT = Math.max(flashT, .04);
+    },
+    blacktide(s, e) {
+      if (s.pulled) return; s.pulled = 1;
+      for (const o of near(e.x, e.y, 120, e)) if (!o.boss) { o.x += (e.x - o.x) * .45; o.y += (e.y - o.y) * .45; }
+      for (let i = 0; i < 8 && parts.length < 420; i++) { const a = rand(0, TAU); parts.push({ x: e.x + Math.cos(a) * 40, y: e.y + Math.sin(a) * 12, z: rand(4, 40), vx: -Math.cos(a) * 120, vy: -Math.sin(a) * 30, vz: 0, life: .35, max: .35, col: pick(['rgba(40,28,80,.85)', 'rgba(110,224,192,.8)']), size: rand(2, 4), shape: 'puff', rot: 0, vr: 0 }); }
+    },
+    drowning(s, e, d) { if (P.hp > 0) P.hp = Math.min(maxHp(), P.hp + Math.min(6, 1 + d * .04)); },
+  };
+  function procs(s, e, d, dir) {
+    const S = s.S, f = S.f;
+    if (s.k === 'shard') return; // (splinters carry no Current of their own: no chains of chains)
+    for (const id of CUR_IDS) if (f.has(id)) PROC[id](s, e, d, dir);
+    if (f.has('rogue') && Math.random() < .25) { const pool = CUR_IDS.filter(id => !f.has(id)); if (pool.length) PROC[pick(pool)](s, e, d * .8, dir); }
+    if (f.has('thunder') && !f.has('static') && (s.k === 'disc' || s.k === 'wpn')) PROC.static(s, e, d * .7, dir);
+    if (f.has('anchor') && !s.shocked && s.k !== 'burst') { s.shocked = 1; anchorShock(e.x, e.y, d, dir, e); }
+  }
+  function anchorShock(x, y, d, dir, not) {
+    fx.push({ kind: 'ring', x, y, z: 2, t: .35, max: .35, r: 70, col: '#F2D68A', flat: 1 }); shakeMag = Math.max(shakeMag, 4); sfx('slam', .4);
+    for (const o of foes()) if (o !== not && Math.hypot(o.x - x, (o.y - y) * 2) < 64 + o.hw && o.z < 50) { const q = Math.max(1, Math.round(d * .5 * (o.boss ? .6 : 1))); strike(o, q, Math.sign(o.x - x) || dir, { dmg: q, kb: 160, launch: 220, power: 1, el: 1, pearl: 1 }, true); }
+  }
+  function addPool(x, y, d, S) {
+    O.pools.push({ x, y, t: 0, max: 1.7, r: 46 * Math.sqrt(S.size), tick: .15, d: Math.max(1, Math.round(d * .16)), pal: S.pal });
+    if (O.pools.length > 4) O.pools.shift(); sfx('hit-goo', .4); bub(x, y, 8, 6, 50);
+  }
+  function poolsStep(dt) {
+    for (const p of O.pools) { p.t += dt; p.tick -= dt;
+      for (const e of foes()) { if (e.boss) continue; const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy * 2); if (d < p.r * 1.9 && d > 6) { e.x += dx / d * 110 * dt; e.y += Math.sign(dy) * Math.min(Math.abs(dy), 40 * dt); } }
+      if (p.tick <= 0) { p.tick = .3; for (const e of foes()) if (Math.hypot(e.x - p.x, (e.y - p.y) * 2) < p.r + e.hw && e.z < 40) nick(e, e.boss ? Math.max(1, Math.round(p.d * .6)) : p.d, Math.sign(e.x - p.x) || 1); }
+      if (Math.random() < dt * 14) bub(p.x + rand(-p.r, p.r) * .6, p.y, 4, 1, 20); }
+    O.pools = O.pools.filter(p => p.t < p.max);
+  }
+  // a shot thrown back off the shell (or caught in its burst)
+  function turnShot(p, S, big) {
+    if (p.big && !big) { p.life = 0; sparkle(p.x, p.y, p.z || 30, 10); sfx('hit-crystal'); return true; }
+    p.owner = 'p'; p.vx = P.facing * Math.max(280, Math.abs(p.vx || 0) * 1.3); p.vy = 0; p.vz = 0; p.hit = new Set(); p.dmg = Math.round((p.dmg || 10) * (1.5 + .25 * (S ? S.n : 2))); p.life = 1.6; p.reflected = true; p.col = '#BFF0E4';
+    sfx('hit-crystal'); fx.push({ kind: 'ring', x: p.x, y: p.y, z: p.z || 30, t: .25, max: .25, r: 18, col: '#BFF0E4' });
     return true;
   }
-  // and a blow: once every few seconds it catches it and throws the striker off
-  function parry(e, fromX) {
-    const g = G(); O.parryCd = 6 - 3 * g; O.flash = .45; P.inv = Math.max(P.inv, .4);
-    const dir = Math.sign((e ? e.x : fromX) - P.x) || P.facing; P.facing = dir;
-    floatText(P.x, P.y, P.z + 84, 'PARRIED', '#BFF0E4', 15); sfx('hit-metal', .6); sfx('hit-crystal'); hitstop = Math.max(hitstop, .08);
-    fx.push({ kind: 'ring', x: P.x + dir * 22, y: P.y, z: P.z + 30, t: .3, max: .3, r: 34, col: '#BFF0E4' }); sparkle(P.x + dir * 22, P.y, P.z + 30, 14);
-    if (e && !e.dead) { const d = Math.max(1, Math.round((6 + 16 * g) * W())); hard(e, d, dir, { kb: 280, power: 1 }); if (!e.dead && !e.boss) { e.state = 'hurt'; e.t = Math.max(e.t, .5); e.plan = null; } }
+  // ---------------- each shot, stepped ----------------
+  function shotsStep(dt) {
+    for (const s of O.shots) { s.t += dt; s.spin += dt * 16; try { stepShot(s, dt); } catch (err) { s.dead = true; console.error(err); } }
+    O.shots = O.shots.filter(s => !s.dead);
   }
-  // the tide-bomb: it waits at his shoulder, drops, rolls to the nearest foe and bursts
-  function bombStep(dt, g, bob) {
-    const B = O.bomb, home = () => ({ x: P.x - P.facing * 15, y: P.y - 1, z: P.z + 46 + bob });
-    B.spin += dt * (B.st === 'roll' ? 14 : 2);
-    if (B.st === 'home' || B.st === 're') { const h = home(), q = Math.min(1, dt * 12); B.x += (h.x - B.x) * q; B.y += (h.y - B.y) * q; B.z += (h.z - B.z) * q;
-      if (B.st === 're') { B.re = Math.min(1, B.re + dt * 2.4); if (B.re >= 1) { B.st = 'home'; } }
-      else { B.t -= dt; if (B.t <= 0 && !['down', 'dead'].includes(P.state)) { const e = nearestFoe(P.x, P.y, 330); if (e) { B.st = 'roll'; B.tgt = e; B.vz = 60; B.life = 0; sfx('hit-goo', .3); } else B.t = .4; } } }
-    else if (B.st === 'roll') { B.life += dt;
-      const e = B.tgt && !B.tgt.dead ? B.tgt : null; if (e) { B.tx = e.x; B.ty = e.y; }
-      const dx = (B.tx ?? B.x) - B.x, dy = (B.ty ?? B.y) - B.y, d = Math.hypot(dx, dy) || 1, v = (250 + 90 * g) * dt;
-      B.x += dx / d * Math.min(d, v); B.y += dy / d * Math.min(d, v * .7);
-      B.vz -= 900 * dt; B.z = Math.max(O.r, B.z + B.vz * dt); if (B.z <= O.r) { B.vz = 0; if (Math.random() < dt * 30) parts.push({ x: B.x, y: B.y, z: 2, vx: rand(-40, 40), vy: 0, vz: rand(30, 90), life: .35, max: .35, col: pick(['rgba(220,250,245,.9)', 'rgba(160,225,220,.85)']), size: rand(1.5, 2.6), shape: 'puff', rot: 0, vr: 0 }); }
-      let hit = d < 6; for (const q of foes()) if (touches(q, B.x, B.y, Math.max(B.z, 8), O.r + 6)) { hit = true; break; }
-      if (hit || B.life > 2.2) burstBomb(g); }
-    O.x = B.x; O.y = B.y; O.z = B.z;
+  function endShot(s) {
+    s.dead = true; const S = s.S;
+    if (s.k === 'lance' && S.f.has('corallance')) { for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * .5, fake = { x: s.x + Math.cos(a) * 60 * s.dir, y: s.y + Math.sin(a) * 12, z: 0, hw: 1, hh: 1 };
+        const tg = near(fake.x, fake.y, 140)[0]; if (tg) shard(s, tg, Math.max(1, s.dmg * .3), S); }
+      sparkle(s.x, s.y, s.z, 12, ['#E86A5A', '#FFFFFF', '#F6C2D4']); sfx('hit-crystal'); }
+    else if (s.k !== 'shard') sparkle(s.x, s.y, s.z, 5, palCols(S));
   }
-  function burstBomb(g) {
-    const B = O.bomb, r = 48 + 62 * g, d = Math.max(1, Math.round((10 + 30 * g) * W()));
-    O.waves.push({ x: B.x, y: B.y, t: 0, max: .9, r, seed: Math.random() * 9 }); if (O.waves.length > 6) O.waves.shift();
-    sfx('hit-goo', .8); sfx('slam', .3); shakeMag = Math.max(shakeMag, 4); bub(B.x, B.y, 10, 10, 80);
-    for (let i = 0, n = CROWD ? 8 : 16; i < n && parts.length < 420; i++) { const a = rand(0, TAU), sp = rand(40, 140), life = rand(.7, 1.1);
-      parts.push({ x: B.x + Math.cos(a) * 6, y: B.y + Math.sin(a) * 2, z: rand(10, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .3, vz: rand(200, 360), life, max: life, col: pick(['rgba(220,250,245,.9)', 'rgba(160,225,220,.85)', '#FFFFFF']), size: rand(1.6, 2.8), shape: 'puff', rot: 0, vr: 0 }); }
-    for (const e of foes()) if (Math.hypot(e.x - B.x, (e.y - B.y) * 2) < r + e.hw && e.z < 80) hard(e, e.boss ? Math.round(d * .6) : d, Math.sign(e.x - B.x) || P.facing, { kb: 240 + 80 * g, launch: 150 + 80 * g, power: 1 });
-    B.st = 're'; B.re = 0; B.t = 5 - 2.2 * g; B.tgt = null; B.tx = B.ty = undefined;
+  function stepShot(s, dt) {
+    const S = s.S, list = foes();
+    if (s.k === 'burst') {
+      const R = s.R * sm(s.t / (s.max * .7)); s.x = P.x; s.y = P.y;
+      for (const e of list) if (!s.hit.has(e) && Math.hypot(e.x - s.x, (e.y - s.y) * 2) < R + e.hw && e.z < 100) { s.hit.set(e, s.t);
+        if (hitFoe(s, e, Math.sign(e.x - s.x) || P.facing, 1, { kb: 300 * S.kb, power: Math.max(1, S.power) }) && S.f.has('coral') && !e.dead && !e.boss) { e.state = 'hurt'; e.t = Math.max(e.t, .5); e.plan = null; } }
+      for (const p of projs) if (p.owner === 'e' && !p.ground && !p.orbit && Math.hypot(p.x - s.x, (p.y - s.y) * 2) < R + 10) turnShot(p, S, S.f.has('scallop'));
+      if (s.t >= s.max) s.dead = true;
+      return;
+    }
+    if (s.k === 'orb') {
+      if (!s.back) { const v = s.v * dt; s.x += s.dir * v; s.d += v; s.y += (P.y - s.y) * Math.min(1, dt * 3); s.z += ((P.z + 34) - s.z) * Math.min(1, dt * 5);
+        if (s.d >= s.max || s.x < leftWall() - 20 || s.x > rightWall() + 20) { s.back = true; s.hit = new Map(); } }
+      else { const tx = P.x, ty = P.y, tz = P.z + 34, dx = tx - s.x, dy = ty - s.y, dz = tz - s.z, d = Math.hypot(dx, dy, dz), v = Math.min(d, 760 * dt);
+        s.x += dx / (d || 1) * v; s.y += dy / (d || 1) * v; s.z += dz / (d || 1) * v;
+        if (d < 16 || s.t > 3) { s.dead = true; sfx('hit-crystal', .2); return; } }
+      if (S.f.has('maelstrom') && s.pools < 4 && (s.d - (s.lastPool || 0) > 70 || (s.back && s.t - (s.lastPoolT || 0) > .2))) { s.lastPool = s.d; s.lastPoolT = s.t; s.pools++; addPool(s.x, s.y, s.dmg, S); }
+    } else if (s.k === 'shard') {
+      const e = s.tgt && !s.tgt.dead ? s.tgt : null;
+      if (e) { const tx = e.x, ty = e.y, tz = e.z + e.hh * .5, dx = tx - s.x, dy = ty - s.y, dz = tz - s.z, d = Math.hypot(dx, dy, dz) || 1, v = s.v * dt; s.x += dx / d * v; s.y += dy / d * v; s.z += dz / d * v; s.dir = Math.sign(dx) || s.dir; }
+      else { s.x += s.dir * s.v * dt; }
+      s.d += s.v * dt; if (s.d > s.max || s.t > 1) { s.dead = true; return; }
+    } else {
+      const v = s.v * dt; s.x += s.dir * v; s.d += v;
+      if (s.d >= s.max || s.x < camX - 40 || s.x > camX + VW + 40) { endShot(s); return; }
+      if (Math.random() < dt * 30 && parts.length < 400) parts.push({ x: s.x - s.dir * 6, y: s.y, z: s.z + rand(-2, 2), vx: -s.dir * 40, vy: 0, vz: rand(-10, 20), life: .3, max: .3, col: pick(palCols(S)), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 3 });
+    }
+    for (const e of list) {
+      if (s.hit.has(e)) continue;
+      let hit = false;
+      if (s.k === 'lance') { const lanes = S.tines === 3 ? [-14, 0, 14] : [0], x0 = Math.min(s.x, s.x - s.dir * s.len), x1 = Math.max(s.x, s.x - s.dir * s.len);
+        hit = e.x + e.hw > x0 && e.x - e.hw < x1 && lanes.some(o => Math.abs(e.y - (s.y + o)) < 12 + e.hw * .3) && zOverlap(s.z - 10, 20, e.z - ((e.def && e.def.reachDown) || 0), e.hh + ((e.def && e.def.reachDown) || 0)); }
+      else hit = touches(e, s.x, s.y, s.z, s.r + 4);
+      if (!hit) continue;
+      s.hit.set(e, s.t); s.n++;
+      const dir = s.k === 'orb' && s.back ? -s.dir : s.k === 'shard' ? (Math.sign(e.x - s.x) || s.dir) : s.dir;
+      hitFoe(s, e, dir, 1, s.k === 'orb' ? { kb: 260 * S.kb, launch: 120, wall: 1 } : s.k === 'lance' ? { kb: 220 * S.kb, wall: 1 } : null);
+      if (S.rehit && s.k !== 'shard') echoes.push({ e, dmg: Math.max(1, Math.round(s.dmg * .5 * (e.boss ? .6 : 1))), dir, m: { dmg: 1, kb: 40, power: 0, el: 1, pearl: 1 }, t: S.rehit });
+      sparkle(e.x, e.y, e.z + e.hh * .5, 6, palCols(S));
+      if (s.k === 'pearl' || s.k === 'shard') { endShot(s); return; }
+      if (s.k === 'disc' && s.n > S.pierce) { endShot(s); return; }
+    }
   }
 
-  // Attack + Heavy together: the moon flung (the second press within a short beat of the first, either way round)
-  function moonInput() {
-    const now = CUR.clock;
-    if (pressed.light) O.lastL = now; if (pressed.heavy) O.lastH = now;
-    if (form() !== 'moon' || ['hurt', 'down', 'dead', 'dodge'].includes(P.state)) return;
-    const both = (pressed.light && pressed.heavy) || (pressed.heavy && input.light && now - O.lastL < .16) || (pressed.light && input.heavy && now - O.lastH < .16);
-    if (both && flingMoon()) { pressed.light = pressed.heavy = false; P.holdUsed = true; }
+  // ---------------- Light + Heavy together: the shot (the second press within a short beat of the first, either way round) ----------------
+  const GLEAM = .55;
+  function chargeTimingP(c) {
+    if (c < .18) return { mul: .6 };
+    if (c < GLEAM) return { mul: .6 + .4 * (c - .18) / (GLEAM - .18) };
+    if (c <= GLEAM + PCW()) return { mul: 1.55, perfect: true };
+    return { mul: Math.max(.85, 1.15 - (c - GLEAM - PCW()) * .3) }; // (held past the gleam it sours a little)
   }
+  function perfectShotFx(S) {
+    floatText(P.x, P.y, P.z + 96, 'PERFECT', '#FFE08A', 15); flashT = Math.max(flashT, .06); sfx('crit');
+    fx.push({ kind: 'ring', x: P.x, y: P.y, z: P.z + 46, t: .22, max: .22, r: 44, col: '#FFF4D0' });
+    if (S.f.has('heldthunder')) { const fx0 = P.x + P.facing * 120;
+      for (const e of near(fx0, P.y, 170).slice(0, 6)) { fx.push({ kind: 'bolt', x: e.x + rand(-16, 16), y: e.y, z: e.z + 240, x2: e.x, y2: e.y, z2: e.z + e.hh * .5, t: .3, max: .3, col: '#FFF2C0', seed: Math.random() * 99 });
+        const q = Math.max(1, Math.round(S.dmg * W() * .7 * (e.boss ? .6 : 1))); strike(e, q, Math.sign(e.x - P.x) || P.facing, { dmg: q, kb: 120, launch: 260, power: 2, el: 1, pearl: 1 }, true); }
+      sfx('shoot'); shakeMag = Math.max(shakeMag, 6); }
+  }
+  const BUSY = ['hurt', 'down', 'dead', 'dodge', 'parry'];
+  function lhInput(S, dt) {
+    const now = CUR.clock;
+    O.cd = Math.max(0, O.cd - dt); O.parryCd = Math.max(0, O.parryCd - dt); O.reflCd = Math.max(0, O.reflCd - dt); O.ripCd = Math.max(0, O.ripCd - dt);
+    if (O.chg !== null) { // gathering it (patient): both held
+      if (['hurt', 'down', 'dead'].includes(P.state)) { O.chg = null; return; }
+      if (input.light && input.heavy) { O.chg += dt;
+        if (!O.gleamed && O.chg >= GLEAM) { O.gleamed = true; sfx('charge', 3); sparkle(O.on ? O.x : P.x + P.facing * 20, P.y, O.on ? O.z : P.z + 40, 10, ['#FFFFFF', '#FFF2C0']); }
+        if (Math.random() < dt * 20 && parts.length < 400) { const a = rand(0, TAU), x = O.on ? O.x : P.x + P.facing * 22, z = O.on ? O.z : P.z + 40; parts.push({ x: x + Math.cos(a) * 18, y: P.y, z: z + Math.sin(a) * 14, vx: -Math.cos(a) * 60, vy: 0, vz: -Math.sin(a) * 50, life: .3, max: .3, col: pick(palCols(S)), size: rand(1.2, 2), shape: 'star', rot: 0, vr: 4 }); }
+        return; }
+      const pc = chargeTimingP(O.chg); O.chg = null; O.gleamed = false;
+      fire(S, pc); O.cd = S.cd; if (pc.perfect) perfectShotFx(S);
+      return;
+    }
+    if (pressed.light) O.lastL = now; if (pressed.heavy) O.lastH = now;
+    if (BUSY.includes(P.state) || (P.state === 'atk' && P.move && P.move.blink)) return;
+    const both = (pressed.light && pressed.heavy) || (pressed.heavy && input.light && now - O.lastL < .16) || (pressed.light && input.heavy && now - O.lastH < .16);
+    if (!both || O.cd > 0) return;
+    pressed.light = pressed.heavy = false; P.holdUsed = true;
+    if (P.state === 'charge') { P.state = 'idle'; P.seq = ''; }
+    if (P.state === 'atk' && P.move && P.t < .14) { P.state = 'idle'; P.seq = ''; P.vx = 0; } // (the first press had just begun a blow: the shot takes its place)
+    if (S.charge) { O.chg = 0; O.gleamed = false; sfx('charge', 1); return; }
+    fire(S); O.cd = S.cd;
+  }
+  // the free shots: out of a dodge (riptide), and a perfect charged Heavy (slack tide)
+  { const _sd = startDodge; startDodge = function () { _sd(); const S = live() && P.state === 'dodge' ? curStats() : null; if (S && S.f.has('riptide') && O.ripCd <= 0) { O.ripCd = 1.1; fire(S, { mul: .7 }); } }; }
+  { const _pc = perfectCue; perfectCue = function () { _pc(); const S = live() ? curStats() : null; if (S && S.f.has('slack')) fire(S, { mul: .9 }); }; }
+
+  // ---------------- the orb at his shoulder (while it is still evolving) ----------------
+  function orbStep(dt) {
+    O.a += dt; O.pop = Math.max(0, O.pop - dt * 3); O.flash = Math.max(0, O.flash - dt);
+    const n = ES().picks.length, bob = Math.sin(CUR.clock * 2.6) * 2, front = O.chg !== null;
+    const tx = P.x + P.facing * (front ? 20 : -21) + Math.cos(O.a * 1.3) * 4, ty = P.y - 1 + Math.sin(O.a * 1.3) * 2, tz = P.z + (front ? 40 : 66) + bob, q = Math.min(1, dt * 9);
+    O.x += (tx - O.x) * q; O.y += (ty - O.y) * q; O.z += (tz - O.z) * q; O.r = 3.6 + 1.05 * n;
+  }
+  // the coral parries a blow, every few seconds; the scallop turns a shot from in front
+  function parry(e, fromX, S) {
+    O.parryCd = 6; O.flash = .45; P.inv = Math.max(P.inv, .4);
+    const dir = Math.sign((e ? e.x : fromX) - P.x) || P.facing; P.facing = dir;
+    floatText(P.x, P.y, P.z + 84, 'PARRIED', '#F0A090', 15); sfx('hit-metal', .6); sfx('hit-crystal'); hitstop = Math.max(hitstop, .08);
+    fx.push({ kind: 'ring', x: P.x + dir * 22, y: P.y, z: P.z + 30, t: .3, max: .3, r: 34, col: '#F0A090' }); sparkle(P.x + dir * 22, P.y, P.z + 30, 14, ['#FFFFFF', '#F0A090', '#F2D68A']);
+    if (e && !e.dead) { const d = Math.max(1, Math.round((6 + 4 * S.n) * W())); strike(e, d, dir, { dmg: d, kb: 280, power: 1, el: 1, pearl: 1 }, true); if (!e.dead && !e.boss) { e.state = 'hurt'; e.t = Math.max(e.t, .5); e.plan = null; } }
+  }
+  { const _pd = playerDamage; playerDamage = function (dmg, fromX, big) {
+    const S = P && live() ? curStats() : null;
+    if (S && P.inv <= 0 && P.state !== 'dead' && P.state !== 'dodge' && !(P.state === 'parry' && P.t < .28) && P.state !== 'down') {
+      const src = typeof HIT_SRC !== 'undefined' ? HIT_SRC : null;
+      if (src && src.kind === 'proj' && src.p && !src.p.ground && S.f.has('scallop') && O.reflCd <= 0 && Math.sign(fromX - P.x) === P.facing) { O.reflCd = 2.5; O.flash = .35; turnShot(src.p, S); floatText(P.x, P.y, P.z + 80, 'THROWN BACK', '#BFF0E4', 12); return; }
+      if (src && src.kind === 'melee' && S.f.has('coral') && O.parryCd <= 0) { parry(src.e, fromX, S); return; }
+    }
+    return _pd(dmg, fromX, big);
+  }; }
+
+  // ======================================================================================================
+  // THE PICK: the Pearl rises out of the fallen boss, and a card offers three traits
+  // ======================================================================================================
+  const pickPending = () => evoOn() && ES().picks.length < PICKS && stageIdx <= (typeof FORK !== 'undefined' ? FORK : 4) && stage && !stage.secret && !ES().got[pickKey()];
+  function take(id, quiet) {
+    const s = ES(); if (!TR[id] || s.picks.includes(id)) return false;
+    s.picks.push(id); if (typeof stageIdx !== 'undefined' && !quiet) s.got[pickKey()] = 1;
+    statKey = ''; persist(); O.pop = 1;
+    if (P && !quiet) { floatText(P.x, P.y, P.z + 96, TR[id].name.toUpperCase(), '#F2D68A', 15); sparkle(O.x || P.x, P.y, (O.z || P.z + 40), 18); sfx('learned'); }
+    return true;
+  }
+  function autoPick(n = PICKS, rnd = Math.random) { const s = ES(); let k = 0; while (s.picks.length < Math.min(PICKS, n)) { const o = offers(s.picks, s.seed); if (!o.length) break; take(o[Math.floor(rnd() * o.length)].id, true); if (++k > 9) break; } statKey = ''; persist(); return s.picks.slice(); }
+  // the boss falls: the Pearl rises out of it while the world goes still
+  { const _kill = killEnemy; killEnemy = function (e, dir, m) { const was = e.dead; _kill(e, dir, m);
+    if (!was && e.dead && e.boss && live() && pickPending()) O.rise = { x: e.x, y: e.y, z: e.z + e.hh * .6, t: 0, x0: e.x, y0: e.y, z0: e.z + e.hh * .6 }; }; }
+  function riseStep(dt) {
+    const R = O.rise; if (!R) return; R.t += dt;
+    const up = sm(R.t / 1.2), go = sm((R.t - 1.3) / 1.2);
+    const hx = P.x - P.facing * 21, hz = P.z + 66;
+    R.x = lerp(R.x0, hx, go); R.y = lerp(R.y0, P.y, go); R.z = lerp(R.z0 + 70 * up, hz, go);
+    if (Math.random() < dt * 30 && parts.length < 400) parts.push({ x: R.x + rand(-6, 6), y: R.y, z: R.z + rand(-6, 6), vx: rand(-20, 20), vy: 0, vz: rand(-30, 10), life: .5, max: .5, col: pick(['#FFFFFF', '#D8F4EC', '#F2D68A']), size: rand(1.2, 2.4), shape: 'star', rot: 0, vr: 4 });
+    if (R.t > 3.2) O.rise = null;
+  }
+  let card = null;
+  function closeCard() { if (card) { card.el.remove(); card = null; app.classList.remove('nocontrols'); } }
+  function openPick(after) {
+    closeCard(); const s = ES(); if (s.picks.length >= PICKS) { if (after) after(); return false; }
+    const opts = offers(s.picks, s.seed); if (!opts.length) { if (after) after(); return false; }
+    const el = document.createElement('div'); el.id = 'pearlPick';
+    const bossName = boss && boss.def && boss.def.name ? boss.def.name : null;
+    const heldTxt = s.picks.length ? s.picks.map(id => TR[id].name).join(' · ') : 'nothing yet: a speck of nacre';
+    el.innerHTML = `<style>
+      #pearlPick { position: absolute; inset: 0; z-index: 7; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 45%, rgba(10,40,48,.8), rgba(4,12,18,.93)); font-family: var(--label, Georgia, serif); color: #EAF6F0; padding: 10px 16px; box-sizing: border-box; }
+      #pearlPick .bx { width: min(780px, 100%); max-height: 100%; overflow: auto; text-align: center; }
+      #pearlPick .kk { font: 700 11px var(--label, Georgia, serif); letter-spacing: .18em; color: #F2D68A; }
+      #pearlPick h2 { margin: 2px 0 2px; font: 700 clamp(15px, 3.2vw, 23px) Cinzel, Georgia, serif; color: #FFFFFF; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
+      #pearlPick .sub { font-size: 11.5px; opacity: .8; margin-bottom: 8px; }
+      #pearlPick .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      #pearlPick button { all: unset; cursor: pointer; box-sizing: border-box; border-radius: 9px; padding: 6px 7px 8px; border: 1.5px solid rgba(242,214,138,.45); background: linear-gradient(170deg, rgba(40,96,100,.6), rgba(8,28,36,.88)); display: grid; gap: 3px; justify-items: center; align-content: start; transition: transform .08s; }
+      #pearlPick button:hover, #pearlPick button:focus-visible, #pearlPick button.sel { border-color: #F2D68A; box-shadow: 0 0 0 2px rgba(242,214,138,.35), 0 0 18px rgba(160,230,215,.35); transform: translateY(-2px); }
+      #pearlPick canvas { width: 100%; max-width: 150px; aspect-ratio: 4 / 3; }
+      #pearlPick .ax { font: 700 9.5px var(--label, Georgia, serif); letter-spacing: .16em; color: #9FE2D3; }
+      #pearlPick .ax.combo { color: #FFD27A; }
+      #pearlPick b { font: 700 12.5px Cinzel, Georgia, serif; color: #F2D68A; letter-spacing: .03em; }
+      #pearlPick i { font-style: normal; font-size: 11px; line-height: 1.3; opacity: .92; }
+      #pearlPick .n { font-size: 10px; opacity: .55; }
+      #pearlPick .held { margin-top: 8px; font-size: 10.5px; opacity: .7; }
+      @media (max-height: 340px) { #pearlPick canvas { max-width: 96px; } #pearlPick .sub { display: none; } }
+    </style><div class="bx"><div class="kk">THE PEARL OF JUDGEMENT · CHOICE ${s.picks.length + 1} OF ${PICKS}</div>
+      <h2>${bossName ? `The Pearl rises out of ${bossName}` : 'The Pearl rises'}: what does it take?</h2>
+      <div class="sub">It keeps every choice, through death and every cycle. After the ${['first', 'second', 'third', 'fourth', 'fifth'][PICKS - 1]}, at the road's last world, it is reforged into a weapon of its own.</div>
+      <div class="row">${opts.map((t, i) => `<button type="button" data-k="${t.id}" class="${i ? '' : 'sel'}"><canvas width="300" height="225"></canvas>
+        <span class="ax ${t.req ? 'combo' : ''}">${AXNAME[t.ax]} · ${t.req ? t.req.map(g => TAGNAME[g].toUpperCase()).join(' + ') : TAGNAME[t.tag].toUpperCase()}</span><b>${t.name}</b><i>${t.desc}</i><span class="n">${KBD ? i + 1 : ''}</span></button>`).join('')}</div>
+      <div class="held">Already in it: ${heldTxt}</div></div>`;
+    app.appendChild(el); app.classList.add('nocontrols');
+    const prev = mode; mode = 'pearlpick'; card = { el, after, prev, i: 0, opts, t0: performance.now() };
+    const cvs = [...el.querySelectorAll('canvas')], draw = (t) => cvs.forEach((c, i) => pickArt(c, s.picks, opts[i], t));
+    draw(0);
+    const spin = () => { if (!card || card.el !== el) return; draw((performance.now() - card.t0) / 1000); try { requestAnimationFrame(spin); } catch (e) {} };
+    try { requestAnimationFrame(spin); } catch (e) {}
+    el.addEventListener('click', (ev) => { const b = ev.target.closest('button[data-k]'); if (b) choose(b.dataset.k); });
+    const first = el.querySelector('button.sel'); if (first) try { first.focus({ preventScroll: true }); } catch (e) {}
+    return true;
+  }
+  function choose(id) {
+    if (!card) return; const after = card.after; closeCard();
+    take(id); if (mode === 'pearlpick') mode = 'play'; clearInput(); for (const q in pressed) pressed[q] = false;
+    if (after) after();
+  }
+  { const _ok = onKeyMenu; onKeyMenu = (e) => {
+    if (mode !== 'pearlpick' || !card) return _ok ? _ok(e) : false;
+    const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code], btns = [...card.el.querySelectorAll('button[data-k]')], N = btns.length;
+    if (n !== undefined && n < N) { e.preventDefault(); choose(btns[n].dataset.k); return true; }
+    if (/Arrow(Left|Right|Up|Down)|Key[ADWS]/.test(e.code)) { e.preventDefault(); const d = /Left|KeyA|Up|KeyW/.test(e.code) ? -1 : 1; card.i = (card.i + d + N) % N; btns.forEach((b, i) => b.classList.toggle('sel', i === card.i)); try { btns[card.i].focus({ preventScroll: true }); } catch (_) {} return true; }
+    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space' || e.code === 'KeyJ' || e.code === 'KeyZ') { e.preventDefault(); const f = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.k; choose(f || btns[card.i].dataset.k); return true; }
+    return true;
+  }; }
+  // a boss of the first five worlds falls: the card comes up before the world is cleared (its ending, the forge, the Rim)
+  { const _sc = stageClear; stageClear = function () { if (live() && pickPending()) { O.rise = null; if (openPick(() => _sc())) return; } return _sc(); }; }
+  { const _play = play; play = function (i, zone) { closeCard(); return _play(i, zone); }; }
 
   // ======================================================================================================
   // CURRENTS, NOT FOOTSTEPS
@@ -253,7 +587,7 @@
         if (dot < 0) { CUR.vx = (CUR.vx - 2 * dot * ux) * T.bounce; CUR.vy = (vyE - 2 * dot * uy) * T.bounce * T.YK; P.x = e.x + ux * (e.hw + 13); bounceFx(P.x, P.y, Math.sign(ux) || 1); } }
       if (!cool(CUR.cd, e, .4)) continue;
       const q = clamp((sE - 200) / 240, .25, 1.4), d = Math.max(1, Math.round((5 + 12 * q) * W() * (e.boss ? .6 : 1))), dir = Math.sign(CUR.vx) || P.facing;
-      strike(e, d, dir, { dmg: d, kb: 120 + sE * .55, launch: sE > 480 ? 160 : 0, power: sE > 480 ? 1 : 0, el: 1, current: 1, wall: sE > 480 ? 1 : 0 }, true);
+      strike(e, d, dir, { dmg: d, kb: 120 + sE * .55, launch: sE > 480 ? 160 : 0, power: sE > 480 ? 1 : 0, el: 1, current: 1, pearl: 1, wall: sE > 480 ? 1 : 0 }, true);
       if (!big && !e.boss) { CUR.vx *= .9; CUR.vy *= .9; }
       bub(e.x, e.y, 20, 4, 60);
     }
@@ -277,15 +611,15 @@
   }; }
 
   // ======================================================================================================
-  // the hooks: his update, the blows on him, the start of each world
+  // the hooks: his update, his stance
   // ======================================================================================================
   const _up = updatePlayer;
   updatePlayer = function (dt) {
     CUR.clock += dt;
     if (O.stage !== stage || O.zone !== (typeof zoneIdx !== 'undefined' ? zoneIdx : 0)) { O.stage = stage; O.zone = typeof zoneIdx !== 'undefined' ? zoneIdx : 0; resetPlace(); }
-    const gr = growOn() && live(), cur = curOn() && live();
-    if (gr) moonInput();
-    const st0 = P.state, mx = input.mx, my = input.my, run = input.run;
+    const lv = live(), S = lv ? curStats() : null, cur = curOn() && lv;
+    if (S) lhInput(S, dt); else O.chg = null;
+    const st0 = P.state, mx = input.mx, my = input.my, run = input.run, L0 = input.light, H0 = input.heavy, hideAtk = O.chg !== null;
     let runTap = false;
     if (cur) {
       const loco = LOCO.includes(st0) && P.z <= 0;
@@ -294,23 +628,16 @@
       if (loco && !act) { input.mx = 0; input.my = 0; input.run = false; } // (the game's own walk is hidden from it: the current carries him instead)
       else if (loco && pressed.dodge) input.run = false;
     } else { CUR.vx = CUR.vy = 0; CUR.glide = false; CUR.lay = 0; }
-    try { _up(dt); } finally { if (cur) { input.mx = mx; input.my = my; input.run = run; } }
+    if (hideAtk) { input.light = input.heavy = false; } // (gathering the Pearl's shot: his own blows wait)
+    try { _up(dt); } finally { if (cur) { input.mx = mx; input.my = my; input.run = run; } if (hideAtk) { input.light = L0; input.heavy = H0; } }
     if (cur) glide(dt, st0, mx, my, runTap);
     // the wake behind him
     if (cur && P.z < 6 && speedE() > 40) CUR.trail.push({ x: P.x, y: P.y, t: CUR.clock, s: speedE() });
     while (CUR.trail.length && (CUR.clock - CUR.trail[0].t > .75 || CUR.trail.length > 60)) CUR.trail.shift();
-    O.on = gr;
-    if (gr) pearlStep(dt);
+    O.on = evoOn() && lv;
+    if (O.on) orbStep(dt);
+    if (lv) { shotsStep(dt); poolsStep(dt); riseStep(dt); }
   };
-  // the mirror between him and a blow
-  { const _pd = playerDamage; playerDamage = function (dmg, fromX, big) {
-    if (growOn() && form() === 'mirror' && P && P.inv <= 0 && P.state !== 'dead' && P.state !== 'dodge' && !(P.state === 'parry' && P.t < .28) && !['down'].includes(P.state)) {
-      const src = typeof HIT_SRC !== 'undefined' ? HIT_SRC : null;
-      if (src && src.kind === 'proj' && src.p && !src.p.ground && Math.sign(fromX - P.x) === P.facing && reflect(src.p, G())) return;
-      if (src && src.kind === 'melee' && O.parryCd <= 0) { parry(src.e, fromX); return; }
-    }
-    return _pd(dmg, fromX, big);
-  }; }
   // his stance on the current: no strides, leaning into the way he is carried
   { const _pp = playerPose; playerPose = function () { const pose = _pp();
     if (curOn() && CUR.glide && LOCO.includes(P.state)) { const s = speedE(), f = CUR.vx * P.facing;
@@ -318,68 +645,14 @@
     return pose; }; }
 
   // ======================================================================================================
-  // THE CHOICE OF SHAPE: in the forge for the world ahead, or on a card as a world begins if it was not made there
-  // ======================================================================================================
-  function choose(k, forWorld) { const s = PS(); s.form = k; s.formFor = forWorld; if (P) { O.moon = null; O.bomb.st = 'home'; O.bomb.t = 1.2; O.x = P.x; O.y = P.y; O.z = P.z + 30; } persist(); }
-  let pick_ = null;
-  function closePicker() { if (pick_) { pick_.el.remove(); pick_ = null; app.classList.remove('nocontrols'); } }
-  function openPicker(world) {
-    closePicker(); if (!growOn()) return;
-    const el = document.createElement('div'); el.id = 'pearlPick';
-    el.innerHTML = `<style>
-      #pearlPick { position: absolute; inset: 0; z-index: 7; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 45%, rgba(10,40,48,.78), rgba(4,12,18,.92)); font-family: var(--label, Georgia, serif); color: #EAF6F0; padding: 12px; box-sizing: border-box; }
-      #pearlPick .bx { width: min(760px, 100%); max-height: 100%; overflow: auto; text-align: center; }
-      #pearlPick .kk { font: 700 11px var(--label, Georgia, serif); letter-spacing: .18em; color: #F2D68A; }
-      #pearlPick h2 { margin: 2px 0 2px; font: 700 clamp(16px, 3.4vw, 24px) Cinzel, Georgia, serif; color: #FFFFFF; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
-      #pearlPick .sub { font-size: 12px; opacity: .8; margin-bottom: 10px; }
-      #pearlPick .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-      #pearlPick button { all: unset; cursor: pointer; box-sizing: border-box; border-radius: 9px; padding: 6px 6px 8px; border: 1.5px solid rgba(242,214,138,.45); background: linear-gradient(170deg, rgba(40,96,100,.6), rgba(8,28,36,.85)); display: grid; gap: 3px; justify-items: center; transition: transform .08s; }
-      #pearlPick button:hover, #pearlPick button:focus-visible, #pearlPick button.sel { border-color: #F2D68A; box-shadow: 0 0 0 2px rgba(242,214,138,.35), 0 0 18px rgba(160,230,215,.35); transform: translateY(-2px); }
-      #pearlPick canvas { width: 100%; max-width: 132px; aspect-ratio: 4 / 3; }
-      #pearlPick b { font: 700 12px Cinzel, Georgia, serif; color: #F2D68A; letter-spacing: .04em; }
-      #pearlPick i { font-style: normal; font-size: 11px; line-height: 1.3; opacity: .9; }
-      #pearlPick .n { font-size: 10px; opacity: .55; }
-      @media (max-width: 520px) { #pearlPick .row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    </style><div class="bx"><div class="kk">THE PEARL OF JUDGEMENT · ${layers()} LAYER${layers() === 1 ? '' : 'S'} · ${Math.round(G() * 100)}% GROWN</div>
-      <h2>What does the Pearl become in ${STAGES[world] ? STAGES[world].name : 'this world'}?</h2><div class="sub">It keeps this shape for the whole world; you choose again at the next.</div>
-      <div class="row">${FORM_ORDER.map((k, i) => `<button type="button" data-k="${k}" class="${k === form() ? 'sel' : ''}"><canvas width="264" height="198"></canvas><b>${FORMS[k].name}</b><i>${FORMS[k].desc}</i><span class="n">${KBD ? i + 1 : ''}</span></button>`).join('')}</div></div>`;
-    app.appendChild(el); app.classList.add('nocontrols');
-    const prev = mode; mode = 'pearlpick'; pick_ = { el, world, prev, i: Math.max(0, FORM_ORDER.indexOf(form())), t0: performance.now() };
-    const cvs = [...el.querySelectorAll('canvas')]; cvs.forEach((c, i) => formCard(c, FORM_ORDER[i], 0));
-    let raf = 0; const spin = () => { if (!pick_ || pick_.el !== el) return; const t = (performance.now() - pick_.t0) / 1000; cvs.forEach((c, i) => formCard(c, FORM_ORDER[i], t)); raf = requestAnimationFrame(spin); };
-    try { raf = requestAnimationFrame(spin); } catch (e) {}
-    el.addEventListener('click', (ev) => { const b = ev.target.closest('button[data-k]'); if (b) take(b.dataset.k); });
-    const first = el.querySelector('button.sel') || el.querySelector('button'); if (first) try { first.focus({ preventScroll: true }); } catch (e) {}
-  }
-  function take(k) {
-    if (!pick_) return; const w = pick_.world; closePicker(); choose(k, w);
-    if (mode === 'pearlpick') mode = 'play'; clearInput(); for (const q in pressed) pressed[q] = false;
-    if (P) { floatText(P.x, P.y, P.z + 96, FORMS[k].name.toUpperCase(), '#F2D68A', 15); sparkle(P.x, P.y, P.z + 40, 18); sfx('learned'); }
-  }
-  W7.pearlPicker = openPicker; // (tests)
-  { const _ok = onKeyMenu; onKeyMenu = (e) => {
-    if (mode !== 'pearlpick' || !pick_) return _ok ? _ok(e) : false;
-    const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[e.code];
-    const btns = [...pick_.el.querySelectorAll('button[data-k]')];
-    if (n !== undefined) { e.preventDefault(); take(FORM_ORDER[n]); return true; }
-    if (/Arrow(Left|Right|Up|Down)|Key[ADWS]/.test(e.code)) { e.preventDefault(); const d = /Left|KeyA|Up|KeyW/.test(e.code) ? -1 : 1; pick_.i = (pick_.i + d + 4) % 4; btns.forEach((b, i) => b.classList.toggle('sel', i === pick_.i)); try { btns[pick_.i].focus({ preventScroll: true }); } catch (_) {} return true; }
-    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space' || e.code === 'KeyJ' || e.code === 'KeyZ') { e.preventDefault(); const f = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.k; take(f || FORM_ORDER[pick_.i]); return true; }
-    return true;
-  }; }
-  // each world as it begins: if the shape was not chosen for it in the forge, the card comes up
-  { const _play = play; play = function (i, zone) { closePicker(); const r = _play(i, zone);
-    Promise.resolve().then(() => { if (growOn() && mode === 'play' && stageIdx === i && PS().formFor !== i) openPicker(i); }); // (after whatever else starts with the world, the Rim's deck among them)
-    return r; }; }
-
-  // ======================================================================================================
   // THE LOOK. Rebma's sea-green, nacre and gold: soft painted shading, an ink line round each piece
   // ======================================================================================================
-  // the pearl itself: nacre shading into sea-green, orient bands of rose and gold drifting over it, the edges of its
-  // layers (more as it grows) catching the light, a highlight and a glint, the ink line round it
-  function pearlBody(x, y, r, t, nl) {
-    if (r < .4) return;
+  // the pearl itself: nacre shading through the Current's colours, orient bands drifting over it, the edges of its layers
+  // catching the light, a highlight and a glint, the ink line round it
+  function pearlBody(x, y, r, t, nl, pal) {
+    if (r < .4) return; const B = (pal || PAL.pearl).b;
     const g = ctx.createRadialGradient(x - r * .38, y - r * .42, r * .05, x + r * .1, y + r * .12, r * 1.05);
-    g.addColorStop(0, '#FFFFFF'); g.addColorStop(.22, '#F4FBF7'); g.addColorStop(.55, '#D0EDE3'); g.addColorStop(.82, '#8CC6B9'); g.addColorStop(1, '#4C8A84');
+    g.addColorStop(0, B[0]); g.addColorStop(.22, B[1]); g.addColorStop(.55, B[2]); g.addColorStop(.82, B[3]); g.addColorStop(1, B[4]);
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
     if (r > 2.4) {
       ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip(); const a = t * .7;
@@ -394,76 +667,150 @@
     if (r > 2) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(x + r * .44, y + r * .36, r * .1, 0, TAU); ctx.fill(); }
     ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .12, .6, 1.3); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
   }
-  const nLayers = () => 1 + Math.floor(G() * 5);
-  const glow = (x, y, r, rgb, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
-  // the nacre blade: three crescent edges of mother-of-pearl, gilt along the cutting side, round a pearl
-  function drawBlade(x, y, r, t, spin) {
-    const L = r * 2.7, c = Math.cos, s = Math.sin;
-    for (let i = 0; i < 3; i++) { const a = spin + i * TAU / 3;
-      const p0 = [x + c(a - .5) * r * .7, y + s(a - .5) * r * .7], tip = [x + c(a + .9) * L, y + s(a + .9) * L], cO = [x + c(a + .2) * L * 1.2, y + s(a + .2) * L * 1.2], cI = [x + c(a + 1.1) * L * .42, y + s(a + 1.1) * L * .42], p1 = [x + c(a + 1.2) * r * .7, y + s(a + 1.2) * r * .7];
-      const edge = () => { ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cO[0], cO[1], tip[0], tip[1]); };
-      const lg = ctx.createLinearGradient(x, y, tip[0], tip[1]); lg.addColorStop(0, '#7CC4B4'); lg.addColorStop(.45, '#CFF0E6'); lg.addColorStop(.8, '#FFFFFF'); lg.addColorStop(1, '#F6D8E4');
-      ctx.fillStyle = lg; ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(60,130,124,.5)'; ctx.lineWidth = Math.max(.3, r * .06); ctx.beginPath(); ctx.moveTo(x + c(a + .35) * r, y + s(a + .35) * r); ctx.quadraticCurveTo(x + c(a + .5) * L * .7, y + s(a + .5) * L * .7, tip[0], tip[1]); ctx.stroke();
-      ctx.strokeStyle = '#E2BE66'; ctx.lineWidth = Math.max(.7, r * .24); ctx.beginPath(); edge(); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,248,220,.95)'; ctx.lineWidth = Math.max(.3, r * .08); ctx.beginPath(); edge(); ctx.stroke();
-      ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .12, .55, 1.1); ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); ctx.stroke(); }
-    ctx.fillStyle = '#D6AE58'; ctx.beginPath(); ctx.arc(x, y, r * .98, 0, TAU); ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .1, .5, 1); ctx.stroke();
-    pearlBody(x, y, r * .78, t, nLayers());
+  const glow = (x, y, r, rgb, a) => { if (r <= 0) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
+  const inkW = (r, k = .12) => clamp(r * k, .5, 1.2);
+  const stroke = (col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke(); };
+  // one crescent blade of nacre, gilt along its cutting side (drawn about 0,0 at angle a)
+  function crescentBlade(r, a, pal, lightning) {
+    const c = Math.cos, s = Math.sin, L = r * 2.5;
+    const p0 = [c(a - .5) * r * .75, s(a - .5) * r * .75], tip = [c(a + .9) * L, s(a + .9) * L], cO = [c(a + .2) * L * 1.2, s(a + .2) * L * 1.2], cI = [c(a + 1.1) * L * .44, s(a + 1.1) * L * .44], p1 = [c(a + 1.2) * r * .75, s(a + 1.2) * r * .75];
+    const edge = () => { ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cO[0], cO[1], tip[0], tip[1]); };
+    const lg = ctx.createLinearGradient(0, 0, tip[0], tip[1]); lg.addColorStop(0, pal.bladeDk); lg.addColorStop(.45, pal.blade); lg.addColorStop(.85, pal.edge); lg.addColorStop(1, pal.accent);
+    ctx.fillStyle = lg; ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); edge(); stroke(lightning ? '#FFF6C0' : pal.metal, Math.max(.7, r * .22));
+    ctx.beginPath(); edge(); stroke('rgba(255,248,220,.95)', Math.max(.3, r * .07));
+    if (lightning) { ctx.beginPath(); ctx.moveTo(c(a + .3) * r * 1.1, s(a + .3) * r * 1.1); for (let i = 1; i <= 4; i++) { const q = i / 4, aa = a + .3 + .55 * q, rr = r * (1.1 + 1.1 * q) + (i % 2 ? 1 : -1) * r * .18; ctx.lineTo(c(aa) * rr, s(aa) * rr); } stroke('#6A74D0', Math.max(.4, r * .09)); }
+    ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); stroke(OUT, inkW(r));
   }
-  // the moon: a great pearl, a sea-green shadow over one side like the moon's, and a ring of gold about it
-  function drawMoon(x, y, r, t, front) {
-    const ring = (back) => { ctx.save(); ctx.translate(x, y); ctx.rotate(-.32); const a0 = back ? Math.PI : 0, a1 = back ? TAU : Math.PI;
-      ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(1, r * .22); ctx.beginPath(); ctx.ellipse(0, 0, r * 1.6, r * .42, 0, a0, a1); ctx.stroke();
-      ctx.strokeStyle = '#D6AE58'; ctx.lineWidth = Math.max(.6, r * .13); ctx.beginPath(); ctx.ellipse(0, 0, r * 1.6, r * .42, 0, a0, a1); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,242,190,.85)'; ctx.lineWidth = Math.max(.3, r * .05); ctx.beginPath(); ctx.ellipse(0, -r * .02, r * 1.6, r * .42, 0, a0, a1); ctx.stroke(); ctx.restore(); };
-    if (front !== 'front') ring(true);
-    if (front !== 'back') {
-      pearlBody(x, y, r, t, nLayers());
-      if (r > 2.5) { ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * .97, 0, TAU); ctx.clip(); ctx.fillStyle = 'rgba(40,96,104,.32)'; ctx.beginPath(); ctx.arc(x + r * .55, y + r * .2, r * 1.05, 0, TAU); ctx.arc(x + r * 1.2, y + r * .1, r * 1.1, 0, TAU, true); ctx.fill('evenodd'); ctx.restore(); }
-      ring(false);
-    }
+  // the parts each trait adds to the orb: [layer, painter(r, pal)] (orb space: the pearl at 0,0 of radius r, facing +x)
+  const shellPath = (rx, ry, n = 12) => { ctx.beginPath(); ctx.moveTo(0, ry * 1.05); for (let i = 0; i <= n; i++) { const a = Math.PI * .62 + i / n * Math.PI * 1.76, rr = i % 2 ? .97 : 1.08; ctx.lineTo(Math.cos(a) * rx * rr, Math.sin(a) * ry * rr); } ctx.closePath(); };
+  const PART = {
+    serrate: ['front', (r, p) => { ctx.beginPath(); const n = 18; for (let i = 0; i <= n; i++) { const a = i / n * TAU, rr = r * (i % 2 ? 1.08 : 1.24); i ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.arc(0, 0, r * 1.02, 0, TAU, true); ctx.fillStyle = p.metal; ctx.fill('evenodd'); stroke(OUT, inkW(r, .08)); }],
+    ring: ['both', (r, p, back) => { ctx.save(); ctx.rotate(-.32); const a0 = back ? Math.PI : 0, a1 = back ? TAU : Math.PI;
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 1.7, r * .44, 0, a0, a1); stroke(OUT, Math.max(1, r * .24));
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 1.7, r * .44, 0, a0, a1); stroke(p.metal, Math.max(.6, r * .14));
+      ctx.beginPath(); ctx.ellipse(0, -r * .02, r * 1.7, r * .44, 0, a0, a1); stroke('rgba(255,242,190,.85)', Math.max(.3, r * .05)); ctx.restore(); }],
+    chain: ['front', (r, p) => { for (let i = 0; i < 4; i++) { const x = -r * .5 - i * r * .42, y = r * 1 + i * r * .32; ctx.beginPath(); ctx.ellipse(x, y, r * (i % 2 ? .14 : .3), r * (i % 2 ? .3 : .16), -.6, 0, TAU); stroke(OUT, Math.max(.8, r * .2)); ctx.beginPath(); ctx.ellipse(x, y, r * (i % 2 ? .14 : .3), r * (i % 2 ? .3 : .16), -.6, 0, TAU); stroke(p.metalLt, Math.max(.4, r * .1)); } }],
+    coral: ['back', (r) => { ctx.lineCap = 'round'; const br = (x0, y0, x1, y1, w) => { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .2, (y0 + y1) / 2, x1, y1); stroke(OUT, w + 1.2); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .2, (y0 + y1) / 2, x1, y1); stroke('#E2604E', w); ctx.beginPath(); ctx.moveTo(x0 + w * .2, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .25, (y0 + y1) / 2, x1, y1); stroke('#FFA090', w * .35); };
+      const w = Math.max(.9, r * .26); br(-r * .2, -r * .6, -r * 1.1, -r * 1.9, w); br(-r * .8, -r * 1.25, -r * 1.7, -r * 1.5, w * .7); br(r * .3, -r * .7, r * .5, -r * 2, w * .85); br(r * .42, -r * 1.4, r * 1.2, -r * 1.75, w * .6); }],
+    scallop: ['back', (r, p) => { ctx.save(); ctx.translate(r * .55, 0); ctx.scale(.62, 1); const R = r * 1.75;
+      const g = ctx.createLinearGradient(-R, -R, R, R); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.45, p.blade); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; shellPath(R, R); ctx.fill();
+      ctx.save(); shellPath(R, R); ctx.clip(); ctx.strokeStyle = 'rgba(60,110,110,.45)'; ctx.lineWidth = Math.max(.4, r * .1); for (let i = 0; i < 7; i++) { const a = Math.PI * .75 + i / 6 * Math.PI * 1.5; ctx.beginPath(); ctx.moveTo(0, R * .7); ctx.lineTo(Math.cos(a) * R * 1.1, Math.sin(a) * R * 1.1); ctx.stroke(); } ctx.restore();
+      shellPath(R, R); stroke(p.metal, Math.max(.7, r * .16)); shellPath(R * 1.06, R * 1.05); stroke(OUT, inkW(r, .1)); ctx.restore(); }],
+    horn: ['front', (r, p) => { const x0 = r * .6, x1 = r * 3.1, w = r * .42;
+      ctx.beginPath(); ctx.moveTo(x0, -w); ctx.quadraticCurveTo(x1 * .7, -w * .5, x1, 0); ctx.quadraticCurveTo(x1 * .7, w * .5, x0, w); ctx.closePath();
+      const g = ctx.createLinearGradient(0, -w, 0, w); g.addColorStop(0, '#FFFDF4'); g.addColorStop(.6, '#EADFC6'); g.addColorStop(1, '#B8A684'); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .1));
+      ctx.strokeStyle = 'rgba(120,100,70,.7)'; ctx.lineWidth = Math.max(.35, r * .06); for (let i = 1; i < 6; i++) { const x = x0 + (x1 - x0) * i / 6, hw = w * (1 - i / 6.5); ctx.beginPath(); ctx.moveTo(x - hw * .5, -hw); ctx.lineTo(x + hw * .5, hw); ctx.stroke(); } }],
+    tines: ['front', (r, p) => { ctx.lineCap = 'round'; const t = (y0, y1, len) => { ctx.beginPath(); ctx.moveTo(r * .7, y0); ctx.quadraticCurveTo(r * 1.6, y0, r * len, y1); stroke(OUT, Math.max(1.2, r * .3)); ctx.beginPath(); ctx.moveTo(r * .7, y0); ctx.quadraticCurveTo(r * 1.6, y0, r * len, y1); stroke(p.metal, Math.max(.6, r * .16)); };
+      t(-r * .35, -r * .9, 2.3); t(r * .35, r * .9, 2.3); t(0, 0, 2.7); ctx.fillStyle = p.metalLt; for (const [x, y] of [[2.3, -.9], [2.3, .9], [2.7, 0]]) { ctx.beginPath(); ctx.moveTo(r * x, r * y - r * .22); ctx.lineTo(r * (x + .38), r * y); ctx.lineTo(r * x, r * y + r * .22); ctx.closePath(); ctx.fill(); stroke(OUT, inkW(r, .07)); } }],
+    swirl: ['both', (r, p, back) => { ctx.lineCap = 'round'; for (let i = 0; i < 2; i++) { const R = r * (1.45 + i * .3), a0 = back ? Math.PI * 1.05 + i : .1 + i, a1 = a0 + Math.PI * .85; ctx.beginPath(); ctx.ellipse(0, r * .1, R, R * .5, -.2, a0, a1); stroke(back ? 'rgba(40,120,130,.85)' : 'rgba(210,250,242,.95)', Math.max(.6, r * (.16 - i * .04))); } }],
+    foam: ['front', (r) => { ctx.fillStyle = '#FFFFFF'; for (const [x, y, s] of [[-.5, -1.02, .3], [-.1, -1.18, .34], [.32, -1.1, .3], [.66, -.9, .22]]) { ctx.beginPath(); ctx.arc(r * x, r * y, r * s, 0, TAU); ctx.fill(); }
+      ctx.beginPath(); ctx.moveTo(-r * .8, -r * .85); ctx.quadraticCurveTo(-r * .1, -r * 1.55, r * .8, -r * .95); ctx.quadraticCurveTo(r * .3, -r * 1.05, r * .55, -r * .7); stroke('rgba(60,140,150,.7)', Math.max(.4, r * .07)); }],
+    shards: ['front', (r, p) => { for (const [a, d, s] of [[-2.3, 1.7, .36], [-.8, 1.9, .3], [2.4, 1.65, .28]]) { const x = Math.cos(a) * r * d, y = Math.sin(a) * r * d * .8, S = r * s; ctx.beginPath(); ctx.moveTo(x, y - S * 1.4); ctx.lineTo(x + S * .6, y); ctx.lineTo(x, y + S); ctx.lineTo(x - S * .6, y); ctx.closePath();
+      const g = ctx.createLinearGradient(x - S, y - S, x + S, y + S); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, p.accent); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .07)); } }],
+    drops: ['front', (r, p) => { const x = r * .15, y = r * 1.05; ctx.fillStyle = p.metal; ctx.beginPath(); ctx.arc(x, y, r * .2, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .06));
+      ctx.beginPath(); ctx.moveTo(x, y + r * .15); ctx.quadraticCurveTo(x + r * .42, y + r * .75, x, y + r * 1); ctx.quadraticCurveTo(x - r * .42, y + r * .75, x, y + r * .15); const g = ctx.createLinearGradient(x, y, x, y + r); g.addColorStop(0, '#FFE0EA'); g.addColorStop(1, '#C8405A'); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .07));
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(x - r * .08, y + r * .5, r * .07, 0, TAU); ctx.fill(); }],
+    static: ['front', (r) => { ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * .98, 0, TAU); ctx.clip(); ctx.beginPath(); ctx.moveTo(-r, r * .1); for (let i = 1; i <= 6; i++) ctx.lineTo(-r + i * r / 3, r * (i % 2 ? -.18 : .22)); stroke('#5E66C8', Math.max(.6, r * .2)); ctx.beginPath(); ctx.moveTo(-r, r * .1); for (let i = 1; i <= 6; i++) ctx.lineTo(-r + i * r / 3, r * (i % 2 ? -.18 : .22)); stroke('#FFF2A0', Math.max(.35, r * .09)); ctx.restore(); }],
+    cloud: ['back', (r) => { const y = -r * 1.65; ctx.fillStyle = '#4A5288'; for (const [x, yy, s] of [[-.55, 0, .42], [0, -.18, .55], [.55, 0, .4]]) { ctx.beginPath(); ctx.arc(r * x, y + r * yy, r * s, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = '#7A84C8'; ctx.beginPath(); ctx.arc(-r * .1, y - r * .3, r * .3, 0, TAU); ctx.fill(); ctx.fillStyle = '#FFF2A0'; ctx.beginPath(); ctx.ellipse(0, y + r * .05, r * .2, r * .11, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#2A2050'; ctx.beginPath(); ctx.arc(0, y + r * .05, r * .07, 0, TAU); ctx.fill(); }],
+    halo: ['back', (r, p) => { ctx.beginPath(); ctx.arc(0, 0, r * 1.5, 0, TAU); stroke('rgba(20,14,40,.85)', Math.max(1, r * .45)); ctx.beginPath(); ctx.arc(0, 0, r * 1.5, 0, TAU); stroke('rgba(110,224,192,.75)', Math.max(.3, r * .08)); ctx.beginPath(); ctx.arc(0, 0, r * 1.72, -.6, 1.4); stroke('rgba(110,224,192,.45)', Math.max(.3, r * .06)); }],
+    core: ['front', (r) => { ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * .99, 0, TAU); ctx.clip(); const g = ctx.createRadialGradient(r * .15, r * .1, 0, r * .15, r * .1, r * .6); g.addColorStop(0, 'rgba(8,6,16,.95)'); g.addColorStop(.7, 'rgba(30,20,60,.7)'); g.addColorStop(1, 'rgba(30,20,60,0)'); ctx.fillStyle = g; ctx.fillRect(-r, -r, r * 2, r * 2); ctx.fillStyle = '#86F2D6'; ctx.beginPath(); ctx.arc(r * .05, 0, r * .09, 0, TAU); ctx.fill(); ctx.restore(); }],
+    ribbons: ['back', (r, p) => { ctx.lineCap = 'round'; for (const [y, k] of [[-r * .35, 1], [r * .3, .8]]) { ctx.beginPath(); ctx.moveTo(-r * .6, y); ctx.bezierCurveTo(-r * 1.6, y - r * .6 * k, -r * 2.1, y + r * .5 * k, -r * 3, y - r * .2); stroke(OUT, Math.max(1, r * .32)); ctx.beginPath(); ctx.moveTo(-r * .6, y); ctx.bezierCurveTo(-r * 1.6, y - r * .6 * k, -r * 2.1, y + r * .5 * k, -r * 3, y - r * .2); stroke(p.accent, Math.max(.5, r * .2)); } }],
+    fin: ['front', (r, p) => { ctx.beginPath(); ctx.moveTo(-r * .5, -r * .85); ctx.quadraticCurveTo(-r * .4, -r * 1.9, -r * 1.25, -r * 2.05); ctx.quadraticCurveTo(-r * .2, -r * 1.55, r * .45, -r * .9); ctx.closePath(); const g = ctx.createLinearGradient(0, -r * 2, 0, -r * .8); g.addColorStop(0, p.edge); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .08)); }],
+    cage: ['front', (r, p) => { for (const [k, rot] of [[.42, 0], [1, 0], [.42, Math.PI / 2]]) { ctx.beginPath(); if (rot) ctx.ellipse(0, 0, r * 1.15, r * 1.15 * k, 0, 0, TAU); else ctx.ellipse(0, 0, r * 1.15 * k, r * 1.15, 0, 0, TAU); stroke(OUT, Math.max(.9, r * .22)); ctx.beginPath(); if (rot) ctx.ellipse(0, 0, r * 1.15, r * 1.15 * k, 0, 0, TAU); else ctx.ellipse(0, 0, r * 1.15 * k, r * 1.15, 0, 0, TAU); stroke(p.metal, Math.max(.5, r * .12)); }
+      ctx.fillStyle = p.metalLt; ctx.beginPath(); ctx.arc(0, -r * 1.2, r * .2, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .06)); }],
+    anchor: ['front', (r, p) => { const x = -r * .1, y = r * 1.2; ctx.lineCap = 'round'; const a = () => { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + r * 1.1); ctx.moveTo(x - r * .3, y + r * .25); ctx.lineTo(x + r * .3, y + r * .25); ctx.moveTo(x - r * .5, y + r * .75); ctx.quadraticCurveTo(x, y + r * 1.35, x + r * .5, y + r * .75); };
+      a(); stroke(OUT, Math.max(1.1, r * .26)); a(); stroke(p.metal, Math.max(.5, r * .13)); ctx.beginPath(); ctx.arc(x, y - r * .05, r * .14, 0, TAU); stroke(p.metal, Math.max(.4, r * .08)); }],
+    charm: ['front', (r, p) => { const x = r * 1.25, y = -r * 1.05, R = r * .42; ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.arc(x + R * .45, y - R * .2, R * .85, 0, TAU, true); ctx.fillStyle = p.metalLt; ctx.fill('evenodd'); ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); stroke(OUT, inkW(r, .06)); }],
+    wave: ['front', (r, p) => { ctx.beginPath(); ctx.moveTo(-r * 1.4, r * 1.05); ctx.quadraticCurveTo(-r * .3, r * .55, r * .35, r * .95); ctx.quadraticCurveTo(r * .8, r * 1.2, r * .55, r * .7); ctx.quadraticCurveTo(r * 1.3, r * .8, r * 1.3, r * 1.3); ctx.lineTo(-r * 1.4, r * 1.3); ctx.closePath();
+      const g = ctx.createLinearGradient(0, r * .6, 0, r * 1.3); g.addColorStop(0, '#FFFFFF'); g.addColorStop(1, p.b[3]); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .07)); }],
+    stillring: ['back', (r, p) => { ctx.beginPath(); ctx.ellipse(0, -r * 1.45, r * .95, r * .26, 0, 0, TAU); stroke(OUT, Math.max(.9, r * .2)); ctx.beginPath(); ctx.ellipse(0, -r * 1.45, r * .95, r * .26, 0, 0, TAU); stroke('#FFF2C8', Math.max(.45, r * .1)); }],
+    dial: ['back', (r, p) => { ctx.fillStyle = p.metal; ctx.beginPath(); ctx.arc(-r * .3, -r * .1, r * 1.42, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .08)); ctx.strokeStyle = p.metalLt; ctx.lineWidth = Math.max(.35, r * .07);
+      for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(-r * .3 + Math.cos(a) * r * 1.18, -r * .1 + Math.sin(a) * r * 1.18); ctx.lineTo(-r * .3 + Math.cos(a) * r * 1.36, -r * .1 + Math.sin(a) * r * 1.36); ctx.stroke(); } }],
+    maelstrom: ['back', (r, p) => { ctx.save(); ctx.scale(1, .42); ctx.translate(0, r * 2.6); for (let i = 0; i < 3; i++) { ctx.beginPath(); for (let k = 0; k <= 20; k++) { const a = k / 20 * Math.PI * 1.6 + i * 2.1, R = r * (.4 + k / 20 * 1.6); k ? ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R) : ctx.moveTo(Math.cos(a) * R, Math.sin(a) * R); } stroke(i ? 'rgba(160,232,224,.75)' : 'rgba(30,100,112,.9)', Math.max(.5, r * .16)); } ctx.restore(); }],
+    corallance: ['front', (r) => { ctx.lineCap = 'round'; const br = (x0, y0, x1, y1, w) => { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); stroke(OUT, w + 1.2); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); stroke('#E2604E', w); };
+      const w = Math.max(.8, r * .24); br(r * .7, 0, r * 3, -r * .1, w); br(r * 1.7, -r * .05, r * 2.3, -r * .7, w * .7); br(r * 2.2, -r * .08, r * 2.7, r * .5, w * .6); br(r * 1.3, 0, r * 1.6, r * .55, w * .55); }],
+    bolt: ['front', (r) => { const x = r * 1.2, y = -r * 1.5; ctx.beginPath(); ctx.moveTo(x - r * .1, y - r * .6); ctx.lineTo(x + r * .32, y - r * .6); ctx.lineTo(x + r * .05, y - r * .05); ctx.lineTo(x + r * .35, y - r * .05); ctx.lineTo(x - r * .25, y + r * .7); ctx.lineTo(x - r * .02, y + r * .1); ctx.lineTo(x - r * .3, y + r * .1); ctx.closePath(); ctx.fillStyle = '#FFF2A0'; ctx.fill(); stroke(OUT, inkW(r, .07)); }],
+  };
+  const SPIN = { crescent: 1, thunder: 1 }; // (these turn round the pearl: drawn on their own, rotated)
+  function drawOrbParts(picks, r, pal, t, layer) {
+    for (const id of picks) { const T = TR[id]; if (!T || SPIN[T.part]) continue; const P_ = PART[T.part]; if (!P_) continue;
+      const L = P_[0]; if (L === 'both') { ctx.save(); P_[1](r, pal, layer === 'back'); ctx.restore(); } else if (L === layer) { ctx.save(); P_[1](r, pal); ctx.restore(); } }
   }
-  // the mirror: a scallop of nacre seen a little edge-on, ribbed, rimmed in gold, a pearl at its heart
-  function drawMirror(x, y, r, t, facing, flash) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(facing * .55, 1);
-    const shell = () => { ctx.beginPath(); ctx.moveTo(0, r * 1.05); for (let i = 0; i <= 12; i++) { const a = Math.PI * .62 + i / 12 * Math.PI * 1.76, rr = r * (i % 2 ? .98 : 1.08); ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 1.05); } ctx.closePath(); };
-    const g = ctx.createLinearGradient(-r, -r, r, r); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.4, '#D8F0E8'); g.addColorStop(.8, '#8FC8BC'); g.addColorStop(1, '#5A9890');
-    ctx.fillStyle = g; shell(); ctx.fill();
-    ctx.save(); shell(); ctx.clip(); ctx.strokeStyle = 'rgba(70,130,128,.55)'; ctx.lineWidth = Math.max(.4, r * .07);
-    for (let i = 0; i < 7; i++) { const a = Math.PI * .75 + i / 6 * Math.PI * 1.5; ctx.beginPath(); ctx.moveTo(0, r * .7); ctx.lineTo(Math.cos(a) * r * 1.1, Math.sin(a) * r * 1.1); ctx.stroke(); }
-    ctx.globalAlpha = .45 + .5 * flash; ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.ellipse(-r * .3, -r * .35, r * .22, r * .6, .3, 0, TAU); ctx.fill(); ctx.restore();
-    ctx.strokeStyle = '#D6AE58'; ctx.lineWidth = Math.max(.8, r * .16); shell(); ctx.stroke();
-    ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .08, .5, 1); ctx.save(); ctx.scale(1.08, 1.06); shell(); ctx.restore(); ctx.stroke();
+  function drawSpinner(picks, r, pal, spin) {
+    const n = picks.filter(id => TR[id] && SPIN[TR[id].part]).length; if (!n) return;
+    const lit = picks.includes('thunder'), k = Math.max(2, n + 1);
+    for (let i = 0; i < k; i++) crescentBlade(r * .62, spin + i * TAU / k, pal, lit);
+  }
+  // the whole orb, at 0,0 (cards draw it straight; the street uses the cached picture below)
+  function drawOrb(picks, r, pal, t, spin) {
+    drawOrbParts(picks, r, pal, t, 'back');
+    drawSpinner(picks, r, pal, spin);
+    pearlBody(0, 0, r, t, 1 + Math.min(4, picks.length), pal);
+    drawOrbParts(picks, r, pal, t, 'front');
+  }
+  const palOf = (picks) => PAL[prof(picks).current[0] || 'pearl'];
+  // cached: the orb's still parts as a picture (redrawn only when a pick changes it), and its spinning crescents
+  const SPR = new Map(), SC = 4;
+  function withCtx(g, fn) { const old = ctx; ctx = g; try { fn(); } finally { ctx = old; } }
+  function sprite(picks, r, kind) {
+    const key = kind + picks.join(',') + '|' + r.toFixed(1);
+    let c = SPR.get(key); if (c) return c;
+    if (SPR.size > 24) SPR.clear();
+    const ext = r * (kind === 'spin' ? 2.8 : 3.4); c = document.createElement('canvas'); c.width = c.height = Math.max(8, Math.ceil(ext * 2 * SC)); c.ext = ext;
+    const g = c.getContext('2d'), pal = palOf(picks);
+    withCtx(g, () => { g.setTransform(SC, 0, 0, SC, ext * SC, ext * SC); if (kind === 'spin') drawSpinner(picks, r, pal, 0); else { drawOrbParts(picks, r, pal, 0, 'back'); pearlBody(0, 0, r, 1.3, 1 + Math.min(4, picks.length), pal); drawOrbParts(picks, r, pal, 0, 'front'); } });
+    SPR.set(key, c); return c;
+  }
+  const hasSpin = (picks) => picks.some(id => TR[id] && SPIN[TR[id].part]);
+  function blitOrb(picks, x, y, r, facing, spin, alpha = 1) {
+    ctx.save(); ctx.translate(x, y); if (facing < 0) ctx.scale(-1, 1); if (alpha < 1) ctx.globalAlpha *= alpha;
+    if (hasSpin(picks)) { const s = sprite(picks, r, 'spin'); ctx.save(); ctx.rotate(spin); ctx.drawImage(s, -s.ext, -s.ext, s.ext * 2, s.ext * 2); ctx.restore(); }
+    const c = sprite(picks, r, 'body'); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2);
     ctx.restore();
-    pearlBody(x, y + r * .55, r * .26, t, 1);
   }
-  // the tide-bomb: a pearl in a shell of turning seawater, caged in two hoops of gold
-  function drawBomb(x, y, r, t, spin, scale) {
-    if (scale <= .02) return; r *= scale; const R = r * 1.5;
-    const g = ctx.createRadialGradient(x - R * .3, y - R * .35, R * .1, x, y, R); g.addColorStop(0, 'rgba(230,252,248,.85)'); g.addColorStop(.6, 'rgba(120,200,190,.7)'); g.addColorStop(1, 'rgba(36,104,112,.85)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.fill();
-    pearlBody(x, y, r * .72, t, nLayers());
-    ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.clip(); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = Math.max(.4, R * .08);
-    for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.arc(x, y, R * (.82 - i * .14), spin * (i ? -1 : 1) + i, spin * (i ? -1 : 1) + i + 1.9); ctx.stroke(); } ctx.restore();
-    ctx.strokeStyle = '#D6AE58'; ctx.lineWidth = Math.max(.6, R * .1);
-    for (let i = 0; i < 2; i++) { const q = Math.abs(Math.cos(spin * .5 + i * Math.PI / 2)); ctx.beginPath(); ctx.ellipse(x, y, Math.max(.3, R * q), R, 0, 0, TAU); ctx.stroke(); }
-    ctx.strokeStyle = OUT; ctx.lineWidth = clamp(R * .08, .6, 1.2); ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.stroke();
-    ctx.fillStyle = '#E2BE66'; ctx.beginPath(); ctx.arc(x, y - R, Math.max(.6, R * .16), 0, TAU); ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = .6; ctx.stroke();
+  // the card's picture: the orb as it would be with this trait taken, the new part flaring
+  function pickArt(cv2, picks, T, t) {
+    const g = cv2.getContext('2d'), w = cv2.width, h = cv2.height, next = picks.concat([T.id]), pal = palOf(next);
+    withCtx(g, () => { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
+      const bg = g.createRadialGradient(w / 2, h * .45, 4, w / 2, h * .5, w * .62); bg.addColorStop(0, '#2E6E70'); bg.addColorStop(.6, '#123A44'); bg.addColorStop(1, '#06161C'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(150,230,215,.12)'; g.lineWidth = 2; for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(w / 2, h * .84, w * (.12 + i * .1), h * (.04 + i * .025), 0, 0, TAU); g.stroke(); } g.restore();
+      const r = h * .13, cx = w / 2 - r * .3, cy = h * .47 + Math.sin(t * 2) * h * .015;
+      glow(cx, cy, r * 4, pal.glow, .28 + .1 * Math.sin(t * 3));
+      g.save(); g.translate(cx, cy); drawOrb(next, r, pal, t, t * 2.2); g.restore();
+      // the new part, flaring on its own beside the orb
+      g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .35 + .25 * Math.sin(t * 4); glow(cx, cy, r * 2.4, '255,240,200', .5); g.restore();
+      g.strokeStyle = T.req ? 'rgba(255,210,122,.75)' : 'rgba(242,214,138,.55)'; g.lineWidth = 2; g.strokeRect(5, 5, w - 10, h - 10); });
   }
-  // the burst: a ring of foam running out over the floor and a crown of seawater thrown up
-  function drawWave(w) {
-    const u = w.t / w.max, fa = 1 - u, rr = w.r * sm(Math.min(1, u * 2.2)), rise = u < .25 ? Math.sin(u / .25 * Math.PI / 2) : Math.max(0, 1 - Math.pow((u - .25) / .75, 1.5));
-    ctx.save();
-    ctx.fillStyle = `rgba(40,110,120,${.24 * fa})`; ctx.beginPath(); ctx.ellipse(w.x, w.y, rr, rr / 2.4, 0, 0, TAU); ctx.fill();
-    ctx.strokeStyle = `rgba(235,255,250,${.9 * fa})`; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.ellipse(w.x, w.y, rr, rr / 2.4, 0, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = `rgba(242,214,138,${.6 * fa})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(w.x, w.y, rr * .82, rr * .82 / 2.4, 0, 0, TAU); ctx.stroke();
-    const n = 14, cr = 8 + 16 * Math.min(1, u * 2);
-    for (let i = 0; i < n; i++) { const a = i / n * TAU + w.seed, back = Math.sin(a) < 0, bx = w.x + Math.cos(a) * cr, by = w.y + Math.sin(a) * cr / 2.4, h = (24 + 22 * (((i * 7.3 + w.seed) % 1 + 1) % 1)) * rise * (.6 + w.r / 160), lean = Math.cos(a) * 14 * rise;
-      ctx.strokeStyle = back ? `rgba(110,180,185,${.7 * fa + .2})` : `rgba(210,248,240,${.9 * fa + .1})`; ctx.lineWidth = back ? 2.6 : 3.6; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + lean * .3, by - h * .6, bx + lean, by - h); ctx.stroke();
-      if (h > 4) { ctx.fillStyle = `rgba(255,255,255,${fa})`; ctx.beginPath(); ctx.arc(bx + lean, by - h - 1.5, 1.6, 0, TAU); ctx.fill(); } }
-    ctx.restore();
+
+  // ---------------- in the street ----------------
+  function drawWave(p) { // a whirlpool on the floor
+    const a = Math.min(1, p.t / .15, (p.max - p.t) / .3), t = CUR.clock, col = p.pal ? p.pal.glow : '190,250,240';
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 4; i++) { const r = p.r * (.3 + i * .22), s = t * (5 - i * .7); ctx.strokeStyle = `rgba(${col},${.4 * a})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r / 2.4, 0, s, s + 3.6); ctx.stroke(); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(20,70,90,${.28 * a})`; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * .5, p.r * .2, 0, 0, TAU); ctx.fill(); ctx.restore();
+  }
+  function drawShot(s, t) {
+    const S = s.S, pal = S.pal, y = s.y - s.z;
+    if (s.k === 'burst') { const u = s.t / s.max, R = s.R * sm(s.t / (s.max * .7)), fa = 1 - u;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${pal.glow},${.85 * fa})`; ctx.lineWidth = 5 * fa + 1; ctx.beginPath(); ctx.ellipse(s.x, s.y - 20, R, R * .55, 0, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,255,255,${.8 * fa})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(s.x, s.y - 20, R * .9, R * .5, 0, 0, TAU); ctx.stroke();
+      ctx.fillStyle = `rgba(${pal.glow},${.12 * fa})`; ctx.beginPath(); ctx.ellipse(s.x, s.y, R, R / 2.4, 0, 0, TAU); ctx.fill(); ctx.restore();
+      if (S.f.has('scallop') || S.f.has('coral')) { ctx.save(); ctx.globalAlpha = fa; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + s.t * 3; ctx.save(); ctx.translate(s.x + Math.cos(a) * R * .85, s.y - 20 + Math.sin(a) * R * .47); ctx.scale(.5, .5); PART[S.f.has('coral') ? 'coral' : 'scallop'][1](8, pal); ctx.restore(); } ctx.restore(); }
+      return; }
+    if (s.k === 'shard') { ctx.save(); ctx.translate(s.x, y); ctx.rotate(s.spin); ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(1.8, 0); ctx.lineTo(0, 3); ctx.lineTo(-1.8, 0); ctx.closePath(); ctx.fillStyle = pal.accent; ctx.fill(); stroke(OUT, .6); ctx.restore(); return; }
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const lg = ctx.createLinearGradient(s.x, 0, s.x - s.dir * (s.k === 'lance' ? s.len * 1.3 : 50), 0); lg.addColorStop(0, `rgba(${pal.glow},.6)`); lg.addColorStop(1, `rgba(${pal.glow},0)`);
+    ctx.fillStyle = lg; ctx.beginPath(); ctx.ellipse(s.x - s.dir * (s.k === 'lance' ? s.len * .6 : 24), y, s.k === 'lance' ? s.len * .7 : 26, s.r * (s.k === 'lance' ? 1.4 : .9), 0, 0, TAU); ctx.fill(); ctx.restore();
+    if (s.k === 'lance') { const lanes = S.tines === 3 ? [-14, 0, 14] : [0];
+      for (const o of lanes) { const ly = y + o, x0 = s.x - s.dir * s.len, w = s.r * .8; ctx.beginPath(); ctx.moveTo(x0, ly - w * .5); ctx.lineTo(s.x - s.dir * s.r * 2, ly - w); ctx.lineTo(s.x + s.dir * s.r * 1.2, ly); ctx.lineTo(s.x - s.dir * s.r * 2, ly + w); ctx.lineTo(x0, ly + w * .5); ctx.closePath();
+        const g = ctx.createLinearGradient(0, ly - w, 0, ly + w); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, pal.blade); g.addColorStop(1, pal.bladeDk); ctx.fillStyle = g; ctx.fill(); stroke(OUT, .9);
+        if (S.f.has('narwhal')) { ctx.strokeStyle = 'rgba(80,80,90,.45)'; ctx.lineWidth = .6; for (let i = 1; i < 6; i++) { const x = x0 + s.dir * (s.len - s.r * 2) * i / 6; ctx.beginPath(); ctx.moveTo(x - 1.5, ly - w * .7); ctx.lineTo(x + 1.5, ly + w * .7); ctx.stroke(); } } }
+      return; }
+    if (s.k === 'disc') { ctx.save(); ctx.translate(s.x, y); ctx.scale(1, .55); for (let i = 0; i < 3; i++) crescentBlade(s.r * .55, s.spin * 1.6 + i * TAU / 3, pal, S.f.has('thunder')); ctx.restore(); pearlBody(s.x, y, s.r * .42, t, 2, pal); return; }
+    if (s.k === 'orb') { glow(s.x, y, s.r * 3, pal.glow, .25); blitOrb(S.picks, s.x, y, s.r, s.dir, s.spin, 1); return; }
+    glow(s.x, y, s.r * 3, pal.glow, .3); pearlBody(s.x, y, s.r, t, 2, pal);
   }
   // the currents on the floor: a dark band of moving water along his wake, foam lines running in it, and the current he
   // is laying just ahead of his feet
@@ -490,100 +837,64 @@
       ctx.restore();
     }
   }
-  // the orb in the street, for whichever shape it has
+  const shadowAt = (x, y, z, rr) => onMain(() => { ctx.fillStyle = `rgba(10,20,30,${clamp(.28 - z / 400, .06, .28)})`; ctx.beginPath(); ctx.ellipse(x, y, rr * 1.2, rr * .4, 0, 0, TAU); ctx.fill(); });
   function orbItems(list, t) {
-    if (!O.on || !P) return;
-    const k = form(), r = O.r * (1 + .25 * O.pop), sy = O.y - O.z, spin = t * 15;
-    const shadowAt = (x, y, z, rr) => onMain(() => { ctx.fillStyle = `rgba(10,20,30,${clamp(.28 - z / 400, .06, .28)})`; ctx.beginPath(); ctx.ellipse(x, y, rr * 1.2, rr * .4, 0, 0, TAU); ctx.fill(); });
-    if (k === 'tide') { const B = O.bomb, sc = B.st === 're' ? sm(B.re) : 1;
-      list.push([B.y - .02, () => { shadowAt(B.x, B.y, B.z, r * 1.4 * sc); onMain(() => glow(B.x, B.y - B.z, r * 4 * sc, '150,230,215', .25)); }]);
-      list.push([B.y + .05, () => drawBomb(B.x, B.y - B.z, r, t, B.spin, sc)]); }
-    else if (k === 'mirror') { const f = O.parryCd <= 0 ? .5 + .5 * Math.sin(t * 5) : 0;
-      list.push([O.y - .02, () => { shadowAt(O.x, O.y, O.z, r); onMain(() => glow(O.x, sy, r * 3.2, '170,240,225', .16 + .25 * f + O.flash)); }]);
-      list.push([P.y + .3, () => drawMirror(O.x, sy, r, t, P.facing, Math.max(O.flash * 2, f * .4))]); }
-    else if (k === 'moon') {
-      list.push([O.y - .02, () => { shadowAt(O.x, O.y, O.z, r); onMain(() => glow(O.x, sy, r * 3.5, '190,240,230', .22)); }]);
-      list.push([O.y - .01, () => drawMoon(O.x, sy, r, t, 'back')]); list.push([O.y + .02, () => drawMoon(O.x, sy, r, t, 'front')]);
-      if (O.moon) list.push([O.y - .03, () => onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const m = O.moon, dir = m.back ? -m.dir : m.dir; const lg = ctx.createLinearGradient(m.x, 0, m.x - dir * 60, 0); lg.addColorStop(0, 'rgba(200,250,240,.5)'); lg.addColorStop(1, 'rgba(200,250,240,0)'); ctx.fillStyle = lg; ctx.beginPath(); ctx.ellipse(m.x - dir * 30, sy, 32, r * .8, 0, 0, TAU); ctx.fill(); ctx.restore(); })]); }
-    else { list.push([O.y - .02, () => { shadowAt(O.x, O.y, O.z, r * 1.6); onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(190,245,235,.22)'; ctx.lineWidth = r * 1.6; ctx.beginPath(); ctx.arc(O.x, sy, r * 1.7, spin, spin + 4.2); ctx.stroke(); ctx.restore(); glow(O.x, sy, r * 3.4, '190,245,235', .2); }); }]);
-      list.push([O.y + .01, () => drawBlade(O.x, sy, r, t, spin)]); }
-    for (const w of O.waves) list.push([w.y + 6, () => onMain(() => drawWave(w))]);
+    if (O.rise) { const R = O.rise, pk = ES().picks, rr = 3.6 + 1.05 * pk.length + 2 * sm(R.t / .8) * (1 - sm((R.t - 2) / 1));
+      list.push([R.y + .4, () => { onMain(() => { glow(R.x, R.y - R.z, rr * 6, '220,250,240', .35); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(242,214,138,.5)'; ctx.lineWidth = 1.2; for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; ctx.beginPath(); ctx.arc(R.x, R.y - R.z, rr * (1.4 + q * 3), 0, TAU); ctx.globalAlpha = 1 - q; ctx.stroke(); } ctx.restore(); }); blitOrb(pk, R.x, R.y - R.z, rr, P.facing, t * 2); }]); }
+    if (O.on && P && !O.rise) {
+      const pk = ES().picks, pal = palOf(pk), r = O.r * (1 + .25 * O.pop), sy = O.y - O.z, front = O.chg !== null;
+      const k = O.chg !== null ? clamp(O.chg / GLEAM, 0, 1) : 0, gl = O.chg !== null && O.chg >= GLEAM && O.chg <= GLEAM + PCW();
+      list.push([O.y - .02, () => { shadowAt(O.x, O.y, O.z, r); onMain(() => glow(O.x, sy, r * (3.4 + 2 * k), gl ? '255,244,200' : pal.glow, .2 + .25 * O.flash + .25 * k + (gl ? .3 : 0))); }]);
+      list.push([front ? P.y + .3 : P.y - .3, () => { blitOrb(pk, O.x, sy, r, P.facing, t * 2.4);
+        if (pk.includes('static') || pk.includes('thunder') || pk.includes('squall')) { if (Math.random() < .35) { ctx.save(); ctx.strokeStyle = '#E8ECFF'; ctx.lineWidth = .8; ctx.beginPath(); const a = rand(0, TAU); let x = O.x + Math.cos(a) * r, y = sy + Math.sin(a) * r; ctx.moveTo(x, y); for (let i = 0; i < 3; i++) { x += Math.cos(a) * r * .5 + rand(-2, 2); y += Math.sin(a) * r * .5 + rand(-2, 2); ctx.lineTo(x, y); } ctx.stroke(); ctx.restore(); } } }]);
+    }
+    for (const s of O.shots) list.push([s.y + .05, () => drawShot(s, t)]);
+    for (const p of O.pools) list.push([p.y - .3, () => onMain(() => drawWave(p))]);
   }
-  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (O.on) { box(O.x, O.y, O.z, 50, 60); if (form() === 'tide') box(O.bomb.x, O.bomb.y, O.bomb.z, 50, 60); } }; }
+  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (O.on) box(O.x, O.y, O.z, 60, 70); if (O.rise) box(O.rise.x, O.rise.y, O.rise.z, 70, 80); for (const s of O.shots) box(s.x, s.y, s.z || 0, s.k === 'burst' ? (s.R || 60) + 20 : s.k === 'lance' ? (s.len || 40) + 30 : 50, s.k === 'burst' ? 90 : 60); for (const p of O.pools) box(p.x, p.y, 0, p.r + 20, 40); }; }
   { const _ml = mechList; mechList = function (list, t) { _ml(list, t);
     if (curOn() && (CUR.trail.length > 2 || CUR.lay > .05)) list.push([FLOOR_TOP - 4, () => onMain(() => drawCurrents(t))]);
     orbItems(list, t); }; }
 
-  // ---------------- its picture, for the cards and the HUD ----------------
-  // (each drawn into its own little canvas with the world painters, ctx swapped for the canvas's own)
-  function withCtx(g, fn) { const old = ctx; ctx = g; try { fn(); } finally { ctx = old; } }
-  function formIcon(kind, x, y, s, t, gk) { // a shape, centred at x,y, at a size of about 2s
-    const r = s * (.45 + .55 * gk);
-    if (kind === 'blade') drawBlade(x, y, r * .5, t, t * 3);
-    else if (kind === 'moon') { drawMoon(x, y, r * .62, t); }
-    else if (kind === 'mirror') { ctx.save(); ctx.translate(x, y); ctx.scale(1.6, 1); ctx.translate(-x, -y); drawMirror(x, y, r * .8, t, 1, .2); ctx.restore(); }
-    else if (kind === 'tide') drawBomb(x, y, r * .55, t, t * 2, 1);
-    else pearlBody(x, y, r * .5, t, 2);
-  }
-  function formCard(cv2, kind, t) {
-    const g = cv2.getContext('2d'), w = cv2.width, h = cv2.height;
-    withCtx(g, () => { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
-      const bg = g.createRadialGradient(w / 2, h * .45, 4, w / 2, h * .5, w * .62); bg.addColorStop(0, '#2E6E70'); bg.addColorStop(.6, '#123A44'); bg.addColorStop(1, '#06161C'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
-      g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(150,230,215,.12)'; g.lineWidth = 2; for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(w / 2, h * .82, w * (.12 + i * .1), h * (.04 + i * .025), 0, 0, TAU); g.stroke(); } g.restore();
-      g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(w / 2, h * .82, w * .14, h * .04, 0, 0, TAU); g.fill();
-      const s = h * .3; g.save(); g.translate(0, Math.sin(t * 2) * h * .015); glow(w / 2, h * .46, s * 2.2, '190,245,235', .25); formIcon(kind, w / 2, h * .46, s, t, Math.max(.75, G())); g.restore();
-      g.strokeStyle = 'rgba(242,214,138,.55)'; g.lineWidth = 2; g.strokeRect(5, 5, w - 10, h - 10); });
-  }
-  // the weapon card's badge: its shape, a ring of gold filling as it grows, and an inner ring of sea-green as its next
-  // trick (the fling, the parry, the bomb) gathers
+  // ---------------- the weapon card's badge: the orb (or the weapon's sigil), a ring as the shot gathers, a pip per choice ----------------
   let hudCv = null, hudN = 0;
   function hudBadge() {
-    if (!hudCv) { const card = document.querySelector('.wcard'); if (!card) return; hudCv = document.createElement('canvas'); hudCv.id = 'pearlNgHud'; hudCv.width = 64; hudCv.height = 64;
-      hudCv.style.cssText = 'position:absolute;right:-13px;bottom:-11px;width:26px;height:26px;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))'; card.appendChild(hudCv); }
-    const on = growOn(); hudCv.hidden = !on; if (!on) return;
-    if ((hudN++ % 4) && hudCv.dataset.k === form()) return; hudCv.dataset.k = form();
-    hudCv.title = `The Pearl of Judgement: ${FORMS[form()].name} · ${layers()} layers · ${Math.round(G() * 100)}% grown`;
-    const g = hudCv.getContext('2d'), t = performance.now() / 1000, gk = G(), k = form();
-    const ready = k === 'moon' ? (O.moon ? 0 : 1 - O.moonCd / (2.4 - .8 * gk)) : k === 'mirror' ? 1 - O.parryCd / (6 - 3 * gk) : k === 'tide' ? (O.bomb.st === 'home' ? 1 - clamp(O.bomb.t / (5 - 2.2 * gk), 0, 1) : 0) : 1;
+    if (!hudCv) { const cardEl = document.querySelector('.wcard'); if (!cardEl) return; hudCv = document.createElement('canvas'); hudCv.id = 'pearlNgHud'; hudCv.width = 64; hudCv.height = 64;
+      hudCv.style.cssText = 'position:absolute;right:-13px;bottom:-11px;width:26px;height:26px;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))'; cardEl.appendChild(hudCv); }
+    const S = P && (mode === 'play' || mode === 'pause') ? curStats() : null; hudCv.hidden = !S; if (!S) return;
+    const ready = O.chg !== null ? clamp(O.chg / GLEAM, 0, 1) : 1 - clamp(O.cd / Math.max(.01, S.cd), 0, 1), sig = ready.toFixed(2) + S.picks.join() + (O.chg !== null);
+    if ((hudN++ % 3) && hudCv.dataset.k === sig) return; hudCv.dataset.k = sig;
+    hudCv.title = `The Pearl of Judgement: ${S.name} (Light + Heavy)${held() ? '' : ` · ${S.n} of ${PICKS} choices`}`;
+    const g = hudCv.getContext('2d'), pal = S.pal;
     withCtx(g, () => { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 64, 64);
       const bg = g.createRadialGradient(32, 28, 2, 32, 32, 28); bg.addColorStop(0, '#2A6A6C'); bg.addColorStop(1, '#071A20'); g.fillStyle = bg; g.beginPath(); g.arc(32, 32, 27, 0, TAU); g.fill();
       g.strokeStyle = 'rgba(20,14,8,.9)'; g.lineWidth = 6; g.beginPath(); g.arc(32, 32, 28, 0, TAU); g.stroke();
-      g.strokeStyle = '#F2D68A'; g.lineWidth = 4; g.beginPath(); g.arc(32, 32, 28, -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(.02, gk)); g.stroke();
-      if (k !== 'blade') { g.strokeStyle = ready >= 1 ? '#BFF0E4' : 'rgba(120,200,190,.7)'; g.lineWidth = 2.2; g.beginPath(); g.arc(32, 32, 22.5, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(ready, 0, 1)); g.stroke(); }
-      formIcon(k, 32, 33, 15, t, Math.max(.6, gk)); });
+      g.strokeStyle = ready >= 1 ? (O.chg !== null && O.chg >= GLEAM ? '#FFFFFF' : '#F2D68A') : `rgba(${pal.glow},.85)`; g.lineWidth = 4; g.beginPath(); g.arc(32, 32, 28, -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(.02, ready)); g.stroke();
+      if (!held()) for (let i = 0; i < PICKS; i++) { const a = Math.PI / 2 + (i - (PICKS - 1) / 2) * .38; g.fillStyle = i < S.n ? '#F2D68A' : 'rgba(255,255,255,.25)'; g.beginPath(); g.arc(32 + Math.cos(a) * 21, 32 + Math.sin(a) * 21, 2.6, 0, TAU); g.fill(); }
+      const pk = S.picks, r = 8 + .9 * Math.min(5, pk.length); blitOrb(pk, 32, 30, r, 1, performance.now() / 400); });
   }
   { const _ht = hudTick; hudTick = function () { _ht(); try { hudBadge(); } catch (e) {} }; }
 
-  // ---------------- the forge: the relic row's words, and the choice of shape for the world ahead ----------------
+  // ---------------- the forge: the relic row's words ----------------
   W7.ngText = () => {
-    const grow = 'THE GROWING PEARL: it starts as a speck at your side and grows a layer from every foe you defeat, to its full size by the road\'s last world. Each world you choose what it becomes: a spinning blade of nacre, a moon that orbits wide and strikes hard (Attack + Heavy together flings it), a mirror that throws shots back and parries a blow every few seconds, or a tide-bomb that rolls at the nearest foe and bursts in a wave.';
+    const s = save.pearlEvo && Array.isArray(save.pearlEvo.picks) ? save.pearlEvo.picks.filter(id => TR[id]) : [];
+    const evo = forged() ? `REFORGED: it is ${WEAPONS[WID] ? WEAPONS[WID].name : 'a weapon of its own'} now, kept for good, its shot its signature (Light + Heavy).`
+      : `THE EVOLVING PEARL: it hangs at your shoulder, and Light + Heavy together fires it. Each time a boss of the first five worlds falls it rises out of it and takes one of three traits (its Form, its Current, its Temper), and every one changes the shot. After the fifth, at the road's last world, it is reforged into a weapon of its own.${s.length ? ` It has taken ${s.map(id => TR[id].name).join(', ')} (${s.length} of ${PICKS}).` : ''}`;
     const cur = 'CURRENTS, NOT FOOTSTEPS: you do not walk, you ride the sea. Hold a direction to lay a current and glide on it; Dodge (or a double-tap) flings you across the street through whatever is in the way, off the edges and the big ones like a pinball; an attack at speed carries further and hits harder.';
-    const on = [SW.grow ? grow : '', SW.currents ? cur : ''].filter(Boolean).join(' ');
+    const on = [SW.evolve || forged() ? evo : '', SW.currents ? cur : ''].filter(Boolean).join(' ');
     if (!owned()) return `The sea's reflection of the Jewel of Judgement, out of the King in the Glass. In New Game+ it wakes and changes the whole road. ${on || '(Its New Game+ powers are switched off.)'}`;
-    return on ? `The sea's reflection of the Jewel of Judgement. ${on}${SW.grow ? ` It has ${layers()} layer${layers() === 1 ? '' : 's'} (${Math.round(G() * 100)}% grown).` : ''}` : 'The sea\'s reflection of the Jewel of Judgement. (Its New Game+ powers are switched off.)';
+    return on ? `The sea's reflection of the Jewel of Judgement. ${on}` : 'The sea\'s reflection of the Jewel of Judgement. (Its New Game+ powers are switched off.)';
   };
-  { const _of = openForge; openForge = function (kicker) { _of(kicker); try { forgeRow(); } catch (e) { console.error(e); } }; }
-  function forgeRow() {
-    const row = document.getElementById('w7relicRow'); if (!row) return;
-    let box = document.getElementById('pearlForms');
-    withCtx(row.firstChild.getContext('2d'), () => { const g = ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 40, 40); formIcon(growOn() ? form() : 'pearl', 20, 21, 12, 0, growOn() ? Math.max(.5, G()) : 1); });
-    if (!growOn()) { if (box) box.remove(); return; }
-    row.style.flexWrap = 'wrap'; if (row.children[1]) { row.children[1].style.flex = '1 1 220px'; row.children[1].style.textAlign = 'left'; }
-    if (!box) { box = document.createElement('div'); box.id = 'pearlForms'; box.style.cssText = 'flex:1 1 100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:4px'; row.appendChild(box); }
-    const wi = roadStage(), chosen = PS().formFor === wi;
-    box.innerHTML = `<div style="grid-column:1/-1;font:700 11px var(--label,Georgia,serif);letter-spacing:.12em;color:#BFF0E4">${chosen ? 'THE PEARL\'S SHAPE' : 'CHOOSE THE PEARL\'S SHAPE'} FOR ${(STAGES[wi] ? STAGES[wi].name : 'THE NEXT WORLD').toUpperCase()}</div>` +
-      FORM_ORDER.map(k => { const sel = chosen && form() === k; return `<button type="button" data-k="${k}" style="all:unset;cursor:pointer;box-sizing:border-box;display:grid;gap:2px;justify-items:center;text-align:center;padding:5px;border-radius:8px;border:1.5px solid ${sel ? '#F2D68A' : 'rgba(242,214,138,.3)'};background:${sel ? 'rgba(60,120,120,.55)' : 'rgba(8,28,36,.6)'};box-shadow:${sel ? '0 0 12px rgba(160,230,215,.35)' : 'none'}"><canvas width="192" height="120" style="width:100%;max-width:120px;aspect-ratio:8/5"></canvas><b style="font:700 11px Cinzel,Georgia,serif;color:#F2D68A">${FORMS[k].name}${sel ? ' ✓' : ''}</b><span style="font-size:10.5px;line-height:1.3;opacity:.85">${FORMS[k].desc}</span></button>`; }).join('');
-    box.querySelectorAll('canvas').forEach((c, i) => formCard(c, FORM_ORDER[i], .4 + i));
-    box.querySelectorAll('button[data-k]').forEach(b => b.addEventListener('click', () => { choose(b.dataset.k, roadStage()); sfx('buy'); forgeRow(); }));
-  }
+  { const _of = openForge; openForge = function (kicker) { _of(kicker); try { const row = document.getElementById('w7relicRow'); if (row && row.firstChild && row.firstChild.getContext) withCtx(row.firstChild.getContext('2d'), () => { const g = ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 40, 40); const pk = forged() ? save.pearlForge.picks || [] : save.pearlEvo ? (save.pearlEvo.picks || []).filter(id => TR[id]) : []; blitOrb(pk, 20, 21, 6 + .6 * Math.min(5, pk.length), 1, 0); }); } catch (e) { console.error(e); } }; }
 
-  // ---------------- for the dev panel and tests ----------------
+  // ---------------- for the weapon (pearl_weapon.js), the dev panel and tests ----------------
   window.PEARLNG = {
-    state: () => ({ owned: owned(), grow: growOn(), currents: curOn(), pts: PS().pts, g: G(), form: form(), formFor: PS().formFor, vx: CUR.vx, vy: CUR.vy, speed: speedE(), orb: { x: O.x, y: O.y, z: O.z, r: O.r }, bomb: O.bomb.st, moon: !!O.moon, parryCd: O.parryCd }),
-    grow: (n = 10) => { PS().pts = clamp(PS().pts + n, 0, FULL * 1.25); return G(); },
-    setPts: (n) => { PS().pts = n; return G(); },
-    form: (k) => { if (FORMS[k]) choose(k, typeof stageIdx !== 'undefined' ? stageIdx : 0); return form(); },
-    fling: flingMoon, picker: openPicker, take, FULL, T, O, CUR,
-    devJump: (i) => { if (!owned()) return; const s = save.pearlNG = { cyc: save.cycle | 0, pts: Math.round(FULL * (EXPECT[i] || 0)), form: (save.pearlNG && save.pearlNG.form) || null, formFor: -1 }; return s; },
+    state: () => ({ owned: owned(), evolve: evoOn(), forged: forged(), held: held(), currents: curOn(), picks: picksNow().slice(), seed: save.pearlEvo ? save.pearlEvo.seed : null, cd: O.cd, chg: O.chg, shots: O.shots.length, pools: O.pools.length,
+      vx: CUR.vx, vy: CUR.vy, speed: speedE(), orb: { on: O.on, x: O.x, y: O.y, z: O.z, r: O.r }, pending: !!(typeof stage !== 'undefined' && stage && pickPending()), card: !!card }),
+    TRAITS, TR, AX, AXNAME, TAGNAME, PAL, PICKS, prof, offers, stats, curStats, ES, take, autoPick, pick: openPick, choose, card: () => card && card.opts.map(t => t.id),
+    fire: (o) => { const S = curStats(); if (!S) return false; fire(S, o); O.cd = S.cd; return true; },
+    procs, hitFoe, addPool, owned, forged, held, evoOn, curOn, O, CUR, T, GLEAM,
+    art: { pearlBody, drawOrb, drawOrbParts, drawSpinner, blitOrb, crescentBlade, PART, glow, withCtx, sparkle, palOf },
+    devJump: (i) => { if (!evoOn()) return; const want = Math.min(PICKS, Math.max(0, i | 0)); if (ES().picks.length < want) autoPick(want); },
   };
 })();
