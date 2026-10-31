@@ -79,11 +79,17 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
     if (!mkC) [mkC] = texCanvas(Math.ceil((MX1 - MX0) * MS), Math.ceil(VH * MS));
     const g = mkC.getContext('2d'), old = ctx; ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, mkC.width, mkC.height); g.setTransform(MS, 0, 0, MS, -MX0 * MS, 0);
     try { T.mask ? T.mask(edgeMask) : edgeMask(T); } finally { ctx = old; }
+    // how far left the next place shows at all (the mask is clear left of its ragged edge): only the canvas right of
+    // that is repainted and laid on each frame, as everything left of it comes out clear anyway
+    mkC.left = MX0;
+    try { const d = g.getImageData(0, 0, mkC.width, mkC.height).data, W = mkC.width; let c0 = W;
+      for (let i = 3; i < d.length; i += 4) { const c = ((i - 3) >> 2) % W; if (c < c0 && d[i]) c0 = c; }
+      mkC.left = MX0 + Math.max(0, c0 - 2) / MS; } catch (e) {}
     mkKey = kind; return mkC;
   }
   function drawNext(kind, T, L, t) {
     const B = NX && NX.K === K ? NX : prepNext(); if (!B) return;
-    const sx0 = L + MX0 - camX; if (sx0 > VW || L + MX1 - camX < 0) return;
+    const sx0 = L + Math.max(MX0, maskFor(kind, T).left) - camX; if (sx0 > VW || L + MX1 - camX < 0) return;
     if (!nwC || nwC.width !== cv.width || nwC.height !== cv.height) { retire(nwC); [nwC, nwG] = texCanvas(cv.width, cv.height); }
     const m = ctx.getTransform(), g = nwG, W = nwC.width, H = nwC.height, px0 = m.b || m.c ? 0 : clamp(Math.floor(m.a * sx0 + m.e) - 2, 0, W), pw = W - px0; // (the part of the canvas it can show in)
     if (pw <= 0) return;
