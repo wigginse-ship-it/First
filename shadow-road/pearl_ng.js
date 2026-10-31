@@ -835,6 +835,11 @@
     const t = performance.now() / 1000, ph = (t % 1.8) / 1.8, q = ph < .26 ? Math.sin(ph / .26 * Math.PI) : 0;
     const x = -r * .38, y = -r * .42;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    { const pu = .5 + .5 * Math.sin(t * 2.4), R = Math.max(r * 3.6, 17) * (1 + .15 * pu), hg = ctx.createRadialGradient(0, 0, r * .4, 0, 0, R); // its own soft light, breathing
+      hg.addColorStop(0, `rgba(240,252,255,${.62 + .2 * pu})`); hg.addColorStop(.3, `rgba(200,240,245,${.34 + .14 * pu})`); hg.addColorStop(.6, `rgba(180,225,240,${.12 + .06 * pu})`); hg.addColorStop(1, 'rgba(170,220,235,0)');
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
+      ctx.strokeStyle = `rgba(255,255,255,${.35 + .25 * pu})`; ctx.lineWidth = Math.max(.8, r * .12); ctx.beginPath(); ctx.arc(0, 0, Math.max(1.5, r * .96), Math.PI * .95, Math.PI * 1.75); ctx.stroke(); // a bright rim along its lit side
+      ctx.strokeStyle = `rgba(255,200,240,${.18 + .12 * pu})`; ctx.beginPath(); ctx.arc(0, 0, Math.max(1.5, r * .96), Math.PI * .1, Math.PI * .7); ctx.stroke(); } // and a faint rose sheen on the far side, as nacre has
     ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(x, y, Math.max(1, r * .16), 0, TAU); ctx.fill();
     if (q > .02) {
       const L = Math.max(r * (.9 + 1.1 * q), 4 + 9 * q), w = Math.max(1.1, r * .1), bl = ctx.createRadialGradient(x, y, 0, x, y, L * .8);
