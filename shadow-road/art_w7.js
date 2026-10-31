@@ -1921,10 +1921,11 @@
         // the whirl: round and in
         if (!['dodge', 'dead'].includes(P.state)) { const dx = P.x - A.cx, dy = (P.y - A.cy) * 3.2, d = Math.hypot(dx, dy) || 1; if (d > 40) { P.x += (-dy / d * 70 - dx / d * 24) * dt; P.y += (dx / d * 70 - dy / d * 24) / 3.2 * dt; } }
         for (const w of G.wreck) { w.a += dt * .85; w.cd -= dt; const [x, y] = orbitPt(w.a); w.x = x; w.y = y; if (w.cd <= 0 && Math.abs(P.x - x) < 26 && Math.abs(P.y - y) < 12 && P.z < 38) { w.cd = 1; hitP(Math.round(edmg(e) * .8), x, true); } }
-        if (G.surf > 0) { G.surf -= dt; G.vuln = true; G.sub += (.12 - G.sub) * Math.min(1, dt * 4); if (G.surf < 1 && !G.surfW) { G.surfW = 1; warnRing(A.cx, A.cy, 1, 240, Math.round(edmg(e) * .7)); } if (G.surf < 1) { e.w7pose = { k: 'inhale', u: 1 - G.surf }; flare(e, 1 - G.surf); } if (G.surf <= 0) { G.sub = .2; G.surfW = 0; } }
-        else { G.vuln = false; if (!G.cur) G.sub += (1 - G.sub) * Math.min(1, dt * 3); }
-        if (!G.cur && !(G.surf > 0)) { G.atkT -= dt; if (G.atkT <= 0) { const S = ['spout', 'whirl', 'drain']; startAtk(e, S[G.seq++ % S.length]); } }
-        if (G.cur && G.cur.name !== 'whirl') G.sub += (1 - G.sub) * Math.min(1, dt * 3);
+        if (G.surf > 0) { G.surf -= dt; G.vuln = true; G.sub += (.12 - G.sub) * Math.min(1, dt * 4); if (G.surf < 1 && !G.surfW) { G.surfW = 1; warnRing(A.cx, A.cy, 1, 240, Math.round(edmg(e) * .7)); } if (G.surf < 1) { e.w7pose = { k: 'inhale', u: 1 - G.surf }; flare(e, 1 - G.surf); } if (G.surf <= 0) { G.sub = .2; G.surfW = 0; G.punish = 1.3; } } // (after the blast he hangs there, spent, for a moment: the time to punish him)
+        else if (G.punish > 0) { G.punish -= dt; G.vuln = true; G.sub += (.22 - G.sub) * Math.min(1, dt * 4); e.w7pose = { k: 'idle', u: 0 }; }
+        else { if (!G.cur) G.sub += (1 - G.sub) * Math.min(1, dt * 3); G.vuln = G.sub < .55; } // (he can be struck until he is more than half under)
+        if (!G.cur && !(G.surf > 0) && !(G.punish > 0)) { G.atkT -= dt; if (G.atkT <= 0) { const S = ['spout', 'whirl', 'drain']; startAtk(e, S[G.seq++ % S.length]); } }
+        if (G.cur && G.cur.name !== 'whirl') { G.sub += (1 - G.sub) * Math.min(1, dt * 3); G.vuln = G.sub < .55; }
         G.spin = 1.1; G.patLit = .7;
         if (e.hp <= e.maxHp * .335) { G.wreck = []; toPhase(e, 3); }
       } else if (G.mode === 'p3in') {
