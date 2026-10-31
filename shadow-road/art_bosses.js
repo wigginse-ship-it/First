@@ -401,7 +401,7 @@
     // smoke from the stacks: light wisps, then grey, then a heavy black plume
     if (r() < dt * [0, 1.6, 3, 6][vph]) { const x = pick([-13, -6.6]); cvPuff(e, x, x < -10 ? -73 : -79, rand(-4, 2), -rand(10, 16), vph === 3 ? rand(4, 5.6) : rand(2.6, 3.8), vph === 3 ? 1.4 : 1.1, vph === 3 ? 'soot' : vph === 2 ? 'smoke' : 'wisp'); }
     // steam venting from the joints
-    if (vph >= 2 && r() < dt * (vph === 3 ? 7 : 3.5)) { const j = pick(CV_JOINTS); cvPuff(e, j[0], j[1], (j[0] >= 0 ? 1 : -1) * rand(6, 16), -rand(2, 9), rand(1.8, 3.2), .6, 'steam'); }
+    if (vph >= 2 && r() < dt * (vph === 3 ? 11 : 8)) { const j = pick(CV_JOINTS); cvPuff(e, j[0], j[1], (j[0] >= 0 ? 1 : -1) * rand(6, 16), -rand(2, 9), rand(2.2, 3.4), .65, 'steam'); }
     if (parts.length > 380) return;
     // sparks from the torn plates
     if (vph >= 2 && r() < dt * (vph === 3 ? 7 : 3.5)) parts.push({ x: e.x + e.facing * rand(-14, 2) * s, y: e.y, z: e.z + rand(28, 44) * s, vx: rand(-90, 90), vy: 0, vz: rand(60, 180), life: .5, max: .5, col: pick(vph === 3 ? ['#FFE2A0', '#FF7A3A'] : ['#FFD27A', '#FF9A5A']), size: 2, shape: 'streak', rot: 0, vr: 0 });
@@ -475,12 +475,14 @@
     if (DET()) { line([-2.4, hy + 6, 3.6, hy + 6], '#5E544E', .7); line([-2.4, hy + 8, 3.6, hy + 8], '#5E544E', .7); }
     // the crimson horsehair crest flowing back
     const fl = flow + (down ? 0 : Math.sin(t * 3) * 1.2);
-    const plume = () => { ctx.beginPath(); ctx.moveTo(4, hy - 11.6); ctx.quadraticCurveTo(-6, hy - 17, -15 - fl, hy - 12); ctx.quadraticCurveTo(-21 - fl * 1.3, hy - 8, -22 - fl * 1.5, hy - 1); ctx.lineTo(-18 - fl * 1.2, hy - 4); ctx.lineTo(-18.5 - fl * 1.2, hy + 1.5); ctx.quadraticCurveTo(-14 - fl, hy - 6, -7, hy - 8); ctx.closePath(); };
+    const torn = phase >= 2; // (from phase two the crest is half torn away, its end ragged)
+    const plume = torn ? () => { ctx.beginPath(); ctx.moveTo(4, hy - 11.6); ctx.quadraticCurveTo(-6, hy - 17, -13 - fl, hy - 12.4); ctx.lineTo(-15.6 - fl, hy - 9.4); ctx.lineTo(-12.4 - fl, hy - 8.8); ctx.lineTo(-16.4 - fl * 1.1, hy - 4.6); ctx.lineTo(-12 - fl, hy - 5.6); ctx.lineTo(-11.2, hy - 2.6); ctx.quadraticCurveTo(-9, hy - 6, -7, hy - 8); ctx.closePath(); }
+      : () => { ctx.beginPath(); ctx.moveTo(4, hy - 11.6); ctx.quadraticCurveTo(-6, hy - 17, -15 - fl, hy - 12); ctx.quadraticCurveTo(-21 - fl * 1.3, hy - 8, -22 - fl * 1.5, hy - 1); ctx.lineTo(-18 - fl * 1.2, hy - 4); ctx.lineTo(-18.5 - fl * 1.2, hy + 1.5); ctx.quadraticCurveTo(-14 - fl, hy - 6, -7, hy - 8); ctx.closePath(); };
     const pc = phase === 3 ? '#4A2422' : CB.plume; // (in overdrive the crest is scorched black, its ends smouldering)
     plume(); ctx.fillStyle = C(pc); ctx.fill();
     clipIn(plume, () => { ctx.fillStyle = shade(pc, -.38); poly([-26 - fl * 2, hy - 8, 6, hy - 9.6, 6, hy + 4, -26 - fl * 2, hy + 4]); ctx.fill(); ctx.strokeStyle = shade(pc, .35); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(2, hy - 13); ctx.quadraticCurveTo(-8, hy - 16, -16 - fl, hy - 11); ctx.moveTo(-4, hy - 12); ctx.quadraticCurveTo(-12, hy - 13, -19 - fl, hy - 6); ctx.stroke(); });
     plume(); outline(1.1);
-    if (phase === 3) add(() => { ctx.strokeStyle = `rgba(255,120,50,${.6 + .3 * Math.sin(t * 10)})`; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-15 - fl, hy - 12); ctx.quadraticCurveTo(-21 - fl * 1.3, hy - 8, -22 - fl * 1.5, hy - 1); ctx.lineTo(-18 - fl * 1.2, hy - 4); ctx.lineTo(-18.5 - fl * 1.2, hy + 1.5); ctx.stroke(); });
+    if (phase === 3) add(() => { ctx.strokeStyle = `rgba(255,120,50,${.6 + .3 * Math.sin(t * 10)})`; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-13 - fl, hy - 12.4); ctx.lineTo(-15.6 - fl, hy - 9.4); ctx.lineTo(-12.4 - fl, hy - 8.8); ctx.lineTo(-16.4 - fl * 1.1, hy - 4.6); ctx.lineTo(-12 - fl, hy - 5.6); ctx.stroke(); });
     // the great helm
     const helm = () => { ctx.beginPath(); ctx.moveTo(-7.6, hy + 5); ctx.lineTo(-8.4, hy - 3); ctx.quadraticCurveTo(-7.4, hy - 11.4, 1, hy - 12); ctx.quadraticCurveTo(8.6, hy - 11.4, 10, hy - 4.4); ctx.lineTo(10.6, hy + 1.6); ctx.lineTo(8.6, hy + 6.4); ctx.lineTo(1.4, hy + 7.4); ctx.closePath(); };
     const hc = P3 ? '#B87A48' : CB.helm;
@@ -504,8 +506,9 @@
     // a heavy brow over the visor slit, which burns brighter as it winds up
     fillPoly([1, hy - 5.6, 10.4, hy - 5.2, 10.4, hy - 3.6, 1.4, hy - 3.8], shade(hc, -.15), 1);
     fillPoly([1.6, hy - 3.6, 10.4, hy - 3.4, 10.2, hy - .8, 2.2, hy - 1.4], '#160E10', 0);
-    const vc = P3 ? '#FFB0A0' : rage ? '#FF7A8A' : CB.visor;
-    glow(vc, 8 + wind * 10, () => { ctx.fillStyle = C(vc); poly([3, -2.9 + hy, 10.2, -2.7 + hy, 10, -1.4 + hy, 3.4, -1.8 + hy]); ctx.fill(); });
+    const flick = phase === 2 && wind < .05 && Math.sin(t * 37) + Math.sin(t * 13.7) > .9; // (in phase two the damaged lens stutters)
+    const vc = P3 ? '#FFB0A0' : flick ? '#6A2A36' : rage ? '#FF7A8A' : CB.visor;
+    glow(vc, flick ? 2 : 8 + wind * 10, () => { ctx.fillStyle = C(vc); poly([3, -2.9 + hy, 10.2, -2.7 + hy, 10, -1.4 + hy, 3.4, -1.8 + hy]); ctx.fill(); });
     if (DET()) { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(7.6, hy - 2.6, 1.8, .6); }
     if (flare > .02) add(() => { // the lens flares: a long streak across the slit, a short one through it, a bloom
       const L = 12 + flare * 14, g = ctx.createLinearGradient(8 - L, 0, 8 + L, 0);
@@ -557,7 +560,7 @@
     if (down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
     const cr = pose.crouch ? 8 : 0, HIP = -30 + cr, SHO = -49 + cr, hy = -61 + cr;
     const flow = (pose.flow || 0) + Math.abs(sw) * 4 + (pose.run ? 6 : 0);
-    const hot = P3, brass = P3 ? '#B87442' : phase === 2 ? '#A67838' : CB.brass; // (polished, then tarnished and scorched, then red-hot)
+    const hot = P3, brass = P3 ? '#B87442' : phase === 2 ? '#8C6834' : CB.brass; // (polished, then tarnished and scorched, then red-hot)
     const lean = () => { ctx.translate(jx, HIP + jy); ctx.rotate(pose.lean || 0); ctx.translate(0, -HIP); };
     if (P3 && !e.dead) add(() => { // overdrive: a red heat pulse about it, and the air shimmering over its head
       const pr = .5 + .5 * Math.sin(t * 5), g = ctx.createRadialGradient(0, SHO + 10, 4, 0, SHO + 10, 46);
@@ -636,32 +639,39 @@
         ctx.fillStyle = 'rgba(255,250,226,.32)'; poly([6, SHO - 6, 9.6, SHO - 6, 3.6, HIP + 2, 0, HIP + 2]); ctx.fill();
         ctx.fillStyle = 'rgba(255,250,226,.2)'; poly([11, SHO - 4, 12.2, SHO - 4, 7, HIP + 2, 5.8, HIP + 2]); ctx.fill();
       } else { // scorched: soot blown out across the brass from the wounds
-        ctx.fillStyle = P3 ? 'rgba(40,14,10,.38)' : 'rgba(40,28,20,.3)'; ell(-6, SHO + 8, 7, 4, .5); ctx.fill(); ell(9, HIP - 6, 5, 2.6, -.3); ctx.fill(); ell(4, SHO - 2, 4, 1.8, .2); ctx.fill();
+        ctx.fillStyle = P3 ? 'rgba(40,14,10,.38)' : 'rgba(34,22,16,.42)'; ell(-6, SHO + 8, 8, 5, .5); ctx.fill(); ell(9, HIP - 9, 6, 3.4, -.3); ctx.fill(); ell(4, SHO - 2, 5, 2.4, .2); ctx.fill(); ell(12, SHO + 8, 3, 6, .2); ctx.fill();
       }
     });
     if (phase >= 2) { // phase two: the breastplate blown open over the clockwork; three: the plating gone to a bare, red-hot frame
       const big = P3;
       const hole = big ? [-15.8, SHO + 3.4, -6, SHO + 2.6, -5.4, SHO + 9, -6.4, HIP - 3, -11.6, HIP - 2.2, -16.2, SHO + 13]
-        : [-14.6, SHO + 7.6, -10.6, SHO + 6.4, -6.4, SHO + 7.4, -6, SHO + 12.6, -7.6, HIP - 4, -12.4, HIP - 4.4, -15.4, SHO + 12];
+        : [-15.8, SHO + 4.6, -10.6, SHO + 3.6, -6, SHO + 4.6, -5.4, SHO + 10, -6.6, HIP - 10, -12, HIP - 10.6, -16, SHO + 13];
       fillPoly(hole, '#1A1210', 0);
       clipIn(() => poly(hole), () => {
-        const fl = .8 + .2 * Math.sin(t * (big ? 17 : 9)), g = ctx.createRadialGradient(-4, SHO + 11, 1, -4, SHO + 11, big ? 15 : 11); // the furnace's light spilling in
-        g.addColorStop(0, big ? `rgba(255,110,50,${fl})` : `rgba(255,160,70,${fl})`); g.addColorStop(1, big ? 'rgba(110,30,14,0)' : 'rgba(150,60,20,.25)'); ctx.fillStyle = g; ctx.fillRect(-18, SHO, 15, 24);
+        const fl = .8 + .2 * Math.sin(t * (big ? 17 : 9)), g = ctx.createRadialGradient(-4, SHO + 11, 1, -4, SHO + 11, big ? 15 : 13);
+        g.addColorStop(0, big ? `rgba(255,110,50,${fl})` : `rgba(255,150,60,${fl})`); g.addColorStop(1, big ? 'rgba(110,30,14,0)' : 'rgba(90,30,10,.2)'); ctx.fillStyle = g; ctx.fillRect(-18, SHO, 15, 24);
         ctx.strokeStyle = '#6E6862'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-16, SHO + 8); ctx.quadraticCurveTo(-12, SHO + 14, -6, SHO + 16); ctx.stroke();
-        cog(-11, SHO + 10.6, 3.6, 8, spin * 1.4, big ? '#A0603A' : '#9A7C50', .7);
-        cog(-7.6, SHO + 14, 2.4, 6, -spin * 2.1 + .3, big ? '#8A5030' : '#7E6A4E', .6);
-        if (big) { // the bare ribs of the frame, glowing where the heat licks them
+        cog(-11.2, SHO + 9.6, 4.4, 9, spin * 1.4, big ? '#A0603A' : '#D8A450', 1);
+        cog(-7.4, SHO + 14.4, 2.8, 7, -spin * 2.1 + .3, big ? '#8A5030' : '#B88440', .9);
+        if (big) {
           for (const y of [SHO + 4.6, SHO + 15.6, SHO + 20.6]) { ctx.fillStyle = '#3A2E28'; ctx.fillRect(-17, y, 14, 2); ctx.fillStyle = '#FF8A4A'; ctx.fillRect(-17, y + 1.4, 14, .6); ctx.fillStyle = '#7A6A5E'; ctx.fillRect(-17, y, 14, .5); }
           ctx.fillStyle = '#3A2E28'; ctx.fillRect(-13.6, SHO, 1.8, 24);
         }
       });
-      poly(hole); ctx.strokeStyle = C(shade(brass, .35)); ctx.lineWidth = 1; ctx.stroke(); // torn bright edge
-      add(() => { poly(hole); ctx.strokeStyle = big ? `rgba(255,120,60,${.55 + .3 * Math.sin(t * 8)})` : 'rgba(255,170,90,.4)'; ctx.lineWidth = big ? 1.3 : 1; ctx.stroke(); });
-      // a lame torn away over the belly: the furnace glows orange through the slot
-      const slot = [3, HIP - 8.6, 12.8, HIP - 9.2, 11.8, HIP - 5.2, 3.6, HIP - 4.6];
-      fillPoly(slot, '#1A1210', 0);
-      add(() => { const k = .55 + .25 * Math.sin(t * (big ? 13 : 6)); ctx.fillStyle = big ? `rgba(255,90,40,${k + .2})` : `rgba(255,150,60,${k})`; poly([4, HIP - 7.8, 11.8, HIP - 8.2, 11, HIP - 5.8, 4.4, HIP - 5.4]); ctx.fill(); });
-      poly(slot); ctx.strokeStyle = C(shade(brass, .35)); ctx.lineWidth = .8; ctx.stroke();
+      poly(hole); ctx.strokeStyle = C(shade(brass, .45)); ctx.lineWidth = 1.1; ctx.stroke();
+      add(() => { poly(hole); ctx.strokeStyle = big ? `rgba(255,120,60,${.55 + .3 * Math.sin(t * 8)})` : 'rgba(255,170,90,.55)'; ctx.lineWidth = big ? 1.3 : 1.1; ctx.stroke(); });
+      // the whole belly plate torn away: a big cog turning in the furnace light (the hatch covers the middle of it)
+      const belly = [-11.6, HIP - 11.4, -2, HIP - 12.2, 13.6, HIP - 11.6, 12.6, HIP - 6.4, 10.8, HIP - 2.6, -9.6, HIP - 2.6, -11.4, HIP - 6];
+      fillPoly(belly, '#1A1210', 0);
+      clipIn(() => poly(belly), () => {
+        const k = .7 + .3 * Math.sin(t * (big ? 13 : 6)), g = ctx.createLinearGradient(0, 0, 14, 0);
+        g.addColorStop(0, big ? `rgba(255,90,40,${k})` : `rgba(255,140,50,${k})`); g.addColorStop(1, big ? 'rgba(140,30,14,.3)' : 'rgba(80,26,10,.3)'); ctx.fillStyle = g; ctx.fillRect(-12, HIP - 13, 26, 11);
+        ctx.fillStyle = '#3A2E28'; ctx.fillRect(-12, HIP - 8, 26, 1.4);
+        cog(10.2, HIP - 7.4, 5, 10, -spin * 1.2, big ? '#A0603A' : '#D8A450', 1.1);
+        cog(-9.4, HIP - 7, 3.2, 7, spin * 1.8, big ? '#8A5030' : '#B88440', .9);
+      });
+      poly(belly); ctx.strokeStyle = C(shade(brass, .45)); ctx.lineWidth = 1; ctx.stroke();
+      add(() => { poly(belly); ctx.strokeStyle = big ? 'rgba(255,110,50,.7)' : 'rgba(255,170,90,.35)'; ctx.lineWidth = 1; ctx.stroke(); });
       const crk = () => { ctx.beginPath(); ctx.moveTo(9, SHO - 2); ctx.lineTo(6.4, SHO + 1.6); ctx.lineTo(8.6, SHO + 4); ctx.moveTo(10, HIP - 10); ctx.lineTo(7.6, HIP - 7); ctx.moveTo(-10, HIP - 7); ctx.lineTo(-7, HIP - 5);
         if (big) { ctx.moveTo(14.6, SHO + 6); ctx.lineTo(11.6, SHO + 8.4); ctx.lineTo(13, SHO + 11); ctx.moveTo(-3.4, SHO - 4.6); ctx.lineTo(-1.6, SHO - 1.6); ctx.lineTo(-3, SHO + 1); } };
       crk(); ctx.strokeStyle = C('#2A1E16'); ctx.lineWidth = 1.3; ctx.stroke();
@@ -671,6 +681,10 @@
     const seamHot = Math.max(P3 && !e.dead ? .5 + .3 * Math.sin(t * 7) : 0, pre);
     if (seamHot > .02) add(() => { seams(); ctx.strokeStyle = `rgba(255,120,50,${seamHot})`; ctx.lineWidth = 1.7; ctx.stroke(); ctx.strokeStyle = `rgba(255,236,190,${seamHot * .8})`; ctx.lineWidth = .6; ctx.stroke(); });
     chest(); outline(1.5);
+    if (phase >= 2) add(() => { // the furnace's light spills out of the openings across the plating
+      const k = .2 + .08 * Math.sin(t * (P3 ? 15 : 7)), col = P3 ? '255,80,40' : '255,150,60';
+      for (const [x, y, r] of [[-10, SHO + 11, 13], [10, HIP - 7, 12]]) { const g = ctx.createRadialGradient(x, y, 1, x, y, r); g.addColorStop(0, `rgba(${col},${k})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; circle(x, y, r); ctx.fill(); }
+    });
     // the furnace: a grated hatch over a roaring fire
     // the fire: steady and banked whole, roaring once opened, a ragged white-red flicker in overdrive
     const fy = SHO + 6.4, fr = phase === 1 ? .5 + Math.sin(t * 2.2) * .08 : P3 ? .5 + .5 * Math.sin(t * 23) * Math.sin(t * 7.3) : Math.sin(t * 13) * .5 + .5, roar = Math.max(wind, pulling ? .7 : 0, pre, post * .8);
@@ -713,25 +727,36 @@
     ctx.restore();
     // the great layered pauldron over the cannon shoulder
     const pa = (k, ry) => { ctx.beginPath(); ctx.ellipse(1, SHO + 1 + k * 2.6, 10 - k * .8, ry, -.25, Math.PI * .92, Math.PI * 2.08); ctx.closePath(); };
-    for (let k = 2; k >= (P3 ? 1 : 0); k--) { // (in overdrive its outer plate is gone, baring the shoulder joint)
+    for (let k = 2; k >= (P3 ? 2 : phase === 2 ? 1 : 0); k--) { // (its outer plate is blown off in phase two, and the next one in overdrive)
       const col = shade(brass, k === 0 ? .06 : -.12 - k * .08);
       pa(k, 7 - k); ctx.fillStyle = C(col); ctx.fill();
       clipIn(() => pa(k, 7 - k), () => { ctx.fillStyle = shade(col, -.35); ctx.fillRect(-12, SHO - 8, 7, 20); if (k === 0) { ctx.fillStyle = shade(col, .5); ell(5, SHO - 3.4, 4, 1.4, -.3); ctx.fill(); } });
       pa(k, 7 - k); outline(1.2);
     }
-    if (P3) { // the bare shoulder: a ball joint, its strut and a cog, the torn plate edge glowing
+    if (phase >= 2) { // the bare shoulder: a ball joint, its strut and a cog (in overdrive the torn plate edge glows)
       line([-5, SHO - 2, 8, SHO - 3.6], C('#3A2E28'), 2.2);
       circle(1.4, SHO - 1, 4.4); ctx.fillStyle = C('#4A3A30'); ctx.fill(); outline(1.1);
-      cog(1.4, SHO - 1, 3, 7, spin * 1.2, '#9A5A36', .7);
-      add(() => { ctx.strokeStyle = `rgba(255,120,60,${.6 + .3 * Math.sin(t * 8)})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(1, SHO + 3.6, 9.2, 6, -.25, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); });
+      cog(1.4, SHO - 1, 3.4, 8, spin * 1.2, P3 ? '#9A5A36' : '#C89A50', .8);
+      if (P3) add(() => { ctx.strokeStyle = `rgba(255,120,60,${.6 + .3 * Math.sin(t * 8)})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(1, SHO + 6.2, 8.4, 5, -.25, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); });
     } else {
     ctx.fillStyle = C(CB.trim); ctx.fillRect(-6, SHO + 1.2, 13, 1.4);
     rivet(-3, SHO - 2, .8, brass); rivet(4.6, SHO - 3, .8, brass);
     }
-    if (phase === 2) { ctx.strokeStyle = C('#2A1E16'); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(6, SHO - 5); ctx.lineTo(3.6, SHO - 2); ctx.lineTo(5.4, SHO); ctx.stroke(); }
+    if (phase >= 2) { // a ruptured steam pipe over the far shoulder, jetting a steady plume up and back
+      line([-9, SHO + 2, -13.6, SHO - 1.4, -15.6, SHO - 5.4], C('#5E5852'), 2.6);
+      if (DET()) line([-9.4, SHO + 1.2, -13.8, SHO - 2.2], '#9A948C', .6);
+      fillPoly([-17.4, SHO - 5, -15.6, SHO - 7.2, -13.6, SHO - 5.6, -14.6, SHO - 4.4, -15.8, SHO - 5.8], '#6E6862', .9); // the burst, flared mouth
+      if (!FLASH && !TINT && !e.dead) {
+        const n = LITE ? 4 : 7;
+        for (let i = 0; i < n; i++) { const u = (t * (P3 ? 2.2 : 1.7) + i / n) % 1, x = -16 - u * 9 - Math.sin(u * 5 + i) * 1.4, y = SHO - 7 - u * 24, r = 1.4 + u * (P3 ? 5.4 : 4.6);
+          ctx.globalAlpha = (1 - u) * (P3 ? .5 : .62); ctx.fillStyle = P3 ? '#B8ACA4' : '#F4EEE8'; circle(x, y, r); ctx.fill();
+          if (!LITE) { ctx.fillStyle = '#FFFFFF'; circle(x + r * .3, y - r * .3, r * .5); ctx.fill(); } }
+        ctx.globalAlpha = 1;
+      }
+    }
     if (P3 && !FLASH && !TINT) { // phase three: red-hot all over
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,70,40,${.16 + .08 * Math.sin(t * 8)})`; chest(); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(1, SHO + 3.6, 9.2, 6, -.25, Math.PI * .92, Math.PI * 2.08); ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.ellipse(1, SHO + 6.2, 8.4, 5, -.25, Math.PI * .92, Math.PI * 2.08); ctx.fill(); ctx.restore();
     }
     if (post > .02 && DET()) { // just transformed: the freshly torn metal still flashes white-hot
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,230,190,${.55 * post * post})`; chest(); ctx.fill(); ctx.restore();
