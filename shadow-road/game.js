@@ -204,6 +204,7 @@ function runMove(dt) {
     for (const d of m.wave2 ? [1, -1] : [1]) projs.push({ owner: 'p', x: P.x + d * P.facing * 40, y: P.y, z: 0, vx: d * P.facing * (quake ? 300 : 340), dmg: Math.round((m.wave === 1 ? 40 : m.wave) * wMult(P.w)), life: quake ? .9 : 1, hit: new Set(), wave: 1, quake }); // wave2: it runs both ways
   }
   if (k > .3) { if (pressed.light) P.q = 'L'; if (pressed.heavy) P.q = 'H'; }
+  if (m.key === 'RH' && P.q === 'H' && airborne && k > .66 && unlocked(WEAPONS[P.w].tree.RHH)) { begin(WEAPONS[P.w].tree.RHH); return; } // Thunderfall takes over in the air, at the top of the Uplift's hop: he never touches down between them
   if (pressed.dodge && k > .4 && !(m.rise && airborne)) { startDodge(); return; } // (no dodging off the top of the rising uppercut)
   if (m.launcher && pressed.jump) P.chaseQ = true; // a jump pressed during the launcher is remembered
   if (m.launcher && !m.rise && P.chaseQ && k > .35) { P.chaseQ = false; chaseJump(); return; } // leap after the enemy you just launched
