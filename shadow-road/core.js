@@ -168,11 +168,17 @@ function moveJoy(e) {
 }
 document.querySelectorAll('.btn').forEach((b) => {
   const k = b.dataset.k;
-  b.addEventListener('pointerdown', (e) => { e.preventDefault(); audioInit(); try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add('on'); press(k); });
-  const up = () => { b.classList.remove('on'); release(k); };
+  // (the PEARL button is Attack and Heavy pressed together, for the Pearl's shot)
+  const ks = k === 'pearl' ? ['light', 'heavy'] : [k];
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); audioInit(); try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add('on'); ks.forEach(press); });
+  const up = () => { b.classList.remove('on'); ks.forEach(release); };
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
   b.addEventListener('contextmenu', (e) => e.preventDefault());
 });
+// the PEARL button shows only while the Pearl can be fired: evolving at his shoulder, or forged and in his hand
+setInterval(() => { const b = document.getElementById('pearlBtn'); if (!b) return; let on = false;
+  try { on = !!(window.PEARLNG && (PEARLNG.evoOn() || PEARLNG.held()) && PEARLNG.curStats()); } catch (_) {}
+  if (b.hidden === on) b.hidden = !on; }, 300);
 const KEYMAP = { KeyJ: 'light', KeyZ: 'light', KeyK: 'heavy', KeyX: 'heavy', Space: 'jump', KeyL: 'dodge', ShiftLeft: 'dodge', KeyQ: 'swap', KeyC: 'swap', KeyE: 'trump', KeyV: 'trump', KeyI: 'shoot', KeyF: 'shoot' };
 const keys = new Set();
 let onKeyMenu = null; // set by ui.js for Escape/pause handling
