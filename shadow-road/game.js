@@ -56,7 +56,7 @@ function begin(m) {
 // every level a held Heavy reaches opens a short window: let go inside it for a PERFECT, a sure critical a quarter
 // harder. Let go early and it is the blow of the level reached, as ever; hold on past the last level's window and the
 // blow sours, down to three quarters of its weight a second later. (The bow's perfect release is the model: arrows.js)
-const PC_WIN = .13, PC_MUL = 1.25, PC_FADE = 1, PC_FLOOR = .75;
+const PC_WIN = .13, PC_MUL = 1.15, PC_FADE = 1, PC_FLOOR = .75;
 function swordMaxL() { return save.wl.sword >= 7 ? 4 : save.wl.sword >= 2 ? 3 : 2; } // Shadow Cleave is the sword's first upgrade, the Judgement of Amber its last
 function chargeTiming(w) {
   if (!P.clvl) return { open: false, over: 0, mul: 1, since: 0 };
