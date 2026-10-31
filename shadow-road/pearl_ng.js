@@ -824,15 +824,17 @@
   const hasSpin = (picks) => picks.some(id => TR[id] && SPIN[TR[id].part]);
   function blitOrb(picks, x, y, r, facing, spin, alpha = 1) {
     ctx.save(); ctx.translate(x, y); if (facing < 0) ctx.scale(-1, 1); if (alpha < 1) ctx.globalAlpha *= alpha;
+    orbGlow(r, picks && picks.length ? palOf(picks).glow : null); // (behind everything it is: it never covers the orb's own detail)
     if (hasSpin(picks)) { const s = sprite(picks, r, 'spin'); ctx.save(); ctx.rotate(spin); ctx.drawImage(s, -s.ext, -s.ext, s.ext * 2, s.ext * 2); ctx.restore(); }
-    if (!picks || !picks.length) orbGlow(r);
     const c = sprite(picks, r, 'body'); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2);
     ctx.restore();
   }
-  // the bare Pearl (no choice taken yet) has a soft light of its own, slowly breathing; once it takes a shape it is drawn as it is
-  function orbGlow(r) {
+  // a soft light of its own behind the Pearl, slowly breathing: pearl-white while it is bare, its Current's colour once shaped
+  function orbGlow(r, rgb) {
     if (FLASH || TINT) return;
     const t = performance.now() / 1000, pu = .5 + .5 * Math.sin(t * 2.4), R = Math.max(r * 3.6, 17) * (1 + .15 * pu);
+    if (rgb) { const hg = ctx.createRadialGradient(0, 0, r * .5, 0, 0, R); hg.addColorStop(0, `rgba(${rgb},${.56 + .16 * pu})`); hg.addColorStop(.4, `rgba(${rgb},${.24 + .08 * pu})`); hg.addColorStop(1, `rgba(${rgb},0)`);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill(); ctx.restore(); return; } // a shaped Pearl glows in its own colour, behind its parts
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const hg = ctx.createRadialGradient(0, 0, r * .4, 0, 0, R);
     hg.addColorStop(0, `rgba(240,252,255,${.62 + .2 * pu})`); hg.addColorStop(.3, `rgba(200,240,245,${.34 + .14 * pu})`); hg.addColorStop(.6, `rgba(180,225,240,${.12 + .06 * pu})`); hg.addColorStop(1, 'rgba(170,220,235,0)');
