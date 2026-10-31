@@ -244,17 +244,17 @@
     const y0 = FLOOR_TOP + 6, y1 = FLOOR_BOT;
     if (P.y < y0) { P.y = y0; CUR.vy = CUR.vy < 0 && off(CUR.vy / T.YK, my < -.15) ? -CUR.vy * .6 : Math.max(0, CUR.vy); }
     if (P.y > y1) { P.y = y1; CUR.vy = CUR.vy > 0 && off(CUR.vy / T.YK, my > .15) ? -CUR.vy * .6 : Math.min(0, CUR.vy); }
-    // through them at speed: struck and thrown, the harder the faster; the big ones throw him back
+    // through them at speed: struck and thrown, the harder the faster; the big ones throw him back, but a boss he goes clean through
     const sE = speedE();
     if (sE > T.hitMin && P.z < 40) for (const e of foes()) {
       if (Math.abs(e.x - P.x) > e.hw + 12 || Math.abs(e.y - P.y) > 16 + e.hw * .3 || e.z > 60) continue;
-      const big = e.boss || (e.def.weight || 1) < .7 || (e.def.poise || 0) >= 3;
+      const big = !e.boss && ((e.def.weight || 1) < .7 || (e.def.poise || 0) >= 3); // (a boss is passed clean through, struck as he goes)
       if (big) { const nx = P.x - e.x || -Math.sign(CUR.vx) || 1, ny = (P.y - e.y) * 2, nd = Math.hypot(nx, ny) || 1, ux = nx / nd, uy = ny / nd, vyE = CUR.vy / T.YK, dot = CUR.vx * ux + vyE * uy;
         if (dot < 0) { CUR.vx = (CUR.vx - 2 * dot * ux) * T.bounce; CUR.vy = (vyE - 2 * dot * uy) * T.bounce * T.YK; P.x = e.x + ux * (e.hw + 13); bounceFx(P.x, P.y, Math.sign(ux) || 1); } }
       if (!cool(CUR.cd, e, .4)) continue;
       const q = clamp((sE - 200) / 420, .25, 1.4), d = Math.max(1, Math.round((5 + 12 * q) * W() * (e.boss ? .6 : 1))), dir = Math.sign(CUR.vx) || P.facing;
       strike(e, d, dir, { dmg: d, kb: 120 + sE * .55, launch: sE > 480 ? 160 : 0, power: sE > 480 ? 1 : 0, el: 1, current: 1, wall: sE > 480 ? 1 : 0 }, true);
-      if (!big) { CUR.vx *= .9; CUR.vy *= .9; }
+      if (!big && !e.boss) { CUR.vx *= .9; CUR.vy *= .9; }
       bub(e.x, e.y, 20, 4, 60);
     }
     // facing follows the stick (with nothing held, he keeps it: he can drift back with his eyes on them)
