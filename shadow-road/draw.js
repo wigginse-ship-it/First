@@ -417,6 +417,7 @@ function drawDeath(e, t) {
   const el = e.corpse ? (e.dmax || 1) : e.dmax - e.t, dl = (e.dir || 1) * e.facing; // dl: knock direction in the enemy's own facing space
   const a = { walk: 0, t: e.deadAt || t, wind: 0, atk: false, hurt: true }; // the clock stops: no whirring rotors or flapping wings
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') a.pose = { arm: -1, lean: -.3 };
+  if (e.death === 'splat') { a.hurt = false; if (a.pose) a.pose = { arm: 1.3, lean: 0 }; } // (squashed straight down: drawn upright, or the squash shears a leaning body into a slant)
   const draw = () => { CREATURES[e.def.draw](e, a); if (e.arrows) for (const s of e.arrows) { // an arrow that killed it, still in the body: its head buried, the shaft and fletching standing out behind
     ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.d, 1); ctx.rotate(s.a); ctx.translate(7, 0); drawArrowShape(s.lvl, 26); ctx.restore(); } };
   shadow(e.x, e.y, e.hw * 1.1);
@@ -512,9 +513,9 @@ function drawDeath(e, t) {
   } else { // splat
     const c = Math.min(1, el / .07), settle = Math.sin(el * 32) * .05 * Math.exp(-el * 6);
     FLASH = false;
-    ctx.translate(0, 1 * c); // (squashed flat but still plainly there, only its underside pressed into the dent the blow left: drawCrater paints that under it)
+    ctx.translate(0, .6 * c); // (flattened like a pancake on the floor, only a sliver of its underside pressed into the dent the blow left: drawCrater paints that under it)
     FLASH = el < .06;
-    ctx.scale(lerp(1, 1.65, c) - settle, Math.max(.18, lerp(1, .32, c) + settle));
+    ctx.scale(lerp(1, 1.9, c) - settle, Math.max(.1, lerp(1, .19, c) + settle));
     draw();
   }
   FLASH = false;
