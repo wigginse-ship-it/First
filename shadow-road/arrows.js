@@ -1,6 +1,6 @@
 // ---------- arrows: a short bow on his back and a quiver of at most five ----------
 // Not a weapon of its own: any time, he can draw and loose one. Arrows are rare (only archers, gunners and other
-// shooters carry them) and are for picking off the crowd, not for felling bosses. The forge can improve them: each of
+// shooters carry them) and are best for picking off the crowd, though they still tell on a boss. The forge can improve them: each of
 // the seven levels is a better arrow, looks it, and keeps every trick of the ones before while learning one of its own.
 // dmg is a full draw's damage in the first world (it grows with each world as the foes do); the tricks:
 // bleed (barbs: the foe bleeds a little more), pierce (through to the next foe), blast (a rune burst round the struck
@@ -19,8 +19,8 @@ const ARROW_TIERS = [
 ];
 const ARROW_LV = ARROW_TIERS.length;
 const arrowLv = () => Math.max(1, Math.min(ARROW_LV, save.alv || 1));
-// arrows are for picking off the crowd: bosses and champions shrug most of one off
-const arrowVs = e => e.boss ? .15 : e.champ ? .45 : 1;
+// arrows are best for picking off the crowd: bosses and champions take a good part of one, not all of it
+const arrowVs = e => e.boss ? .4 : e.champ ? .65 : 1;
 const aTier = () => ARROW_TIERS[arrowLv() - 1];
 // a better arrow is dear, but within reach
 const arrowCost = (lvl) => ({ s: Math.round([0, 200, 400, 700, 1100, 1500, 2000][lvl] * (1 + .5 * (save.cycle || 0))), g: Math.round([0, 3, 5, 8, 12, 15, 19][lvl] * (1 + .5 * (save.cycle || 0))) });

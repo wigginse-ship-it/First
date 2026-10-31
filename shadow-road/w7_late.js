@@ -386,6 +386,7 @@
     $('#bossbar').hidden = true; app.classList.add('nocontrols', 'sr-end'); app.classList.remove('playing');
     if (typeof TRACKS !== 'undefined' && TRACKS.w7tide) playMusic('w7tide');
   };
+  W7.setEndT = (v) => { if (END) { END.t = v; END.last = performance.now(); } }; // (for tests: jump the ending's clock)
   W7.endT = () => END && END.t; W7.skipEnding = skipEnding; W7.finishEnding = finishEnding;
   { const _sc = stageClear; stageClear = function () { if (isMine() && !END) { W7.startEnding(_sc); return; } return _sc(); }; }
   { const _ds = drawScene; W7.origDraw = _ds; drawScene = function (t) { if (END && mode !== 'ending') { END = null; W7.ending = false; } if (END) { renderEnding(t); return; } return _ds(t); }; }
