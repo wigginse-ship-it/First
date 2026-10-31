@@ -145,6 +145,7 @@ function statsFor(eq) {
     if (n[id] >= 4) for (const k in S.b4.s) add(k, sc(k, S.b4.s[k]));
   }
   const cy = Math.min(5, save.cycle || 0); for (const k in STAT_CAP0) STAT_CAP[k] = STAT_CAP0[k] * (1 + .2 * cy);
+  if (st.crit > .15) { st.critRaw = st.crit; st.crit = .15 + (st.crit - .15) * .4; } // critical chance tapers: the first 15% counts in full, each point past it two-fifths
   st.capped = {}; for (const k in STAT_CAP) if (st[k] >= STAT_CAP[k] - 1e-9 && st[k] > 0) { if (st[k] > STAT_CAP[k] + 1e-9) st.over = Object.assign(st.over || {}, { [k]: st[k] }); st[k] = STAT_CAP[k]; st.capped[k] = true; } // (capped stats are marked, for the inventory to say so)
   return st;
 }
