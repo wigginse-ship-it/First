@@ -201,7 +201,19 @@ function toCorpse(e, kind) {
 function attackers() { let n = 0; for (const e of enemies) if (!e.dead && ['wind', 'strike', 'dash', 'pounce', 'leap'].includes(e.state)) n++; return n; }
 function leftWall() { return (lockX !== null ? lockX : camX) + 14; }
 function rightWall() { return (lockX !== null ? lockX : camX) + VW - 14; }
+// no stunlocking a foe against the edge of the view: struck four times inside a second and a half while pinned there, it
+// springs out toward the middle, out of reach for half a second (bosses keep their own rules)
+{ const _he = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) {
+  _he(e, dmg, dir, m, crit);
+  if (e.boss || e.dead || m.trump) return;
+  const atEdge = e.x < leftWall() + 40 || e.x > rightWall() - 40; if (!atEdge) { e.pinN = 0; return; }
+  e.pinN = (e.pinT > 0 ? e.pinN || 0 : 0) + 1; e.pinT = 1.5;
+  if (e.pinN >= 4) { const inward = e.x < (leftWall() + rightWall()) / 2 ? 1 : -1;
+    e.pinN = 0; e.slip = .5; e.state = 'evade'; e.t = .5; e.plan = null; e.air = false; e.vx = inward * 380; e.vz = e.def.move === 'fly' ? 0 : 240; e.facing = -inward;
+    dust(e.x, e.y, 8); sfx('whoosh'); }
+}; }
 function updateEnemy(e, dt) {
+  if (e.slip > 0) e.slip -= dt; if (e.pinT > 0) e.pinT -= dt;
   e.flash = Math.max(0, e.flash - dt); e.jit = Math.max(0, e.jit - dt); e.flinch = Math.max(0, (e.flinch || 0) - dt);
   e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12);
   if (stillT > 0 && !e.dead) return;

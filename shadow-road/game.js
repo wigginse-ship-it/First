@@ -326,6 +326,7 @@ function critChance(e) {
   return Math.min(.35 * Math.max(1, fast) + gearStat('crit'), c * fast);
 }
 function strike(e, base, dir, m, echo) {
+  if (e.slip > 0 && !m.trump) return; // (breaking out from being pinned at the edge of the view: out of reach for a moment)
   let raw = base * rand(.9, 1.1) * (stillT > 0 ? (TL('stillness') >= 3 ? 3 : 2) : 1);
   if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
   const crit = !m.trump && (m.crit || Math.random() < critChance(e));
