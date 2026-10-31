@@ -826,6 +826,22 @@
     ctx.save(); ctx.translate(x, y); if (facing < 0) ctx.scale(-1, 1); if (alpha < 1) ctx.globalAlpha *= alpha;
     if (hasSpin(picks)) { const s = sprite(picks, r, 'spin'); ctx.save(); ctx.rotate(spin); ctx.drawImage(s, -s.ext, -s.ext, s.ext * 2, s.ext * 2); ctx.restore(); }
     const c = sprite(picks, r, 'body'); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2);
+    orbGlint(r);
+    ctx.restore();
+  }
+  // the glint: every couple of seconds a white star flares on the pearl's shine, with a soft bloom, and fades
+  function orbGlint(r) {
+    if (FLASH || TINT) return;
+    const t = performance.now() / 1000, ph = (t % 1.8) / 1.8, q = ph < .26 ? Math.sin(ph / .26 * Math.PI) : 0;
+    const x = -r * .38, y = -r * .42;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(x, y, Math.max(1, r * .16), 0, TAU); ctx.fill();
+    if (q > .02) {
+      const L = Math.max(r * (.9 + 1.1 * q), 4 + 9 * q), w = Math.max(1.1, r * .1), bl = ctx.createRadialGradient(x, y, 0, x, y, L * .8);
+      bl.addColorStop(0, `rgba(255,255,255,${.5 * q})`); bl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = bl; ctx.beginPath(); ctx.arc(x, y, L * .8, 0, TAU); ctx.fill();
+      ctx.fillStyle = `rgba(255,255,255,${.95 * q})`; ctx.translate(x, y); ctx.rotate(t * .6);
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2, l = i % 2 ? L * .65 : L; ctx.beginPath(); ctx.moveTo(Math.cos(a) * l, Math.sin(a) * l); ctx.lineTo(Math.cos(a + Math.PI / 2) * w, Math.sin(a + Math.PI / 2) * w); ctx.lineTo(0, 0); ctx.lineTo(Math.cos(a - Math.PI / 2) * w, Math.sin(a - Math.PI / 2) * w); ctx.closePath(); ctx.fill(); }
+    }
     ctx.restore();
   }
   // the card's picture: the orb as it would be with this trait taken, the new part flaring
