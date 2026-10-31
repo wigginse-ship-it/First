@@ -127,3 +127,7 @@ function drawBossRoom(t) { // the rising water in the Sunken Grove
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .4, max: .4, r: (e.def.reach + e.hw) * 1.1, col: '#E8D8B0', flat: 1 }); }
     wasStrike = strike; };
 }
+// the Brass Colossus transforms at each phase change, and breathes steam, smoke and sparks by phase (art_bosses.js)
+{ const _upd = updateBossRoom;
+  updateBossRoom = function (dt) { _upd(dt); if (boss && boss.def.draw === 'colossus' && window.colossusFx) colossusFx(boss, dt); };
+}
