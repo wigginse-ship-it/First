@@ -12,7 +12,12 @@
   if (opts.relics || (opts.arm && opts.pearl && opts.horn)) opts.relic = 'all'; else if (opts.arm || opts.pearl || opts.horn) opts.relic = opts.arm ? 'arm' : opts.pearl ? 'pearl' : 'horn';
   delete opts.relics; delete opts.arm; delete opts.pearl; delete opts.horn; // (the older switches)
   const keepOpts = () => { try { localStorage.setItem(OPTS, JSON.stringify(opts)); } catch (e) {} };
-  DEV.god = !!opts.god; DEV.elites = !!opts.elites;
+  // the test switches hold only in a session started from this panel: a new journey or Continue from the title is an
+  // ordinary game, with no switch carried into it (they are remembered here, for the next time the panel is used)
+  DEV.active = false;
+  const syncDev = () => { DEV.god = DEV.active && !!opts.god; DEV.elites = DEV.active && !!opts.elites; };
+  syncDev();
+  for (const id of ['newBtn', 'contBtn']) { const btn = document.getElementById(id); if (btn) btn.addEventListener('click', () => { DEV.active = false; syncDev(); }, true); }
 
   // invincible: blows land (and flash) but take nothing off
   { const _pd = playerDamage; playerDamage = function (dmg, fromX, big) { if (DEV.god && P) { const hp = P.hp; _pd(dmg, fromX, big); P.hp = Math.max(hp, P.hp); return; } return _pd(dmg, fromX, big); }; }
@@ -37,14 +42,14 @@
     if (opts.card && TRUMPS[opts.card]) { save.trumps[opts.card] = true; save.trump = opts.card; save.tlv[opts.card] = clamp(opts.clv | 0, 1, 3); }
   }
   function go(i, zone) {
-    backup(); applyOpts(); close();
+    DEV.active = true; syncDev(); backup(); applyOpts(); close();
     save.stage = i; save.done = false; save.atChoice = false; save.branch = i >= 5 ? i : null;
     if (window.PEARLNG) PEARLNG.devJump(i); // (with the Pearl in New Game+: grown about as far as an ordinary road would have it by this world, its shape to choose)
     persist(); play(i, zone);
     if (DEV.god && P) P.hp = maxHp();
   }
   function toChoice() {
-    backup(); applyOpts(); close();
+    DEV.active = true; syncDev(); backup(); applyOpts(); close();
     save.stage = 4; save.done = false; save.branch = null; save.atChoice = true; persist();
     if (window.BRANCH && BRANCH.resume) { play(4, 0); BRANCH.resume(); }
   }
@@ -95,10 +100,10 @@
     });
     for (const c of el.querySelectorAll('[data-o]')) {
       const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'card' || k === 'relic' ? String(opts[k] || '') : String(opts[k] | 0);
-      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' ? c.value : +c.value; DEV.god = !!opts.god; DEV.elites = !!opts.elites; keepOpts(); });
+      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' ? c.value : +c.value; syncDev(); keepOpts(); });
     }
     for (const c of el.querySelectorAll('[data-p]')) { // the Pearl's New Game+ switches (PEARL_NG, w7_late.js): they take effect at once
-      const k = c.dataset.p; c.checked = !!(window.PEARL_NG && PEARL_NG[k]);
+      const k = c.dataset.p; c.checked = !!(window.pearlNG && pearlNG()[k]); // (as saved for dev games: an ordinary game ignores them)
       c.addEventListener('change', () => { if (window.pearlNG) pearlNG(k, c.checked); });
     }
     el.addEventListener('click', (ev) => {

@@ -22,12 +22,18 @@
 // THE PEARL IN NEW GAME+: its switches. In a later cycle (save.cycle >= 1) the Pearl changes how the whole run plays
 // (pearl_ng.js): THE GROWING PEARL (grow) and CURRENTS, NOT FOOTSTEPS (currents), each its own mechanic. legacy is the
 // Pearl as it first was (the undertow and the splash, below), kept but switched off for now. The dev panel has a box for
-// each (devmode.js); in the console, pearlNG('currents', false) and the like. They are remembered in this browser.
-const PEARL_NG = (() => { const d = { grow: true, currents: true, legacy: false };
+// each (devmode.js); in the console, pearlNG('currents', false) and the like. What is set there is remembered in this
+// browser, but it holds only in a game started from the dev panel (DEV.active): an ordinary game always plays with the
+// defaults, grow and currents on and legacy off, whatever was saved.
+const PEARL_NG_DEFAULT = Object.freeze({ grow: true, currents: true, legacy: false });
+const PEARL_NG_SAVED = (() => { const d = Object.assign({}, PEARL_NG_DEFAULT);
   try { const s = JSON.parse(localStorage.getItem('shadowroad-pearlng') || '{}'); for (const k in d) if (typeof s[k] === 'boolean') d[k] = s[k]; } catch (e) {}
   return d; })();
+const PEARL_NG = {};
+for (const k in PEARL_NG_DEFAULT) Object.defineProperty(PEARL_NG, k, { enumerable: true, get: () => (window.DEV && DEV.active ? PEARL_NG_SAVED : PEARL_NG_DEFAULT)[k] });
 window.PEARL_NG = PEARL_NG;
-window.pearlNG = (k, on) => { if (k in PEARL_NG) { PEARL_NG[k] = !!on; try { localStorage.setItem('shadowroad-pearlng', JSON.stringify(PEARL_NG)); } catch (e) {} } return Object.assign({}, PEARL_NG); };
+// pearlNG(k, on) sets a dev switch (and remembers it); pearlNG() gives the switches as saved for dev games
+window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!on; try { localStorage.setItem('shadowroad-pearlng', JSON.stringify(PEARL_NG_SAVED)); } catch (e) {} } return Object.assign({}, PEARL_NG_SAVED); };
 (() => {
   if (!window.W7) { console.error('w7_late.js: art_w7.js missing'); return; }
   const cl01 = (k) => clamp(k, 0, 1), sm = (k) => { k = cl01(k); return k * k * (3 - 2 * k); };

@@ -184,7 +184,7 @@ function spawnEnemy(type, side, isBoss) {
   // (in New Game+ bosses hit harder still: +30% a cycle, in dmg below)
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
-    dmg: Math.round(def.dmg * ngDmgK() * (isBoss ? 1.6 * (1 + .3 * Math.min(5, save.cycle || 0)) : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
+    dmg: Math.round(def.dmg * ngDmgK() * (isBoss ? 1.6 * (1 + .3 * Math.min(5, save.cycle || 0)) : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 3.2 : 1), poise: (def.poise || 0) * (isBoss ? 3.2 : 1),
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
   if (!isBoss && (forceElite || (stageIdx >= 1 && def.move !== 'fly' && Math.random() < [0, 0, .3, .38, .44][Math.min(stageIdx, 4)]))) makeElite(e);
   if (isBoss) { e.phase = 1; e.baseDmg = e.dmg; e.size = 1.15; e.hw = def.hw * e.size; e.hh = def.hh * e.size; e.rageT = 0; e.staggers = 0; }
@@ -215,6 +215,11 @@ function rightWall() { return (lockX !== null ? lockX : camX) + VW - 14; }
 }; }
 function updateEnemy(e, dt) {
   if (e.slip > 0) e.slip -= dt; if (e.pinT > 0) e.pinT -= dt;
+  if (e.boss && e.poiseMax) { // a boss's poise comes back if it is left alone for two seconds; and for three after a stagger it cannot be staggered again
+    if (e.poiseGuard > 0) e.poiseGuard -= dt;
+    if (e.state === 'down') e.poiseGuard = 3;
+    e.poiseIdle = (e.poiseIdle || 0) + dt; if (e.poiseIdle > 2 && e.poise < e.poiseMax) e.poise = Math.min(e.poiseMax, e.poise + e.poiseMax * .35 * dt);
+  }
   e.flash = Math.max(0, e.flash - dt); e.jit = Math.max(0, e.jit - dt); e.flinch = Math.max(0, (e.flinch || 0) - dt);
   e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12);
   if (stillT > 0 && !e.dead) return;

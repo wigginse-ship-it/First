@@ -355,7 +355,7 @@ function drawEnemy(e, t) {
   const scale = (e.boss ? e.size : e.champ ? 1.3 : 1) * (e.shrink || 1);
   const a = { walk: e.dead ? 0 : e.walk, t: e.dead ? e.deadAt : t, wind: e.state === 'wind' ? 1 - e.t / e.windMax : 0, atk: ['strike', 'dash', 'pounce'].includes(e.state), hurt: ['hurt', 'down', 'dying'].includes(e.state) };
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') { a.pose = humanEnemyPose(e); if ((e.state === 'down' && !(e.boss && !e.dead)) || (e.state === 'dying' && !e.air)) a.pose.down = 1; }
-  shadow(e.x, e.y, e.hw * 1.1 * Math.max(.4, 1 - e.z / 200));
+  shadow(e.x, e.y, e.hw * 1.1 * (e.shrink || 1) * Math.max(.4, 1 - e.z / 200));
   if (e.boss && e.enraged && !e.dead) { // an enraged boss smoulders
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const cy = e.y - e.z - e.hh * .55, gg = ctx.createRadialGradient(e.x, cy, 10, e.x, cy, e.hh * 1.3);
@@ -401,13 +401,9 @@ function drawEnemy(e, t) {
     if (e.frozen > 0) { ctx.strokeStyle = 'rgba(230,248,255,.9)'; ctx.lineWidth = 1.5; rrect(e.x - e.hw - 6, e.y - e.z - e.hh - 6, e.hw * 2 + 12, e.hh + 8, 4); ctx.stroke(); }
   }
   if (stillT > 0 && !e.dead) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(111,211,255,.3)'; ell(e.x, e.y - e.z - e.hh / 2, e.hw + 6, e.hh / 2 + 6); ctx.fill(); ctx.restore(); }
-  if (e.state === 'wind') { // attack warning
-    const y = e.y - e.z - e.hh - 16;
-    ctx.fillStyle = '#D04A62'; circle(e.x, y, 9); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#FFFFFF'; ctx.stroke();
-    ctx.fillStyle = '#FFFFFF'; ctx.font = '700 13px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText('!', e.x, y + 5);
-  }
+  // (no badge over a foe winding up: its own wind-up, and the flash just before the blow, say it is coming)
   if (!e.boss && !e.dead && e.hp < e.maxHp) {
-    const w = 30 + e.hw, x = e.x - w / 2, y = e.y - e.z - e.hh - 10;
+    const sk = e.shrink || 1, w = (30 + e.hw) * Math.max(.6, sk), x = e.x - w / 2, y = e.y - e.z - e.hh * sk - 10; // (sized and set to the foe as it is drawn: small while the spores shrink it)
     ctx.fillStyle = 'rgba(28,18,64,.75)'; rrect(x - 2, y - 2, w + 4, 7, 3); ctx.fill();
     ctx.fillStyle = '#D0566A'; rrect(x, y, Math.max(0, w * e.hp / e.maxHp), 3, 1.5); ctx.fill();
   }
@@ -420,9 +416,10 @@ function drawDeath(e, t) {
   if (e.death === 'splat') { a.hurt = false; if (a.pose) a.pose = { arm: 1.3, lean: 0 }; } // (squashed straight down: drawn upright, or the squash shears a leaning body into a slant)
   const draw = () => { CREATURES[e.def.draw](e, a); if (e.arrows) for (const s of e.arrows) { // an arrow that killed it, still in the body: its head buried, the shaft and fletching standing out behind
     ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.d, 1); ctx.rotate(s.a); ctx.translate(7, 0); drawArrowShape(s.lvl, 26); ctx.restore(); } };
-  shadow(e.x, e.y, e.hw * 1.1);
+  shadow(e.x, e.y, e.hw * 1.1 * (e.shrink || 1));
   ctx.save(); ctx.globalAlpha = e.fade !== undefined ? e.fade : 1;
   ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); if (e.boss) ctx.scale(e.size, e.size); else if (e.champ) ctx.scale(1.3, 1.3);
+  if (e.shrink && e.shrink < 1) ctx.scale(e.shrink, e.shrink); // (one that fell while the spores had it shrunk stays small)
   FLASH = el < .08;
   if (e.death === 'lie') { // knocked flat and left where it landed
     FLASH = false;

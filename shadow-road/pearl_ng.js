@@ -100,7 +100,7 @@
         for (const e of foes()) if (touches(e, O.x, O.y, O.z, reach) && cool(O.cd, e, .24)) { const dir = Math.sign(e.x - P.x) || P.facing; nick(e, e.boss ? Math.max(1, Math.round(d * .6)) : d, dir, 3);
           sparkle(O.x, O.y, O.z, 4); if (Math.random() < .5) sfx('slice', .2); } }
     } else if (k === 'moon') {
-      O.r = 3 + 7 * gs;
+      O.r = 3.5 + 9.5 * gs;
       if (!O.moon) { O.a += dt * (2.4 + .5 * g); const R = 48 + 30 * gs, tx = P.x + Math.cos(O.a) * R, ty = P.y + Math.sin(O.a) * R * .4, tz = P.z + 34 + bob;
         const q = Math.min(1, dt * 10); O.x += (tx - O.x) * q; O.y += (ty - O.y) * q; O.z += (tz - O.z) * q;
         if (!down) { const d = Math.max(1, Math.round((8 + 26 * g) * W()));
@@ -272,7 +272,7 @@
     const s = speedE(), b = clamp((s - 140) / 460, 0, 1);
     if (b > 0) m = Object.assign({}, m, { dmg: (m.dmg || 0) * (1 + .5 * b), kb: (m.kb || 0) * (1 + .7 * b), x1: (m.x1 || 0) + 24 * b, curB: b });
     _begin(m);
-    if (b > 0 && P.state === 'atk') { P.vx += CUR.vx * .9; CUR.vx *= .35; CUR.vy *= .35; if (b > .4) { fx.push({ kind: 'speed', x: P.x, y: P.y, z: 30, dir: P.facing, t: .25, max: .25 }); bub(P.x, P.y, 10, 4, 50); } }
+    if (b > 0 && P.state === 'atk') { P.vx += CUR.vx * .7; CUR.vx *= .35; CUR.vy *= .35; if (b > .4) { fx.push({ kind: 'speed', x: P.x, y: P.y, z: 30, dir: P.facing, t: .25, max: .25 }); bub(P.x, P.y, 10, 4, 50); } }
     else if (b > 0 && P.state === 'air') P.jvx = (P.jvx || 0) * .5 + CUR.vx * .6;
   }; }
 
@@ -398,14 +398,17 @@
   const glow = (x, y, r, rgb, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
   // the nacre blade: three crescent edges of mother-of-pearl, gilt along the cutting side, round a pearl
   function drawBlade(x, y, r, t, spin) {
-    const L = r * 2.5;
-    for (let i = 0; i < 3; i++) { const a = spin + i * TAU / 3, c = Math.cos, s = Math.sin;
-      const p0 = [x + c(a) * r * .6, y + s(a) * r * .6], tip = [x + c(a + 1.05) * L, y + s(a + 1.05) * L], cO = [x + c(a + .45) * L * 1.15, y + s(a + .45) * L * 1.15], cI = [x + c(a + .95) * L * .5, y + s(a + .95) * L * .5], p1 = [x + c(a + .9) * r * .6, y + s(a + .9) * r * .6];
-      const lg = ctx.createLinearGradient(p0[0], p0[1], tip[0], tip[1]); lg.addColorStop(0, '#E8F6F0'); lg.addColorStop(.55, '#BFE3D8'); lg.addColorStop(1, '#FFFFFF');
-      ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cO[0], cO[1], tip[0], tip[1]); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#E2BE66'; ctx.lineWidth = Math.max(.5, r * .16); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cO[0], cO[1], tip[0], tip[1]); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,248,220,.9)'; ctx.lineWidth = Math.max(.25, r * .06); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cO[0], cO[1], tip[0], tip[1]); ctx.stroke();
-      ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .1, .5, 1); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cO[0], cO[1], tip[0], tip[1]); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); ctx.stroke(); }
+    const L = r * 2.7, c = Math.cos, s = Math.sin;
+    for (let i = 0; i < 3; i++) { const a = spin + i * TAU / 3;
+      const p0 = [x + c(a - .5) * r * .7, y + s(a - .5) * r * .7], tip = [x + c(a + .9) * L, y + s(a + .9) * L], cO = [x + c(a + .2) * L * 1.2, y + s(a + .2) * L * 1.2], cI = [x + c(a + 1.1) * L * .42, y + s(a + 1.1) * L * .42], p1 = [x + c(a + 1.2) * r * .7, y + s(a + 1.2) * r * .7];
+      const edge = () => { ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cO[0], cO[1], tip[0], tip[1]); };
+      const lg = ctx.createLinearGradient(x, y, tip[0], tip[1]); lg.addColorStop(0, '#7CC4B4'); lg.addColorStop(.45, '#CFF0E6'); lg.addColorStop(.8, '#FFFFFF'); lg.addColorStop(1, '#F6D8E4');
+      ctx.fillStyle = lg; ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(60,130,124,.5)'; ctx.lineWidth = Math.max(.3, r * .06); ctx.beginPath(); ctx.moveTo(x + c(a + .35) * r, y + s(a + .35) * r); ctx.quadraticCurveTo(x + c(a + .5) * L * .7, y + s(a + .5) * L * .7, tip[0], tip[1]); ctx.stroke();
+      ctx.strokeStyle = '#E2BE66'; ctx.lineWidth = Math.max(.7, r * .24); ctx.beginPath(); edge(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,248,220,.95)'; ctx.lineWidth = Math.max(.3, r * .08); ctx.beginPath(); edge(); ctx.stroke();
+      ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .12, .55, 1.1); ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); ctx.stroke(); }
+    ctx.fillStyle = '#D6AE58'; ctx.beginPath(); ctx.arc(x, y, r * .98, 0, TAU); ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .1, .5, 1); ctx.stroke();
     pearlBody(x, y, r * .78, t, nLayers());
   }
   // the moon: a great pearl, a sea-green shadow over one side like the moon's, and a ring of gold about it
@@ -455,9 +458,9 @@
     ctx.fillStyle = `rgba(40,110,120,${.24 * fa})`; ctx.beginPath(); ctx.ellipse(w.x, w.y, rr, rr / 2.4, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = `rgba(235,255,250,${.9 * fa})`; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.ellipse(w.x, w.y, rr, rr / 2.4, 0, 0, TAU); ctx.stroke();
     ctx.strokeStyle = `rgba(242,214,138,${.6 * fa})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(w.x, w.y, rr * .82, rr * .82 / 2.4, 0, 0, TAU); ctx.stroke();
-    const n = 14, cr = rr * .75;
-    for (let i = 0; i < n; i++) { const a = i / n * TAU + w.seed, back = Math.sin(a) < 0, bx = w.x + Math.cos(a) * cr, by = w.y + Math.sin(a) * cr / 2.4, h = (26 + 18 * (((i * 7.3 + w.seed) % 1 + 1) % 1)) * rise, lean = Math.cos(a) * 10 * rise;
-      ctx.strokeStyle = back ? `rgba(110,180,185,${.7 * fa + .2})` : `rgba(210,248,240,${.9 * fa + .1})`; ctx.lineWidth = back ? 2.2 : 3; ctx.lineCap = 'round';
+    const n = 14, cr = 8 + 16 * Math.min(1, u * 2);
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + w.seed, back = Math.sin(a) < 0, bx = w.x + Math.cos(a) * cr, by = w.y + Math.sin(a) * cr / 2.4, h = (24 + 22 * (((i * 7.3 + w.seed) % 1 + 1) % 1)) * rise * (.6 + w.r / 160), lean = Math.cos(a) * 14 * rise;
+      ctx.strokeStyle = back ? `rgba(110,180,185,${.7 * fa + .2})` : `rgba(210,248,240,${.9 * fa + .1})`; ctx.lineWidth = back ? 2.6 : 3.6; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + lean * .3, by - h * .6, bx + lean, by - h); ctx.stroke();
       if (h > 4) { ctx.fillStyle = `rgba(255,255,255,${fa})`; ctx.beginPath(); ctx.arc(bx + lean, by - h - 1.5, 1.6, 0, TAU); ctx.fill(); } }
     ctx.restore();
@@ -471,9 +474,9 @@
       for (let pass = 0; pass < 4; pass++) {
         for (let i = 1; i < tr.length; i++) { const a = tr[i - 1], b = tr[i], age = (now - b.t) / .75, k = (1 - age) * Math.min(1, b.s / 320); if (k <= .02) continue;
           const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d * .5;
-          if (pass === 0) { ctx.strokeStyle = `rgba(28,92,104,${.3 * k})`; ctx.lineWidth = 12 * (.5 + .5 * k); ctx.beginPath(); ctx.moveTo(a.x, a.y + 1); ctx.lineTo(b.x, b.y + 1); ctx.stroke(); continue; }
+          if (pass === 0) { ctx.strokeStyle = `rgba(28,92,104,${.42 * k})`; ctx.lineWidth = 13 * (.5 + .5 * k); ctx.beginPath(); ctx.moveTo(a.x, a.y + 1); ctx.lineTo(b.x, b.y + 1); ctx.stroke(); continue; }
           const off = (pass - 2) * 4.5 * (.6 + .6 * (1 - k)), wob = Math.sin(b.t * 30 + pass * 2 - t * 6) * 1.4;
-          ctx.strokeStyle = pass === 2 ? `rgba(240,255,252,${.75 * k})` : `rgba(170,232,224,${.6 * k})`; ctx.lineWidth = pass === 2 ? 1.6 * k + .4 : 1.1 * k + .3;
+          ctx.strokeStyle = pass === 2 ? `rgba(240,255,252,${.9 * k})` : `rgba(170,232,224,${.75 * k})`; ctx.lineWidth = pass === 2 ? 2 * k + .5 : 1.4 * k + .4;
           ctx.beginPath(); ctx.moveTo(a.x + nx * (off + wob), a.y + ny * (off + wob) + 1); ctx.lineTo(b.x + nx * (off + wob), b.y + ny * (off + wob) + 1); ctx.stroke(); }
       }
       ctx.restore();
@@ -481,7 +484,7 @@
     if (CUR.lay > .05 && P.z < 4) { // the current under his feet, flowing the way the stick holds
       const a = CUR.layA, ca = Math.cos(a), sa = Math.sin(a) * .5, L = 34, al = CUR.lay;
       ctx.save(); ctx.lineCap = 'round';
-      ctx.strokeStyle = `rgba(28,92,104,${.22 * al})`; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(P.x - ca * 10, P.y - sa * 10 + 1); ctx.lineTo(P.x + ca * L, P.y + sa * L + 1); ctx.stroke();
+      ctx.strokeStyle = `rgba(28,92,104,${.32 * al})`; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(P.x - ca * 10, P.y - sa * 10 + 1); ctx.lineTo(P.x + ca * L, P.y + sa * L + 1); ctx.stroke();
       for (let i = 0; i < 4; i++) { const ph = ((t * 2.4 + i / 4) % 1), px = P.x + ca * (-10 + ph * (L + 10)), py = P.y + sa * (-10 + ph * (L + 10)) + 1, side = (i % 2 ? 1 : -1) * 3, ex = -sa * 2 * side, ey = ca * .5 * side;
         ctx.strokeStyle = `rgba(235,255,250,${.75 * al * Math.sin(ph * Math.PI)})`; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(px + ex - ca * 5, py + ey - sa * 5); ctx.lineTo(px + ex + ca * 3, py + ey + sa * 3); ctx.stroke(); }
       ctx.restore();
@@ -536,7 +539,7 @@
   let hudCv = null, hudN = 0;
   function hudBadge() {
     if (!hudCv) { const card = document.querySelector('.wcard'); if (!card) return; hudCv = document.createElement('canvas'); hudCv.id = 'pearlNgHud'; hudCv.width = 64; hudCv.height = 64;
-      hudCv.style.cssText = 'position:absolute;right:-15px;top:-13px;width:28px;height:28px;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))'; card.appendChild(hudCv); }
+      hudCv.style.cssText = 'position:absolute;right:-13px;bottom:-11px;width:26px;height:26px;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))'; card.appendChild(hudCv); }
     const on = growOn(); hudCv.hidden = !on; if (!on) return;
     if ((hudN++ % 4) && hudCv.dataset.k === form()) return; hudCv.dataset.k = form();
     hudCv.title = `The Pearl of Judgement: ${FORMS[form()].name} · ${layers()} layers · ${Math.round(G() * 100)}% grown`;
@@ -565,8 +568,8 @@
     let box = document.getElementById('pearlForms');
     withCtx(row.firstChild.getContext('2d'), () => { const g = ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 40, 40); formIcon(growOn() ? form() : 'pearl', 20, 21, 12, 0, growOn() ? Math.max(.5, G()) : 1); });
     if (!growOn()) { if (box) box.remove(); return; }
-    row.style.flexWrap = 'wrap';
-    if (!box) { box = document.createElement('div'); box.id = 'pearlForms'; box.style.cssText = 'flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px;margin-top:4px'; row.appendChild(box); }
+    row.style.flexWrap = 'wrap'; if (row.children[1]) { row.children[1].style.flex = '1 1 220px'; row.children[1].style.textAlign = 'left'; }
+    if (!box) { box = document.createElement('div'); box.id = 'pearlForms'; box.style.cssText = 'flex:1 1 100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:4px'; row.appendChild(box); }
     const wi = roadStage(), chosen = PS().formFor === wi;
     box.innerHTML = `<div style="grid-column:1/-1;font:700 11px var(--label,Georgia,serif);letter-spacing:.12em;color:#BFF0E4">${chosen ? 'THE PEARL\'S SHAPE' : 'CHOOSE THE PEARL\'S SHAPE'} FOR ${(STAGES[wi] ? STAGES[wi].name : 'THE NEXT WORLD').toUpperCase()}</div>` +
       FORM_ORDER.map(k => { const sel = chosen && form() === k; return `<button type="button" data-k="${k}" style="all:unset;cursor:pointer;box-sizing:border-box;display:grid;gap:2px;justify-items:center;text-align:center;padding:5px;border-radius:8px;border:1.5px solid ${sel ? '#F2D68A' : 'rgba(242,214,138,.3)'};background:${sel ? 'rgba(60,120,120,.55)' : 'rgba(8,28,36,.6)'};box-shadow:${sel ? '0 0 12px rgba(160,230,215,.35)' : 'none'}"><canvas width="192" height="120" style="width:100%;max-width:120px;aspect-ratio:8/5"></canvas><b style="font:700 11px Cinzel,Georgia,serif;color:#F2D68A">${FORMS[k].name}${sel ? ' ✓' : ''}</b><span style="font-size:10.5px;line-height:1.3;opacity:.85">${FORMS[k].desc}</span></button>`; }).join('');

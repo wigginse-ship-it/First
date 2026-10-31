@@ -198,6 +198,7 @@ function updateMech(dt) {
 }
 // every actor's size while the spores are in them
 function updateShrink(o, dt) {
+  if (o.dead) return; // (the fallen keep the size they fell at)
   o.shrinkT = Math.max(0, (o.shrinkT || 0) - dt);
   const target = o.shrinkT > 0 ? .55 : 1; o.shrink = (o.shrink || 1) + (target - (o.shrink || 1)) * Math.min(1, dt * 7);
   if (o.shrink > .995) o.shrink = 1;

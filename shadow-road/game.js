@@ -386,17 +386,23 @@ function hurtEnemy(e, dmg, dir, m, crit) {
   comboN++; comboT = 1.8; refreshCombo(true);
   if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg * (1 + gearStat('trump')));
   if (e.hp <= 0) { killEnemy(e, dir, m); return; }
-  e.cd = Math.max(e.cd, .4);
+  if (!e.boss) e.cd = Math.max(e.cd, .4); // (a boss's own count to its next attack runs on through a combo: blows can't hold it off forever)
   if (m.noStun) { e.vx = dir * 25; e.flinch = .08; return; } // an armored elite doesn't even stagger
   if (e.boss && !e.enraged) { e.rageBuild = (e.rageBuild || 0) + dmg; if (e.rageBuild > e.maxHp * .14) { e.rageBuild = 0; e.rageQ = true; } } // punish it hard and it flies into a rage
   if (e.boss && (e.state === 'down' || e.stagger)) return; // a staggered boss stays down while you punish it
+  // a boss in the middle of its own attack is not knocked out of it: blows land and wear at its poise (at half the rate),
+  // but the attack plays out; its poise only breaks between attacks, and not again for a moment after it has got up
+  const bossBusy = e.boss && !['idle', 'recover', 'hurt', 'down', 'walk', 'enter'].includes(e.state);
+  if (e.boss) e.poiseIdle = 0;
+  if (bossBusy && !e.poiseMax) { e.flinch = .08; return; }
   if (e.poiseMax && !e.air) {
-    e.poise -= 1 + pw;
-    if (e.poise > 0) { e.vx = dir * (m.kb || 0) * .12; e.flinch = .12; return; }
+    e.poise -= (1 + pw) * (bossBusy ? .5 : 1);
+    if (e.boss && (bossBusy || e.poiseGuard > 0)) e.poise = Math.max(1, e.poise);
+    if (e.poise > 0) { e.vx = dir * (m.kb || 0) * (bossBusy ? .04 : .12); e.flinch = .12; return; }
     e.poise = e.poiseMax;
     if (e.boss) { // poise broken: the boss collapses and is open for a few seconds
       const st = Math.max(.8, 1.5 - .2 * e.staggers); // each stagger is shorter, and the next one takes more to cause
-      e.staggers++; e.poiseMax = e.def.poise * 1.6 + 5 * e.staggers; e.poise = e.poiseMax;
+      e.staggers++; e.poiseMax = e.def.poise * 3.2 + 5 * e.staggers; e.poise = e.poiseMax;
       e.state = 'down'; e.t = st; e.plan = null; e.rolls = 0; e.around = false;
       if (e.def.move === 'fly') { e.air = true; e.vz = 0; e.stagger = st; }
       floatText(e.x, e.y, e.z + e.hh + 24, 'STAGGERED', '#EED48A', 18); sfx('crunch'); shakeMag = 10; zoom = .05;
