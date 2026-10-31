@@ -1311,6 +1311,24 @@
   const POOL_F = W6.POOL_F = { slow: .34, fast: 1.65 };
   const newPool = (x, y, kind) => ({ x, y, rx: rand(46, 58), kind, g: 0, ph: rand(0, 6), dead: 0 });
   W6.poolAt = (x, y) => { if (!mech || mech.kind !== 'w6melt' || !mech.pools) return null; for (const p of mech.pools) if (!p.dead && p.g > .5 && Math.hypot(x - p.x, (y - p.y) * 2.8) < p.rx) return p; return null; };
+  // THE STRIKE: every pool rings its hour as the hours turn. Whatever stands in a gold pool then is stopped dead (held in
+  // amber for a few seconds, and hit harder while it is held); whoever stands in a red one is quickened: the prince gets
+  // Quicksilver, a foe stays hurried for a while after it leaves
+  const STOP_T = 3, STOP_DMG = 1.5;
+  function hourStrike(m) {
+    let stopped = 0;
+    for (const p of m.pools) { if (p.dead || p.g < .5) continue; const slow = p.kind === 'slow', col = slow ? '#FFE08A' : '#FF7A5A';
+      fx.push({ kind: 'ring', x: p.x, y: p.y, z: 0, t: .6, max: .6, r: p.rx * 1.9, col, flat: 1 }); fx.push({ kind: 'ring', x: p.x, y: p.y, z: 0, t: .35, max: .35, r: p.rx * 1.2, col: '#FFFFFF', flat: 1 });
+      for (let i = 0; i < 14; i++) parts.push({ x: p.x + rand(-p.rx, p.rx) * .8, y: p.y + rand(-6, 6), z: 2, vx: rand(-30, 30), vy: 0, vz: rand(120, 240), life: .7, max: .7, col: pick([col, '#FFFFFF']), size: rand(2, 3.4), shape: 'star', rot: 0, vr: 4 });
+      for (const e of enemies) { if (e.dead || e.boss || e.state === 'enter' || W6.poolAt(e.x, e.y) !== p) continue;
+        if (slow) { e.w6stop = STOP_T; e.w6hurry = 0; e.plan = null; if (e.state === 'wind' || e.state === 'strike') e.state = 'idle'; stopped++; floatText(e.x, e.y, e.hh + 24, 'STOPPED', '#FFE08A', 13); }
+        else { e.w6hurry = 4; floatText(e.x, e.y, e.hh + 24, 'HURRIED', '#FF8A6A', 11); } }
+      if (!slow && W6.poolAt(P.x, P.y) === p) { gainPower('haste'); PW.haste = 5; floatText(P.x, P.y, 120, 'THE QUICK HOUR', '#FF9A7A', 15); } }
+    if (sfxOn && actx) { tone(523, 1.1, 'sine', .1, 0); tone(784, 1.2, 'sine', .07, 0, .02); tone(1046, 1.4, 'triangle', .05, 0, .04); tone(523, .9, 'sine', .07, 0, .5); }
+    if (stopped) sfx('hit-crystal'); shakeMag = Math.max(shakeMag, 6); flashT = Math.max(flashT || 0, .08);
+  }
+  W6.hourStrike = hourStrike;
+  { const _he = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) { if (e.w6stop > 0) { dmg = Math.round(dmg * STOP_DMG); m = Object.assign({}, m, { kb: (m && m.kb || 0) * .2, launch: 0 }); } return _he(e, dmg, dir, m, crit); }; }
   MECH_FX.w6melt = {
     start(m) {
       m.pools = []; m.turnT = 9; m.warned = false; m.dripT = 5; m.drops = [];
@@ -1323,8 +1341,9 @@
       m.pools = m.pools.filter(p => p.dead < 1);
       const busy = waveActive || enemies.some(e => !e.dead);
       m.turnT -= dt;
-      if (m.turnT < 1.4 && !m.warned) { m.warned = true; floatText(P.x, P.y, 110, 'THE HOURS TURN', '#F6D07A', 16); if (sfxOn && actx) for (let i = 0; i < 4; i++) tone(880, .05, 'square', .04, 0, i * .3); }
-      if (m.turnT <= 0) { m.warned = false; m.turnT = rand(8, 10); for (const p of m.pools) p.kind = p.kind === 'slow' ? 'fast' : 'slow'; if (sfxOn && actx) { tone(660, .5, 'sine', .08, 0); tone(990, .7, 'sine', .06, 0, .12); } shakeMag = Math.max(shakeMag, 3); }
+      if (m.turnT < 3 && !m.warned) { m.warned = true; m.tick = 3; floatText(P.x, P.y, 110, 'THE HOURS STRIKE', '#F6D07A', 16); }
+      if (m.warned && m.turnT < m.tick) { if (sfxOn && actx) tone(1250 - m.tick * 120, .06, 'square', .03 + (3 - m.tick) * .02, 0); m.tick--; } // the countdown ticks, louder each second
+      if (m.turnT <= 0) { hourStrike(m); m.warned = false; m.turnT = rand(8, 10); for (const p of m.pools) p.kind = p.kind === 'slow' ? 'fast' : 'slow'; }
       m.dripT -= dt;
       if (m.dripT <= 0 && busy) { m.dripT = rand(6, 8); const x = clamp(P.x + rand(-160, 160), camX + 60, camX + VW - 60), y = clamp(P.y + rand(-40, 40), FLOOR_TOP + 20, FLOOR_BOT - 14); m.drops.push({ x, y, z: 300, vz: 0, kind: Math.random() < .55 ? 'slow' : 'fast', rot: rand(0, 6) }); }
       for (const d of m.drops) { d.vz -= GRAV * .5 * dt; d.z += d.vz * dt; d.rot += dt * 2;
@@ -1335,6 +1354,15 @@
     },
     boxes(m, box) { for (const d of m.drops) box(d.x, d.y, 0, 40, d.z + 40); for (const e of enemies) if (e.w6pool) box(e.x, e.y, e.z, 30, e.hh + 40); },
     list(m, list, t) {
+      for (const e of enemies) if (e.w6stop > 0 && !e.dead) { const k = Math.min(1, e.w6stop / .4), cy = e.y - e.z - e.hh * .5, rx = e.hw + 14, ry = e.hh * .62 + 8;
+        list.push([e.y + .03, () => onMain(() => { ctx.save(); ctx.globalAlpha = k; // held in amber: a gold glass round it, a stopped dial over its head
+          const g = ctx.createRadialGradient(e.x - rx * .3, cy - ry * .3, 4, e.x, cy, Math.max(rx, ry)); g.addColorStop(0, 'rgba(255,236,170,.18)'); g.addColorStop(.75, 'rgba(240,180,70,.32)'); g.addColorStop(1, 'rgba(200,130,40,.5)');
+          ctx.fillStyle = g; ell(e.x, cy, rx, ry); ctx.fill(); ctx.strokeStyle = 'rgba(255,226,140,.9)'; ctx.lineWidth = 1.6; ctx.stroke();
+          ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,250,220,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(e.x - rx * .25, cy - ry * .3, rx * .55, ry * .5, -.5, Math.PI * 1.05, Math.PI * 1.45); ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
+          const x = e.x, y = e.y - e.z - e.hh - 22, r = 10; ctx.fillStyle = 'rgba(255,232,150,.95)'; circle(x, y, r); ctx.fill(); ctx.strokeStyle = '#5A3410'; ctx.lineWidth = 1.5; ctx.stroke();
+          for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * r * .72, y + Math.sin(a) * r * .72); ctx.lineTo(x + Math.cos(a) * r * .9, y + Math.sin(a) * r * .9); ctx.lineWidth = 1; ctx.stroke(); }
+          const left = e.w6stop / STOP_T; ctx.fillStyle = 'rgba(120,70,20,.35)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r * .7, -Math.PI / 2, -Math.PI / 2 + TAU * left); ctx.closePath(); ctx.fill(); // how long it is held
+          ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - r * .7); ctx.moveTo(x, y); ctx.lineTo(x + r * .45, y); ctx.stroke(); ctx.restore(); })]); }
       for (const d of m.drops) list.push([d.y, () => { shadow(d.x, d.y, 10 * (1 - Math.min(.7, d.z / 300))); W6_ART.softWatch(d.x, d.y - d.z, 1.4, .4 + Math.sin(t * 6) * .2, d.rot * .2, d.kind === 'slow' ? '#D8A848' : '#C84A30'); }]);
       for (const e of enemies) if (e.w6pool && !e.dead) list.push([e.y + .02, () => onMain(() => { // a little dial turning over its head, slow or fast
         const x = e.x, y = e.y - e.z - e.hh - 14, slow = e.w6pool === 'slow', a = t * (slow ? .6 : 9);
@@ -1344,7 +1372,7 @@
   };
   // the pools themselves, painted flat on the sand: molten gold with its hour-marks, or a red that will not keep still
   reg('w6pools', { draw(h, t) { const m = h.m;
-    for (const p of m.pools) { const g = sm(p.g) * (p.dead ? 1 - p.dead : 1), warn = m.turnT < 1.4 ? (Math.sin(t * 18) > 0 ? 1 : 0) : 0, slow = (p.kind === 'slow') !== !!warn, rx = p.rx * g, ry = rx / 2.8;
+    for (const p of m.pools) { const g = sm(p.g) * (p.dead ? 1 - p.dead : 1) * (m.warned ? 1 + .05 * Math.max(0, Math.sin(m.turnT * TAU)) : 1), warn = m.turnT < 1 ? (Math.sin(t * 18) > 0 ? 1 : 0) : 0, slow = (p.kind === 'slow') !== !!warn, rx = p.rx * g, ry = rx / 2.8;
       if (rx < 2) continue;
       ctx.save(); ctx.translate(p.x, p.y);
       ctx.fillStyle = slow ? 'rgba(120,80,20,.35)' : 'rgba(110,20,10,.35)'; ell(2, 2, rx + 3, ry + 1.5); ctx.fill();
@@ -1353,7 +1381,7 @@
       ctx.strokeStyle = slow ? 'rgba(90,50,10,.7)' : 'rgba(80,10,6,.7)'; ctx.lineWidth = 1.2; ctx.stroke();
       ctx.strokeStyle = slow ? 'rgba(80,46,10,.65)' : 'rgba(255,230,210,.5)'; ctx.lineWidth = 1; // the hour-marks round it, and a hand going round: slowly in gold, racing in red
       for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a) * rx * .72, Math.sin(a) * ry * .72); ctx.lineTo(Math.cos(a) * rx * .86, Math.sin(a) * ry * .86); ctx.stroke(); }
-      const ha = t * (slow ? .25 : 7) + p.ph; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(ha) * rx * .6, Math.sin(ha) * ry * .6); ctx.stroke();
+      const cd = m.warned ? Math.max(0, m.turnT) / 3 : -1, ha = cd >= 0 ? -Math.PI / 2 - cd * TAU * 1.5 : t * (slow ? .25 : 7) + p.ph; // (in the countdown every hand sweeps up to twelve) ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(ha) * rx * .6, Math.sin(ha) * ry * .6); ctx.stroke();
       ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = slow ? 'rgba(255,240,190,.35)' : 'rgba(255,190,150,.4)'; ctx.lineWidth = 1; // ripples: lazy in gold, quick in red
       for (let k = 0; k < 2; k++) { const q = ((t * (slow ? .15 : 1.2) + k * .5 + p.ph) % 1); ell(0, 0, rx * q, ry * q); ctx.stroke(); }
       ctx.restore(); }
@@ -1918,8 +1946,10 @@
       e.w6fallen = Math.max(0, (e.w6fallen || 0) - dt * 1.4);
     }
     if (e.w6noApple > 0) e.w6noApple -= dt;
+    if (e.w6stop > 0) { e.w6stop -= dt; decay(); e.vx = 0; e.vy = 0; e.vz = 0; if (e.w6stop <= 0) { e.cd = Math.max(e.cd || 0, .5); for (let i = 0; i < 10; i++) parts.push({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: rand(4, e.hh), vx: rand(-60, 60), vy: 0, vz: rand(20, 90), life: .5, max: .5, col: pick(['#FFE08A', '#F2B850']), size: rand(2, 3.5), shape: 'spark', rot: rand(0, 3), vr: 5 }); } return; }
+    if (e.w6hurry > 0) e.w6hurry -= dt;
     if (W6.poolAt && !e.boss && e.state !== 'enter') { const p = W6.poolAt(e.x, e.y); e.w6pool = p ? p.kind : null; if (p) { if (Math.random() < dt * (p.kind === 'fast' ? 8 : 2)) parts.push({ x: e.x + rand(-10, 10), y: e.y, z: rand(4, 30), vx: 0, vy: 0, vz: p.kind === 'fast' ? 80 : 14, life: .6, max: .6, col: p.kind === 'fast' ? 'rgba(255,120,80,.7)' : 'rgba(255,220,130,.6)', size: rand(1.4, 2.4), shape: 'star', rot: 0, vr: 2 }); return _upd(e, dt * W6.POOL_F[p.kind]); } }
-    return _upd(e, dt);
+    return _upd(e, e.w6hurry > 0 ? dt * 1.4 : dt);
   };
   // the mannequin comes apart instead of dying (the first time); the dreamer's things die in their own ways
   const CUSTOM_DEATH = { w6clock: 'w6melt', w6skybird: 'w6paper', w6mannequin: 'w6pieces', w6elephant: 'w6topple', w6crutch: 'w6snap' };

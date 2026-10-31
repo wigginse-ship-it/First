@@ -1187,10 +1187,13 @@
   // a wing, from the shoulder at the origin, rising up and back. beat (-1 down .. 1 raised) is the stroke, seen side-on;
   // fold (0..1) sweeps it back along the body for a dive
   function drakeWing(far, beat, fold, hot) {
-    ctx.save(); ctx.rotate(-fold * .95); ctx.scale(1 - fold * .2, (.3 + .7 * beat) * (1 - fold * .35));
-    const E = [-16, -28], W = [-4, -60], F = [[-62, -46], [-72, -14], [-52, 10]]; // elbow, wrist, the tips of the finger-spars
+    // the stroke is seen side-on: raised the wing stands above the back, driven down it hangs below the belly, and between the
+    // two it passes edge-on, a thin spread blade; it swings a little forward on the downstroke
+    const sy = Math.sign(beat || 1) * Math.max(.16, Math.abs(beat));
+    ctx.save(); ctx.rotate(-fold * .95 + (1 - beat) * .1); ctx.scale(1 - fold * .2, sy * (1 - fold * .45));
+    const E = [-18, -26], W = [-10, -56], F = [[-72, -40], [-82, -12], [-58, 8]]; // elbow, wrist, the tips of the finger-spars
     // the primaries fan out from the wrist, up and back: the feathered half
-    for (let i = 6; i >= 0; i--) pinion(W[0] - 1, W[1] + 2 + i * 1.6, -1.85 - i * .19, 50 - Math.abs(i - 2) * 3.4, 6.6, far, hot && !far ? DR.goldLit : DR.ember);
+    for (let i = 6; i >= 0; i--) pinion(W[0] - 1, W[1] + 2 + i * 1.6, -1.95 - i * .18, 56 - Math.abs(i - 2) * 3.4, 5.4, far, hot && !far ? DR.goldLit : DR.ember);
     // the membrane strung between the spars and back to the flank: the wyvern half, its trailing edge scalloped
     const tips = [W, ...F, [-16, 8]], mem = (ox, oy, cont) => { if (!cont) ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(E[0] + ox, E[1] + oy); ctx.lineTo(W[0] + ox, W[1] + oy);
       for (let i = 1; i < tips.length; i++) { const p = tips[i - 1], q = tips[i], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2; ctx.quadraticCurveTo(mx + (-18 - mx) * .32 + ox, my + (-24 - my) * .32 + oy, q[0] + ox, q[1] + oy); }
@@ -1214,66 +1217,74 @@
     const swoop = (act === 'swoop' || act === 'circle') && e.w4dash, swoopW = W('w4swoop'), flameW = W('w4flame'), flaming = act === 'flame', gustW = W('w4gust');
     const howl = Math.max(W('w4howl'), act === 'howl' ? 1 : 0), maw = Math.max(W('w4maw'), act === 'maw' ? 1 : 0);
     const hot = flameW > .3 || flaming || maw > .3 || howl > .3;
-    // the wings beat slowly and heavily at rest; it mantles them high to wind up, and the attacks drive the stroke themselves
-    let beat = pose.beat ?? (.5 + .45 * Math.sin(t * 1.15));
+    // how it is moving (kept by drakeMotion each frame): the stroke's phase, its velocity, how far it has settled into a glide
+    const M = e.w4m || { ph: t * 9, vx: 0, vy: 0, vz: 0, ax: 0, sp: 0, tl: 0, tw: t * 2, glide: 0 }, f = e.facing || 1, fwd = M.vx * f;
+    // the stroke: a snapping downstroke and a quicker recovery (1 the wings high, -1 driven right down); held spread in a glide
+    const w = M.ph + .45 * Math.sin(M.ph); let beat = Math.cos(w);
+    beat = lerp(beat, .6 + .05 * Math.sin(t * 1.4), M.glide);
+    if (pose.beat !== undefined) beat = pose.beat;
     beat = lerp(beat, 1, Math.max(flameW, gustW, swoopW * .8, howl * .6, maw * .5));
-    if (down) beat = dazed ? .25 + .12 * Math.sin(t * 2.4) : -.5; // (dazed, its wings sag half open)
-    const fold = swoop ? 1 : pose.fold || 0, rear = Math.max(flameW, howl * .8, gustW * .6), lunge = flaming ? 1 : maw;
-    const pitch = (swoop ? .34 : flaming ? .16 : -.14 * Math.max(flameW, gustW) + (down ? .12 : 0)) + (pose.pitch || 0);
-    const B = (down ? 16 : 0) + Math.sin(t * 1.15 - .9) * 1.6 * (1 - fold); // the body lifts a little on each downstroke
-    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.translate(0, B);
-    if (pitch) { ctx.translate(0, -44); ctx.rotate(pitch); ctx.translate(0, 44); }
-    const SH = [2, -56]; // the shoulder
-    const wr = pose.wrot || 0; // the wings swung down and back, so their tips rake the floor (the wing-rakes)
-    ctx.save(); ctx.translate(SH[0] - 9, SH[1] + 1); ctx.rotate(.24 + wr); drakeWing(true, beat, fold, hot); ctx.restore();
-    // the tail: long, swinging slowly, scaled in bands, a row of spines down it and a barb at the end
-    const sw = Math.sin(t * .8) * 5, tl = swoop ? -10 : down ? 14 : 0;
-    const tp = taper(-20, -40, -62, -22 + sw + tl, -106, -42 + sw * 1.7 + tl * .6, 15, 2.8, 12);
-    for (let i = 2; i < 11; i += 2) { const k = i * 2, x = tp.L[k], y = tp.L[k + 1], s = 1 - i / 13; horn(x, y + 1, x - 3, y - 6 * s, x - 7, y - 8 * s, 4.6 * s + 1, .3, '#1E1230', .9, '#0A0610'); }
-    cel(stripPath(tp), DR.hide, { d: 2.6, r: 1, w: 1.7, dark: DR.hideDk, lite: DR.hideLit, tex: () => {
-      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .8; ctx.beginPath(); for (let k = 2; k < tp.L.length - 2; k += 2) { ctx.moveTo(tp.L[k], tp.L[k + 1]); ctx.quadraticCurveTo(tp.M[k] + 2, tp.M[k + 1], tp.R[k], tp.R[k + 1]); } ctx.stroke(); // the bands of scale
-      ctx.strokeStyle = 'rgba(216,160,64,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tp.R[2], tp.R[3] - 1); for (let k = 4; k < tp.R.length - 4; k += 2) ctx.lineTo(tp.R[k], tp.R[k + 1] - 1); ctx.stroke(); // the gilt edge of the belly-scales
+    if (down) beat = dazed ? .2 + .1 * Math.sin(t * 2.4) : .1; // (on the floor its wings sag half open)
+    const fold = swoop ? 1 : Math.max(pose.fold || 0, cl01((M.sp - 520) / 400) * .5 * (1 - M.glide)), rear = Math.max(flameW, howl * .8, gustW * .6), lunge = flaming ? 1 : maw;
+    // its attitude: nose down as it drops and on the stoop, up as it climbs; leaning into a burst of speed; rolled as it slips across the arena in depth
+    let pitch = clamp(-M.vz / 520, -.42, .7) + clamp(M.ax * f / 2600, -.18, .22) + (swoop ? .12 : 0) + (flaming ? .16 : 0) - .16 * Math.max(flameW, gustW) + (pose.pitch || 0);
+    if (down) pitch = .1;
+    pitch = clamp(pitch, -.5, .78);
+    const bank = down ? 0 : clamp(M.vy / 240, -1, 1);
+    const stroke = (1 - fold) * (1 - M.glide) * (down ? 0 : 1), B = (down ? 30 : 0) - beat * 2.4 * stroke; // the body rises on each downstroke
+    const S = .84; // drawn a little smaller and leaner than its reach (its hit box is unchanged)
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.translate(0, -50 + B); ctx.rotate(pitch + bank * .06); ctx.scale(S, S * (1 - .14 * Math.abs(bank)));
+    // speed: lines of torn air behind it
+    const streak = swoop || pose.streak || M.sp > 380;
+    if (streak) add(() => { const L = 30 + Math.min(1, M.sp / 900) * 70; ctx.lineWidth = 1.8; for (let i = 0; i < 6; i++) { const y = -26 + i * 9 + Math.sin(t * 30 + i) * 1.5, x0 = -24 - (i % 3) * 10; ctx.strokeStyle = `rgba(255,${150 + i * 12},90,${.18 + .06 * (i % 3)})`; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 - L * (.6 + .4 * ((i * 7) % 3) / 2), y - pitch * 8); ctx.stroke(); } });
+    const wr = pose.wrot || 0, SH = [4, -8], sweep = -.32 - fold * .2; // its shoulders; the wings are swept back from them
+    ctx.save(); ctx.translate(SH[0] - 7, SH[1] - 1); ctx.rotate(sweep + .12 + wr); ctx.scale(1, 1 - .25 * bank); drakeWing(true, beat * .92, fold, hot); ctx.restore();
+    // the tail: long and thin, whipping a beat behind the body; it streams out straight on the dive and hangs as it climbs
+    const lag = clamp(M.tl / 320, -1, 1), wv = (1 - fold * .7) * (down ? .3 : 1), tw = M.tw;
+    const tp = taper(-24, -1, -66, 2 + lag * 12 + Math.sin(tw - .9) * 6 * wv + (down ? 14 : 0), -124, -2 + lag * 30 + Math.sin(tw - 1.9) * 13 * wv + (down ? 24 : 0), 11, 2, 14);
+    for (let i = 2; i < 13; i += 2) { const k = i * 2, x = tp.L[k], y = tp.L[k + 1], s = 1 - i / 15; horn(x, y + 1, x - 3, y - 5 * s, x - 7, y - 6 * s, 3.6 * s + .8, .3, '#1E1230', .9, '#0A0610'); }
+    cel(stripPath(tp), DR.hide, { d: 2.2, r: .9, w: 1.6, dark: DR.hideDk, lite: DR.hideLit, tex: () => {
+      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .7; ctx.beginPath(); for (let k = 2; k < tp.L.length - 2; k += 2) { ctx.moveTo(tp.L[k], tp.L[k + 1]); ctx.quadraticCurveTo(tp.M[k] + 2, tp.M[k + 1], tp.R[k], tp.R[k + 1]); } ctx.stroke();
+      ctx.strokeStyle = 'rgba(216,160,64,.5)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(tp.R[2], tp.R[3] - 1); for (let k = 4; k < tp.R.length - 4; k += 2) ctx.lineTo(tp.R[k], tp.R[k + 1] - 1); ctx.stroke();
     } });
     { const n = tp.M.length, x = tp.M[n - 2], y = tp.M[n - 1], dx = x - tp.M[n - 4], dy = y - tp.M[n - 3], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, nx = -uy, ny = ux;
-      fillPoly([x - ux * 2, y - uy * 2, x + ux * 6 + nx * 7, y + uy * 6 + ny * 7, x + ux * 18, y + uy * 18, x + ux * 6 - nx * 7, y + uy * 6 - ny * 7], DR.gold, 1.2); // the barb, a heraldic dart of gold
-      detPoly([x + ux * 6, y + uy * 6, x + ux * 18, y + uy * 18, x + ux * 6 - nx * 7, y + uy * 6 - ny * 7], DR.goldDk, .8); }
-    // the legs, eagle-feathered at the thigh, scaled below; they hang at rest and are thrown forward for the strike
+      fillPoly([x - ux * 2, y - uy * 2, x + ux * 6 + nx * 6, y + uy * 6 + ny * 6, x + ux * 17, y + uy * 17, x + ux * 6 - nx * 6, y + uy * 6 - ny * 6], DR.gold, 1.1); // the barb, a heraldic dart of gold
+      detPoly([x + ux * 6, y + uy * 6, x + ux * 17, y + uy * 17, x + ux * 6 - nx * 6, y + uy * 6 - ny * 6], DR.goldDk, .7); }
+    // the legs: tucked back along the belly in flight, thrown forward talons-open for the strike, splayed when it is down
+    const strike = swoop || swoopW > .5 ? 1 : 0;
     const leg = (far) => {
-      const hx = far ? -12 : -3, hy = -34, s = Math.sin(t * 1.0 + (far ? 1.4 : 0)) * 2, strike = swoop || swoopW > .5 ? 1 : 0, col = far ? '#140A1E' : DR.hide;
-      let K = [hx + 5 + s, -17], A = [hx + 2 + s * 1.5, -6];
-      if (strike) { K = [hx + 14, -24]; A = [hx + 30, -18]; }
-      if (down) { K = [hx + 9, -20]; A = [hx + 14, -10]; }
-      seg(K[0], K[1], A[0], A[1], 5.6, 4, col, 0); // the scaled shank
-      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .7; if (DET()) { ctx.beginPath(); for (let i = 1; i < 4; i++) { const x = lerp(K[0], A[0], i / 4), y = lerp(K[1], A[1], i / 4); ctx.moveTo(x - 2.4, y); ctx.lineTo(x + 2.4, y + .6); } ctx.stroke(); }
-      const cc = far ? '#9A8C72' : DR.claw; // the talons: three forward, one behind, hooked; they open for the strike
-      for (let c = 0; c < 3; c++) { const g = .5 + c * .42 - strike * .75, x1 = A[0] + Math.cos(g) * 6, y1 = A[1] + Math.sin(g) * 6; seg(A[0], A[1], x1, y1, 3.4, 2.6, col, 0); horn(x1, y1, x1 + Math.cos(g) * 3, y1 + Math.sin(g) * 3, x1 + Math.cos(g + 1) * 5, y1 + Math.sin(g + 1) * 5, 2.6, .3, cc, .8); }
-      horn(A[0] - 1, A[1], A[0] - 5, A[1] + 1, A[0] - 6, A[1] + 5 - strike * 3, 2.6, .3, cc, .8);
-      cel(furPath([hx - 10, hy - 6, hx + 9, hy - 6, K[0] + 6, K[1] - 3, K[0] + 2, K[1] + 3, K[0] - 6, K[1] + 1, hx - 12, hy + 8], 3.2, far ? 7 : 3), far ? '#120A1C' : DR.pin, { d: 2.4, r: 1, w: 1.4, dark: '#06030A', lite: DR.pinLit, tex: () => { // the feathered thigh
-        ctx.strokeStyle = 'rgba(216,160,64,.4)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 3; i++) { const y = hy + 2 + i * 5, x = lerp(hx, K[0], i / 3); ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x, y + 3, x + 6, y); } ctx.stroke(); } });
+      const hx = far ? -16 : -10, hy = 2, col = far ? '#140A1E' : DR.hide, s = Math.sin(t * 1.3 + (far ? 1.4 : 0)) * 1.5;
+      let K = [hx - 8, 10 + s], A = [hx - 22, 12 + s];
+      if (strike) { K = [hx + 10, 14]; A = [hx + 24, 22]; }
+      if (down) { K = [hx + 6, 14]; A = [hx + 14, 22]; }
+      seg(K[0], K[1], A[0], A[1], 4.6, 3.4, col, 0);
+      const cc = far ? '#9A8C72' : DR.claw, g0 = strike ? -.2 : down ? .4 : 1.9;
+      for (let c = 0; c < 3; c++) { const g = g0 + c * .4, x1 = A[0] + Math.cos(g) * 5, y1 = A[1] + Math.sin(g) * 5; seg(A[0], A[1], x1, y1, 2.8, 2.2, col, 0); horn(x1, y1, x1 + Math.cos(g) * 2.6, y1 + Math.sin(g) * 2.6, x1 + Math.cos(g + 1) * 4.4, y1 + Math.sin(g + 1) * 4.4, 2.2, .3, cc, .7); }
+      cel(furPath([hx - 9, hy - 4, hx + 7, hy - 3, K[0] + 5, K[1] - 2, K[0] + 2, K[1] + 3, K[0] - 5, K[1] + 1, hx - 11, hy + 6], 2.6, far ? 7 : 3), far ? '#120A1C' : DR.pin, { d: 2, r: .9, w: 1.3, dark: '#06030A', lite: DR.pinLit });
     };
     leg(true);
-    // the body: a deep keel of a breast, eagle-feathered and diapered with gold like a herald's eagle, the back scaled
-    const body = PB([22, -52, 23, -38, 12, -27, -4, -25, -20, -30, -30, -40, -24, -52, -8, -60, 10, -62]);
-    cel(body, DR.hide, { d: 4.6, r: 1.8, w: 2.1, dark: DR.hideDk, lite: DR.hideLit, under: () => {
-      const g = ctx.createRadialGradient(8, -42, 2, 8, -42, 30); g.addColorStop(0, `rgba(${BRUISE},.45)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-30, -72, 60, 50);
+    // the body: lean and long, a keel of a breast tapering to narrow hips; diapered with gold along the breast, scaled on the back
+    const body = PB([22, -6, 16, -12, 2, -13, -14, -10, -27, -4, -26, 3, -12, 7, 4, 9, 16, 6]);
+    cel(body, DR.hide, { d: 3.6, r: 1.5, w: 2, dark: DR.hideDk, lite: DR.hideLit, under: () => {
+      const g = ctx.createRadialGradient(8, -2, 2, 8, -2, 24); g.addColorStop(0, `rgba(${BRUISE},.45)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-30, -20, 60, 34);
     }, tex: () => {
-      for (let r = 0; r < 5; r++) for (let i = 0; i < 3; i++) { const x = 18 - i * 6 - r * 1.6, y = -52 + r * 5.4 + i * 1.4; // the breast-feathers, scalloped rows
-        ctx.fillStyle = r % 2 ? '#34204C' : '#2C1A42'; ctx.beginPath(); ctx.arc(x, y, 3.6, 0, Math.PI); ctx.fill(); ctx.strokeStyle = 'rgba(216,160,64,.62)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(x, y, 3.6, .2, Math.PI - .2); ctx.stroke(); }
-      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 12; i++) { const x = -24 + (i * 23) % 26, y = -54 + (i * 11) % 20; ctx.moveTo(x - 3, y); ctx.quadraticCurveTo(x, y + 2.6, x + 3, y); } ctx.stroke(); // the scales of the back
+      for (let r = 0; r < 2; r++) for (let i = 0; i < 4; i++) { const x = 17 - i * 6 - r * 3, y = -1 + r * 4.4 + i * .8;
+        ctx.fillStyle = r % 2 ? '#34204C' : '#2C1A42'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI); ctx.fill(); ctx.strokeStyle = 'rgba(216,160,64,.62)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.arc(x, y, 3, .2, Math.PI - .2); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 9; i++) { const x = -22 + (i * 17) % 34, y = -10 + (i * 5) % 6; ctx.moveTo(x - 2.6, y); ctx.quadraticCurveTo(x, y + 2.2, x + 2.6, y); } ctx.stroke();
     } });
-    cracks([[-14, -32, -6, -29, 2, -30], [-22, -38, -18, -34]], .55); // the fire inside, showing through the belly
+    cracks([[-16, 4, -8, 6, 0, 5], [-22, 1, -18, 4]], .55); // the fire inside, showing through the belly
     leg(false);
-    // the neck: long, curved like a swan's, maned with plumes of ember down the back of it
-    const H = [44 + lunge * 10 - rear * 6, -90 + lunge * 22 - rear * 8 + Math.sin(t * .7) * 1.4 + (down ? 22 : 0) + (swoop ? 20 : 0)];
-    if (swoop) H[0] += 12;
-    const nk = taper(14, -52, 40 - rear * 4 + (swoop ? 10 : 0), -60 + lunge * 6, H[0] - 4, H[1] + 5, 19, 9, 10);
-    for (let i = 10; i >= 2; i -= 2) { const k = i * 2; pinion(nk.R[k] + 1, nk.R[k + 1], 2.5 + i * .05 + Math.sin(t * .9 + i) * .05, 12 + i * .6, 4.4, false, DR.ember); }
-    cel(stripPath(nk), DR.hide, { d: 3, r: 1.3, w: 1.8, dark: DR.hideDk, lite: DR.hideLit, tex: () => {
-      ctx.strokeStyle = 'rgba(216,160,64,.55)'; ctx.lineWidth = .9; ctx.beginPath(); for (let k = 4; k < nk.L.length - 2; k += 4) { ctx.moveTo(nk.L[k], nk.L[k + 1]); ctx.lineTo(nk.M[k] * .5 + nk.L[k] * .5, nk.M[k + 1] * .5 + nk.L[k + 1] * .5 - 1); } ctx.stroke(); // the plates of the throat
+    // the neck: long and swan-curved, maned with plumes of ember; thrust out straight for a lunge, drawn back to rear
+    const H = [54 + lunge * 16 - rear * 10 + (swoop ? 10 : 0), -26 + lunge * 22 - rear * 10 + Math.sin(t * .9) * 1.2 + (down ? 26 : 0) + (swoop ? 18 : 0) - beat * 1.5 * stroke];
+    const nk = taper(14, -8, 36 - rear * 6 + (swoop ? 12 : 0), -26 + lunge * 12 + (swoop ? 10 : 0), H[0] - 4, H[1] + 4, 13, 7, 12);
+    for (let i = 12; i >= 2; i -= 2) { const k = i * 2; pinion(nk.R[k] + 1, nk.R[k + 1], 2.5 + i * .04 + Math.sin(t * 1.2 + i) * .05 + fold * .3, 9 + i * .5, 3.6, false, DR.ember); }
+    cel(stripPath(nk), DR.hide, { d: 2.6, r: 1.1, w: 1.7, dark: DR.hideDk, lite: DR.hideLit, tex: () => {
+      ctx.strokeStyle = 'rgba(216,160,64,.55)'; ctx.lineWidth = .8; ctx.beginPath(); for (let k = 4; k < nk.L.length - 2; k += 4) { ctx.moveTo(nk.L[k], nk.L[k + 1]); ctx.lineTo(nk.M[k] * .5 + nk.L[k] * .5, nk.M[k + 1] * .5 + nk.L[k + 1] * .5 - 1); } ctx.stroke();
     } });
-    if (hot) glowAt(nk.L[10], nk.L[11], 16, EMBER, .25 + .35 * Math.max(flameW, flaming ? 1 : 0)); // the throat kindling
+    if (hot) glowAt(nk.L[12], nk.L[13], 14, EMBER, .25 + .35 * Math.max(flameW, flaming ? 1 : 0)); // the throat kindling
     // the head: crested, with a hooked beak of gilt horn and fangs in the jaw below
-    const hr = .12 + lunge * .45 - rear * .35 - howl * .25 + (down ? .5 : 0) + (swoop ? .3 : 0), open = Math.max(maw * .9, howl * .8, flaming ? .85 : flameW * .3, a.atk ? .5 : 0, swoop ? .35 : 0, .05 + Math.sin(t * .9) * .03);
+    const hr = .12 + lunge * .45 - rear * .35 - howl * .25 + (down ? .5 : 0) + (swoop ? .1 : 0) - pitch * .35, open = Math.max(maw * .9, howl * .8, flaming ? .85 : flameW * .3, a.atk ? .5 : 0, swoop ? .35 : 0, .05 + Math.sin(t * .9) * .03);
     ctx.save(); ctx.translate(H[0], H[1]); ctx.rotate(hr);
     for (let i = 0; i < 5; i++) pinion(-4, -3 + i * .8, -2.05 - i * .24 + Math.sin(t * .8 + i) * .03, 15 + (i === 1 ? 6 : i * 1.5), 3.2, false, DR.ember); // the crest, a fan of plumes
     horn(-3, -6, -12, -12, -22, -10, 5, .4, '#1A1024', 1.1, '#08040C'); horn(0, -7, -8, -16, -16, -20, 4.4, .4, DR.gold, 1.1, DR.goldDk); // two horns swept back
@@ -1291,13 +1302,12 @@
     else emberEye(5, -3.6, 1.1, hot || wind > .4 ? '#FFF0A8' : TY.eye, SULF, hot);
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-1, -7.6); ctx.quadraticCurveTo(5, -9.4, 10, -6.4); ctx.stroke(); // the brow, drawn down over the eye
     ctx.restore();
-    ctx.save(); ctx.translate(SH[0], SH[1]); ctx.rotate(wr); drakeWing(false, beat, fold, hot); ctx.restore();
-    if (dazed) { // knocked silly: embers wheeling round its head, and its crest hanging
+    ctx.save(); ctx.translate(SH[0], SH[1]); ctx.rotate(sweep + wr); ctx.scale(1, 1 + .2 * bank); drakeWing(false, beat, fold, hot); ctx.restore();
+    if (dazed) { // knocked silly: embers wheeling round its head
       const hx = H[0] + 2, hy = H[1] - 16;
       for (let i = 0; i < 4; i++) { const an = t * 5.5 + i * TAU / 4, x = hx + Math.cos(an) * 15, y = hy + Math.sin(an) * 4.5, s = 2.4 + (Math.sin(an) + 1) * .9;
         fillPoly([x, y - s * 1.6, x + s * .5, y - s * .5, x + s * 1.6, y, x + s * .5, y + s * .5, x, y + s * 1.6, x - s * .5, y + s * .5, x - s * 1.6, y, x - s * .5, y - s * .5], i % 2 ? DR.goldLit : DR.ember, .7); glowAt(x, y, 7, EMBER, .35); }
     }
-    if (swoop || pose.streak) add(() => { ctx.strokeStyle = 'rgba(255,150,80,.35)'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = -70 + i * 11; ctx.moveTo(-40 - i * 4, y); ctx.lineTo(-90 - i * 8, y - 6); } ctx.stroke(); }); // the air torn behind it
     ctx.restore();
   }
   // ---------------------------------------------------------------- the change between shapes
@@ -2179,6 +2189,22 @@
 
   // ---------------- THE RIM OF THE ABYSS: the Ty'iga's shapes ----------------
   const FORM_BOX = { 1: [52, 68], 2: [44, 72], 3: [42, 84] }; // the wolf, the drake, the Mask
+  // how the Drake is moving, for its drawing: its velocity and lean from where it was last frame (after its attacks have
+  // moved it), the phase of its wingbeat (faster as it climbs or darts, stilled as it settles into a glide), the lag of its tail
+  function drakeMotion(e, dt) {
+    const M = e.w4m || (e.w4m = { px: e.x, py: e.y, pz: e.z, vx: 0, vy: 0, vz: 0, ax: 0, sp: 0, ph: 0, tl: 0, tw: 0, glide: 0 });
+    if (!(dt > 0)) return;
+    let vx = (e.x - M.px) / dt, vy = (e.y - M.py) / dt, vz = (e.z - M.pz) / dt; M.px = e.x; M.py = e.y; M.pz = e.z;
+    if (Math.abs(vx) > 2500 || Math.abs(vz) > 2500 || Math.abs(vy) > 1500) vx = vy = vz = 0; // (a jump cut, not a flight)
+    const k = Math.min(1, dt * 9), ax = (vx - M.vx) / dt;
+    M.ax += (clamp(ax, -6000, 6000) - M.ax) * Math.min(1, dt * 5);
+    M.vx += (vx - M.vx) * k; M.vy += (vy - M.vy) * k; M.vz += (vz - M.vz) * k; M.sp = Math.hypot(M.vx, M.vy * 2, M.vz);
+    const glide = (e.w4low > 0 || e.w4dip) && e.state !== 'w4act' && !(e.w4daze > 0);
+    M.glide += ((glide ? 1 : 0) - M.glide) * Math.min(1, dt * 4);
+    const hz = 1.6 + (M.vz > 40 ? 1.5 : 0) + Math.min(1.6, M.sp / 300);
+    M.ph += dt * TAU * hz * (1 - .85 * M.glide);
+    M.tl += (M.vz - M.tl) * Math.min(1, dt * 2.5); M.tw += dt * (2.4 + M.sp / 180);
+  }
   MECH_FX.w4rim = {
     start(m) { m.ph = 1; },
     update(m, dt) {
@@ -2186,6 +2212,7 @@
       if (e.phase !== m.ph) { e.w4from = m.ph; m.ph = e.phase; e.w4shift = 1; smokePuff(e.x, e.y, 30, 30); sfx('roar'); e.w4T = null; }
       if (e.w4shift > 0) e.w4shift = Math.max(0, e.w4shift - dt / 1.3);
       if (!e.dead) { const [w, h] = FORM_BOX[e.phase] || FORM_BOX[1]; e.hw = w * e.size; e.hh = h * e.size; }
+      if (e.phase === 2 && !e.dead) drakeMotion(e, dt);
       const hl = e.phase === 3 && !e.dead && !(e.w4shift > 0); if (hl && !e.w4hl) e.w4H = null; e.w4hl = hl; // the Mask's hands live in the world
       if (stillT > 0) return;
       m.clk = (m.clk || 0) + dt;

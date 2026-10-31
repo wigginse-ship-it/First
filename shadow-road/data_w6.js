@@ -46,7 +46,7 @@
 
   ZONES.push({ trans: ['w6easel', 'w6bed'], zones: [
     { theme: 'dream', len: 2300, waves: [0, 1], pods: [720, 1680], mech: 'w6piazza' },
-    { theme: 'dream2', len: 1750, waves: [2], pods: [1180], mech: 'w6melt', title: 'The Shore of Soft Clocks', sub: 'THE HOURS MELT HERE · GOLD ONES SLOW THEM, RED ONES HURRY THEM' },
+    { theme: 'dream2', len: 1750, waves: [2], pods: [1180], mech: 'w6melt', title: 'The Shore of Soft Clocks', sub: 'WHEN THE HOURS STRIKE, GOLD STOPS THEM DEAD AND RED QUICKENS YOU' },
     { theme: 'dreamBoss', len: 1000, waves: [], boss: 1, mech: 'w6sleep', title: 'The Bed of the Sleeper', sub: 'HUSH · SOMETHING VAST IS DREAMING ALL OF THIS' } ] });
 
   // saves from before this world was set into the road: a game that had finished the road keeps having finished it

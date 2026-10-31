@@ -206,7 +206,7 @@ function rightWall() { return (lockX !== null ? lockX : camX) + VW - 14; }
 // springs out toward the middle, out of reach for half a second (bosses keep their own rules)
 { const _he = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) {
   _he(e, dmg, dir, m, crit);
-  if (e.boss || e.dead || m.trump) return;
+  if (e.boss || e.dead || (m && m.trump) || !e.def.spd || e.w6stop > 0) { e.slip = 0; return; } // (not for what cannot move, like the Sleeper's crutches, nor what is stopped in time)
   const atEdge = e.x < leftWall() + 40 || e.x > rightWall() - 40; if (!atEdge) { e.pinN = 0; return; }
   e.pinN = (e.pinT > 0 ? e.pinN || 0 : 0) + 1; e.pinT = 1.5;
   if (e.pinN >= 4) { const inward = e.x < (leftWall() + rightWall()) / 2 ? 1 : -1;
