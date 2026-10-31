@@ -491,11 +491,23 @@
   };
 
   // ---------------- the horn's call ----------------
-  function hornCall(short) {
+  // each verse has its own short call on the horn, in its natural notes ([hertz, start, length] in seconds); the horn
+  // blows the call of the verse picked last
+  const MELODY = {
+    charge:    [[196, 0, .14], [261.6, .14, .14], [329.6, .28, .14], [392, .42, .6]], // a quick rising charge
+    banner:    [[293.7, 0, .2], [392, .2, .32], [392, .54, .14], [440, .68, .16], [493.9, .84, .6]], // a proud climb
+    iron:      [[196, 0, .26], [196, .3, .14], [146.8, .46, .34], [196, .84, .6]], // low and stern
+    drum:      [[392, 0, .12], [392, .2, .12], [392, .4, .12], [293.7, .6, .16], [392, .8, .5]], // on the beat
+    hunt:      [[587.3, 0, .16], [493.9, .16, .16], [392, .32, .2], [493.9, .52, .16], [587.3, .68, .62]], // the hunting call
+    dead:      [[293.7, 0, .36], [349.2, .36, .36], [329.6, .72, .3], [293.7, 1.02, .8]], // a slow fall, in the minor
+    watchfire: [[261.6, 0, .2], [329.6, .2, .2], [392, .4, .2], [523.3, .6, .7]], // warm, rising
+    standard:  [[196, 0, .18], [293.7, .2, .18], [392, .4, .3], [293.7, .72, .16], [392, .9, .7]], // a regal fanfare
+  };
+  function hornCall(short, id) {
     if (typeof sfxOn === 'undefined' || !sfxOn || !actx) return;
     try {
       const t0 = actx.currentTime + .03, lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 2; lp.connect(actx.destination);
-      const notes = short ? [[196, 0, .26], [293.7, .24, .55]] : [[196, 0, .3], [293.7, .3, .3], [392, .62, .85]];
+      const notes = MELODY[id] || (short ? [[196, 0, .26], [293.7, .24, .55]] : [[196, 0, .3], [293.7, .3, .3], [392, .62, .85]]);
       lp.frequency.setValueAtTime(500, t0);
       for (const [f, d, L] of notes) { lp.frequency.setTargetAtTime(1900, t0 + d, .05); lp.frequency.setTargetAtTime(900, t0 + d + L * .6, .1);
         for (const [type, det, v] of [['sawtooth', 0, .055], ['sawtooth', 7, .04], ['triangle', -1200, .05]]) {
@@ -515,7 +527,7 @@
   { const _ss = startStage; startStage = function (i) { CINE = null; endPanel(); mist.length = 0; W8.hornInHand = false; const r = _ss(i); QUEUE = { full: true }; return r; }; }
   function begin(full) {
     const v = verses().slice(), ng = cyc() > 0;
-    const T = full ? (ng ? 2.3 : 2.9) + Math.min(.6, v.length * .06) : (ng ? 1.4 : 1.75);
+    const T = full ? (ng ? 2.3 : 2.9) + Math.min(.6, v.length * .06) + .8 : (ng ? 1.4 : 1.75); // (+.8: room for the verse's name to leave the horn, word by word)
     const a = full ? .22 : .14, b = full ? .5 : .32;
     CINE = { t: 0, T, a, b, blow: b + .05, end: T - (full ? .38 : .26), full, v, called: false, spawn: {} };
     W8.bellAt = null; P.state = 'idle'; P.vx = 0; P.vy = 0; clearInput(); for (const k in pressed) pressed[k] = false;
@@ -529,17 +541,28 @@
     const c = CINE; c.t += dt;
     if (c.t > .3 && c.t < c.end) for (const k in pressed) if (pressed[k]) { c.t = Math.max(c.t, c.end); endPanel(); break; }
     W8.hornInHand = c.t > c.a * .75 && c.t < c.T - .06;
-    if (!c.called && c.t >= c.blow) { c.called = true; hornCall(!c.full); shakeMag = Math.max(shakeMag, 2); }
+    if (!c.called && c.t >= c.blow) { c.called = true; hornCall(!c.full, c.v[c.v.length - 1]); shakeMag = Math.max(shakeMag, 2); }
     if (c.t >= c.blow && c.t < c.end) emit(c, dt);
     if (c.t >= c.T) finish();
   }
-  const SONG = ['The', 'Long', 'March']; // the call's own name, its words drifting out of the horn
+  // the words out of the bell: the name of the verse picked last (the Long March, if none yet), each word let go when the
+  // one before has drifted far enough to clear it
+  const WORD_PX = 15.6, WORD_V = 110;
+  function wordsFor(c, f) {
+    const id = c.v[c.v.length - 1], name = id && V[id] ? V[id].name : 'The Long March', ws = name.split(' ');
+    const seq = f > 0 ? ws.slice().reverse() : ws, out = []; let at = c.blow + .06, prevW = 0;
+    try { ctx.save(); ctx.font = `700 ${WORD_PX}px Cinzel, Georgia, serif`; } catch (e) {}
+    seq.forEach((w, i) => { let wd = w.length * 9; try { wd = ctx.measureText(w).width; } catch (e) {} if (i) at += (prevW / 2 + wd / 2 + 12) / WORD_V; out.push({ w, at }); prevW = wd; });
+    try { ctx.restore(); } catch (e) {}
+    return out;
+  }
   function emit(c, dt) {
     const b = W8.bellAt || { x: P.x + P.facing * 22, y: P.y - 72, f: P.facing }, f = b.f, R = Math.random;
     if (R() < dt * 34) mist.push({ k: 'mist', x: b.x, y: b.y, vx: f * (60 + R() * 70), vy: -10 + R() * 26, t: 0, max: 1.3 + R() * .6, s: 5 + R() * 5, gy: P.y });
     // the song's name flows out of the bell, word by word, carried on the mist
     // (the first word out goes furthest: out of a horn pointing right the last word leads, so the line reads left to right)
-    (f > 0 ? SONG.slice().reverse() : SONG).forEach((w, i) => { const k = 'w' + i; if (!c.spawn[k] && c.t >= c.blow + .06 + i * .55) { c.spawn[k] = 1; mist.push({ k: 'word', txt: w, x: b.x + f * 6, y: b.y - 4, vx: f * 110, vy: -9, t: 0, max: 2.2 - i * .4, f, ph: i * 1.7, gy: P.y }); } }); // (one after another along one line, so they read as the phrase)
+    if (!c.words) c.words = wordsFor(c, f);
+    c.words.forEach((o, i) => { const k = 'w' + i; if (!c.spawn[k] && c.t >= o.at) { c.spawn[k] = 1; mist.push({ k: 'word', txt: o.w, x: b.x + f * 6, y: b.y - 4, vx: f * WORD_V, vy: -9, t: 0, max: Math.max(.9, c.end - o.at + .7), f, ph: i * 1.7, gy: P.y }); } }); // (each word stays until the call is over, so the whole name can be read)
     const span = c.end - c.blow, n = Math.max(1, c.v.length), slot = Math.min(.55, span * .8 / n);
     c.v.forEach((id, i) => { const t0 = c.blow + i * slot * .85, u = c.t - t0; if (u < 0 || u > slot + .15) return; motif(id, b, f, u, c.spawn, dt); });
   }
@@ -574,10 +597,10 @@
         ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-27, -4); ctx.lineTo(-24, 0); ctx.lineTo(-27, 4); ctx.closePath(); ctx.fill(); }
       else if (m.k === 'ember') { const x = m.x + Math.sin(t * 6 + m.ph) * 3; ctx.fillStyle = `rgba(255,${150 + Math.round(70 * (1 - u))},70,${a})`; ctx.beginPath(); ctx.arc(x, m.y, 1.4 + (1 - u), 0, Math.PI * 2); ctx.fill(); }
       else if (m.k === 'word') { // a word of the song's name: swelling from the bell, drifting on a slow wave, fading
-        const sc = .55 + .65 * Math.min(1, u * 2.4), x = m.x, y = m.y + Math.sin(t * 2.6 + m.ph) * 3.5;
-        ctx.globalAlpha = a; ctx.font = `700 ${Math.round(13 * sc)}px Cinzel, Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const sc = .55 + .65 * Math.min(1, m.t / .5), x = m.x, y = m.y + Math.sin(t * 2.6 + m.ph) * 3.5, aw = Math.min(1, m.t / .12) * Math.min(1, (m.max - m.t) / .7); // (full until its last moments: the name reads whole)
+        ctx.globalAlpha = aw; ctx.font = `700 ${Math.round(13 * sc)}px Cinzel, Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(32,22,14,.75)'; ctx.strokeText(m.txt, x, y);
-        ctx.fillStyle = '#F2DFA6'; ctx.fillText(m.txt, x, y); ctx.globalAlpha = a * .45; ctx.fillStyle = '#FFF8E2'; ctx.fillText(m.txt, x - .6, y - .6); }
+        ctx.fillStyle = '#F2DFA6'; ctx.fillText(m.txt, x, y); ctx.globalAlpha = aw * .45; ctx.fillStyle = '#FFF8E2'; ctx.fillText(m.txt, x - .6, y - .6); }
       else if (m.k === 'arms') { ctx.translate(m.x, m.y); ctx.globalAlpha = .7 * a; ctx.scale(.9 + u * .3, .9 + u * .3); W8.arms(0, 0, 22, 26, { ow: .6 }); }
       else if (m.k === 'rider' && W8.horse) { const o = { t, walk: t * 14, gallop: 1, legCol: '#6A7A96', bootCol: '#4A566E' }, look = Object.assign({}, heroLook(), { cloak: '#5A6A86', body: '#7A8AA6', legs: '#6A7A96', boots: '#4A566E' });
         for (let i = 1; i >= 0; i--) { ctx.save(); ctx.translate(m.x - m.f * i * 18, m.y); ctx.scale(m.f * .72, .72); ctx.globalAlpha = (i ? .1 : .42) * a; TINT = '#C8D4EA';
