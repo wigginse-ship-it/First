@@ -196,8 +196,8 @@
   // CURRENTS, NOT FOOTSTEPS
   // ======================================================================================================
   // tuning (world units a second; the street's depth is drawn at about .6 of its width, so depth speeds are scaled by YK)
-  const T = { cruise: 215, acc: 820, turn: .16, coast: .2, over: .3, overFling: .78, fling: 520, flingDur: .34,
-    hitMin: 250, bounce: .78, bounceMin: 90, YK: .62 };
+  const T = { cruise: 265, acc: 820, turn: .16, coast: .2, over: .3, overFling: .78, fling: 340, flingDur: .34,
+    hitMin: 300, bounce: .78, bounceMin: 90, YK: .62 };
   const LOCO = ['idle', 'walk', 'run'];
   const speedE = () => Math.hypot(CUR.vx, CUR.vy / T.YK); // speed, depth counted as the screen draws it
   const spd = () => (W_SPEED[P.w] || 1) * (P.shrink || 1) * (pw('haste') ? 1.3 : 1) * (1 + gearStat('speed')) * (typeof roomSlow !== 'undefined' ? roomSlow : 1);
@@ -252,7 +252,7 @@
       if (big) { const nx = P.x - e.x || -Math.sign(CUR.vx) || 1, ny = (P.y - e.y) * 2, nd = Math.hypot(nx, ny) || 1, ux = nx / nd, uy = ny / nd, vyE = CUR.vy / T.YK, dot = CUR.vx * ux + vyE * uy;
         if (dot < 0) { CUR.vx = (CUR.vx - 2 * dot * ux) * T.bounce; CUR.vy = (vyE - 2 * dot * uy) * T.bounce * T.YK; P.x = e.x + ux * (e.hw + 13); bounceFx(P.x, P.y, Math.sign(ux) || 1); } }
       if (!cool(CUR.cd, e, .4)) continue;
-      const q = clamp((sE - 200) / 420, .25, 1.4), d = Math.max(1, Math.round((5 + 12 * q) * W() * (e.boss ? .6 : 1))), dir = Math.sign(CUR.vx) || P.facing;
+      const q = clamp((sE - 200) / 240, .25, 1.4), d = Math.max(1, Math.round((5 + 12 * q) * W() * (e.boss ? .6 : 1))), dir = Math.sign(CUR.vx) || P.facing;
       strike(e, d, dir, { dmg: d, kb: 120 + sE * .55, launch: sE > 480 ? 160 : 0, power: sE > 480 ? 1 : 0, el: 1, current: 1, wall: sE > 480 ? 1 : 0 }, true);
       if (!big && !e.boss) { CUR.vx *= .9; CUR.vy *= .9; }
       bub(e.x, e.y, 20, 4, 60);
