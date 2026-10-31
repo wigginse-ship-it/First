@@ -36,7 +36,7 @@
   const POOL_CD = .8;
   // UNDERTOW: every dodge leaves a whirlpool where he stood
   { const _sd = startDodge; startDodge = function () { const x = P.x, y = P.y; _sd();
-    if (has() && P.state === 'dodge' && R.poolCd <= 0) { const k = PW(); R.poolCd = POOL_CD; R.pools.push({ x, y, t: 0, max: .9 + .55 * k, r: 54 * Math.sqrt(k), tick: 0 }); sfx('hit-goo', .4); bub(x, y, 10, 8, 50); } }; }
+    if (has() && P.state === 'dodge' && R.poolCd <= 0 && !R.pools.length) { const k = PW(); R.poolCd = POOL_CD; R.pools.push({ x, y, t: 0, max: .9 + .55 * k, r: 54 * Math.sqrt(k), tick: 0 }); sfx('hit-goo', .4); bub(x, y, 10, 8, 50); } }; }
   // THE SPLASH: whatever falls bursts in a crown of seawater that strikes everything near it and pushes it back a little.
   // A foe the splash kills splashes in its turn, but only twice over (so a crowd can go up in a chain, never a whole road)
   const SPLASH_DEPTH = 2;
@@ -117,7 +117,7 @@
     if (!hudCv) { const card = document.querySelector('.wcard'); if (!card) return; hudCv = document.createElement('canvas'); hudCv.id = 'w7pearlHud'; hudCv.width = 40; hudCv.height = 40; hudCv.title = 'The Pearl of Judgement';
       hudCv.style.cssText = 'position:absolute;right:-12px;top:-10px;width:20px;height:20px;pointer-events:none'; card.appendChild(hudCv); }
     hudCv.hidden = !has(); if (!has()) return;
-    pearlIcon(hudCv.getContext('2d'), 1, 1 - R.poolCd / POOL_CD, performance.now() / 1000);
+    pearlIcon(hudCv.getContext('2d'), 1, R.pools.length ? 0 : 1 - R.poolCd / POOL_CD, performance.now() / 1000); // (one whirlpool at a time: the next waits until it has run out)
   }
   { const _ht = hudTick; hudTick = function () { _ht(); try { hudBadge(); } catch (e) {} }; }
   const RELIC_TEXT = () => `The sea's reflection of the Jewel of Judgement, out of the King in the Glass. Whatever you fight with: every dodge leaves an undertow that drags foes in and grinds at them, and every foe that falls bursts in a splash of seawater that strikes the foes round it and pushes them back (a splash can set off another, two deep).${save.cycle > 0 ? ' In this cycle the tide runs strong: wider, harder whirlpools and splashes.' : ' In New Game+ it is far stronger.'}`;
@@ -307,7 +307,8 @@
       g.fillStyle = tint[i % 4]; g.fill();
       const rg = g.createRadialGradient(cx, sp, 2, cx, sp, aw); rg.addColorStop(0, 'rgba(8,24,32,.6)'); rg.addColorStop(.4, 'rgba(8,24,32,.18)'); rg.addColorStop(1, 'rgba(8,24,32,0)'); g.fillStyle = rg; g.fill(); // darker in toward the hinge
       g.strokeStyle = 'rgba(10,26,34,.7)'; g.lineWidth = .8; g.stroke(); }
-    g.save(); g.globalCompositeOperation = 'source-atop'; for (let i = 0; i < 900; i++) { const a = Math.PI + rnd() * Math.PI, f = .25 + rnd() * .8, [x, y] = pt(a, f); g.fillStyle = rnd() < .5 ? 'rgba(255,255,255,.35)' : rnd() < .5 ? 'rgba(220,170,240,.3)' : 'rgba(140,230,220,.3)'; g.fillRect(x, y, 1.3, 1.3); } g.restore(); // nacre's glitter
+    for (const f of [.3, .48, .66, .82, .94]) { g.strokeStyle = `rgba(255,248,240,${.1 + f * .14})`; g.lineWidth = .7; g.beginPath(); g.ellipse(cx, sp, aw * f, aR * f, 0, Math.PI, 0); g.stroke(); g.strokeStyle = 'rgba(20,30,44,.18)'; g.beginPath(); g.ellipse(cx, sp + .9, aw * f, aR * f, 0, Math.PI, 0); g.stroke(); } // its rings of growth
+    g.save(); g.globalCompositeOperation = 'source-atop'; const ps = [new Path2D(), new Path2D(), new Path2D()]; for (let i = 0; i < 900; i++) { const a = Math.PI + rnd() * Math.PI, f = .25 + rnd() * .8, [x, y] = pt(a, f); ps[rnd() < .5 ? 0 : rnd() < .5 ? 1 : 2].rect(x, y, 1.3, 1.3); } ['rgba(255,255,255,.35)', 'rgba(220,170,240,.3)', 'rgba(140,230,220,.3)'].forEach((c, i) => { g.fillStyle = c; g.fill(ps[i]); }); g.restore(); // nacre's glitter
     g.beginPath(); for (let i = 0; i <= M; i++) { const a0 = Math.PI + (i - 1) / M * Math.PI, a1 = Math.PI + i / M * Math.PI, [x1, y1] = pt(a1); if (!i) { g.moveTo(x1, y1); continue; } const [xm, ym] = pt((a0 + a1) / 2, 1.07); g.quadraticCurveTo(xm, ym, x1, y1); }
     g.strokeStyle = PAL_GOLD; g.lineWidth = 2.4; g.stroke(); g.strokeStyle = 'rgba(255,236,190,.7)'; g.lineWidth = .8; g.stroke(); // its gilded edge
     g.fillStyle = '#C8D8E0'; g.beginPath(); g.ellipse(cx, sp, aw * .12, aR * .07, 0, Math.PI, 0); g.fill(); g.strokeStyle = MO_INK; g.lineWidth = 1; g.stroke(); // the hinge
@@ -321,8 +322,10 @@
     const [vc, v] = texCanvas(W, Hh); v.scale(K, K); moireCity(v, L, rnd);
     // ---- the hall: a wall of nacre mosaic, the arches cut through it, slender columns of glass and pearl between them
     const [wc, g] = texCanvas(W, Hh); g.scale(K, K);
-    { const gr = g.createLinearGradient(0, 0, 0, wall); gr.addColorStop(0, '#16242E'); gr.addColorStop(.45, '#3A5260'); gr.addColorStop(1, '#22364A'); g.fillStyle = gr; g.fillRect(0, 0, VW, wall + 1); }
-    for (let y = 0; y < wall; y += 3.2) for (let x = (y / 3.2 % 2) * 1.6; x < VW; x += 3.2) { const k = rnd(); if (k > .55) continue; g.fillStyle = k < .05 ? 'rgba(240,248,255,.45)' : k < .12 ? 'rgba(200,170,230,.22)' : k < .2 ? 'rgba(150,220,220,.2)' : k < .38 ? 'rgba(170,196,206,.12)' : 'rgba(8,20,30,.18)'; g.fillRect(x, y, 2.6, 2.6); } // its tesserae, some glinting
+    { const gr = g.createLinearGradient(0, 0, 0, wall); gr.addColorStop(0, '#182832'); gr.addColorStop(.45, '#40596A'); gr.addColorStop(1, '#263C4E'); g.fillStyle = gr; g.fillRect(0, 0, VW, wall + 1); }
+    { const cols = ['rgba(240,248,255,.28)', 'rgba(200,170,230,.13)', 'rgba(150,220,220,.12)', 'rgba(170,196,206,.08)', 'rgba(8,20,30,.14)'], ps = cols.map(() => new Path2D()); // its tesserae, some glinting (one path to each colour, so it is quick to lay)
+      for (let y = 0; y < wall; y += 3.2) for (let x = (y / 3.2 % 2) * 1.6; x < VW; x += 3.2) { const k = rnd(); if (k > .55) continue; ps[k < .03 ? 0 : k < .1 ? 1 : k < .18 ? 2 : k < .38 ? 3 : 4].rect(x, y, 2.6, 2.6); }
+      ps.forEach((q, i) => { g.fillStyle = cols[i]; g.fill(q); }); }
     g.save(); g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; for (const x of bays) { moireArch(g, x, ow, L); g.fill(); } g.restore();
     for (const x of bays) { moireArch(g, x, ow + 8, L); g.strokeStyle = '#A8BECA'; g.lineWidth = 6; g.stroke(); g.strokeStyle = 'rgba(240,248,252,.75)'; g.lineWidth = 1.2; g.stroke(); moireArch(g, x, ow, L); g.strokeStyle = MO_INK; g.lineWidth = 1.2; g.stroke(); // its moulding, pearl-bright
       moireArch(g, x, ow + 14, L); g.strokeStyle = 'rgba(10,26,34,.55)'; g.lineWidth = .8; g.stroke();
@@ -351,11 +354,12 @@
       g.fillStyle = 'rgba(120,190,176,.16)'; g.beginPath(); g.moveTo(xAt(i, ya), ya); g.lineTo(xAt(i + 1, ya), ya); g.lineTo(xAt(i + 1, yb), yb); g.lineTo(xAt(i, yb), yb); g.closePath(); g.fill(); } // the sea-green squares
     g.strokeStyle = 'rgba(8,22,30,.35)'; g.lineWidth = .7; g.beginPath(); for (let j = 1; j <= 9; j++) { const y = rowY(j); g.moveTo(0, y); g.lineTo(VW, y); } for (let i = -40; i <= 40; i++) { if (xAt(i, H) < -40 || xAt(i, H) > VW + 40) continue; g.moveTo(xAt(i, wall), wall); g.lineTo(xAt(i, H), H); } g.stroke();
     g.strokeStyle = 'rgba(230,244,248,.14)'; g.lineWidth = .6; g.beginPath(); for (let j = 1; j <= 9; j++) { const y = rowY(j) + .8; g.moveTo(0, y); g.lineTo(VW, y); } g.stroke(); // each joint's pearl edge
-    for (let i = 0; i < 700; i++) { const y = wall + Math.pow(rnd(), 1.3) * (H - wall), x = rnd() * VW; g.fillStyle = rnd() < .5 ? 'rgba(240,248,255,.22)' : 'rgba(200,170,230,.16)'; g.fillRect(x, y, 1.2, 1); } // nacre's glitter in it
+    { const ps = [new Path2D(), new Path2D()]; for (let i = 0; i < 700; i++) { const y = wall + Math.pow(rnd(), 1.3) * (H - wall), x = rnd() * VW; ps[rnd() < .5 ? 0 : 1].rect(x, y, 1.2, 1); } g.fillStyle = 'rgba(240,248,255,.22)'; g.fill(ps[0]); g.fillStyle = 'rgba(200,170,230,.16)'; g.fill(ps[1]); } // nacre's glitter in it
     g.save(); g.globalCompositeOperation = 'lighter'; // the hall glimmering in the polished floor: the columns, the arches' light, the glow of her niche
     for (const x of moireCols(L)) { const gr = g.createLinearGradient(0, wall, 0, wall + H * .22); gr.addColorStop(0, 'rgba(180,210,220,.2)'); gr.addColorStop(1, 'rgba(180,210,220,0)'); g.fillStyle = gr; g.fillRect(x - 5, wall, 10, H * .22); }
     for (const x of bays) { const gr = g.createLinearGradient(0, wall, 0, wall + H * .16); gr.addColorStop(0, 'rgba(110,190,200,.16)'); gr.addColorStop(1, 'rgba(110,190,200,0)'); g.fillStyle = gr; g.fillRect(x - ow * .4, wall, ow * .8, H * .16); }
     g.restore();
+    { const yb = dT + (L.N + 1) * L.r + L.N * L.tr, gr = g.createRadialGradient(cx, yb + 6, 4, cx, yb + 6, L.dW * .75); gr.addColorStop(0, 'rgba(200,240,232,.22)'); gr.addColorStop(1, 'rgba(200,240,232,0)'); g.save(); g.globalCompositeOperation = 'lighter'; g.save(); g.translate(cx, yb + 6); g.scale(1, .35); g.translate(-cx, -yb - 6); g.fillStyle = gr; g.fillRect(cx - L.dW, yb + 6 - L.dW, L.dW * 2, L.dW * 2); g.restore(); g.restore(); } // and on the floor before them
     g.fillStyle = '#9FB6C2'; g.fillRect(0, wall - 4, VW, 5); g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(0, wall - 4, VW, 1); g.strokeStyle = MO_INK; g.lineWidth = .9; g.beginPath(); g.moveTo(0, wall + 1); g.lineTo(VW, wall + 1); g.stroke(); // the skirting
     // ---- the top of her dais, either side of her couch
     { const yb = dT - H * .05, wb = L.dW * .93; g.beginPath(); g.moveTo(cx - wb / 2, yb); g.lineTo(cx + wb / 2, yb); g.lineTo(cx + L.dW / 2, dT); g.lineTo(cx - L.dW / 2, dT); g.closePath();
@@ -366,7 +370,7 @@
     const [fc, f] = texCanvas(W, Hh); f.scale(K, K);
     const marble = (x, y, w, h, c0, c1) => { const gr = f.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, c0); gr.addColorStop(1, c1); f.fillStyle = gr; f.fillRect(x, y, w, h);
       f.save(); f.beginPath(); f.rect(x, y, w, h); f.clip(); f.lineWidth = .6; for (let i = 0; i < Math.max(2, w / 22); i++) { const sx = x + rnd() * w; f.strokeStyle = rnd() < .6 ? 'rgba(220,250,240,.2)' : 'rgba(6,24,24,.3)'; f.beginPath(); f.moveTo(sx, y - 2); f.bezierCurveTo(sx + (rnd() - .5) * 30, y + h * .3, sx + (rnd() - .5) * 30, y + h * .7, sx + (rnd() - .5) * 40, y + h + 2); f.stroke(); } f.restore(); }; // sea-green stone, veined
-    { const x = cx - L.dW / 2, w = L.dW, h = dB - dT; marble(x, dT, w, h, '#3E7C72', '#173C3A');
+    { const x = cx - L.dW / 2, w = L.dW, h = dB - dT; marble(x, dT, w, h, '#36706A', '#112C2E');
       const fy = dT + 3, fh = Math.min(L.r * .85, 9); f.fillStyle = '#C6D8D6'; f.fillRect(x + 3, fy, w - 6, fh); f.strokeStyle = 'rgba(10,26,34,.8)'; f.lineWidth = .9; f.beginPath(); // a frieze: the running wave, in pearl, on the stone
       for (let wx = x + 5; wx < x + w - 8; wx += fh * 1.4) { f.moveTo(wx, fy + fh * .8); f.quadraticCurveTo(wx + fh * .2, fy + fh * .1, wx + fh * .7, fy + fh * .35); f.quadraticCurveTo(wx + fh * .9, fy + fh * .7, wx + fh * .55, fy + fh * .6); } f.stroke();
       f.strokeStyle = PAL_GOLD; f.lineWidth = .9; f.strokeRect(x + 3, fy, w - 6, fh); f.strokeStyle = MO_INK; f.lineWidth = 1.1; f.strokeRect(x, dT, w, h);
@@ -374,12 +378,13 @@
     { const x = cx - L.dW / 2 - 2, w = L.dW + 4; f.fillStyle = '#D8E6E8'; f.fillRect(x, dT - 2, w, 4); f.fillStyle = 'rgba(255,255,255,.85)'; f.fillRect(x, dT - 2, w, 1); f.strokeStyle = MO_INK; f.lineWidth = 1; f.strokeRect(x, dT - 2, w, 4); } // the dais's lip of pearl, over the hem of her gown
     { const gr = f.createLinearGradient(0, dB, 0, dB + 6); gr.addColorStop(0, 'rgba(2,10,16,.5)'); gr.addColorStop(1, 'rgba(2,10,16,0)'); f.fillStyle = gr; f.fillRect(cx - L.dW / 2 - 4, dB, L.dW + 8, 6); } // its shadow on the floor
     for (let k = 1, wp = L.sW; k <= L.N; k++) { const w = L.sW * (1 + .07 * k), yt = dT + k * L.r + (k - 1) * L.tr, yr = yt + L.tr; // each step: its tread, flaring a little as it comes forward, then its riser
-      f.beginPath(); f.moveTo(cx - wp / 2, yt); f.lineTo(cx + wp / 2, yt); f.lineTo(cx + w / 2, yr); f.lineTo(cx - w / 2, yr); f.closePath(); const gt = f.createLinearGradient(0, yt, 0, yr); gt.addColorStop(0, '#7EA8A0'); gt.addColorStop(1, '#C4DED8'); f.fillStyle = gt; f.fill(); f.strokeStyle = MO_INK; f.lineWidth = .9; f.stroke();
-      marble(cx - w / 2, yr, w, L.r, '#4A887E', '#204A46');
+      f.beginPath(); f.moveTo(cx - wp / 2, yt); f.lineTo(cx + wp / 2, yt); f.lineTo(cx + w / 2, yr); f.lineTo(cx - w / 2, yr); f.closePath(); const gt = f.createLinearGradient(0, yt, 0, yr); gt.addColorStop(0, '#6A928C'); gt.addColorStop(1, '#B4D0CA'); f.fillStyle = gt; f.fill(); f.strokeStyle = MO_INK; f.lineWidth = .9; f.stroke();
+      marble(cx - w / 2, yr, w, L.r, '#3E7870', '#183A3A');
       f.fillStyle = 'rgba(255,255,255,.75)'; f.fillRect(cx - w / 2, yr, w, .9); const gs = f.createLinearGradient(0, yr + 1, 0, yr + 4); gs.addColorStop(0, 'rgba(2,12,16,.45)'); gs.addColorStop(1, 'rgba(2,12,16,0)'); f.fillStyle = gs; f.fillRect(cx - w / 2, yr + 1, w, 3); // the nosing's bright edge, its shadow under
       f.strokeStyle = 'rgba(200,154,58,.65)'; f.lineWidth = .7; f.beginPath(); f.moveTo(cx - w / 2 + 3, yr + L.r * .62); f.lineTo(cx + w / 2 - 3, yr + L.r * .62); f.stroke(); // an inlay of gold
       f.strokeStyle = MO_INK; f.lineWidth = 1; f.strokeRect(cx - w / 2, yr, w, L.r); wp = w; }
     { const yb = dT + (L.N + 1) * L.r + L.N * L.tr, w = L.sW * (1 + .07 * L.N), gr = f.createLinearGradient(0, yb, 0, yb + 7); gr.addColorStop(0, 'rgba(2,10,16,.55)'); gr.addColorStop(1, 'rgba(2,10,16,0)'); f.fillStyle = gr; f.fillRect(cx - w / 2 - 3, yb, w + 6, 7); }
+    { f.save(); f.globalCompositeOperation = 'source-atop'; const gr = f.createRadialGradient(cx + L.iw * .05, dB, 4, cx + L.iw * .05, dB, L.dW * .5); gr.addColorStop(0, 'rgba(210,246,236,.28)'); gr.addColorStop(1, 'rgba(210,246,236,0)'); f.fillStyle = gr; f.fillRect(0, dT, VW, H - dT); f.restore(); } // the light falling on the steps
     const pTop = L.pTop - Y0, pw = L.pw;
     for (const x of [L.pL, L.pR]) { // the posts at either side of her couch, a pearl on each in a cup of gold
       const bh = pw * .7; marble(x - pw * .78, dT - bh, pw * 1.56, bh + 1, '#5A968A', '#28544E'); f.strokeStyle = MO_INK; f.lineWidth = 1; f.strokeRect(x - pw * .78, dT - bh, pw * 1.56, bh + 1);
