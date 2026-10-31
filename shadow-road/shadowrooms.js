@@ -702,10 +702,10 @@ const SR_KINDS = {
       for (let x = 320; x < 2300 - 560; x += 58 + r.f() * 30) R.motes.push({ x, y: FLOOR_TOP + 16 + r.f() * (FLOOR_BOT - FLOOR_TOP - 26), z: r.chance(.2) ? 52 : 12, got: false }); },
     update(R, dt) { const G = R.gen, end = stage.len - 520, dmg = 8 + stageIdx * 3, col = G.pal.accRgb;
       if (P.hp < R.lastHp) R.hits++; R.lastHp = P.hp;
-      // easy to gather: a generous reach, any hop for the high ones, and a spark close by drifts in to him
+      // gathered when he passes close (a near miss drifts in to him): any hop takes a high one, and no jump carries him over a low one
       const reach = (m) => m.z > 30 ? P.z > 6 : P.z < 80;
-      for (const m of R.motes) if (!m.got && reach(m) && Math.abs(P.x - m.x) < 64 && Math.abs(P.y - m.y) < 40) { const k = Math.min(1, dt * 7); m.x += (P.x - m.x) * k; m.y += (P.y - m.y) * k; m.z += (Math.max(12, P.z + 10) - m.z) * k * .6; }
-      for (const m of R.motes) if (!m.got && reach(m) && Math.abs(P.x - m.x) < 30 && Math.abs(P.y - m.y) < 26) { m.got = true; sfx('pick'); burst(m.x, m.y, m.z, ['#FFFFFF', G.pal.acc], 8, 'spark'); }
+      for (const m of R.motes) if (!m.got && reach(m) && Math.abs(P.x - m.x) < 32 && Math.abs(P.y - m.y) < 24) { const k = Math.min(1, dt * 5); m.x += (P.x - m.x) * k; m.y += (P.y - m.y) * k; m.z += (Math.max(12, P.z + 10) - m.z) * k * .6; }
+      for (const m of R.motes) if (!m.got && reach(m) && Math.abs(P.x - m.x) < 22 && Math.abs(P.y - m.y) < 19) { m.got = true; sfx('pick'); burst(m.x, m.y, m.z, ['#FFFFFF', G.pal.acc], 8, 'spark'); }
       if (R.done || P.x < 280) return;
       if (P.x > end) { R.done = true; const got = R.motes.filter(m => m.got).length, all = R.motes.length;
         banner(R.hits ? 'THROUGH THE GAUNTLET' : 'UNTOUCHED', `${got} OF ${all} SPARKS`, 2); srChest(R, .5 + 1.1 * got / all + (R.hits ? 0 : .5), stage.len - 430); return; }
