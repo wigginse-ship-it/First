@@ -108,7 +108,9 @@ const WEAPONS = {
       A:    { dur: .38, h: [.25, .6], x0: 0, x1: 80, dmg: 14, kb: 120, arc: [-1.8, 1.0] },
       AA:   { dur: .42, h: [.25, .6], x0: 0, x1: 80, dmg: 15, kb: 120, arc: [1.0, -1.6] },
       AAA:  { dur: .5,  h: [.25, .65], x0: 0, x1: 82, dmg: 22, kb: 160, arc: [-2.6, 1.5], spike: 1, power: 2 },
-      JH:   { name: 'Wheel of Steel', dur: .62, h: [.16, .76], x0: 0, x1: 86, dmg: 6, kb: 150, multi: .12, arc: [-.2, -.2], hop: 210, lunge: 120, rot: TAU, power: 1 }, // Heavy in the air: a front flip with the blade held straight out, a wheel of steel
+      JH:   { name: 'Wheel of Steel', dur: .62, h: [.16, .76], x0: 0, x1: 86, dmg: 12, kb: 70, multi: .12, arc: [-.2, -.2], hop: 210, lunge: 120, rot: TAU, zDown: 60, slamDrop: .6, shock: 96, land: { dmg: 56 }, power: 1 }, // Heavy in the air: a front flip with the blade held straight out, a wheel of steel
+      // (the wheel's lower arc reaches the street beneath him, zDown; out of the flip he is pulled down hard, slamDrop, and
+      // the blade bites into the street: the landing strikes everyone near for land.dmg, game.js onLand)
       DA:   { name: 'Gale Cleave', dur: .5, h: [.24, .62], x0: 0, x1: 94, dmg: 18, kb: 340, arc: [.35, .35], fly: 1, power: 2, depth: 26 }, // Attack in a running jump: one great flat cut thrown from the flying body
       D:    { name: 'Running Thrust', dur: .55, h: [.1, .6], x0: 0, x1: 88, dmg: 22, kb: 420, arc: [.1, .1], lunge: 480, power: 1, wall: 1 }, // Attack off the run: the point driven in
       DX:   { name: 'Charging Cleave', dur: .66, h: [.38, .6], x0: 0, x1: 96, depth: 24, dmg: 30, kb: 300, launch: 220, arc: [-2.6, 1.3], lunge: 430, shock: 70, power: 2 }, // Heavy off the run (until Phantom Rush is learned): the blade swung up over his head on the run and brought down through them

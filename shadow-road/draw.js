@@ -195,6 +195,7 @@ function playerPose() {
     pose.arm = -2.2; pose.crouch = 1; pose.walk = 0;
     pose.glow = ['', '#D8AA55', '#FFE9A0', '#C8607A', '#FFD27A'][P.clvl] || '';
     if (P.clvl && Math.sin(performance.now() / 45) > 0) pose.glow = '#FFFFFF';
+    { const pg = perfectGlow(); if (pg) pose.glow = pg; } // the perfect window: a steady white-gold flare; held past it, the glow dims and wavers (moves.js)
   } else if (P.state === 'run') { pose.run = 1; pose.lean = .36; pose.flow = 8; if (P.w === 'fists') { pose.arm = 1.35; pose.elbow = 1.45; pose.backArm = 1.5; } else { pose.arm = 1.9; pose.backArm = 1.75; pose.backElbow = -1.2; } } // bare-handed he pumps his arms; armed, the weapon trails and the free arm drives, bent, close at his side
   else if (P.state === 'jump') { // as in the strip: going up, the lead knee driven high and the other leg trailing long beneath
     // him, fists tucked at the chest; at the top both knees fold up; coming down the legs open and reach for the street

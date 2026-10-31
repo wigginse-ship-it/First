@@ -28,8 +28,9 @@ function nextMove(key) {
 }
 // (out of a hopping backstep a dodge counter is still a ground move, so it plays out in full)
 function begin(m) {
-  if (m === 'charge') { P.state = 'charge'; P.ct = 0; P.clvl = 0; P.seq = 'H'; return; }
+  if (m === 'charge') { P.state = 'charge'; P.ct = 0; P.clvl = 0; P.clAt = 0; P.pcShown = -1; P.seq = 'H'; return; }
   if (!m) { P.state = 'idle'; return; }
+  if (P.pcRel) { m = Object.assign({}, m, P.pcRel); P.pcRel = null; } // a charged release carries its timing: a perfect (sure crit, harder) or a soured, over-held one (chargeTiming)
   if (m.rise && P.z > 2) m = Object.assign({}, m, { rise: 0, hop: 0, dur: .5, h: [.36, .58] }); // the rising uppercut only ever leaves from the street: no climbing the sky on it
   P.state = m.dive || (P.z > 0 && !m.hop && P.state !== 'dodge') ? 'air' : 'atk'; P.move = m; P.t = 0; P.moveId = (P.moveId || 0) + 1; P.q = null; P.hits = new Map(); P.seq = m.key || 'H'; P.shocked = false; P.waved = false; P.finDone = false; P.turned = false; P.vaultVx = undefined; P.stormed = false; P.blinkList = null; P.blinkTwin = false; P.blinkDouble = false; P.blinkJ = 0; P.twinE = null; P.twinDone = false;
   if (Math.abs(input.mx) > 0.3 && !m.dive) P.facing = Math.sign(input.mx);
@@ -49,6 +50,22 @@ function begin(m) {
   }
   sfx(m.power === 2 || m.rot || m.spin ? 'whoosh' : 'swing');
   if (m.lvl) learnedCue(m); // a learned move announces itself: a chime, a gilded flourish, gold along the weapon and round him (moves.js)
+}
+
+// ---------- the perfect charge ----------
+// every level a held Heavy reaches opens a short window: let go inside it for a PERFECT, a sure critical a quarter
+// harder. Let go early and it is the blow of the level reached, as ever; hold on past the last level's window and the
+// blow sours, down to three quarters of its weight a second later. (The bow's perfect release is the model: arrows.js)
+const PC_WIN = .13, PC_MUL = 1.25, PC_FADE = 1, PC_FLOOR = .75;
+function swordMaxL() { return save.wl.sword >= 7 ? 4 : save.wl.sword >= 2 ? 3 : 2; } // Shadow Cleave is the sword's first upgrade, the Judgement of Amber its last
+function chargeTiming(w) {
+  if (!P.clvl) return { open: false, over: 0, mul: 1, since: 0 };
+  // the Silver Arm's Rock, Paper, Scissors cycles its shapes: each new shape is a window, and it never sours
+  const jk = w.tree.HC && w.tree.HC.janken;
+  const at = jk ? .45 + Math.floor(Math.max(0, P.ct - .45) / .42) * .42 : (P.clAt || 0), since = P.ct - at;
+  const top = !jk && P.clvl >= (w.charge2 ? (unlocked(w.tree.HC) ? 3 : 2) : w.charge ? swordMaxL() : 1);
+  const over = top ? Math.max(0, since - PC_WIN) : 0;
+  return { open: since <= PC_WIN, over, mul: 1 - (1 - PC_FLOOR) * Math.min(1, over / PC_FADE), since, at };
 }
 
 // ---------- player ----------
@@ -115,18 +132,22 @@ function updatePlayer(dt) {
     case 'atk': runMove(dt); break;
     case 'charge': {
       P.ct += dt;
-      const maxL = save.wl.sword >= 7 ? 4 : save.wl.sword >= 2 ? 3 : 2; // Shadow Cleave is the sword's first upgrade, the Judgement of Amber its last
+      const maxL = swordMaxL();
       // the rapier charges twice: a glint at .4 s, a second at .9 s, and once Hellride is learned a third at 1.5 s (what each releases: rapierRelease, moves.js)
       const lvl = w.charge2 ? (P.ct >= 1.5 && unlocked(w.tree.HC) ? 3 : P.ct >= .9 ? 2 : P.ct >= .4 ? 1 : 0) : !w.charge ? (P.ct >= .45 ? 1 : 0) : P.ct >= 2.05 && maxL === 4 ? 4 : P.ct >= 1.5 && maxL >= 3 ? 3 : P.ct >= .95 ? 2 : P.ct >= .45 ? 1 : 0;
       if (lvl > P.clvl && w.charge2) { P.clvl = lvl; P.clAt = P.ct; rapierChargeCue(lvl); }
-      if (lvl > P.clvl) { P.clvl = lvl; sfx('charge', lvl); burst(P.x - P.facing * 6, P.y, 56, lvl === 4 ? ['#FFE9A0', '#FFFFFF'] : lvl === 3 ? '#C8607A' : '#D8AA55', 8 + lvl * 4, 'spark'); zoom = Math.max(zoom, .02 + (lvl === 4 ? .02 : 0)); }
+      if (lvl > P.clvl) { P.clvl = lvl; P.clAt = P.ct; sfx('charge', lvl); burst(P.x - P.facing * 6, P.y, 56, lvl === 4 ? ['#FFE9A0', '#FFFFFF'] : lvl === 3 ? '#C8607A' : '#D8AA55', 8 + lvl * 4, 'spark'); zoom = Math.max(zoom, .02 + (lvl === 4 ? .02 : 0)); }
+      chargeGlint(chargeTiming(w), dt); // the window shows: a white-gold glint while it is open, the glow souring once it has passed (moves.js)
       if (Math.abs(mx) > 0.3) P.facing = Math.sign(mx);
       if (pressed.dodge) { startDodge(); break; }
       if (!input.heavy) {
+        const pc = chargeTiming(w);
+        P.pcRel = pc.open ? { perfect: 1, pmul: PC_MUL } : pc.over > 0 ? { pmul: pc.mul } : null;
         if (w.charge) { const m = Object.assign({ key: 'H' }, WEAPONS.sword.charged[P.clvl]); begin(m); }
         else if (w.charge2) rapierRelease(P.clvl);
         else begin(P.ct >= .45 ? w.tree.HC : w.tree.H); // a quick tap is the normal Heavy, a held one the charged special
-        P.seq = 'H';
+        P.pcRel = null; P.seq = 'H';
+        if (pc.open) perfectCue();
       }
       break;
     }
@@ -177,7 +198,8 @@ function onLand() {
   if (P.state === 'jump') { P.state = 'idle'; }
   else if (P.state === 'air' || (P.state === 'atk' && P.move && (P.move.shock || P.move.bounce) && P.move.hop)) {
     const m = P.move;
-    if (m.shock && !P.shocked) shockwave(P.x + P.facing * 20, P.y, m.shock, m);
+    if (m.shock && !P.shocked) shockwave(P.x + P.facing * 20, P.y, m.shock, m.land ? Object.assign({}, m, m.land) : m); // (land: what the landing itself hits with, when it hits harder than the move)
+    if (m.land) landFx(m); // (moves.js)
     if (P.state === 'air') { P.state = 'idle'; P.airUsed = false; P.t = 0; }
     else { P.t = Math.max(P.t, m.dur * m.h[1]); if (m.airCarry) P.vx = 0; } // (the slam plants him where the hammer hits)
   }
@@ -201,7 +223,7 @@ function runMove(dt) {
   if (m.wave && !P.waved && k >= m.h[0]) {
     P.waved = true;
     const quake = m.waveKind === 'quake'; // the hammer's crack runs along the ground; the sword's wave is a crescent of light
-    for (const d of m.wave2 ? [1, -1] : [1]) projs.push({ owner: 'p', x: P.x + d * P.facing * 40, y: P.y, z: 0, vx: d * P.facing * (quake ? 300 : 340), dmg: Math.round((m.wave === 1 ? 40 : m.wave) * wMult(P.w)), life: quake ? .9 : 1, hit: new Set(), wave: 1, quake }); // wave2: it runs both ways
+    for (const d of m.wave2 ? [1, -1] : [1]) projs.push({ owner: 'p', x: P.x + d * P.facing * 40, y: P.y, z: 0, vx: d * P.facing * (quake ? 300 : 340), dmg: Math.round((m.wave === 1 ? 40 : m.wave) * wMult(P.w) * (m.pmul || 1)), life: quake ? .9 : 1, hit: new Set(), wave: 1, quake }); // wave2: it runs both ways
   }
   if (k > .3) { if (pressed.light) P.q = 'L'; if (pressed.heavy) P.q = 'H'; }
   if (m.key === 'RH' && P.q === 'H' && airborne && k > .66 && unlocked(WEAPONS[P.w].tree.RHH)) { begin(WEAPONS[P.w].tree.RHH); return; } // Thunderfall takes over in the air, at the top of the Uplift's hop: he never touches down between them
@@ -286,7 +308,7 @@ function addGhost(dark) { if (ghosts.length < 18) ghosts.push({ x: P.x, y: P.y, 
 function zOverlap(az, ah, bz, bh) { return az < bz + bh && bz < az + ah; }
 function inReach(m, tx, ty, tz, hw, hh) {
   if (Math.abs(ty - P.y) > (m.depth || 18) + hw * .3) return false;
-  if (!zOverlap(P.z - 6, 70, tz, hh)) return false;
+  if (!zOverlap(P.z - 6 - (m.zDown || 0), 70 + (m.zDown || 0), tz, hh)) return false; // (zDown: a blow that sweeps down below him, like the sword's flip)
   if (m.around) return Math.abs(tx - P.x) <= m.x1 + hw;
   const dx = (tx - P.x) * P.facing;
   if (m.ends && dx < 0) return dx >= -m.x1 * .8 - hw; // the staff's other end catches whoever is behind
@@ -329,7 +351,8 @@ function strike(e, base, dir, m, echo) {
   if (e.slip > 0 && !m.trump) return; // (breaking out from being pinned at the edge of the view: out of reach for a moment)
   let raw = base * rand(.9, 1.1) * (stillT > 0 ? (TL('stillness') >= 3 ? 3 : 2) : 1);
   if (P.z > 15 && e.air) raw *= 1.25; // aerial bonus
-  const crit = !m.trump && (m.crit || Math.random() < critChance(e));
+  if (m.pmul) raw *= m.pmul; // a charged blow's timing: a perfect release lands harder, an over-held one softer
+  const crit = !m.trump && (m.crit || m.perfect || Math.random() < critChance(e));
   let dmg = Math.round(raw * (crit ? 1.8 : P.w === 'fists' || m.arrow ? 1 : .78)); // weapon hits are a little weaker (fists keep full damage); crits keep their full punch
   // what counts as a heavy blow: it breaks blocks and guards
   const heavy = m.trump || m.power === 2 || m.launch || m.smash || m.shock || (m.key && m.key.includes('H')) || m.key === 'X';

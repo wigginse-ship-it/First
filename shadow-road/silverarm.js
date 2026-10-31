@@ -191,7 +191,7 @@
   playerPose = function () {
     const pose = _pp(); if (!SA.on()) return pose;
     pose.armOn = 1; if (SA.fistOut) { pose.armGone = 1; pose.arm = 0; pose.elbow = 0; pose.ext = .6; }
-    if (P.state === 'charge') { const s = jkOf(P.ct || 0), q = Math.min(1, (P.ct || 0) / .45); pose.armShape = P.ct >= .45 ? s : 'rock'; pose.armBig = 1 + 1.4 * q + .1 * Math.sin(performance.now() / 70) * q; pose.arm = -1.6; pose.elbow = 1.2; pose.glow = 'rgba(225,235,255,.6)';
+    if (P.state === 'charge') { const s = jkOf(P.ct || 0), q = Math.min(1, (P.ct || 0) / .45); pose.armShape = P.ct >= .45 ? s : 'rock'; pose.armBig = 1 + 1.4 * q + .1 * Math.sin(performance.now() / 70) * q; pose.arm = -1.6; pose.elbow = 1.2; pose.glow = perfectGlow() || 'rgba(225,235,255,.6)';
       if (P.ct >= .45 && SA.jkShown !== s) { SA.jkShown = s; floatText(P.x, P.y, 92, s.toUpperCase() + '…', '#EEF2FA', 14); sfx('hit-metal', .3); } }
     else SA.jkShown = null;
     return pose;

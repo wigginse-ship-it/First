@@ -36,7 +36,7 @@ function moveExtras(m, k, dt, airborne) {
   }
   if (m.tornado && !P.stormed && k >= m.h[0] + .1) { // the staff tears a whirlwind loose
     P.stormed = true; sfx('whoosh');
-    projs.push({ owner: 'p', tornado: 1, x: P.x + P.facing * 50, y: P.y, z: 0, vx: P.facing * 150, life: 2.4, max: 2.4, dmg: Math.round(m.tornado * wMult(P.w)), hitT: new Map(), hit: new Set(), seed: Math.random() * 9 });
+    projs.push({ owner: 'p', tornado: 1, x: P.x + P.facing * 50, y: P.y, z: 0, vx: P.facing * 150, life: 2.4, max: 2.4, dmg: Math.round(m.tornado * wMult(P.w) * (m.pmul || 1)), perfect: m.perfect, hitT: new Map(), hit: new Set(), seed: Math.random() * 9 });
   }
   if (m.blink && P.blinkList && P.blinkList.length) { // Hellride: step out of Shadow beside each of them in turn
     const n = P.blinkList.length, slot = (m.h[1] - m.h[0]) / n, i = Math.floor((k - m.h[0]) / slot);
@@ -108,6 +108,36 @@ function rapierTwin(m) { // out of the lunge he recovers half a step and runs th
   strike(e, m.dmg * (m.twinDmg || .65) * wMult(P.w), P.facing, m2); P.hits.set(e, P.t);
   fx.push({ kind: 'slash', x: e.x - P.facing * e.hw * .3, y: e.y, z: e.z + e.hh * .55, ang: 0, t: .22, max: .22, size: 26 + e.hw * .5, col: '#F2E4EC' }); sfx('slice');
 }
+// ---------- the perfect charge (game.js, chargeTiming): the window's cues, and the release ----------
+function chargeGlint(pc, dt) { // while the window is open, white-gold sparks off the weapon; once the last one has passed, the glow gutters and smokes
+  const hx = P.x - P.facing * 4, hz = P.z + 62;
+  if (pc.open && P.clvl) {
+    if (P.pcShown !== pc.at) { P.pcShown = pc.at; fx.push({ kind: 'ring', x: P.x, y: P.y, z: P.z + 46, t: .14, max: .14, r: 34, col: '#FFF4D0' }); } // the window opens: a quick ring of light
+    for (let i = 0; i < 3; i++) parts.push({ x: hx + rand(-16, 16), y: P.y + rand(-3, 3), z: hz + rand(-22, 18), vx: rand(-30, 30), vy: 0, vz: rand(20, 90), life: .22, max: .22, col: pick(['#FFFFFF', '#FFF4D0', '#FFE08A']), size: rand(1.6, 2.8), shape: 'star', rot: rand(0, TAU), vr: rand(-8, 8) });
+  } else if (pc.over > 0 && Math.random() < dt * (6 + 10 * (1 - pc.mul) / (1 - PC_FLOOR))) // over-held: a thin dark smoke off the weapon, thickening as it sours
+    parts.push({ x: hx + rand(-12, 12), y: P.y + rand(-3, 3), z: hz + rand(-16, 10), vx: rand(-10, 10), vy: 0, vz: rand(14, 34), life: .5, max: .5, col: pick(['rgba(70,56,52,.55)', 'rgba(110,90,70,.45)']), size: rand(3, 5), shape: 'puff', rot: 0, vr: 0 });
+}
+function perfectGlow() { // the charge's glow on the weapon: steady white-gold through the window, dimming and wavering once over-held (null: leave it be)
+  if (!P || P.state !== 'charge') return null;
+  const pc = chargeTiming(WEAPONS[P.w]);
+  if (pc.open && P.clvl) return 'rgba(255,250,228,.98)';
+  if (pc.over > 0) { const q = (pc.mul - PC_FLOOR) / (1 - PC_FLOOR), t = performance.now() / 1000;
+    return `rgba(200,150,80,${(.12 + .5 * q * (.65 + .35 * Math.sin(t * 29) * Math.sin(t * 7.3))).toFixed(2)})`; }
+  return null;
+}
+function perfectCue() { // let go in the window: as the bow's perfect release, a word, a flash and a spray of white-gold
+  floatText(P.x, P.y, 96, 'PERFECT', '#FFE08A', 15); flashT = Math.max(flashT, .06);
+  burst(P.x + P.facing * 20, P.y, P.z + 52, ['#FFE08A', '#FFFFFF'], 14, 'spark', P.facing, true);
+  fx.push({ kind: 'ring', x: P.x, y: P.y, z: P.z + 46, t: .22, max: .22, r: 44, col: '#FFF4D0' });
+  sfx('crit');
+}
+function landFx(m) { // a move that comes down with a payload (game.js, onLand: m.land)
+  if (P.w === 'sword') { // the Wheel of Steel bites into the street: a gash of light across the stones, grit and sparks thrown up both ways
+    fx.push({ kind: 'slash', x: P.x + P.facing * 30, y: P.y, z: 4, ang: 0, t: .3, max: .3, size: 90, col: '#E8E0FF' });
+    burst(P.x + P.facing * 30, P.y, 6, ['#FFFFFF', '#D8D0F0', '#EED48A'], 14, 'spark', 0, true);
+    hitstop = Math.max(hitstop, .06); shakeMag = Math.max(shakeMag, 10);
+  }
+}
 function rapierChargePose(pose) { // en garde and drawn back: weight settling on the back leg, the point held level at them
   const q = sstep(Math.min(1, (P.ct || 0) / .4));
   pose.crouch = 0; pose.glow = ''; pose.walk = 0; pose.trail = 0;
@@ -115,6 +145,7 @@ function rapierChargePose(pose) { // en garde and drawn back: weight settling on
   pose.arm = lerp(.08, .3, q) - pose.lean * .9; pose.elbow = lerp(.3, 1.2, q); pose.grip = lerp(.15, .95, q); pose.ext = lerp(-.1, -.3, q); // the sword hand drawn back by the shoulder, the blade kept level
   rapierOffHand(pose, 'guard', 0, q);
   pose.rGlint = { lvl: P.clvl || 0, k: P.clvl ? ((P.ct || 0) - (P.clAt || 0)) / .26 : 9 }; // the glint runs down the blade (art_rapier.js)
+  pose.glow = perfectGlow() || ''; // the perfect window: the blade flares white-gold (and sours past the last glint)
 }
 { const _pp = playerPose; playerPose = function () { const pose = _pp(); if (P && P.state === 'charge' && P.w === 'rapier' && !pose.down) rapierChargePose(pose); return pose; }; }
 function tornadoTick(p, dt) { // the staff's whirlwind: drags whoever it touches into itself and beats at them, then throws them all
@@ -125,7 +156,7 @@ function tornadoTick(p, dt) { // the staff's whirlwind: drags whoever it touches
     if (e.dead || Math.abs(e.x - p.x) > 46 + e.hw * .5 || Math.abs(e.y - p.y) > 30) continue;
     if (!e.boss) { e.x += (p.x - e.x) * Math.min(1, dt * 5); e.y += (p.y - e.y) * Math.min(1, dt * 3); }
     const last = p.hitT.get(e);
-    if (end) { strike(e, p.dmg * 1.6, Math.sign(e.x - P.x) || 1, { key: 'HC', dmg: p.dmg, kb: 260, launch: 520, power: 2 }); continue; }
+    if (end) { strike(e, p.dmg * 1.6, Math.sign(e.x - P.x) || 1, { key: 'HC', dmg: p.dmg, kb: 260, launch: 520, power: 2, crit: p.perfect }); continue; } // (a perfect release: the throw at the end is a sure critical)
     if (last === undefined || now - last >= .2) { p.hitT.set(e, now); strike(e, p.dmg, Math.sign(p.vx) || 1, { key: 'HC', dmg: p.dmg, kb: 0, launch: 160, power: 1 }); }
   }
   if (!end) { hitstop = Math.max(hs, Math.min(hitstop, .015)); shakeMag = Math.max(sh, Math.min(shakeMag, 2)); }
