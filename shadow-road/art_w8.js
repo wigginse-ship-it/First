@@ -2044,16 +2044,26 @@
   // its warning shows the whole reach of the sound: the ground darkens out to where the ring will die, and rings of
   // dust run outward along it, faster as the bleat comes
   // the warning itself is on his crozier (the bleat gathers in its crook: a6_boss.js); the floor only shows, faintly, how far it will reach
-  function bleatTell() {} // (nothing on the floor: the warning is all in the crozier, or the horns)
+  // the breath drawn in: faint grey rings of the Circle drawing in to him from as far as the bleat will reach (no marks
+  // on the floor), and in its last moments he flashes white, so the blast never comes out of nowhere
+  function bleatTell(x, y, k, t, e) {
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { const q = ((k * 2.2 + i / 3) % 1), R = 250 * (1 - q) + 16, a = Math.sin(q * Math.PI) * (.22 + .3 * k);
+      ctx.strokeStyle = `rgba(210,204,190,${a})`; ctx.lineWidth = 1.2 + 2 * k; ell(x, y, R, R / 2.2); ctx.stroke(); }
+    ctx.restore();
+    if (e && k > .72) e.flash = Math.floor(t * 16) % 2 ? .05 : 0;
+  }
   TELL_FX.w8bleat = (e, t, k) => { bleatTell(e.x, e.y, k, t); };
   // the same warning when he bleats without a wind-up of his own (at the engine, and when spent): he throws his head back first
-  function bleatWarn(e, after) { e.w8a = 'bleat'; e.state = 'w8act'; hazards.push({ kind: 'w8bleattell', e, x: e.x, y: e.y, t: .8, max: .8, after }); sfx('charge', .6); }
+  function bleatWarn(e, after) { e.w8a = 'bleat'; e.state = 'w8act'; hazards.push({ kind: 'w8bleattell', e, x: e.x, y: e.y, t: 1.3, max: 1.3, after }); sfx('charge', .6); tn(70, 1.2, 'sawtooth', .04, 140); } // (a longer breath, with a rising groan under it)
+  W8.bleatWarn = bleatWarn; // (for tests: make him bleat)
   reg('w8bleattell', { update(h, dt) { h.x = h.e.x; h.y = h.e.y; h.e.w8bleatK = 1 - h.t / h.max; if (h.t <= dt + .001 && !h.done) { h.done = 1; h.e.w8bleatK = 0; if (!h.e.dead) { PLAN_FX.w8bleat(h.e); if (h.after) h.after(h.e); } } },
-    draw(h, t) { bleatTell(h.x, h.y, 1 - h.t / h.max, t); } });
+    draw(h, t) { bleatTell(h.x, h.y, 1 - h.t / h.max, t, h.e); } });
   PLAN_FX.w8bleat = (e) => { sfx('roar'); tn(180, .6, 'sawtooth', .06, 120);
     hazards.push({ kind: 'w8bleatring', x: e.x, y: e.y, r: 10, t: 1, max: 1, dmg: Math.round(edmg(e) * .9) }); act(e, 'bleat', (h, dt, e) => { e.w8k = h.el; if (h.el > .6) { recover(e, .9); return true; } return false; }); };
+  // the ring: a heavy blow, but never more than a third of his health, so it cannot kill from full
   reg('w8bleatring', {
-    update(h, dt) { h.r += 300 * dt; if (!h.hit) { const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2); if (Math.abs(d - h.r) < 14 && P.z < 12) { h.hit = 1; hitP(h.dmg, h.x, true); } } if (h.r > 260) h.t = -1; },
+    update(h, dt) { h.r += 300 * dt; if (!h.hit) { const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2); if (Math.abs(d - h.r) < 14 && P.z < 12) { h.hit = 1; hitP(Math.min(h.dmg, Math.round(maxHp() * .33)), h.x, true); } } if (h.r > 260) h.t = -1; },
     draw(h, t) { ctx.save(); ctx.strokeStyle = 'rgba(30,24,20,.7)'; ctx.lineWidth = 4; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke(); ctx.strokeStyle = 'rgba(232,220,196,.6)'; ctx.lineWidth = 1.4; ell(h.x, h.y, h.r - 3, (h.r - 3) / 2.2); ctx.stroke(); ctx.restore(); },
   });
 

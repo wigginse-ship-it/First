@@ -515,7 +515,7 @@ function drawDeath(e, t) {
     FLASH = false;
     ctx.translate(0, .6 * c); // (flattened like a pancake on the floor, only a sliver of its underside pressed into the dent the blow left: drawCrater paints that under it)
     FLASH = el < .06;
-    ctx.scale(lerp(1, 2.8, c) - settle * 2, Math.max(.1, lerp(1, .19, c) + settle)); // (squashed flat it spreads out wide: the mass has to go somewhere)
+    ctx.scale(lerp(1, 2.2, c) - settle * 1.6, Math.max(.1, lerp(1, .19, c) + settle)); // (squashed flat it spreads out wide: the mass has to go somewhere)
     draw();
   }
   FLASH = false;
