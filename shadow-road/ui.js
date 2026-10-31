@@ -240,7 +240,7 @@ function drawTrumpArt(canvas, id) {
 // ---------- title & buttons ----------
 function refreshTitle() {
   const has = save.started;
-  $('#contBtn').hidden = !has;
+  $('#contBtn').hidden = !has; $('#contBtn').textContent = save.done ? 'Walk again, harder' : 'Continue'; // (a road walked to its end goes on to the next cycle, never back into its last world)
   $('#newBtn').textContent = has ? 'New journey' : 'Begin the journey';
   $('#newBtn').className = has ? 'cta alt' : 'cta';
   const found = WEAPON_ORDER.filter(id => save.owned[id]).map(id => WEAPONS[id].name).join(', ');
@@ -248,7 +248,7 @@ function refreshTitle() {
   $('#saveInfo').textContent = has ? `Saved: ${save.atChoice ? 'the Rim of the Abyss, deck in hand' : STAGES[roadStage()].name}${save.done ? ' (the road walked)' : ''}${save.cycle ? ', cycle ' + (save.cycle + 1) : ''}${ends ? ` · endings ${ends}/3` : ''} · ${save.shards} shards · ${save.sigils} sigils · ${found}` : '';
 }
 let confirmNew = false;
-$('#contBtn').addEventListener('click', () => { audioInit(); if (save.atChoice && window.BRANCH) BRANCH.resume(); else if (save.stage > 0) openForge(); else play(0); }); // (left with the deck in hand: back to the Rim)
+$('#contBtn').addEventListener('click', () => { audioInit(); if (save.done) $('#cycleBtn').click(); else if (save.atChoice && window.BRANCH) BRANCH.resume(); else if (save.stage > 0) openForge(); else play(0); }); // (left with the deck in hand: back to the Rim; with the road walked, the next cycle from the start)
 $('#newBtn').addEventListener('click', () => {
   audioInit();
   if (save.started && !confirmNew) { confirmNew = true; $('#newBtn').textContent = 'Tap again to erase your save'; return; }
