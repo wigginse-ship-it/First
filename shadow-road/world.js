@@ -26,13 +26,13 @@ const MAT_BITS = {
 const MAT_KIND = { metal: 'machine', bronze: 'machine', w7bronze: 'machine', crystal: 'crystal', w7glass: 'glass', rock: 'stone', china: 'porcelain', shell: 'porcelain' };
 // an armor's material (ARMOR[type].mat) as a kind of bits; wood and cloth give none
 const ARMOR_KIND = { metal: 'metal', iron: 'metal', brass: 'metal', bronze: 'metal', glass: 'glass', crystal: 'crystal', stone: 'stone', porcelain: 'porcelain' };
-function matBurst(x, y, z, kind, n, dir = 0, cols, small) {
+function matBurst(x, y, z, kind, n, dir = 0, cols, small, keep) { // keep: the bits stay where they settle, like the fallen (a hammer's smash)
   const B = MAT_BITS[kind]; if (!B || n <= 0) return;
   cols = cols && cols.length ? cols : B.cols;
   for (let i = 0; i < n && parts.length < 420; i++) {
     const a = rand(0, TAU), sp = small ? rand(30, 110) : rand(50, 190), life = rand(1.6, 2.8);
     parts.push({ x: x + rand(-4, 4), y: y + rand(-4, 4), z, vx: Math.cos(a) * sp + dir * rand(20, small ? 90 : 150), vy: Math.sin(a) * sp * .22, vz: small ? rand(90, 220) : rand(170, 380),
-      life, max: life, col: pick(cols), size: rand(B.size[0], B.size[1]) * (small ? .8 : 1), shape: B.shapes[i % B.shapes.length], rot: rand(0, TAU), vr: rand(-14, 14), rest: false });
+      life, max: life, col: pick(cols), size: rand(B.size[0], B.size[1]) * (small ? .8 : 1), shape: B.shapes[i % B.shapes.length], rot: rand(0, TAU), vr: rand(-14, 14), rest: false, keep: !!keep });
   }
 }
 // a chip off an armor as one pip of its guard goes (the struck side), or the whole of it bursting as the guard breaks
@@ -95,15 +95,19 @@ function makeCrater(e, dir) {
 function floatText(x, y, z, txt, col, size = 14) { nums.push({ x, y, z, txt, col, size, t: .85, max: .85 }); }
 function floatIcon(x, y, z, icon, size = 14) { nums.push({ x, y, z, txt: '', col: '#FFFFFF', size, t: .85, max: .85, icon }); } // a blow turned aside: just the icon, no words
 function iconNums(n0, icon, pips) { for (let i = n0; i < nums.length; i++) if (/^\d+!?$/.test(String(nums[i].txt))) { nums[i].icon = icon; if (pips !== undefined) nums[i].pips = pips; } } // tag the damage numbers a hit just made
+const KEEP_BITS = 160, KEEP_PIECES = 40; // the most bits of smashed foes and broken armor, and whole armor pieces, left lying on the street at once
 function updateFx(dt) {
+  let kept = 0;
+  for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; if (p.keep && p.rest) { if (++kept > KEEP_BITS) { p.keep = false; p.life = Math.min(p.life, .6); } } } // (newest first: past the limit the oldest bits fade)
   for (const p of parts) {
+    if (p.keep && p.rest) continue; // a smashed foe's pieces lie where they fell
     p.life -= dt;
     if (p.rest) continue;
     p.vz -= GRAV * .9 * dt; p.z += p.vz * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
     if (p.z <= 0) {
       p.z = 0;
       if (p.shape === 'puff' || p.shape === 'star' || p.shape === 'streak') { p.life = Math.min(p.life, .1); continue; }
-      if (Math.abs(p.vz) > 90) { p.vz *= -.35; p.vx *= .5; } else { p.rest = true; p.vz = 0; if (p.shape === 'blob') { p.size *= 1.6; p.flat = 1; } }
+      if (Math.abs(p.vz) > 90) { p.vz *= -.35; p.vx *= .5; } else { p.rest = true; p.vz = 0; if (p.keep) p.life = Math.max(p.life, 1); if (p.shape === 'blob') { p.size *= 1.6; p.flat = 1; } }
     }
   }
   parts = parts.filter(p => p.life > 0);
@@ -165,7 +169,7 @@ function armorBreak(e, dir) {
     hazards.push({ kind: 'armorbit', fn: p.fn, x: bx, y: e.y + rand(-2, 2), z: bz, vx: dir * rand(90, 200) + rand(-40, 40), vz: rand(160, 300), rot: 0, vr: dir * rand(5, 11), sc: s, facing: e.facing, t: 2.2, max: 2.2, bounced: 0 });
   }
   const kind = ARMOR_KIND[A.mat]; // a hard armor bursts into bits of what it was made of; anything else into its shards
-  if (kind) { matBurst(e.x, e.y, e.z + e.hh * .6, kind, CROWD ? 8 : 14, dir, A.cols && A.cols.slice(0, 3)); if (kind === 'metal') burst(e.x, e.y, e.z + e.hh * .6, ['#FFE6A0', '#FFFFFF', '#FFB050'], 6, 'spark', dir); }
+  if (kind) { matBurst(e.x, e.y, e.z + e.hh * .6, kind, CROWD ? 8 : 14, dir, A.cols && A.cols.slice(0, 3), false, true); if (kind === 'metal') burst(e.x, e.y, e.z + e.hh * .6, ['#FFE6A0', '#FFFFFF', '#FFB050'], 6, 'spark', dir); }
   else if (A.cols) burst(e.x, e.y, e.z + e.hh * .6, A.cols, 18, 'crystal', dir, true);
   if (A.onBreak) A.onBreak(e, dir);
 }
@@ -377,7 +381,11 @@ const PLAN_FX = {}, TELL_FX = {}, HAZARD_FX = {};
 // the bits of an elite's armor tumbling away when it breaks (see armorBreak)
 HAZARD_FX.armorbit = {
   update(h, dt) { h.vz -= 900 * dt; h.x += h.vx * dt; h.z += h.vz * dt; h.rot += h.vr * dt;
-    if (h.z <= 0) { h.z = 0; if (h.vz < -60 && h.bounced < 2) { h.bounced++; h.vz = -h.vz * .35; h.vx *= .5; h.vr *= .5; } else { h.vz = 0; h.vx *= Math.pow(.02, dt); h.vr *= Math.pow(.02, dt); } } },
+    if (h.z <= 0) { h.z = 0; if (h.vz < -60 && h.bounced < 2) { h.bounced++; h.vz = -h.vz * .35; h.vx *= .5; h.vr *= .5; } else { h.vz = 0; h.vx *= Math.pow(.02, dt); h.vr *= Math.pow(.02, dt); if (!h.lying && Math.abs(h.vx) < 4) h.lying = 1; } }
+    if (h.lying && !h.fading) { // settled, the piece stays on the street like the fallen (the oldest go once there are too many)
+      let n = 0; for (const o of hazards) if (o.kind === 'armorbit' && o.lying && !o.fading) n++;
+      if (n > KEEP_PIECES) { const old = hazards.find(o => o.kind === 'armorbit' && o.lying && !o.fading); if (old) { old.fading = 1; old.t = Math.min(old.t, .5); } }
+      if (!h.fading) h.t = Math.max(h.t, 1); } },
   draw(h, t) { const a = Math.min(1, h.t / .5); if (a <= 0) return;
     ctx.save(); ctx.globalAlpha *= .3 * a; ctx.fillStyle = '#000'; ell(h.x, h.y, 10 * h.sc, 3 * h.sc); ctx.fill(); ctx.restore();
     ctx.save(); ctx.globalAlpha *= a; ctx.translate(h.x, h.y - h.z); ctx.rotate(h.rot); ctx.scale(h.facing * h.sc, h.sc); try { h.fn(); } finally { ctx.restore(); } },

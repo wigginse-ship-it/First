@@ -461,7 +461,7 @@ function killEnemy(e, dir, m) {
     } else if (e.death === 'splat') {
       e.z = 0; makeCrater(e, dir); // the floor gives under it: a dent with cracks, or a soft dent, a puff of silt or a ripple, by the world
       const kind = MAT_KIND[e.def.mat]; // a hard thing bursts into bits of what it was made of; soft things only go flat
-      if (kind) matBurst(e.x, e.y, 6 + e.hh * .1, kind, Math.min(14, CROWD ? 8 : 12 + (e.boss ? 2 : 0)), dir, kind === 'glass' || kind === 'crystal' ? MAT_COL[e.def.mat] : null);
+      if (kind) matBurst(e.x, e.y, 6 + e.hh * .1, kind, Math.min(14, CROWD ? 8 : 12 + (e.boss ? 2 : 0)), dir, kind === 'glass' || kind === 'crystal' ? MAT_COL[e.def.mat] : null, false, true); // (its pieces stay on the street)
       sfx('slam'); sfx(kind ? MAT_SFX[e.def.mat] || 'hit-metal' : 'hit-goo'); shakeMag = Math.max(shakeMag, 6);
     }
   }
