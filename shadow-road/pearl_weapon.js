@@ -31,10 +31,11 @@
     flail:       { base: 'hammer', noun: 'Flail',           short: 'flail',   form: 'orb',   death: 'crumple' },
     chakram:     { base: 'rapier', noun: 'Chakram',         short: 'chakram', form: 'orb',   death: 'slice' },
     shieldspear: { base: 'rapier', noun: 'Spear and Shield', short: 'spear',  form: 'shell', death: 'pop' },
+    warshield:   { base: 'hammer', noun: 'Warshield',       short: 'shield',  form: 'shell', death: 'crumple' },
     trident:     { base: 'staff',  noun: 'Trident',         short: 'trident', form: 'spire', death: 'pop' },
     lance:       { base: 'staff',  noun: 'Lance',           short: 'lance',   form: 'spire', death: 'pop' },
   };
-  const BY_FORM = { edge: ['glaive', 'swordstaff'], orb: ['flail', 'chakram'], shell: ['shieldspear'], spire: ['trident', 'lance'] };
+  const BY_FORM = { edge: ['glaive', 'swordstaff'], orb: ['flail', 'chakram'], shell: ['shieldspear', 'warshield'], spire: ['trident', 'lance'] };
   const HYB_WORD = { edge: 'Blade', orb: 'Moon', shell: 'Shell', spire: 'Spire' };
   const PLACES = { tide: ['the Undertow', 'the Long Ebb', 'the Breakers', 'Faiella-bionin'], nacre: ['the Nacre Halls', 'the Oyster Throne', 'Moire\'s Court', 'the Pearl Beds'],
     storm: ['the Squall', 'the Thunder Reef', 'the Jewel\'s Weather', 'the Drowned Storm'], abyss: ['the Abyss', 'the Drowned Stair', 'the Deep Below Rebma', 'the Black Water'],
@@ -291,6 +292,23 @@
       const tip = leaf(63, pl, 5.4, p, { thunder, spiral }); band(62.5, 3.6, 5.6, p);
       scallopShield(sx, rx, ry, p);
       S = { pommel: [0, 0], haft: [40, 48, 54, 34], collar: [58, 0], head: [63 + pl * .4, 0], w: 2.8, tip, x0: -20, x1: tip[0] + 6, y0: -ry * 1.2 - 12, y1: ry * 1.2 + 12 };
+    } else if (spec.type === 'warshield') { // a great scallop, its hinge on a short haft, swung like a hammer to bash
+      const Rf = 25 * Math.sqrt(M), hx = 29, A = 1.12, n = 18;
+      hybPiece(2); haft(2, hx + 2, 4.2, p, [8, 24]); pommel(2, 3.2, p);
+      const rim = (i) => { const a = -A + 2 * A * i / n, rr = Rf * (i % 2 ? .93 : 1.02); return [hx + 3 + Math.cos(a) * rr, Math.sin(a) * rr * .92]; };
+      const fan = (ox, oy, cont) => { if (!cont) ctx.beginPath(); ctx.moveTo(hx + ox, -3.5 + oy); for (let i = 0; i <= n; i++) { const q = rim(i); ctx.lineTo(q[0] + ox, q[1] + oy); } ctx.lineTo(hx + ox, 3.5 + oy); ctx.closePath(); };
+      cel(fan, p.blade, { d: 2.4, r: 1.4, dark: p.bladeDk, lite: '#FFFFFF', w: 1.4, tex: () => {
+        for (let i = 0; i < n; i += 2) { const a0 = rim(i), a1 = rim(i + 1), a2 = rim(Math.min(n, i + 2)); ctx.beginPath(); ctx.moveTo(hx + 2, 0); ctx.lineTo(a0[0], a0[1]); ctx.lineTo(a1[0], a1[1]); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fill();
+          ctx.beginPath(); ctx.moveTo(hx + 2, 0); ctx.lineTo(a2[0], a2[1]); ctx.strokeStyle = C(shade(p.bladeDk, -.15)); ctx.globalAlpha = .55; ctx.lineWidth = .7; ctx.stroke(); ctx.globalAlpha = 1; }
+        for (const k of [.45, .72]) { ctx.beginPath(); ctx.ellipse(hx + 3, 0, Rf * k, Rf * k * .92, 0, -A, A); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = .6; ctx.stroke(); }
+        if (thunder) { ctx.beginPath(); for (let i = 0; i <= 8; i++) { const a = -A + 2 * A * i / 8, rr = Rf * .6 + (i % 2 ? 2 : -2); ctx.lineTo(hx + 3 + Math.cos(a) * rr, Math.sin(a) * rr * .92); } ctx.strokeStyle = '#FFF2A0'; ctx.lineWidth = .9; ctx.stroke(); } } });
+      ctx.beginPath(); for (let i = 0; i <= n; i++) { const q = rim(i); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); } ctx.strokeStyle = C(p.metal); ctx.lineWidth = 1.6; ctx.stroke();
+      if (serr) { ctx.fillStyle = C(p.metalLt); for (let i = 0; i <= n; i += 2) { const q = rim(i), a = -A + 2 * A * i / n; ctx.beginPath(); ctx.moveTo(q[0] + Math.cos(a - .1) * 1, q[1] + Math.sin(a - .1)); ctx.lineTo(q[0] + Math.cos(a) * 3.4, q[1] + Math.sin(a) * 3.2); ctx.lineTo(q[0] + Math.cos(a + .1) * 1, q[1] + Math.sin(a + .1)); ctx.closePath(); ctx.fill(); outline(.5); } }
+      cel(PL([hx - 1, -3.5, hx + 6, -7.5, hx + 7.5, -3, hx + 7.5, 3, hx + 6, 7.5, hx - 1, 3.5]), p.metal, { d: 1, r: .7, lite: p.metalLt, w: 1 });
+      const ux = hx + 3 + Rf * .5; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; cel(PL([ux + Math.cos(a - .35) * 4, Math.sin(a - .35) * 4, ux + Math.cos(a) * 7.4, Math.sin(a) * 7.4, ux + Math.cos(a + .35) * 4, Math.sin(a + .35) * 4]), p.metal, { d: .5, r: .4, lite: p.metalLt, w: .7 }); }
+      pearl(ux, 0, 4.4, p);
+      if (spec.hyb === 'spire') cel(PL([hx + Rf - 1, -2.4, hx + Rf + 15, 0, hx + Rf - 1, 2.4]), q.blade, { d: 1, r: .6, dark: q.bladeDk, lite: q.edge, w: 1 });
+      S = { pommel: [0, 0], haft: [26, 5, 9], collar: [hx - 2, 0], cstep: -4.5, head: [hx + Rf * .62, -Rf * .52], w: 4.2, tip: [hx + Rf + 3, 0], x0: -24, x1: hx + Rf + 22, y0: -Rf - 14, y1: Rf + 14 };
     } else if (spec.type === 'trident') {
       const tl = 24 * L;
       haft(-26, 52, 3.4, p, [10, 24]); pommel(-26, 3, p);
