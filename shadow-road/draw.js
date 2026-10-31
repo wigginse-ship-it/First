@@ -601,7 +601,7 @@ function drawScene(t) {
   for (const p of props) list.push([p.y, () => { FLASH = p.flash > 0; drawPod(p, t); FLASH = false; }]);
   for (const k of loot) list.push([k.y, () => drawLoot(k, t)]);
   // a crowd: with many foes on screen they leave out their finest shading (LITE), which keeps a big fight smooth on a phone
-  { let n = 0; for (const e of enemies) if (!e.dead && e.x > camX - 40 && e.x < camX + VW + 40) n++; CROWD = n >= (CROWD ? 5 : 7); }
+  { let n = 0; for (const e of enemies) if (!e.dead && e.x > camX - 40 && e.x < camX + VW + 40) n++; CROWD = PAINT_LITE || n >= (CROWD ? 5 : 7); } // (in the lighter paint, always)
   for (const e of enemies) list.push([e.y, () => { LITE = CROWD && !e.boss; try { drawEnemy(e, t); } finally { LITE = false; } }]);
   // afterimages are light, not ink, so they are painted straight onto the page
   for (const g of ghosts) list.push([g.y - .1, () => onMain(() => { // light afterimages glow; shadow ones are dark doubles of him

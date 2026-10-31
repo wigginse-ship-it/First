@@ -91,6 +91,30 @@ function texPat(g, name) { // patterns belong to a context, so cache one per con
   return g.__pat[name] || (g.__pat[name] = g.createPattern(T[name], 'repeat'));
 }
 
+// ---------- a still view's unchanging layers, kept ----------
+// Some of the world is drawn afresh every frame although it changes only with the camera: the sky's wash, the sun, the
+// brushwork over the floor. While the view holds still (the camera locked on a fight, no shake, no zoom), such a layer
+// is painted once into a canvas of the page's size, with the very same transform, and laid back on each frame at the
+// same pixels: what reaches the page is the same. A view that is moving is drawn straight on, as ever (it is only kept
+// once the same view has come round two frames running).
+const STILL = {};
+const STILL_PROPS = ['fillStyle', 'strokeStyle', 'lineWidth', 'lineCap', 'lineJoin', 'miterLimit', 'font', 'textAlign', 'textBaseline', 'imageSmoothingEnabled', 'shadowBlur', 'shadowColor', 'shadowOffsetX', 'shadowOffsetY'];
+function stillLayer(id, key, paint) {
+  const g = ctx;
+  if (!g || typeof cv === 'undefined' || g.canvas !== cv || g.globalAlpha !== 1 || g.globalCompositeOperation !== 'source-over') { paint(); return; }
+  const m = g.getTransform(), k = key + '|' + m.a + ',' + m.b + ',' + m.c + ',' + m.d + ',' + m.e + ',' + m.f + '|' + cv.width + 'x' + cv.height;
+  const S = STILL[id] || (STILL[id] = { k: '', seen: '', c: null, g: null });
+  if (S.k !== k) {
+    if (S.seen !== k) { S.seen = k; paint(); return; }
+    if (!S.c || S.c.width !== cv.width || S.c.height !== cv.height) { retire(S.c); [S.c, S.g] = texCanvas(cv.width, cv.height); }
+    const L = S.g; L.setTransform(1, 0, 0, 1, 0, 0); L.globalAlpha = 1; L.globalCompositeOperation = 'source-over'; L.clearRect(0, 0, S.c.width, S.c.height);
+    for (const p of STILL_PROPS) L[p] = g[p];
+    L.setTransform(m); ctx = L;
+    try { paint(); } finally { ctx = g; }
+    S.k = k;
+  }
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(S.c, 0, 0); g.restore();
+}
 // ---------- painting a pre-rendered background layer (done once, when a world is built) ----------
 // ink: contour color, line: contour strength, lw: contour width, brush: how much brushwork shows, hatch: modelling strokes low down
 function paintLayer(canvas, o) {
@@ -121,26 +145,44 @@ function wobbleInto(src, dst, tmp, tg, px, o, amp) { // src -> tmp (rows shift s
 
 // ---------- the figure layer ----------
 let inkC = null, inkG = null, silC = null, silG = null, rimC = null, rimG = null, mainCtx = null;
-// paint quality steps down by itself if the phone can't keep up: 1 = painted figures, 0 = figures drawn straight onto the page
-let PAINT_Q = 1, perfN = 0, perfT = 0, perfSkip = 60, perfPrev = 0, perfLock = false, perfUndo = null;
+// paint quality steps down by itself if the phone can't keep up: 1 = painted figures, 0 = figures drawn straight onto the page.
+// PAINT_LITE is a step between them: the figures keep their paint and contour, but the prince is painted with the others
+// (not on his own finely inked layer), the pale rim light is left off and every foe leaves out its finest shading
+let PAINT_Q = 1, PAINT_LITE = false, perfT = 0, perfSkip = 1, perfPrev = 0, perfLock = false, perfUndo = null, perfMiss = 0, perfKind = '';
+const perfWin = [], perfUseless = {};
 // how sharp the canvas is drawn, in device pixels per screen pixel. A phone starts at 1.5 (most phone screens pack 3; the
 // paint reads just as well at half that, for a quarter of the pixels); anything else at 2
 let RES_CAP = (window.matchMedia && matchMedia('(pointer: coarse)').matches) ? 1.5 : 2;
-// Every 90 frames of play: if the game is running slow, first draw the canvas a step softer (down to one device pixel
-// per screen pixel), and only then fall back to the plain renderer
-function paintPerf(rawDt) {
+// Every second and a half of play (90 frames at most, 20 at least): if the game is running slow, take the next step down:
+// the canvas a step softer, down to 1.25 device pixels per screen pixel; then the lighter paint; then softer again, down
+// to one; and last the plain renderer. A step that didn't make it any faster is put back and not tried again; two such in a
+// row mean the frame rate is capped (Low Power Mode runs at 30), and it is then left alone for good.
+// The speed is the median frame time of the window, so a one-off hitch (a new place being painted) doesn't count; and
+// frames are counted however slow they are (on a very slow phone every frame is slow, and that is just when it matters)
+function perfRes() { return Math.min(window.devicePixelRatio || 1, RES_CAP); }
+function perfNext(avg) {
+  const res = perfRes(), resOk = !perfUseless.res && res > 1.01 && (res > 1.26 || PAINT_LITE || perfUseless.lite);
+  if (avg > 1 / 50 && resOk) { const was = RES_CAP; RES_CAP = Math.max(1, res - .25); layout(); return ['res', () => { RES_CAP = was; layout(); }]; }
+  if (avg <= 1 / 42 || PAINT_Q === 0) return null;
+  if (!PAINT_LITE && !perfUseless.lite) { PAINT_LITE = true; return ['lite', () => { PAINT_LITE = false; }]; }
+  if (PAINT_LITE || perfUseless.lite) { if (res > 1.01 && !perfUseless.res) return null; PAINT_Q = 0; return ['q', () => { PAINT_Q = 1; }]; }
+  return null;
+}
+function paintPerf(rawDt, gap = rawDt) {
   if (perfLock) return;
-  if (perfSkip > 0) { perfSkip--; return; } // ignore the first second after starting or a change
-  if (rawDt > .2) { perfN = perfT = 0; return; } // a stall (tab switch, menu) says nothing about drawing speed
-  perfN++; perfT += rawDt;
-  if (perfN < 90) return;
-  const avg = perfT / perfN; perfN = perfT = 0;
-  // stepping down didn't speed anything up: the frame rate is capped (Low Power Mode runs at 30), so put it back
-  if (perfPrev && avg > perfPrev * .9) { if (perfUndo) perfUndo(); perfLock = true; return; }
-  perfPrev = 0; perfUndo = null;
-  const dpr = window.devicePixelRatio || 1;
-  if (avg > 1 / 50 && Math.min(dpr, RES_CAP) > 1.01) { const was = RES_CAP; RES_CAP = Math.max(1, Math.min(dpr, RES_CAP) - .25); layout(); perfUndo = () => { RES_CAP = was; layout(); }; perfPrev = avg; perfSkip = 30; return; }
-  if (avg > 1 / 42 && PAINT_Q > 0) { PAINT_Q--; perfUndo = () => { PAINT_Q++; }; perfPrev = avg; perfSkip = 30; }
+  if (gap > 1) { perfWin.length = 0; perfT = 0; perfSkip = Math.max(perfSkip, .5); return; } // a stall (tab switch, menu) says nothing about drawing speed
+  if (perfSkip > 0) { perfSkip -= gap; return; } // ignore the first second after starting, and half a second after a change
+  perfWin.push(gap); perfT += gap;
+  if (perfWin.length < 20 || (perfWin.length < 90 && perfT < 1.5)) return;
+  perfWin.sort((a, b) => a - b); const avg = perfWin[perfWin.length >> 1]; perfWin.length = 0; perfT = 0;
+  if (perfPrev) { // the step just taken: did it help?
+    const helped = avg < perfPrev * .9; perfPrev = 0;
+    if (!helped) { if (perfUndo) perfUndo(); perfUndo = null; perfUseless[perfKind] = true; perfSkip = .5; if (++perfMiss >= 2) perfLock = true; return; }
+    perfMiss = 0;
+  }
+  perfUndo = null;
+  const s = perfNext(avg); if (!s) return;
+  [perfKind, perfUndo] = s; perfPrev = avg; perfSkip = .5;
 }
 const IB = { x: 0, y: 0, w: 0, h: 0 }, IBS = []; // the screen box the figures occupy (all the work stays inside it), and the separate boxes inside that
 // The prince is painted on a layer of his own inside the figure layer, after the reference sheet: a fine dark ink line
@@ -156,7 +198,7 @@ let heroWC = null, heroWG = null, heroWOn = false;
   if (heroWOn && heroWG && ctx === heroG && !FLASH && !TINT) { const c = ctx; heroWG.setTransform(c.getTransform()); heroWG.globalAlpha = 1; heroWG.globalCompositeOperation = 'source-over'; ctx = heroWG; try { _dw(kind, pose); } finally { ctx = c; } }
 }; }
 function heroInk(cx, cy, fn) {
-  if (PAINT_Q === 0 || ctx !== inkG || HB.on || TINT || FLASH) { fn(); return; }
+  if (PAINT_Q === 0 || PAINT_LITE || ctx !== inkG || HB.on || TINT || FLASH) { fn(); return; } // (lighter paint: he is painted with the others)
   const m = ctx.getTransform(); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const [px, py] of [[cx - 135, cy - 150], [cx + 135, cy - 150], [cx - 135, cy + 18], [cx + 135, cy + 18]]) { const X = m.a * px + m.c * py + m.e, Y = m.b * px + m.d * py + m.f; x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); }
   x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(inkC.width, Math.ceil(x1)); y1 = Math.min(inkC.height, Math.ceil(y1));
@@ -283,11 +325,13 @@ function inkEnd() {
 function inkBox() {
   const { x, y, w, h } = IB, hb = HB.on && HB.x < x + w && x < HB.x + HB.w && HB.y < y + h && y < HB.y + HB.h;
   const boxClip = (g) => { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.beginPath(); g.rect(x, y, w, h); g.clip(); };
-  boxClip(silG); silG.clearRect(x, y, w, h); silG.globalCompositeOperation = 'source-over'; blit(silG, inkC, 0, 0);
+  // ('copy' inside the box's clip lays the layer in and clears what was under it, in one pass instead of a clear and a draw)
+  boxClip(silG); silG.globalCompositeOperation = 'copy'; blit(silG, inkC, 0, 0);
   silG.globalCompositeOperation = 'source-in'; silG.fillStyle = '#1A100C'; silG.fillRect(x, y, w, h);
   // light catching every figure's upper-right edges, and shadow gathering along the lower-left: gives each one volume
-  for (const [dx, dy, col, al] of [[-1.4, 1.4, '#FFF0D2', .55]]) {
-    boxClip(rimG); rimG.clearRect(x, y, w, h); rimG.globalCompositeOperation = 'source-over'; blit(rimG, silC, 0, 0);
+  // (left off in the lighter paint)
+  if (!PAINT_LITE) for (const [dx, dy, col, al] of [[-1.4, 1.4, '#FFF0D2', .55]]) {
+    boxClip(rimG); rimG.globalCompositeOperation = 'copy'; blit(rimG, silC, 0, 0);
     rimG.globalCompositeOperation = 'destination-out'; blit(rimG, silC, dx * K, dy * K);
     rimG.globalCompositeOperation = 'source-in'; rimG.fillStyle = col; rimG.fillRect(x, y, w, h);
     if (hb) { rimG.globalCompositeOperation = 'destination-out'; rimG.drawImage(heroSC, 0, 0, HB.w, HB.h, HB.x, HB.y, HB.w, HB.h); } // (none on the prince)

@@ -1139,14 +1139,19 @@ function buildBackground(themeId, seed) {
 }
 function drawWorld(themeId, camX, t) {
   const th = THEMES[themeId];
-  const g = ctx.createLinearGradient(0, Y_OFF, 0, FLOOR_TOP);
-  g.addColorStop(0, th.sky[0]); g.addColorStop(.45, th.sky[1]); g.addColorStop(.82, th.sky[2]); g.addColorStop(1, th.sky[3]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, VW, FLOOR_TOP);
   const sx = VW * th.sun[0] - camX * .02, sy = Y_OFF + VIEW_H * th.sun[1];
-  const sg = ctx.createRadialGradient(sx, sy, 4, sx, sy, 160); sg.addColorStop(0, `rgba(${th.sun[2]},.95)`); sg.addColorStop(.15, `rgba(${th.sun[2]},.5)`); sg.addColorStop(1, `rgba(${th.sun[2]},0)`);
-  ctx.fillStyle = sg; ctx.fillRect(sx - 160, sy - 160, 320, 320);
-  if (typeof WORLD_TILT !== 'undefined' && WORLD_TILT) { ctx.save(); ctx.translate(VW / 2, FLOOR_TOP); ctx.rotate(WORLD_TILT); ctx.scale(1.3, 1.3); ctx.translate(-VW / 2, -FLOOR_TOP); } // the deck banks: the world beyond the rail tilts
-  skyWash(camX);
+  const tilt = typeof WORLD_TILT !== 'undefined' && WORLD_TILT;
+  const sky = () => {
+    const g = ctx.createLinearGradient(0, Y_OFF, 0, FLOOR_TOP);
+    g.addColorStop(0, th.sky[0]); g.addColorStop(.45, th.sky[1]); g.addColorStop(.82, th.sky[2]); g.addColorStop(1, th.sky[3]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, FLOOR_TOP);
+    const sg = ctx.createRadialGradient(sx, sy, 4, sx, sy, 160); sg.addColorStop(0, `rgba(${th.sun[2]},.95)`); sg.addColorStop(.15, `rgba(${th.sun[2]},.5)`); sg.addColorStop(1, `rgba(${th.sun[2]},0)`);
+    ctx.fillStyle = sg; ctx.fillRect(sx - 160, sy - 160, 320, 320);
+    if (tilt) { ctx.save(); ctx.translate(VW / 2, FLOOR_TOP); ctx.rotate(WORLD_TILT); ctx.scale(1.3, 1.3); ctx.translate(-VW / 2, -FLOOR_TOP); } // the deck banks: the world beyond the rail tilts
+    skyWash(camX);
+  };
+  // the sky, its sun and its wash change only with the camera: kept while the view holds still (paint.js stillLayer)
+  if (tilt) sky(); else stillLayer('sky', themeId + '|' + camX + '|' + VW + '|' + Y_OFF + '|' + FLOOR_TOP, sky);
   const skyKind = th.skyKind || (themeId === 'prism' ? 'ribbons' : 'clouds'); // a locale may also paint its own live sky
   if (th.liveSky) th.liveSky(camX, t);
   else if (skyKind === 'none') {}
@@ -1176,11 +1181,14 @@ function drawFloor(themeId, th, camX, t) {
   drawFloorLayer(themeId, th, camX, t);
   DAB_X = 0;
   // the ground is brushed in too, and its near edge is modelled into shadow with fine strokes
-  ctx.save(); ctx.beginPath(); ctx.rect(0, FLOOR_TOP - 2, VW, VH - FLOOR_TOP + 2); ctx.clip();
-  ctx.translate(-(camX % 512), 0); ctx.fillStyle = texPat(ctx, 'brush');
-  ctx.save(); ctx.scale(.5, .5); ctx.fillRect(0, (FLOOR_TOP - 2) * 2, (VW + 512) * 2, (VH - FLOOR_TOP + 2) * 2); ctx.restore();
-  ctx.globalAlpha = .16; ctx.fillStyle = texPat(ctx, 'hatch'); ctx.scale(.5, .5); ctx.fillRect(0, (VH - 34) * 2, (VW + 512) * 2, 68);
-  ctx.restore();
+  // (kept while the view holds still: it changes only with the camera, and it is laid over the floor as it stands)
+  stillLayer('floorTex', camX + '|' + VW + '|' + FLOOR_TOP + '|' + VH, () => {
+    ctx.save(); ctx.beginPath(); ctx.rect(0, FLOOR_TOP - 2, VW, VH - FLOOR_TOP + 2); ctx.clip();
+    ctx.translate(-(camX % 512), 0); ctx.fillStyle = texPat(ctx, 'brush');
+    ctx.save(); ctx.scale(.5, .5); ctx.fillRect(0, (FLOOR_TOP - 2) * 2, (VW + 512) * 2, (VH - FLOOR_TOP + 2) * 2); ctx.restore();
+    ctx.globalAlpha = .16; ctx.fillStyle = texPat(ctx, 'hatch'); ctx.scale(.5, .5); ctx.fillRect(0, (VH - 34) * 2, (VW + 512) * 2, 68);
+    ctx.restore();
+  });
 }
 function drawFloorLayer(themeId, th, camX, t) {
   const fg = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH);

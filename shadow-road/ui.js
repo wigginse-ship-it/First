@@ -320,7 +320,7 @@ function frame(now) {
   }
 }
 function step(now) {
-  const rawDt = Math.min(.25, (now - last) / 1000); // real seconds, even if the frame rate drops
+  const gap = (now - last) / 1000, rawDt = Math.min(.25, gap); // real seconds, even if the frame rate drops
   let dt = Math.min(1 / 30, rawDt); last = now;
   const t = now / 1000;
   if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('#banner').classList.remove('on'); }
@@ -349,7 +349,7 @@ function step(now) {
     P.walk += dt * 8; updateFx(dt);
   }
   ctx.setTransform(K, 0, 0, K, 0, -Y_OFF * K);
-  if (stage && P) { drawScene(t); if (live) paintPerf(rawDt); }
+  if (stage && P) { drawScene(t); if (live) paintPerf(rawDt, gap); }
 }
 
 // ---------- boot ----------
