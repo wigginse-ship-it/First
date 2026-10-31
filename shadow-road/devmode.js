@@ -34,7 +34,10 @@
   function applyOpts() {
     save.started = true;
     save.cycle = Math.max(0, opts.cycle | 0);
-    if (opts.arsenal) { for (const id of WEAPON_ORDER) { save.owned[id] = true; save.wl[id] = Math.max(save.wl[id] || 1, WMAX()); } if (typeof ARROW_TIERS !== 'undefined') save.alv = ARROW_TIERS.length; }
+    // weapons: as saved, every one at its top level (and the best arrows), or one of them at its top level, in his hands
+    const A = opts.arsenal === true ? 'all' : opts.arsenal || '';
+    if (A === 'all') { for (const id of WEAPON_ORDER) { save.owned[id] = true; save.wl[id] = Math.max(save.wl[id] || 1, WMAX()); } if (typeof ARROW_TIERS !== 'undefined') save.alv = ARROW_TIERS.length; }
+    else if (A && WEAPONS[A]) { save.owned[A] = true; save.wl[A] = Math.max(save.wl[A] || 1, WMAX()); save.weapon = A; }
     // the relics of the road's ends: none, one of the three, or all three
     const R = opts.relic, all = R === 'all';
     save.silverArm = all || R === 'arm'; save.w7relic = all || R === 'pearl'; save.w8relic = all || R === 'horn';
@@ -87,7 +90,7 @@
       <div class="opts">
         <label><input type="checkbox" data-o="god"> Invincible</label>
         <label><input type="checkbox" data-o="elites"> Every foe armored</label>
-        <label><input type="checkbox" data-o="arsenal"> All weapons, max level, best arrows</label>
+        <label>Weapons <select data-o="arsenal"><option value="">(as saved)</option><option value="all">All weapons, max level, best arrows</option>${WEAPON_ORDER.filter(id => id !== 'fists' && id !== 'pearlw' && WEAPONS[id]).map(id => `<option value="${id}">${WEAPONS[id].name}, max level</option>`).join('')}</select></label>
         <label>Relic <select data-o="relic"><option value="">None</option><option value="arm">The Silver Arm (equipped)</option><option value="pearl">The Pearl of Judgement</option><option value="horn">The Horn of Lorraine</option><option value="all">All three</option></select></label>
         <label>Card <select data-o="card"><option value="">(as saved)</option>${TRUMP_ORDER.map(k => `<option value="${k}">${TRUMPS[k].name}</option>`).join('')}</select></label>
         <label>Card level <select data-o="clv">${[1, 2, 3].map(l => `<option value="${l}">${['I', 'II', 'III'][l - 1]}</option>`).join('')}</select></label>
@@ -115,8 +118,8 @@
       if (i === 4 && window.BRANCH) { const r2 = document.createElement('div'); r2.className = 'w'; r2.innerHTML = `<b>Trump choice</b><button data-a="choice">The deck on the Rim (after the dream)</button>`; list.appendChild(r2); }
     });
     for (const c of el.querySelectorAll('[data-o]')) {
-      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'card' || k === 'relic' ? String(opts[k] || '') : String(opts[k] | 0);
-      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' ? c.value : +c.value; syncDev(); keepOpts(); });
+      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'arsenal' ? (opts[k] === true ? 'all' : String(opts[k] || '')) : k === 'card' || k === 'relic' ? String(opts[k] || '') : String(opts[k] | 0);
+      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' || k === 'arsenal' ? c.value : +c.value; syncDev(); keepOpts(); });
     }
     for (const c of el.querySelectorAll('[data-p]')) { // the Pearl's New Game+ switches (PEARL_NG, w7_late.js): they take effect at once
       const k = c.dataset.p; c.checked = !!(window.pearlNG && pearlNG()[k]); // (as saved for dev games: an ordinary game ignores them)
