@@ -239,8 +239,8 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
     const M = MO, P = MO_PAD, n = M.U.length, VX = M.VX, VY = M.VY, U = M.U, V = M.V, IH = M.IH, q = M.IW / MO_W;
     const surge = (Math.sin(t * .37) * .6 + Math.sin(t * .23 + 1) * .4) * q; // the current's slow swell
     for (let k = 0; k < n; k++) { let dx = 0, dy = 0; const h = M.wh[k], c = M.wc[k], b = M.wb[k];
-      if (h) { const a = t * .85 - M.ph[k]; dx += h * ((7.5 * Math.sin(a) + 2.4 * Math.sin(a * 1.7 + 1.3)) * q + 4.5 * surge); dy += h * 4 * q * Math.cos(a * .8 + .5); }
-      if (c) { const a = t * .7 - M.ph[k]; dx += c * ((6.5 * Math.sin(a) + 1.8 * Math.sin(t * 1.3 + U[k] * .03)) * q + 3 * surge); dy += c * 3 * q * Math.cos(a * 1.1) * cl01((IH - V[k]) / (60 * q)); } // (the hem stays down at the frame)
+      if (h) { const a = t * .85 - M.ph[k]; dx += h * ((13 * Math.sin(a) + 4.2 * Math.sin(a * 1.7 + 1.3)) * q + 7.5 * surge); dy += h * 7 * q * Math.cos(a * .8 + .5); }
+      if (c) { const a = t * .7 - M.ph[k]; dx += c * ((11 * Math.sin(a) + 3.2 * Math.sin(t * 1.3 + U[k] * .03)) * q + 5.5 * surge); dy += c * 5.2 * q * Math.cos(a * 1.1) * cl01((IH - V[k]) / (60 * q)); } // (the hem stays down at the frame)
       if (b) dy -= b * 1.3 * q * (.5 + .5 * Math.sin(t * 1.25));
       VX[k] = x0 + (P + U[k] + dx) * s; VY[k] = y0 + (P + V[k] + dy) * s; }
     ctx.drawImage(M.B, x0, y0, M.B.width * s, M.B.height * s);
@@ -358,7 +358,17 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
     niche(g); { const gr = g.createRadialGradient(cx, asp + H * .1, 6, cx, asp + H * .1, aw * 1.3); gr.addColorStop(0, '#2C5A62'); gr.addColorStop(.6, '#16343E'); gr.addColorStop(1, '#0A1A22'); g.fillStyle = gr; g.fill(); }
     g.save(); niche(g); g.clip();
     g.strokeStyle = 'rgba(150,210,210,.08)'; g.lineWidth = 2; for (let x = cx - aw; x < cx + aw; x += 7) { g.beginPath(); g.moveTo(x, asp); g.lineTo(x, wall); g.stroke(); } // the niche's fluting below the shell
-    moireScallop(g, L, rnd);
+    // the back of the niche is open on the sea, and the castle on its cliff stands in it behind her, as in her picture's
+    // own window (moire_sea.webp); the scallop is kept as a rim of fluted shell round the head of the arch
+    if (MO.sea) { const top = asp - aR, h = (wall - top) * 1.02, w = h * MO.sea.width / MO.sea.height, y = top + (wall - top) * .02, x = cx - aw * .5 - w / 2;
+      { const sea = g.createLinearGradient(0, top, 0, wall); sea.addColorStop(0, '#6CC2CC'); sea.addColorStop(.35, '#2E8098'); sea.addColorStop(1, '#0E3246'); g.fillStyle = sea; g.fillRect(cx - aw - 2, top, aw * 2 + 4, wall - top); } // open water either side of it
+      { const [cc, c2] = texCanvas(Math.ceil(w * K), Math.ceil(h * K)); c2.scale(K, K); c2.drawImage(MO.sea, 0, 0, w, h); c2.globalCompositeOperation = 'destination-in'; // its edges feathered into the water
+        const fx = c2.createLinearGradient(0, 0, w, 0); fx.addColorStop(0, 'rgba(0,0,0,0)'); fx.addColorStop(.16, '#000'); fx.addColorStop(.84, '#000'); fx.addColorStop(1, 'rgba(0,0,0,0)'); c2.fillStyle = fx; c2.fillRect(0, 0, w, h);
+        g.drawImage(cc, x, y, w, h); retire(cc); }
+      const dm = g.createLinearGradient(0, y, 0, wall); dm.addColorStop(0, 'rgba(10,30,40,.25)'); dm.addColorStop(.55, 'rgba(10,30,40,.12)'); dm.addColorStop(1, 'rgba(6,18,26,.55)'); g.fillStyle = dm; g.fillRect(cx - aw - 2, top, aw * 2 + 4, wall - top); }
+    g.save(); g.beginPath(); g.ellipse(cx, asp, aw + 2, aR + 2, 0, Math.PI, 0); g.closePath(); if (MO.sea) { g.ellipse(cx, asp + 2, aw * .9, aR * .84, 0, 0, TAU); } g.clip('evenodd');
+    moireScallop(g, L, rnd); g.restore();
+    if (MO.sea) { g.strokeStyle = '#C8D8E0'; g.lineWidth = 2.4; g.beginPath(); g.ellipse(cx, asp + 2, aw * .9, aR * .84, 0, Math.PI, 0); g.stroke(); g.strokeStyle = MO_INK; g.lineWidth = .9; g.stroke(); } // the shell's inner lip
     { const hx = x0 + iw * .66, hy = L.iy - Y0 + L.ih * .2, gr = g.createRadialGradient(hx, hy, 4, hx, hy, aw * .9); gr.addColorStop(0, 'rgba(190,240,230,.35)'); gr.addColorStop(.5, 'rgba(120,200,200,.12)'); gr.addColorStop(1, 'rgba(120,200,200,0)'); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(cx - aw, 0, aw * 2, wall); g.globalCompositeOperation = 'source-over'; } // the glow behind her
     g.restore();
     niche(g, 6); g.strokeStyle = '#B4C8D2'; g.lineWidth = 7; g.stroke(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.2; g.stroke(); niche(g); g.strokeStyle = MO_INK; g.lineWidth = 1.3; g.stroke(); niche(g, 10); g.strokeStyle = MO_INK; g.lineWidth = 1; g.stroke(); // its archivolt
