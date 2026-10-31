@@ -46,7 +46,7 @@ function armorChip(e, dir) {
 // It is painted onto the floor itself (under every figure, outside the ink), and fades after a few seconds. Each world's
 // floor takes it its own way: stone, wood and street crack; moss, earth and mud give under it in a soft dent with the dirt
 // thrown up round it; the sea floor puffs up silt; the dream floor ripples like water.
-let craters = [];
+let craters = []; const KEEP_CRATERS = 30;
 function floorKind(id) {
   id = id || '';
   if (/^dream/.test(id)) return 'ripple';
@@ -63,7 +63,9 @@ function floorTone(th, y) { // the floor's own colour where the mark is, as #rrg
 function makeCrater(e, dir) {
   const id = stage ? stage.theme : '', th = THEMES[id], kind = floorKind(id), base = floorTone(th, e.y);
   const r = clamp(e.hw * 1.5 + 10, 24, 62) * (e.boss ? 1.3 : 1), sd = Math.random() * 1000;
-  const c = { x: e.x, y: e.y, r, kind, wet: /^lorraine/.test(id), grain: /^sky/.test(id), t: 0, max: kind === 'ripple' ? 3.6 : 4.6, sd,
+  // what pools in the bottom of the dent, from what was smashed into it: blood, oil, a glossy ooze, or grit of its own stuff
+  const mat = e.def.mat, stain = { fur: 'blood', flesh: 'blood', metal: 'oil', goo: 'ooze', spark: 'ooze', ghost: 'ooze', dream: 'ooze', w7brine: 'ooze', rock: 'grit', crystal: 'grit', china: 'grit', w7glass: 'grit', w7bronze: 'oil', w7nacre: 'grit', ash: 'grit', wood: 'grit' }[mat] || 'blood';
+  const c = { x: e.x, y: e.y, r, kind, wet: /^lorraine/.test(id), grain: /^sky/.test(id), t: 0, max: Infinity, sd, stain, scol: (MAT_COL[mat] || MAT_COL.fur)[0],
     dark: shade(base, -.62), deep: shade(base, -.8), lite: shade(base, .5), dust: shade(base, .32), clod: shade(base, -.3), cracks: [], chips: [], clods: [] };
   const h = (n) => { const v = Math.sin(sd + n * 12.9898) * 43758.5453; return v - Math.floor(v); };
   const jag = kind === 'crack' ? .16 : .06; c.rim = [];
@@ -82,7 +84,8 @@ function makeCrater(e, dir) {
   } else if (kind === 'soft' || kind === 'silt') {
     for (let i = 0; i < 11; i++) { const a = (i + h(i + 60) * .8) / 11 * TAU, d = r * (1.02 + h(i + 61) * .32); c.clods.push([Math.cos(a) * d, Math.sin(a) * d * .36, 2.4 + h(i + 62) * 3.4]); }
   }
-  craters.push(c); if (craters.length > 8) craters.shift();
+  craters.push(c); // the mark stays, as the fallen do; past the limit the oldest fades out
+  const live = craters.filter(o => o.max === Infinity); if (live.length > KEEP_CRATERS) live[0].max = live[0].t + 1.6;
   // pebbles or clods hop up off the floor round it (none on the dream's water-floor; the sea floor puffs up silt and bubbles)
   if (kind === 'crack' || kind === 'soft') {
     const cols = kind === 'soft' ? [c.clod, shade(base, -.45), shade(base, .15)] : [shade(base, -.2), shade(base, .25), c.dark];

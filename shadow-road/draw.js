@@ -678,7 +678,7 @@ function drawScene(t) {
 // ---------- the hammer's mark on the floor (craters: world.js makeCrater) ----------
 // painted straight onto the floor under every figure: a shallow dent (its far inner wall in shadow, its near inner wall
 // and far rim catching the light), and by the floor: cracks with pale edges and chips of rubble; a ring of thrown-up dirt;
-// rings rippling out over the dream's floor. It fades after a few seconds.
+// rings rippling out over the dream's floor. It stays, as the fallen do, with whatever pooled in it from the body.
 function drawCrater(c) {
   if (c.x < camX - 140 || c.x > camX + VW + 140) return;
   const t = c.t, A = Math.min(1, (c.max - t) / 1.6) * (c.kind === 'ripple' ? .55 : 1), s = .55 + .45 * ease(t / .09), x = c.x, y = c.y, rx = c.r * s, ry = rx * .36, lite = !CROWD;
@@ -693,6 +693,15 @@ function drawCrater(c) {
   ctx.save(); rim(1); ctx.clip();
   ctx.globalAlpha = A * .62; ctx.fillStyle = c.deep; ell(x, y - ry * .85, rx * 1.15, ry); ctx.fill();
   ctx.globalAlpha = A * .32; ctx.fillStyle = c.lite; ell(x + rx * .12, y + ry * 1.05, rx * .8, ry * .55); ctx.fill();
+  if (c.stain) { // what pooled in it from the body smashed in: settling in as the body flattens
+    const g = ease(Math.min(1, t / .6)), h = (n) => { const v = Math.sin(c.sd + n * 7.31) * 43758.5; return v - Math.floor(v); };
+    if (c.stain === 'grit') { ctx.globalAlpha = A * .9; ctx.fillStyle = c.scol; ctx.beginPath(); for (let i = 0; i < 9; i++) { const a = h(i) * TAU, d = h(i + 9) * .75, px = x + Math.cos(a) * rx * d, py = y + Math.sin(a) * ry * d, r = (1 + h(i + 18) * 1.8) * g; ctx.moveTo(px - r, py + r * .4); ctx.lineTo(px, py - r * .7); ctx.lineTo(px + r, py + r * .3); ctx.closePath(); } ctx.fill(); } // chips of what it was made of
+    else { const col = c.stain === 'blood' ? '#5A0A12' : c.stain === 'oil' ? '#0C0A10' : shade(c.scol, -.25), pr = rx * .62 * g;
+      ctx.globalAlpha = A * (c.stain === 'ooze' ? .72 : .8); ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x + rx * .04, y + ry * .25, pr, pr * .36, 0, 0, TAU); ctx.fill(); // pooled in the bottom of the dent
+      for (let i = 0; i < 5; i++) { const a = h(i + 30) * TAU, d = .35 + h(i + 31) * .4, r = pr * (.18 + h(i + 32) * .16); ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * pr * d * 1.1, y + ry * .25 + Math.sin(a) * pr * d * .4, r, r * .4, 0, 0, TAU); ctx.fill(); } // lobes, so it is no clean oval
+      if (c.stain === 'oil') { ctx.globalAlpha = A * .5; ctx.lineWidth = .8; ctx.strokeStyle = 'rgba(150,120,230,1)'; ctx.beginPath(); ctx.ellipse(x, y + ry * .2, pr * .6, pr * .2, 0, 3.4, 4.5); ctx.stroke(); ctx.strokeStyle = 'rgba(110,200,190,1)'; ctx.beginPath(); ctx.ellipse(x, y + ry * .2, pr * .6, pr * .2, 0, 4.5, 5.6); ctx.stroke(); } // a rainbow sheen
+      else if (c.stain === 'ooze' || c.stain === 'blood') { ctx.globalAlpha = A * (c.stain === 'ooze' ? .5 : .3); ctx.fillStyle = c.stain === 'ooze' ? shade(c.scol, .5) : '#C03040'; ctx.beginPath(); ctx.ellipse(x - pr * .25, y + ry * .12, pr * .28, pr * .07, 0, 0, TAU); ctx.fill(); } } // a wet glint
+  }
   if (c.wet) { ctx.globalAlpha = A * .45; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x + rx * .1, y + ry * .1, rx * .55, ry * .45, 0, .4, 1.5); ctx.stroke(); } // a wet sheen on mud
   ctx.restore();
   if (c.kind === 'crack' || c.kind === 'ripple') { // the rim: lit along its far edge, a dark line along its near one
@@ -704,6 +713,7 @@ function drawCrater(c) {
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (lite) { ctx.globalAlpha = A * .55; ctx.strokeStyle = c.lite; ctx.lineWidth = 1; path(.4, 1.1); ctx.stroke(); } // the pale lip on each crack's lit side
     ctx.globalAlpha = A * .85; ctx.strokeStyle = c.deep; ctx.lineWidth = 1.2; path(0, 0); ctx.stroke();
+    if (c.stain === 'blood' || c.stain === 'oil') { ctx.globalAlpha = A * .7 * ease(Math.min(1, t / 1.2)); ctx.strokeStyle = c.stain === 'blood' ? '#6A0C14' : '#0C0A10'; ctx.lineWidth = 1.6; path(0, 0, 2); ctx.stroke(); } // seeping a little way into the cracks
     ctx.lineWidth = 2.2; path(0, 0, 2); ctx.stroke(); // (wider where it leaves the dent)
     if (lite && c.chips.length) { ctx.globalAlpha = A; ctx.fillStyle = c.dark; ctx.beginPath(); for (const [cx, cy, r, an] of c.chips) { ctx.moveTo(x + cx - r, y + cy + .6); ctx.lineTo(x + cx + Math.cos(an) * r * .4, y + cy - r * .7 + .6); ctx.lineTo(x + cx + r, y + cy + .6); ctx.lineTo(x + cx, y + cy + r * .5 + .6); } ctx.fill();
       ctx.fillStyle = c.lite; ctx.beginPath(); for (const [cx, cy, r, an] of c.chips) { ctx.moveTo(x + cx - r * .8, y + cy); ctx.lineTo(x + cx + Math.cos(an) * r * .4, y + cy - r * .7); ctx.lineTo(x + cx + r * .7, y + cy - .2); ctx.lineTo(x + cx, y + cy + r * .1); } ctx.fill(); }

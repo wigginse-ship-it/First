@@ -29,7 +29,7 @@ function enterZone(z, Zs) { // Zs: a place outside the usual three (a hidden Tru
     else if (k.kind === 'gear') sweepGear(k); // armor left lying: into the bag, or salvaged if it is full
   }
   P.moonSaved = false; // a new place: moon-silver's refusal is ready again
-  enemies = []; projs = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; corpses = []; parts = []; fx = [];
+  enemies = []; projs = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; corpses = []; parts = []; fx = []; craters = [];
   props = stage.pods.map(x => ({ kind: 'pod', x, y: FLOOR_TOP + 46 + (x % 3) * 18, hp: 1, theme: baseStage.theme }));
   P.x = 50; P.vx = 0; camX = 0; lockX = null; waveIdx = 0; waveActive = false;
   setZoom(Z.boss ? VIEW_BOSS : VIEW_NORMAL);
