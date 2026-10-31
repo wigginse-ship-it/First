@@ -413,6 +413,10 @@ const BOW_TIERS = [ // H half-length; d the limbs' sweep back at rest, p its cur
   { H: 26.5, d: 9.4, p: 1.9, fx: 4.8, rc: 6, rs: .64, g: 5.4, wr: 4.3, wl: 3.3, wt: 1.3, col: ['#2A2236', '#6E5C92', '#140F1E'], str: '#D8C8F4' },
   { H: 29, d: 10, p: 1.6, fx: 5, rc: 3.6, rs: .72, g: 5.8, wr: 4.5, wl: 3.4, wt: 1.4, col: ['#C8D2EC', '#FFFFFF', '#8A96BC'], str: '#BFE0FF' },
 ];
+// each tier's bow a clear step longer than the last, the Pattern bow by far the biggest: the length grows, and the
+// limbs' sweep and recurve with it (a little less, so the longer bows read as longbows, not as the small ones blown up)
+[12, 16, 20.5, 25, 30, 35.5, 42].forEach((H, i) => { const B = BOW_TIERS[i], r = H / B.H, q = Math.pow(r, .7);
+  B.H = H; B.d *= q; B.fx *= q; B.rc *= q; B.g *= Math.pow(r, .4); });
 function bowPos(B, u, k) {
   const a = Math.abs(u), g = B.g / B.H, s = Math.max(0, (a - g) / (1 - g)), q = Math.max(0, (s - B.rs) / (1 - B.rs));
   return [BOW_R - (B.d + B.fx * k) * Math.pow(s, B.p) + B.rc * (1 - .45 * k) * q * q, (u < 0 ? -1 : 1) * a * B.H * (1 - .04 * k), s];

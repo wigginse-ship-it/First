@@ -1143,23 +1143,25 @@
   // the whole figure. o: { form, walk, t, lean, crook (angle), farUp (0..1), head tilt, open, kneel (0..1), book (0..1) }
   function goatLord(o) {
     const t = o.t || 0, form = o.form || 1, sw = Math.sin(o.walk || 0) * 6, kneel = o.kneel || 0, burn = form >= 3 ? .8 : 0, hs = form >= 3 ? 1.35 : 1;
+    // crouch (0..1): the haunches dropped, gathered for a spring or taking a landing; tuck (0..1): the hooves drawn up in a leap
+    const crouch = o.crouch || 0, tuck = o.tuck || 0;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    const hip = [0, -40 + kneel * 18], lean = o.lean || 0;
-    goatLeg(-3, hip[1], kneel ? -16 : -sw - 4, 0, '#2E2620', false);
+    const hip = [0, -40 + kneel * 18 + crouch * 12], lean = o.lean || 0;
+    goatLeg(-3, hip[1], kneel ? -16 : lerp(-sw - 4 - crouch * 7, -15, tuck), -tuck * 12, '#2E2620', false);
     // the far arm: a hand open in a sign, or on the book
     const sh = [lean * 50 - 6, hip[1] - 32];
     { const up = o.farUp || 0, hx = sh[0] - 8 + up * 30, hy = sh[1] + 22 - up * 40; limb3(sh[0], sh[1], lerp(sh[0] - 8, sh[0] + 6, up), lerp(sh[1] + 12, sh[1] - 10, up), hx, hy, 6, 5, 4, GL.copeDk);
       cel(PB([hx - 3, hy + 2, hx - 2, hy - 4, hx + 2, hy - 6, hx + 5, hy - 2, hx + 3, hy + 3]), form >= 3 ? '#1C1816' : GL.skin, { d: .8, r: .4, w: 1.1 });
       if (up > .4 && (o.sign ?? 1) > 0 && DET()) { ctx.strokeStyle = `rgba(20,16,12,${up})`; ctx.lineWidth = 1.4; circle(hx + 1, hy - 1, 2.6); ctx.stroke(); } } // the ring drawn on his palm
     ctx.save(); ctx.translate(0, hip[1]); ctx.rotate(lean); ctx.translate(0, -hip[1]);
-    ctx.translate(0, kneel * 18);
+    ctx.translate(0, kneel * 18 + crouch * 12);
     cel(PB([-12, -66, 12, -66, 14, -40, 10, -20, -10, -20, -14, -40]), GL.robe, { d: 2, r: .8, w: 1.4, lite: '#3E3836' });
     cope(sw * .4 - kneel * 2, burn, form >= 3 ? 6 : 0);
     // the morse: a gold clasp holding the cope at his breast, set with a black stone
     cel(PE(1, -62, 5, 4), '#C9982E', { d: 1, r: .6, w: 1.2, lite: '#FFE8A0' }); ctx.fillStyle = C('#140E0A'); circle(1, -62, 2.2); ctx.fill();
     goatHead(4, -76, 1, { horns: hs, rage: form >= 3 ? 1 : 0, open: o.open || 0, tilt: o.tilt || 0, charge: o.book ? o.charge || 0 : 0, t: o.t });
     ctx.restore();
-    if (!kneel) goatLeg(3, hip[1], sw + 5, 0, '#3E342C', true);
+    if (!kneel) goatLeg(3, hip[1], lerp(sw + 5 + crouch * 7, 10, tuck), -tuck * 22, '#3E342C', true);
     // the near arm and the crozier (or, kneeling, the book)
     const nsh = [lean * 50 + 8, hip[1] - 30 + kneel * 18];
     if (o.book) { const bx = nsh[0] + 14, by = nsh[1] + 14; limb3(nsh[0], nsh[1], nsh[0] + 8, nsh[1] + 12, bx, by, 6, 5, 4, GL.cope);
@@ -1193,6 +1195,22 @@
     if (W('w8hands') || A('hands')) { o.crook = lerp(-1.3, 1.45, W('w8hands') ? sm(wind) : 1); o.lean = .2; o.crookGlow = 1; }
     if (W('w8close') || A('close')) { o.farUp = 1; o.sign = 1; o.crook = -2.4; o.tilt = -.3; o.open = .5; }
     if (form === 4) { o.kneel = 1; o.book = 1; o.crook = 0; if (A('curse') || W('w8curse')) { o.open = .6 + Math.sin(t * 14) * .3; o.tilt = -.15; } if (A('spent')) { o.book = .3; o.tilt = .5; o.lean = .2; } if (W('w8word') || A('word')) { o.farUp = 1; o.sign = 0; } }
+    // stalking round you between blows: head low, the crozier held out before him
+    if (st === 'idle' && e.w8stalk) { o.lean = .1; o.tilt = .22; o.crook = -1.0; }
+    // the ram: pawing the ground, then horns down at a run; at the end he skids, and shakes his head
+    if (W('w8ram')) { o.lean = .3 * wind; o.tilt = .65 * wind; o.crouch = .35 * wind; o.crook = lerp(-1.3, -2.5, sm(wind)); o.walk = Math.sin(t * 11) * .9; }
+    if (A('ram')) { const ph = e.w8rph;
+      if (!ph) { o.lean = .5; o.tilt = .8; o.crook = -2.6; o.crouch = .2; o.walk = e.walk || 0; }
+      else if (ph === 'skid') { o.lean = -.12; o.tilt = -.15; o.crouch = .6; o.crook = .9; o.walk = .6; }
+      else { o.tilt = .3 + Math.sin(t * 15) * .25; o.lean = .08; o.crouch = .25; o.crook = -1.0; } }
+    // a leap (in every shape): gathered on his haunches, then up with the hooves drawn under him, then down hard on
+    // the crozier's foot. A hop back is the same, smaller
+    if (e.w8lp) { const lk = cl01(e.w8lk || 0), hop = e.w8hop;
+      o.kneel = 0;
+      if (e.w8lp === 'crouch') { o.crouch = sm(lk) * (hop ? .6 : 1); o.lean = .22 * lk; o.tilt = .35 * lk; o.crook = lerp(-1.3, -2.4, sm(lk)); o.farUp = .3 * lk; o.sign = 0; }
+      else if (e.w8lp === 'air') { o.tuck = Math.min(1, lk * 5) * (1 - sm((lk - .72) / .28)) * (hop ? .6 : 1); o.lean = lerp(.25, -.12, lk); o.tilt = lerp(.1, -.3, sm(lk * 1.4)) + sm((lk - .6) / .4) * .45; o.crook = lerp(-2.5, -.8, sm(lk)); o.farUp = .8; o.sign = 0; }
+      else { const u = sm(lk); o.crouch = (1 - u) * (hop ? .5 : 1); o.lean = .18 * (1 - u); o.tilt = .3 * (1 - u); o.crook = lerp(1.25, -1.3, u); o.farUp = .4 * (1 - u); o.sign = 0; } }
+    if (form === 4 && e.w8m === 'kneel') { o.kneel = 1; o.tilt = .2 * (1 - cl01((e.w8t || 0) / .55)); }
     return o;
   }
   CREATURES.w8goat = function (e, a) {
@@ -1921,8 +1939,8 @@
   const formOf = (e) => (e && e.w8form) || 1;
   Object.defineProperty(B, 'name', { get() { return SHAPE[formOf(typeof boss !== 'undefined' ? boss : null)].name; }, configurable: true });
   Object.defineProperty(B, 'title', { get() { return SHAPE[formOf(typeof boss !== 'undefined' ? boss : null)].title; }, configurable: true });
-  Object.assign(BOSS_WIND, { w8crook: 1.0, w8bind: 1.2, w8butt: 1.0, w8bleat: .85, w8gore: 1.15, w8hands: 1.15, w8bind2: 1.4, w8close: 1.6 });
-  const KINDS = new Set(['w8bindring', 'w8bleatring', 'w8hands', 'w8walls', 'w8bale', 'w8mill', 'w8scroll', 'w8word', 'w8lanes']);
+  Object.assign(BOSS_WIND, { w8crook: 1.0, w8bind: 1.2, w8butt: 1.0, w8bleat: .85, w8gore: 1.15, w8hands: 1.15, w8bind2: 1.4, w8close: 1.6, w8ram: 1.0 });
+  const KINDS = new Set(['w8bindring', 'w8bleatring', 'w8hands', 'w8walls', 'w8bale', 'w8mill', 'w8scroll', 'w8word', 'w8lanes', 'w8mark', 'w8stamp']);
   const arenaL = () => (lockX ?? camX), arenaR = () => (lockX ?? camX) + VW;
   const ENG = W8.eng = { arm: 0, rise: 0, x: 0, y: 0 };
   const LANES = () => [0, 1, 2, 3].map(i => FLOOR_TOP + 16 + i * 28);
@@ -1932,6 +1950,7 @@
   function startMorph(e, f) {
     e.w8from = formOf(e); e.w8form = f; e.phase = Math.min(3, f); e.state = 'w8morph'; e.w8mt = 0; e.w8mmax = f === 2 ? 2.6 : f === 3 ? 3 : 3.2; e.plan = null; e.w8T = null;
     e.rotA = 0; e.spin = 0; e.air = false; e.vz = 0; e.vx = 0; e.walk = 0; e.enraged = false; e.rageT = 0; e.rageQ = false; e.w8onEngine = 0; e.w8lift = 0; e.flash = 0;
+    e.w8fl = null; e.w8lp = null; e.w8rph = null; e.w8stalk = 0; e.z = 0; e.w8mv = 2;
     hazards = hazards.filter(h => !(h.kind === 'w8ctl' && h.e === e) && !KINDS.has(h.kind)); projs = projs.filter(p => p.owner !== 'e');
     e.w8x0 = e.x; e.w8y0 = e.y; e.w8z0 = e.z;
     sfx('roar'); slowmo = Math.max(slowmo, .5); shakeMag = Math.max(shakeMag, 8); ash(e.x, e.y, 30, 24);
@@ -1973,6 +1992,8 @@
     if (isGoat(e) && !e.dead) {
       const f = formOf(e);
       if (e.state === 'w8morph') return;
+      // in the air, in a leap, a blow lands but does not stop him
+      if (e.z > 6 && (e.w8fl || (e.state === 'w8act' && OWN.has(e.w8a)))) m = Object.assign({}, m, { noStun: 1 });
       if (f === 2 && e.w8onEngine) { if (!(e.w8msg > performance.now())) { e.w8msg = performance.now() + 900; floatText(e.x, e.y, e.hh + 50, 'OUT OF REACH · WAIT FOR HIM AT THE WINDLASS', '#E8D8B0', 12); } return; }
       if (f === 2) { dmg = Math.round(dmg * (e.w8m === 'crank' || e.w8m === 'bleatC' ? 1.6 : 1)); m = Object.assign({}, m, { noStun: 1 }); }
       if (f === 4) { dmg = Math.round(dmg * (e.w8m === 'spent' ? 1.6 : .5)); m = Object.assign({}, m, { noStun: 1 }); }
@@ -1995,7 +2016,14 @@
     if (want > f && e.state !== 'enter' && e.state !== 'w8act') { startMorph(e, f + 1); return; }
     if (f === 2) { titheStep(e, dt); return; }
     if (f === 4) { curseStep(e, dt); return; }
+    e.w8stalk = 0; e.w8mv = (e.w8mv || 0) - dt;
+    // in a leap or a hop he flies on his own line: none of the world's falling and sliding
+    if (e.state === 'w8act' && OWN.has(e.w8a)) { ownTick(e, dt); return; }
+    if (e.state === 'idle' && inView(e) && startMove(e)) return;
+    const was = e.state, x0 = e.x, y0 = e.y, w0 = e.walk;
     _upd(e, dt);
+    // between blows, instead of walking to the length of his attack and standing there, he stalks round you
+    if (was === 'idle' && e.state === 'idle' && inView(e) && e.plan !== 'roar' && P.state !== 'dead') { e.x = x0; e.y = y0; e.walk = w0; steer(e, dt); }
     if (e.state === 'recover' && e.w8was !== 'recover') e.cd = Math.max(e.cd, f === 3 ? .5 : .7); // after each attack, a breath: your opening
     e.w8was = e.state;
   };
@@ -2067,6 +2095,133 @@
     draw(h, t) { ctx.save(); ctx.strokeStyle = 'rgba(30,24,20,.7)'; ctx.lineWidth = 4; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke(); ctx.strokeStyle = 'rgba(232,220,196,.6)'; ctx.lineWidth = 1.4; ell(h.x, h.y, h.r - 3, (h.r - 3) / 2.2); ctx.stroke(); ctx.restore(); },
   });
 
+  // ================= HOW HE GOES ABOUT THE FIELD (every shape) =================
+  // he is a goat, and he does not stand and wait for you. Between blows he stalks round you at the length of his next
+  // one. He crosses the field in a bound and comes down beside you, or over you, with a stamp that runs out along the
+  // ground (the spot he will land on is marked from the moment he gathers himself, the reach of the stamp with it: jump
+  // the ring). Crowded, he hops back out of your reach to cast, and against the edge of the field he bounds over you to
+  // the open side. From across the field he paws the ground and rams straight through where you stand and out past you.
+  // After each bound or ram he is a moment finding his feet: that is your opening. (Up on his engine he bounds onto it
+  // and off it; on his knees with his book he gets up between readings and bounds to another place to read from.)
+  const OWN = new Set(['leap', 'hop']);
+  const CAST = new Set(['w8bind', 'w8bind2', 'w8hands', 'w8close']);
+  const inX = (x) => clamp(x, arenaL() + 50, arenaR() - 50), inY = (y) => clamp(y, FLOOR_TOP + 14, FLOOR_BOT - 6);
+  const inView = (e) => e.x >= camX + 26 + e.hw && e.x <= camX + VW - 26 - e.hw;
+  const STAMP_R = 120;
+  // a leap, kept in e.w8fl: he gathers himself (cr s), flies (fl s) in an arc H high, and comes down
+  function leapStart(e, x1, y1, o = {}) {
+    const L = e.w8fl = Object.assign({ x0: e.x, y0: e.y, z0: e.z || 0, x1, y1, z1: 0, H: 130, cr: .5, fl: .7, el: 0, wave: 1 }, o);
+    e.w8hop = !!o.hop; e.w8lp = 'crouch'; e.w8lk = 0;
+    if (!o.face) e.facing = Math.sign(x1 - e.x) || e.facing;
+    if (o.mark !== false && o.mark !== 0) hazards.push({ kind: 'w8mark', e, L, x: x1, y: y1, t: L.cr + L.fl, max: L.cr + L.fl, r: L.wave ? 40 : 28, R: L.wave ? STAMP_R : 0 });
+    sfx('growl'); return L;
+  }
+  // one frame of it: 'crouch', 'air', 'land' (the frame he comes down), or 'none'
+  function leapStep(e, dt) {
+    const L = e.w8fl; if (!L) return 'none'; L.el += dt;
+    if (L.face) e.facing = Math.sign(P.x - e.x) || e.facing;
+    if (L.el < L.cr) { const k = sm(L.el / L.cr); e.w8lp = 'crouch'; e.w8lk = L.el / L.cr; e.sqx = 1 + .08 * k; e.sqy = 1 - .1 * k; if (Math.random() < .3) dust(e.x + rand(-12, 12), e.y, 1); return 'crouch'; }
+    const u = (L.el - L.cr) / L.fl;
+    if (u < 1) { if (!L.up) { L.up = 1; sfx('whoosh'); for (let i = 0; i < 7; i++) dust(e.x + rand(-16, 16), e.y, 1); e.sqx = .86; e.sqy = 1.16; }
+      e.w8lp = 'air'; e.w8lk = u; e.x = lerp(L.x0, L.x1, u); e.y = lerp(L.y0, L.y1, u); e.z = lerp(L.z0, L.z1, u) + Math.sin(u * Math.PI) * L.H; return 'air'; }
+    e.x = L.x1; e.y = L.y1; e.z = L.z1; e.w8fl = null; e.w8lp = null; e.w8hop = false;
+    e.sqx = L.wave ? 1.3 : 1.15; e.sqy = L.wave ? .7 : .85; sfx('slam', L.wave ? 1 : .4); shakeMag = Math.max(shakeMag, L.wave ? 7 : 2.5);
+    for (let i = 0; i < (L.wave ? 14 : 5); i++) dust(e.x + rand(-24, 24), e.y + rand(-4, 4), 1);
+    if (L.wave) stamp(e, L.x1, L.y1);
+    return 'land';
+  }
+  // where he will come down: the hoof-ring, and (dashed) how far the stamp will run out
+  reg('w8mark', {
+    update(h, dt) { if (h.e.w8fl !== h.L) h.t = -1; },
+    draw(h, t) { const k = 1 - h.t / h.max; ring(h.x, h.y, h.r, k);
+      if (h.R) { ctx.save(); ctx.setLineDash([4, 5]); ctx.strokeStyle = `rgba(232,220,196,${.2 + .4 * k})`; ctx.lineWidth = 1.2; ell(h.x, h.y, h.R, h.R / 2.2); ctx.stroke(); ctx.restore(); }
+      ctx.fillStyle = `rgba(30,22,18,${.3 + .4 * k})`; for (const s of [-1, 1]) { ell(h.x + s * 4, h.y, 2.6, 1.6); ctx.fill(); } },
+  });
+  // the stamp: a ring of dust and cracked ground running out from where he lands (moderate: jump it, or be out of it)
+  function stamp(e, x, y) { hazards.push({ kind: 'w8stamp', x, y, r: 24, R: STAMP_R, el: 0, t: 1, max: 1, dmg: Math.min(Math.round(edmg(e) * .6), Math.round(maxHp() * .2)) });
+    fx.push({ kind: 'ring', x, y, z: 2, t: .3, max: .3, r: 50, col: '#E8DCC4', flat: 1 }); ash(x, y, 4, 8); }
+  reg('w8stamp', {
+    update(h, dt) { h.el += dt; const u = cl01(h.el / .4); h.r = lerp(24, h.R, u);
+      if (!h.hit && alive()) { const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2);
+        if ((h.el < .06 && d < 40 && P.z < 30) || (u < 1 && Math.abs(d - h.r) < 16 && P.z < 12)) { h.hit = 1; hitP(h.dmg, h.x, true); } }
+      if (h.el > .75) h.t = -1; },
+    draw(h, t) { const a = 1 - cl01((h.el - .3) / .45); ctx.save();
+      ctx.strokeStyle = `rgba(58,46,34,${.75 * a})`; ctx.lineWidth = 5; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke();
+      ctx.strokeStyle = `rgba(226,214,190,${.6 * a})`; ctx.lineWidth = 1.4; ell(h.x, h.y, h.r - 3, (h.r - 3) / 2.2); ctx.stroke();
+      ctx.strokeStyle = `rgba(24,18,14,${.6 * a})`; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 8; i++) { const an = i / 8 * TAU + .3, r0 = 14, r1 = Math.min(h.r, 46) * (.7 + hsh(i) * .4); ctx.moveTo(h.x + Math.cos(an) * r0, h.y + Math.sin(an) * r0 / 2.2); ctx.lineTo(h.x + Math.cos(an + .15) * r1, h.y + Math.sin(an + .15) * r1 / 2.2); } ctx.stroke();
+      ctx.restore(); },
+  });
+  // in his first and third shapes a leap is an attack of his own: the leap, then a moment finding his feet
+  function bound(e, x1, y1, o = {}) {
+    x1 = inX(x1); y1 = inY(y1); const rec = o.rec ?? (formOf(e) === 3 ? .7 : .9);
+    let L, landAt = -1;
+    act(e, o.hop ? 'hop' : 'leap', (h, dt, e) => {
+      if (landAt < 0) { if (leapStep(e, dt) !== 'land') return false; landAt = h.el; }
+      e.w8lp = 'land'; e.w8lk = (h.el - landAt) / rec; e.w8hop = !!o.hop; if (o.hop) e.facing = Math.sign(P.x - e.x) || e.facing;
+      if (h.el - landAt >= rec) { e.w8lp = null; e.w8hop = false; e.state = 'idle'; e.cd = o.cd ?? Math.max(.25, Math.min(e.cd, .4)); return true; }
+      return false; });
+    L = leapStart(e, x1, y1, o); return L;
+  }
+  // a leap's frame, outside the world's physics (its timers still run)
+  function ownTick(e, dt) {
+    decay(e, dt);
+    e.cd -= dt * [1, 1.35, 1.7][e.phase - 1]; e.closeCd = Math.max(0, (e.closeCd || 0) - dt); e.rageT = Math.max(0, (e.rageT || 0) - dt); e.enraged = e.rageT > 0;
+    if (!e.w8fl && e.w8lp !== 'land') e.z = Math.max(0, e.z - dt * 300);
+  }
+  // what he does next, when he is free to choose: true if he has set off on something
+  function startMove(e) {
+    if (e.w8mv > 0 || P.state === 'dead' || e.rageQ || e.plan === 'roar' || stillT > 0) return false;
+    if (!e.plan) e.plan = pick(e.def.p1);
+    const f = formOf(e), dx = P.x - e.x, adx = Math.abs(dx), ady = Math.abs(P.y - e.y), sk = f === 3 ? .8 : 1;
+    const mv = (a, b) => { e.w8mv = rand(a, b) * sk; return true; };
+    const want = Math.max(150, e.def.reach * .75 + e.hw * .5), back = Math.sign(e.x - P.x) || 1;
+    const crowded = adx < e.hw + 60 && ady < 40;
+    if (crowded) {
+      if (e.cd <= 0 && (e.closeCd || 0) <= 0) return false;
+      if (!CAST.has(e.plan) && Math.random() < .25) { e.w8mv = .9; return false; }
+      // he backs off to keep his distance: a hop back, or, with the edge of the field at his back, a bound over you
+      const tx = P.x + back * want;
+      if (tx > arenaL() + 50 && tx < arenaR() - 50) { bound(e, tx, e.y + rand(-18, 18), { hop: 1, face: 1, H: 46, cr: .22, fl: .45, wave: 0, mark: 0, rec: .25, cd: 0 }); return mv(1.6, 2.4); }
+      bound(e, P.x - back * want, P.y + rand(-12, 12), { H: 128, cr: .55, fl: .75 }); return mv(2.4, 3.4);
+    }
+    const r = Math.random();
+    if (adx > 300 || r < .3) { // a bound: across the field to you, landing beside you or, now and then, over you
+      const over = Math.random() < .4, sd = back * (over ? -1 : 1); let tx = P.x + sd * 115;
+      if (tx < arenaL() + 50 || tx > arenaR() - 50) tx = P.x - sd * 115;
+      bound(e, tx, P.y + rand(-14, 14), { H: adx > 260 ? 128 : 110, cr: f === 3 ? .45 : .55, fl: adx > 260 ? .8 : .65 }); return mv(2.4, 3.4);
+    }
+    if (adx > 150 && adx < 420 && ady < 60 && r < .62) { e.plan = 'w8ram'; e.w8T = null; e.facing = Math.sign(dx) || e.facing; wind(e, 1); return mv(3, 4); }
+    e.w8mv = rand(.5, 1.1); return false;
+  }
+  // between blows: he lines up his next at its length (going round you to the open side if the edge of the field is at
+  // his back), and while it is not yet ready he stalks round you there, sidelong, never standing still
+  function steer(e, dt) {
+    const dx = P.x - e.x, dy = P.y - e.y, want = e.def.reach * .75 + e.hw * .5, lo = camX + 26 + e.hw, hi = camX + VW - 26 - e.hw;
+    let side = e.w8sideP === e.plan && e.w8side ? e.w8side : (Math.sign(e.x - P.x) || 1);
+    if (P.x + side * want < lo || P.x + side * want > hi) side = -side;
+    e.w8side = side; e.w8sideP = e.plan;
+    const tx = clamp(P.x + side * want, lo, hi), crossing = Math.sign(e.x - P.x) !== side && Math.abs(dx) < 60;
+    e.w8orb = (e.w8orb || 0) + dt * 1.4;
+    if (e.cd > 0) { e.w8stalk = 1; approach(e, tx + Math.cos(e.w8orb) * 24 * side, inY(P.y + Math.sin(e.w8orb) * 42 + (crossing ? 50 : 0)), dt, 1.25); e.facing = Math.sign(P.x - e.x) || e.facing; return; }
+    if (Math.abs(e.x - tx) < 12 && Math.abs(dy) < 8) { e.facing = Math.sign(dx) || e.facing; wind(e, e.def.wind); return; }
+    approach(e, tx, inY(P.y + (crossing ? 50 : 0)), dt, 1.4); e.facing = Math.sign(P.x - e.x) || e.facing;
+  }
+  // THE RAM: he paws the ground with his head down (the lane he will take shows, out past you), then runs straight
+  // through where you stand and on beyond; he skids, and stands a moment shaking his horns (hit him then)
+  W8.AIM8.w8ram = (e, k) => { const T0 = (e.w8T && e.w8T.plan === 'w8ram') ? e.w8T : (e.w8T = { plan: 'w8ram', x1: e.x, dir: e.facing });
+    if (k < .55) { e.y += clamp(P.y - e.y, -1, 1); const d = Math.sign(P.x - e.x) || T0.dir; T0.dir = d; T0.x1 = clamp(P.x + d * 150, arenaL() + 40, arenaR() - 40); }
+    if (Math.random() < .25) dust(e.x - T0.dir * 14, e.y, 1); };
+  TELL_FX.w8ram = (e, t, k) => { const T0 = e.w8T; if (!T0 || T0.plan !== 'w8ram') return; lane(e.x, T0.x1, e.y, 20, k); label((e.x + T0.x1) / 2, e.y - 26, 'THE RAM', .5 + .5 * k); };
+  PLAN_FX.w8ram = (e) => { const T0 = e.w8T && e.w8T.plan === 'w8ram' ? e.w8T : { x1: e.x + e.facing * 300 }; e.w8T = null;
+    const x1 = T0.x1, dir = Math.sign(x1 - e.x) || e.facing, sp = formOf(e) === 3 ? 560 : 500; let ph = 0, t0 = 0; sfx('roar'); e.w8rph = null;
+    act(e, 'ram', (h, dt, e) => { e.facing = dir;
+      if (!ph) { e.walk += dt * 18; e.x += dir * sp * dt; if (Math.random() < .8) dust(e.x - dir * 18, e.y, 1);
+        if (!h.hit && Math.abs(P.x - e.x) < e.hw + 16 && Math.abs(P.y - e.y) < 22 && P.z < 30) { h.hit = 1; hitP(Math.min(Math.round(edmg(e) * 1.05), Math.round(maxHp() * .25)), e.x, true, { kind: 'melee', e }); }
+        if ((x1 - e.x) * dir <= 0 || e.x < arenaL() + 30 || e.x > arenaR() - 30 || h.el > 2) { e.x = clamp(e.x, arenaL() + 30, arenaR() - 30); ph = 1; t0 = h.el; sfx('slam', .5); shakeMag = Math.max(shakeMag, 3); } return false; }
+      if (ph === 1) { const u = (h.el - t0) / .35; e.w8rph = 'skid'; e.x = clamp(e.x + dir * sp * .4 * (1 - u) * dt, arenaL() + 30, arenaR() - 30); if (Math.random() < .9) dust(e.x + dir * 12, e.y, 1); if (u >= 1) { ph = 2; t0 = h.el; } return false; }
+      e.w8rph = 'reel'; if (h.el - t0 > .85) { e.w8rph = null; recover(e, .2); return true; } return false; },
+      { draw(h, t) { if (!ph) lane(h.e.x, x1, h.e.y, 20, .6); } }); };
+
   // ================= SECOND SHAPE: THE TITHE OF LORRAINE =================
   // up on his engine he throws what the Circle took (burning hay, millstones); after three throws he must come down
   // and wind it, and then he is in reach
@@ -2075,17 +2230,27 @@
     ENG.x = arenaL() + VW * .72; ENG.y = FLOOR_TOP + 14; ENG.rise = Math.min(1, ENG.rise + dt);
     e.w8t = (e.w8t || 0) + dt;
     if (e.w8m === 'toEngine') { const tx = ENG.x, ty = ENG.y + 2; e.facing = Math.sign(P.x - e.x) || e.facing;
+      // from the windlass (or anywhere on the field) he goes up onto his engine in one bound
+      if (Math.abs(e.x - tx) > 30 || Math.abs(e.y - ty) > 12) { e.w8m = 'leapUp'; e.w8onEngine = 0; e.w8lift = 0; leapStart(e, tx, ty, { z1: 36, H: 70, cr: .4, fl: .6, wave: 0, mark: 0 }); return; }
       if (Math.abs(e.x - tx) > 6 || Math.abs(e.y - ty) > 4) { e.x += Math.sign(tx - e.x) * Math.min(Math.abs(tx - e.x), 140 * dt); e.y += Math.sign(ty - e.y) * Math.min(Math.abs(ty - e.y), 60 * dt); e.walk += dt * 9; return; }
       e.w8lift = Math.min(36, (e.w8lift || 0) + dt * 120); if (e.w8lift >= 36) { e.w8onEngine = 1; e.w8m = 'volley'; e.w8t = 0; e.w8vol = 0; } return; }
-    if (e.w8m === 'volley') { e.facing = Math.sign(P.x - e.x) || e.facing; e.x = ENG.x; e.y = ENG.y + 2; e.w8lift = 36; e.w8onEngine = 1;
+    if (e.w8m === 'leapUp') { if (leapStep(e, dt) === 'land') { e.z = 0; e.w8lift = 36; e.w8onEngine = 1; e.w8m = 'volley'; e.w8t = 0; e.w8vol = 0; sfx('crunch'); } return; }
+    if (e.w8m === 'volley') { e.facing = Math.sign(P.x - e.x) || e.facing; e.w8lift = 36; e.w8onEngine = 1; e.z = 0;
+      // he paces the platform between throws, from one end of it to the other
+      e.w8pace = (e.w8pace || 0) + dt * 1.6; const px = ENG.x + Math.sin(e.w8pace) * 20; e.walk += Math.abs(px - e.x) * .35; e.x = px; e.y = ENG.y + 2;
       ENG.arm = Math.max(0, ENG.arm - dt * .9);
       if (e.w8t > (e.w8vol ? 2.2 : 1) && !hazards.some(h => h.kind === 'w8lanes' || (h.kind === 'w8bale' && !h.landed) || h.kind === 'w8mill')) { e.w8t = 0;
         if (e.w8vol >= (e.w8cyc >= 3 ? 3 : 2)) { e.w8m = 'down'; return; }
         e.w8vol++; (e.w8vol % 2 ? throwBales : throwMills)(e); }
       return; }
-    if (e.w8m === 'down') { e.w8lift = Math.max(0, e.w8lift - dt * 110); if (e.w8lift < 18) e.w8onEngine = 0; const tx = ENG.x - 40; e.x += Math.sign(tx - e.x) * Math.min(Math.abs(tx - e.x), 120 * dt); e.y = ENG.y + 6;
-      if (e.w8lift <= 0 && Math.abs(e.x - tx) < 4) { e.w8m = 'crank'; e.w8t = 0; e.w8onEngine = 0; floatText(e.x, e.y, e.hh + 40, 'HE WINDS THE ENGINE · NOW', '#FFE0A0', 15); sfx('crunch');
-      } return; }
+    // his throws spent, he leaps down off the engine at you (where he will land is marked, and the stamp's reach), finds
+    // his feet (hit him), and hops across to the windlass to wind it
+    if (e.w8m === 'down') { const sd = Math.sign(ENG.x - P.x) || 1; let tx = P.x + sd * 100; if (tx < arenaL() + 50 || tx > arenaR() - 50) tx = P.x - sd * 100;
+      e.z = e.w8lift || 36; e.w8lift = 0; leapStart(e, inX(tx), inY(P.y), { H: 80, cr: .55, fl: .7 }); e.w8m = 'leapDown'; return; }
+    if (e.w8m === 'leapDown') { const r = leapStep(e, dt); e.w8onEngine = r === 'crouch' ? 1 : 0; if (r === 'land') { e.w8m = 'landed'; e.w8t = 0; e.w8lp = 'land'; } return; }
+    if (e.w8m === 'landed') { e.w8lp = 'land'; e.w8lk = e.w8t / .9; e.facing = Math.sign(P.x - e.x) || e.facing;
+      if (e.w8t > .9) { e.w8lp = null; e.w8m = 'toWindlass'; leapStart(e, ENG.x - 40, ENG.y + 6, { H: 44, cr: .25, fl: .5, wave: 0, mark: 0 }); } return; }
+    if (e.w8m === 'toWindlass') { if (leapStep(e, dt) === 'land') { e.w8m = 'crank'; e.w8t = 0; e.w8onEngine = 0; floatText(e.x, e.y, e.hh + 40, 'HE WINDS THE ENGINE · NOW', '#FFE0A0', 15); sfx('crunch'); } return; }
     if (e.w8m === 'crank') { e.facing = 1; e.w8onEngine = 0; ENG.arm = 0; ENG.wind = (ENG.wind || 0) + dt; if (Math.random() < dt * 4) sfx('hit-metal', .2);
       if (Math.abs(P.x - e.x) < e.hw + 30 && Math.abs(P.y - e.y) < 30 && (e.closeCd || 0) <= 0) { e.closeCd = 3; e.w8m = 'bleatC'; e.w8t = 0; bleatWarn(e, (e) => { e.state = 'w8act'; e.w8a = 'crank'; }); }
       e.closeCd = Math.max(0, (e.closeCd || 0) - dt);
@@ -2180,13 +2345,21 @@
     const busy = hazards.some(h => h.kind === 'w8scroll' || h.kind === 'w8word');
     if (e.w8m === 'curse') { e.w8a = 'curse';
       if (!e.w8begun) { e.w8begun = 1; e.w8t = 0; const r = e.w8round = (e.w8round || 0) + 1, line = CURSE[(r - 1) % CURSE.length]; scrolls(e, line, r); }
-      else if (e.w8t > 1 && !busy) { e.w8m = 'word'; e.w8begun = 0; e.w8t = 0; } return; }
+      else if (e.w8t > 1 && !busy) { e.w8begun = 0; e.w8t = 0; if (Math.abs(P.x - e.x) < 130 && Math.abs(P.y - e.y) < 50) { shiftSpot(e); e.w8then = 'word'; } else e.w8m = 'word'; } return; }
     if (e.w8m === 'word') { e.w8a = 'word';
       if (!e.w8begun) { e.w8begun = 1; e.w8t = 0; words(e); }
       else if (e.w8t > .6 && !busy) { e.w8m = 'spent'; e.w8begun = 0; e.w8t = 0; floatText(e.x, e.y, e.hh + 50, 'HE IS SPENT · NOW', '#FFE0A0', 15); } return; }
     if (e.w8m === 'spent') { e.w8a = 'spent';
       if (Math.abs(P.x - e.x) < e.hw + 40 && Math.abs(P.y - e.y) < 30 && e.w8t > 1.6 && !(e.w8bl > 0)) { e.w8bl = 1; bleatWarn(e, (e) => { e.state = 'w8act'; e.w8a = 'spent'; }); }
-      if (e.w8t > 3.4) { e.w8m = 'curse'; e.w8t = 0; e.w8bl = 0; } }
+      if (e.w8t > 3.4 && !hazards.some(h => h.kind === 'w8bleattell' && h.e === e)) { e.w8bl = 0; shiftSpot(e); } }
+    // he gets up off his knees and bounds to another place to read from, and kneels again
+    if (e.w8m === 'shift') { e.w8a = 'shift'; if (leapStep(e, dt) === 'land') { e.w8m = 'kneel'; e.w8t = 0; } return; }
+    if (e.w8m === 'kneel') { e.w8a = 'kneel'; if (e.w8t > .55) { e.w8m = e.w8then || 'curse'; e.w8then = null; e.w8t = 0; } return; }
+  }
+  function shiftSpot(e) {
+    const xs = [.2, .5, .8].map(u => arenaL() + VW * u).filter(x => Math.abs(x - e.x) > 90);
+    const x = xs.reduce((b, x) => Math.abs(x - P.x) > Math.abs(b - P.x) ? x : b, xs[0]);
+    e.w8m = 'shift'; e.w8t = 0; leapStart(e, x, rand(FLOOR_TOP + 24, FLOOR_TOP + 56), { H: 120, cr: .6, fl: .75 });
   }
   function scrolls(e, line, r) {
     const ls = LANES(), safe = new Set(), n1 = Math.floor(Math.random() * 4); safe.add(n1); safe.add((n1 + 1 + Math.floor(Math.random() * 3)) % 4);

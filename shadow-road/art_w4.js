@@ -1217,14 +1217,15 @@
     // the wings beat slowly and heavily at rest; it mantles them high to wind up, and the attacks drive the stroke themselves
     let beat = pose.beat ?? (.5 + .45 * Math.sin(t * 1.15));
     beat = lerp(beat, 1, Math.max(flameW, gustW, swoopW * .8, howl * .6, maw * .5));
-    if (down) beat = dazed ? -.3 + .25 * Math.sin(t * 2.4) : -.5;
+    if (down) beat = dazed ? .25 + .12 * Math.sin(t * 2.4) : -.5; // (dazed, its wings sag half open)
     const fold = swoop ? 1 : pose.fold || 0, rear = Math.max(flameW, howl * .8, gustW * .6), lunge = flaming ? 1 : maw;
     const pitch = (swoop ? .34 : flaming ? .16 : -.14 * Math.max(flameW, gustW) + (down ? .12 : 0)) + (pose.pitch || 0);
     const B = (down ? 16 : 0) + Math.sin(t * 1.15 - .9) * 1.6 * (1 - fold); // the body lifts a little on each downstroke
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.translate(0, B);
     if (pitch) { ctx.translate(0, -44); ctx.rotate(pitch); ctx.translate(0, 44); }
     const SH = [2, -56]; // the shoulder
-    ctx.save(); ctx.translate(SH[0] - 9, SH[1] + 1); ctx.rotate(.24); drakeWing(true, beat, fold, hot); ctx.restore();
+    const wr = pose.wrot || 0; // the wings swung down and back, so their tips rake the floor (the wing-rakes)
+    ctx.save(); ctx.translate(SH[0] - 9, SH[1] + 1); ctx.rotate(.24 + wr); drakeWing(true, beat, fold, hot); ctx.restore();
     // the tail: long, swinging slowly, scaled in bands, a row of spines down it and a barb at the end
     const sw = Math.sin(t * .8) * 5, tl = swoop ? -10 : down ? 14 : 0;
     const tp = taper(-20, -40, -62, -22 + sw + tl, -106, -42 + sw * 1.7 + tl * .6, 15, 2.8, 12);
@@ -1290,7 +1291,7 @@
     else emberEye(5, -3.6, 1.1, hot || wind > .4 ? '#FFF0A8' : TY.eye, SULF, hot);
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-1, -7.6); ctx.quadraticCurveTo(5, -9.4, 10, -6.4); ctx.stroke(); // the brow, drawn down over the eye
     ctx.restore();
-    ctx.save(); ctx.translate(SH[0], SH[1]); drakeWing(false, beat, fold, hot); ctx.restore();
+    ctx.save(); ctx.translate(SH[0], SH[1]); ctx.rotate(wr); drakeWing(false, beat, fold, hot); ctx.restore();
     if (dazed) { // knocked silly: embers wheeling round its head, and its crest hanging
       const hx = H[0] + 2, hy = H[1] - 16;
       for (let i = 0; i < 4; i++) { const an = t * 5.5 + i * TAU / 4, x = hx + Math.cos(an) * 15, y = hy + Math.sin(an) * 4.5, s = 2.4 + (Math.sin(an) + 1) * .9;
@@ -1568,24 +1569,7 @@
       list.push([h.y, () => miniFace(h.x, h.y - z - 18, 16, h.face, h.sp * .3 + (u > 0 ? u * h.sp * .6 : 0))]); },
     box(h, box) { box(h.x, h.y, 0, 40, 290); },
   });
-  // SWOOP (drake): it climbs, then dives, talons first, across the whole arena along the dark track on the floor, lowest where you stand
-  const swoopT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, x0 = e.x, x1 = d > 0 ? rightWall() - 70 : leftWall() + 70; return { x0, y0: e.y, x1, px: clamp(P.x, Math.min(x0, x1) + 20, Math.max(x0, x1) - 20), py: yClamp(P.y), d }; });
-  const swoopAt = (T, u) => { const uP = clamp((T.px - T.x0) / (T.x1 - T.x0), .1, .9), x = lerp(T.x0, T.x1, u), y = u < uP ? lerp(T.y0, T.py, sm(u / uP)) : T.py, q = (u - uP) / (u < uP ? uP : 1 - uP); return [x, y, 6 + 104 * q * q]; };
-  TELL_FX.w4swoop = (e, t, k) => { const T = swoopT(e); ctx.save();
-    for (let i = 0; i <= 30; i++) { const u = i / 30, [x, y, z] = swoopAt(T, u), danger = z < 50, w = 14 + (1 - z / 110) * 14; if (u > k * 1.3) break;
-      ctx.fillStyle = danger ? tellCol(k) : `rgba(40,20,50,${.18 + .2 * k})`; ell(x, y, w, w * .3); ctx.fill(); }
-    ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; for (let i = 1; i < 6; i++) { const [x, y] = swoopAt(T, i / 6); ctx.beginPath(); ctx.moveTo(x - T.d * 8, y - 6); ctx.lineTo(x, y); ctx.lineTo(x - T.d * 8, y + 6); ctx.stroke(); }
-    ctx.restore(); };
-  PLAN_FX.w4swoop = (e) => {
-    const T = swoopT(e); e.w4T = null; sfx('whoosh');
-    act(e, 'swoop', (h, dt, e) => {
-      const u = h.el / .95; if (u >= 1) { e.w4dash = 0; recover(e, 1.15); return true; }
-      const [x, y, z] = swoopAt(T, u); e.x = x; e.y = y; e.z = z; e.facing = T.d; e.w4dash = 1;
-      if (!h.hit && Math.abs(P.x - x) < e.hw * .8 && Math.abs(P.y - y) < 22 && P.z < z + 40 && z < 60) { h.hit = true; hitP(Math.round(edmg(e) * 1.2), x - T.d * 10, true); }
-      if (z < 40 && Math.random() < .8) dust(x, y, 1);
-      return false;
-    });
-  };
+  // (the drake's SWOOP is its dive-bomb, below with the rest of its flight)
   // EMBER BREATH (drake): it marks the lane you stand in and rears, its throat kindling; then it flies the length of the
   // lane breathing fire down onto it, the flames racing ahead of it along the floor. Step out of the lane before it comes
   const flameT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, l = laneOf(P.y), x1 = d > 0 ? rightWall() - 16 : leftWall() + 16; return { l, y: laneY(l), d, x0: clamp(e.x + d * 30, leftWall() + 16, rightWall() - 16), x1 }; });
@@ -1758,6 +1742,364 @@
       if (!fire) { ctx.setLineDash([]); ctx.strokeStyle = 'rgba(255,140,120,.6)'; ctx.lineWidth = 1.4; ell(h.x, h.y, 14, 6); ctx.stroke(); }
       ctx.restore(); },
   });
+
+  // ======================================================================================================
+  // THE DRAKE ON THE WING, AND THE WARDED MASK
+  // ======================================================================================================
+  // The Drake keeps to the air between its attacks, wheeling in figure-eights, darting from one high corner of the arena to
+  // another, feinting a dive at you and pulling away. While it is high a blow from the ground only glances off it: jump to
+  // reach it. It comes down to strike, and every strike leaves it low for a moment (dazed after a dive, panting after the
+  // rakes and the feathers), and now and then it dips low over the floor of its own accord: those are your openings.
+  // The Mask is warded: its eyes and mouth are sealed and a ward shimmers over the glaze, and blows barely mark it. It opens
+  // them to attack (the beam, the spit, the bite), and only then, while its eyes and mouth burn gold, can it be hurt.
+  // It never flinches, and if you crowd it for long it blows you away from it.
+  const isTy = (e) => !!e && e.def === BOSSES.tyiga;
+  const TY_HIGH = 50; // above this the Drake is out of reach of a blow from the ground
+  const CRUISE = 100; // the height it wheels at
+  const zCap = (y) => y - 172; // how high it can fly and still be seen, at that depth (the back of the arena is nearer the top of the view)
+  const aerialBlow = (m) => P.state === 'air' || P.z > 20 || !!(m && m.dive);
+  // its openings: dazed after a dive or a stoop, labouring low after the rakes and the feathers, and the dips it makes of its
+  // own accord. Skimming the floor in the middle of an attack it is too fast to land a blow on from the ground
+  const drakeLow = (e) => e.w4daze > 0 || e.state === 'down' || ((e.w4low > 0 || e.w4dip) && e.z < TY_HIGH + 10);
+  const maskOpen = (e) => (e.w4openT || 0) > 0;
+  const openMask = (e, t) => { e.w4openT = Math.max(e.w4openT || 0, t); };
+  const ARENA = () => { const l = leftWall() + 64, r = rightWall() - 64; return { l, r, cx: (l + r) / 2, hw: (r - l) / 2, top: FLOOR_TOP + 16, bot: FLOOR_BOT - 12, mid: (FLOOR_TOP + FLOOR_BOT) / 2 }; };
+  // steer toward a point at no more than a top speed, banking into the turn
+  function steer(e, gx, gy, gz, k, top, dt) {
+    gz = Math.min(gz, zCap(gy)); const q = Math.min(1, dt * k); let dx = (gx - e.x) * q, dy = (gy - e.y) * q, dz = (gz - e.z) * q;
+    const d = Math.hypot(dx, dy * 2, dz), cap = top * dt; if (d > cap) { dx *= cap / d; dy *= cap / d; dz *= cap / d; }
+    e.x += dx; e.y = clamp(e.y + dy, FLOOR_TOP + 8, FLOOR_BOT); e.z = Math.max(2, e.z + dz);
+    const v = dx / Math.max(dt, 1e-4); if (Math.abs(v) > 90) e.facing = Math.sign(v); else e.facing = Math.sign(P.x - e.x) || e.facing;
+    return Math.abs(v);
+  }
+  // ---------------- its figures in the air ----------------
+  const FIG = { eight: 3.4, dart: 2.5, feint: 1.5, dip: 2.1 };
+  function flightNext(e) {
+    const F = e.w4fl || (e.w4fl = {}), last = F.mode || F.last; F.since = (F.since || 0) + 1;
+    let mode = F.since >= 4 ? 'dip' : pick(['eight', 'dart', 'dart', 'feint', 'eight', 'dip'].filter(m => m !== last));
+    if (mode === 'dip') F.since = 0;
+    Object.assign(F, { mode, last: mode, t: 0, dur: FIG[mode], ph: Math.random() * TAU, n: -1, x0: e.x, y0: e.y, dir: Math.random() < .5 ? 1 : -1 });
+    if (mode === 'feint') { sfx('growl'); F.side = Math.sign(e.x - P.x) || 1; }
+    return F;
+  }
+  function flightGoal(e, F) { // [x, y, z, chase, top speed] for the figure it is flying
+    const A = ARENA();
+    if (F.mode === 'eight') { const a = F.ph + F.t / F.dur * TAU * F.dir; // a figure eight lying across the arena, rising at its loops
+      return [A.cx + Math.sin(a) * A.hw * .95, A.mid + Math.sin(2 * a) * (A.bot - A.top) * .42, CRUISE + 14 * Math.sin(2 * a + 1.2), 6, 560]; }
+    if (F.mode === 'dart') { // a dash to a high corner, a beat hanging there, the next
+      const i = Math.floor(F.t / .82); if (i !== F.n) { F.n = i; const C4 = [[A.l, A.top], [A.r, A.top], [A.l, A.bot], [A.r, A.bot]], far = C4.filter(c => Math.abs(c[0] - e.x) > A.hw * .8);
+        F.c = pick(far.length ? far : C4); F.cz = CRUISE + rand(-4, 22); sfx('whoosh'); }
+      return [F.c[0], F.c[1], F.cz, 8, 720]; }
+    if (F.mode === 'feint') { // it drops at you as if it means to dive, and pulls up and away at the last moment
+      if (F.t < .62) return [P.x + F.side * 46, P.y, 52, 5, 560];
+      return [F.side > 0 ? A.r : A.l, clamp(P.y + (P.y > A.mid ? -40 : 40), A.top, A.bot), CRUISE + 18, 6, 640]; }
+    // the dip: down to labour low over the floor beside you, low enough to be hit from the ground, then back up
+    if (F.t < F.dur - .5) return [clamp(P.x + (Math.sign(F.x0 - P.x) || 1) * 62, A.l, A.r), clamp(P.y, A.top, A.bot), 22, 3.4, 380];
+    return [e.x, e.y, CRUISE, 4, 420];
+  }
+  // where it goes while it winds up each attack (the attack's own targets are fixed when the wind-up starts)
+  const WIND_GO = {};
+  const _upd = updateEnemy;
+  function drakeUpd(e, dt) {
+    e.closeCd = 99; e.w4clk = (e.w4clk || 0) + dt; e.w4dip = false;
+    if (e.w4daze > 0) e.w4daze -= dt;
+    if (e.w4low > 0) e.w4low -= dt;
+    if (e.w4clipT > 0) e.w4clipT -= dt; else e.w4clip = 0;
+    const idle = e.state === 'idle' && e.plan !== 'roar', x0 = e.x, y0 = e.y, z0 = e.z, cd = e.cd;
+    if (idle) e.cd = 99; // the shared walk-in never starts its attacks: it picks its moment in the air
+    _upd(e, dt);
+    if (e.cd > 50) e.cd = cd - (99 - e.cd);
+    if (e.dead || e.phase !== 2 || e.w4shift > 0 || e.air || e.state === 'dying' || e.state === 'down') return; // (staggered, it lies where it fell)
+    if (e.state === 'w4act') { e.z = z0; return; } // its attacks fly it themselves
+    if (e.state === 'idle' && e.plan !== 'roar') {
+      e.x = x0; e.y = y0; e.z = z0;
+      if (e.w4daze > 0) { e.z += (6 - e.z) * Math.min(1, dt * 7); return; }
+      let F = e.w4fl && e.w4fl.mode ? e.w4fl : flightNext(e); F.t += dt; if (F.t >= F.dur) F = flightNext(e);
+      const [gx, gy, gz, k, top] = flightGoal(e, F), v = steer(e, gx, gy, gz, k, top, dt); e.w4dip = F.mode === 'dip' && e.z < TY_HIGH;
+      e.w4pose = { fold: clamp((v - 220) / 700, 0, .55), pitch: F.mode === 'feint' && F.t < .62 ? .22 : 0, beat: F.mode === 'dip' && F.t < F.dur - .5 ? .5 + .55 * Math.sin(e.w4clk * 8) : undefined, streak: v > 420 ? 1 : 0 };
+      if (e.cd <= 0 && P.state !== 'dead' && F.mode !== 'dip' && F.t > .3) { if (!e.plan) e.plan = pick(e.def.p2); F.mode = null; e.w4pose = null; e.w4T = null; wind(e, e.def.wind); }
+      return;
+    }
+    e.w4pose = e.w4daze > 0 ? null : e.w4pose && e.state === 'wind' ? e.w4pose : null;
+    e.x = x0; e.y = y0; e.z = z0;
+    if (e.state === 'wind' && WIND_GO[e.plan]) { const g = WIND_GO[e.plan](e); steer(e, g[0], g[1], g[2], 5, 620, dt); e.facing = Math.sign(P.x - e.x) || e.facing; return; }
+    const tz = e.w4daze > 0 ? 6 : e.w4low > 0 ? 30 : Math.min(CRUISE, zCap(e.y));
+    e.z += (tz - e.z) * Math.min(1, dt * (e.w4daze > 0 ? 7 : e.state === 'hurt' ? .8 : 2));
+    if (e.state === 'recover' && e.w4daze <= 0 && e.w4low <= 0) { const A = ARENA(); e.x += (clamp(e.x, A.l, A.r) - e.x) * Math.min(1, dt * 2); }
+  }
+  // ---------------- the Mask ----------------
+  const OPEN_AFTER = { clap: 1.6, faces: 1.2, gaze: 1.1 }; // a moment after some of its attacks, its eyes still open
+  const OPEN_WIND = { w4beam: .5, w4spit: .45, w4bite: .6 }; // and late in the wind-up of the ones that use its mouth
+  function maskUpd(e, dt) {
+    e.closeCd = 99;
+    if (e.state === 'w4act') e.w4lastA = e.w4a; else if (e.w4lastA) { if (OPEN_AFTER[e.w4lastA]) openMask(e, OPEN_AFTER[e.w4lastA]); e.w4lastA = null; }
+    if (e.w4openT > 0) e.w4openT -= dt;
+    const near = Math.abs(P.x - e.x) < e.hw + 74 && Math.abs(P.y - e.y) < 36 && P.z < 70 && P.state !== 'dead' && (e.state === 'idle' || e.state === 'recover');
+    if (e.w4breathCd > 0) e.w4breathCd -= dt;
+    e.w4crowd = near ? (e.w4crowd || 0) + dt : Math.max(0, (e.w4crowd || 0) - dt * .6);
+    const z0 = e.z;
+    _upd(e, dt);
+    if (e.dead || e.phase !== 3) return;
+    if (e.state === 'wind' && OPEN_WIND[e.plan] && 1 - e.t / e.windMax > OPEN_WIND[e.plan]) openMask(e, .15); // its mouth unseals as the attack gathers
+    if (e.state === 'wind' && e.plan === 'w4bite') { const k = 1 - e.t / e.windMax; e.z = z0 + (80 - z0) * Math.min(1, dt * 4); e.w4pose = { tilt: -.35 * k }; } // it rears up and back
+    e.w4open = (e.w4open ?? 0) + ((maskOpen(e) ? 1 : 0) - (e.w4open ?? 0)) * Math.min(1, dt * 9);
+    if (e.w4shift > 0) { e.w4open = 1; return; }
+    e.w4idleT = e.state === 'idle' ? (e.w4idleT || 0) + dt : 0;
+    if (e.state !== 'idle' || e.plan === 'roar' || P.state === 'dead') return;
+    if (e.w4crowd > 2.6 && !(e.w4breathCd > 0)) { e.w4crowd = 0; e.w4breathCd = 7; e.plan = 'w4breath'; e.w4T = null; wind(e, .8); return; }
+    // it need not line itself up: if you keep on top of it, it attacks from where it is (up close, as often as not with the bite)
+    if (e.cd <= 0 && e.w4idleT > 1.1) { if (!e.plan) e.plan = pick(e.def.p3); if (Math.abs(P.x - e.x) < e.hw + 60 && Math.random() < .4) e.plan = 'w4bite'; e.w4T = null; wind(e, e.def.wind); }
+  }
+  updateEnemy = function (e, dt) {
+    if (!isTy(e) || e.dead) return _upd(e, dt);
+    if (e.phase === 2 && !(e.w4shift > 0)) return drakeUpd(e, dt);
+    if (e.phase === 3) return maskUpd(e, dt);
+    return _upd(e, dt);
+  };
+  // ---------------- blows on it ----------------
+  const cue = (e, txt, col) => { const now = performance.now(); if (!(e.w4cue > now)) { e.w4cue = now + 2400; floatText(e.x, e.y, e.z + e.hh + 22, txt, col, 13); } };
+  const _strike = strike;
+  strike = function (e, base, dir, m, echo) {
+    if (!isTy(e) || e.dead || e.w4shift > 0 || e.phase === 1) return _strike(e, base, dir, m, echo);
+    m = m || {};
+    if (e.phase === 2) {
+      const air = aerialBlow(m), low = drakeLow(e);
+      if (!air && !low) { // it is high: the blow only grazes it
+        base *= m.arrow ? .5 : .15; m = Object.assign({}, m, { noStun: 1, launch: 0, kb: 0, bounce: 0, spike: 0, crit: 0 });
+        const now = performance.now(); if (!(e.w4ping > now)) { e.w4ping = now + 260; floatIcon(e.x, e.y, Math.min(e.z, 40) + 30, 'shield', 14); sfx('hit-metal', .2); }
+        if (!m.arrow) cue(e, 'OUT OF REACH', '#E8D8FF');
+      } else if (!air || e.w4daze > 0) m = Object.assign({}, m, { noStun: 1, launch: 0, bounce: 0, spike: 0 }); // low or dazed: it takes it in full, but doesn't flinch out of it
+      else { m = Object.assign({}, m, { launch: 0, spike: 0, bounce: 0 }); // from the air: in full, and it reels
+        if (!echo) { e.w4clip = (e.w4clip || 0) + 1; e.w4clipT = 2.6; } }
+      const r = _strike(e, base, dir, m, echo);
+      if (!e.dead && air && !(e.w4daze > 0) && e.w4clip >= 5 && !drakeLow(e) && !e.air) { // struck again and again on the wing: knocked out of the sky
+        e.w4clip = 0; e.w4daze = 1.7; e.plan = null; e.w4T = null; recover(e, 1.7); e.w4pose = null;
+        floatText(e.x, e.y, e.z + e.hh + 24, 'GROUNDED!', '#FFD27A', 18); sfx('crunch'); shakeMag = Math.max(shakeMag, 8); burst(e.x, e.y, e.z + 40, ['#FF8A3C', '#FFD27A', '#2A1A36'], 16, 'spark', dir, true);
+      }
+      return r;
+    }
+    // the Mask: never flinches; warded, a blow barely marks it
+    m = Object.assign({}, m, { noStun: 1, launch: 0, kb: (m.kb || 0) * .15, bounce: 0, spike: 0 });
+    if (maskOpen(e)) base *= 1.8; // its eyes and mouth open: the weak points
+    else {
+      base *= m.trump ? .35 : .1; m.crit = 0;
+      const now = performance.now(); if (!(e.w4ping > now)) { e.w4ping = now + 220; floatIcon(e.x, e.y, e.z + e.hh * .7, 'shield', 15); sfx('hit-crystal', .25);
+        burst(e.x - dir * e.hw * .5, e.y, e.z + e.hh * .6, ['#E8E0FF', '#C8B8FF', '#FFFFFF'], 7, 'spark', -dir); }
+      cue(e, 'WARDED', '#D8C8FF');
+    }
+    return _strike(e, base, dir, m, echo);
+  };
+
+  // ---------------- DIVE-BOMB (drake): from a high corner it stoops across the whole arena, talons first, lowest where you
+  // stand, and ploughs into the floor at the far side: dazed there for a moment ----------------
+  const swoopT = (e) => targets(e, () => { const A = ARENA(), fromR = P.x < A.cx, x0 = fromR ? A.r + 10 : A.l - 10, x1 = fromR ? A.l + 6 : A.r - 6, y0 = pick([A.mid + 8, A.bot]);
+    return { x0, y0, z0: Math.min(132, zCap(y0)), x1, px: clamp(P.x, A.l, A.r), py: yClamp(P.y), d: fromR ? -1 : 1 }; });
+  const swoopAt = (T, u) => { const uP = clamp((T.px - T.x0) / (T.x1 - T.x0), .2, .8), x = lerp(T.x0, T.x1, u);
+    if (u < uP) { const q = u / uP; return [x, lerp(T.y0, T.py, sm(q)), 6 + (T.z0 - 6) * (1 - q) * (1 - q)]; }
+    const q = (u - uP) / (1 - uP); return [x, T.py, 6 + 16 * Math.sin(q * Math.PI) * (1 - q)]; };
+  WIND_GO.w4swoop = (e) => { const T = swoopT(e); return [T.x0, T.y0, T.z0]; };
+  TELL_FX.w4swoop = (e, t, k) => { const T = swoopT(e); ctx.save();
+    for (let i = 0; i <= 34; i++) { const u = i / 34, [x, y, z] = swoopAt(T, u), danger = z < 56, w = 14 + (1 - Math.min(1, z / 120)) * 14; if (u > k * 1.25) break;
+      ctx.fillStyle = danger ? tellCol(k) : `rgba(40,20,50,${.18 + .2 * k})`; ell(x, y, w, w * .3); ctx.fill(); }
+    ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; for (let i = 1; i < 7; i++) { const [x, y] = swoopAt(T, i / 7); ctx.beginPath(); ctx.moveTo(x - T.d * 8, y - 6); ctx.lineTo(x, y); ctx.lineTo(x - T.d * 8, y + 6); ctx.stroke(); }
+    { const [x, y] = swoopAt(T, 1); ctx.strokeStyle = tellLine(k); ctx.setLineDash([4, 4]); ell(x, y, 34, 11); ctx.stroke(); ctx.setLineDash([]); } // where it will plough in
+    ctx.restore(); };
+  PLAN_FX.w4swoop = (e) => {
+    const T = Object.assign({}, swoopT(e)); T.x0 = e.x; T.y0 = e.y; T.z0 = Math.max(60, e.z); e.w4T = null; sfx('roar');
+    act(e, 'swoop', (h, dt, e) => {
+      const u = h.el / 1.0;
+      if (u >= 1) { e.w4dash = 0; e.z = 4; e.x = xClamp(e.x); shakeMag = Math.max(shakeMag, 11); sfx('slam'); hitstop = Math.max(hitstop, .05);
+        burst(e.x, e.y, 6, ['#2A1A36', '#FF9A50', '#FFFFFF'], 20, 'rock', 0, true); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 90, col: '#FF9A50', flat: 1 });
+        if (!h.hit && inEll(P.x, P.y, e.x, e.y, 54) && P.z < 30) hitP(Math.round(edmg(e) * .8), e.x, true);
+        e.w4daze = 1.6; recover(e, 1.6); return true; } // ploughed into the floor, dazed: your opening
+      const [x, y, z] = swoopAt(T, sm(u) * .35 + u * .65); e.x = x; e.y = y; e.z = z; e.facing = T.d; e.w4dash = 1;
+      if (!h.hit && Math.abs(P.x - x) < e.hw * .8 && Math.abs(P.y - y) < 22 && P.z < z + 40 && z < 60) { h.hit = true; hitP(Math.round(edmg(e) * 1.15), x - T.d * 10, true); }
+      if (z < 40 && Math.random() < .8) dust(x, y, 1);
+      return false;
+    });
+  };
+  // ---------------- WING-RAKES (drake): it skims low across the arena twice, there and back, its wingtips raking two lanes
+  // of the floor each time. Stand in a lane they leave clear, or jump the rake as it passes ----------------
+  const rakesT = (e) => targets(e, () => { const me = laneOf(P.y), l0 = clamp(me - (Math.random() < .5 ? 1 : 0), 0, LANES - 2), opts = [0, 1, 2].filter(l => l !== l0), l1 = pick(opts);
+    const A = ARENA(), d = e.x < A.cx ? 1 : -1; return { passes: [{ l: l0, d }, { l: l1, d: -d }], A }; });
+  const rakeY = (l) => (laneY(l) + laneY(l + 1)) / 2;
+  WIND_GO.w4rakes = (e) => { const T = rakesT(e), p = T.passes[0]; return [p.d > 0 ? T.A.l - 20 : T.A.r + 20, rakeY(p.l), 60]; };
+  function rakeLanes(l, k, d, t) { for (const j of [l, l + 1]) { const y = laneY(j); ctx.fillStyle = tellCol(k, .85); ctx.fillRect(camX, y - laneH * .45, VW, laneH * .9);
+    ctx.strokeStyle = `rgba(255,170,130,${.25 + .6 * k})`; ctx.lineWidth = 2; for (let i = 0; i < 8; i++) { const x = (d > 0 ? camX + 40 : camX + VW - 40) + d * i * VW / 8 * Math.min(1, k * 1.5); ctx.beginPath(); ctx.moveTo(x - d * 5, y - 5); ctx.lineTo(x + d * 3, y); ctx.lineTo(x - d * 5, y + 5); ctx.stroke(); } } }
+  TELL_FX.w4rakes = (e, t, k) => { const T = rakesT(e), p = T.passes[0]; ctx.save(); rakeLanes(p.l, k, p.d, t); ctx.restore(); };
+  PLAN_FX.w4rakes = (e) => {
+    const T = rakesT(e); e.w4T = null; sfx('roar');
+    const PASS = 1.45, LEAD = .5;
+    act(e, 'rakes', (h, dt, e) => {
+      const i = Math.floor(h.el / PASS), k = (h.el % PASS);
+      if (i >= T.passes.length) { e.w4low = 1.3; recover(e, 1.3); return true; } // spent, labouring low: your opening
+      const p = T.passes[i], xa = p.d > 0 ? T.A.l - 20 : T.A.r + 20, xb = p.d > 0 ? T.A.r + 20 : T.A.l - 20, y = rakeY(p.l);
+      if (h.i !== i) { h.i = i; h.hit = false; h.ax = e.x; h.ay = e.y; h.az = e.z; }
+      e.facing = p.d;
+      if (k < LEAD) { const q = sm(k / LEAD); e.x = lerp(h.ax, xa, q); e.y = lerp(h.ay, y, q); e.z = lerp(h.az, 26, q); e.w4pose = { beat: 1 - q * .25, wrot: -1.75 * q, pitch: -.1 }; return false; }
+      const u = (k - LEAD) / (PASS - LEAD); if (!h.sw) h.sw = -1; if (h.sw !== i) { h.sw = i; sfx('whoosh'); shakeMag = Math.max(shakeMag, 3); }
+      e.x = lerp(xa, xb, u); e.y = y; e.z = 24 + Math.sin(u * Math.PI) * 6; e.w4pose = { beat: .75 + .06 * Math.sin(h.el * 30), wrot: -1.75, pitch: .1, streak: 1 }; // wings swung down and back, their tips raking the floor
+      for (const j of [p.l, p.l + 1]) { if (Math.random() < .6) h.marks.push({ x: e.x - p.d * 20, y: laneY(j) + rand(-4, 4), t: 1.1, d: p.d }); if (Math.random() < .4) burst(e.x - p.d * 10, laneY(j), 2, ['#FF8A3C', '#FFD27A'], 2, 'spark', -p.d); }
+      if (!h.hit && P.z < 30 && Math.abs(P.x - e.x) < 46 && (laneOf(P.y) === p.l || laneOf(P.y) === p.l + 1)) { h.hit = true; hitP(Math.round(edmg(e) * .9), e.x - p.d * 20, true); }
+      return false;
+    }, { marks: [], i: -1 }).draw = (h, t) => {
+      const i = Math.floor(h.el / PASS), k = h.el % PASS, p = T.passes[i];
+      if (p && k < LEAD && i > 0) { ctx.save(); rakeLanes(p.l, k / LEAD, p.d, t); ctx.restore(); } // the next pass's lanes light before it comes
+      ctx.save(); ctx.lineCap = 'round';
+      for (const m of h.marks) { m.t -= 1 / 60; if (m.t <= 0) continue; ctx.strokeStyle = `rgba(255,${120 + 60 * m.t},60,${.6 * Math.min(1, m.t)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x - m.d * 22, m.y + 1.5); ctx.stroke(); }
+      ctx.restore(); h.marks = h.marks.filter(m => m.t > 0); };
+  };
+  // ---------------- CIRCLING STOOPS (drake): it wheels round over your head, then stoops on you three times, each time
+  // where the ring on the floor closes; the last drives it into the floor ----------------
+  WIND_GO.w4circle = (e) => [clamp(P.x + (Math.sign(e.x - P.x) || 1) * 100, leftWall() + 40, rightWall() - 40), yClamp(P.y + 10), 124];
+  TELL_FX.w4circle = (e, t, k) => { ctx.save(); ctx.strokeStyle = tellLine(k * .7); ctx.lineWidth = 1.4; ctx.setLineDash([6, 6]); ctx.lineDashOffset = -t * 30; ell(P.x, P.y, 110, 34); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); };
+  PLAN_FX.w4circle = (e) => {
+    e.w4T = null; sfx('roar'); const ROUND = 1.0, ST = 1.02, N = 3;
+    act(e, 'circle', (h, dt, e) => {
+      if (h.el < ROUND) { // the wheel: round you at a height, closing in
+        h.a = (h.a ?? Math.atan2((e.y - P.y) * 3, e.x - P.x)) + dt * 5.2; const r = 110 - h.el * 20;
+        steer(e, clamp(P.x + Math.cos(h.a) * r, leftWall() + 30, rightWall() - 30), yClamp(P.y + Math.sin(h.a) * 30), 124, 9, 900, dt); e.facing = -Math.sign(Math.sin(h.a)) || e.facing; e.w4pose = { beat: .6 + .4 * Math.sin(h.el * 14), fold: .2 }; return false; }
+      const i = Math.floor((h.el - ROUND) / ST), k = (h.el - ROUND) % ST;
+      if (i >= N) { e.w4dash = 0; e.w4daze = 1.3; recover(e, 1.3); return true; } // the last stoop drove it into the floor: your opening
+      if (h.i !== i) { h.i = i; h.hit = false; h.landed = false; h.tx = xClamp(P.x); h.ty = yClamp(P.y); h.sx = e.x; h.sy = e.y; h.sz = e.z; h.side = Math.sign(e.x - P.x) || 1; sfx('charge', 1); }
+      if (k < .5) { // up and over the mark, the ring closing on it; it keeps tracking you for a moment, then locks
+        if (k < .3) { h.tx += (xClamp(P.x) - h.tx) * Math.min(1, dt * 6); h.ty += (yClamp(P.y) - h.ty) * Math.min(1, dt * 6); }
+        const q = sm(k / .5), top = Math.max(84, Math.min(136, zCap(h.ty + 30))); h.top = top; e.x = lerp(h.sx, h.tx + h.side * 70, q); e.y = lerp(h.sy, h.ty, q); e.z = lerp(h.sz, top, q); e.facing = -h.side; e.w4dash = 0; e.w4pose = { beat: 1, pitch: -.16 }; return false; }
+      if (k < .72) { const q = (k - .5) / .22; e.x = lerp(h.tx + h.side * 70, h.tx, q); e.y = h.ty; e.z = lerp(h.top, 4, q * q); e.w4dash = 1; e.w4pose = null; // the stoop
+        if (!h.hit && Math.abs(P.x - e.x) < 34 && Math.abs(P.y - e.y) < 20 && P.z < e.z + 30) { h.hit = true; hitP(Math.round(edmg(e) * .9), e.x, true); } return false; }
+      if (!h.landed) { h.landed = true; e.w4dash = 0; sfx('slam'); shakeMag = Math.max(shakeMag, i === N - 1 ? 10 : 6); dust(h.tx, h.ty, 10); fx.push({ kind: 'ring', x: h.tx, y: h.ty, z: 2, t: .35, max: .35, r: 50, col: '#FF9A50', flat: 1 });
+        if (!h.hit && inEll(P.x, P.y, h.tx, h.ty, 42) && P.z < 30) { h.hit = true; hitP(Math.round(edmg(e) * .9), h.tx, true); } }
+      if (i < N - 1) { const q = sm((k - .72) / (ST - .72)); e.x = h.tx - h.side * 30 * q; e.z = lerp(4, 112, q); h.sx = e.x; h.sy = e.y; h.sz = e.z; e.w4pose = { beat: 1 - q, pitch: -.2 }; } // and back up
+      else { e.z = 4; }
+      return false;
+    }, { i: -1 }).draw = (h, t) => { if (h.el < ROUND || h.landed || h.i < 0) return; const k = (h.el - ROUND) % ST, lock = k >= .3, q = cl01(k / .5);
+      ctx.save(); ctx.fillStyle = `rgba(230,70,80,${.15 + .3 * q})`; ell(h.tx, h.ty, 42, 14); ctx.fill();
+      ctx.strokeStyle = lock ? `rgba(255,120,90,${.6 + .4 * Math.sin(t * 40)})` : tellLine(q); ctx.lineWidth = lock ? 2.6 : 1.6; const r = lerp(92, 42, q); ell(h.tx, h.ty, r, r / 3); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,230,210,.85)'; ctx.font = '700 9px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText(String(h.i + 1), h.tx, h.ty - 16); ctx.restore(); };
+  };
+  // ---------------- BURNING FEATHERS (drake): it wheels fast and high over the arena shedding its ember-tipped pinions;
+  // each one's shadow on the floor shows where it will stand. Then it hangs low, spent ----------------
+  WIND_GO.w4embers = (e) => [ARENA().cx, (FLOOR_TOP + FLOOR_BOT) / 2, 122];
+  TELL_FX.w4embers = (e, t, k) => { ctx.save(); for (let i = 0; i < 7; i++) { const x = camX + 60 + ((i * 131 + t * 40) % (VW - 120)), y = FLOOR_TOP + 14 + (i * 37) % (FLOOR_BOT - FLOOR_TOP - 24); ctx.fillStyle = `rgba(20,8,24,${.12 + .2 * k})`; ell(x, y, 8, 3); ctx.fill(); } ctx.restore(); };
+  PLAN_FX.w4embers = (e) => {
+    e.w4T = null; sfx('roar'); const D = 2.7, A = ARENA(), dir = Math.random() < .5 ? 1 : -1, ph = Math.asin(clamp((e.x - A.cx) / (A.hw * .95), -1, 1));
+    act(e, 'embers', (h, dt, e) => {
+      if (h.el >= D) { e.w4low = 1.2; recover(e, 1.2); return true; } // spent, it hangs low and heavy: your opening
+      const a = ph + h.el / D * TAU * dir * 1.2;
+      steer(e, A.cx + Math.sin(a) * A.hw * .95, A.mid + 10 + Math.sin(2 * a) * (A.bot - A.top) * .32, 120 + 10 * Math.sin(3 * a), 7, 700, dt); e.w4pose = { beat: .5 + .5 * Math.sin(h.el * 16), fold: .25 };
+      h.nx = (h.nx ?? .2) - dt;
+      if (h.nx <= 0 && h.el < D - .5) { h.nx = .19; h.n = (h.n || 0) + 1; const aim = h.n % 3 === 0;
+        const tx = xClamp(aim ? P.x : P.x + rand(-90, 90)), ty = yClamp(aim ? P.y : P.y + rand(-34, 34));
+        hazards.push({ kind: 'w4feather', x0: e.x + e.facing * 10, y0: e.y, z0: e.z + 50, x: tx, y: ty, el: 0, fall: .8, t: 9, max: 9, dmg: Math.round(edmg(e) * .55), sp: rand(-1, 1) }); }
+      return false;
+    });
+  };
+  reg('w4feather', {
+    update(h, dt) { h.el += dt; const u = h.el / h.fall;
+      if (u >= 1 && !h.landed) { h.landed = 1; sfx('crunch', .5); burst(h.x, h.y, 3, ['#FF8A3C', '#FFD27A', '#2A1A36'], 5, 'spark', 0); if (inEll(P.x, P.y, h.x, h.y, 24) && P.z < 30) hitP(h.dmg, h.x, false); }
+      if (h.el > h.fall + .8) h.t = -1; },
+    draw(h, t) { const u = cl01(h.el / h.fall); if (h.landed) { ctx.save(); ctx.fillStyle = `rgba(30,10,8,${.4 * (1 - cl01((h.el - h.fall - .4) / .4))})`; ell(h.x, h.y, 10, 3.4); ctx.fill(); ctx.restore(); return; }
+      ctx.save(); ctx.fillStyle = `rgba(20,8,24,${.15 + .4 * u})`; ell(h.x, h.y, 5 + 10 * u, (5 + 10 * u) * .32); ctx.fill(); ctx.strokeStyle = `rgba(255,140,90,${.3 + .5 * u})`; ctx.lineWidth = 1.2; ell(h.x, h.y, 16, 5.4); ctx.stroke(); ctx.restore(); },
+    ups(h, list, t) { const u = cl01(h.el / h.fall), f = h.landed ? 1 - cl01((h.el - h.fall - .4) / .4) : 1; if (f <= 0) return;
+      const q = u * u, x = lerp(h.x0, h.x, u), y = lerp(h.y0, h.y, u), z = h.landed ? 0 : lerp(h.z0, 0, q);
+      list.push([y, () => { ctx.save(); ctx.globalAlpha = f; ctx.translate(x, y - z); // the pinion: tumbling as it falls, then standing in the floor, quill up
+        const ang = h.landed ? -Math.PI / 2 + h.sp * .25 : -Math.PI / 2 + Math.sin(h.el * 9 + h.sp * 3) * (1 - u) * 1.2 + (1 - u) * h.sp;
+        ctx.scale(1.35, 1.35); pinion(0, 0, ang + Math.PI, 30, 6.4, false, DR.ember); glowAt(0, -30 * Math.sin(-ang) * .1, 14, EMBER, .5); ctx.restore(); }]); },
+    box(h, box) { box(h.x, h.y, 0, 40, 220); },
+  });
+  Object.assign(BOSS_WIND, { w4rakes: 1.0, w4circle: .9, w4embers: .9, w4beam: 1.25, w4spit: .85, w4bite: 1.0, w4breath: .95 });
+
+  // ---------------- THE MASK'S MOUTH: BEAM (mask): its mouth unseals and fills with light; a beam pours out of it onto the
+  // lane you stand in and runs along it to the wall. Step out of the lane, or jump the beam as it runs under you ----------------
+  const mouthAt = (e) => { const s = e.size; return [e.x + e.facing * 6 * s, e.y, e.z + 43 * s]; };
+  const beamT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, l = laneOf(P.y); return { d, l, y: laneY(l), x0: e.x + d * 40, x1: d > 0 ? rightWall() - 8 : leftWall() + 8 }; });
+  TELL_FX.w4beam = (e, t, k) => { const T = beamT(e), lo = Math.min(T.x0, T.x1), hi = Math.max(T.x0, T.x1), hw = laneH * .55; ctx.save();
+    ctx.fillStyle = tellCol(k, .9); rrect(lo, T.y - hw, hi - lo, hw * 2, hw * .8); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.lineWidth = 2; for (let i = 0; i < 10; i++) { const q = cl01(k * 1.5 - i * .08), x = T.x0 + T.d * (20 + i * (hi - lo - 30) / 9); if (q <= 0) break; ctx.strokeStyle = `rgba(255,236,170,${.2 + .7 * q})`; ctx.beginPath(); ctx.moveTo(x - T.d * 4, T.y - 6); ctx.lineTo(x + T.d * 3, T.y); ctx.lineTo(x - T.d * 4, T.y + 6); ctx.stroke(); }
+    const [mx, my, mz] = mouthAt(e); glowAt(mx, my - mz, 10 + 22 * k, SULF, .3 + .5 * k); ctx.restore(); };
+  PLAN_FX.w4beam = (e) => {
+    const T = beamT(e); e.w4T = null; sfx('charge', 2); openMask(e, 1); const RUN = .85, HOLD = .3;
+    act(e, 'beam', (h, dt, e) => {
+      openMask(e, 1.9); e.facing = T.d;
+      h.front = lerp(T.x0, T.x1, sm(cl01(h.el / RUN)));
+      if (h.el - (h.sfxT ?? -1) > .22) { h.sfxT = h.el; sfx('whoosh'); }
+      if (!h.hit && P.z < 32 && Math.abs(P.y - T.y) < laneH * .6 && (P.x - h.front) * T.d < 8 && (P.x - T.x0) * T.d > -10) { h.hit = true; hitP(Math.round(edmg(e) * .9), h.front - T.d * 10, true); }
+      if (Math.random() < .7) burst(h.front, T.y, 3, ['#FFF0C0', '#E8C8FF', '#FFFFFF'], 2, 'spark', T.d);
+      if (h.el > RUN + HOLD) { e.w4openT = 0; openMask(e, 1.9); recover(e, 1.9); return true; } // spent, its mouth still hanging open: your opening
+      return false;
+    }, { uy: T.y + 1 }).up = (h, t) => { const e = h.e, [mx, my, mz] = mouthAt(e), fx = h.front ?? T.x0, fy = T.y, sx = mx, sy = my - mz, on = cl01(h.el / .08);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      const fl = 1 + .15 * Math.sin(t * 50);
+      for (const [w, c] of [[30 * fl, 'rgba(150,110,255,.3)'], [16 * fl, 'rgba(230,200,255,.65)'], [6, 'rgba(255,255,240,.95)']]) { ctx.strokeStyle = c; ctx.lineWidth = w * on; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(lerp(sx, fx, .3), lerp(sy, fy, .9), fx, fy - 4); ctx.lineTo(T.x0 + (fx - T.x0) * .02, fy - 2); ctx.stroke(); }
+      glowAt(fx, fy - 6, 34, SULF, .6); glowAt(sx, sy, 20, SULF, .6); ctx.restore();
+      ctx.save(); ctx.fillStyle = 'rgba(40,20,60,.35)'; ctx.fillRect(Math.min(T.x0, fx), fy - 3, Math.abs(fx - T.x0), 6); ctx.restore(); }; // (the scorch down the lane)
+  };
+  // ---------------- SPIT (mask): it opens its mouth and spits three globs of the Abyss at you, one after another, each to
+  // the mark that opens under you when it spits ----------------
+  TELL_FX.w4spit = (e, t, k) => { const [mx, my, mz] = mouthAt(e); ctx.save(); glowAt(mx, my - mz, 8 + 14 * k, '170,120,255', .3 + .4 * k); ctx.strokeStyle = tellLine(k * .6); ctx.lineWidth = 1.2; ell(P.x, P.y, 26, 9); ctx.stroke(); ctx.restore(); };
+  PLAN_FX.w4spit = (e) => {
+    e.w4T = null; openMask(e, 1);
+    act(e, 'spit', (h, dt, e) => {
+      openMask(e, 1.8); e.facing = Math.sign(P.x - e.x) || e.facing;
+      const n = Math.floor(h.el / .32);
+      if (n < 3 && h.n !== n) { h.n = n; sfx('shoot'); const [mx, my, mz] = mouthAt(e), lead = n === 1 ? (P.vx || 0) * .4 : 0;
+        hazards.push({ kind: 'w4glob', x0: mx, y0: my, z0: mz, x: xClamp(P.x + lead), y: yClamp(P.y + (n === 2 ? rand(-14, 14) : 0)), el: 0, fly: .72, t: 9, max: 9, dmg: Math.round(edmg(e) * .7) }); }
+      if (h.el > 1.05) { e.w4openT = 0; openMask(e, 1.8); recover(e, 1.4); return true; }
+      return false;
+    });
+  };
+  reg('w4glob', {
+    update(h, dt) { h.el += dt; if (h.el >= h.fly && !h.landed) { h.landed = 1; sfx('hit-goo', .6); burst(h.x, h.y, 3, ['#2A1238', '#B890FF', '#FFE8A0'], 10, 'goo', 0); if (inEll(P.x, P.y, h.x, h.y, 28) && P.z < 30) hitP(h.dmg, h.x, true); }
+      if (h.el > h.fly + .9) h.t = -1; },
+    draw(h, t) { const u = cl01(h.el / h.fly); ctx.save();
+      if (!h.landed) { ctx.fillStyle = `rgba(230,70,80,${.12 + .3 * u})`; ell(h.x, h.y, 28, 9.5); ctx.fill(); ctx.strokeStyle = tellLine(u); ctx.lineWidth = 1.6; ell(h.x, h.y, 28 - 10 * u, (28 - 10 * u) / 3); ctx.stroke(); }
+      else { const f = 1 - cl01((h.el - h.fly - .4) / .5); ctx.fillStyle = `rgba(42,18,56,${.7 * f})`; ell(h.x, h.y, 20, 6.5); ctx.fill(); ctx.strokeStyle = `rgba(184,144,255,${.6 * f})`; ctx.lineWidth = 1.2; ell(h.x, h.y, 20, 6.5); ctx.stroke(); }
+      ctx.restore(); },
+    ups(h, list, t) { if (h.landed) return; const u = cl01(h.el / h.fly), x = lerp(h.x0, h.x, u), y = lerp(h.y0, h.y, u), z = lerp(h.z0, 0, u) + Math.sin(u * Math.PI) * 60;
+      list.push([y, () => { shadow(x, y, 6); const sy = y - z; ctx.save(); ctx.translate(x, sy); ctx.rotate(t * 6);
+        smokeLobe(0, 0, 10, '#2A1238', 1); smokeLobe(3, -3, 5.5, '#4A2A70', .9); ctx.restore(); glowAt(x, sy, 20, '170,120,255', .55);
+        ctx.fillStyle = C('#FFE8A0'); circle(x - 1, sy - 1, 1.6); ctx.fill(); }]); },
+    box(h, box) { box((h.x0 + h.x) / 2, h.y, 0, Math.abs(h.x - h.x0) / 2 + 30, 200); },
+  });
+  // ---------------- BITE (mask): it rears up, its eyes flaring, and drops onto the ring under you mouth-first; if it misses,
+  // its jaw is jammed in the floor for a moment, mouth agape ----------------
+  const biteT = (e) => targets(e, () => ({ x: xClamp(P.x), y: yClamp(P.y) }));
+  TELL_FX.w4bite = (e, t, k) => { const T = biteT(e); if (k < .7) { T.x += (xClamp(P.x) - T.x) * .08; T.y += (yClamp(P.y) - T.y) * .08; }
+    ctx.save(); ctx.fillStyle = tellCol(k); ell(T.x, T.y, 44, 14); ctx.fill(); ctx.strokeStyle = k >= .7 ? `rgba(255,120,90,${.6 + .4 * Math.sin(t * 40)})` : tellLine(k); ctx.lineWidth = 2; ell(T.x, T.y, 44, 14); ctx.stroke();
+    ctx.fillStyle = `rgba(236,228,210,${.4 + .5 * k})`; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, x = T.x + Math.cos(a) * 44, y = T.y + Math.sin(a) * 14, hh = 3 + 7 * k; poly([x - 2.4, y, x, y - hh, x + 2.4, y]); ctx.fill(); } ctx.restore(); };
+  WIND_GO.w4bite = null;
+  PLAN_FX.w4bite = (e) => {
+    const T = Object.assign({}, biteT(e)); e.w4T = null; sfx('roar'); openMask(e, 1);
+    const x0 = e.x, y0 = e.y, z0 = e.z, LUNGE = .26, STUCK = 2.0;
+    act(e, 'bite', (h, dt, e) => {
+      openMask(e, .6);
+      if (h.el < LUNGE) { const q = h.el / LUNGE; e.x = lerp(x0, T.x - e.facing * 8, q); e.y = lerp(y0, T.y, q); e.z = lerp(z0 + 30, 0, q * q); e.w4pose = { tilt: lerp(-.35, .4, q) }; return false; }
+      if (!h.snap) { h.snap = 1; sfx('crunch'); shakeMag = Math.max(shakeMag, 10); hitstop = Math.max(hitstop, .06); burst(T.x, T.y, 4, ['#2A1A36', '#ECE4D2', '#FFFFFF'], 18, 'rock', 0, true);
+        fx.push({ kind: 'ring', x: T.x, y: T.y, z: 2, t: .35, max: .35, r: 60, col: '#ECE4D2', flat: 1 }); if (inEll(P.x, P.y, T.x, T.y, 46) && P.z < 40) { h.hit = 1; hitP(Math.round(edmg(e) * 1.05), T.x, true); } }
+      const s = h.el - LUNGE; e.z = 0; e.w4pose = { tilt: .4 + Math.sin(s * 40) * .03 * (1 - s / STUCK) }; e.x = T.x - e.facing * 8 + Math.sin(s * 37) * 1.2;
+      if (s < STUCK) { openMask(e, 1); if (Math.random() < .2) dust(e.x, e.y, 1); return false; }
+      e.w4openT = 0; openMask(e, .5); e.w4pose = null; recover(e, .7); return true; // it wrenches its jaw free
+    }).draw = (h, t) => { if (!h.snap) return; const f = 1 - cl01((h.el - LUNGE - STUCK) / .6); if (f <= 0) return; // the floor cracked round its jaw
+      ctx.save(); ctx.strokeStyle = `rgba(14,6,18,${.75 * f})`; ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + .3, L = 30 + (i * 17) % 22; let x = T.x, y = T.y; ctx.moveTo(x, y); for (let j = 1; j <= 3; j++) { x = T.x + Math.cos(a + Math.sin(i * 3 + j) * .25) * L * j / 3; y = T.y + Math.sin(a + Math.sin(i * 3 + j) * .25) * L * j / 3 / 3.1; ctx.lineTo(x, y); } }
+      ctx.stroke(); ctx.strokeStyle = `rgba(255,170,90,${.35 * f})`; ctx.lineWidth = .8; ctx.stroke(); ctx.restore(); };
+  };
+  // ---------------- THE BREATH (mask, when you crowd it): it draws in, and blows you away from it ----------------
+  TELL_FX.w4breath = (e, t, k) => { ctx.save(); const R = 150; ctx.strokeStyle = `rgba(220,210,255,${.3 + .5 * k})`; ctx.lineWidth = 1.8; ell(e.x, e.y, R * (1.2 - .2 * k), R * (1.2 - .2 * k) / 3.1); ctx.stroke();
+    ctx.fillStyle = `rgba(200,190,255,${.08 + .16 * k})`; ell(e.x, e.y, R, R / 3.1); ctx.fill();
+    for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t * .8, r = R * (1 - ((t * 1.6 + i * .1) % 1)); ctx.strokeStyle = `rgba(230,220,255,${.45 * k})`; ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * r, e.y + Math.sin(a) * r / 3.1); ctx.lineTo(e.x + Math.cos(a) * (r - 14), e.y + Math.sin(a) * (r - 14) / 3.1); ctx.stroke(); } // the air drawn in
+    ctx.restore(); };
+  PLAN_FX.w4breath = (e) => {
+    e.w4T = null; sfx('roar'); shakeMag = Math.max(shakeMag, 6);
+    act(e, 'breath', (h, dt, e) => {
+      const d = Math.hypot(P.x - e.x, (P.y - e.y) * 3.1);
+      if (d < 190 && P.state !== 'dead' && P.state !== 'dodge') { const f = 1 - d / 190, dir = Math.sign(P.x - e.x) || -e.facing; P.x = xClamp(P.x + dir * 560 * f * dt); P.y = yClamp(P.y + Math.sign(P.y - e.y) * 60 * f * dt); }
+      if (!h.hit && d < 150 && P.z < 60) { h.hit = 1; hitP(Math.round(edmg(e) * .4), e.x, true); }
+      if (Math.random() < .9) { const a = rand(0, TAU); parts.push({ x: e.x + Math.cos(a) * 30, y: e.y + Math.sin(a) * 10, z: rand(10, 60), vx: Math.cos(a) * rand(280, 420), vy: Math.sin(a) * 40, vz: 0, life: .4, max: .4, col: 'rgba(225,215,255,.6)', size: rand(2, 3.4), shape: 'streak', rot: 0, vr: 0 }); }
+      if (h.el > .55) { recover(e, .8); return true; }
+      return false;
+    }).draw = (h, t) => { const k = cl01(h.el / .55); ctx.save(); ctx.strokeStyle = `rgba(230,220,255,${.7 * (1 - k)})`; ctx.lineWidth = 3; ell(h.e.x, h.e.y, 40 + 170 * k, (40 + 170 * k) / 3.1); ctx.stroke(); ctx.restore(); };
+  };
 
   // ======================================================================================================
   // THE RULES OF THE PLACES
