@@ -376,7 +376,7 @@ function hurtEnemy(e, dmg, dir, m, crit) {
   fx.push({ kind: 'slash', x: hx, y: e.y, z: hz, ang: rand(-.6, .6) + (m.launch ? -1.2 : 0), t: .16, max: .16, size: 18 + pw * 10, col: pw === 2 ? '#D8AA55' : '#FFFFFF' });
   fx.push({ kind: 'ring', x: hx, y: e.y, z: hz, t: .2, max: .2, r: 10 + pw * 8, col: '#FFFFFF' });
   if (crit) {
-    floatText(e.x, e.y, e.z + e.hh + 14, dmg + '!', '#FF4A32', 22 + pw * 4); nums[nums.length - 1].crit = 1; // red-orange with a starburst behind it: never mistaken for a heavy blow's gold
+    floatText(e.x, e.y, e.z + e.hh + 14, dmg + '!', '#FF4A32', 22 + pw * 4); // red: never mistaken for a heavy blow's gold
     fx.push({ kind: 'crit', x: hx, y: e.y, z: hz, t: .3, max: .3, r: 34 + pw * 10 });
     hitstop = Math.max(hitstop, .14); flashT = Math.max(flashT, .04); zoom = Math.max(zoom, .04); shakeMag = Math.max(shakeMag, 7); sfx('crit');
   } else floatText(e.x, e.y, e.z + e.hh + 10, String(dmg), pw === 2 ? '#D8AA55' : '#FFFFFF', 14 + pw * 4);
