@@ -180,10 +180,10 @@ function spawnEnemy(type, side, isBoss) {
   let forceElite = false;
   if (!isBoss && type.endsWith('*')) { type = type.slice(0, -1); forceElite = stageIdx >= 1; }
   const def = isBoss ? BOSSES[type] : EDEF[type];
-  const wd = worldDiff(), hp = Math.round(scaleStat(def.hp, .8) * ngPow() * (isBoss ? wd.boss : wd.hp) * (!isBoss && def.ranged && !def.poise ? .65 : 1)); // shooters are fragile: close the gap and they drop fast (the armored tank isn't)
+  const wd = worldDiff(), hp = Math.round(scaleStat(def.hp, .8) * ngPow() * (isBoss ? wd.boss * (stageIdx <= 1 ? 1 + .5 * Math.min(5, save.cycle || 0) : 1) : wd.hp) * (!isBoss && def.ranged && !def.poise ? .65 : 1)); // (in New Game+ the first two worlds' bosses, built for a fresh start, get +50% health a cycle on top) shooters are fragile: close the gap and they drop fast (the armored tank isn't)
   const e = { type, def, boss: !!isBoss, x: side > 0 ? camX + VW + 40 : camX - 40, y: isBoss ? 300 : rand(FLOOR_TOP + 14, FLOOR_BOT - 6),
     z: def.move === 'fly' ? def.hover : 0, vx: 0, vz: 0, facing: -side, hp, maxHp: hp, hw: def.hw, hh: def.hh,
-    dmg: Math.round(def.dmg * ngDmgK() * (isBoss ? 1.6 : 1.35) * wd.dmg), cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
+    dmg: Math.round(def.dmg * ngDmgK() * (isBoss ? 1.6 * (1 + .3 * Math.min(5, save.cycle || 0)) : 1.35) * wd.dmg), // (in New Game+ bosses hit harder still: +30% a cycle) cd: rand(.6, 1.4), poiseMax: (def.poise || 0) * (isBoss ? 1.6 : 1), poise: (def.poise || 0) * (isBoss ? 1.6 : 1),
     state: 'idle', t: 0, plan: null, slot: rand(-26, 26), flash: 0, jit: 0, sqx: 1, sqy: 1, sq: 1, rotA: 0, spin: 0, walk: rand(0, 6), hopT: rand(0, .5), air: false, jug: 0, walls: 0 };
   if (!isBoss && (forceElite || (stageIdx >= 1 && def.move !== 'fly' && Math.random() < [0, 0, .3, .38, .44][Math.min(stageIdx, 4)]))) makeElite(e);
   if (isBoss) { e.phase = 1; e.baseDmg = e.dmg; e.size = 1.15; e.hw = def.hw * e.size; e.hh = def.hh * e.size; e.rageT = 0; e.staggers = 0; }
