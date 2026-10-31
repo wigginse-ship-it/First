@@ -638,6 +638,12 @@ function drawScene(t) {
     const k = n.t / n.max, pop = 1 + Math.max(0, (k - .82) / .18) * .7;
     ctx.globalAlpha = Math.min(1, n.t * 3);
     ctx.font = `700 ${Math.round(n.size * pop)}px Cinzel, Georgia, serif`;
+    if (n.crit) { // a critical hit: a pale starburst flaring behind the number
+      const sz = n.size * pop, cx = n.x, cy = n.y - n.z - sz * .36, R = sz * (.95 + .25 * (1 - k)), r = R * .42, a0 = n.t * 2;
+      ctx.save(); ctx.globalAlpha *= .85; ctx.fillStyle = '#FFE7A8'; ctx.strokeStyle = OUT; ctx.lineWidth = 2; ctx.beginPath();
+      for (let i = 0; i < 16; i++) { const a = a0 + i * Math.PI / 8, d = i % 2 ? r : R * (i % 4 ? .8 : 1); ctx.lineTo(cx + Math.cos(a) * d * 1.25, cy + Math.sin(a) * d * .9); }
+      ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore();
+    }
     ctx.lineWidth = 4; ctx.strokeStyle = OUT; ctx.strokeText(n.txt, n.x, n.y - n.z);
     ctx.fillStyle = n.col; ctx.fillText(n.txt, n.x, n.y - n.z);
     if (n.icon === 'guard') { // the guard's remaining diamonds beside the number
