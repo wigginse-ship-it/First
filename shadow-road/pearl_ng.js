@@ -808,22 +808,42 @@
   const glow = (x, y, r, rgb, a) => { if (r <= 0) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
   const inkW = (r, k = .12) => clamp(r * k, .5, 1.2);
   const stroke = (col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke(); };
-  // one crescent blade of nacre, gilt along its cutting side (drawn about 0,0 at angle a)
-  function crescentBlade(r, a, pal, lightning) {
+  // AN EDGE ORB (any Edge trait taken) is the Nacre Blade of the Growing Pearl (design A, bc6856a): three long, thin
+  // crescents of pale nacre, gilt along the cutting side, round a small pearl hub, so it reads as a saw blade first. HUB is
+  // the hub's share of the orb's radius r; the blades then reach about 1.9r, as the full-grown Nacre Blade's did
+  const HUB = .6, BLADE_R = HUB / .78;
+  // one crescent blade, drawn about 0,0 at angle a; r is the Nacre Blade's own measure (its hub pearl was .78r). Cockle
+  // Lip sets gilt saw teeth along the outer, cutting side; Thunder Lamella runs a bolt down the blade and whitens the gilt
+  function crescentBlade(r, a, pal, lightning, teeth) {
     const c = Math.cos, s = Math.sin, L = r * 2.5;
-    const p0 = [c(a - .5) * r * .75, s(a - .5) * r * .75], tip = [c(a + .9) * L, s(a + .9) * L], cO = [c(a + .2) * L * 1.2, s(a + .2) * L * 1.2], cI = [c(a + 1.1) * L * .44, s(a + 1.1) * L * .44], p1 = [c(a + 1.2) * r * .75, s(a + 1.2) * r * .75];
+    const p0 = [c(a) * r * .6, s(a) * r * .6], tip = [c(a + 1.05) * L, s(a + 1.05) * L], cO = [c(a + .45) * L * 1.15, s(a + .45) * L * 1.15], cI = [c(a + .95) * L * .5, s(a + .95) * L * .5], p1 = [c(a + .9) * r * .6, s(a + .9) * r * .6];
     const edge = () => { ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cO[0], cO[1], tip[0], tip[1]); };
-    const lg = ctx.createLinearGradient(0, 0, tip[0], tip[1]); lg.addColorStop(0, pal.bladeDk); lg.addColorStop(.45, pal.blade); lg.addColorStop(.85, pal.edge); lg.addColorStop(1, pal.accent);
-    ctx.fillStyle = lg; ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); edge(); stroke(lightning ? '#FFF6C0' : pal.metal, Math.max(.7, r * .22));
-    ctx.beginPath(); edge(); stroke('rgba(255,248,220,.95)', Math.max(.3, r * .07));
-    if (lightning) { ctx.beginPath(); ctx.moveTo(c(a + .3) * r * 1.1, s(a + .3) * r * 1.1); for (let i = 1; i <= 4; i++) { const q = i / 4, aa = a + .3 + .55 * q, rr = r * (1.1 + 1.1 * q) + (i % 2 ? 1 : -1) * r * .18; ctx.lineTo(c(aa) * rr, s(aa) * rr); } stroke('#6A74D0', Math.max(.4, r * .09)); }
-    ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); stroke(OUT, inkW(r));
+    const body = () => { ctx.beginPath(); edge(); ctx.quadraticCurveTo(cI[0], cI[1], p1[0], p1[1]); ctx.closePath(); };
+    // the outer (cutting) curve at u, and the inner curve at the same distance along, from base to tip
+    const q = (A, B, C, u) => [(1 - u) * (1 - u) * A[0] + 2 * u * (1 - u) * B[0] + u * u * C[0], (1 - u) * (1 - u) * A[1] + 2 * u * (1 - u) * B[1] + u * u * C[1]];
+    const out = (u) => q(p0, cO, tip, u), inn = (u) => q(p1, cI, tip, u);
+    if (teeth) {
+      // the cockle's lip: raked teeth along the outer side (drawn first, so the blade covers their roots)
+      ctx.beginPath(); const n = 6;
+      for (let i = 0; i < n; i++) { const u0 = .1 + i * .78 / n, u1 = u0 + .78 / n, a0 = out(u0), a1 = out(u1), m = out(u0 + (u1 - u0) * .8), w = inn(u0 + (u1 - u0) * .8);
+        let nx = m[0] - w[0], ny = m[1] - w[1]; const d = Math.hypot(nx, ny) || 1, h = r * (.42 - .22 * (i / n)); nx = nx / d * h; ny = ny / d * h;
+        ctx.moveTo(a0[0], a0[1]); ctx.lineTo(m[0] + nx, m[1] + ny); ctx.lineTo(a1[0], a1[1]); ctx.closePath(); }
+      ctx.fillStyle = '#E2BE66'; ctx.fill(); stroke(OUT, clamp(r * .07, .35, .7));
+    }
+    const lg = ctx.createLinearGradient(p0[0], p0[1], tip[0], tip[1]); lg.addColorStop(0, '#E8F6F0'); lg.addColorStop(.55, '#BFE3D8'); lg.addColorStop(1, '#FFFFFF');
+    ctx.fillStyle = lg; body(); ctx.fill();
+    if (lightning) {
+      // a bolt down the middle of the blade, from root to near the tip
+      const zig = () => { ctx.beginPath(); for (let i = 0; i <= 6; i++) { const u = .12 + i * .7 / 6, o = out(u), w = inn(u), k = .5 + (i % 2 ? .24 : -.24) * (i && i < 6 ? 1 : 0); const x = w[0] + (o[0] - w[0]) * k, y = w[1] + (o[1] - w[1]) * k; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
+      ctx.lineJoin = 'round'; zig(); stroke('#5E66C8', Math.max(.45, r * .16)); zig(); stroke('#FFFFFF', Math.max(.2, r * .055));
+    }
+    ctx.beginPath(); edge(); stroke(lightning ? '#FFF2A8' : '#E2BE66', Math.max(.5, r * .16));
+    ctx.beginPath(); edge(); stroke('rgba(255,248,220,.9)', Math.max(.25, r * .06));
+    body(); stroke(OUT, clamp(r * .1, .5, 1));
   }
   // the parts each trait adds to the orb: [layer, painter(r, pal)] (orb space: the pearl at 0,0 of radius r, facing +x)
   const shellPath = (rx, ry, n = 12) => { ctx.beginPath(); ctx.moveTo(0, ry * 1.05); for (let i = 0; i <= n; i++) { const a = Math.PI * .62 + i / n * Math.PI * 1.76, rr = i % 2 ? .97 : 1.08; ctx.lineTo(Math.cos(a) * rx * rr, Math.sin(a) * ry * rr); } ctx.closePath(); };
   const PART = {
-    serrate: ['front', (r, p) => { ctx.beginPath(); const n = 18; for (let i = 0; i <= n; i++) { const a = i / n * TAU, rr = r * (i % 2 ? 1.08 : 1.24); i ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.arc(0, 0, r * 1.02, 0, TAU, true); ctx.fillStyle = p.metal; ctx.fill('evenodd'); stroke(OUT, inkW(r, .08)); }],
     ring: ['both', (r, p, back) => { ctx.save(); ctx.rotate(-.32); const a0 = back ? Math.PI : 0, a1 = back ? TAU : Math.PI;
       ctx.beginPath(); ctx.ellipse(0, 0, r * 1.7, r * .44, 0, a0, a1); stroke(OUT, Math.max(1, r * .24));
       ctx.beginPath(); ctx.ellipse(0, 0, r * 1.7, r * .44, 0, a0, a1); stroke(p.metal, Math.max(.6, r * .14));
@@ -871,22 +891,30 @@
       const w = Math.max(.8, r * .24); br(r * .7, 0, r * 3, -r * .1, w); br(r * 1.7, -r * .05, r * 2.3, -r * .7, w * .7); br(r * 2.2, -r * .08, r * 2.7, r * .5, w * .6); br(r * 1.3, 0, r * 1.6, r * .55, w * .55); }],
     bolt: ['front', (r) => { const x = r * 1.2, y = -r * 1.5; ctx.beginPath(); ctx.moveTo(x - r * .1, y - r * .6); ctx.lineTo(x + r * .32, y - r * .6); ctx.lineTo(x + r * .05, y - r * .05); ctx.lineTo(x + r * .35, y - r * .05); ctx.lineTo(x - r * .25, y + r * .7); ctx.lineTo(x - r * .02, y + r * .1); ctx.lineTo(x - r * .3, y + r * .1); ctx.closePath(); ctx.fillStyle = '#FFF2A0'; ctx.fill(); stroke(OUT, inkW(r, .07)); }],
   };
-  const SPIN = { crescent: 1, thunder: 1 }; // (these turn round the pearl: drawn on their own, rotated)
+  // the Edge traits: they make the orb the spinning Nacre Blade (drawn on their own, rotated), not parts round the pearl
+  const SPIN = { crescent: 1, serrate: 1, thunder: 1 };
   function drawOrbParts(picks, r, pal, t, layer) {
     for (const id of picks) { const T = TR[id]; if (!T || SPIN[T.part]) continue; const P_ = PART[T.part]; if (!P_) continue;
       const L = P_[0]; if (L === 'both') { ctx.save(); P_[1](r, pal, layer === 'back'); ctx.restore(); } else if (L === layer) { ctx.save(); P_[1](r, pal); ctx.restore(); } }
   }
   function drawSpinner(picks, r, pal, spin) {
-    const n = picks.filter(id => TR[id] && SPIN[TR[id].part]).length; if (!n) return;
-    const lit = picks.includes('thunder'), k = Math.max(2, n + 1);
-    for (let i = 0; i < k; i++) crescentBlade(r * .62, spin + i * TAU / k, pal, lit);
+    if (!hasSpin(picks)) return;
+    const ar = r * BLADE_R, lit = picks.includes('thunder'), teeth = picks.includes('serrate');
+    for (let i = 0; i < 3; i++) crescentBlade(ar, spin + i * TAU / 3, pal, lit, teeth);
+  }
+  // the Nacre Blade's sweep of light behind its turning blades (as the Growing Pearl's blade had in the street)
+  function bladeSweep(r, spin, rgb) {
+    if (FLASH || TINT) return; const ar = r * BLADE_R;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${rgb || '190,245,235'},.22)`; ctx.lineWidth = ar * 1.6; ctx.beginPath(); ctx.arc(0, 0, ar * 1.7, spin, spin + 4.2); ctx.stroke(); ctx.restore();
   }
   // the whole orb, at 0,0 (cards draw it straight; the street uses the cached picture below)
+  // (an Edge orb's pearl is the small hub of its blades, and the other parts sit round that hub)
   function drawOrb(picks, r, pal, t, spin) {
-    drawOrbParts(picks, r, pal, t, 'back');
+    const hr = hasSpin(picks) ? r * HUB : r;
+    drawOrbParts(picks, hr, pal, t, 'back');
     drawSpinner(picks, r, pal, spin);
-    pearlBody(0, 0, r, t, 1 + Math.min(4, picks.length), pal, !picks.length || V2());
-    drawOrbParts(picks, r, pal, t, 'front');
+    pearlBody(0, 0, hr, t, 1 + Math.min(4, picks.length), pal, !picks.length || V2());
+    drawOrbParts(picks, hr, pal, t, 'front');
   }
   const palOf = (picks) => PAL[prof(picks).current[0] || 'pearl'];
   // cached: the orb's still parts as pictures (the parts behind the pearl, the parts in front; redrawn only when a pick
@@ -918,15 +946,16 @@
   const hasLayer = (picks, layer) => picks.some(id => TR[id] && PART[TR[id].part] && !SPIN[TR[id].part] && (PART[TR[id].part][0] === layer || PART[TR[id].part][0] === 'both'));
   function blitOrb(picks, x, y, r, facing, spin, alpha = 1) {
     ctx.save(); ctx.translate(x, y); if (alpha < 1) ctx.globalAlpha *= alpha; const sc = resOf();
-    orbGlow(r, picks && picks.length ? palOf(picks).glow : null); // (behind everything it is: it never covers the orb's own detail)
+    const glowRgb = picks && picks.length ? palOf(picks).glow : null, edge = hasSpin(picks), hr = edge ? r * HUB : r;
+    orbGlow(r, glowRgb); // (behind everything it is: it never covers the orb's own detail)
     ctx.save(); if (facing < 0) ctx.scale(-1, 1);
-    if (hasSpin(picks)) { const s = sprite(picks, r, 'spin', sc); ctx.save(); ctx.rotate(spin); ctx.drawImage(s, -s.ext, -s.ext, s.ext * 2, s.ext * 2); ctx.restore(); }
-    if (hasLayer(picks, 'back')) { const c = sprite(picks, r, 'back', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
+    if (edge) { bladeSweep(r, spin, glowRgb); const s = sprite(picks, r, 'spin', sc); ctx.save(); ctx.rotate(spin); ctx.drawImage(s, -s.ext, -s.ext, s.ext * 2, s.ext * 2); ctx.restore(); }
+    if (hasLayer(picks, 'back')) { const c = sprite(picks, hr, 'back', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
     ctx.restore();
-    // (the pearl is not turned with him: its light stays at the upper left, as on the relic)
-    const k = picks && picks.length && !V2() ? sprite(picks, r, 'nacre', sc) : coreSprite(r, performance.now() / 1000, sc); ctx.drawImage(k, -k.ext, -k.ext, k.ext * 2, k.ext * 2);
+    // (the pearl is not turned with him: its light stays at the upper left, as on the relic; an Edge orb's is the small hub)
+    const k = picks && picks.length && !V2() ? sprite(picks, hr, 'nacre', sc) : coreSprite(hr, performance.now() / 1000, sc); ctx.drawImage(k, -k.ext, -k.ext, k.ext * 2, k.ext * 2);
     if (facing < 0) ctx.scale(-1, 1);
-    if (hasLayer(picks, 'front')) { const c = sprite(picks, r, 'front', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
+    if (hasLayer(picks, 'front')) { const c = sprite(picks, hr, 'front', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
     ctx.restore();
   }
   // a soft light of its own behind the Pearl, slowly breathing: pearl-white while it is bare, its Current's colour once shaped
@@ -980,8 +1009,7 @@
         const g = ctx.createLinearGradient(0, ly - w, 0, ly + w); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, pal.blade); g.addColorStop(1, pal.bladeDk); ctx.fillStyle = g; ctx.fill(); stroke(OUT, .9);
         if (S.f.has('narwhal')) { ctx.strokeStyle = 'rgba(80,80,90,.45)'; ctx.lineWidth = .6; for (let i = 1; i < 6; i++) { const x = x0 + s.dir * (s.len - s.r * 2) * i / 6; ctx.beginPath(); ctx.moveTo(x - 1.5, ly - w * .7); ctx.lineTo(x + 1.5, ly + w * .7); ctx.stroke(); } } }
       return; }
-    if (s.k === 'disc') { ctx.save(); ctx.translate(s.x, y); ctx.scale(1, .55); for (let i = 0; i < 3; i++) crescentBlade(s.r * .55, s.spin * 1.6 + i * TAU / 3, pal, S.f.has('thunder')); ctx.restore(); pearlBody(s.x, y, s.r * .42, t, 2, pal); return; }
-    if (s.k === 'orb') { glow(s.x, y, s.r * 3, pal.glow, .25); blitOrb(S.picks, s.x, y, s.r, s.dir, s.spin, 1); return; }
+    if (s.k === 'orb' || s.k === 'disc') { glow(s.x, y, s.r * 3, pal.glow, .25); blitOrb(S.picks, s.x, y, s.r, s.dir, s.spin, 1); return; }
     glow(s.x, y, s.r * 3, pal.glow, .3); pearlBody(s.x, y, s.r, t, 2, pal, !(S.picks && S.picks.length) || V2());
   }
   // the currents on the floor: a dark band of moving water along his wake, foam lines running in it, and the current he
@@ -1010,7 +1038,7 @@
     }
   }
   const shadowAt = (x, y, z, rr) => onMain(() => { ctx.fillStyle = `rgba(10,20,30,${clamp(.28 - z / 400, .06, .28)})`; ctx.beginPath(); ctx.ellipse(x, y, rr * 1.2, rr * .4, 0, 0, TAU); ctx.fill(); });
-  // the orb in flight: a ribbon of light along its path, the orb itself turning fast, an Edge's crescents wheeling round it
+  // the orb in flight: a ribbon of light along its path, the orb itself turning fast (an Edge orb wheels as the Nacre Blade)
   function drawThrow(th, t) {
     const S = th.S, pal = S.pal, y = th.y - th.z, tr = th.trail;
     shadowAt(th.x, th.y, th.z, th.r);
@@ -1018,7 +1046,6 @@
         for (let i = 2; i < tr.length; i += 2) { const k = i / tr.length; ctx.strokeStyle = `rgba(${pal.glow},${(.55 * k).toFixed(2)})`; ctx.lineWidth = th.r * 1.5 * k + 1; ctx.beginPath(); ctx.moveTo(tr[i - 2], tr[i - 1]); ctx.lineTo(tr[i], tr[i + 1]); ctx.stroke(); }
         ctx.restore(); }
       glow(th.x, y, th.r * 3.2, pal.glow, th.perfect ? .5 : .3); });
-    if (S.form === 'edge' && !hasSpin(S.picks)) { ctx.save(); ctx.translate(th.x, y); ctx.scale(1, .6); for (let i = 0; i < 3; i++) crescentBlade(th.r * .55, th.spin + i * TAU / 3, pal, S.f.has('thunder')); ctx.restore(); }
     blitOrb(S.picks, th.x, y, th.r, th.phase === 'back' ? -th.dir : th.dir, th.spin, th.ghost ? .8 : 1);
   }
   function orbItems(list, t) {
@@ -1028,7 +1055,7 @@
       const pk = ES().picks, pal = palOf(pk), r = O.r * (1 + .25 * O.pop), sy = O.y - O.z, front = O.chg !== null;
       const k = O.chg !== null ? clamp(O.chg / GLEAM, 0, 1) : 0, gl = O.chg !== null && O.chg >= GLEAM && O.chg <= GLEAM + PCW();
       list.push([O.y - .02, () => { shadowAt(O.x, O.y, O.z, r); onMain(() => glow(O.x, sy, r * (3.4 + 2 * k), gl ? '255,244,200' : pal.glow, .2 + .25 * O.flash + .25 * k + (gl ? .3 : 0))); }]);
-      list.push([front ? P.y + .3 : P.y - .3, () => { blitOrb(pk, O.x, sy, r, P.facing, t * 2.4);
+      list.push([front ? P.y + .3 : P.y - .3, () => { blitOrb(pk, O.x, sy, r, P.facing, t * (hasSpin(pk) ? 9 : 2.4));
         if (pk.includes('static') || pk.includes('thunder') || pk.includes('squall')) { if (Math.random() < .35) { ctx.save(); ctx.strokeStyle = '#E8ECFF'; ctx.lineWidth = .8; ctx.beginPath(); const a = rand(0, TAU); let x = O.x + Math.cos(a) * r, y = sy + Math.sin(a) * r; ctx.moveTo(x, y); for (let i = 0; i < 3; i++) { x += Math.cos(a) * r * .5 + rand(-2, 2); y += Math.sin(a) * r * .5 + rand(-2, 2); ctx.lineTo(x, y); } ctx.stroke(); ctx.restore(); } } }]);
     }
     for (const th of O.throws) list.push([th.y + .05, () => drawThrow(th, t)]);
