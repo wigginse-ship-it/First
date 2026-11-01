@@ -585,7 +585,7 @@ THRESH.w5mist = {
 };
 let thDoorC = null;
 TRANS_FX.w5mist = (T, p, c, inP, t) => { // through the doors: the doorway opens out round him until the hall is all there is, then its silver frame goes past
-  const L = threshX(), { cx, w, top } = thDoor, dx = inP ? L + cx - camX : VW / 2, dy = (top + FLOOR_TOP) / 2, s = inP ? 1 + 11 * Math.pow(c, 2.2) : 12 + 10 * (1 - c);
+  const L = threshX(), { cx, w } = thDoor, top = thDoor.top - GLIDE_DY, dx = inP ? L + cx - camX : VW / 2, dy = (top + FLOOR_TOP) / 2, s = inP ? 1 + 11 * Math.pow(c, 2.2) : 12 + 10 * (1 - c);
   ctx.save(); ctx.translate(lerp(dx, VW / 2, inP ? c : 1), lerp(dy, Y_OFF + VIEW_H / 2, inP ? c : 1)); ctx.scale(s, s); ctx.translate(-(L + cx - camX), -dy);
   const arch = () => { ctx.beginPath(); const hw = w / 2, X = L + cx - camX, B = FLOOR_TOP + 2; ctx.moveTo(X - hw, B + 20); ctx.lineTo(X - hw, top + hw); ctx.quadraticCurveTo(X - hw, top, X, top - 6); ctx.quadraticCurveTo(X + hw, top, X + hw, top + hw); ctx.lineTo(X + hw, B + 20); ctx.closePath(); };
   if (inP) { // the hall, in the doorway

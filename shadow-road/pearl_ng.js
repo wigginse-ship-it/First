@@ -226,7 +226,7 @@
     if (e.dead || d <= 0) return;
     e.hp -= d; e.flash = .06; floatText(e.x, e.y, e.z + e.hh + 8, String(d), '#FFFFFF', 12);
     if (!e.boss && push && !e.air) e.x += dir * push;
-    if (e.hp <= 0) killEnemy(e, dir, { el: 1, kb: 160 });
+    if (e.hp <= 0) killEnemy(e, dir, { el: 1, kb: 160, pearl: 1 });
   }
   function touches(e, x, y, z, r) {
     const down = (e.def && e.def.reachDown) || 0;
@@ -337,7 +337,7 @@
   // a foe struck by the Pearl: a real blow (it can crit), then what the Current does
   function hitFoe(s, e, dir, mul = 1, extra) {
     const S = s.S, d = Math.max(1, Math.round(s.dmg * mul * (e.boss ? (s.k === 'throw' ? .5 : .6) : 1))), hp0 = e.hp;
-    strike(e, d, dir, Object.assign({ dmg: d, el: 1, pearl: 1, kb: 170 * S.kb, power: s.k === 'shard' ? 0 : S.power, perfect: s.perfect ? 1 : 0, launch: 0, wall: S.power >= 2 ? 1 : 0 }, extra), true);
+    strike(e, d, dir, Object.assign({ dmg: d, el: 1, pearl: 1, pform: S.form || 'speck', pcur: S.cur || null, kb: 170 * S.kb, power: s.k === 'shard' ? 0 : S.power, perfect: s.perfect ? 1 : 0, launch: 0, wall: S.power >= 2 ? 1 : 0 }, extra), true);
     if (e.hp < hp0 || e.dead) { procs(s, e, d, dir); return true; }
     return false;
   }
@@ -518,6 +518,74 @@
   // the boss falls: the Pearl rises out of it while the world goes still
   { const _kill = killEnemy; killEnemy = function (e, dir, m) { const was = e.dead; _kill(e, dir, m);
     if (!was && e.dead && e.boss && live() && pickPending()) O.rise = { x: e.x, y: e.y, z: e.z + e.hh * .6, t: 0, x0: e.x, y0: e.y, z0: e.z + e.hh * .6 }; }; }
+  // ---------------- the Pearl's own deaths: only when a Pearl hit is the killing blow ----------------
+  // each Form finishes a foe its own way (drawn in draw.js's drawDeath): the Edge cuts it clean in two along a nacre line,
+  // the Orb punts it crushed and tumbling down the street, the Shell seals it in nacre that cracks and bursts into pieces,
+  // the Spire throws it back and pins it to the floor with light pouring out, and the bare speck dissolves it into motes,
+  // leaving a little pearl. The Current adds its touch: a puddle and a splash (tide), shards stuck in it (nacre), char and
+  // sparks (storm), or a small dark vortex that swallows what is left (abyss). Bosses and the worlds' own deaths are kept
+  const PDEATH = { edge: 'slice', orb: 'plcrush', shell: 'plshatter', spire: 'plpin', speck: 'plspeck' };
+  const PDUR = { slice: 2, plcrush: 1.6, plshatter: 1.5, plpin: 1.6, plspeck: 1.3 }, ABYSS_T = .8;
+  const NACRE = ['#FFFFFF', '#F6E6FF', '#D8F4EC', '#F2D68A', '#F6C2D4'];
+  function pearlDeath(e, dir, m) {
+    const S = curStats(), form = m.pform || (S && S.form) || 'speck', cur = m.pcur !== undefined ? m.pcur : S ? S.cur : null;
+    const kind = PDEATH[form] || 'plspeck', sk = e.shrink || 1, cy = e.z + e.hh * .5 * sk, cols = MAT_COL[e.def.mat] || MAT_COL.fur;
+    e.death = kind; e.pform = form; e.pcur = cur || null; e.pfx = 0;
+    e.air = false; e.spin = 0; e.rotA = 0; e.vz = 0; e.vx = 0;
+    e.t = e.dmax = PDUR[kind] + (e.pcur === 'abyss' ? ABYSS_T : 0);
+    dropLoot(e); // (a pop would have dropped it on landing)
+    if (kind === 'slice') {
+      e.cut = rand(-.45, .45); e.vx = dir * 40;
+      for (let i = -4; i <= 4; i++) burst(e.x + Math.cos(e.cut) * i * e.hw * .3 * sk, e.y, cy + Math.sin(-e.cut) * i * e.hw * .3 * sk, i % 2 ? cols : NACRE, 2, e.def.mat, dir);
+      fx.push({ kind: 'slash', x: e.x, y: e.y, z: cy, ang: -e.cut, t: .3, max: .3, size: (46 + e.hw) * sk, col: '#F6E6FF' }); sfx('slice'); sfx('hit-crystal', .4);
+    } else if (kind === 'plcrush') {
+      e.vx = dir * 430 * sk;
+      fx.push({ kind: 'ring', x: e.x, y: e.y, z: cy, t: .25, max: .25, r: (26 + e.hw) * sk, col: '#F6E6FF' });
+      burst(e.x - dir * e.hw * .5 * sk, e.y, cy, cols, 10, e.def.mat === 'flesh' ? 'rock' : e.def.mat, dir);
+      sfx('crunch'); sfx('slam', .5); shakeMag = Math.max(shakeMag, 6); hitstop = Math.max(hitstop, .16);
+    } else if (kind === 'plshatter') {
+      e.pshards = []; for (let i = 0; i < 7; i++) { const x = rand(-.8, .8); e.pshards.push({ x, y: rand(.12, .92), vx: (x + rand(-.25, .25)) * rand(90, 170), vz: rand(80, 220), r: rand(.16, .3), a: rand(0, TAU), w: rand(-9, 9), n: i % 3 === 1 ? 4 : 3, s: rand(0, 99), body: i % 2 }); }
+      fx.push({ kind: 'ring', x: e.x, y: e.y, z: cy, t: .3, max: .3, r: (20 + e.hw) * sk, col: '#F6E6FF' }); sfx('hit-crystal');
+    } else if (kind === 'plpin') {
+      e.vx = dir * 520 * sk;
+      fx.push({ kind: 'slash', x: e.x, y: e.y, z: cy, ang: 0, t: .25, max: .25, size: (30 + e.hw) * sk, col: '#FFF4D0' }); sfx('slice'); sfx('whoosh', .5);
+    } else { sfx('hit-crystal', .6); sparkle(e.x, e.y, cy, 8, NACRE); }
+    if (e.pcur === 'tide') { for (let i = 0; i < 12 && parts.length < 420; i++) parts.push({ x: e.x + rand(-8, 8) * sk, y: e.y + rand(-3, 3), z: 2, vx: rand(-110, 110) * sk, vy: rand(-10, 10), vz: rand(90, 230) * sk, life: rand(.4, .7), max: .7, col: pick(['#BFF0FF', '#7FD0E8', '#FFFFFF']), size: rand(1.4, 2.6) * sk, shape: 'blob' }); sfx('hit-goo', .6); bub(e.x, e.y, 6, 6, 40); }
+    else if (e.pcur === 'nacre') { e.pspk = []; for (let i = 0; i < 3; i++) e.pspk.push({ x: rand(-.55, .55), y: rand(.3, .8), a: -Math.PI / 2 + rand(-1.1, 1.1), l: rand(7, 12) }); sparkle(e.x, e.y, cy, 6, ['#FFFFFF', '#F6C2D4', '#E86A5A']); }
+    else if (e.pcur === 'storm') { fx.push({ kind: 'bolt', x: e.x + rand(-10, 10), y: e.y, z: e.z + 240, x2: e.x, y2: e.y, z2: cy, t: .22, max: .22, col: '#E8ECFF', seed: Math.random() * 99 }); burst(e.x, e.y, cy, ['#FFFFFF', '#BFD8FF', '#FFE08A'], 10, 'spark', 0, true); sfx('shoot', .6); }
+  }
+  // the timed beats of those deaths (the shell bursting, the spire biting into the floor, motes rising), stepped with him
+  function pearlDeathStep(dt) {
+    for (const e of enemies) {
+      if (!e.pform || e.state !== 'dying' || e.corpse) continue;
+      const el = e.dmax - e.t, sk = e.shrink || 1, cy = e.z + e.hh * .5 * sk;
+      if (e.death === 'plshatter' && !(e.pfx & 1) && el >= .62) { e.pfx |= 1; sfx('break'); sfx('hit-crystal', .6); shakeMag = Math.max(shakeMag, 3); sparkle(e.x, e.y, cy, 14, NACRE); }
+      else if (e.death === 'plpin' && !(e.pfx & 1) && el >= .4) { e.pfx |= 1; sfx('slam', .5); dust(e.x, e.y, 6); shakeMag = Math.max(shakeMag, 4); }
+      else if (e.death === 'plcrush' && Math.abs(e.vx) > 120 && Math.random() < .5) dust(e.x, e.y, 1);
+      else if (e.death === 'plspeck' && el < 1.15 && Math.random() < dt * 28 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * sk, y: e.y, z: e.z + rand(0, e.hh) * sk, vx: rand(-12, 12), vy: 0, vz: rand(40, 90), life: .6, max: .6, col: pick(NACRE), size: rand(1.2, 2.2) * sk, shape: 'star', rot: 0, vr: 4 });
+      if (e.pcur === 'storm' && el < .9 && Math.random() < dt * 12 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * sk, y: e.y, z: e.z + rand(4, e.hh) * sk, vx: rand(-60, 60), vy: 0, vz: rand(30, 110), life: .3, max: .3, col: pick(['#FFFFFF', '#BFD8FF', '#FFE08A']), size: rand(1, 2), shape: 'star', rot: 0, vr: 8 });
+      if (e.pcur === 'abyss' && el >= e.dmax - ABYSS_T) {
+        if (!(e.pfx & 2)) { e.pfx |= 2; sfx('whoosh', .6); sfx('hit-goo', .3); }
+        if (Math.random() < dt * 20 && parts.length < 400) { const a = rand(0, TAU), r = (30 + e.hw) * sk; parts.push({ x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * .3, z: 3, vx: -Math.cos(a) * r * 2.2, vy: -Math.sin(a) * r * .6, vz: 0, life: .4, max: .4, col: pick(['rgba(40,28,80,.85)', 'rgba(110,224,192,.8)']), size: rand(1.6, 3), shape: 'puff', rot: 0, vr: 0 }); }
+      }
+    }
+  }
+  { let swap = null; const _kill = killEnemy; killEnemy = function (e, dir, m) {
+    const pl = !!(m && m.pearl && !m.trump) && !e.boss && !e.dead;
+    if (!pl) { // (a kill set off inside a Pearl kill, by a splash or a jewel's lightning, keeps its weapon's own death)
+      if (!swap) return _kill(e, dir, m);
+      const s = swap; swap = null; if (s.had) DEATH_BY[s.k] = s.v; else delete DEATH_BY[s.k];
+      try { return _kill(e, dir, m); } finally { swap = s; DEATH_BY[s.k] = 'pop'; }
+    }
+    if (swap) return _kill(e, dir, m); // (already a Pearl kill under way: the weapon's death is already set aside)
+    // the weapon in hand must not cut, cave in or run through what the Pearl killed: the kill is made as a plain one first
+    const k = P ? P.w : '', had = Object.prototype.hasOwnProperty.call(DEATH_BY, k); swap = { k, had, v: DEATH_BY[k] }; DEATH_BY[k] = 'pop';
+    try { _kill(e, dir, m); } finally { const s = swap; swap = null; if (s.had) DEATH_BY[s.k] = s.v; else delete DEATH_BY[s.k]; }
+    if (e.dead && !e.boss && e.state === 'dying' && e.death === 'pop' && !e.popped) pearlDeath(e, dir, m); // (a world's own death for its creature stands)
+  }; }
+  // swallowed by the abyss: nothing is left lying there
+  { const _tc = toCorpse; toCorpse = function (e, kind) { _tc(e, kind); if (e.pcur === 'abyss' && e.pform) { const i = corpses.indexOf(e); if (i >= 0) corpses.splice(i, 1); } }; }
+  { const _up = updatePlayer; updatePlayer = function (dt) { _up(dt); try { pearlDeathStep(dt); } catch (err) { console.error(err); } }; }
   function riseStep(dt) {
     const R = O.rise; if (!R) return; R.t += dt;
     const up = sm(R.t / 1.2), go = sm((R.t - 1.3) / 1.2);

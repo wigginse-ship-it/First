@@ -1802,7 +1802,7 @@
   // it opens out round him until it is all there is, its stretcher and the legs of the easel going past him
   let easC = null;
   TRANS_FX.w6easel = (T, p, c, inP, t) => {
-    const L = typeof threshX === 'function' ? threshX() : stage.len - 130, E = W6.EASEL, cx = L + E.cx - camX, cy = (E.top + E.bot) / 2;
+    const L = typeof threshX === 'function' ? threshX() : stage.len - 130, E = W6.EASEL, cx = L + E.cx - camX, cy = (E.top + E.bot) / 2 - GLIDE_DY; // (the easel stands with the backdrop: lifted in the glide view)
     const s = inP ? 1 + 9 * Math.pow(c, 2.4) : 10 + 6 * (1 - c), w = E.w * s, h = (E.bot - E.top) * s, X = lerp(cx, VW / 2, inP ? sm(c) : 1), Y = lerp(cy, Y_OFF + VIEW_H / 2, inP ? sm(c) : 1);
     if (inP) { // the next place, in the canvas
       if (!easC || easC.width !== cv.width || easC.height !== cv.height) easC = texCanvas(cv.width, cv.height)[0];
