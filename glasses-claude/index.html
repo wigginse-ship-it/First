@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Claude for Glasses</title>
+<style>
+  /* Glasses displays are additive: black = transparent, so keep the background pure black
+     and use bright, high-contrast, large type. */
+  :root { --fg:#f2f2f2; --dim:#8a8a8a; --accent:#7CFFB2; --warn:#ffb86b; --line:#2a2a2a; --btn:#161616; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; height:100%; background:#000; color:var(--fg);
+    font:22px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; }
+  body.small { font-size:18px; } body.large { font-size:28px; }
+  .view { display:none; position:absolute; inset:0; padding:10px 12px; flex-direction:column; gap:8px; }
+  .view.on { display:flex; }
+  h1 { font-size:1.1em; margin:0; color:var(--accent); font-weight:600; }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:44px; }
+  .top .title { color:var(--dim); font-size:.8em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+  button { font:inherit; color:var(--fg); background:var(--btn); border:2px solid var(--line);
+    border-radius:14px; padding:10px 14px; min-height:52px; cursor:pointer; }
+  button:focus-visible, button:active, input:focus, select:focus, textarea:focus { outline:3px solid var(--accent); outline-offset:1px; }
+  button.primary { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
+  button.rec { background:#ff4d4d; border-color:#ff4d4d; color:#000; font-weight:700; animation:pulse 1.2s infinite; }
+  button.on { border-color:var(--accent); color:var(--accent); }
+  button.small { min-height:44px; padding:6px 12px; }
+  @keyframes pulse { 50% { opacity:.65; } }
+  input, select, textarea { font:inherit; color:var(--fg); background:#0c0c0c; border:2px solid var(--line);
+    border-radius:12px; padding:10px 12px; width:100%; }
+  label { color:var(--dim); font-size:.75em; display:block; margin:6px 0 2px; }
+  .scroll { flex:1; overflow-y:auto; overscroll-behavior:contain; scroll-behavior:smooth; padding:2px 2px 8px; }
+  .q { color:var(--dim); font-size:.78em; margin-bottom:6px; }
+  .q b { color:var(--warn); font-weight:600; }
+  #answer { font-size:1.15em; line-height:1.4; word-wrap:break-word; }
+  #answer p { margin:0 0 .6em; } #answer ul, #answer ol { margin:0 0 .6em; padding-left:1.2em; }
+  #answer code { background:#1a1a1a; padding:1px 5px; border-radius:6px; font-size:.9em; }
+  #answer pre { background:#111; padding:8px; border-radius:10px; overflow-x:auto; font-size:.8em; white-space:pre-wrap; }
+  #answer strong { color:var(--accent); }
+  .cursor::after { content:"▍"; color:var(--accent); animation:pulse 1s infinite; }
+  .live { color:var(--warn); font-size:.85em; min-height:1.4em; }
+  .bar { display:flex; gap:8px; }
+  .bar button { flex:1; padding:8px 4px; font-size:.85em; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .row > * { flex:1; }
+  .item { display:flex; gap:8px; align-items:stretch; margin-bottom:8px; }
+  .item .open { flex:1; text-align:left; overflow:hidden; }
+  .item .open small { display:block; color:var(--dim); font-size:.7em; }
+  .item .open span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .err { color:#ff7a7a; font-size:.8em; min-height:1.2em; }
+  .hint { color:var(--dim); font-size:.7em; }
+  .center { margin:auto 0; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN / LOCK -->
+<section id="v-login" class="view">
+  <div class="center">
+    <h1>Claude for Glasses</h1>
+    <div id="login-key">
+      <label for="key">Anthropic API key</label>
+      <input id="key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-...">
+      <div class="hint">Stored only on this device. Get one at console.anthropic.com</div>
+    </div>
+    <div id="login-pin" style="display:none">
+      <label for="pin">PIN</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+    </div>
+    <div class="err" id="login-err"></div>
+    <button class="primary" id="login-go" style="width:100%;margin-top:6px">Sign in</button>
+  </div>
+</section>
+
+<!-- CHAT -->
+<section id="v-chat" class="view">
+  <div class="top">
+    <button class="small" id="b-history">History</button>
+    <div class="title" id="c-title">New chat</div>
+    <button class="small" id="b-settings">⚙</button>
+  </div>
+  <div class="scroll" id="scroll">
+    <div class="q" id="question"></div>
+    <div id="answer"><span class="hint">Tap “Speak” and ask me anything.</span></div>
+  </div>
+  <div class="live" id="live"></div>
+  <div class="bar">
+    <button id="b-up" aria-label="Scroll up">▲</button>
+    <button id="b-down" aria-label="Scroll down">▼</button>
+    <button id="b-read">🔊 Read</button>
+    <button id="b-new">＋ New</button>
+  </div>
+  <div class="row">
+    <button class="primary" id="b-mic" style="flex:3">🎤 Speak</button>
+    <button id="b-type" style="flex:1">⌨</button>
+  </div>
+  <div class="row" id="typebox" style="display:none">
+    <input id="typed" placeholder="Type a message" enterkeyhint="send">
+    <button class="primary" id="b-send" style="flex:0 0 90px">Send</button>
+  </div>
+</section>
+
+<!-- HISTORY -->
+<section id="v-history" class="view">
+  <div class="top">
+    <button class="small" id="h-back">← Back</button>
+    <div class="title">Previous chats</div>
+    <button class="small" id="h-new">＋ New</button>
+  </div>
+  <div class="scroll" id="h-list"></div>
+</section>
+
+<!-- SETTINGS -->
+<section id="v-settings" class="view">
+  <div class="top">
+    <button class="small" id="s-back">← Back</button>
+    <div class="title">Settings</div>
+  </div>
+  <div class="scroll">
+    <label for="s-model">Model</label>
+    <select id="s-model">
+      <option value="claude-sonnet-5-5">Sonnet 5.5 (balanced)</option>
+      <option value="claude-haiku-5-5">Haiku 5.5 (fastest)</option>
+      <option value="claude-opus-5-5">Opus 5.5 (smartest)</option>
+      <option value="claude-fable-5-1">Fable 5.1</option>
+    </select>
+    <label for="s-auto">Read answers aloud automatically</label>
+    <select id="s-auto"><option value="1">On</option><option value="0">Off</option></select>
+    <label for="s-send">Send as soon as I stop speaking</label>
+    <select id="s-send"><option value="1">On</option><option value="0">Off (review first)</option></select>
+    <label for="s-rate">Voice speed</label>
+    <select id="s-rate"><option value="0.85">Slow</option><option value="1">Normal</option><option value="1.2">Fast</option><option value="1.45">Faster</option></select>
+    <label for="s-voice">Voice</label>
+    <select id="s-voice"></select>
+    <label for="s-lang">Dictation language</label>
+    <input id="s-lang" placeholder="en-US">
+    <label for="s-size">Text size</label>
+    <select id="s-size"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select>
+    <label for="s-sys">Instructions for Claude</label>
+    <textarea id="s-sys" rows="4"></textarea>
+    <label for="s-pin">Lock PIN (optional — asked each time the app opens or you tap Lock)</label>
+    <input id="s-pin" type="password" inputmode="numeric" placeholder="Leave empty for none">
+    <div class="row" style="margin-top:12px">
+      <button id="s-lock">Lock now</button>
+      <button id="s-out">Sign out</button>
+    </div>
+    <div class="hint" style="margin-top:8px">Chats are saved on this device only. Signing out removes your API key but keeps chat history.</div>
+  </div>
+</section>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const DEFAULT_SYS = "You are replying on the small heads-up display of smart glasses and your reply may be read aloud. " +
+  "Be brief and direct: short sentences, short paragraphs, plain language. Avoid tables and heavy formatting. " +
+  "Lead with the answer; only elaborate if asked.";
+
+let settings = Object.assign({ model:"claude-sonnet-5-5", auto:"1", send:"1", rate:"1", voice:"", lang:"en-US",
+  size:"medium", sys:DEFAULT_SYS, pin:"" }, LS.get("gc.settings", {}));
+let chats = LS.get("gc.chats", []);            // [{id,title,updated,messages:[{role,content}]}]
+let current = null;                              // active chat object
+let busy = false, abortCtl = null, speaking = false, listening = false, recog = null;
+
+const saveSettings = () => LS.set("gc.settings", settings);
+const saveChats = () => LS.set("gc.chats", chats);
+const apiKey = () => LS.get("gc.key", "");
+
+/* ---------- views ---------- */
+function show(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + name));
+  LS.set("gc.view", name === "login" ? "chat" : name);
+}
+function applySize() { document.body.className = settings.size === "medium" ? "" : settings.size; }
+
+/* ---------- login / lock ---------- */
+function showLogin(msg) {
+  $("login-key").style.display = apiKey() ? "none" : "block";
+  $("login-pin").style.display = (apiKey() && settings.pin) ? "block" : "none";
+  $("login-go").textContent = apiKey() ? (settings.pin ? "Unlock" : "Continue") : "Sign in";
+  $("login-err").textContent = msg || "";
+  $("pin").value = ""; show("login");
+}
+$("login-go").onclick = () => {
+  if (!apiKey()) {
+    const k = $("key").value.trim();
+    if (!/^sk-ant-/.test(k)) return $("login-err").textContent = "That doesn't look like an Anthropic key (sk-ant-...)";
+    LS.set("gc.key", k); $("key").value = "";
+    return enterApp();
+  }
+  if (settings.pin && $("pin").value !== settings.pin) return $("login-err").textContent = "Wrong PIN";
+  enterApp();
+};
+$("pin").addEventListener("keydown", e => { if (e.key === "Enter") $("login-go").click(); });
+$("key").addEventListener("keydown", e => { if (e.key === "Enter") $("login-go").click(); });
+
+function enterApp() {
+  const last = LS.get("gc.lastChat", null);
+  openChat(chats.find(c => c.id === last) || null);
+  show("chat");
+}
+$("s-lock").onclick = () => { stopAll(); showLogin(); };
+$("s-out").onclick = () => { stopAll(); LS.del("gc.key"); showLogin(); };
+
+/* ---------- chat model ---------- */
+function newChat() {
+  stopAll(); current = null; LS.del("gc.lastChat");
+  renderChat(); show("chat");
+}
+function openChat(c) {
+  current = c; if (c) LS.set("gc.lastChat", c.id); renderChat();
+}
+function renderChat() {
+  $("c-title").textContent = current ? current.title : "New chat";
+  const m = current ? current.messages : [];
+  const lastA = [...m].reverse().find(x => x.role === "assistant");
+  const lastU = [...m].reverse().find(x => x.role === "user");
+  $("question").innerHTML = lastU ? "<b>You:</b> " + esc(lastU.content) : "";
+  $("answer").innerHTML = lastA ? md(lastA.content) : '<span class="hint">Tap “Speak” and ask me anything.</span>';
+  $("live").textContent = ""; $("scroll").scrollTop = 0;
+}
+
+/* ---------- tiny markdown ---------- */
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+function inline(s) { return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>"); }
+function md(text) {
+  const out = []; let list = null, code = null;
+  const flush = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  for (const line of text.split("\n")) {
+    if (line.startsWith("```")) {
+      if (code === null) { flush(); code = []; } else { out.push("<pre>" + esc(code.join("\n")) + "</pre>"); code = null; }
+      continue;
+    }
+    if (code !== null) { code.push(line); continue; }
+    let m;
+    if ((m = line.match(/^\s*[-*]\s+(.*)/))) { if (list !== "ul") { flush(); out.push("<ul>"); list = "ul"; } out.push("<li>" + inline(m[1]) + "</li>"); }
+    else if ((m = line.match(/^\s*\d+[.)]\s+(.*)/))) { if (list !== "ol") { flush(); out.push("<ol>"); list = "ol"; } out.push("<li>" + inline(m[1]) + "</li>"); }
+    else if (!line.trim()) flush();
+    else { flush(); out.push("<p>" + inline(line.replace(/^#+\s*/, "")) + "</p>"); }
+  }
+  if (code !== null) out.push("<pre>" + esc(code.join("\n")) + "</pre>");
+  flush(); return out.join("");
+}
+function plain(text) {   // for speech
+  return text.replace(/```[\s\S]*?```/g, " code block omitted. ").replace(/[`*#_>]/g, "").replace(/\s*\n\s*/g, ". ").replace(/\.\s*\./g, ".");
+}
+
+/* ---------- Claude API (streaming) ---------- */
+async function ask(userText) {
+  if (busy || !userText.trim()) return;
+  stopSpeaking();
+  if (!current) {
+    current = { id: String(Date.now()), title: userText.slice(0, 48), updated: Date.now(), messages: [] };
+    chats.unshift(current); LS.set("gc.lastChat", current.id);
+  }
+  current.messages.push({ role: "user", content: userText.trim() });
+  current.updated = Date.now(); saveChats();
+  $("c-title").textContent = current.title;
+  $("question").innerHTML = "<b>You:</b> " + esc(userText.trim());
+  const ans = $("answer"); ans.innerHTML = ""; ans.classList.add("cursor"); $("scroll").scrollTop = 0;
+  $("live").textContent = "Thinking…";
+  busy = true; setBusyUI(); abortCtl = new AbortController();
+  let acc = "";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", signal: abortCtl.signal,
+      headers: { "content-type":"application/json", "x-api-key": apiKey(), "anthropic-version":"2023-06-01",
+                 "anthropic-dangerous-direct-browser-access":"true" },
+      body: JSON.stringify({ model: settings.model, max_tokens: 1500, stream: true,
+        system: settings.sys || DEFAULT_SYS,
+        messages: current.messages.map(m => ({ role:m.role, content:m.content })) }),
+    });
+    if (!res.ok) {
+      let msg = res.status + ""; try { msg = (await res.json()).error.message; } catch {}
+      if (res.status === 401) { LS.del("gc.key"); throw new Error("API key rejected. Sign in again."); }
+      throw new Error(msg);
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream:true });
+      let i; while ((i = buf.indexOf("\n\n")) >= 0) {
+        const ev = buf.slice(0, i); buf = buf.slice(i + 2);
+        const d = ev.split("\n").find(l => l.startsWith("data:")); if (!d) continue;
+        try {
+          const j = JSON.parse(d.slice(5));
+          if (j.type === "content_block_delta" && j.delta.type === "text_delta") {
+            acc += j.delta.text; ans.innerHTML = md(acc); $("live").textContent = "";
+          } else if (j.type === "error") throw new Error(j.error.message);
+        } catch (e) { if (e.message && !(e instanceof SyntaxError)) throw e; }
+      }
+    }
+    if (!acc) acc = "(no response)";
+    current.messages.push({ role:"assistant", content: acc });
+    current.updated = Date.now(); saveChats();
+    ans.innerHTML = md(acc);
+    if (settings.auto === "1") speak(acc);
+  } catch (e) {
+    if (e.name === "AbortError") { if (acc) current.messages.push({ role:"assistant", content: acc + " …" }); saveChats(); }
+    else {
+      current.messages.pop();                       // drop the unanswered user turn so retry works
+      saveChats();
+      $("live").textContent = "⚠ " + e.message;
+      if (!apiKey()) setTimeout(() => showLogin(e.message), 1500);
+    }
+  } finally {
+    busy = false; abortCtl = null; ans.classList.remove("cursor"); setBusyUI();
+  }
+}
+function setBusyUI() { $("b-mic").disabled = busy && !listening; }
+
+/* ---------- dictation (Web Speech API) ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+function toggleMic() {
+  if (listening) { recog && recog.stop(); return; }
+  if (busy) { abortCtl && abortCtl.abort(); return; }
+  if (!SR) { $("live").textContent = "Voice input isn't supported here — use ⌨"; toggleType(true); return; }
+  stopSpeaking();
+  recog = new SR(); recog.lang = settings.lang || "en-US"; recog.interimResults = true; recog.continuous = false;
+  let finalText = "";
+  recog.onstart = () => { listening = true; $("b-mic").textContent = "■ Listening… tap to finish"; $("b-mic").className = "rec"; $("live").textContent = ""; };
+  recog.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t; else interim += t;
+    }
+    $("live").textContent = "🎤 " + (finalText + interim);
+  };
+  recog.onerror = e => { $("live").textContent = e.error === "not-allowed" ? "Microphone blocked — allow it in the app/browser" : "Mic: " + e.error; };
+  recog.onend = () => {
+    listening = false; $("b-mic").textContent = "🎤 Speak"; $("b-mic").className = "primary";
+    const t = finalText.trim(); recog = null;
+    if (!t) return;
+    if (settings.send === "1") { $("live").textContent = ""; ask(t); }
+    else { toggleType(true); $("typed").value = t; $("typed").focus(); }
+  };
+  try { recog.start(); } catch (e) { $("live").textContent = "Mic: " + e.message; }
+}
+$("b-mic").onclick = toggleMic;
+
+/* ---------- text-to-speech ---------- */
+function loadVoices() {
+  const sel = $("s-voice"), vs = speechSynthesis ? speechSynthesis.getVoices() : [];
+  sel.innerHTML = '<option value="">Default</option>' + vs.map(v => `<option value="${esc(v.name)}">${esc(v.name)} (${v.lang})</option>`).join("");
+  sel.value = settings.voice || "";
+}
+if ("speechSynthesis" in window) { speechSynthesis.onvoiceschanged = loadVoices; loadVoices(); }
+function speak(text) {
+  if (!("speechSynthesis" in window)) { $("live").textContent = "Read-aloud isn't supported here"; return; }
+  speechSynthesis.cancel();
+  const chunks = plain(text).match(/[^.!?\n]+[.!?]*\s*/g) || [text];     // short chunks avoid Chrome cutting long speech
+  const voice = speechSynthesis.getVoices().find(v => v.name === settings.voice);
+  speaking = true; $("b-read").textContent = "■ Stop"; $("b-read").classList.add("on");
+  chunks.forEach((c, i) => {
+    const u = new SpeechSynthesisUtterance(c.trim()); if (!u.text) return;
+    u.rate = parseFloat(settings.rate) || 1; if (voice) u.voice = voice;
+    if (i === chunks.length - 1) u.onend = u.onerror = stopSpeakingUI;
+    speechSynthesis.speak(u);
+  });
+}
+function stopSpeakingUI() { speaking = false; $("b-read").textContent = "🔊 Read"; $("b-read").classList.remove("on"); }
+function stopSpeaking() { if ("speechSynthesis" in window) speechSynthesis.cancel(); stopSpeakingUI(); }
+function stopAll() { stopSpeaking(); abortCtl && abortCtl.abort(); recog && recog.abort(); listening = false; }
+$("b-read").onclick = () => {
+  if (speaking) return stopSpeaking();
+  const a = current && [...current.messages].reverse().find(m => m.role === "assistant");
+  if (a) speak(a.content); else $("live").textContent = "Nothing to read yet";
+};
+
+/* ---------- other chat controls ---------- */
+function toggleType(force) {
+  const b = $("typebox"), open = force === true ? true : b.style.display === "none";
+  b.style.display = open ? "flex" : "none"; if (open) $("typed").focus();
+}
+$("b-type").onclick = () => toggleType();
+$("b-send").onclick = () => { const t = $("typed").value; $("typed").value = ""; toggleType(false); ask(t); };
+$("typed").addEventListener("keydown", e => { if (e.key === "Enter") $("b-send").click(); });
+$("b-up").onclick = () => $("scroll").scrollBy({ top: -$("scroll").clientHeight * .85 });
+$("b-down").onclick = () => $("scroll").scrollBy({ top: $("scroll").clientHeight * .85 });
+$("b-new").onclick = newChat;
+$("b-history").onclick = () => { renderHistory(); show("history"); };
+$("b-settings").onclick = () => { fillSettings(); show("settings"); };
+
+/* ---------- history ---------- */
+function renderHistory() {
+  const l = $("h-list"); l.innerHTML = "";
+  if (!chats.length) { l.innerHTML = '<div class="hint">No chats yet.</div>'; return; }
+  [...chats].sort((a, b) => b.updated - a.updated).forEach(c => {
+    const d = document.createElement("div"); d.className = "item";
+    const o = document.createElement("button"); o.className = "open";
+    o.innerHTML = `<span>${esc(c.title)}</span><small>${new Date(c.updated).toLocaleString()} · ${Math.ceil(c.messages.length / 2)} Q&amp;A</small>`;
+    o.onclick = () => { stopAll(); openChat(c); show("chat"); };
+    const x = document.createElement("button"); x.textContent = "🗑"; x.setAttribute("aria-label", "Delete chat");
+    x.onclick = () => { if (x.dataset.arm) { chats = chats.filter(k => k !== c); if (current === c) current = null; saveChats(); renderHistory(); }
+      else { x.dataset.arm = 1; x.textContent = "Sure?"; setTimeout(() => { x.dataset.arm = ""; x.textContent = "🗑"; }, 3000); } };
+    d.append(o, x); l.append(d);
+  });
+}
+$("h-back").onclick = () => show("chat");
+$("h-new").onclick = newChat;
+
+/* ---------- settings ---------- */
+const FIELDS = { "s-model":"model","s-auto":"auto","s-send":"send","s-rate":"rate","s-voice":"voice","s-lang":"lang","s-size":"size","s-sys":"sys","s-pin":"pin" };
+function fillSettings() { loadVoices(); for (const [id, k] of Object.entries(FIELDS)) $(id).value = settings[k] ?? ""; }
+for (const [id, k] of Object.entries(FIELDS)) $(id).addEventListener("change", () => { settings[k] = $(id).value; saveSettings(); applySize(); });
+$("s-back").onclick = () => show("chat");
+
+/* ---------- boot ---------- */
+applySize();
+document.addEventListener("visibilitychange", () => { if (document.hidden) stopSpeaking(); });
+if (!apiKey()) showLogin();
+else if (settings.pin) showLogin();
+else enterApp();
+if (apiKey() && !settings.pin && LS.get("gc.view", "chat") === "history") { renderHistory(); show("history"); }
+</script>
+</body>
+</html>
