@@ -94,6 +94,7 @@
         <label>Relic <select data-o="relic"><option value="">None</option><option value="arm">The Silver Arm (equipped)</option><option value="pearl">The Pearl of Judgement</option><option value="horn">The Horn of Lorraine</option><option value="all">All three</option></select></label>
         <label>Card <select data-o="card"><option value="">(as saved)</option>${TRUMP_ORDER.map(k => `<option value="${k}">${TRUMPS[k].name}</option>`).join('')}</select></label>
         <label>Card level <select data-o="clv">${[1, 2, 3].map(l => `<option value="${l}">${['I', 'II', 'III'][l - 1]}</option>`).join('')}</select></label>
+        <label title="How the Pearl looks once it has taken a shape. Takes effect straight away">Pearl look <select id="devPearlStyle"><option value="v3">Current (nacre pearls once shaped)</option><option value="v2">2.0 (every pearl the Rebma relic)</option></select></label>
         <label title="The camera pulled back and the street made deeper, for the Pearl's Currents. Auto: whenever the glide applies. A change takes hold as the next place (zone) is entered">Glide view (zoomed out, taller floor) <select data-o="glide"><option value="auto">auto (follow the glide)</option><option value="on">always on</option><option value="off">always off</option></select></label>
         <label>Cycle <select data-o="cycle">${[0, 1, 2, 3].map(c => `<option value="${c}">${c ? 'NG+' + c : 'first'}</option>`).join('')}</select></label>
       </div>
@@ -118,6 +119,7 @@
       list.appendChild(row);
       if (i === 4 && window.BRANCH) { const r2 = document.createElement('div'); r2.className = 'w'; r2.innerHTML = `<b>Trump choice</b><button data-a="choice">The deck on the Rim (after the dream)</button>`; list.appendChild(r2); }
     });
+    { const ps = el.querySelector('#devPearlStyle'); if (ps && window.PEARLNG && PEARLNG.style) { ps.value = PEARLNG.style(); ps.addEventListener('change', () => PEARLNG.style(ps.value)); } } // (the Pearl's look is kept in the browser, apart from the dev options)
     for (const c of el.querySelectorAll('[data-o]')) {
       const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'arsenal' ? (opts[k] === true ? 'all' : String(opts[k] || '')) : k === 'card' || k === 'relic' ? String(opts[k] || '') : k === 'glide' ? String(opts[k] || 'auto') : String(opts[k] | 0);
       c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' || k === 'arsenal' || k === 'glide' ? c.value : +c.value; syncDev(); keepOpts(); });

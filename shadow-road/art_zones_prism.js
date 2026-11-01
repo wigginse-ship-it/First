@@ -486,7 +486,7 @@
       const mx = -(((camX * .45) % AW_W) + AW_W) % AW_W;
       for (const [cx, w, top] of galleryCols) for (const k of [0, AW_W, -AW_W]) { // the columns stand mirrored in the polished floor, sliding with them
         const x = mx + cx + k; if (x < -30 || x > VW + 30) continue;
-        const L = (FLOOR_TOP - top) * .5, g = ctx.createLinearGradient(0, FLOOR_TOP, 0, FLOOR_TOP + L); g.addColorStop(0, 'rgba(230,200,240,.13)'); g.addColorStop(1, 'rgba(230,200,240,0)');
+        const L = (FLOOR_TOP0 - top) * .5, g = ctx.createLinearGradient(0, FLOOR_TOP, 0, FLOOR_TOP + L); g.addColorStop(0, 'rgba(230,200,240,.13)'); g.addColorStop(1, 'rgba(230,200,240,0)');
         ctx.fillStyle = g; ctx.fillRect(x - w / 2, FLOOR_TOP + 1, w, L);
       }
       for (let i = 0; i < 3; i++) {

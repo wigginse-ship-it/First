@@ -1242,7 +1242,7 @@
   const GLYPHS = ['?', 'Ⅲ', '☾', 'Ⅰ', 'Ⅳ'];
   PLAN_FX.w5glyphs = (e) => {
     sfx('charge', 2);
-    for (const [ox, oy, d] of [[0, 0, 0], [-80, -16, .2], [80, 16, .4], [0, P.y > (FLOOR_TOP + FLOOR_BOT) / 2 ? -40 : 40, .6]]) hazards.push({ kind: 'w5glyph', x: xClamp(P.x + ox), y: yClamp(P.y + oy), r: 34, t: 1 + d, max: 1 + d, dmg: edmg(e), g: pick(GLYPHS) });
+    for (const [ox, oy, d] of [[0, 0, 0], [-80, -16, .2], [80, 16, .4], [0, P.y > FLOOR_TOP + 52 ? -40 : 40, .6]]) hazards.push({ kind: 'w5glyph', x: xClamp(P.x + ox), y: yClamp(P.y + oy), r: 34, t: 1 + d, max: 1 + d, dmg: edmg(e), g: pick(GLYPHS) });
     act(e, 'glyphs', (h, dt, e) => { if (h.el > .6) { recover(e, 1.0); return true; } return false; });
   };
   reg('w5glyph', {
