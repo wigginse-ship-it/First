@@ -436,6 +436,7 @@
 // ---------- an enchanted piece on him: three motes circling slowly ----------
 // (painted on the page behind the inked figure; it never flickers, it only drifts)
 function drawGearAura(t, front) {
+  return; // (switched off: the motes are no longer drawn; an enchanted piece shows as enchanted in the inventory)
   if (!P || P.state === 'dead' || !heroLook().enchanted) return;
   const cy = P.y - P.z - 40;
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
