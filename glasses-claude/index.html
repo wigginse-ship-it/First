@@ -412,6 +412,11 @@ $("s-back").onclick = () => show("chat");
 
 /* ---------- boot ---------- */
 applySize();
+// Optional prefill: open  .../glasses-claude/#key=sk-ant-...  once; the key is saved here and removed from the address bar.
+try {
+  const m = location.hash.match(/[#&]key=(sk-ant-[^&\s]+)/);
+  if (m) { LS.set("gc.key", decodeURIComponent(m[1])); history.replaceState(null, "", location.pathname + location.search); }
+} catch {}
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopSpeaking(); });
 if (!apiKey()) showLogin();
 else if (settings.pin) showLogin();
