@@ -92,6 +92,7 @@
   </div>
   <div class="row">
     <button class="primary" id="b-mic" style="flex:3">🎤 Speak</button>
+    <button id="b-paste" style="flex:1">📋</button>
     <button id="b-type" style="flex:1">⌨</button>
   </div>
   <div class="row" id="typebox" style="display:none">
@@ -378,6 +379,15 @@ function toggleType(force) {
   b.style.display = open ? "flex" : "none"; if (open) $("typed").focus();
 }
 $("b-type").onclick = () => toggleType();
+$("b-paste").onclick = async () => {
+  try {
+    const t = (await navigator.clipboard.readText()).trim();
+    if (!t) { $("live").textContent = "Clipboard is empty"; return; }
+    toggleType(true); $("typed").value = t; $("live").textContent = "Pasted — tap Send";
+  } catch {
+    toggleType(true); $("live").textContent = "Paste blocked — long-press the box and choose Paste";
+  }
+};
 $("b-send").onclick = () => { const t = $("typed").value; $("typed").value = ""; toggleType(false); ask(t); };
 $("typed").addEventListener("keydown", e => { if (e.key === "Enter") $("b-send").click(); });
 $("b-up").onclick = () => $("scroll").scrollBy({ top: -$("scroll").clientHeight * .85 });
