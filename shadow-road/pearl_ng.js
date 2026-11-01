@@ -539,7 +539,7 @@
       for (let i = -4; i <= 4; i++) burst(e.x + Math.cos(e.cut) * i * e.hw * .3 * sk, e.y, cy + Math.sin(-e.cut) * i * e.hw * .3 * sk, i % 2 ? cols : NACRE, 2, e.def.mat, dir);
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: cy, ang: -e.cut, t: .3, max: .3, size: (46 + e.hw) * sk, col: '#F6E6FF' }); sfx('slice'); sfx('hit-crystal', .4);
     } else if (kind === 'plcrush') {
-      e.vx = dir * 430 * sk;
+      e.vx = dir * 360 * sk;
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: cy, t: .25, max: .25, r: (26 + e.hw) * sk, col: '#F6E6FF' });
       burst(e.x - dir * e.hw * .5 * sk, e.y, cy, cols, 10, e.def.mat === 'flesh' ? 'rock' : e.def.mat, dir);
       sfx('crunch'); sfx('slam', .5); shakeMag = Math.max(shakeMag, 6); hitstop = Math.max(hitstop, .16);
@@ -547,7 +547,7 @@
       e.pshards = []; for (let i = 0; i < 7; i++) { const x = rand(-.8, .8); e.pshards.push({ x, y: rand(.12, .92), vx: (x + rand(-.25, .25)) * rand(90, 170), vz: rand(80, 220), r: rand(.16, .3), a: rand(0, TAU), w: rand(-9, 9), n: i % 3 === 1 ? 4 : 3, s: rand(0, 99), body: i % 2 }); }
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: cy, t: .3, max: .3, r: (20 + e.hw) * sk, col: '#F6E6FF' }); sfx('hit-crystal');
     } else if (kind === 'plpin') {
-      e.vx = dir * 520 * sk;
+      e.vx = dir * 300 * sk;
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: cy, ang: 0, t: .25, max: .25, size: (30 + e.hw) * sk, col: '#FFF4D0' }); sfx('slice'); sfx('whoosh', .5);
     } else { sfx('hit-crystal', .6); sparkle(e.x, e.y, cy, 8, NACRE); }
     if (e.pcur === 'tide') { for (let i = 0; i < 12 && parts.length < 420; i++) parts.push({ x: e.x + rand(-8, 8) * sk, y: e.y + rand(-3, 3), z: 2, vx: rand(-110, 110) * sk, vy: rand(-10, 10), vz: rand(90, 230) * sk, life: rand(.4, .7), max: .7, col: pick(['#BFF0FF', '#7FD0E8', '#FFFFFF']), size: rand(1.4, 2.6) * sk, shape: 'blob' }); sfx('hit-goo', .6); bub(e.x, e.y, 6, 6, 40); }

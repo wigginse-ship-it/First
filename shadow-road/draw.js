@@ -419,11 +419,12 @@ function drawDeath(e, t) {
   if (e.def.draw === 'knight' || e.def.draw === 'colossus' || e.def.draw === 'human') a.pose = { arm: -1, lean: -.3 };
   if (e.death === 'splat') { a.hurt = false; if (a.pose) a.pose = { arm: 1.3, lean: 0 }; } // (squashed straight down: drawn upright, or the squash shears a leaning body into a slant)
   const draw = () => { CREATURES[e.def.draw](e, a); if (e.arrows) for (const s of e.arrows) { // an arrow that killed it, still in the body: its head buried, the shaft and fletching standing out behind
-    ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.d, 1); ctx.rotate(s.a); ctx.translate(7, 0); drawArrowShape(s.lvl, 26); ctx.restore(); } };
+    ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.d, 1); ctx.rotate(s.a); ctx.translate(7, 0); drawArrowShape(s.lvl, 26); ctx.restore(); } if (e.pform) pearlDeathMarks(e, a, el, t); };
   shadow(e.x, e.y, e.hw * 1.1 * (e.shrink || 1));
   ctx.save(); ctx.globalAlpha = e.fade !== undefined ? e.fade : 1;
   ctx.translate(e.x, e.y - e.z); ctx.scale(e.facing, 1); if (e.boss) ctx.scale(e.size, e.size); else if (e.champ) ctx.scale(1.3, 1.3);
   if (e.shrink && e.shrink < 1) ctx.scale(e.shrink, e.shrink); // (one that fell while the spores had it shrunk stays small)
+  if (e.pform) pearlDeathUnder(e, el, dl);
   FLASH = el < .08;
   if (e.death === 'lie') { // knocked flat and left where it landed
     FLASH = false;
@@ -442,7 +443,8 @@ function drawDeath(e, t) {
       } else ctx.rotate(dl * Math.min(1, Math.max(0, el - .15) / .5) * 1.35); // the legs stagger and topple
       ctx.save(); ctx.translate(0, cutY); ctx.rotate(ang); ctx.beginPath(); ctx.rect(-400, upper ? -400 : 0, 800, 400); ctx.restore(); ctx.clip();
       draw();
-      if (el < .7) { // the fresh cut glows
+      if (e.pform) pearlCut(e, el, cutY, ang);
+      else if (el < .7) { // the fresh cut glows
         ctx.save(); ctx.translate(0, cutY); ctx.rotate(ang); ctx.globalAlpha *= 1 - el / .7;
         ctx.fillStyle = MAT_COL[e.def.mat][0]; ctx.fillRect(-e.hw * 1.6, -2, e.hw * 3.2, 4);
         ctx.fillStyle = '#FFFFFF'; ctx.fillRect(-e.hw * 1.6, -.8, e.hw * 3.2, 1.6); ctx.restore();
@@ -511,6 +513,7 @@ function drawDeath(e, t) {
         }
         ctx.restore(); }
     }
+  } else if (e.death === 'plcrush' || e.death === 'plshatter' || e.death === 'plpin' || e.death === 'plspeck') { drawPearlDeath(e, el, dl, a, draw);
   } else { // splat
     const c = Math.min(1, el / .07), settle = Math.sin(el * 32) * .05 * Math.exp(-el * 6);
     FLASH = false;
@@ -521,6 +524,127 @@ function drawDeath(e, t) {
   }
   FLASH = false;
   ctx.restore();
+}
+// ---------- the Pearl's own deaths (set in pearl_ng.js, only when a Pearl hit is the killing blow) ----------
+// the Edge's cut is lined with nacre, a glint running along it while it is fresh (its corpse keeps a faint pearly seam)
+function pearlCut(e, el, cutY, ang) {
+  ctx.save(); ctx.translate(0, cutY); ctx.rotate(ang);
+  const w = e.hw * 1.5, fresh = Math.max(0, 1 - el / .7), ga = ctx.globalAlpha;
+  if (LITE || FLASH || TINT) ctx.fillStyle = '#F6E6FF';
+  else { const g = ctx.createLinearGradient(-w, 0, w, 0); g.addColorStop(0, '#F6C2D4'); g.addColorStop(.35, '#FFFFFF'); g.addColorStop(.62, '#BFF0E4'); g.addColorStop(1, '#F2D68A'); ctx.fillStyle = g; }
+  ctx.globalAlpha = ga * (.6 + .4 * fresh); ctx.fillRect(-w, -1.3 - fresh * 1.2, w * 2, 2.6 + fresh * 2.4);
+  if (el < 1.3 && !FLASH) { const gx = lerp(-w, w, el / 1.3); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga * (1 - el / 1.3); ctx.fillStyle = '#FFFFFF'; ell(gx, 0, 5, 1.6); ctx.fill(); ell(gx, 0, 1.4, 4.5); ctx.fill(); }
+  ctx.restore();
+}
+// under the body, on the floor: the Tide's puddle, the Abyss's vortex (which then draws the body down into itself)
+function pearlDeathUnder(e, el, dl) {
+  const s0 = (e.champ ? 1.3 : 1) * (e.shrink || 1), gy = (e.z || 0) / s0;
+  if (e.pcur === 'tide') { const g = Math.min(1, el / .5), rx = (e.hw * 1.5 + 10) * g;
+    if (rx > 1) { ctx.fillStyle = 'rgba(80,170,205,.38)'; ell(dl * 6, gy + 1, rx, rx * .28); ctx.fill();
+      ctx.strokeStyle = 'rgba(220,250,255,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(dl * 6, gy + 1, rx * .8, rx * .2, 0, Math.PI + .4, TAU - .4); ctx.stroke(); } }
+  if (e.pcur === 'abyss') { const q = clamp((el - (e.dmax - .8)) / .8, 0, 1); if (q <= 0) return;
+    const rx = (e.hw * 1.3 + 12) * Math.sin(Math.PI * Math.min(1, q * 1.15));
+    if (rx > .5) { ctx.fillStyle = 'rgba(16,10,34,.92)'; ell(0, gy, rx, rx * .3); ctx.fill();
+      ctx.strokeStyle = 'rgba(110,224,192,.75)'; ctx.lineWidth = 1.4; const sp = el * 9;
+      for (let i = 0; i < 2; i++) { const r = rx * (.85 - i * .3); ctx.beginPath(); ctx.ellipse(0, gy, r, r * .3, 0, sp + i * 2, sp + i * 2 + 2.2); ctx.stroke(); } }
+    const s = 1 - ease(Math.min(1, q * 1.1)); ctx.translate(0, gy); ctx.scale(s * (.7 + .3 * Math.cos(q * 9)), s); ctx.translate(0, -gy);
+  }
+}
+// on the body itself (drawn with it, so a cut half keeps its share): the Storm's char and embers, the Nacre's shards
+function pearlDeathMarks(e, a, el, t) {
+  if (FLASH) return;
+  if (e.pcur === 'storm' && !TINT) {
+    const ga = ctx.globalAlpha; TINT = '#1E1418'; ctx.globalAlpha = ga * .62 * Math.min(1, el / .25);
+    try { CREATURES[e.def.draw](e, a); } finally { TINT = null; ctx.globalAlpha = ga; }
+    if (!LITE) { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) { const fl = .5 + .5 * Math.sin(t * (5 + i) + i * 2); ctx.fillStyle = `rgba(255,${150 + i * 30},80,${(.35 + .4 * fl) * (e.corpse ? .6 : 1)})`; circle((i - 1) * e.hw * .45, -e.hh * (.35 + .18 * (i % 2)), 1.6); ctx.fill(); }
+      ctx.restore(); }
+  }
+  if (e.pspk) for (const s of e.pspk) { // splinters of nacre standing out of it
+    const x = s.x * e.hw, y = -s.y * e.hh, ca = Math.cos(s.a), sa = Math.sin(s.a), l = s.l, w = 2.2;
+    ctx.fillStyle = C('#F6E2EC'); ctx.beginPath(); ctx.moveTo(x - sa * w, y + ca * w); ctx.lineTo(x + ca * l, y + sa * l); ctx.lineTo(x + sa * w, y - ca * w); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = C('#8A5A6A'); ctx.lineWidth = .8; ctx.stroke();
+    if (!TINT) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ca * l * .8, y + sa * l * .8); ctx.stroke(); }
+  }
+}
+const pdHash = (s, k) => { const v = Math.sin(s * 91.3 + k * 12.9898) * 43758.5; return v - Math.floor(v); };
+// the Spire's lance: a spiralled nacre horn, its point buried in the body, its butt standing out toward the thrower
+function pearlLance(x0, y0, x1, y1) {
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, w0 = 2.2, w1 = 4.2;
+  ctx.beginPath(); ctx.moveTo(x0 + nx * w0, y0 + ny * w0); ctx.lineTo(x1 + nx * w1, y1 + ny * w1); ctx.lineTo(x1 - nx * w1, y1 - ny * w1); ctx.lineTo(x0 - nx * w0, y0 - ny * w0); ctx.closePath();
+  if (LITE || FLASH || TINT) ctx.fillStyle = C('#F2EAF0'); else { const g = ctx.createLinearGradient(x0 + nx * 4, y0 + ny * 4, x0 - nx * 4, y0 - ny * 4); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, '#EADCEA'); g.addColorStop(1, '#B8A8C8'); ctx.fillStyle = g; }
+  ctx.fill(); ctx.strokeStyle = C('#4A3A50'); ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = C('rgba(120,96,130,.7)'); ctx.lineWidth = .8; ctx.beginPath();
+  for (let i = 1; i < 7; i++) { const f = i / 7, w = lerp(w0, w1, f), cx = x0 + dx * f, cy = y0 + dy * f; ctx.moveTo(cx + nx * w, cy + ny * w); ctx.lineTo(cx - nx * w + dx / L * 3, cy - ny * w + dy / L * 3); } ctx.stroke(); // the spiral
+  ctx.fillStyle = C('#E8B848'); ctx.beginPath(); const cx = x0 + dx * .88, cy = y0 + dy * .88; ell(cx, cy, 3.4, 3.4); ctx.fill(); ctx.strokeStyle = C('#6A4A18'); ctx.lineWidth = .8; ctx.stroke(); // a gold collar near the butt
+}
+function drawPearlDeath(e, el, dl, a, draw) {
+  const hop = e.def.move === 'hop', d = Math.sign(dl || 1);
+  if (e.death === 'plcrush') { // punted by the moon: caved in where it struck, tumbling away down the street, and left flattened
+    const sq = Math.min(1, el / .06), k = ease(Math.min(1, el / .9)), b = Math.min(1, el / .55), bounce = Math.abs(Math.sin(Math.PI * b * 2)) * 16 * (1 - b);
+    ctx.translate(0, -bounce);
+    if (hop) ctx.scale(lerp(1, 1.5, sq), lerp(1, .45, sq));
+    else { ctx.scale(1 + .16 * sq, 1 - .3 * sq); const cy = -e.hh * .5; ctx.translate(0, (e.hh * .5 - e.hw * .8) * k); ctx.translate(0, cy); ctx.rotate(d * (TAU + 1.5) * k); ctx.translate(0, -cy); }
+    FLASH = el < .05; draw(); FLASH = false;
+    if (!TINT) { // the dent the moon left: a round hollow, its lower rim catching the light, cracks running out of it
+      const x = -d * e.hw * .5, y = -e.hh * .55, R = clamp(Math.min(e.hw, e.hh * .6) * .5, 4, 15);
+      ctx.save(); ctx.globalCompositeOperation = 'source-atop';
+      if (LITE) ctx.fillStyle = 'rgba(20,12,24,.4)'; else { const g = ctx.createRadialGradient(x + d * R * .3, y - R * .3, R * .1, x, y, R); g.addColorStop(0, 'rgba(20,12,24,.6)'); g.addColorStop(.75, 'rgba(20,12,24,.32)'); g.addColorStop(1, 'rgba(20,12,24,0)'); ctx.fillStyle = g; }
+      circle(x, y, R); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, R * .8, .4, Math.PI - .4); ctx.stroke();
+      ctx.strokeStyle = 'rgba(30,20,35,.7)'; ctx.beginPath(); for (let i = 0; i < 4; i++) { const an = i * TAU / 4 + .4; ctx.moveTo(x + Math.cos(an) * R * .9, y + Math.sin(an) * R * .9); ctx.lineTo(x + Math.cos(an + .2) * R * 1.5, y + Math.sin(an + .2) * R * 1.5); } ctx.stroke();
+      ctx.restore();
+    }
+  } else if (e.death === 'plshatter') { // sealed in a pearl shell that cracks, then bursts into nacre-coated pieces that stay where they fall
+    const T0 = .62;
+    if (el < T0) {
+      const c = Math.min(1, el / .4);
+      if (el > .42) ctx.translate(Math.sin(el * 90) * 1.2, 0);
+      FLASH = el < .05; draw(); FLASH = false;
+      if (!TINT) { const ga = ctx.globalAlpha; TINT = '#F4ECF6'; ctx.globalAlpha = ga * .72 * c; try { CREATURES[e.def.draw](e, a); } finally { TINT = null; ctx.globalAlpha = ga; } }
+      const rx = e.hw * 1.25 + 6, ry = e.hh * .62 + 6, cy = -e.hh * .5;
+      ctx.save(); ctx.globalAlpha *= c;
+      if (!LITE) { const g = ctx.createLinearGradient(-rx, cy - ry, rx, cy + ry); g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(.5, 'rgba(246,194,212,.18)'); g.addColorStop(1, 'rgba(191,240,228,.28)'); ctx.fillStyle = g; ell(0, cy, rx, ry); ctx.fill(); }
+      ctx.strokeStyle = 'rgba(255,248,240,.9)'; ctx.lineWidth = 1.6; ell(0, cy, rx, ry); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(0, cy, rx * .8, ry * .85, 0, 3.6, 4.6); ctx.stroke(); // its shine
+      if (el > .42) { const q = Math.min(1, (el - .42) / .18); ctx.strokeStyle = 'rgba(70,50,80,.85)'; ctx.lineWidth = 1.1; ctx.beginPath(); // the cracks run in across it
+        for (let i = 0; i < 5; i++) { const an = pdHash(e.deadAt || 1, i) * TAU; let px = Math.cos(an) * rx, py = cy + Math.sin(an) * ry; ctx.moveTo(px, py);
+          for (let j = 1; j <= 3; j++) { const f = j / 3 * q * .8; px = Math.cos(an) * rx * (1 - f) + (pdHash(i, j) - .5) * 8; py = cy + Math.sin(an) * ry * (1 - f) + (pdHash(j, i) - .5) * 6; ctx.lineTo(px, py); } }
+        ctx.stroke(); }
+      ctx.restore();
+    } else {
+      const u = el - T0, G = 900, body = C((MAT_COL[e.def.mat] || MAT_COL.fur)[0]);
+      for (const s of e.pshards || []) {
+        const z0 = s.y * e.hh, tl = (s.vz + Math.sqrt(s.vz * s.vz + 2 * G * z0)) / G, tt = Math.min(u, tl), down = u >= tl;
+        const r = s.r * (e.hw + e.hh) * .5, x = s.x * e.hw + s.vx * tt, y = -(z0 + s.vz * tt - .5 * G * tt * tt);
+        ctx.save(); ctx.translate(x, Math.min(0, y) - (down ? r * .3 : 0)); ctx.rotate(s.a + s.w * tt); if (down) ctx.scale(1, .55);
+        ctx.beginPath(); for (let i = 0; i < s.n; i++) { const an = i * TAU / s.n + pdHash(s.s, i) * .9, rr = r * (.7 + .5 * pdHash(s.s, i + 9)); ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } ctx.closePath();
+        ctx.fillStyle = s.body ? body : C('#F2E8F2'); ctx.fill(); ctx.strokeStyle = C('#4A3A50'); ctx.lineWidth = .9; ctx.stroke();
+        if (!TINT && !FLASH) { ctx.strokeStyle = s.body ? 'rgba(246,230,255,.85)' : 'rgba(191,240,228,.9)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(-r * .5, -r * .3); ctx.lineTo(r * .4, -r * .5); ctx.stroke(); } // its nacre coat
+        ctx.restore();
+      }
+    }
+  } else if (e.death === 'plpin') { // run through by the spire: thrown back, pinned to the floor, light pouring out of the wound
+    const u = Math.min(1, el / .4), k = ease(u), lift = Math.sin(Math.PI * u) * 22, ang = hop ? 0 : d * 1.45 * k;
+    ctx.translate(0, -lift); ctx.rotate(ang);
+    FLASH = el < .05; draw(); FLASH = false;
+    ctx.save(); ctx.translate(0, -e.hh * (hop ? .45 : .55)); ctx.rotate(-ang); // (the wound, in the floor's own frame)
+    if (el > .3 && el < 1.5 && !TINT) { const q = el < .5 ? (el - .3) / .2 : Math.max(0, 1 - (el - .5) / 1);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,244,210,${.4 * q})`;
+      for (let i = 0; i < 5; i++) { const an = -Math.PI / 2 + (i - 2) * .45 + Math.sin(el * 3 + i) * .06, l = (16 + 9 * (i % 2)) * (.6 + .4 * q); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(an - .09) * l, Math.sin(an - .09) * l); ctx.lineTo(Math.cos(an + .09) * l, Math.sin(an + .09) * l); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = `rgba(255,250,235,${.8 * q})`; circle(0, 0, 3); ctx.fill(); ctx.restore(); }
+    const la = .95, L = 40 + e.hw * .3; pearlLance(d * Math.cos(la) * 5, Math.sin(la) * 5, -d * Math.cos(la) * L, -Math.sin(la) * L);
+    ctx.restore();
+  } else { // plspeck: the bare speck dissolves it into motes of nacre, and a little pearl is left where it stood
+    const u = Math.min(1, el / 1.1);
+    if (u < 1) { const ga = ctx.globalAlpha, fade = Math.pow(1 - u, 2); ctx.save(); ctx.globalAlpha = ga * fade; ctx.translate(0, -u * 6); ctx.scale(1 - .25 * u, 1 + .12 * u);
+      FLASH = el < .05; draw(); FLASH = false;
+      if (!TINT) { TINT = '#F6EEF8'; ctx.globalAlpha = ga * Math.sqrt(1 - u) * Math.min(1, u * 2.5) * .9; try { CREATURES[e.def.draw](e, a); } finally { TINT = null; } }
+      ctx.restore(); }
+    if (el > .85) { const r = 3.4 * Math.min(1, (el - .85) / .2);
+      ctx.fillStyle = C('#F4EEF2'); circle(0, -r, r); ctx.fill(); ctx.strokeStyle = C('#6A5A6A'); ctx.lineWidth = .8; ctx.stroke();
+      if (!FLASH && !TINT) { ctx.fillStyle = 'rgba(246,194,212,.55)'; circle(r * .25, -r * .7, r * .55); ctx.fill(); ctx.fillStyle = '#FFFFFF'; circle(-r * .35, -r * 1.35, r * .3); ctx.fill(); } }
+  }
 }
 function drawLoot(k, t) {
   if (k.kind === 'weapon') { drawWeaponPickup(k, t); return; }
