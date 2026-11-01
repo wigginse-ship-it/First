@@ -160,7 +160,13 @@
   }
   const band = (x, w, h, p) => cel(RR(x - w / 2, -h / 2, w, h, Math.min(w, h) * .3), p.metal, { d: h * .18, r: h * .14, lite: p.metalLt, w: .9 });
   function pommel(x, r, p, cap) { cel(PE(x, 0, r * (cap ? .8 : 1), r), p.metal, { d: r * .4, r: r * .3, lite: p.metalLt, w: 1 }); if (det()) { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(x - r * .25, -r * .35, r * .22, 0, TAU); ctx.fill(); } }
-  const pearl = (x, y, r, p) => ART.pearlBody(x, y, r, 1.3, 2, p);
+  // a pearl set in it: the Pearl of Judgement's own sphere (W7.pearlCore, through pearl_ng.js), at this size; a dry run
+  // with SPOTS set gathers where each one lies, in weapon space, for its light behind (backlight, below)
+  let SPOTS = null;
+  const pearl = (x, y, r, p) => {
+    if (SPOTS) { const m = ctx.getTransform(), q = m.transformPoint({ x, y }); SPOTS.push([q.x, q.y, r * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c))]); }
+    ART.pearlBody(x, y, r, 1.3, 2, p);
+  };
   // a curved single-edged blade from x0 (its edge on top, -y), bending up by curve; returns its tip
   function curvedBlade(x0, L, W, curve, p, o = {}) {
     const tip = [x0 + L, -curve * L * .55 - W * .2], sp0 = [x0, W * .42], spC = [x0 + L * .55, W * .5 - curve * L * .12], ed0 = [x0, -W * .62], edC = [x0 + L * .5, -W * 1.08 - curve * L * .42];
@@ -222,7 +228,7 @@
     static: ['haft', (x, y, p, w) => { ctx.beginPath(); ctx.moveTo(x - 6, 0); for (let i = 1; i <= 6; i++) ctx.lineTo(x - 6 + i * 2, (i % 2 ? -1 : 1) * w * .32); ctx.strokeStyle = C('#FFF2A0'); ctx.lineWidth = .9; ctx.stroke(); }],
     cloud: ['haft', (x, y, p, w) => { cel(PE(x, 0, 2.8, 2.2), '#3A4282', { d: .8, r: .6, w: .9 }); if (det()) { ctx.fillStyle = '#FFF2A0'; ctx.beginPath(); ctx.ellipse(x, 0, 1.5, .9, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#1E1838'; ctx.beginPath(); ctx.arc(x, 0, .5, 0, TAU); ctx.fill(); } }],
     halo: ['haft', (x, y, p, w) => { ctx.fillStyle = C('#14102A'); ctx.fillRect(x - 2, -w / 2 - .5, 4, w + 1); ctx.beginPath(); ctx.rect(x - 2, -w / 2 - .5, 4, w + 1); outline(.7); if (det()) { ctx.fillStyle = '#6FE0C0'; ctx.fillRect(x - .3, -w / 2 - .5, .6, w + 1); } }],
-    core: ['pommel', (x) => { ART.pearlBody(x, 0, 3.4, 1.3, 1, PAL.abyss); }],
+    core: ['pommel', (x) => { pearl(x, 0, 3.4, PAL.abyss); }],
     ribbons: ['pommel', (x, y, p) => { for (const [dy, k] of [[-1, 1], [1, -.7]]) rod(() => { ctx.moveTo(x, dy); ctx.bezierCurveTo(x - 5, dy + 6 * k, x - 9, dy - 4 * k, x - 15, dy + 5 * k); }, 1.5, p.accent); }],
     fin: ['head', (x, y, p) => { cel(PF((ox, oy) => { ctx.moveTo(x - 4 + ox, 3 + oy); ctx.quadraticCurveTo(x - 4 + ox, 9 + oy, x - 11 + ox, 10.5 + oy); ctx.quadraticCurveTo(x - 4 + ox, 7 + oy, x + 3 + ox, 3 + oy); }), p.bladeDk, { d: .8, r: .6, lite: p.blade, w: .9 }); }],
     cage: ['collar', (x, y, p) => { band(x, 4.2, 8.4, p); band(x - 4.6, 2.2, 6.4, p); }],
@@ -341,6 +347,22 @@
     return S;
   }
 
+  // each pearl on it lit from behind: a soft light in the Current's colour, drawn before the weapon so it never covers it
+  // (not kept in the picture, so a hit flash or a shadow tint of the picture has no halo)
+  const SPOTC = new Map();
+  function pearlSpots(spec) {
+    let sp = SPOTC.get(spec.key); if (sp) return sp;
+    const probe = document.createElement('canvas'); probe.width = probe.height = 2; sp = [];
+    SPOTS = sp; try { ART.withCtx(probe.getContext('2d'), () => { paintWeapon(spec); }); } finally { SPOTS = null; }
+    if (SPOTC.size > 30) SPOTC.clear(); SPOTC.set(spec.key, sp); return sp;
+  }
+  function backlight(spec) {
+    if (!det()) return; const now = performance.now() / 1000, pu = .5 + .5 * Math.sin(now * 2.4);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const [x, y, r] of pearlSpots(spec)) ART.glow(x, y, Math.max(r * 3.4, 7) * (1 + .12 * pu), spec.pal.glow, .5 + .14 * pu);
+    ctx.restore();
+  }
+
   // ---------------- the picture, painted once and kept ----------------
   const W_SC = 4, CACHE = new Map();
   function picture(spec) {
@@ -365,11 +387,14 @@
     const W = WEAPONS[ID], spec = W && W.pearl; if (!spec) return;
     const hand = pose.glove || '#FFF1E0', withHand = !pose.noHand;
     if (withHand) gripBack(hand, 17.1);
-    if (pose.vector) { paintWeapon(spec); }
-    else { const c = picture(spec), img = FLASH ? tinted(c, '#FFFFFF') : TINT ? tinted(c, TINT) : c; ctx.drawImage(img, c.bx, c.by, c.bw, c.bh); }
+    // the light: the head's glow by the Temper and each pearl's own, behind the weapon (it lights round it, never over it)
+    backlight(spec);
     if (det() && !pose.noGlow) { const c = picture(spec), hd = c.slots.head, G = GLOWS[spec.tmp] || { per: 2, a: .2 }, now = performance.now() / 1000;
       let k = .6 + .4 * Math.sin(now * TAU / G.per); if (G.flick) k = .5 + .5 * Math.random();
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ART.glow(hd[0], hd[1], 16 + 6 * spec.mass, spec.pal.glow, G.a * k); if (pose.glow) { ctx.globalAlpha = .5; ctx.fillStyle = pose.glow; rrect(c.bx + c.bw * .45, -7, c.bw * .5, 14, 6); ctx.fill(); } ctx.restore(); }
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ART.glow(hd[0], hd[1], 16 + 6 * spec.mass, spec.pal.glow, G.a * k); ctx.restore(); }
+    if (pose.vector) { paintWeapon(spec); }
+    else { const c = picture(spec), img = FLASH ? tinted(c, '#FFFFFF') : TINT ? tinted(c, TINT) : c; ctx.drawImage(img, c.bx, c.by, c.bw, c.bh); }
+    if (det() && !pose.noGlow && pose.glow) { const c = picture(spec); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = pose.glow; rrect(c.bx + c.bw * .45, -7, c.bw * .5, 14, 6); ctx.fill(); ctx.restore(); }
     if (withHand) gripFront(hand, 17.1);
   }
   { const _dw = drawWeapon; drawWeapon = function (kind, pose) { if (kind === ID) { drawPW(pose || {}); return; } return _dw(kind, pose); }; }
@@ -385,7 +410,7 @@
   function drawBig(g, spec, cx, cy, size, rot = -.32, hmax) {
     const old = ctx; ctx = g; const c = picture(spec), len = c.bw, k = Math.min(size / len, hmax ? hmax / (c.bh * .72) : 1e9);
     const ok = OUTK, ik = INK; OUTK = .7; INK = '#170D0C';
-    try { ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(k, k); ctx.translate(-(c.bx + c.bw / 2), -(c.by + c.bh / 2)); paintWeapon(spec); ctx.restore(); } finally { ctx = old; OUTK = ok; INK = ik; }
+    try { ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(k, k); ctx.translate(-(c.bx + c.bw / 2), -(c.by + c.bh / 2)); backlight(spec); paintWeapon(spec); ctx.restore(); } finally { ctx = old; OUTK = ok; INK = ik; }
   }
 
   // ======================================================================================================

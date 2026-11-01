@@ -705,25 +705,11 @@
   // ======================================================================================================
   // THE LOOK. Rebma's sea-green, nacre and gold: soft painted shading, an ink line round each piece
   // ======================================================================================================
-  // the pearl itself: nacre shading through the Current's colours, orient bands drifting over it, the edges of its layers
-  // catching the light, a highlight and a glint, the ink line round it
+  // the pearl itself: the Pearl of Judgement exactly as it drops in Rebma (W7.pearlCore, art_w7.js), black, the reversed
+  // Pattern turning in it, at any size; what each pick adds is drawn round it, and its light is behind (orbGlow)
   function pearlBody(x, y, r, t, nl, pal) {
-    if (r < .4) return; const B = (pal || PAL.pearl).b;
-    const g = ctx.createRadialGradient(x - r * .38, y - r * .42, r * .05, x + r * .1, y + r * .12, r * 1.05);
-    g.addColorStop(0, B[0]); g.addColorStop(.22, B[1]); g.addColorStop(.55, B[2]); g.addColorStop(.82, B[3]); g.addColorStop(1, B[4]);
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
-    if (r > 2.4) {
-      ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip(); const a = t * .7;
-      ctx.globalAlpha = .34; ctx.fillStyle = '#F6C2D4'; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * r * .3, y + r * .5, r * .95, r * .34, Math.sin(a) * .3, 0, TAU); ctx.fill();
-      ctx.globalAlpha = .28; ctx.fillStyle = '#F2D68A'; ctx.beginPath(); ctx.ellipse(x + r * .48, y + Math.sin(a) * r * .22, r * .3, r * .78, -.5, 0, TAU); ctx.fill();
-      ctx.globalAlpha = .22; ctx.fillStyle = '#7FD8C8'; ctx.beginPath(); ctx.ellipse(x - r * .55, y + r * .2, r * .3, r * .6, .4, 0, TAU); ctx.fill();
-      ctx.globalAlpha = .55; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = Math.max(.3, r * .045);
-      for (let i = 1; i <= nl; i++) { const q = 1 - i / (nl + 1.4), o = r * .14 * (1 - q); ctx.beginPath(); ctx.arc(x - o, y - o, r * q, Math.PI * .9 + i * .45, Math.PI * 1.65 + i * .45); ctx.stroke(); }
-      ctx.restore();
-    }
-    ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.ellipse(x - r * .4, y - r * .45, r * .32, r * .19, -.6, 0, TAU); ctx.fill();
-    if (r > 2) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(x + r * .44, y + r * .36, r * .1, 0, TAU); ctx.fill(); }
-    ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .12, .6, 1.3); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+    if (r < .4) return;
+    W7.pearlCore(x, y, r, t);
   }
   const glow = (x, y, r, rgb, a) => { if (r <= 0) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
   const inkW = (r, k = .12) => clamp(r * k, .5, 1.2);
@@ -809,24 +795,44 @@
     drawOrbParts(picks, r, pal, t, 'front');
   }
   const palOf = (picks) => PAL[prof(picks).current[0] || 'pearl'];
-  // cached: the orb's still parts as a picture (redrawn only when a pick changes it), and its spinning crescents
+  // cached: the orb's still parts as pictures (the parts behind the pearl, the parts in front; redrawn only when a pick
+  // changes them), its spinning crescents, and the pearl itself, its Pattern turning, as a ring of kept frames
   const SPR = new Map(), SC = 4;
   function withCtx(g, fn) { const old = ctx; ctx = g; try { fn(); } finally { ctx = old; } }
-  function sprite(picks, r, kind) {
-    const key = kind + picks.join(',') + '|' + r.toFixed(1);
+  // (each picture is painted at about the scale it is shown at, so it is never shrunk a long way and left ragged)
+  const resOf = () => { const m = ctx.getTransform(); return clamp(Math.ceil(Math.hypot(m.a, m.b) * 2) / 2, 1, 8); };
+  function sprite(picks, r, kind, sc = SC) {
+    const key = kind + picks.join(',') + '|' + r.toFixed(1) + '@' + sc;
     let c = SPR.get(key); if (c) return c;
-    if (SPR.size > 24) SPR.clear();
-    const ext = r * (kind === 'spin' ? 2.8 : 3.4); c = document.createElement('canvas'); c.width = c.height = Math.max(8, Math.ceil(ext * 2 * SC)); c.ext = ext;
+    if (SPR.size > 36) SPR.clear();
+    const ext = r * (kind === 'spin' ? 2.8 : 3.4); c = document.createElement('canvas'); c.width = c.height = Math.max(8, Math.ceil(ext * 2 * sc)); c.ext = ext;
     const g = c.getContext('2d'), pal = palOf(picks);
-    withCtx(g, () => { g.setTransform(SC, 0, 0, SC, ext * SC, ext * SC); if (kind === 'spin') drawSpinner(picks, r, pal, 0); else { drawOrbParts(picks, r, pal, 0, 'back'); pearlBody(0, 0, r, 1.3, 1 + Math.min(4, picks.length), pal); drawOrbParts(picks, r, pal, 0, 'front'); } });
+    withCtx(g, () => { g.setTransform(sc, 0, 0, sc, ext * sc, ext * sc); if (kind === 'spin') drawSpinner(picks, r, pal, 0); else drawOrbParts(picks, r, pal, 0, kind); });
     SPR.set(key, c); return c;
   }
+  // the pearl's frames: the Pattern in it turns at 1.5 a second, both ways, so CORE_N frames go once round in CORE_P seconds
+  const CORE = new Map(), CORE_N = 32, CORE_P = TAU / 1.5;
+  function coreSprite(r, t, sc = SC) {
+    const f = Math.floor((((t % CORE_P) + CORE_P) % CORE_P) / CORE_P * CORE_N) % CORE_N, key = f + '|' + r.toFixed(1) + '@' + sc;
+    let c = CORE.get(key); if (c) return c;
+    if (CORE.size > 160) CORE.clear();
+    const ext = r * 1.1 + 1; c = document.createElement('canvas'); c.width = c.height = Math.max(4, Math.ceil(ext * 2 * sc)); c.ext = ext;
+    withCtx(c.getContext('2d'), () => { ctx.setTransform(sc, 0, 0, sc, ext * sc, ext * sc); pearlBody(0, 0, r, f / CORE_N * CORE_P); });
+    CORE.set(key, c); return c;
+  }
   const hasSpin = (picks) => picks.some(id => TR[id] && SPIN[TR[id].part]);
+  const hasLayer = (picks, layer) => picks.some(id => TR[id] && PART[TR[id].part] && !SPIN[TR[id].part] && (PART[TR[id].part][0] === layer || PART[TR[id].part][0] === 'both'));
   function blitOrb(picks, x, y, r, facing, spin, alpha = 1) {
-    ctx.save(); ctx.translate(x, y); if (facing < 0) ctx.scale(-1, 1); if (alpha < 1) ctx.globalAlpha *= alpha;
+    ctx.save(); ctx.translate(x, y); if (alpha < 1) ctx.globalAlpha *= alpha; const sc = resOf();
     orbGlow(r, picks && picks.length ? palOf(picks).glow : null); // (behind everything it is: it never covers the orb's own detail)
-    if (hasSpin(picks)) { const s = sprite(picks, r, 'spin'); ctx.save(); ctx.rotate(spin); ctx.drawImage(s, -s.ext, -s.ext, s.ext * 2, s.ext * 2); ctx.restore(); }
-    const c = sprite(picks, r, 'body'); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2);
+    ctx.save(); if (facing < 0) ctx.scale(-1, 1);
+    if (hasSpin(picks)) { const s = sprite(picks, r, 'spin', sc); ctx.save(); ctx.rotate(spin); ctx.drawImage(s, -s.ext, -s.ext, s.ext * 2, s.ext * 2); ctx.restore(); }
+    if (hasLayer(picks, 'back')) { const c = sprite(picks, r, 'back', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
+    ctx.restore();
+    // (the pearl is not turned with him: its light stays at the upper left, as on the relic)
+    const k = coreSprite(r, performance.now() / 1000, sc); ctx.drawImage(k, -k.ext, -k.ext, k.ext * 2, k.ext * 2);
+    if (facing < 0) ctx.scale(-1, 1);
+    if (hasLayer(picks, 'front')) { const c = sprite(picks, r, 'front', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
     ctx.restore();
   }
   // a soft light of its own behind the Pearl, slowly breathing: pearl-white while it is bare, its Current's colour once shaped
@@ -850,9 +856,9 @@
       g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(150,230,215,.12)'; g.lineWidth = 2; for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(w / 2, h * .84, w * (.12 + i * .1), h * (.04 + i * .025), 0, 0, TAU); g.stroke(); } g.restore();
       const r = h * .13, cx = w / 2 - r * .3, cy = h * .47 + Math.sin(t * 2) * h * .015;
       glow(cx, cy, r * 4, pal.glow, .28 + .1 * Math.sin(t * 3));
-      g.save(); g.translate(cx, cy); drawOrb(next, r, pal, t, t * 2.2); g.restore();
-      // the new part, flaring on its own beside the orb
+      // the new part's flare, behind the orb (its light round the pearl, never over it)
       g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .35 + .25 * Math.sin(t * 4); glow(cx, cy, r * 2.4, '255,240,200', .5); g.restore();
+      g.save(); g.translate(cx, cy); drawOrb(next, r, pal, t, t * 2.2); g.restore();
       g.strokeStyle = T.req ? 'rgba(255,210,122,.75)' : 'rgba(242,214,138,.55)'; g.lineWidth = 2; g.strokeRect(5, 5, w - 10, h - 10); });
   }
 

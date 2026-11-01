@@ -2182,10 +2182,17 @@
   W7.drawPearl = (x, y, s, t, glow) => {
     if (glow) glowM(x, y - 4 * s, 26 * s, '120,160,255', .35);
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    const g = ctx.createRadialGradient(-2, -9, 1, 0, -6, 7); g.addColorStop(0, '#5A5A7A'); g.addColorStop(.5, '#1E1C2E'); g.addColorStop(1, '#08070E'); ctx.fillStyle = g; circle(0, -6, 6); ctx.fill(); ctx.strokeStyle = '#0A0A12'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.save(); ctx.beginPath(); ctx.arc(0, -6, 5.4, 0, TAU); ctx.clip(); ctx.strokeStyle = 'rgba(110,150,240,.9)'; ctx.lineWidth = .7; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(0, -6, 1 + i * 1.4, t * (i % 2 ? 1.5 : -1.5), t * (i % 2 ? 1.5 : -1.5) + 4.6); ctx.stroke(); } ctx.restore();
-    ctx.fillStyle = 'rgba(255,255,255,.85)'; ell(-2, -9, 1.6, 1); ctx.fill();
+    W7.pearlCore(0, -6, 6, t);
     ctx.restore();
+  };
+  // the Pearl's own sphere, centred at x,y, radius r: black nacre lit from the upper left, an ink rim, the reversed Pattern
+  // turning in it (three arcs of blue light, each the other way from the last), and its highlight. The one drawing of it:
+  // the drop above, the badges in w7_late.js, and the New Game+ Pearl and its weapon (pearl_ng.js, pearl_weapon.js)
+  W7.pearlCore = (x, y, r, t) => {
+    const k = r / 6;
+    const g = ctx.createRadialGradient(x - 2 * k, y - 3 * k, k, x, y, 7 * k); g.addColorStop(0, '#5A5A7A'); g.addColorStop(.5, '#1E1C2E'); g.addColorStop(1, '#08070E'); ctx.fillStyle = g; circle(x, y, r); ctx.fill(); ctx.strokeStyle = '#0A0A12'; ctx.lineWidth = k; ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, 5.4 * k, 0, TAU); ctx.clip(); ctx.strokeStyle = 'rgba(110,150,240,.9)'; ctx.lineWidth = .7 * k; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x, y, (1 + i * 1.4) * k, t * (i % 2 ? 1.5 : -1.5), t * (i % 2 ? 1.5 : -1.5) + 4.6); ctx.stroke(); } ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ell(x - 2 * k, y - 3 * k, 1.6 * k, k); ctx.fill();
   };
   { const _ul = updateLoot; updateLoot = function (dt) { _ul(dt); const pr = W7.pearl; if (pr && inW7()) { pr.t += dt; if (pr.z > 0) { pr.vz -= 300 * dt; pr.z = Math.max(0, pr.z + pr.vz * dt); } } else if (pr && !inW7()) W7.pearl = null; }; }
   { const _ez = enterZone; enterZone = function (z, Zs) { W7.pearl = null; W7.flip = 0; W7.turnK = 0; return _ez(z, Zs); }; }
