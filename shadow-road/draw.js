@@ -389,8 +389,11 @@ function drawEnemy(e, t) {
   ctx.scale(e.facing, 1);
   if (rot) { ctx.translate(0, -e.hh * .5); ctx.rotate(rot * e.facing); ctx.translate(0, e.hh * .5); }
   if (e.boss && e.state === 'wind') { const w = 1 - e.t / e.windMax; ctx.translate(-e.hw * .6, 0); ctx.rotate(-.1 * w); ctx.translate(e.hw * .6, 0); } // rears back before striking
-  ctx.scale(e.sqx * scale, e.sqy * scale);
-  if (e.state === 'down' && e.def.move === 'hop') ctx.scale(1.3, .55);
+  // a living foe shrunk by the spores keeps its proportions exactly, whatever it is doing: its squash and stretch (hit,
+  // landing, hopping back) becomes an even pulse in size instead; only the fallen are flattened
+  const keepShape = e.shrink < 1 && !e.dead, sq = keepShape ? Math.sqrt(e.sqx * e.sqy) : 1;
+  ctx.scale((keepShape ? sq : e.sqx) * scale, (keepShape ? sq : e.sqy) * scale);
+  if (e.state === 'down' && e.def.move === 'hop' && !keepShape) ctx.scale(1.3, .55);
   FLASH = e.flash > 0 || (e.state === 'wind' && e.t < .25 && Math.floor(t * 20) % 2 === 0);
   CREATURES[e.def.draw](e, a);
   if (e.elite && e.guard > 0 && !e.bare && ARMOR[e.type]) ARMOR[e.type].draw(e, a); // its breakable armor
