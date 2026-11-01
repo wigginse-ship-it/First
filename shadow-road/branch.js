@@ -182,7 +182,7 @@
     line: "The moon is full over Kolvir, and the ghost of Amber hangs in the sky above it. On its stair a phantom of Benedict keeps watch, and what the city shows you may never be.",
     go: 'He held up the moon, and looked into it until it was cold under his fingers, and the city on it began to move.',
     draw: (c, w, h, t) => moonDraw(c, w, h, t),
-    relic: { key: 'silverArm', name: "Benedict's silver arm", desc: 'Fight bare-handed and the arm is on you: silver to the shoulder, and stronger every cycle.' } });
+    relic: { key: 'silverArm', name: "Benedict's silver arm", desc: 'Fight bare-handed to wear it. Stronger every cycle.' } });
   // stand-ins, painted, for a world whose files have not registered a card yet; they can be picked only once its STAGES entry is there
   const STUBS = {
     6: { stage: 6, id: 'rebma', name: 'REBMA', stub: 1,

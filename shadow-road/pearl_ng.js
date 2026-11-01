@@ -553,7 +553,7 @@
       @media (max-height: 340px) { #pearlPick canvas { max-width: 96px; } #pearlPick .sub { display: none; } }
     </style><div class="bx"><div class="kk">THE PEARL OF JUDGEMENT · CHOICE ${s.picks.length + 1} OF ${PICKS}</div>
       <h2>${bossName ? `The Pearl rises out of ${bossName}` : 'The Pearl rises'}: what does it take?</h2>
-      <div class="sub">It keeps every choice, through death and every cycle. After the ${['first', 'second', 'third', 'fourth', 'fifth'][PICKS - 1]}, at the road's last world, it is reforged into a weapon of its own.</div>
+      <div class="sub">Choose one. Light + Heavy throws it.</div>
       <div class="row">${opts.map((t, i) => `<button type="button" data-k="${t.id}" class="${i ? '' : 'sel'}"><canvas width="300" height="225"></canvas>
         <span class="ax ${t.req ? 'combo' : ''}">${AXNAME[t.ax]} · ${t.req ? t.req.map(g => TAGNAME[g].toUpperCase()).join(' + ') : TAGNAME[t.tag].toUpperCase()}</span><b>${t.name}</b><i>${t.desc}</i><span class="n">${KBD ? i + 1 : ''}</span></button>`).join('')}</div>
       <div class="held">Already in it: ${heldTxt}</div></div>`;
@@ -994,12 +994,12 @@
   // ---------------- the forge: the relic row's words ----------------
   W7.ngText = () => {
     const s = save.pearlEvo && Array.isArray(save.pearlEvo.picks) ? save.pearlEvo.picks.filter(id => TR[id]) : [];
-    const evo = forged() ? `REFORGED: it is ${WEAPONS[WID] ? WEAPONS[WID].name : 'a weapon of its own'} now, kept for good, its boomerang throw its signature (Light + Heavy).`
-      : `THE EVOLVING PEARL: it hangs at your shoulder, and Light + Heavy together throws it out and back like a boomerang, striking on both legs. Each time a boss of the first five worlds falls it rises out of it and takes one of three traits (its Form, its Current, its Temper), and every one changes the throw. After the fifth, at the road's last world, it is reforged into a weapon of its own.${s.length ? ` It has taken ${s.map(id => TR[id].name).join(', ')} (${s.length} of ${PICKS}).` : ''}`;
-    const cur = 'CURRENTS, NOT FOOTSTEPS: you do not walk, you ride the sea. Hold a direction to lay a current and glide on it; Dodge (or a double-tap) flings you across the street through whatever is in the way, off the edges and the big ones like a pinball; an attack at speed carries further and hits harder.';
+    const evo = forged() ? `Light + Heavy: the boomerang throw.`
+      : `Light + Heavy: throw the Pearl. Beat a boss to choose a trait.${s.length ? ` (${s.length} of ${PICKS})` : ''}`;
+    const cur = 'Hold a direction to glide. Dodge to fling yourself.';
     const on = [SW.evolve || forged() ? evo : '', SW.currents ? cur : ''].filter(Boolean).join(' ');
-    if (!owned()) return `The sea's reflection of the Jewel of Judgement, out of the King in the Glass. In New Game+ it wakes and changes the whole road. ${on || '(Its New Game+ powers are switched off.)'}`;
-    return on ? `The sea's reflection of the Jewel of Judgement. ${on}` : 'The sea\'s reflection of the Jewel of Judgement. (Its New Game+ powers are switched off.)';
+    if (!owned()) return `Wakes in New Game+. ${on}`;
+    return on || '(Switched off.)';
   };
   { const _of = openForge; openForge = function (kicker) { _of(kicker); try { const row = document.getElementById('w7relicRow'); if (row && row.firstChild && row.firstChild.getContext) withCtx(row.firstChild.getContext('2d'), () => { const g = ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 40, 40); const pk = forged() ? save.pearlForge.picks || [] : save.pearlEvo ? (save.pearlEvo.picks || []).filter(id => TR[id]) : []; blitOrb(pk, 20, 21, 6 + .6 * Math.min(5, pk.length), 1, 0); }); } catch (e) { console.error(e); } }; }
 

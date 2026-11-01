@@ -73,7 +73,7 @@
     stage: 7, id: 'lorraine', name: 'LORRAINE',
     line: 'The Black Circle is eating Lorraine a village at a time, and Corwin knows whose curse it grew from: he goes back to unmake what he made, where Ganelon once held the line.',
     draw(ctx2, w, h, t) { if (window.W8 && W8.card) W8.card(ctx2, w, h, t); },
-    relic: { key: 'w8relic', name: 'The Horn of Lorraine', desc: 'Ganelon\'s war-horn, and the Long March it carries. Every world you clear without falling adds a verse: you choose one of two, and it holds for the rest of the road and into every new cycle. The Charge (first blows land double and floor), the Banner (a gold wave down the lane), Iron (finishers break the ground), the Drum (kills chain a growing bonus), the Hunt (wounded foes take far more), Lorraine\'s Dead (a ghost rider charges), the Watchfire (blows burn, and the burning burst), Ganelon\'s Standard (badly hurt, you hit much harder). Falling loses only the newest verse. Five verses at first, one more each cycle, and each a little stronger.' },
+    relic: { key: 'w8relic', name: 'The Horn of Lorraine', desc: 'Clear a world without falling: pick one of two verses. Falling loses the newest.' },
   });
 })();
 // the attacks, rules, passages and music (art_w8.js) register now that world.js and zones.js have loaded

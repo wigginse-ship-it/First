@@ -99,7 +99,7 @@
     sc();
     if (mode === 'win') {
       const k = $('#winOv .kicker'), h2 = $('#winOv .h2'); if (k) k.textContent = 'THE CIRCLE IS BROKEN'; if (h2) h2.textContent = 'You unmade what you made';
-      $('#winText').textContent = 'The Black Circle is gone out of Lorraine, and Ganelon\'s war-horn is yours, and with it the Long March: every world you clear without falling adds a verse to the march, a lasting gift of war that holds for the rest of your road, and falling costs you only the newest. Walking the road again starts a harder cycle; the march comes with you, and it can grow longer; at the end of the dream you may draw another card.';
+      $('#winText').textContent = 'The Black Circle is gone out of Lorraine, and Ganelon\'s war-horn is yours, and with it the Long March: clear a world without falling to pick a verse; falling loses the newest. Walking the road again starts a harder cycle; the march comes with you, and it can grow longer; at the end of the dream you may draw another card.';
     }
   }
   W8.startEnding = (sc) => {
@@ -395,7 +395,7 @@
     const v = owned() ? M().v : [];
     if (!owned()) { if (sec) sec.remove(); return; }
     if (!sec) { const foot = document.querySelector('#forgeOv .forge-foot'); if (!foot) return; sec = document.createElement('div'); sec.id = 'w8marchForge'; foot.parentNode.insertBefore(sec, foot); }
-    sec.innerHTML = `<h3 class="h3">The Long March</h3><p class="small">The Horn of Lorraine: ${v.length} of ${cap()} verses. Clear a world without falling to add a verse; falling loses the newest. The march comes with you into every new cycle.</p>`;
+    sec.innerHTML = `<h3 class="h3">The Long March</h3><p class="small">The Horn of Lorraine: ${v.length} of ${cap()} verses. Clear a world without falling to add one; falling loses the newest.</p>`;
     const list = document.createElement('div'); list.className = 'cards';
     for (const id of v) { const d = document.createElement('div'); d.className = 'card'; d.style.cssText = 'display:flex;gap:8px;align-items:flex-start';
       const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; cv.style.cssText = 'width:32px;height:32px;flex:none'; const g = cv.getContext('2d'); verseIcon(g, id, 32, 32, 28);
