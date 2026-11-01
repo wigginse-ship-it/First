@@ -707,9 +707,35 @@
   // ======================================================================================================
   // the pearl itself: the Pearl of Judgement exactly as it drops in Rebma (W7.pearlCore, art_w7.js), black, the reversed
   // Pattern turning in it, at any size; what each pick adds is drawn round it, and its light is behind (orbGlow)
-  function pearlBody(x, y, r, t, nl, pal) {
+  // which look a pearl takes: the bare Pearl is the relic itself; once it has taken a shape it is the nacre pearl of its
+  // Current (the first designs: more distinct from one another). Pearl style 2.0, every pearl the relic, is kept behind a
+  // switch: pearlNG('v2', true) in the console, or the dev panel
+  const STYLE_KEY = 'shadowroad-pearl-style';
+  const V2 = () => { try { return localStorage.getItem(STYLE_KEY) === 'v2'; } catch (e) { return false; } };
+  function pearlBody(x, y, r, t, nl, pal, relic) {
     if (r < .4) return;
-    W7.pearlCore(x, y, r, t);
+    if (relic === undefined) relic = V2();
+    if (relic) W7.pearlCore(x, y, r, t); else nacreBody(x, y, r, t, nl, pal);
+  }
+  // the first design: nacre shading through the Current's colours, orient bands drifting over it, the edges of its layers
+  // catching the light, a highlight, the ink line round it
+  function nacreBody(x, y, r, t, nl, pal) {
+    if (r < .4) return; const B = (pal || PAL.pearl).b;
+    const g = ctx.createRadialGradient(x - r * .38, y - r * .42, r * .05, x + r * .1, y + r * .12, r * 1.05);
+    g.addColorStop(0, B[0]); g.addColorStop(.22, B[1]); g.addColorStop(.55, B[2]); g.addColorStop(.82, B[3]); g.addColorStop(1, B[4]);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    if (r > 2.4) {
+      ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip(); const a = t * .7;
+      ctx.globalAlpha = .34; ctx.fillStyle = '#F6C2D4'; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * r * .3, y + r * .5, r * .95, r * .34, Math.sin(a) * .3, 0, TAU); ctx.fill();
+      ctx.globalAlpha = .28; ctx.fillStyle = '#F2D68A'; ctx.beginPath(); ctx.ellipse(x + r * .48, y + Math.sin(a) * r * .22, r * .3, r * .78, -.5, 0, TAU); ctx.fill();
+      ctx.globalAlpha = .22; ctx.fillStyle = '#7FD8C8'; ctx.beginPath(); ctx.ellipse(x - r * .55, y + r * .2, r * .3, r * .6, .4, 0, TAU); ctx.fill();
+      ctx.globalAlpha = .55; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = Math.max(.3, r * .045);
+      for (let i = 1; i <= nl; i++) { const q = 1 - i / (nl + 1.4), o = r * .14 * (1 - q); ctx.beginPath(); ctx.arc(x - o, y - o, r * q, Math.PI * .9 + i * .45, Math.PI * 1.65 + i * .45); ctx.stroke(); }
+      ctx.restore();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.ellipse(x - r * .4, y - r * .45, r * .32, r * .19, -.6, 0, TAU); ctx.fill();
+    if (r > 2) { ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(x + r * .44, y + r * .36, r * .1, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = OUT; ctx.lineWidth = clamp(r * .12, .6, 1.3); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
   }
   const glow = (x, y, r, rgb, a) => { if (r <= 0) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
   const inkW = (r, k = .12) => clamp(r * k, .5, 1.2);
@@ -791,7 +817,7 @@
   function drawOrb(picks, r, pal, t, spin) {
     drawOrbParts(picks, r, pal, t, 'back');
     drawSpinner(picks, r, pal, spin);
-    pearlBody(0, 0, r, t, 1 + Math.min(4, picks.length), pal);
+    pearlBody(0, 0, r, t, 1 + Math.min(4, picks.length), pal, !picks.length || V2());
     drawOrbParts(picks, r, pal, t, 'front');
   }
   const palOf = (picks) => PAL[prof(picks).current[0] || 'pearl'];
@@ -807,7 +833,7 @@
     if (SPR.size > 36) SPR.clear();
     const ext = r * (kind === 'spin' ? 2.8 : 3.4); c = document.createElement('canvas'); c.width = c.height = Math.max(8, Math.ceil(ext * 2 * sc)); c.ext = ext;
     const g = c.getContext('2d'), pal = palOf(picks);
-    withCtx(g, () => { g.setTransform(sc, 0, 0, sc, ext * sc, ext * sc); if (kind === 'spin') drawSpinner(picks, r, pal, 0); else drawOrbParts(picks, r, pal, 0, kind); });
+    withCtx(g, () => { g.setTransform(sc, 0, 0, sc, ext * sc, ext * sc); if (kind === 'spin') drawSpinner(picks, r, pal, 0); else if (kind === 'nacre') nacreBody(0, 0, r, 0, 1 + Math.min(4, picks.length), pal); else drawOrbParts(picks, r, pal, 0, kind); });
     SPR.set(key, c); return c;
   }
   // the pearl's frames: the Pattern in it turns at 1.5 a second, both ways, so CORE_N frames go once round in CORE_P seconds
@@ -817,7 +843,7 @@
     let c = CORE.get(key); if (c) return c;
     if (CORE.size > 160) CORE.clear();
     const ext = r * 1.1 + 1; c = document.createElement('canvas'); c.width = c.height = Math.max(4, Math.ceil(ext * 2 * sc)); c.ext = ext;
-    withCtx(c.getContext('2d'), () => { ctx.setTransform(sc, 0, 0, sc, ext * sc, ext * sc); pearlBody(0, 0, r, f / CORE_N * CORE_P); });
+    withCtx(c.getContext('2d'), () => { ctx.setTransform(sc, 0, 0, sc, ext * sc, ext * sc); pearlBody(0, 0, r, f / CORE_N * CORE_P, 1, null, true); });
     CORE.set(key, c); return c;
   }
   const hasSpin = (picks) => picks.some(id => TR[id] && SPIN[TR[id].part]);
@@ -830,7 +856,7 @@
     if (hasLayer(picks, 'back')) { const c = sprite(picks, r, 'back', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
     ctx.restore();
     // (the pearl is not turned with him: its light stays at the upper left, as on the relic)
-    const k = coreSprite(r, performance.now() / 1000, sc); ctx.drawImage(k, -k.ext, -k.ext, k.ext * 2, k.ext * 2);
+    const k = picks && picks.length && !V2() ? sprite(picks, r, 'nacre', sc) : coreSprite(r, performance.now() / 1000, sc); ctx.drawImage(k, -k.ext, -k.ext, k.ext * 2, k.ext * 2);
     if (facing < 0) ctx.scale(-1, 1);
     if (hasLayer(picks, 'front')) { const c = sprite(picks, r, 'front', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
     ctx.restore();
@@ -888,7 +914,7 @@
       return; }
     if (s.k === 'disc') { ctx.save(); ctx.translate(s.x, y); ctx.scale(1, .55); for (let i = 0; i < 3; i++) crescentBlade(s.r * .55, s.spin * 1.6 + i * TAU / 3, pal, S.f.has('thunder')); ctx.restore(); pearlBody(s.x, y, s.r * .42, t, 2, pal); return; }
     if (s.k === 'orb') { glow(s.x, y, s.r * 3, pal.glow, .25); blitOrb(S.picks, s.x, y, s.r, s.dir, s.spin, 1); return; }
-    glow(s.x, y, s.r * 3, pal.glow, .3); pearlBody(s.x, y, s.r, t, 2, pal);
+    glow(s.x, y, s.r * 3, pal.glow, .3); pearlBody(s.x, y, s.r, t, 2, pal, !(S.picks && S.picks.length) || V2());
   }
   // the currents on the floor: a dark band of moving water along his wake, foam lines running in it, and the current he
   // is laying just ahead of his feet
@@ -985,6 +1011,7 @@
     fire: (o) => { const S = curStats(); return S ? fire(S, o) : false; }, legDmg: (S) => legDmg(S || curStats()), wBest,
     procs, hitFoe, addPool, owned, forged, held, evoOn, curOn, O, CUR, T, GLEAM,
     art: { pearlBody, drawOrb, drawOrbParts, drawSpinner, blitOrb, crescentBlade, PART, glow, withCtx, sparkle, palOf },
+    style: (v) => { try { if (v === 'v2' || v === true) localStorage.setItem(STYLE_KEY, 'v2'); else if (v !== undefined) localStorage.removeItem(STYLE_KEY); } catch (e) {} SPR.clear(); return V2() ? 'v2' : 'v3'; }, V2,
     devJump: (i) => { if (!evoOn()) return; const want = Math.min(PICKS, Math.max(0, i | 0)); if (ES().picks.length < want) autoPick(want); },
   };
 })();
