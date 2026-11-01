@@ -111,6 +111,16 @@
   const RGB = { surf: '200,236,224', flame: '170,255,190', pearl: '236,232,246', lapis: '110,150,230', gold: '255,214,140', deep: '8,30,40' };
   const W7 = { PAL, RGB }; // state shared between the parts of this file, w7_late.js and tests
   window.W7 = W7;
+  // the Pearl's own sphere, centred at x,y, radius r: black nacre lit from the upper left, an ink rim, the reversed Pattern
+  // turning in it (three arcs of blue light, each the other way from the last), and its highlight. The one drawing of it:
+  // the drop (W7.drawPearl, below), the badges in w7_late.js, and the New Game+ Pearl and its weapon (pearl_ng.js, pearl_weapon.js).
+  // Set at once, not with the late hooks below: the reforged weapon's icon can be painted while the page is still loading
+  W7.pearlCore = (x, y, r, t) => {
+    const k = r / 6;
+    const g = ctx.createRadialGradient(x - 2 * k, y - 3 * k, k, x, y, 7 * k); g.addColorStop(0, '#5A5A7A'); g.addColorStop(.5, '#1E1C2E'); g.addColorStop(1, '#08070E'); ctx.fillStyle = g; circle(x, y, r); ctx.fill(); ctx.strokeStyle = '#0A0A12'; ctx.lineWidth = k; ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, 5.4 * k, 0, TAU); ctx.clip(); ctx.strokeStyle = 'rgba(110,150,240,.9)'; ctx.lineWidth = .7 * k; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x, y, (1 + i * 1.4) * k, t * (i % 2 ? 1.5 : -1.5), t * (i % 2 ? 1.5 : -1.5) + 4.6); ctx.stroke(); } ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ell(x - 2 * k, y - 3 * k, 1.6 * k, k); ctx.fill();
+  };
 
   // ======================================================================================================
   // SHARED PIECES OF THE DEEP
@@ -2184,15 +2194,6 @@
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
     W7.pearlCore(0, -6, 6, t);
     ctx.restore();
-  };
-  // the Pearl's own sphere, centred at x,y, radius r: black nacre lit from the upper left, an ink rim, the reversed Pattern
-  // turning in it (three arcs of blue light, each the other way from the last), and its highlight. The one drawing of it:
-  // the drop above, the badges in w7_late.js, and the New Game+ Pearl and its weapon (pearl_ng.js, pearl_weapon.js)
-  W7.pearlCore = (x, y, r, t) => {
-    const k = r / 6;
-    const g = ctx.createRadialGradient(x - 2 * k, y - 3 * k, k, x, y, 7 * k); g.addColorStop(0, '#5A5A7A'); g.addColorStop(.5, '#1E1C2E'); g.addColorStop(1, '#08070E'); ctx.fillStyle = g; circle(x, y, r); ctx.fill(); ctx.strokeStyle = '#0A0A12'; ctx.lineWidth = k; ctx.stroke();
-    ctx.save(); ctx.beginPath(); ctx.arc(x, y, 5.4 * k, 0, TAU); ctx.clip(); ctx.strokeStyle = 'rgba(110,150,240,.9)'; ctx.lineWidth = .7 * k; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x, y, (1 + i * 1.4) * k, t * (i % 2 ? 1.5 : -1.5), t * (i % 2 ? 1.5 : -1.5) + 4.6); ctx.stroke(); } ctx.restore();
-    ctx.fillStyle = 'rgba(255,255,255,.85)'; ell(x - 2 * k, y - 3 * k, 1.6 * k, k); ctx.fill();
   };
   { const _ul = updateLoot; updateLoot = function (dt) { _ul(dt); const pr = W7.pearl; if (pr && inW7()) { pr.t += dt; if (pr.z > 0) { pr.vz -= 300 * dt; pr.z = Math.max(0, pr.z + pr.vz * dt); } } else if (pr && !inW7()) W7.pearl = null; }; }
   { const _ez = enterZone; enterZone = function (z, Zs) { W7.pearl = null; W7.flip = 0; W7.turnK = 0; return _ez(z, Zs); }; }
