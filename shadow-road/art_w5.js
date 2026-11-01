@@ -13,7 +13,7 @@
 // Passages: 'w5moonpath' (a stair of light unrolls up to the moon) and 'w5mist' (the picture flakes away like silver leaf).
 // Everything lives inside this closure so nothing collides with the other files; the late parts are handed to data_w5.js.
 (() => {
-  const T = FLOOR_TOP;
+  // (the street's far edge is read live as FLOOR_TOP: the glide view moves it, core.js)
   const DET = () => !FLASH && !TINT && !LITE; // fine shading is skipped in a hit flash or a flat afterimage tint
   const add = (fn) => { if (!DET()) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
   const addB = (fn) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); }; // light, at build time
@@ -140,9 +140,9 @@
   // it comes down out of the moon's lower limb and lands behind the balustrade, where the landing is
   let stairO = [0, 0];
   function buildStair(R, th) {
-    retire(stairC); const mx = VW * th.sun[0], my = Y_OFF + VIEW_H * th.sun[1], ox = mx - 400, oy = my - 10, W = 420, H = Math.max(60, T + 24 - oy), [c, g] = makeLayer(W, H), old = ctx; ctx = g;
+    retire(stairC); const mx = VW * th.sun[0], my = Y_OFF + VIEW_H * th.sun[1], ox = mx - 400, oy = my - 10, W = 420, H = Math.max(60, FLOOR_TOP + 24 - oy), [c, g] = makeLayer(W, H), old = ctx; ctx = g;
     stairO = [ox - mx, oy - my];
-    const P0 = [mx - 330 - ox, T + 14 - oy], P1 = [mx - 150 - ox, T - 34 - oy], P2 = [mx - R * .3 - ox, my + R * .72 - oy]; // from the landing up to the moon
+    const P0 = [mx - 330 - ox, FLOOR_TOP + 14 - oy], P1 = [mx - 150 - ox, FLOOR_TOP - 34 - oy], P2 = [mx - R * .3 - ox, my + R * .72 - oy]; // from the landing up to the moon
     const at = (u) => { const iu = 1 - u; return [iu * iu * P0[0] + 2 * iu * u * P1[0] + u * u * P2[0], iu * iu * P0[1] + 2 * iu * u * P1[1] + u * u * P2[1]]; };
     addB(() => { ctx.lineCap = 'round'; for (const [w, a] of [[30, .05], [14, .08], [5, .14]]) { ctx.strokeStyle = `rgba(200,215,250,${a})`; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(...P0); ctx.quadraticCurveTo(...P1, ...P2); ctx.stroke(); } });
     for (let i = 0; i < 42; i++) { const u = i / 42, [x, y] = at(u), w = lerp(54, 8, Math.pow(u, .6)), h = lerp(5, 1.2, u), rise = lerp(7, 1.6, u);
@@ -239,14 +239,14 @@
       for (const [dx, dy] of [[-4, 168], [2, 172], [-10, 176], [8, 178], [14, 184], [-2, 180]]) { ctx.fillStyle = 'rgba(255,214,150,.75)'; ctx.fillRect(x + dx, dy, 1, 1.2); }
     });
     cloudSea(rnd, 186, 5, 11, ['#1A2448', '#202C54', '#26345E', '#2C3C68', '#334672'], ['#6A7EAE', '#7C90C0', '#90A4D0', '#A6B8DE', '#BCCAE8']);
-    hazeBand(f, th.haze, 150, T, .3);
+    hazeBand(f, th.haze, 150, FLOOR_TOP, .3);
     // the city ahead, high on its cloud: ghostly doubles of Amber's towers in the mist
     const FP = { base: 'rgba(120,140,195,.5)', lit: 'rgba(205,218,245,.6)', dark: 'rgba(60,76,130,.5)', win: 'rgba(235,242,255,.8)', rim: 'rgba(225,235,255,.7)', a: .8 };
     for (let i = 0; i < 5; i++) awWR(i * 256 + rnd() * 80, 90, rnd, (x, r) => {
       const y = 132 + r() * 26; cloudIsle(x, y + 4, 40 + r() * 20, r, 'rgba(70,86,140,.6)', 'rgba(210,222,250,.6)');
       const n = 2 + Math.floor(r() * 3); for (let k = 0; k < n; k++) mistTower(x + (k - (n - 1) / 2) * 13 + (r() - .5) * 4, y + 2, 20 + r() * 40 * (k === 1 ? 1.5 : 1), 6 + r() * 4, r, FP, { dome: r() < .3, flag: r() < .4 });
     });
-    hazeBand(f, th.haze, 196, T, .25);
+    hazeBand(f, th.haze, 196, FLOOR_TOP, .25);
   }
   // a flight of the moon-stair passing in the distance: treads of light with nothing under them
   function flight(x, y, n, s, dir, a = 1) {
@@ -278,19 +278,19 @@
     AW_SUN = 1;
     for (let i = 0; i < 24; i++) { const x = rnd() * AW_W, y = 212 + rnd() * 22, r = 30 + rnd() * 40; awWrap(x, r, (x) => awSoft(x, y, r, r * .28, '90,110,175', .32)); } // cloud rising behind the landing
     // flights of the moon-stair crossing the sky: some climbing, some falling away into nothing
-    for (let i = 0; i < 5; i++) awWR(70 + i * 250 + rnd() * 80, 120, rnd, (x, r) => flight(x, T - 18 - r() * 40, 6 + Math.floor(r() * 7), 4 + r() * 2.5, r() < .5 ? 1 : -1, .8 + r() * .2));
-    for (let i = 0; i < 5; i++) awWR(150 + i * 256 + rnd() * 70, 20, rnd, (x, r) => mistPillar(x, T + 4, 110 + r() * 60, 11 + r() * 5, r));
-    for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 10, rnd, (x, r) => coldLamp(x, T + 2, 44 + r() * 14, r));
+    for (let i = 0; i < 5; i++) awWR(70 + i * 250 + rnd() * 80, 120, rnd, (x, r) => flight(x, FLOOR_TOP - 18 - r() * 40, 6 + Math.floor(r() * 7), 4 + r() * 2.5, r() < .5 ? 1 : -1, .8 + r() * .2));
+    for (let i = 0; i < 5; i++) awWR(150 + i * 256 + rnd() * 70, 20, rnd, (x, r) => mistPillar(x, FLOOR_TOP + 4, 110 + r() * 60, 11 + r() * 5, r));
+    for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 10, rnd, (x, r) => coldLamp(x, FLOOR_TOP + 2, 44 + r() * 14, r));
     // banners of mist hung between the pillars
-    for (let i = 0; i < 4; i++) awWR(40 + i * 320 + rnd() * 60, 60, rnd, (x, r) => { const y = T - 120 - r() * 30;
+    for (let i = 0; i < 4; i++) awWR(40 + i * 320 + rnd() * 60, 60, rnd, (x, r) => { const y = FLOOR_TOP - 120 - r() * 30;
       ctx.strokeStyle = 'rgba(200,214,245,.35)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(x - 50, y); ctx.quadraticCurveTo(x, y + 14, x + 50, y); ctx.stroke();
       for (let k = 0; k < 5; k++) { const bx = x - 40 + k * 20, L = 26 + r() * 30, by = y + Math.sin((k + .5) / 5 * Math.PI) * 12; ctx.fillStyle = 'rgba(170,186,230,.22)'; poly([bx - 5, by, bx + 5, by, bx + 4, by + L, bx, by + L - 5, bx - 4, by + L]); ctx.fill(); } });
   }
   function moonFloor(rnd, th) {
     stairSeams = [];
-    { const g = ctx.createLinearGradient(0, T - 3, 0, VH); g.addColorStop(0, '#5A6C9E'); g.addColorStop(.25, '#34446E'); g.addColorStop(1, '#141C38'); ctx.fillStyle = g; ctx.fillRect(0, T - 3, AW_W, VH - T + 3); }
+    { const g = ctx.createLinearGradient(0, FLOOR_TOP - 3, 0, VH); g.addColorStop(0, '#5A6C9E'); g.addColorStop(.25, '#34446E'); g.addColorStop(1, '#141C38'); ctx.fillStyle = g; ctx.fillRect(0, FLOOR_TOP - 3, AW_W, VH - FLOOR_TOP + 3); }
     // the landing: great slabs of moonstone, pale where the moon catches them; here and there one is so thin the sky shows through
-    const plates = crackNet(rnd, T + 4, [10, 13, 16, 20, 24, 28], { min: 2.2, max: 4.4, jag: .12, lean: .5 });
+    const plates = crackNet(rnd, FLOOR_TOP + 4, [10, 13, 16, 20, 24, 28], { min: 2.2, max: 4.4, jag: .12, lean: .5 });
     for (const p of plates) {
       const l = p.row / 5, thin = p.k < .06 && p.row > 0 && p.row < 5;
       if (thin) { poly(p.pts); const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h); g.addColorStop(0, 'rgba(10,16,40,.85)'); g.addColorStop(1, 'rgba(40,56,110,.75)'); ctx.fillStyle = g; ctx.fill();
@@ -307,10 +307,10 @@
       if (p.k2 > .7 && p.x >= 0 && p.x < AW_W - 120) { const pts = [[p.x + 2, p.pts[1] + .8], [p.x + p.w * .5, p.pts[1] + .8], [p.x + p.w - 2, p.pts[1] + .8]]; stairSeams.push({ pts, ph: rnd() * TAU }); }
     }
     // a stair-rod of silver leaf runs along the landing every few yards, with a tooled rosette where it meets the next
-    for (let i = 0; i < 6; i++) { const x = 100 + i * 213 + rnd() * 30, y = T + 52 + rnd() * 10;
+    for (let i = 0; i < 6; i++) { const x = 100 + i * 213 + rnd() * 30, y = FLOOR_TOP + 52 + rnd() * 10;
       ctx.save(); ctx.translate(x, y); ctx.scale(1, .32); leafLine(() => { ctx.arc(0, 0, 11, 0, TAU); ctx.moveTo(15, 0); ctx.arc(0, 0, 15, 0, TAU); }, 1); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.fillStyle = 'rgba(232,238,250,.85)'; circle(Math.cos(a) * 7, Math.sin(a) * 7, 1.2); ctx.fill(); } ctx.restore(); }
     // the back of the landing: a balustrade of light, glass posts capped in silver
-    const by = T + 3; ctx.fillStyle = 'rgba(30,40,80,.8)'; ctx.fillRect(0, by - 2, AW_W, 4);
+    const by = FLOOR_TOP + 3; ctx.fillStyle = 'rgba(30,40,80,.8)'; ctx.fillRect(0, by - 2, AW_W, 4);
     for (let x = 4; x < AW_W; x += 9) { const g = ctx.createLinearGradient(x - 2, 0, x + 2, 0); g.addColorStop(0, 'rgba(90,110,170,.6)'); g.addColorStop(.6, 'rgba(225,235,255,.7)'); g.addColorStop(1, 'rgba(150,170,220,.6)'); ctx.fillStyle = g; ctx.fillRect(x - 1.3, by - 15, 2.6, 13); ctx.fillStyle = '#C8D2E2'; ctx.fillRect(x - 2, by - 16, 4, 1.6); }
     ctx.fillStyle = '#B8C4D8'; ctx.fillRect(0, by - 18, AW_W, 2.4); ctx.fillStyle = '#F4F8FF'; ctx.fillRect(0, by - 18, AW_W, .8);
     // the near edge: the landing simply stops, and under it is the night and the cloud far below
@@ -330,9 +330,9 @@
     liveFloor(camX, t) {
       if (stairC) { // the stair comes down out of the moon to the landing: light laid over the far cloud, stopping at the balustrade
         const th = THEMES.moon, mx = VW * th.sun[0] - camX * .02, my = Y_OFF + VIEW_H * th.sun[1];
-        ctx.save(); ctx.beginPath(); ctx.rect(0, Y_OFF, VW, T - 18 - Y_OFF); ctx.clip(); ctx.globalAlpha = .9; ctx.drawImage(stairC, mx + stairO[0], my + stairO[1], stairC.width / K, stairC.height / K); ctx.restore();
+        ctx.save(); ctx.beginPath(); ctx.rect(0, Y_OFF, VW, FLOOR_TOP - 18 - Y_OFF); ctx.clip(); ctx.globalAlpha = .9; ctx.drawImage(stairC, mx + stairO[0], my + stairO[1], stairC.width / K, stairC.height / K); ctx.restore();
       }
-      liveSeams(stairSeams, camX, t, '235,242,255', .12, .1); liveMotes(camX, t, 110, T - 30, T + 90, PALE);
+      liveSeams(stairSeams, camX, t, '235,242,255', .12, .1); liveMotes(camX, t, 110, FLOOR_TOP - 30, FLOOR_TOP + 90, PALE);
     },
   };
   AW_FAR.moon = moonFar; AW_MID.moon = moonMid; AW_FLOOR.moon = moonFloor;
@@ -354,17 +354,17 @@
     const R1 = { base: 'rgba(110,130,190,.32)', lit: 'rgba(200,214,245,.4)', dark: 'rgba(70,86,140,.32)', win: null, rim: null, a: .7 };
     for (let i = 0; i < 26; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => mistTower(x, 206, 40 + r() * 70, 6 + r() * 6, r, R1, { dome: r() < .3 }));
     awWR(300, 70, rnd, (x, r) => ghostKeep(x, 208, .9, r, Object.assign({}, R1, { dark: 'rgba(80,96,150,.4)' })));
-    hazeBand(f, th.haze, 150, T, .3);
+    hazeBand(f, th.haze, 150, FLOOR_TOP, .3);
     const R2 = { base: 'rgba(56,72,126,.72)', lit: 'rgba(170,188,232,.7)', dark: 'rgba(30,40,80,.75)', win: 'rgba(225,235,255,.85)', rim: 'rgba(220,230,255,.75)', a: .9 };
     for (let i = 0; i < 14; i++) awWR(i * 91 + rnd() * 50, 20, rnd, (x, r) => mistTower(x, 220, 50 + r() * 80, 8 + r() * 7, r, R2, { dome: r() < .25, flag: r() < .4 }));
     awWR(900, 70, rnd, (x, r) => ghostKeep(x, 222, 1.05, r, R2));
     // walls between the towers: a rampart walk with merlons
     for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 70, rnd, (x, r) => { const y = 222 - 18 - r() * 10, w = 60 + r() * 60; ctx.fillStyle = 'rgba(36,48,92,.8)'; ctx.fillRect(x - w / 2, y, w, 222 - y); for (let k = -w / 2; k < w / 2; k += 6) ctx.fillRect(x + k, y - 4, 3.4, 4); ctx.fillStyle = 'rgba(200,214,245,.45)'; ctx.fillRect(x - w / 2, y, w, .7); });
-    hazeBand(f, th.haze, 196, T, .35);
+    hazeBand(f, th.haze, 196, FLOOR_TOP, .35);
   }
   // a house of the ghost city: dressed stone, a steep slate roof with a ridge of silver, lancet windows lit from inside
   function ghostHouse(x, w, h, rnd, kind) {
-    const base = T + 4, top = base - h, dir = AW_SUN;
+    const base = FLOOR_TOP + 4, top = base - h, dir = AW_SUN;
     const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(dir > 0 ? 0 : 1, '#18223F'); g.addColorStop(.5, '#26345C'); g.addColorStop(dir > 0 ? 1 : 0, '#3E5080'); ctx.fillStyle = g; ctx.fillRect(x, top, w, h);
     ctx.strokeStyle = 'rgba(8,12,28,.5)'; ctx.lineWidth = .6; ctx.beginPath(); for (let y = top + 9; y < base; y += 9) { ctx.moveTo(x, y); ctx.lineTo(x + w, y); for (let bx = x + ((y / 9) % 2) * 9; bx < x + w; bx += 18) { ctx.moveTo(bx, y); ctx.lineTo(bx, y + 9); } } ctx.stroke(); // stone courses
     ctx.fillStyle = dir > 0 ? 'rgba(200,214,245,.35)' : 'rgba(200,214,245,.35)'; ctx.fillRect(dir > 0 ? x + w - 1.2 : x, top, 1.2, h); // the moonlit edge
@@ -410,29 +410,29 @@
     // the houses stand shoulder to shoulder along the back of the street, with narrow wynds between them
     let x = 0; const kinds = ['gable', 'gable', 'step', 'tower', 'gable'];
     while (x < AW_W - 40) { const w = 50 + rnd() * 56, h = 56 + rnd() * 56, k = kinds[Math.floor(rnd() * kinds.length)]; awWR(x, w + 10, rnd, (xx, r) => ghostHouse(xx, k === 'tower' ? w * .6 : w, k === 'tower' ? h + 34 : h, r, k)); x += w + 14 + rnd() * 40; }
-    for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => unicornBanner(x, T - 70 - r() * 30, 30 + r() * 16, r));
-    for (let i = 0; i < 7; i++) awWR(rnd() * AW_W, 10, rnd, (x, r) => coldLamp(x, T + 6, 50 + r() * 10, r));
+    for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => unicornBanner(x, FLOOR_TOP - 70 - r() * 30, 30 + r() * 16, r));
+    for (let i = 0; i < 7; i++) awWR(rnd() * AW_W, 10, rnd, (x, r) => coldLamp(x, FLOOR_TOP + 6, 50 + r() * 10, r));
   }
   function streetsFloor(rnd, th) {
     streetSeams = [];
-    { const g = ctx.createLinearGradient(0, T - 3, 0, VH); g.addColorStop(0, '#4E5E8E'); g.addColorStop(.3, '#2E3C66'); g.addColorStop(1, '#121A34'); ctx.fillStyle = g; ctx.fillRect(0, T - 3, AW_W, VH - T + 3); }
+    { const g = ctx.createLinearGradient(0, FLOOR_TOP - 3, 0, VH); g.addColorStop(0, '#4E5E8E'); g.addColorStop(.3, '#2E3C66'); g.addColorStop(1, '#121A34'); ctx.fillStyle = g; ctx.fillRect(0, FLOOR_TOP - 3, AW_W, VH - FLOOR_TOP + 3); }
     // the setts: small blocks of moonstone, worn into rounded tops, pale where the moon finds them
-    const plates = crackNet(rnd, T + 10, [7, 8, 9, 10, 11, 12, 13, 15, 17], { min: 1.5, max: 2.6, jag: .2, lean: .6 });
+    const plates = crackNet(rnd, FLOOR_TOP + 10, [7, 8, 9, 10, 11, 12, 13, 15, 17], { min: 1.5, max: 2.6, jag: .2, lean: .6 });
     for (const p of plates) { const l = p.row / 8;
       poly(p.pts); const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h); g.addColorStop(0, awMix(p.k < .5 ? '#A8B6D6' : '#90A0C6', '#3A4878', l)); g.addColorStop(1, awMix('#5E6E9C', '#1E2A50', l)); ctx.fillStyle = g; ctx.fill();
       ctx.save(); poly(p.pts); ctx.clip(); dab(p.x + p.w * .55, p.y + p.h * .3, p.h * .45, '#E8EEF8', .16); ctx.restore(); }
     for (const p of plates) { ctx.strokeStyle = 'rgba(10,14,32,.75)'; ctx.lineWidth = 1 + p.row * .08; poly(p.pts); ctx.stroke(); }
     // the gutters: channels of silver leaf running the length of the street
-    for (const gy of [T + 30, T + 92]) { const wv = awWave(gy, [[3, 1.2], [7, .6]]), gl = () => { ctx.moveTo(0, gy + wv(0)); for (let x = 6; x <= AW_W; x += 6) ctx.lineTo(x, gy + wv(x)); };
+    for (const gy of [FLOOR_TOP + 30, FLOOR_TOP + 92]) { const wv = awWave(gy, [[3, 1.2], [7, .6]]), gl = () => { ctx.moveTo(0, gy + wv(0)); for (let x = 6; x <= AW_W; x += 6) ctx.lineTo(x, gy + wv(x)); };
       ctx.strokeStyle = 'rgba(8,12,30,.55)'; ctx.lineWidth = 4; ctx.beginPath(); gl(); ctx.stroke(); leafLine(gl, .9, .5);
       const pts = []; for (let x = 0; x <= AW_W; x += 20) pts.push([x, gy + wv(x) - .3]); for (let i = 0; i + 6 < pts.length; i += 9) streetSeams.push({ pts: pts.slice(i, i + 6), ph: i * .7 }); }
     // puddles holding the moon
-    for (let i = 0; i < 7; i++) { const x = 60 + i * 180 + rnd() * 60, y = T + 40 + rnd() * 50, w = 18 + rnd() * 26;
+    for (let i = 0; i < 7; i++) { const x = 60 + i * 180 + rnd() * 60, y = FLOOR_TOP + 40 + rnd() * 50, w = 18 + rnd() * 26;
       ctx.fillStyle = 'rgba(14,20,44,.75)'; ell(x, y, w, w * .22); ctx.fill();
       ctx.save(); ell(x, y, w, w * .22); ctx.clip(); ctx.fillStyle = 'rgba(200,214,245,.35)'; ell(x + w * .2, y - w * .05, w * .5, w * .1); ctx.fill(); ctx.fillStyle = 'rgba(240,244,252,.7)'; ell(x - w * .3, y, w * .12, w * .06); ctx.fill(); ctx.restore();
       ctx.strokeStyle = 'rgba(200,214,240,.4)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(x, y, w, w * .22, 0, Math.PI * .05, Math.PI * .95); ctx.stroke(); }
     // the steps up to the doors along the back of the street, and the kerb at the front
-    const by = T + 4; ctx.fillStyle = '#1A2446'; ctx.fillRect(0, by - 4, AW_W, 6); ctx.fillStyle = '#8A98BC'; ctx.fillRect(0, by - 4, AW_W, 1); ctx.fillStyle = '#2A3660'; ctx.fillRect(0, by + 2, AW_W, 3); ctx.fillStyle = '#6E7EA6'; ctx.fillRect(0, by + 2, AW_W, .7);
+    const by = FLOOR_TOP + 4; ctx.fillStyle = '#1A2446'; ctx.fillRect(0, by - 4, AW_W, 6); ctx.fillStyle = '#8A98BC'; ctx.fillRect(0, by - 4, AW_W, 1); ctx.fillStyle = '#2A3660'; ctx.fillRect(0, by + 2, AW_W, 3); ctx.fillStyle = '#6E7EA6'; ctx.fillRect(0, by + 2, AW_W, .7);
     const ey = 350; ctx.fillStyle = '#0A1024'; ctx.fillRect(0, ey, AW_W, VH - ey); ctx.fillStyle = '#7A8AB2'; ctx.fillRect(0, ey - 1, AW_W, 2); for (let x = 0; x < AW_W; x += 22) { ctx.fillStyle = 'rgba(10,14,32,.8)'; ctx.fillRect(x, ey - 1, 1, 6); }
     const sh = ctx.createLinearGradient(0, VH - 44, 0, VH - 10); sh.addColorStop(0, 'rgba(6,8,20,0)'); sh.addColorStop(1, 'rgba(6,8,20,.42)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 44, AW_W, 34);
   }
@@ -441,7 +441,7 @@
     floorA: '#4E5E8E', floorB: '#121A34', path: '#C8D2E2', skyKind: 'none',
     grade: { desat: .1, top: 'rgba(40,56,150,.52)', bot: 'rgba(140,160,215,.3)', vig: 'rgba(2,4,12,.7)' },
     liveSky(camX, t) { skyMoon(THEMES.moon2, camX); skyClouds(camX, t, Y_OFF + 4, Y_OFF + 60, .9, .8); },
-    liveFloor(camX, t) { liveSeams(streetSeams, camX, t, '235,242,255', .14, .1); liveMotes(camX, t, 130, T - 20, T + 100, PALE, .1); },
+    liveFloor(camX, t) { liveSeams(streetSeams, camX, t, '235,242,255', .14, .1); liveMotes(camX, t, 130, FLOOR_TOP - 20, FLOOR_TOP + 100, PALE, .1); },
   };
   AW_FAR.moon2 = streetsFar; AW_MID.moon2 = streetsMid; AW_FLOOR.moon2 = streetsFloor;
 
@@ -456,22 +456,22 @@
     cloudSea(rnd, 200, 4, 10, ['#161E40', '#1C264C', '#222E58', '#283664'], ['#5E72A4', '#7084B8', '#8698C8', '#9CAED6']);
     // far colonnades curving away to either side, all mist
     for (const side of [-1, 1]) for (let i = 0; i < 9; i++) { const x = THRONE_X + side * (300 + i * 34), y = 196 - i * 2, h = 60 - i * 4; awWrap(x, 10, (x) => { ctx.fillStyle = `rgba(110,130,190,${.5 - i * .04})`; ctx.fillRect(x - 3, y - h, 6, h); ctx.fillStyle = `rgba(210,222,250,${.5 - i * .04})`; ctx.fillRect(x - 4, y - h - 3, 8, 3); }); }
-    hazeBand(f, th.haze, 170, T, .3);
+    hazeBand(f, th.haze, 170, FLOOR_TOP, .3);
   }
   function throneMid(rnd) {
     AW_SUN = 1;
     const X = THRONE_X;
     // the great columns of the hall, the arch they carry framing the moon
-    const col = (x, w) => { const g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, 'rgba(26,34,66,.95)'); g.addColorStop(.55, 'rgba(70,86,140,.92)'); g.addColorStop(1, 'rgba(170,186,230,.9)'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, 0, w, T + 6);
-      ctx.strokeStyle = 'rgba(10,14,34,.4)'; ctx.lineWidth = .8; ctx.beginPath(); for (let k = -2; k <= 2; k++) { ctx.moveTo(x + k * w * .18, 0); ctx.lineTo(x + k * w * .18, T + 6); } ctx.stroke();
-      const bg = ctx.createLinearGradient(0, T - 16, 0, T + 6); bg.addColorStop(0, '#C8D2E6'); bg.addColorStop(1, '#5A6890'); ctx.fillStyle = bg; ctx.fillRect(x - w * .7, T - 12, w * 1.4, 16); ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(x - w * .7, T - 12, w * 1.4, .7); }; // the plinth, silver leaf
+    const col = (x, w) => { const g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, 'rgba(26,34,66,.95)'); g.addColorStop(.55, 'rgba(70,86,140,.92)'); g.addColorStop(1, 'rgba(170,186,230,.9)'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, 0, w, FLOOR_TOP + 6);
+      ctx.strokeStyle = 'rgba(10,14,34,.4)'; ctx.lineWidth = .8; ctx.beginPath(); for (let k = -2; k <= 2; k++) { ctx.moveTo(x + k * w * .18, 0); ctx.lineTo(x + k * w * .18, FLOOR_TOP + 6); } ctx.stroke();
+      const bg = ctx.createLinearGradient(0, FLOOR_TOP - 16, 0, FLOOR_TOP + 6); bg.addColorStop(0, '#C8D2E6'); bg.addColorStop(1, '#5A6890'); ctx.fillStyle = bg; ctx.fillRect(x - w * .7, FLOOR_TOP - 12, w * 1.4, 16); ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(x - w * .7, FLOOR_TOP - 12, w * 1.4, .7); }; // the plinth, silver leaf
     for (const dx of [-430, -250, 250, 430]) awWrap(X + dx, 30, (x) => col(x, Math.abs(dx) > 300 ? 22 : 30));
     for (const s of [-1, 1]) awWrap(X + s * 250, 60, (x) => { // the springing of the arch
       ctx.strokeStyle = 'rgba(30,40,76,.95)'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(x, 40); ctx.quadraticCurveTo(x - s * 40, 4, x - s * 130, -10); ctx.stroke();
       leafLine(() => { ctx.moveTo(x - s * 8, 34); ctx.quadraticCurveTo(x - s * 46, 2, x - s * 130, -12); }, 1.6, .9); });
     // the dais and the throne of mist upon it
-    for (let i = 0; i < 4; i++) { const w = 150 - i * 26, y = T + 6 - i * 6; ctx.fillStyle = i % 2 ? '#26345E' : '#2E3E6C'; ctx.fillRect(X - w / 2, y - 6, w, 6); ctx.fillStyle = '#B8C4DA'; ctx.fillRect(X - w / 2, y - 6, w, .9); }
-    const ty = T - 18;
+    for (let i = 0; i < 4; i++) { const w = 150 - i * 26, y = FLOOR_TOP + 6 - i * 6; ctx.fillStyle = i % 2 ? '#26345E' : '#2E3E6C'; ctx.fillRect(X - w / 2, y - 6, w, 6); ctx.fillStyle = '#B8C4DA'; ctx.fillRect(X - w / 2, y - 6, w, .9); }
+    const ty = FLOOR_TOP - 18;
     ctx.save(); ctx.globalAlpha = .82;
     const tg = ctx.createLinearGradient(X - 30, 0, X + 30, 0); tg.addColorStop(0, '#3A4C82'); tg.addColorStop(.6, '#8A9ED0'); tg.addColorStop(1, '#D2DCF2'); ctx.fillStyle = tg;
     ctx.beginPath(); ctx.moveTo(X - 26, ty); ctx.lineTo(X - 26, ty - 70); ctx.quadraticCurveTo(X - 26, ty - 104, X, ty - 118); ctx.quadraticCurveTo(X + 26, ty - 104, X + 26, ty - 70); ctx.lineTo(X + 26, ty); ctx.closePath(); ctx.fill(); // the high back, a pointed arch
@@ -484,7 +484,7 @@
     addB(() => { softDab(X, ty - 60, 70, '170,190,240', .18); for (let i = 0; i < 6; i++) softDab(X + (rnd() - .5) * 60, ty - rnd() * 90, 16 + rnd() * 14, '210,222,250', .12); }); // mist pouring off it
     // banners of mist down the columns
     for (const dx of [-250, 250]) awWrap(X + dx, 20, (x) => { for (let k = 0; k < 2; k++) unicornBanner(x - 14 + k * 16, 70 + k * 10, 70 + k * 8, rnd); });
-    for (let i = 0; i < 4; i++) awWR(rnd() * AW_W, 10, rnd, (x, r) => { if (Math.abs(x - X) < 200) return; coldLamp(x, T + 6, 56, r); });
+    for (let i = 0; i < 4; i++) awWR(rnd() * AW_W, 10, rnd, (x, r) => { if (Math.abs(x - X) < 200) return; coldLamp(x, FLOOR_TOP + 6, 56, r); });
   }
   // THE PATTERN, as the ghost city remembers it: a labyrinth of curves laid into the floor in silver leaf
   function ghostPattern(cx, cy, R, rnd) {
@@ -501,16 +501,16 @@
     return seams;
   }
   function throneFloor(rnd, th) {
-    { const g = ctx.createLinearGradient(0, T - 3, 0, VH); g.addColorStop(0, '#6A7CAE'); g.addColorStop(.2, '#3A4A7A'); g.addColorStop(1, '#10183A'); ctx.fillStyle = g; ctx.fillRect(0, T - 3, AW_W, VH - T + 3); }
+    { const g = ctx.createLinearGradient(0, FLOOR_TOP - 3, 0, VH); g.addColorStop(0, '#6A7CAE'); g.addColorStop(.2, '#3A4A7A'); g.addColorStop(1, '#10183A'); ctx.fillStyle = g; ctx.fillRect(0, FLOOR_TOP - 3, AW_W, VH - FLOOR_TOP + 3); }
     // polished moon-marble in great squares, veined, holding a sheen
-    const plates = crackNet(rnd, T + 4, [12, 16, 21, 27, 34], { min: 2.6, max: 3.6, jag: .05, lean: 1.4 });
+    const plates = crackNet(rnd, FLOOR_TOP + 4, [12, 16, 21, 27, 34], { min: 2.6, max: 3.6, jag: .05, lean: 1.4 });
     for (const p of plates) { const l = p.row / 4;
       poly(p.pts); const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h); g.addColorStop(0, awMix(p.k < .5 ? '#B4C2E0' : '#9AAAD0', '#40507E', l)); g.addColorStop(1, awMix('#7686B2', '#1E2A52', l)); ctx.fillStyle = g; ctx.fill();
       ctx.save(); poly(p.pts); ctx.clip(); ctx.strokeStyle = 'rgba(240,244,255,.18)'; ctx.lineWidth = .6; let vx = p.x + rnd() * p.w, vy = p.y; ctx.beginPath(); ctx.moveTo(vx, vy); for (let s = 0; s < 5; s++) { vx += (rnd() - .4) * p.w * .3; vy += p.h * .22; ctx.lineTo(vx, vy); } ctx.stroke(); ctx.restore(); }
     for (const p of plates) { ctx.strokeStyle = 'rgba(12,16,38,.7)'; ctx.lineWidth = 1.2 + p.row * .12; poly(p.pts); ctx.stroke(); ctx.strokeStyle = 'rgba(225,232,248,.45)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(p.pts[0], p.pts[1] + 1); ctx.lineTo(p.x + p.w - 1, p.pts[1] + 1); ctx.stroke(); }
-    throneSeams = ghostPattern(690, T + 58, 250, rnd);
+    throneSeams = ghostPattern(690, FLOOR_TOP + 58, 250, rnd);
     // the back edge of the hall: a low step of silver leaf; the near edge opens on the night
-    const by = T + 3; ctx.fillStyle = '#1A2446'; ctx.fillRect(0, by - 3, AW_W, 5); leafLine(() => { ctx.moveTo(0, by - 3); ctx.lineTo(AW_W, by - 3); }, 1.2);
+    const by = FLOOR_TOP + 3; ctx.fillStyle = '#1A2446'; ctx.fillRect(0, by - 3, AW_W, 5); leafLine(() => { ctx.moveTo(0, by - 3); ctx.lineTo(AW_W, by - 3); }, 1.2);
     const ey = 350, g = ctx.createLinearGradient(0, ey, 0, VH); g.addColorStop(0, '#0A1028'); g.addColorStop(1, '#26365E'); ctx.fillStyle = g; ctx.fillRect(0, ey, AW_W, VH - ey);
     leafLine(() => { ctx.moveTo(0, ey - 1); ctx.lineTo(AW_W, ey - 1); }, 1.4);
     const sh = ctx.createLinearGradient(0, VH - 44, 0, VH - 10); sh.addColorStop(0, 'rgba(6,8,20,0)'); sh.addColorStop(1, 'rgba(6,8,20,.42)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 44, AW_W, 34);
@@ -523,17 +523,17 @@
     liveSky(camX, t) {
       const th = THEMES.moonBoss, d = W5.dawnK || 0;
       if (d > 0) { // the east (left) blushing, then the whole sky paling as the dawn comes
-        const g = ctx.createLinearGradient(0, 0, VW, 0); g.addColorStop(0, `rgba(240,170,150,${.5 * d})`); g.addColorStop(.45, `rgba(200,170,190,${.25 * d})`); g.addColorStop(1, 'rgba(150,160,210,0)'); ctx.fillStyle = g; ctx.fillRect(0, Y_OFF, VW, T - Y_OFF);
-        const h = ctx.createLinearGradient(0, T - 90, 0, T); h.addColorStop(0, 'rgba(255,200,170,0)'); h.addColorStop(1, `rgba(255,214,180,${.45 * d})`); ctx.fillStyle = h; ctx.fillRect(0, T - 90, VW, 90);
+        const g = ctx.createLinearGradient(0, 0, VW, 0); g.addColorStop(0, `rgba(240,170,150,${.5 * d})`); g.addColorStop(.45, `rgba(200,170,190,${.25 * d})`); g.addColorStop(1, 'rgba(150,160,210,0)'); ctx.fillStyle = g; ctx.fillRect(0, Y_OFF, VW, FLOOR_TOP - Y_OFF);
+        const h = ctx.createLinearGradient(0, FLOOR_TOP - 90, 0, FLOOR_TOP); h.addColorStop(0, 'rgba(255,200,170,0)'); h.addColorStop(1, `rgba(255,214,180,${.45 * d})`); ctx.fillStyle = h; ctx.fillRect(0, FLOOR_TOP - 90, VW, 90);
       }
       ctx.save(); ctx.translate(0, d * 46); ctx.globalAlpha = 1 - d * .4; skyMoon(th, camX); ctx.restore(); // the moon going down
       skyClouds(camX, t, Y_OFF + 6, Y_OFF + 70, .85, .7);
     },
     liveFloor(camX, t) {
       liveSeams(throneSeams, camX, t, '235,242,255', .14, .12);
-      const mx = VW * THEMES.moonBoss.sun[0] - camX * .02, g = ctx.createLinearGradient(0, T, 0, VH); g.addColorStop(0, 'rgba(220,230,255,.16)'); g.addColorStop(1, 'rgba(220,230,255,0)'); // the moon's reflection in the polished floor
-      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(mx - 30, T); ctx.lineTo(mx + 30, T); ctx.lineTo(mx + 70, VH); ctx.lineTo(mx - 70, VH); ctx.fill();
-      liveMotes(camX, t, 90, T - 40, T + 100, PALE, .1);
+      const mx = VW * THEMES.moonBoss.sun[0] - camX * .02, g = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH); g.addColorStop(0, 'rgba(220,230,255,.16)'); g.addColorStop(1, 'rgba(220,230,255,0)'); // the moon's reflection in the polished floor
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(mx - 30, FLOOR_TOP); ctx.lineTo(mx + 30, FLOOR_TOP); ctx.lineTo(mx + 70, VH); ctx.lineTo(mx - 70, VH); ctx.fill();
+      liveMotes(camX, t, 90, FLOOR_TOP - 40, FLOOR_TOP + 100, PALE, .1);
     },
   };
   AW_FAR.moonBoss = throneFar; AW_MID.moonBoss = throneMid; AW_FLOOR.moonBoss = throneFloor;
@@ -1242,7 +1242,7 @@
   const GLYPHS = ['?', 'Ⅲ', '☾', 'Ⅰ', 'Ⅳ'];
   PLAN_FX.w5glyphs = (e) => {
     sfx('charge', 2);
-    for (const [ox, oy, d] of [[0, 0, 0], [-80, -16, .2], [80, 16, .4], [0, P.y > 290 ? -40 : 40, .6]]) hazards.push({ kind: 'w5glyph', x: xClamp(P.x + ox), y: yClamp(P.y + oy), r: 34, t: 1 + d, max: 1 + d, dmg: edmg(e), g: pick(GLYPHS) });
+    for (const [ox, oy, d] of [[0, 0, 0], [-80, -16, .2], [80, 16, .4], [0, P.y > (FLOOR_TOP + FLOOR_BOT) / 2 ? -40 : 40, .6]]) hazards.push({ kind: 'w5glyph', x: xClamp(P.x + ox), y: yClamp(P.y + oy), r: 34, t: 1 + d, max: 1 + d, dmg: edmg(e), g: pick(GLYPHS) });
     act(e, 'glyphs', (h, dt, e) => { if (h.el > .6) { recover(e, 1.0); return true; } return false; });
   };
   reg('w5glyph', {

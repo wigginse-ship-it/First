@@ -33,6 +33,7 @@
   // drawWorld, with its layers under our control: each can slide, sink or fade on its own, and the sky can be repainted
   function paintWorld(themeId, o, t) {
     const th = THEMES[themeId], camX = o.cam, wrap = (x) => -(((x % 1280) + 1280) % 1280);
+    asBackdrop(() => { // (everything beyond the street, lifted to meet it in the glide view: core.js)
     if (o.skyFill) o.skyFill(th);
     else {
       const g = ctx.createLinearGradient(0, Y_OFF, 0, FLOOR_TOP); g.addColorStop(0, th.sky[0]); g.addColorStop(.45, th.sky[1]); g.addColorStop(.82, th.sky[2]); g.addColorStop(1, th.sky[3]);
@@ -52,6 +53,7 @@
     if (o.afterMid) o.afterMid();
     if (!o.noWash) { const sx = VW * th.sun[0] - camX * .02, sy = Y_OFF + VIEW_H * th.sun[1];
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; const wash = ctx.createRadialGradient(sx, sy, 10, sx, sy, VW * .7); wash.addColorStop(0, `rgba(${th.sun[2]},.22)`); wash.addColorStop(1, `rgba(${th.sun[2]},0)`); ctx.fillStyle = wash; ctx.fillRect(0, Y_OFF, VW, FLOOR_TOP - Y_OFF); ctx.restore(); }
+    });
     drawFloor(themeId, th, o.floorCam ?? camX, t);
   }
   function cycleTint() { // as drawScene does it: a new cycle of the road is painted under night

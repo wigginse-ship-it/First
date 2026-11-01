@@ -7,7 +7,7 @@
 (() => {
   const BACKUP = 'shadowroad-devbackup', OPTS = 'shadowroad-devopts';
   const DEV = window.DEV = { god: false };
-  let opts = { god: false, elites: false, arsenal: false, relic: '', cycle: 0, card: '', clv: 1 };
+  let opts = { god: false, elites: false, arsenal: false, relic: '', cycle: 0, card: '', clv: 1, glide: 'auto' };
   try { Object.assign(opts, JSON.parse(localStorage.getItem(OPTS) || '{}')); } catch (e) {}
   if (opts.relics || (opts.arm && opts.pearl && opts.horn)) opts.relic = 'all'; else if (opts.arm || opts.pearl || opts.horn) opts.relic = opts.arm ? 'arm' : opts.pearl ? 'pearl' : 'horn';
   delete opts.relics; delete opts.arm; delete opts.pearl; delete opts.horn; // (the older switches)
@@ -15,7 +15,7 @@
   // the test switches hold only in a session started from this panel: a new journey or Continue from the title is an
   // ordinary game, with no switch carried into it (they are remembered here, for the next time the panel is used)
   DEV.active = false;
-  const syncDev = () => { DEV.god = DEV.active && !!opts.god; DEV.elites = DEV.active && !!opts.elites; };
+  const syncDev = () => { DEV.god = DEV.active && !!opts.god; DEV.elites = DEV.active && !!opts.elites; DEV.glideView = DEV.active ? opts.glide || 'auto' : 'auto'; }; // (glideView: core.js glideWanted)
   syncDev();
   for (const id of ['newBtn', 'contBtn']) { const btn = document.getElementById(id); if (btn) btn.addEventListener('click', () => { DEV.active = false; syncDev(); }, true); }
 
@@ -94,6 +94,7 @@
         <label>Relic <select data-o="relic"><option value="">None</option><option value="arm">The Silver Arm (equipped)</option><option value="pearl">The Pearl of Judgement</option><option value="horn">The Horn of Lorraine</option><option value="all">All three</option></select></label>
         <label>Card <select data-o="card"><option value="">(as saved)</option>${TRUMP_ORDER.map(k => `<option value="${k}">${TRUMPS[k].name}</option>`).join('')}</select></label>
         <label>Card level <select data-o="clv">${[1, 2, 3].map(l => `<option value="${l}">${['I', 'II', 'III'][l - 1]}</option>`).join('')}</select></label>
+        <label title="The camera pulled back and the street made deeper, for the Pearl's Currents. Auto: whenever the glide applies. A change takes hold as the next place (zone) is entered">Glide view (zoomed out, taller floor) <select data-o="glide"><option value="auto">auto (follow the glide)</option><option value="on">always on</option><option value="off">always off</option></select></label>
         <label>Cycle <select data-o="cycle">${[0, 1, 2, 3].map(c => `<option value="${c}">${c ? 'NG+' + c : 'first'}</option>`).join('')}</select></label>
       </div>
       <div class="opts" title="The Pearl of Judgement in New Game+: pick the Pearl as the relic and a cycle of NG+1 or more">
@@ -118,8 +119,8 @@
       if (i === 4 && window.BRANCH) { const r2 = document.createElement('div'); r2.className = 'w'; r2.innerHTML = `<b>Trump choice</b><button data-a="choice">The deck on the Rim (after the dream)</button>`; list.appendChild(r2); }
     });
     for (const c of el.querySelectorAll('[data-o]')) {
-      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'arsenal' ? (opts[k] === true ? 'all' : String(opts[k] || '')) : k === 'card' || k === 'relic' ? String(opts[k] || '') : String(opts[k] | 0);
-      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' || k === 'arsenal' ? c.value : +c.value; syncDev(); keepOpts(); });
+      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'arsenal' ? (opts[k] === true ? 'all' : String(opts[k] || '')) : k === 'card' || k === 'relic' ? String(opts[k] || '') : k === 'glide' ? String(opts[k] || 'auto') : String(opts[k] | 0);
+      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' || k === 'arsenal' || k === 'glide' ? c.value : +c.value; syncDev(); keepOpts(); });
     }
     for (const c of el.querySelectorAll('[data-p]')) { // the Pearl's New Game+ switches (PEARL_NG, w7_late.js): they take effect at once
       const k = c.dataset.p; c.checked = !!(window.pearlNG && pearlNG()[k]); // (as saved for dev games: an ordinary game ignores them)

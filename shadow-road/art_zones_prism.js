@@ -4,7 +4,7 @@
 //   prismBoss - The Wyrm's Nest: a crystal cathedral built from the ribs of something vast, open to the stars, a rose window of light
 // Everything lives inside this closure so nothing collides with the other art files sharing the global scope.
 (() => {
-  const T = FLOOR_TOP;
+  // (the street's far edge is read live as FLOOR_TOP: the glide view moves it, core.js)
   let roseC = null, nebC = null, roseX = 0, nestRibs = [], galleryCols = []; // kept from painting for the live sky and the floor's reflections
   const flipY = (yc, fn) => { ctx.save(); ctx.translate(0, 2 * yc); ctx.scale(1, -1); fn(); ctx.restore(); }; // the world hung upside down about y = yc
   const add = (fn) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
@@ -188,7 +188,7 @@
     const sP = { base: '#8A7AB2', lit: '#F0D4E4', dark: '#4A3E78', gold: '#C8A8B0' };
     for (let i = 0; i < 4; i++) { const x = 120 + i * 320 + rnd() * 100, y = 150 + rnd() * 34, rot = (rnd() - .5) * .9, flip = i % 2;
       awWR(x, 60, rnd, (x) => { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); if (flip) ctx.scale(1, -1); zStair(-30, 0, 6, 9, 5.5, sP, true); ctx.restore(); }); }
-    hazeBand(f, th.haze, 150, T, .22);
+    hazeBand(f, th.haze, 150, FLOOR_TOP, .22);
     // the far gallery: a two-storey arcade on the horizon, broken off here and there into columns that stop in the air
     const aTop = 176, aBase = 214, bay = 40;
     ctx.fillStyle = '#62528E'; ctx.beginPath(); ctx.rect(0, aTop, AW_W, aBase - aTop);
@@ -201,9 +201,9 @@
         ctx.fillStyle = '#F4C0A8'; ctx.globalAlpha = .55; ctx.fillRect(x, aTop - 22, bay, 1.1); ctx.fillRect(x + 11, aTop - 18, 1.2, 18); ctx.globalAlpha = 1; }
       else if (r < .85) { ctx.fillStyle = '#62528E'; const ch = 10 + r * 30; ctx.fillRect(x + 4, aTop - ch, 4, ch); ctx.fillRect(x + 2, aTop - ch - 2, 8, 2.5); ctx.fillStyle = '#F4C0A8'; ctx.globalAlpha = .55; ctx.fillRect(x + 4, aTop - ch, 1.2, ch); ctx.globalAlpha = 1; }
     }
-    hazeBand(f, th.haze, 176, T, .26);
+    hazeBand(f, th.haze, 176, FLOOR_TOP, .26);
     ridge(226, 4, .01, '#7E70A4', 9);
-    hazeBand(f, th.haze, 205, T, .3);
+    hazeBand(f, th.haze, 205, FLOOR_TOP, .3);
   }
 
   // ---------- mid layer: arches and stairs hung from the sky, columns that stop in the air, gilt frames and mirrors adrift ----------
@@ -211,11 +211,11 @@
     AW_SUN = -1;
     const P = MARBLE, Pd = { base: '#6E5C9E', lit: '#F4C8C0', dark: '#201840', mortar: '#1E1638', gold: '#B89048', goldLit: '#F2D898' };
     // upside-down arches whose piers come down out of the sky
-    for (let i = 0; i < 2; i++) { const x = 330 + i * 640 + rnd() * 80; awWR(x, 70, rnd, (x, r) => flipY(135, () => zArch(x, T + 10, 32 + r() * 6, 76, Pd, r, { foot: false }))); }
+    for (let i = 0; i < 2; i++) { const x = 330 + i * 640 + rnd() * 80; awWR(x, 70, rnd, (x, r) => flipY(135, () => zArch(x, FLOOR_TOP + 10, 32 + r() * 6, 76, Pd, r, { foot: false }))); }
     // a staircase hanging head-down from a pier in the sky
     for (let i = 0; i < 2; i++) { const x = 40 + i * 640 + rnd() * 80; awWR(x + 48, 70, rnd, (xx) => {
       const x = xx - 48; ctx.fillStyle = sideGrad(x - 6, x + 12, Pd); ctx.fillRect(x - 6, 0, 18, 92); slab(x - 9, 90, 24, 5, Pd);
-      flipY(150, () => zStair(x, T - 36, 8, 12, 7.5, Pd, true));
+      flipY(150, () => zStair(x, FLOOR_TOP - 36, 8, 12, 7.5, Pd, true));
     }); }
     // columns hanging from nowhere, their capitals pointing at the floor
     const cols = []; galleryCols = [];
@@ -223,9 +223,9 @@
     // columns rising from the floor and simply stopping: whole, or broken with their drums floating above the break
     for (let i = 0; i < 4; i++) { const x = 100 + i * 320 + rnd() * 70, w = 15 + rnd() * 5, top = 118 + rnd() * 30, brk = i % 2 === 1; cols.push([x, w * 1.4]); galleryCols.push([x, w, top]);
       awWR(x, w * 1.2, rnd, (x, r) => {
-        zColumn(x, top, T + 2, w, P, { cap: !brk, foot: true, brk }, r);
+        zColumn(x, top, FLOOR_TOP + 2, w, P, { cap: !brk, foot: true, brk }, r);
         if (brk) for (let k = 0; k < 3; k++) { const dy = top - 12 - k * (w * .9 + 6) - r() * 4, dw = w * .84; ctx.save(); ctx.translate(x + (r() - .5) * 6, dy); ctx.rotate((r() - .5) * .35); zColumn(0, -w * .45, w * .45, dw, P, {}, r); ctx.restore(); }
-        for (let k = 0; k < 5; k++) dab(x + (r() - .5) * w * 2.4, T - 1, 2 + r() * 2.5, r() < .5 ? '#4A3E72' : '#7A6CA4', .9);
+        for (let k = 0; k < 5; k++) dab(x + (r() - .5) * w * 2.4, FLOOR_TOP - 1, 2 + r() * 2.5, r() < .5 ? '#4A3E72' : '#7A6CA4', .9);
       }); }
     // floating frames and mirrors, hung in the gaps between the columns
     for (let i = 0; i < 6; i++) {
@@ -235,17 +235,17 @@
       awWR(x, fw, rnd, (x, r) => zFrame(x, y, w, h, rot, kind, oval, r, GILT));
     }
     // a pedestal with crystals, and low plinths along the foot of the gallery
-    for (let i = 0; i < 3; i++) { const x = 260 + i * 427 + rnd() * 80; awWR(x, 30, rnd, (x, r) => { slab(x - 12, T - 22, 24, 22, P); slab(x - 15, T - 26, 30, 4, P); ctx.fillStyle = P.gold; ctx.fillRect(x - 12, T - 21, 24, 1.2); awCluster(x, T - 25, 16 + r() * 10, [190, 300, 50][i], r, 56); }); }
-    for (let i = 0; i < 10; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => awCluster(x, T + 2, 9 + r() * 12, [190, 280, 320, 170][i % 4], r, 50));
+    for (let i = 0; i < 3; i++) { const x = 260 + i * 427 + rnd() * 80; awWR(x, 30, rnd, (x, r) => { slab(x - 12, FLOOR_TOP - 22, 24, 22, P); slab(x - 15, FLOOR_TOP - 26, 30, 4, P); ctx.fillStyle = P.gold; ctx.fillRect(x - 12, FLOOR_TOP - 21, 24, 1.2); awCluster(x, FLOOR_TOP - 25, 16 + r() * 10, [190, 300, 50][i], r, 56); }); }
+    for (let i = 0; i < 10; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => awCluster(x, FLOOR_TOP + 2, 9 + r() * 12, [190, 280, 320, 170][i % 4], r, 50));
   }
 
   // ---------- floor: a checkered pavement of marble and black glass, laid on the slant, mirroring the hanging world ----------
   function galleryFloor(rnd, th) {
     const N = 32, CW = AW_W / N, S = -.5;
-    ctx.fillStyle = '#16112A'; ctx.fillRect(0, T - 1, AW_W, VH - T + 1);
-    const rows = []; for (let y = T + 2, h = 7.5; y < VH; y += h, h *= 1.16) rows.push([y, h]);
+    ctx.fillStyle = '#16112A'; ctx.fillRect(0, FLOOR_TOP - 1, AW_W, VH - FLOOR_TOP + 1);
+    const rows = []; for (let y = FLOOR_TOP + 2, h = 7.5; y < VH; y += h, h *= 1.16) rows.push([y, h]);
     rows.forEach(([y0, h], r) => {
-      const y1 = y0 + h, ox0 = (y0 - T) * S, ox1 = (y1 - T) * S, fog = 1 - r / rows.length;
+      const y1 = y0 + h, ox0 = (y0 - FLOOR_TOP) * S, ox1 = (y1 - FLOOR_TOP) * S, fog = 1 - r / rows.length;
       for (let c = -4; c < N + 4; c++) {
         const cm = ((c % N) + N) % N, cr = mulberry(cm * 97 + r * 1013 + 7), light = (c + r) % 2 === 0;
         const xa = c * CW + ox0, xb = c * CW + ox1, g = .6;
@@ -271,16 +271,16 @@
       }
     });
     add(() => { // the floor mirrors the gallery: pale streaks under the columns, a rosy wash at the back
-      const wg = ctx.createLinearGradient(0, T, 0, T + 60); wg.addColorStop(0, 'rgba(220,150,200,.16)'); wg.addColorStop(1, 'rgba(220,160,200,0)'); ctx.fillStyle = wg; ctx.fillRect(0, T, AW_W, 60);
-      for (let i = 0; i < 12; i++) { const x = rnd() * AW_W, w = 6 + rnd() * 12, L = 40 + rnd() * 50; awWrap(x, w, (x) => { const g = ctx.createLinearGradient(0, T, 0, T + L); g.addColorStop(0, i % 3 ? 'rgba(200,180,240,.16)' : 'rgba(255,220,150,.14)'); g.addColorStop(1, 'rgba(200,180,240,0)'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, T, w, L); }); }
+      const wg = ctx.createLinearGradient(0, FLOOR_TOP, 0, FLOOR_TOP + 60); wg.addColorStop(0, 'rgba(220,150,200,.16)'); wg.addColorStop(1, 'rgba(220,160,200,0)'); ctx.fillStyle = wg; ctx.fillRect(0, FLOOR_TOP, AW_W, 60);
+      for (let i = 0; i < 12; i++) { const x = rnd() * AW_W, w = 6 + rnd() * 12, L = 40 + rnd() * 50; awWrap(x, w, (x) => { const g = ctx.createLinearGradient(0, FLOOR_TOP, 0, FLOOR_TOP + L); g.addColorStop(0, i % 3 ? 'rgba(200,180,240,.16)' : 'rgba(255,220,150,.14)'); g.addColorStop(1, 'rgba(200,180,240,0)'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, FLOOR_TOP, w, L); }); }
     });
     // a gilt border along the back of the pavement
-    ctx.fillStyle = '#5E3E1C'; ctx.fillRect(0, T - 1, AW_W, 3.4); ctx.fillStyle = '#C29440'; ctx.fillRect(0, T - 1, AW_W, 2); ctx.fillStyle = '#FFE6A0'; ctx.globalAlpha = .7; ctx.fillRect(0, T - 1, AW_W, .7); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#5E3E1C'; ctx.fillRect(0, FLOOR_TOP - 1, AW_W, 3.4); ctx.fillStyle = '#C29440'; ctx.fillRect(0, FLOOR_TOP - 1, AW_W, 2); ctx.fillStyle = '#FFE6A0'; ctx.globalAlpha = .7; ctx.fillRect(0, FLOOR_TOP - 1, AW_W, .7); ctx.globalAlpha = 1;
     // things lying at the back: a toppled column drum, a fallen frame, crystals
-    for (let i = 0; i < 3; i++) awWR(150 + i * 427 + rnd() * 100, 30, rnd, (x, r) => { const w = 22 + r() * 10, d = 13; ctx.fillStyle = sideGrad(x - w / 2, x + w / 2, MARBLE); ctx.fillRect(x - w / 2, T - d, w, d); ctx.fillStyle = 'rgba(40,30,70,.35)'; for (let k = 1; k < 4; k++) ctx.fillRect(x - w / 2, T - d + k * d / 4, w, .7);
-      ctx.fillStyle = '#D8C8E8'; ell(x + w / 2, T - d / 2, 3.2, d / 2); ctx.fill(); ctx.strokeStyle = 'rgba(80,60,120,.6)'; ctx.lineWidth = .6; ell(x + w / 2, T - d / 2, 2, d / 3); ctx.stroke(); });
-    for (let i = 0; i < 2; i++) awWR(400 + i * 640 + rnd() * 80, 26, rnd, (x, r) => zFrame(x, T - 9, 30, 20, -.15 + r() * .1, 'empty', false, r, GILT));
-    for (let i = 0; i < 10; i++) awWR(rnd() * AW_W, 22, rnd, (x, r) => awCluster(x, T + 1, 8 + r() * 12, [190, 280, 320, 50][i % 4], r, 54));
+    for (let i = 0; i < 3; i++) awWR(150 + i * 427 + rnd() * 100, 30, rnd, (x, r) => { const w = 22 + r() * 10, d = 13; ctx.fillStyle = sideGrad(x - w / 2, x + w / 2, MARBLE); ctx.fillRect(x - w / 2, FLOOR_TOP - d, w, d); ctx.fillStyle = 'rgba(40,30,70,.35)'; for (let k = 1; k < 4; k++) ctx.fillRect(x - w / 2, FLOOR_TOP - d + k * d / 4, w, .7);
+      ctx.fillStyle = '#D8C8E8'; ell(x + w / 2, FLOOR_TOP - d / 2, 3.2, d / 2); ctx.fill(); ctx.strokeStyle = 'rgba(80,60,120,.6)'; ctx.lineWidth = .6; ell(x + w / 2, FLOOR_TOP - d / 2, 2, d / 3); ctx.stroke(); });
+    for (let i = 0; i < 2; i++) awWR(400 + i * 640 + rnd() * 80, 26, rnd, (x, r) => zFrame(x, FLOOR_TOP - 9, 30, 20, -.15 + r() * .1, 'empty', false, r, GILT));
+    for (let i = 0; i < 10; i++) awWR(rnd() * AW_W, 22, rnd, (x, r) => awCluster(x, FLOOR_TOP + 1, 8 + r() * 12, [190, 280, 320, 50][i % 4], r, 54));
     const sh = ctx.createLinearGradient(0, VH - 36, 0, VH); sh.addColorStop(0, 'rgba(10,6,20,0)'); sh.addColorStop(1, 'rgba(10,6,20,.45)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 36, AW_W, 36);
   }
 
@@ -376,13 +376,13 @@
     });
     // the far side of the cage: hazy ribs bowing the other way, rooted in a crystal shore
     for (let i = 0; i < 8; i++) { const x = i * 160 + rnd() * 30; awWR(x, 140, rnd, (x, r) => zRib(x, 66, x - 120, 92, x - 92, 214, 13, 5, BONE_FAR, r, 4)); }
-    { const hg = ctx.createLinearGradient(0, 90, 0, T); hg.addColorStop(0, `rgba(${th.haze},0)`); hg.addColorStop(1, `rgba(${th.haze},.3)`); ctx.fillStyle = hg; ctx.fillRect(0, 90, AW_W, T - 90); }
+    { const hg = ctx.createLinearGradient(0, 90, 0, FLOOR_TOP); hg.addColorStop(0, `rgba(${th.haze},0)`); hg.addColorStop(1, `rgba(${th.haze},.3)`); ctx.fillStyle = hg; ctx.fillRect(0, 90, AW_W, FLOOR_TOP - 90); }
     // the far spine of the beast, a chain of vertebrae against the stars
     for (let x = 0; x < AW_W; x += 20) { const y = 66 + Math.sin(x * TAU / AW_W * 2) * 3; ctx.fillStyle = BONE_FAR.dark; ell(x + 10, y, 10, 6); ctx.fill(); ctx.fillStyle = BONE_FAR.base; ell(x + 10, y - 1.5, 8, 3.5); ctx.fill(); ctx.fillStyle = BONE_FAR.dark; awPath([x + 7, y - 4, x + 10, y - 16, x + 13, y - 4]); ctx.fill(); }
-    hazeBand(f, th.haze, 120, T, .35);
+    hazeBand(f, th.haze, 120, FLOOR_TOP, .35);
     awRange(rnd, { n: 13, base: 228, hMin: 6, hMax: 34, col: '#241C44', lit: '#5A4A92', litA: .55, jag: 6, steps: 2, vDepth: .35, gully: 'rgba(170,230,255,.15)' });
     for (let i = 0; i < 8; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => awCluster(x, 224, 14 + r() * 18, [190, 280, 320, 200][i % 4], r, 40));
-    hazeBand(f, th.haze, 196, T, .3);
+    hazeBand(f, th.haze, 196, FLOOR_TOP, .3);
   }
   function nestMid(rnd) {
     AW_SUN = 1;
@@ -391,12 +391,12 @@
     for (let i = 0; i < 3; i++) ribs.push(60 + i * 427 + rnd() * 40);
     nestRibs = ribs.slice();
     for (const x of ribs) awWR(x, 300, rnd, (x, r) => {
-      zRib(x - 10, 72, x + 200, 62, x + 236, T + 6, 26, 9, BONE, r, 5);
+      zRib(x - 10, 72, x + 200, 62, x + 236, FLOOR_TOP + 6, 26, 9, BONE, r, 5);
       // crystals and shed scales piled where the rib enters the ground
-      awCluster(x + 226, T + 2, 30 + r() * 14, 200 + r() * 40, r, 54); awCluster(x + 256, T + 3, 16 + r() * 8, 290, r, 50);
-      for (let k = 0; k < 5; k++) zScale(x + 200 + r() * 70, T - 1 - r() * 4, 5 + r() * 3, (r() - .5) * 2, 180 + r() * 160, 1, .6);
+      awCluster(x + 226, FLOOR_TOP + 2, 30 + r() * 14, 200 + r() * 40, r, 54); awCluster(x + 256, FLOOR_TOP + 3, 16 + r() * 8, 290, r, 50);
+      for (let k = 0; k < 5; k++) zScale(x + 200 + r() * 70, FLOOR_TOP - 1 - r() * 4, 5 + r() * 3, (r() - .5) * 2, 180 + r() * 160, 1, .6);
       // icicles of crystal hanging from the rib's underside
-      for (let k = 0; k < 4; k++) { const t = .15 + k * .12 + r() * .05, u = 1 - t, px = u * u * (x - 10) + 2 * u * t * (x + 200) + t * t * (x + 236), py = u * u * 72 + 2 * u * t * 62 + t * t * (T + 6); awCrystal(px - 4, py + 8, 10 + r() * 14, 5 + r() * 3, Math.PI + (r() - .5) * .3, 190 + r() * 120, 50, 56); }
+      for (let k = 0; k < 4; k++) { const t = .15 + k * .12 + r() * .05, u = 1 - t, px = u * u * (x - 10) + 2 * u * t * (x + 200) + t * t * (x + 236), py = u * u * 72 + 2 * u * t * 62 + t * t * (FLOOR_TOP + 6); awCrystal(px - 4, py + 8, 10 + r() * 14, 5 + r() * 3, Math.PI + (r() - .5) * .3, 190 + r() * 120, 50, 56); }
     });
     // the spine, overhead: a chain of vertebrae, each with its spur, lit from the window below it
     const sp = awWave(57, [[2, 3], [5, 1.5]]);
@@ -417,12 +417,12 @@
     for (let i = 0; i < 5; i++) { const x = rnd() * AW_W, y = 92 + rnd() * 60, s = 6 + rnd() * 8, a = (rnd() - .5) * 1.2, hue = [190, 280, 320, 200, 260][i];
       awWrap(x, s * 2, (x) => { add(() => softDab(x, y, s * 2, '190,170,255', .18)); awCrystal(x, y, s, s * .5, a, hue, 50, 60); awCrystal(x, y, s * .6, s * .5, a + Math.PI, hue, 50, 50); }); }
     for (let i = 0; i < 6; i++) { const x = rnd() * AW_W, y = 120 + rnd() * 70; awWrap(x, 8, (x) => zScale(x, y, 3 + rnd() * 2, rnd() * TAU, 160 + i * 30, .85)); }
-    for (let i = 0; i < 10; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => awCluster(x, T + 2, 9 + r() * 12, [190, 280, 320, 170][i % 4], r, 46));
+    for (let i = 0; i < 10; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => awCluster(x, FLOOR_TOP + 2, 9 + r() * 12, [190, 280, 320, 170][i % 4], r, 46));
   }
   // the floor: great slabs of dark mirror-glass; the stars are in it, joined into the shapes of old constellations
   function nestFloor(rnd, th) {
-    ctx.fillStyle = '#05040C'; ctx.fillRect(0, T - 1, AW_W, VH - T + 1);
-    let y = T + 1, row = 0;
+    ctx.fillStyle = '#05040C'; ctx.fillRect(0, FLOOR_TOP - 1, AW_W, VH - FLOOR_TOP + 1);
+    let y = FLOOR_TOP + 1, row = 0;
     for (const h of [12, 17, 22, 30, 41]) {
       for (const [x0, w] of awRow(rnd, h * 6, h * 11)) awWR(x0, w, rnd, (x, r) => {
         const g = ctx.createLinearGradient(0, y, 0, y + h); const l = 1 - row * .1;
@@ -434,14 +434,14 @@
     }
     add(() => {
       // the starfield, mirrored
-      for (let i = 0; i < 170; i++) { const x = rnd() * AW_W, yy = T + 4 + rnd() * (VH - T - 8); ctx.fillStyle = `rgba(230,225,255,${.12 + rnd() * .3})`; circle(x, yy, .3 + rnd() * .7); ctx.fill(); }
+      for (let i = 0; i < 170; i++) { const x = rnd() * AW_W, yy = FLOOR_TOP + 4 + rnd() * (VH - FLOOR_TOP - 8); ctx.fillStyle = `rgba(230,225,255,${.12 + rnd() * .3})`; circle(x, yy, .3 + rnd() * .7); ctx.fill(); }
       // the glow of the nave's light lying along the back of the floor, and pale streaks under the ribs
-      const wg = ctx.createLinearGradient(0, T, 0, T + 55); wg.addColorStop(0, 'rgba(150,110,200,.2)'); wg.addColorStop(1, 'rgba(150,110,200,0)'); ctx.fillStyle = wg; ctx.fillRect(0, T, AW_W, 55);
-      for (let i = 0; i < 10; i++) { const x = rnd() * AW_W, w = 6 + rnd() * 16, L = 40 + rnd() * 60; awWrap(x, w, (x) => { const g = ctx.createLinearGradient(0, T, 0, T + L); g.addColorStop(0, 'rgba(210,190,250,.14)'); g.addColorStop(1, 'rgba(210,190,250,0)'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, T, w, L); }); }
+      const wg = ctx.createLinearGradient(0, FLOOR_TOP, 0, FLOOR_TOP + 55); wg.addColorStop(0, 'rgba(150,110,200,.2)'); wg.addColorStop(1, 'rgba(150,110,200,0)'); ctx.fillStyle = wg; ctx.fillRect(0, FLOOR_TOP, AW_W, 55);
+      for (let i = 0; i < 10; i++) { const x = rnd() * AW_W, w = 6 + rnd() * 16, L = 40 + rnd() * 60; awWrap(x, w, (x) => { const g = ctx.createLinearGradient(0, FLOOR_TOP, 0, FLOOR_TOP + L); g.addColorStop(0, 'rgba(210,190,250,.14)'); g.addColorStop(1, 'rgba(210,190,250,0)'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, FLOOR_TOP, w, L); }); }
       // constellations: a few bright stars joined by fine lines
       for (let i = 0; i < 9; i++) {
-        const cx = i * 142 + rnd() * 80, cy = T + 22 + rnd() * 80, n = 4 + Math.floor(rnd() * 3), pts = [];
-        for (let k = 0; k < n; k++) pts.push([cx + (rnd() - .3) * 70, cy + (rnd() - .5) * 26 * (1 + (cy - T) / 80)]);
+        const cx = i * 142 + rnd() * 80, cy = FLOOR_TOP + 22 + rnd() * 80, n = 4 + Math.floor(rnd() * 3), pts = [];
+        for (let k = 0; k < n; k++) pts.push([cx + (rnd() - .3) * 70, cy + (rnd() - .5) * 26 * (1 + (cy - FLOOR_TOP) / 80)]);
         awWrap(cx, 80, (ox) => { const d = ox - cx;
           ctx.strokeStyle = 'rgba(170,210,255,.22)'; ctx.lineWidth = .6; ctx.beginPath(); pts.forEach(([px, py], k) => k ? ctx.lineTo(px + d, py) : ctx.moveTo(px + d, py)); ctx.stroke();
           pts.forEach(([px, py], k) => { spark(px + d, py, k === 0 ? 3 : 1.8, 'rgba(230,240,255,.55)'); ctx.fillStyle = 'rgba(255,255,255,.75)'; circle(px + d, py, .7); ctx.fill(); });
@@ -449,16 +449,16 @@
       }
     });
     // the arena seal: a great ring inlaid in the glass, with the wyrm's sigil
-    const sx = 640, sy = T + 62, R = 170; // the middle of the arena once the camera locks for the fight
+    const sx = 640, sy = FLOOR_TOP + 62, R = 170; // the middle of the arena once the camera locks for the fight
     awGlow('#B8A0FF', 6, () => {
       ctx.strokeStyle = 'rgba(190,170,255,.4)'; ctx.lineWidth = 1.2; ell(sx, sy, R, R * .2); ctx.stroke(); ctx.lineWidth = .8; ell(sx, sy, R * .86, R * .17); ctx.stroke();
       ctx.beginPath(); for (let k = 0; k < 36; k++) { const a = k / 36 * TAU, c = Math.cos(a), s = Math.sin(a); ctx.moveTo(sx + c * R * .87, sy + s * R * .172); ctx.lineTo(sx + c * R * .985, sy + s * R * .197); } ctx.stroke();
       ctx.strokeStyle = 'rgba(160,230,240,.35)'; ctx.beginPath(); for (let k = 0; k <= 7; k++) { const a = k * 3 / 7 * TAU - Math.PI / 2; const px = sx + Math.cos(a) * R * .7, py = sy + Math.sin(a) * R * .14; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); // a seven-pointed star
     });
     // scales the wyrm has shed, and broken crystal, along the back edge
-    for (let i = 0; i < 16; i++) awWR(rnd() * AW_W, 14, rnd, (x, r) => zScale(x, T + 2 + r() * 9, 5 + r() * 4, (r() - .5) * 2.4, 170 + r() * 170, 1, .5));
-    for (let i = 0; i < 8; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => { const w = 7 + r() * 9; awFillPts([x - w, T + 4, x - w * .5, T - w * .6, x + w * .3, T - w * .8, x + w, T + 4], '#2A2248'); awFillPts([x + w * .3, T - w * .8, x + w, T + 4, x + w * .2, T + 4], '#6A5A9E', .85); });
-    for (let i = 0; i < 12; i++) awWR(rnd() * AW_W, 22, rnd, (x, r) => awCluster(x, T + 1, 8 + r() * 12, [190, 280, 320, 200][i % 4], r, 50));
+    for (let i = 0; i < 16; i++) awWR(rnd() * AW_W, 14, rnd, (x, r) => zScale(x, FLOOR_TOP + 2 + r() * 9, 5 + r() * 4, (r() - .5) * 2.4, 170 + r() * 170, 1, .5));
+    for (let i = 0; i < 8; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => { const w = 7 + r() * 9; awFillPts([x - w, FLOOR_TOP + 4, x - w * .5, FLOOR_TOP - w * .6, x + w * .3, FLOOR_TOP - w * .8, x + w, FLOOR_TOP + 4], '#2A2248'); awFillPts([x + w * .3, FLOOR_TOP - w * .8, x + w, FLOOR_TOP + 4, x + w * .2, FLOOR_TOP + 4], '#6A5A9E', .85); });
+    for (let i = 0; i < 12; i++) awWR(rnd() * AW_W, 22, rnd, (x, r) => awCluster(x, FLOOR_TOP + 1, 8 + r() * 12, [190, 280, 320, 200][i % 4], r, 50));
     const sh = ctx.createLinearGradient(0, VH - 40, 0, VH); sh.addColorStop(0, 'rgba(2,1,8,0)'); sh.addColorStop(1, 'rgba(2,1,8,.5)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 40, AW_W, 40);
   }
 
@@ -522,7 +522,7 @@
       ctx.strokeStyle = rg; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath();
       for (const rx of nestRibs) for (const k of [0, AW_W, -AW_W]) { // the ribs, mirrored in the glass, sliding with them
         const x = mx + rx + k; if (x + 240 < -10 || x - 10 > VW + 10) continue;
-        ctx.moveTo(x + 236, R(T + 2)); ctx.quadraticCurveTo(x + 200, R(62), x - 10, R(72));
+        ctx.moveTo(x + 236, R(FLOOR_TOP + 2)); ctx.quadraticCurveTo(x + 200, R(62), x - 10, R(72));
       }
       ctx.stroke();
       const a = .1 + .025 * Math.sin(t * .4);

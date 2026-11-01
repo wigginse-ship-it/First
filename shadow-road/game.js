@@ -573,7 +573,7 @@ function playTrump() {
   banner(card.name, 'CARD PLAYED', 1.4);
   const lv = TL(save.trump);
   if (save.trump === 'stag') { // a lane each; at III the last one turns round at the far side and runs back
-    const lanes = [P.y, clamp(P.y + (P.y > 290 ? -40 : 40), FLOOR_TOP + 8, FLOOR_BOT), clamp(P.y + (P.y > 290 ? 40 : -40), FLOOR_TOP + 8, FLOOR_BOT)];
+    const lanes = [P.y, clamp(P.y + (P.y > (FLOOR_TOP + FLOOR_BOT) / 2 ? -40 : 40), FLOOR_TOP + 8, FLOOR_BOT), clamp(P.y + (P.y > (FLOOR_TOP + FLOOR_BOT) / 2 ? 40 : -40), FLOOR_TOP + 8, FLOOR_BOT)];
     for (let i = 0; i < lv; i++) stags.push({ x: camX - 60 - i * 70, y: lanes[i], hit: new Set(), t: 0, back: lv >= 3 && i === 2, dir: 1 });
   }
   else if (save.trump === 'mirror') mirrorT = lv >= 2 ? 14 : 10;

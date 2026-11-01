@@ -1138,6 +1138,10 @@ function buildBackground(themeId, seed) {
   }
 }
 function drawWorld(themeId, camX, t) {
+  asBackdrop(() => drawBackdrop(themeId, camX, t)); // (lifted to meet the street's far edge in the glide view, core.js)
+  drawFloor(themeId, THEMES[themeId], camX, t);
+}
+function drawBackdrop(themeId, camX, t) {
   const th = THEMES[themeId];
   const sx = VW * th.sun[0] - camX * .02, sy = Y_OFF + VIEW_H * th.sun[1];
   const tilt = typeof WORLD_TILT !== 'undefined' && WORLD_TILT;
@@ -1174,7 +1178,6 @@ function drawWorld(themeId, camX, t) {
   ctx.fillStyle = wash; ctx.fillRect(0, Y_OFF, VW, FLOOR_TOP - Y_OFF);
   ctx.restore();
   if (typeof WORLD_TILT !== 'undefined' && WORLD_TILT) ctx.restore();
-  drawFloor(themeId, th, camX, t);
 }
 function drawFloor(themeId, th, camX, t) {
   DAB_X = camX;

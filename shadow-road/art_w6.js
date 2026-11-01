@@ -15,7 +15,7 @@
 // Passages: 'w6easel' (into a painting of the place ahead, on its easel) and 'w6bed' (he lies down, and the eyes close).
 // Everything lives inside this closure; the late parts are handed to data_w6.js.
 (() => {
-  const T = FLOOR_TOP;
+  // (the street's far edge is read live as FLOOR_TOP: the glide view moves it, core.js)
   const DET = () => !FLASH && !TINT && !LITE;
   const add = (fn) => { if (!DET()) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
   const addB = (fn) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; fn(); ctx.restore(); };
@@ -227,8 +227,8 @@
     for (let i = 0; i < 3; i++) awWR(i * 430 + 100 + rnd() * 120, 20, rnd, (x, r) => chimney(x, wy + 2, 70 + r() * 50, 7 + r() * 5, r));
     awWR(900 + rnd() * 80, 30, rnd, (x, r) => redTower(x, wy + 2, 110, 30, r));
     hazeBand(f, th.haze, 150, wy + 8, .32);
-    for (let i = 0; i < 4; i++) awWR(i * 320 + rnd() * 140, 120, rnd, (x, r) => arcade(x, x + 90 + r() * 70, T - 6, 46 + r() * 20, 24, 6, r() < .5, r, { face: '#E6B47E', shade: '#9A6A4A', win: false }));
-    hazeBand(f, th.haze, 170, T, .4);
+    for (let i = 0; i < 4; i++) awWR(i * 320 + rnd() * 140, 120, rnd, (x, r) => arcade(x, x + 90 + r() * 70, FLOOR_TOP - 6, 46 + r() * 20, 24, 6, r() < .5, r, { face: '#E6B47E', shade: '#9A6A4A', win: false }));
+    hazeBand(f, th.haze, 170, FLOOR_TOP, .4);
   }
   function piazzaMid(rnd) {
     AW_SUN = -1;
@@ -236,18 +236,18 @@
     const spots = [[30, 1], [360, 0], [700, 1], [1000, 0]];
     for (const [x0, k] of spots) {
       const x = x0 + rnd() * 60, len = 200 + rnd() * 60, dir = k ? 1 : -1;
-      awWR(x, len + 40, rnd, (x, r) => arcade(dir > 0 ? x : x + len, dir > 0 ? x + len : x, T + 2, 132 + r() * 24, 60, 7, dir > 0, r, { end: 26 + r() * 10 }));
+      awWR(x, len + 40, rnd, (x, r) => arcade(dir > 0 ? x : x + len, dir > 0 ? x + len : x, FLOOR_TOP + 2, 132 + r() * 24, 60, 7, dir > 0, r, { end: 26 + r() * 10 }));
     }
     // statues on their plinths, pennants, a little pair of figures with their shadows, far out in the square
-    for (let i = 0; i < 3; i++) awWR(250 + i * 420 + rnd() * 60, 20, rnd, (x, r) => marbleStatue(x, T + 1, 1 + r() * .25, r));
-    for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => pennant(x, T + 2, 70 + r() * 40, r() < .5 ? '#2E7A4E' : '#B8402E', r));
-    for (let i = 0; i < 4; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => { tinyFigure(x, T - 1, 1, 34); if (r() < .6) tinyFigure(x + 6, T - 1, .9, 30); });
+    for (let i = 0; i < 3; i++) awWR(250 + i * 420 + rnd() * 60, 20, rnd, (x, r) => marbleStatue(x, FLOOR_TOP + 1, 1 + r() * .25, r));
+    for (let i = 0; i < 6; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => pennant(x, FLOOR_TOP + 2, 70 + r() * 40, r() < .5 ? '#2E7A4E' : '#B8402E', r));
+    for (let i = 0; i < 4; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => { tinyFigure(x, FLOOR_TOP - 1, 1, 34); if (r() < .6) tinyFigure(x + 6, FLOOR_TOP - 1, .9, 30); });
   }
   // the paving: big ochre slabs in rows that widen toward us, the long shadows of the arcades lying across it, things
   // the dream has left lying along the back (a marble torso, a bunch of bananas, a red glove, a green ball)
   function piazzaFloor(rnd, th) {
-    { const g = ctx.createLinearGradient(0, T - 2, 0, VH); g.addColorStop(0, '#F0C080'); g.addColorStop(.25, '#E0A462'); g.addColorStop(.7, '#C07A40'); g.addColorStop(1, '#8A5028'); ctx.fillStyle = g; ctx.fillRect(0, T - 2, AW_W, VH - T + 2); }
-    let y = T; const rows = [7, 9, 11, 13, 16, 19, 23, 26];
+    { const g = ctx.createLinearGradient(0, FLOOR_TOP - 2, 0, VH); g.addColorStop(0, '#F0C080'); g.addColorStop(.25, '#E0A462'); g.addColorStop(.7, '#C07A40'); g.addColorStop(1, '#8A5028'); ctx.fillStyle = g; ctx.fillRect(0, FLOOR_TOP - 2, AW_W, VH - FLOOR_TOP + 2); }
+    let y = FLOOR_TOP; const rows = [7, 9, 11, 13, 16, 19, 23, 26];
     for (const h of rows) {
       for (const [x0, w] of awRow(rnd, h * 3.5, h * 7)) for (const ox of x0 + w > AW_W ? [0, -AW_W] : [0]) {
         const x = x0 + ox, k = rnd(); ctx.fillStyle = k < .5 ? `rgba(255,220,160,${.06 + rnd() * .12})` : `rgba(110,60,30,${.06 + rnd() * .12})`; ctx.fillRect(x + .6, y + .6, w - 1.2, h - 1.2);
@@ -263,22 +263,22 @@
       const x = 80 + i * 320 + rnd() * 90, w = 90 + rnd() * 80, sl = 210 + rnd() * 60, arches = rnd() < .65;
       W6.shadowBands.push([x, w, sl]);
       for (const ox of [0, -AW_W, AW_W]) {
-        const X = x + ox, pts = [X, T, X + w, T, X + w + sl, VH, X + sl, VH];
+        const X = x + ox, pts = [X, FLOOR_TOP, X + w, FLOOR_TOP, X + w + sl, VH, X + sl, VH];
         ctx.save(); poly(pts); ctx.clip();
-        const g = ctx.createLinearGradient(0, T, 0, VH); g.addColorStop(0, 'rgba(30,14,10,.55)'); g.addColorStop(1, 'rgba(30,14,10,.72)'); ctx.fillStyle = g; ctx.fillRect(X - 10, T, w + sl + 20, VH - T);
+        const g = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH); g.addColorStop(0, 'rgba(30,14,10,.55)'); g.addColorStop(1, 'rgba(30,14,10,.72)'); ctx.fillStyle = g; ctx.fillRect(X - 10, FLOOR_TOP, w + sl + 20, VH - FLOOR_TOP);
         if (arches) for (let k = 0; k < 4; k++) { // a lit arch in the shadow: an arch-shaped hole, skewed along with it
-          const u = .25 + k * .17, ay = lerp(T, VH, u), ah = (VH - T) * .14, ax = X + sl * u + w * .2, aw = w * .45;
+          const u = .25 + k * .17, ay = lerp(FLOOR_TOP, VH, u), ah = (VH - FLOOR_TOP) * .14, ax = X + sl * u + w * .2, aw = w * .45;
           ctx.fillStyle = 'rgba(240,180,110,.62)'; ctx.beginPath(); ctx.moveTo(ax, ay + ah); ctx.lineTo(ax + sl * .14, ay); ctx.lineTo(ax + sl * .14 + aw * .7, ay - ah * .1); ctx.quadraticCurveTo(ax + aw * 1.05, ay + ah * .35, ax + aw, ay + ah); ctx.closePath(); ctx.fill(); }
         ctx.restore();
       }
     }
     // the back verge: the far edge of the paving, and what lies along it
-    ctx.fillStyle = 'rgba(60,30,18,.35)'; ctx.fillRect(0, T - 2, AW_W, 2.4);
+    ctx.fillStyle = 'rgba(60,30,18,.35)'; ctx.fillRect(0, FLOOR_TOP - 2, AW_W, 2.4);
     for (let i = 0; i < 5; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => { const k = i % 4;
-      if (k === 0) { ctx.fillStyle = '#E8DCC0'; poly([x - 7, T + 3, x - 8, T - 8, x - 5, T - 14, x + 5, T - 14, x + 8, T - 8, x + 7, T + 3]); ctx.fill(); ctx.fillStyle = '#B8A88E'; poly([x + 1, T - 14, x + 5, T - 14, x + 8, T - 8, x + 7, T + 3, x + 2, T + 3]); ctx.fill(); ctx.fillStyle = '#D6C6A8'; ell(x, T - 16, 3, 2.4); ctx.fill(); } // a marble torso
-      else if (k === 1) { for (let b = 0; b < 4; b++) { ctx.strokeStyle = '#E8C040'; ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - 6 + b * 2, T + 2); ctx.quadraticCurveTo(x - 2 + b * 2, T - 8, x + 6 + b, T - 6 + b); ctx.stroke(); } ctx.strokeStyle = '#6A4A1A'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 6, T + 2); ctx.lineTo(x - 3, T + 1); ctx.stroke(); } // bananas
-      else if (k === 2) { ctx.fillStyle = '#C8302A'; for (let f = 0; f < 4; f++) { ctx.save(); ctx.translate(x + f * 2.4 - 3, T - 4); ctx.rotate(-.3 + f * .2); rrect(-1, -7, 2, 7, 1); ctx.fill(); ctx.restore(); } ell(x, T - 1, 5, 3.4); ctx.fill(); ctx.fillStyle = 'rgba(255,170,150,.6)'; ell(x - 1.5, T - 2, 2, 1); ctx.fill(); } // a red glove
-      else { ctx.fillStyle = '#3A8A4E'; circle(x, T - 3, 4.4); ctx.fill(); ctx.fillStyle = 'rgba(200,255,200,.5)'; circle(x - 1.4, T - 4.6, 1.4); ctx.fill(); } }); // a green ball
+      if (k === 0) { ctx.fillStyle = '#E8DCC0'; poly([x - 7, FLOOR_TOP + 3, x - 8, FLOOR_TOP - 8, x - 5, FLOOR_TOP - 14, x + 5, FLOOR_TOP - 14, x + 8, FLOOR_TOP - 8, x + 7, FLOOR_TOP + 3]); ctx.fill(); ctx.fillStyle = '#B8A88E'; poly([x + 1, FLOOR_TOP - 14, x + 5, FLOOR_TOP - 14, x + 8, FLOOR_TOP - 8, x + 7, FLOOR_TOP + 3, x + 2, FLOOR_TOP + 3]); ctx.fill(); ctx.fillStyle = '#D6C6A8'; ell(x, FLOOR_TOP - 16, 3, 2.4); ctx.fill(); } // a marble torso
+      else if (k === 1) { for (let b = 0; b < 4; b++) { ctx.strokeStyle = '#E8C040'; ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - 6 + b * 2, FLOOR_TOP + 2); ctx.quadraticCurveTo(x - 2 + b * 2, FLOOR_TOP - 8, x + 6 + b, FLOOR_TOP - 6 + b); ctx.stroke(); } ctx.strokeStyle = '#6A4A1A'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 6, FLOOR_TOP + 2); ctx.lineTo(x - 3, FLOOR_TOP + 1); ctx.stroke(); } // bananas
+      else if (k === 2) { ctx.fillStyle = '#C8302A'; for (let f = 0; f < 4; f++) { ctx.save(); ctx.translate(x + f * 2.4 - 3, FLOOR_TOP - 4); ctx.rotate(-.3 + f * .2); rrect(-1, -7, 2, 7, 1); ctx.fill(); ctx.restore(); } ell(x, FLOOR_TOP - 1, 5, 3.4); ctx.fill(); ctx.fillStyle = 'rgba(255,170,150,.6)'; ell(x - 1.5, FLOOR_TOP - 2, 2, 1); ctx.fill(); } // a red glove
+      else { ctx.fillStyle = '#3A8A4E'; circle(x, FLOOR_TOP - 3, 4.4); ctx.fill(); ctx.fillStyle = 'rgba(200,255,200,.5)'; circle(x - 1.4, FLOOR_TOP - 4.6, 1.4); ctx.fill(); } }); // a green ball
     const sh = ctx.createLinearGradient(0, VH - 36, 0, VH); sh.addColorStop(0, 'rgba(40,16,8,0)'); sh.addColorStop(1, 'rgba(40,16,8,.4)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 36, AW_W, 36);
   }
   // the sky of Golconda: rank on rank of gentlemen in bowler hats, standing in the air, drifting a little (painted once)
@@ -303,7 +303,7 @@
         for (let i = 0; i < 7; i++) { const life = (t * .25 + i / 7) % 1; softDab(x - life * 40, 206 - 16 - life * 46, 4 + life * 12, '250,244,232', .7 * (1 - life)); } } }
     },
     liveFloor(camX, t) { // a heat-shimmer of light along the far edge of the square
-      for (let x = ((-camX) % 80 + 80) % 80 - 80; x < VW + 80; x += 80) { const w = Math.floor((x + camX) / 80 + .5), a = .12 + .1 * Math.sin(t * 1.3 + w * 1.7); ctx.fillStyle = `rgba(255,230,170,${a})`; ctx.fillRect(x + hsh(w) * 50, T + 1 + hsh(w + 1) * 4, 18 + hsh(w + 2) * 20, .8); }
+      for (let x = ((-camX) % 80 + 80) % 80 - 80; x < VW + 80; x += 80) { const w = Math.floor((x + camX) / 80 + .5), a = .12 + .1 * Math.sin(t * 1.3 + w * 1.7); ctx.fillStyle = `rgba(255,230,170,${a})`; ctx.fillRect(x + hsh(w) * 50, FLOOR_TOP + 1 + hsh(w + 1) * 4, 18 + hsh(w + 2) * 20, .8); }
     },
   };
   AW_FAR.dream = piazzaFar; AW_MID.dream = piazzaMid; AW_FLOOR.dream = piazzaFloor;
@@ -348,7 +348,7 @@
     // a sky so clear it is almost glass, with a few long thin clouds lit gold underneath
     for (let i = 0; i < 6; i++) { const x = rnd() * AW_W, y = 110 + rnd() * 50, L = 80 + rnd() * 120; awWrap(x, L, (x) => { ctx.fillStyle = 'rgba(250,236,210,.55)'; ell(x, y, L, 2.6); ctx.fill(); ctx.fillStyle = 'rgba(255,200,140,.4)'; ell(x + 6, y + 2, L * .8, 1.4); ctx.fill(); }); }
     // the sea: flat and still, deep blue-green, a line of light along it
-    const sy = 196; { const g = ctx.createLinearGradient(0, sy, 0, T); g.addColorStop(0, '#3E7A8A'); g.addColorStop(.4, '#2A5A6E'); g.addColorStop(1, '#6A8A84'); ctx.fillStyle = g; ctx.fillRect(0, sy, AW_W, T - sy); }
+    const sy = 196; { const g = ctx.createLinearGradient(0, sy, 0, FLOOR_TOP); g.addColorStop(0, '#3E7A8A'); g.addColorStop(.4, '#2A5A6E'); g.addColorStop(1, '#6A8A84'); ctx.fillStyle = g; ctx.fillRect(0, sy, AW_W, FLOOR_TOP - sy); }
     ctx.fillStyle = 'rgba(255,240,210,.7)'; ctx.fillRect(0, sy, AW_W, 1.2);
     for (let i = 0; i < 70; i++) { const x = rnd() * AW_W, y = sy + 3 + rnd() * 30; ctx.fillStyle = `rgba(255,236,200,${.2 + rnd() * .35})`; ctx.fillRect(x, y, 4 + rnd() * 10, .7); }
     // the cape: golden cliffs running out into the sea, one great headland and a lower one
@@ -360,36 +360,36 @@
     for (let i = 0; i < 3; i++) { const x = 140 + i * 400 + rnd() * 120, s = .9 + rnd() * .5; W6.eleFar.push(x); awWrap(x, 40, (x) => stiltElephant(x, sy + 16, 70 * s, s, '#4A3A40', '#E8B08A', i * 1.3)); }
     // a little boat, far out
     awWR(rnd() * AW_W, 10, rnd, (x) => { ctx.fillStyle = '#3A2A24'; poly([x - 6, sy + 10, x + 6, sy + 10, x + 4, sy + 13, x - 4, sy + 13]); ctx.fill(); ctx.fillStyle = '#F4EAD8'; poly([x, sy + 10, x, sy - 2, x + 5, sy + 9]); ctx.fill(); });
-    hazeBand(f, th.haze, 170, T, .45);
+    hazeBand(f, th.haze, 170, FLOOR_TOP, .45);
   }
   function shoreMid(rnd) {
     AW_SUN = -1;
     // the near beach rising to a low ridge of rock behind the shore
-    awHills(T - 14, [[2, 5], [5, 3], [11, 1.4]], 131, '#B8864E', '#F6D29A', .6);
+    awHills(FLOOR_TOP - 14, [[2, 5], [5, 3], [11, 1.4]], 131, '#B8864E', '#F6D29A', .6);
     // dead olive trees with their watches; stone slabs with watches melting over their edges; soft shapes on crutches
-    for (let i = 0; i < 4; i++) awWR(70 + i * 320 + rnd() * 80, 90, rnd, (x, r) => oliveTree(x, T + 2, 110 + r() * 40, r));
-    for (let i = 0; i < 3; i++) awWR(230 + i * 420 + rnd() * 60, 90, rnd, (x, r) => { slab(x - 50, T + 2, 80, 22 + r() * 10, 12, r); softWatch(x + 30, T - 26, 1.3, 1, -.1); softWatch(x - 10, T - 30, .9, .3, .05, '#A88A5A', '#E8E0C8'); });
+    for (let i = 0; i < 4; i++) awWR(70 + i * 320 + rnd() * 80, 90, rnd, (x, r) => oliveTree(x, FLOOR_TOP + 2, 110 + r() * 40, r));
+    for (let i = 0; i < 3; i++) awWR(230 + i * 420 + rnd() * 60, 90, rnd, (x, r) => { slab(x - 50, FLOOR_TOP + 2, 80, 22 + r() * 10, 12, r); softWatch(x + 30, FLOOR_TOP - 26, 1.3, 1, -.1); softWatch(x - 10, FLOOR_TOP - 30, .9, .3, .05, '#A88A5A', '#E8E0C8'); });
     for (let i = 0; i < 2; i++) awWR(520 + i * 640 + rnd() * 60, 60, rnd, (x, r) => { // a soft mass of something, held up off the sand by a crutch
-      ctx.fillStyle = '#D8A88A'; ctx.beginPath(); ctx.moveTo(x - 40, T - 34); ctx.bezierCurveTo(x - 20, T - 58, x + 30, T - 50, x + 46, T - 30); ctx.bezierCurveTo(x + 30, T - 20, x + 6, T - 6, x - 6, T - 12); ctx.bezierCurveTo(x - 20, T - 20, x - 30, T - 22, x - 40, T - 34); ctx.fill();
-      ctx.fillStyle = '#F6D6B8'; ell(x - 6, T - 44, 22, 6, -.2); ctx.fill(); ctx.fillStyle = 'rgba(120,70,50,.4)'; ell(x + 14, T - 24, 22, 6, -.3); ctx.fill();
-      crutchShape(x + 30, T + 2, x + 30, T - 34, 2.6, 8); });
+      ctx.fillStyle = '#D8A88A'; ctx.beginPath(); ctx.moveTo(x - 40, FLOOR_TOP - 34); ctx.bezierCurveTo(x - 20, FLOOR_TOP - 58, x + 30, FLOOR_TOP - 50, x + 46, FLOOR_TOP - 30); ctx.bezierCurveTo(x + 30, FLOOR_TOP - 20, x + 6, FLOOR_TOP - 6, x - 6, FLOOR_TOP - 12); ctx.bezierCurveTo(x - 20, FLOOR_TOP - 20, x - 30, FLOOR_TOP - 22, x - 40, FLOOR_TOP - 34); ctx.fill();
+      ctx.fillStyle = '#F6D6B8'; ell(x - 6, FLOOR_TOP - 44, 22, 6, -.2); ctx.fill(); ctx.fillStyle = 'rgba(120,70,50,.4)'; ell(x + 14, FLOOR_TOP - 24, 22, 6, -.3); ctx.fill();
+      crutchShape(x + 30, FLOOR_TOP + 2, x + 30, FLOOR_TOP - 34, 2.6, 8); });
     // a chest of drawers standing on the shore, its drawers half open
-    awWR(rnd() * AW_W, 30, rnd, (x, r) => { ctx.fillStyle = '#6A3A24'; ctx.fillRect(x - 16, T - 50, 32, 52); ctx.fillStyle = '#9A5A34'; ctx.fillRect(x - 16, T - 50, 10, 52);
-      for (let k = 0; k < 4; k++) { const dy = T - 46 + k * 12, out = [4, 9, 0, 6][k]; ctx.fillStyle = '#B87A4A'; ctx.fillRect(x - 14 + out * .3, dy, 28, 9); ctx.fillStyle = '#2A140C'; ctx.fillRect(x - 14, dy + 9, 28, 1.5); ctx.fillStyle = '#F2C86A'; circle(x + out * .3, dy + 4.5, 1.2); ctx.fill(); } });
+    awWR(rnd() * AW_W, 30, rnd, (x, r) => { ctx.fillStyle = '#6A3A24'; ctx.fillRect(x - 16, FLOOR_TOP - 50, 32, 52); ctx.fillStyle = '#9A5A34'; ctx.fillRect(x - 16, FLOOR_TOP - 50, 10, 52);
+      for (let k = 0; k < 4; k++) { const dy = FLOOR_TOP - 46 + k * 12, out = [4, 9, 0, 6][k]; ctx.fillStyle = '#B87A4A'; ctx.fillRect(x - 14 + out * .3, dy, 28, 9); ctx.fillStyle = '#2A140C'; ctx.fillRect(x - 14, dy + 9, 28, 1.5); ctx.fillStyle = '#F2C86A'; circle(x + out * .3, dy + 4.5, 1.2); ctx.fill(); } });
   }
   // the sand: pale gold, combed into long ripples, the shadows of things lying long across it, small pebbles and a few ants
   function shoreFloor(rnd, th) {
-    { const g = ctx.createLinearGradient(0, T - 2, 0, VH); g.addColorStop(0, '#F2D49A'); g.addColorStop(.3, '#E2B474'); g.addColorStop(.75, '#C88E52'); g.addColorStop(1, '#94603A'); ctx.fillStyle = g; ctx.fillRect(0, T - 2, AW_W, VH - T + 2); }
-    for (let i = 0; i < 46; i++) { const y = T + 4 + Math.pow(rnd(), 1.3) * (VH - T - 8), x = rnd() * AW_W, L = 40 + (y - T) * 1.6 + rnd() * 60, a = .18 + rnd() * .2;
-      awWrap(x, L, (x) => { ctx.strokeStyle = `rgba(150,96,50,${a})`; ctx.lineWidth = .8 + (y - T) * .01; ctx.beginPath(); ctx.moveTo(x - L, y); ctx.quadraticCurveTo(x, y - 2 - (y - T) * .02, x + L, y + 1); ctx.stroke();
-        ctx.strokeStyle = `rgba(255,236,190,${a * 1.4})`; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(x - L * .8, y - 1.2); ctx.quadraticCurveTo(x, y - 3 - (y - T) * .02, x + L * .8, y - .4); ctx.stroke(); }); }
-    for (let i = 0; i < 60; i++) dab(rnd() * AW_W, T + 6 + rnd() * (VH - T - 10), 2 + rnd() * 7, rnd() < .5 ? '#F8DCA8' : '#B07A44', .22);
+    { const g = ctx.createLinearGradient(0, FLOOR_TOP - 2, 0, VH); g.addColorStop(0, '#F2D49A'); g.addColorStop(.3, '#E2B474'); g.addColorStop(.75, '#C88E52'); g.addColorStop(1, '#94603A'); ctx.fillStyle = g; ctx.fillRect(0, FLOOR_TOP - 2, AW_W, VH - FLOOR_TOP + 2); }
+    for (let i = 0; i < 46; i++) { const y = FLOOR_TOP + 4 + Math.pow(rnd(), 1.3) * (VH - FLOOR_TOP - 8), x = rnd() * AW_W, L = 40 + (y - FLOOR_TOP) * 1.6 + rnd() * 60, a = .18 + rnd() * .2;
+      awWrap(x, L, (x) => { ctx.strokeStyle = `rgba(150,96,50,${a})`; ctx.lineWidth = .8 + (y - FLOOR_TOP) * .01; ctx.beginPath(); ctx.moveTo(x - L, y); ctx.quadraticCurveTo(x, y - 2 - (y - FLOOR_TOP) * .02, x + L, y + 1); ctx.stroke();
+        ctx.strokeStyle = `rgba(255,236,190,${a * 1.4})`; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(x - L * .8, y - 1.2); ctx.quadraticCurveTo(x, y - 3 - (y - FLOOR_TOP) * .02, x + L * .8, y - .4); ctx.stroke(); }); }
+    for (let i = 0; i < 60; i++) dab(rnd() * AW_W, FLOOR_TOP + 6 + rnd() * (VH - FLOOR_TOP - 10), 2 + rnd() * 7, rnd() < .5 ? '#F8DCA8' : '#B07A44', .22);
     // long shadows of the trees and slabs behind, thrown toward us and to the right
     for (let i = 0; i < 6; i++) { const x = rnd() * AW_W, w = 22 + rnd() * 50, sl = 160 + rnd() * 80, L = .45 + rnd() * .5;
-      for (const ox of [0, -AW_W, AW_W]) { const X = x + ox; ctx.fillStyle = 'rgba(70,36,24,.3)'; poly([X, T + 1, X + w, T + 1, X + w + sl * L, T + (VH - T) * L, X + sl * L, T + (VH - T) * L]); ctx.fill(); } }
-    for (let i = 0; i < 26; i++) awWR(rnd() * AW_W, 8, rnd, (x, r) => { const y = T + 6 + r() * 100, s = 1.4 + r() * 3; ctx.fillStyle = '#6A4A3A'; ell(x, y, s, s * .6); ctx.fill(); ctx.fillStyle = '#E8D0B0'; ell(x - s * .3, y - s * .25, s * .45, s * .25); ctx.fill(); }); // pebbles
-    for (let i = 0; i < 4; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => { for (let k = 0; k < 9; k++) { const ax = x + k * 4 + r() * 3, ay = T + 30 + Math.sin(k) * 4; ctx.fillStyle = '#1A100C'; ell(ax, ay, 1.3, .7); ctx.fill(); ell(ax + 1.4, ay - .2, .7, .6); ctx.fill(); } }); // a file of ants
-    ctx.fillStyle = 'rgba(80,46,24,.35)'; ctx.fillRect(0, T - 2, AW_W, 2);
+      for (const ox of [0, -AW_W, AW_W]) { const X = x + ox; ctx.fillStyle = 'rgba(70,36,24,.3)'; poly([X, FLOOR_TOP + 1, X + w, FLOOR_TOP + 1, X + w + sl * L, FLOOR_TOP + (VH - FLOOR_TOP) * L, X + sl * L, FLOOR_TOP + (VH - FLOOR_TOP) * L]); ctx.fill(); } }
+    for (let i = 0; i < 26; i++) awWR(rnd() * AW_W, 8, rnd, (x, r) => { const y = FLOOR_TOP + 6 + r() * 100, s = 1.4 + r() * 3; ctx.fillStyle = '#6A4A3A'; ell(x, y, s, s * .6); ctx.fill(); ctx.fillStyle = '#E8D0B0'; ell(x - s * .3, y - s * .25, s * .45, s * .25); ctx.fill(); }); // pebbles
+    for (let i = 0; i < 4; i++) awWR(rnd() * AW_W, 20, rnd, (x, r) => { for (let k = 0; k < 9; k++) { const ax = x + k * 4 + r() * 3, ay = FLOOR_TOP + 30 + Math.sin(k) * 4; ctx.fillStyle = '#1A100C'; ell(ax, ay, 1.3, .7); ctx.fill(); ell(ax + 1.4, ay - .2, .7, .6); ctx.fill(); } }); // a file of ants
+    ctx.fillStyle = 'rgba(80,46,24,.35)'; ctx.fillRect(0, FLOOR_TOP - 2, AW_W, 2);
     const sh = ctx.createLinearGradient(0, VH - 36, 0, VH); sh.addColorStop(0, 'rgba(60,30,14,0)'); sh.addColorStop(1, 'rgba(60,30,14,.38)'); ctx.fillStyle = sh; ctx.fillRect(0, VH - 36, AW_W, 36);
   }
   THEMES.dream2 = {
@@ -401,7 +401,7 @@
         ctx.strokeStyle = 'rgba(60,50,60,.7)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(x - 5, y - fl); ctx.quadraticCurveTo(x - 2, y - 2, x, y); ctx.quadraticCurveTo(x + 2, y - 2, x + 5, y - fl); ctx.stroke(); }
     },
     liveFloor(camX, t) { // light glancing off the sand in the slow heat
-      for (let x = ((-camX) % 64 + 64) % 64 - 64; x < VW + 64; x += 64) { const w = Math.floor((x + camX) / 64 + .5), a = Math.max(0, Math.sin(t * 1.6 + w * 2.3)) * .5; if (a < .05) continue; ctx.fillStyle = `rgba(255,246,220,${a})`; circle(x + hsh(w) * 50, T + 10 + hsh(w + 3) * 100, .9 + a); ctx.fill(); }
+      for (let x = ((-camX) % 64 + 64) % 64 - 64; x < VW + 64; x += 64) { const w = Math.floor((x + camX) / 64 + .5), a = Math.max(0, Math.sin(t * 1.6 + w * 2.3)) * .5; if (a < .05) continue; ctx.fillStyle = `rgba(255,246,220,${a})`; circle(x + hsh(w) * 50, FLOOR_TOP + 10 + hsh(w + 3) * 100, .9 + a); ctx.fill(); }
     },
   };
   AW_FAR.dream2 = shoreFar; AW_MID.dream2 = shoreMid; AW_FLOOR.dream2 = shoreFloor;
@@ -450,28 +450,28 @@
     // fixed clouds, far and small, banked low over the rooftops
     for (let i = 0; i < 10; i++) awWR(i * 128 + rnd() * 60, 70, rnd, (x, r) => cumulus(x, 150 + r() * 26, 60 + r() * 50, r, .9));
     // and below them, the night: a row of far rooftops and treetops, black-blue, a lit window or two
-    const g = ctx.createLinearGradient(0, 168, 0, T); g.addColorStop(0, 'rgba(14,20,40,0)'); g.addColorStop(.5, 'rgba(14,20,40,.75)'); g.addColorStop(1, '#0C1222'); ctx.fillStyle = g; ctx.fillRect(0, 168, AW_W, T - 168);
-    for (let i = 0; i < 26; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => { const w = 14 + r() * 20, h = 10 + r() * 22; ctx.fillStyle = '#0A1020'; ctx.fillRect(x, T - 30 - h, w, h + 30); poly([x - 2, T - 30 - h, x + w / 2, T - 38 - h, x + w + 2, T - 30 - h]); ctx.fill(); if (r() < .4) { ctx.fillStyle = '#FFCE7A'; ctx.fillRect(x + w * .4, T - 22 - h, 2.4, 3); } });
-    for (let i = 0; i < 14; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => { for (let k = 0; k < 8; k++) dab(x + (r() - .5) * 30, T - 40 - r() * 26, 7 + r() * 6, '#080C18', .95); });
+    const g = ctx.createLinearGradient(0, 168, 0, FLOOR_TOP); g.addColorStop(0, 'rgba(14,20,40,0)'); g.addColorStop(.5, 'rgba(14,20,40,.75)'); g.addColorStop(1, '#0C1222'); ctx.fillStyle = g; ctx.fillRect(0, 168, AW_W, FLOOR_TOP - 168);
+    for (let i = 0; i < 26; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => { const w = 14 + r() * 20, h = 10 + r() * 22; ctx.fillStyle = '#0A1020'; ctx.fillRect(x, FLOOR_TOP - 30 - h, w, h + 30); poly([x - 2, FLOOR_TOP - 30 - h, x + w / 2, FLOOR_TOP - 38 - h, x + w + 2, FLOOR_TOP - 30 - h]); ctx.fill(); if (r() < .4) { ctx.fillStyle = '#FFCE7A'; ctx.fillRect(x + w * .4, FLOOR_TOP - 22 - h, 2.4, 3); } });
+    for (let i = 0; i < 14; i++) awWR(rnd() * AW_W, 30, rnd, (x, r) => { for (let k = 0; k < 8; k++) dab(x + (r() - .5) * 30, FLOOR_TOP - 40 - r() * 26, 7 + r() * 6, '#080C18', .95); });
   }
   function bedMid(rnd) {
     AW_SUN = 1;
     // the dark street along the far edge of the bed: houses, great trees, the one lamp, its light in a pond
-    for (let i = 0; i < 5; i++) awWR(i * 256 + rnd() * 40, 70, rnd, (x, r) => nightHouse(x - 30, T - 4, 60 + r() * 20, 70 + r() * 40, r, true));
-    for (let i = 0; i < 6; i++) awWR(i * 213 + 120 + rnd() * 50, 60, rnd, (x, r) => nightTree(x, T - 2, 120 + r() * 50, r));
-    for (let i = 0; i < 2; i++) awWR(300 + i * 640 + rnd() * 60, 70, rnd, (x) => { streetLamp(x, T - 2, 66);
-      ctx.fillStyle = '#0A1224'; ell(x + 10, T - 4, 44, 4); ctx.fill(); addB(() => { ctx.fillStyle = 'rgba(255,200,110,.5)'; ctx.fillRect(x - 1, T - 7, 2.4, 6); ctx.fillStyle = 'rgba(255,200,110,.25)'; ell(x + 1, T - 4, 14, 1.4); ctx.fill(); }); });
+    for (let i = 0; i < 5; i++) awWR(i * 256 + rnd() * 40, 70, rnd, (x, r) => nightHouse(x - 30, FLOOR_TOP - 4, 60 + r() * 20, 70 + r() * 40, r, true));
+    for (let i = 0; i < 6; i++) awWR(i * 213 + 120 + rnd() * 50, 60, rnd, (x, r) => nightTree(x, FLOOR_TOP - 2, 120 + r() * 50, r));
+    for (let i = 0; i < 2; i++) awWR(300 + i * 640 + rnd() * 60, 70, rnd, (x) => { streetLamp(x, FLOOR_TOP - 2, 66);
+      ctx.fillStyle = '#0A1224'; ell(x + 10, FLOOR_TOP - 4, 44, 4); ctx.fill(); addB(() => { ctx.fillStyle = 'rgba(255,200,110,.5)'; ctx.fillRect(x - 1, FLOOR_TOP - 7, 2.4, 6); ctx.fillStyle = 'rgba(255,200,110,.25)'; ell(x + 1, FLOOR_TOP - 4, 14, 1.4); ctx.fill(); }); });
     // the headboard of the great bed, rising out of the dark at the far end of the quilt: carved, gilded, endless
-    ctx.fillStyle = '#2A1A20'; ctx.fillRect(0, T - 22, AW_W, 20); ctx.fillStyle = '#5A3A30'; ctx.fillRect(0, T - 22, AW_W, 3);
-    for (let x = 12; x < AW_W; x += 64) { ctx.fillStyle = '#3A2428'; rrect(x, T - 34, 10, 32, 3); ctx.fill(); ctx.fillStyle = '#C8A060'; circle(x + 5, T - 36, 4); ctx.fill(); ctx.fillStyle = '#FFE6A8'; circle(x + 3.8, T - 37.4, 1.4); ctx.fill(); }
+    ctx.fillStyle = '#2A1A20'; ctx.fillRect(0, FLOOR_TOP - 22, AW_W, 20); ctx.fillStyle = '#5A3A30'; ctx.fillRect(0, FLOOR_TOP - 22, AW_W, 3);
+    for (let x = 12; x < AW_W; x += 64) { ctx.fillStyle = '#3A2428'; rrect(x, FLOOR_TOP - 34, 10, 32, 3); ctx.fill(); ctx.fillStyle = '#C8A060'; circle(x + 5, FLOOR_TOP - 36, 4); ctx.fill(); ctx.fillStyle = '#FFE6A8'; circle(x + 3.8, FLOOR_TOP - 37.4, 1.4); ctx.fill(); }
   }
   // the quilt: cream linen, diamond-quilted and stitched, rumpled in long soft folds, blue with the night and warm where
   // the lamplight falls on it; its edge hangs over at the front in a fringe of tassels
   function bedFloor(rnd, th) {
-    { const g = ctx.createLinearGradient(0, T - 2, 0, VH); g.addColorStop(0, '#6A7090'); g.addColorStop(.3, '#8E92AE'); g.addColorStop(.8, '#B6B4C8'); g.addColorStop(1, '#7A7896'); ctx.fillStyle = g; ctx.fillRect(0, T - 2, AW_W, VH - T + 2); }
+    { const g = ctx.createLinearGradient(0, FLOOR_TOP - 2, 0, VH); g.addColorStop(0, '#6A7090'); g.addColorStop(.3, '#8E92AE'); g.addColorStop(.8, '#B6B4C8'); g.addColorStop(1, '#7A7896'); ctx.fillStyle = g; ctx.fillRect(0, FLOOR_TOP - 2, AW_W, VH - FLOOR_TOP + 2); }
     const fold = awWave(311, [[3, 6], [7, 3], [13, 1.5]]);
     // the quilting: a lattice of stitched diamonds that widen toward us, each one puffed (lit on top, shaded below)
-    let y = T + 2; for (let row = 0; row < 9; row++) { const h = 6 + row * 2.6, w = h * 2.6;
+    let y = FLOOR_TOP + 2; for (let row = 0; row < 9; row++) { const h = 6 + row * 2.6, w = h * 2.6;
       for (let x = (row % 2) * w / 2 - w; x < AW_W + w; x += w) {
         const cy = y + h / 2 + fold(x) * (row / 9) * .5;
         ctx.fillStyle = `rgba(240,236,250,${.12 + hsh(x * .1 + row) * .1})`; ell(x, cy - h * .12, w * .38, h * .3); ctx.fill();
@@ -480,14 +480,14 @@
       }
       y += h; }
     // long soft folds running across the cover
-    for (let i = 0; i < 9; i++) { const yy = T + 10 + i * 12 + rnd() * 6, a = .1 + rnd() * .08; ctx.strokeStyle = `rgba(30,30,70,${a})`; ctx.lineWidth = 3 + i * .5; ctx.beginPath(); for (let x = 0; x <= AW_W; x += 16) ctx.lineTo(x, yy + fold(x + i * 90) * (.6 + i * .1)); ctx.stroke();
+    for (let i = 0; i < 9; i++) { const yy = FLOOR_TOP + 10 + i * 12 + rnd() * 6, a = .1 + rnd() * .08; ctx.strokeStyle = `rgba(30,30,70,${a})`; ctx.lineWidth = 3 + i * .5; ctx.beginPath(); for (let x = 0; x <= AW_W; x += 16) ctx.lineTo(x, yy + fold(x + i * 90) * (.6 + i * .1)); ctx.stroke();
       ctx.strokeStyle = `rgba(250,248,255,${a * 1.2})`; ctx.lineWidth = 1.2; ctx.beginPath(); for (let x = 0; x <= AW_W; x += 16) ctx.lineTo(x, yy - 2 - i * .2 + fold(x + i * 90) * (.6 + i * .1)); ctx.stroke(); }
     // pools of warm lamplight under the lamps
-    for (let i = 0; i < 2; i++) { const x = 300 + i * 640 + 30; awWrap(x, 160, (x) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, T + 40); ctx.scale(1, .3); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 170); g.addColorStop(0, 'rgba(255,190,110,.32)'); g.addColorStop(1, 'rgba(255,190,110,0)'); ctx.fillStyle = g; ctx.fillRect(-170, -170, 340, 340); ctx.restore(); }); }
+    for (let i = 0; i < 2; i++) { const x = 300 + i * 640 + 30; awWrap(x, 160, (x) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, FLOOR_TOP + 40); ctx.scale(1, .3); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 170); g.addColorStop(0, 'rgba(255,190,110,.32)'); g.addColorStop(1, 'rgba(255,190,110,0)'); ctx.fillStyle = g; ctx.fillRect(-170, -170, 340, 340); ctx.restore(); }); }
     // the front edge where the cover turns down, and its fringe
     const ey = VH - 13; ctx.fillStyle = '#5A5A80'; ctx.fillRect(0, ey, AW_W, VH - ey); ctx.fillStyle = '#C8A060'; ctx.fillRect(0, ey, AW_W, 1.6);
     for (let x = 3; x < AW_W; x += 7) { ctx.strokeStyle = '#B08A50'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, ey + 1); ctx.lineTo(x + .5, ey + 9); ctx.stroke(); ctx.fillStyle = '#E8C070'; circle(x + .5, ey + 9.5, 1.3); ctx.fill(); }
-    ctx.fillStyle = 'rgba(14,18,40,.45)'; ctx.fillRect(0, T - 2, AW_W, 3);
+    ctx.fillStyle = 'rgba(14,18,40,.45)'; ctx.fillRect(0, FLOOR_TOP - 2, AW_W, 3);
   }
   THEMES.dreamBoss = {
     name: 'the bed of the sleeper', sky: ['#2A68B0', '#5E9AD4', '#A6C8E8', '#3A4A6E'], sun: [0.5, 0.18, '255,250,236'], haze: '150,170,210',

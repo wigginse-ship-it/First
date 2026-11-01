@@ -38,13 +38,13 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
   function prepNext() {
     if (!stage || stage.bossRoom) return null;
     const s = nextSpec(); if (!s) return null;
-    if (NX && NX.theme === s.theme && NX.seed === s.seed && NX.K === K) return NX;
+    if (NX && NX.theme === s.theme && NX.seed === s.seed && NX.K === K && NX.ft === FLOOR_TOP) return NX;
     dropNX(); const A = getSet();
-    try { bgFar = bgMid = awFloorC = null; bgKey = ''; _bb(s.theme, s.seed); NX = Object.assign(getSet(), s, { K }); } finally { putSet(A); }
+    try { bgFar = bgMid = awFloorC = null; bgKey = ''; _bb(s.theme, s.seed); NX = Object.assign(getSet(), s, { K, ft: FLOOR_TOP }); } finally { putSet(A); }
     return NX;
   }
   buildBackground = function (themeId, seed) { // stepping into the next place: its layers are already painted
-    if (NX && NX.theme === themeId && NX.seed === seed && NX.K === K) { retire(bgFar); retire(bgMid); retire(awFloorC); putSet(NX); NX = null; return; }
+    if (NX && NX.theme === themeId && NX.seed === seed && NX.K === K && NX.ft === FLOOR_TOP) { retire(bgFar); retire(bgMid); retire(awFloorC); putSet(NX); NX = null; return; }
     _bb(themeId, seed);
   };
   const _zone = enterZone; // a crystal pod or two left sitting past the last fight is moved into it
@@ -56,7 +56,7 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
   // ---------------- painted pieces, cached ----------------
   const SPR = new Map(); let sprKey = '';
   function sprite(kind, part, T) { // painted once per passage and scale, x relative to the way on; the solid parts get the layers' brushwork and fine contour
-    const KS = Math.min(K, 2.5), key = kind + KS;
+    const KS = Math.min(K, 2.5), key = kind + KS + '|' + GLIDE_DY;
     if (sprKey !== key) { for (const c of SPR.values()) retire(c); SPR.clear(); sprKey = key; }
     let c = SPR.get(part); if (c) return c;
     const b = T[part + 'B'] || [-600, Y_OFF - 10, 240, VH], paint = T[part], [cv2, g] = texCanvas(Math.ceil((b[2] - b[0]) * KS), Math.ceil((b[3] - b[1]) * KS));
@@ -65,30 +65,41 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
     if (part !== 'haze' && T[part + 'Ink'] !== false) { const k0 = K; K = KS; try { paintLayer(cv2, { ink: '#1A100C', line: part === 'front' ? .7 : .6, lw: 1, brush: .9, hatch: .12, seed: 5 }); } finally { K = k0; releaseScratch(); } }
     c = cv2; c.b = b; SPR.set(part, c); return c;
   }
-  const drawSpr = (kind, T, part, L) => { if (!T[part]) return; const c = sprite(kind, part, T), b = c.b; ctx.drawImage(c, L + b[0], b[1], b[2] - b[0], b[3] - b[1]); };
+  const drawSpr = (kind, T, part, L) => { if (!T[part]) return; const c = sprite(kind, part, T), b = c.b;
+    if (!GLIDE_DY) { ctx.drawImage(c, L + b[0], b[1], b[2] - b[0], b[3] - b[1]); return; }
+    // the glide view (drawn lifted, in the art's space: core.js asBackdrop) shows more above and below than these were
+    // painted for: the middle is laid on as it is, and what lies above Ym or below Yf is drawn out, so a piece that
+    // reached the top or the bottom of the old view (a canopy, a root in the near ground) still reaches the new one's
+    const Ym = 150, Yf = FLOOR_TOP0 + 20, top0 = VH - VIEW_NORMAL0, s1 = (Ym - Math.min(Y_OFF - 6, top0)) / (Ym - top0), s2 = (VH + GLIDE_DY - Yf) / (VH - Yf);
+    const f = (y) => y < Ym ? Ym - (Ym - y) * s1 : y > Yf ? Yf + (y - Yf) * s2 : y, ky = c.height / (b[3] - b[1]), w = b[2] - b[0];
+    for (const [y0, y1] of [[b[1], Math.min(b[3], Ym)], [Math.max(b[1], Ym), Math.min(b[3], Yf)], [Math.max(b[1], Yf), b[3]]]) {
+      if (y1 - y0 < .01) continue; const sy0 = (y0 - b[1]) * ky, sh = (y1 - y0) * ky;
+      ctx.drawImage(c, 0, sy0, c.width, sh, L + b[0], f(y0), w, f(y1) - f(y0)); } };
   // ---------------- the next place, showing through ----------------
   const MS = .25, MX0 = MX0_TH, MX1 = 220; // the mask is soft, so it is kept small
   let mkC = null, mkKey = '', nwC = null, nwG = null, nwKey = '', nwT = 0;
   function edgeMask(T) { // the next place shows right of a ragged, brushed edge: T.edge(y) is where it is half there, T.feather how soft
     const f = T.feather || 110, r = mulberry(11), at = (y) => T.edge(y) + Math.sin(y * .05 + 1) * 16 + Math.sin(y * .13 + 2) * 8 + Math.sin(y * .31) * 4;
-    for (let y = 0; y < VH; y += 3) { const x = at(y), g = ctx.createLinearGradient(x - f, 0, x + f, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, '#fff'); ctx.fillStyle = g; ctx.fillRect(x - f, y, MX1 - x + f, 3.4); }
+    for (let y = 0; y < VH + GLIDE_DY; y += 3) { const x = at(y), g = ctx.createLinearGradient(x - f, 0, x + f, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, '#fff'); ctx.fillStyle = g; ctx.fillRect(x - f, y, MX1 - x + f, 3.4); }
     for (let i = 0; i < 46; i++) { const y = r() * VH, x = at(y) - f * (.2 + r() * .7); softDab(x, y, 14 + r() * 26, '255,255,255', .45); } // blots where the brush went over the edge
   }
   function maskFor(kind, T) {
-    if (mkKey === kind && mkC) return mkC;
-    if (!mkC) [mkC] = texCanvas(Math.ceil((MX1 - MX0) * MS), Math.ceil(VH * MS));
+    // (in the glide view the mask is made in the art's space and laid on lifted, like the backdrop: core.js asBackdrop)
+    if (mkKey === kind + '|' + GLIDE_DY && mkC) return mkC;
+    const mh = Math.ceil((VH + GLIDE_DY) * MS); if (mkC && mkC.height !== mh) { retire(mkC); mkC = null; }
+    if (!mkC) [mkC] = texCanvas(Math.ceil((MX1 - MX0) * MS), mh);
     const g = mkC.getContext('2d'), old = ctx; ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, mkC.width, mkC.height); g.setTransform(MS, 0, 0, MS, -MX0 * MS, 0);
-    try { T.mask ? T.mask(edgeMask) : edgeMask(T); } finally { ctx = old; }
+    try { withArtFloor(() => T.mask ? T.mask(edgeMask) : edgeMask(T)); } finally { ctx = old; }
     // how far left the next place shows at all (the mask is clear left of its ragged edge): only the canvas right of
     // that is repainted and laid on each frame, as everything left of it comes out clear anyway
     mkC.left = MX0;
     try { const d = g.getImageData(0, 0, mkC.width, mkC.height).data, W = mkC.width; let c0 = W;
       for (let i = 3; i < d.length; i += 4) { const c = ((i - 3) >> 2) % W; if (c < c0 && d[i]) c0 = c; }
       mkC.left = MX0 + Math.max(0, c0 - 2) / MS; } catch (e) {}
-    mkKey = kind; return mkC;
+    mkKey = kind + '|' + GLIDE_DY; return mkC;
   }
   function drawNext(kind, T, L, t) {
-    const B = NX && NX.K === K ? NX : prepNext(); if (!B) return;
+    const B = NX && NX.K === K && NX.ft === FLOOR_TOP ? NX : prepNext(); if (!B) return;
     const sx0 = L + Math.max(MX0, maskFor(kind, T).left) - camX; if (sx0 > VW || L + MX1 - camX < 0) return;
     if (!nwC || nwC.width !== cv.width || nwC.height !== cv.height) { retire(nwC); [nwC, nwG] = texCanvas(cv.width, cv.height); }
     const m = ctx.getTransform(), g = nwG, W = nwC.width, H = nwC.height, px0 = m.b || m.c ? 0 : clamp(Math.floor(m.a * sx0 + m.e) - 2, 0, W), pw = W - px0; // (the part of the canvas it can show in)
@@ -100,11 +111,11 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
     if (T.nextDY) g.translate(0, T.nextDY);
     const old = ctx, A = getSet(); ctx = g; putSet(B);
     try { drawWorld(B.theme, camX + (T.nextDX || 0), t); } finally { putSet(A); ctx = old; }
-    g.setTransform(m); g.globalCompositeOperation = 'destination-in'; g.drawImage(maskFor(kind, T), L + MX0 - camX, 0, MX1 - MX0, VH); g.restore(); } // through its ragged edge
+    g.setTransform(m); g.globalCompositeOperation = 'destination-in'; g.drawImage(maskFor(kind, T), L + MX0 - camX, -GLIDE_DY, MX1 - MX0, VH + GLIDE_DY); g.restore(); } // through its ragged edge
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = T.nextA ?? 1; ctx.drawImage(nwC, px0, 0, pw, H, px0, 0, pw, H); ctx.restore();
   }
   window.nextWorldInto = (g, t, o = {}) => { // the next place's world painted into g (a passage's last moments use it), or false if it isn't ready
-    const B = NX && NX.K === K ? NX : prepNext(); if (!B) return false;
+    const B = NX && NX.K === K && NX.ft === FLOOR_TOP ? NX : prepNext(); if (!B) return false;
     const old = ctx, A = getSet(); ctx = g; putSet(B);
     try { drawWorld(B.theme, o.cam || 0, t); } finally { putSet(A); ctx = old; }
     return true;
@@ -114,10 +125,10 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
   const _br = drawBossRoom;
   drawBossRoom = function (t) { _br(t); const a = active(); if (!a) return; const [k, T, L] = a;
     drawNext(k, T, L, t);
-    ctx.save(); ctx.translate(-camX, 0); drawSpr(k, T, 'haze', L); drawSpr(k, T, 'back', L); if (T.live) T.live(L, stage.wake || 0, t); ctx.restore(); };
+    ctx.save(); ctx.translate(-camX, 0); asBackdrop(() => { drawSpr(k, T, 'haze', L); drawSpr(k, T, 'back', L); if (T.live) T.live(L, stage.wake || 0, t); }); ctx.restore(); }; // (the way on stands beyond the street: lifted with the backdrop in the glide view)
   const _ga = drawGearAura;
   drawGearAura = function (t, front) { _ga(t, front); if (!front) return; const a = active(); if (!a) return; const [k, T, L] = a; // (in front of the figures)
-    drawSpr(k, T, 'front', L); if (T.liveFront) T.liveFront(L, stage.wake || 0, t); };
+    asBackdrop(() => { drawSpr(k, T, 'front', L); if (T.liveFront) T.liveFront(L, stage.wake || 0, t); }); };
 }
 // ---------- the passages: painted in the backgrounds' own hand (soft dabs, the next place's haze and light) ----------
 // a soft sweep across the view, for the moves between places: a band of something (dark wood, mist, cloud) whose edges are

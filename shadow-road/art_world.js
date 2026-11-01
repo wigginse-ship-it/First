@@ -222,7 +222,8 @@ const ENEMY_WEAPONS = {
 // WORLDS — painted once per world into two 1280-wide layers that tile (far, mid) plus a floor strip.
 // Every placed object goes through awWrap so it continues across the seam; every ridge uses whole harmonics.
 // ======================================================================================================
-const AW_W = 1280, AW_FT0 = FLOOR_TOP - 44; // the floor strip starts a little above the ground line (for the verge)
+const AW_W = 1280;
+let AW_FT0 = FLOOR_TOP - 44; // the floor strip starts a little above the ground line (for the verge); setGlideView moves it with the floor
 let AW_SUN = 1; // which side the light comes from while a world is painted: +1 from the right, -1 from the left
 let awFloorC = null, awFloorKey = '', awSeams = [];
 function awWrap(x, w, fn) { fn(x); if (x - w < 0) fn(x + AW_W); if (x + w > AW_W) fn(x - AW_W); }
@@ -736,14 +737,14 @@ function awPrismMid(rnd) {
 // painters for each locale, by theme id; the zone art files add their own locales to these
 const AW_FAR = { bloom: awBloomFar, sky: awSkyFar, prism: awPrismFar }, AW_MID = { bloom: awBloomMid, sky: awSkyMid, prism: awPrismMid };
 function buildBackground(themeId, seed) {
-  const key = themeId + K + seed; if (key === bgKey) return; bgKey = key;
+  const key = themeId + K + seed + '|' + FLOOR_TOP; if (key === bgKey) return; bgKey = key;
   const rnd = mulberry(seed), th = THEMES[themeId];
-  const [fc, f] = makeLayer(1280, FLOOR_TOP), [mc, m] = makeLayer(1280, FLOOR_TOP);
   const old = ctx;
   const far = AW_FAR[themeId] || awBloomFar, mid = AW_MID[themeId] || awBloomMid;
-  ctx = f; far(rnd, th, f);
-  ctx = m; mid(rnd);
-  ctx = old;
+  // the far and middle layers are painted to the art's own floor line (the glide view lifts them onto the page, core.js)
+  const [fc, mc] = withArtFloor(() => { const [fc, f] = makeLayer(1280, FLOOR_TOP), [mc, m] = makeLayer(1280, FLOOR_TOP);
+    try { ctx = f; far(rnd, th, f); ctx = m; mid(rnd); } finally { ctx = old; }
+    return [fc, mc]; });
   paintLayer(fc, { ink: '#3A2A30', line: .3, lw: .9, brush: .8, hatch: 0, seed: 3 });
   paintLayer(mc, { ink: '#1A100C', line: .85, lw: 1.1, brush: 1, hatch: .2, seed: 7 });
   releaseScratch(); retire(bgFar); retire(bgMid); // give the old world's layers and the working canvases back right away
@@ -892,11 +893,11 @@ function awBuildFloor(themeId, th, seed) {
   const [c, g] = makeLayer(AW_W, VH - AW_FT0), old = ctx; ctx = g; ctx.translate(0, -AW_FT0);
   const rnd = mulberry(seed * 31 + 5);
   (AW_FLOOR[themeId] || awFloorBloom)(rnd, th);
-  ctx = old; awFloorC = c; awFloorKey = themeId;
+  ctx = old; awFloorC = c; awFloorKey = themeId + '|' + FLOOR_TOP;
 }
 // every frame: the painted floor strip scrolls with the world (anchored to world x, so nothing swims), plus a few live touches
 function drawFloorLayer(themeId, th, camX, t) {
-  if (!awFloorC || awFloorKey !== themeId) { const fg = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH); fg.addColorStop(0, th.floorA); fg.addColorStop(1, th.floorB); ctx.fillStyle = fg; ctx.fillRect(0, FLOOR_TOP - 4, VW, VH - FLOOR_TOP + 4); return; }
+  if (!awFloorC || awFloorKey !== themeId + '|' + FLOOR_TOP) { const fg = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH); fg.addColorStop(0, th.floorA); fg.addColorStop(1, th.floorB); ctx.fillStyle = fg; ctx.fillRect(0, FLOOR_TOP - 4, VW, VH - FLOOR_TOP + 4); return; }
   const ox = -((camX % AW_W + AW_W) % AW_W);
   ctx.drawImage(awFloorC, ox, AW_FT0, AW_W, VH - AW_FT0); if (ox + AW_W < VW) ctx.drawImage(awFloorC, ox + AW_W, AW_FT0, AW_W, VH - AW_FT0);
   const off = (n) => ((-camX) % n + n) % n - n;

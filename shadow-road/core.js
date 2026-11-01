@@ -1,11 +1,54 @@
 'use strict';
 // ---------- shared constants & helpers ----------
 let VW = 640; // widens on long phones so they see more street
-const VH = 360, FLOOR_TOP = 238, FLOOR_BOT = 346;
+const VH = 360, FLOOR_BOT = 346;
+// the street's far edge. FLOOR_TOP0 is where every world's art was painted to meet it; the glide view (below) raises it
+const FLOOR_TOP0 = 238;
+let FLOOR_TOP = FLOOR_TOP0;
 // how much of the scene the camera shows (it crops the top of the sky so fighters read bigger); boss fights pull back
-const VIEW_NORMAL = 276, VIEW_BOSS = 318;
+const VIEW_NORMAL0 = 276, VIEW_BOSS0 = 318;
+let VIEW_NORMAL = VIEW_NORMAL0, VIEW_BOSS = VIEW_BOSS0;
 let VIEW_H = VIEW_NORMAL, Y_OFF = VH - VIEW_H;
+let VW_MAX = 680; // the widest street a long screen is shown (ui.js layout)
 function setZoom(h) { if (VIEW_H === h) return; VIEW_H = h; Y_OFF = VH - VIEW_H; if (typeof layout === 'function') layout(); }
+
+// ---------- the glide view: for the Pearl's Currents, the camera pulls back and the street is deeper ----------
+// While it is on, the floor's far edge is raised GLIDE_DY units (FLOOR_TOP 210 for 238), the camera shows more of the
+// scene (and so more street across a wide screen too), and everything beyond the street (sky, far and middle layers, the
+// landmarks at each area's end) is painted exactly as before, only lifted by GLIDE_DY so its horizon meets the new edge:
+// asBackdrop(fn) paints in that lifted space, where FLOOR_TOP (and Y_OFF) read as the art was made for.
+// It is chosen as each place is entered (enterZone): on whenever the glide applies (PEARLNG.curOn(), or the forged Pearl
+// in hand), or as the dev panel says (devmode.js: auto / on / off), or forced by ?glideview=on|off in the page's address.
+const GLIDE = { ft: 210, normal: 330, boss: 356, vwMax: 780 };
+let GLIDE_VIEW = false, GLIDE_DY = 0, ART_DEPTH = 0;
+const GLIDE_FORCE = (() => { try { const m = /[?&]glideview=(on|off|auto)\b/.exec(location.search); return m ? m[1] : ''; } catch (e) { return ''; } })();
+function glideWanted() {
+  const f = GLIDE_FORCE || (window.DEV && DEV.active && DEV.glideView) || 'auto';
+  if (f === 'on') return true; if (f === 'off') return false;
+  try { const N = window.PEARLNG; if (!N) return false;
+    return !!(N.curOn() || N.held() || (N.forged() && typeof save !== 'undefined' && save.weapon === 'pearlw')); } catch (e) { return false; }
+}
+function setGlideView(on) { // (call between places: what is on screen is rebuilt as the place is entered)
+  on = !!on; if (on === GLIDE_VIEW) return false;
+  GLIDE_VIEW = on; FLOOR_TOP = on ? GLIDE.ft : FLOOR_TOP0; GLIDE_DY = FLOOR_TOP0 - FLOOR_TOP;
+  VIEW_NORMAL = on ? GLIDE.normal : VIEW_NORMAL0; VIEW_BOSS = on ? GLIDE.boss : VIEW_BOSS0; VW_MAX = on ? GLIDE.vwMax : 680;
+  if (typeof AW_FT0 !== 'undefined') AW_FT0 = FLOOR_TOP - 44;
+  if (typeof bgKey !== 'undefined') bgKey = '';
+  VIEW_H = -1; return true; // (the next setZoom lays the page out afresh)
+}
+// the art's own floor line, for painting anything beyond the street (no lift: an offscreen layer is painted in its own space)
+function withArtFloor(fn) {
+  if (!GLIDE_DY || ART_DEPTH) return fn();
+  const ft = FLOOR_TOP, yo = Y_OFF, a0 = typeof AW_FT0 !== 'undefined' ? AW_FT0 : 0; ART_DEPTH++;
+  FLOOR_TOP = FLOOR_TOP0; Y_OFF = yo + GLIDE_DY; if (typeof AW_FT0 !== 'undefined') AW_FT0 = FLOOR_TOP0 - 44;
+  try { return fn(); } finally { FLOOR_TOP = ft; Y_OFF = yo; if (typeof AW_FT0 !== 'undefined') AW_FT0 = a0; ART_DEPTH--; }
+}
+// painted onto the page, lifted to meet the raised floor
+function asBackdrop(fn) {
+  if (!GLIDE_DY || ART_DEPTH) return fn();
+  const g = ctx; g.save(); g.translate(0, -GLIDE_DY);
+  try { return withArtFloor(fn); } finally { g.restore(); }
+}
 const GRAV = 1000, TAU = Math.PI * 2;
 const $ = (s) => document.querySelector(s);
 const rand = (a, b) => a + Math.random() * (b - a);

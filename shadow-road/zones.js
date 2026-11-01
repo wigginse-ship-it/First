@@ -20,6 +20,7 @@ const zoneTheme = (z) => (THEMES[ZONES[stageIdx].zones[z].theme] ? ZONES[stageId
 
 function enterZone(z, Zs) { // Zs: a place outside the usual three (a hidden Trump room), entered from place z
   const Z = Zs || ZONES[stageIdx].zones[z]; zoneIdx = z;
+  setGlideView(glideWanted()); // the glide view is settled as each place is entered (core.js)
   stage = Object.assign({}, baseStage, { theme: Zs ? Zs.theme : zoneTheme(z), len: Z.len, waves: Zs ? Zs.rawWaves : Z.waves.map(k => baseStage.waves[k]), w0: Zs ? 99 : Z.waves.length ? Z.waves[0] : baseStage.waves.length,
     pods: Z.pods || [], bossRoom: !!Z.boss, mech: Z.mech || null, secret: !!Zs });
   for (const k of loot) { // whatever was left lying in the last place comes along
