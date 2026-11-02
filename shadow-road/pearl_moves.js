@@ -546,9 +546,9 @@
       reset() { M.jh = false; for (const e of enemies) { e.pmFloat = null; e.pmCrash = null; e.pmLift = 0; } },
       peek: () => ({ adrift: adrift().length, crashing: foes().filter(e => e.pmCrash).length, pull: foes().reduce((s, e) => s + (e.pmLift || 0), 0) }),
       tree: () => ({
-        L:    { name: 'Waxing', dur: .34, h: [.3, .6], x0: 0, x1: 72, dmg: 10, kb: 45, lunge: 40, depth: 24, lift: 1, desc: 'Each blow pulls (+1). Three pulls: they float ADRIFT.' },
-        LL:   { name: 'Waning', dur: .38, h: [.3, .62], x0: 0, x1: 72, dmg: 11, kb: 55, lunge: 40, depth: 24, lift: 1 },
-        LLL:  { name: 'Full Moon', dur: .6, h: [.2, .8], x0: 0, x1: 84, dmg: 8, kb: 100, around: 1, multi: .2, depth: 30, power: 1, lift: 2, desc: 'A circle overhead, all round: +2 pull.' },
+        L:    { name: 'Waxing', dur: .34, h: [.3, .6], x0: 0, x1: 72, dmg: 10, kb: 20, lunge: 40, depth: 24, lift: 1, tether: 1, desc: 'Each blow pulls (+1). Three pulls: they float ADRIFT.' },
+        LL:   { name: 'Waning', dur: .38, h: [.3, .62], x0: 0, x1: 72, dmg: 11, kb: 25, lunge: 40, depth: 24, lift: 1, tether: 1 },
+        LLL:  { name: 'Full Moon', dur: .6, h: [.2, .8], x0: 0, x1: 84, dmg: 8, kb: 100, around: 1, multi: .2, depth: 30, power: 1, lift: 2, gather: 1, desc: 'A circle overhead, all round: +2 pull.' },
         H:    { name: 'Gravity Well', dur: .55, h: [.42, .58], x0: 0, x1: 80, dmg: 18, kb: 60, shock: 100, power: 2, depth: 28, lift: 1, well: 1, desc: 'Nobody adrift: a pound that drags them in.' },
         Hs:   { name: 'Spring Tide', seq: ['H'], dur: .5, h: [3, 3], x0: 0, x1: 0, dmg: 18, kb: 0, power: 2, spring: 1, desc: 'Foes adrift: every one crashes down on whoever is under it.' },
         HH:   { name: 'Perigee', dur: .6, h: [.2, .75], x0: 0, x1: 84, dmg: 15, kb: 180, around: 1, depth: 32, power: 2, lift: 2, desc: 'A wide swing all round: +2 pull.' },
@@ -571,6 +571,11 @@
         if (m.hook) { const e = nearest(P.x, P.y, 300, null, (o) => !!o.pmFloat); P._hook = e ? { e, x0: P.x, z0: P.z } : null; if (e) { P.facing = Math.sign(e.x - P.x) || P.facing; sfx('whoosh'); } }
       },
       extras(m, k, dt, air) {
+        // Full Moon: the foes near are drawn in to the circle before it swings, so every one of them is in it
+        if (m.gather && (k < m.h[0] || once('gather', k, m.h[0], () => {}))) { const u = k < m.h[0] ? Math.min(1, dt * 22) : 1;
+          for (const e of foes()) { if (e.boss || e.pmFloat || e.pmCrash) continue; const dx = e.x - P.x;
+            if (Math.abs(dx) > 170 * RK() || Math.abs(e.y - P.y) > 60) continue; const s = Math.sign(dx) || fc(), want = Math.min(Math.abs(dx), e.hw + 36);
+            e.x += (P.x + s * want - e.x) * u; e.y += (P.y - e.y) * u * .6; if (Math.sign(e.vx) === s) e.vx = 0; } }
         if (m.well) once('well', k, m.h[0], () => { const cx = P.x + fc() * 50; for (const e of foes()) if (!e.boss && Math.hypot(e.x - cx, (e.y - P.y) * 2) < 160 * RK()) { e.x += (cx - e.x) * .5; e.y += (P.y - e.y) * .4; } bubbles(cx, P.y, 10, 10, 80); });
         if (m.invert) once('inv', k, m.h[0], () => invert(m));
         if (m.eclipse && P.shocked) once('ecl', 1, 0, () => { for (const e of adrift()) if (Math.abs(e.x - P.x) < 170 * RK()) crashDown(e, 16); });
@@ -579,11 +584,15 @@
           if (once('hk', k, .45, () => { if (!e.dead) hitE(e, m.dmg, P.facing, m, { kb: 40 }); })) { P._hook = null; toAir(null, 160); return true; } }
         return false;
       },
-      onHit(e, m) { if (m.lift) lift(e, m.lift); if (m.meteor && e.pmFloat) crashDown(e, 16); },
+      // the light pulls hold the foe on the chain (in reach of the next blow), whatever else knocks it about
+      onHit(e, m) { if (m.lift) lift(e, m.lift); if (m.tether && !e.boss && !e.dead && !e.pmFloat) e.pmTether = clock() + .7; if (m.meteor && e.pmFloat) crashDown(e, 16); },
       step(dt) { if (M.jh && P.z <= 0 && P.state !== 'air') { M.jh = false; if (adrift().length) spring(WP().tree.Hs); } },
       enemy(e, dt) {
         if (e.dead) { e.pmFloat = null; return; }
         if (e.pmLift && clock() - (e.pmLiftT || 0) > 3) e.pmLift = 0;
+        // on the chain: never further than the light blow reaches (it is reeled back in, not let fly)
+        if (e.pmTether > clock() && !e.boss && !e.pmFloat && !e.pmCrash) { const dx = e.x - P.x, s = Math.sign(dx) || P.facing, lim = Math.max(e.hw + 20, ((WP().tree.L || {}).x1 || 72) - 14);
+          if (Math.abs(dx) > lim) { e.x = P.x + s * Math.max(lim, Math.abs(dx) - 400 * dt); if (Math.sign(e.vx) === s) e.vx = 0; } }
         const F = e.pmFloat;
         if (F) { F.t -= dt; e.air = true; e.state = 'hurt'; e.t = Math.max(e.t, .25); e.plan = null;
           const tz = F.z + 6 * Math.sin(clock() * 3 + e.x * .05); e.z += (tz - e.z) * Math.min(1, dt * 5); e.vz = 0; e.vx *= Math.pow(.002, dt);
@@ -934,14 +943,23 @@
         return false;
       },
       guard(dmg, fromX) { if (P.state === 'atk' && P.move && P.move.turtle && (Math.sign(fromX - P.x) === P.facing || Math.abs(fromX - P.x) < 10)) { sfx('hit-metal', .5); sparkle(P.x + P.facing * 20, P.y, 40, 6); P.inv = Math.max(P.inv, .2); const src = typeof HIT_SRC !== 'undefined' ? HIT_SRC : null; if (src && src.p) src.p.life = 0; floatText(P.x, P.y, 80, 'BLOCKED', '#F2D68A', 11); return true; } return false; },
-      onHit(e, m) { if (m.toReef && R.reef && !e.boss && !e.dead) { const d = Math.sign(R.reef.x - e.x) || P.facing; e.vx = d * Math.max(260, m.kb) * (e.def.weight || 1); e.wallOK = false; e.pmToReef = clock() + .8; } },
+      // a driven foe is steered at the reef: it keeps its way on it (whatever else knocks it about) until it gets there
+      onHit(e, m) { if (m.toReef && R.reef && !e.boss && !e.dead) { const F = R.reef, d = Math.sign(F.x - e.x) || P.facing, v = Math.max(260, m.kb) * (e.def.weight || 1);
+        e.vx = d * v; e.wallOK = false; e.pmReefD = d; e.pmReefV = Math.max(220, v * .8); e.pmToReef = clock() + clamp(Math.abs(F.x - e.x) / e.pmReefV + .35, .8, 1.6); } },
       enemy(e, dt) {
         const F = R.reef; if (!F || e.dead || e.boss || !(e.pmToReef > clock()) || (e.pmSplat || 0) > clock()) return;
-        if (Math.abs(e.x - F.x) < e.hw + 10 && Math.abs(e.y - F.y) < 28 && e.z < 70 && Math.abs(e.vx) > 120) {
-          const d = Math.sign(e.vx); e.x = F.x - d * (e.hw + 12); e.vx = -d * 120; e.pmSplat = clock() + .5; e.pmToReef = 0;
+        const d = e.pmReefD || Math.sign(F.x - e.x) || 1;
+        // it reaches the reef: touching it (a generous reach), or knocked on past it, a little off the lane or not
+        if ((Math.abs(e.x - F.x) < e.hw + 26 || (e.x - F.x) * d > 0) && Math.abs(e.y - F.y) < 46 && e.z < 90) {
+          e.x = F.x - d * (e.hw + 12); e.vx = -d * 120; e.pmSplat = clock() + .5; e.pmToReef = 0;
           hitE(e, 12, -d, { pm: 'warshield', key: 'SPLAT', kb: 120, power: 2, pe: .5 }); if (!e.dead) { e.state = 'hurt'; e.t = .9; e.plan = null; }
           floatText(e.x, e.y, e.z + e.hh + 18, 'REEF!', '#F2D68A', 14); ev('splat'); sfx('hit-metal'); shakeMag = Math.max(shakeMag, 5); sparkle(F.x, F.y, 40, 10); F.ring = .3;
+          return;
         }
+        // not there yet: still sliding at it, drawn into its lane
+        if (Math.sign(e.vx) !== d || Math.abs(e.vx) < e.pmReefV) e.vx = d * e.pmReefV;
+        e.y += (F.y - e.y) * Math.min(1, dt * 6);
+        if (!e.air) { e.state = 'hurt'; e.t = Math.max(e.t, .12); e.plan = null; }
       },
       step(dt) {
         const F = R.reef; if (!F) return; F.t += dt; F.ring = Math.max(0, (F.ring || 0) - dt);
