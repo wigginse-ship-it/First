@@ -3,7 +3,7 @@
 // NG+ CORRUPTION: "THE CURSE FOLLOWS HIM"
 // ------------------------------------------------------------------------------------------------------
 // Blind in Eric's dungeon, Corwin laid a curse on Amber; it took root in Lorraine first, as the Black Circle. In New
-// Game+ (save.cycle >= 1) it follows him across every shadow, feeds on how he fights and seeps into the Horn. There is no
+// Game+ (save.cycle >= 1), once Lorraine has been beaten in an earlier cycle (save.w8relic), it follows him across every shadow, feeds on how he fights and seeps into the Horn. There is no
 // meter: it shows only as omens and changes in the world. The value is hidden in the save (save.curse); the dev panel
 // alone shows it (a readout and sliders while a dev game is running, DEV.active).
 //   THE CURSE      save.curse.v, 0..100. Fed by deaths (more with each death in the cycle), cruelty (blows on downed
@@ -25,7 +25,8 @@
 // Console and tests: CURSE (see the end of the file).
 // ======================================================================================================
 (() => {
-  const NG = () => typeof save !== 'undefined' && !!save && (save.cycle | 0) >= 1;
+  // (the curse starts only once Lorraine has been beaten in an earlier cycle: New Game+ with the Horn of Lorraine in hand)
+  const NG = () => typeof save !== 'undefined' && !!save && (save.cycle | 0) >= 1 && !!save.w8relic;
   const playing = () => typeof mode !== 'undefined' && mode === 'play' && !!P && !!stage;
   const cl01 = (k) => clamp(k, 0, 1), sm = (k) => { k = cl01(k); return k * k * (3 - 2 * k); };
   const hsh = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
@@ -50,13 +51,13 @@
   function CS() {
     let c = save.curse;
     if (!c || typeof c !== 'object') c = save.curse = { v: 0, horn: 0, cyc: save.cycle | 0, deaths: 0, fell: {}, abyssN: 0, wc: {}, residue: 0, endCyc: -1, endHigh: false, heartDone: false, ends: {} };
-    if (!c.fell) c.fell = {}; if (!c.wc) c.wc = {}; if (!c.ends) c.ends = {};
+    if (!c.fell) c.fell = {}; if (!c.bfell) c.bfell = {}; if (!c.wc) c.wc = {}; if (!c.ends) c.ends = {};
     if (c.cyc !== (save.cycle | 0)) { if ((save.cycle | 0) > c.cyc) newCycle(c); c.cyc = save.cycle | 0; }
     return c;
   }
   function newCycle(c) { // most of it lifts as the road begins again; a residue stays with him
     c.v = Math.round(c.v * RESIDUE * 10) / 10; c.residue = c.v; c.horn = Math.round(c.horn * HORN_KEEP * 10) / 10;
-    c.deaths = 0; c.fell = {}; c.endCyc = -1; c.endHigh = false; c.heartDone = false;
+    c.deaths = 0; c.fell = {}; c.bfell = {}; c.endCyc = -1; c.endHigh = false; c.heartDone = false;
   }
   const V = () => NG() ? CS().v : 0;
   const tier = () => NG() ? tierOf(CS().v) : 0;
@@ -217,6 +218,7 @@
     const c = CS();
     if (onRoad()) feed(WT.roadPerSec * dt / WT.roadMul, 'standing on the Black Road');
     corpseHits(); villagers(); mimicStep(dt); clootStep(dt); verseStep(dt); patternStep(dt); roadStep(dt); pearlStep(dt); weaponStep(dt); heartStep(dt); fxSchedule(dt);
+    if (boss && boss.cB && !boss.dead && enemies.includes(boss)) bossStep(boss, dt);
     if ((L.abT = (L.abT || 0) - dt) <= 0) { L.abT = 1; abyssCheck(); }
     if (P.cBurn > 0) burnHim(dt);
     L.recT -= dt; if (L.recT <= 0) { L.recT = .05; L.rec.push({ x: P.x, y: P.y, z: P.z, f: P.facing, pose: Object.assign({}, playerPose()) }); if (L.rec.length > 24) L.rec.shift(); }
@@ -364,7 +366,7 @@
   const _se = spawnEnemy;
   spawnEnemy = function (type, side, isBoss) {
     const e = _se(type, side, isBoss);
-    if (!NG() || !e || e.boss) { if (e && e.boss && finalHigh()) { e.cursed = true; e.cBossT = 4; } return e; }
+    if (!NG() || !e || e.boss) { if (e && e.boss && NG()) { try { bossInit(e); } catch (err) { console.error(err); } } return e; }
     const t = teff(), p = [0, 0, .12, .22, .35][t] * (finalHigh() ? 1.5 : 1);
     if (!(stage && stage.secret && !L.heart) && !e.cNoCurse && Math.random() < p) curseFoe(e);
     return e;
@@ -387,7 +389,7 @@
   function enemyCurse(e, dt) {
     if (!e.cursed) return;
     if (e.cRoad && L.road && Math.abs(e.x - P.x) > 110) e.y += (L.road.y - e.y) * Math.min(1, dt * 8); // (a thing of the road keeps to it until it is on him)
-    if (e.boss && finalHigh()) return bossCurse(e, dt);
+    if (e.boss) return; // (a corrupted lord is stepped from worldStep: some fights' own rules never pass it down this far)
     if (e.cTrait === 'mask' && ['idle', 'walk', 'recover'].includes(e.state) && Math.abs(e.x - P.x) < 300) { e.cAtkT -= dt; if (e.cAtkT <= 0) { e.cAtkT = rand(5.5, 8.5); borrowed(e, MASKS[e.cMask].atk); } }
   }
   function borrowed(e, k) { // one of another lord's attacks, borrowed with its face
@@ -459,7 +461,7 @@
   }
   const _de = drawEnemy;
   drawEnemy = function (e, t) {
-    if (!NG()) return _de(e, t);
+    if (!NG() || DBL_DRAW) return _de(e, t);
     const puppet = L.fx && L.fx.k === 'puppet' && fxAmt() > .4;
     if (puppet && !TINT) { TINT = '#140C0A'; try { return _de(e, t); } finally { TINT = null; } }
     _de(e, t);
@@ -469,7 +471,7 @@
     { // (painted on the figure itself, in its own layer, so the figure does not cover it)
       const cy = e.y - e.z - e.hh * sc * .55;
       if (lite() || LITE) { ctx.save(); ctx.globalAlpha = .35; ctx.fillStyle = '#6A6670'; ell(e.x, cy, e.hw * .9, e.hh * .5 * sc); ctx.fill(); ctx.restore(); }
-      circleMark(e.x + e.facing * e.hw * .15, cy, e.boss ? 9 : 5.5, t);
+      if (e.cB) bossMark(e, e.x + e.facing * e.hw * .15, cy, sc, t); else circleMark(e.x + e.facing * e.hw * .15, cy, e.boss ? 9 : 5.5, t);
       if (e.cMask) drawMask(e, e.x + e.facing * e.hw * .25, e.y - e.z - e.hh * sc * .86, .95 * Math.min(1.6, Math.max(.8, e.hh / 60)), t);
       if (Math.random() < .25) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(0, e.hh), vx: rand(-8, 8), vy: 0, vz: rand(20, 50), life: .7, max: .7, col: pick(['rgba(30,24,30,.7)', 'rgba(90,84,92,.6)']), size: rand(2, 4), shape: 'puff', rot: 0, vr: 0 });
     }
@@ -773,13 +775,171 @@
   // ======================================================================================================
   // 6. THE ENDGAME: THE CIRCLE TAKES THE LAST WORLD, AND ITS HEART
   // ======================================================================================================
-  function bossCurse(e, dt) { // the last lord, the Circle in him
-    if (!['idle', 'walk', 'recover'].includes(e.state)) return;
-    e.cBossT -= dt; if (e.cBossT > 0) return; e.cBossT = rand(5.5, 7.5);
-    if (Math.random() < .55) hazards.push({ kind: 'cring', x: e.x, y: e.y, r: 0, speed: 240, delay: .7, dmg: Math.round(edmg(e) * .7), t: 99 });
-    else for (let i = 0; i < 3; i++) { const t = .9 + i * .25; hazards.push({ kind: 'cgrasp', x: clamp(P.x + rand(-40, 40), camX + 30, camX + VW - 30), y: clamp(P.y + rand(-14, 14), FLOOR_TOP + 8, FLOOR_BOT), r: 26, t, max: t, dmg: Math.round(edmg(e) * .6) }); }
-    floatText(e.x, e.y, e.hh * (e.size || 1) + 40, 'THE CIRCLE ANSWERS HIM', '#C8C2CC', 12); sfx('growl');
+  // ---------------- every lord of a world, corrupted (New Game+, once Lorraine has fallen) ----------------
+  // From the moment it appears the Circle is in it: grey, the Circle's mark and red-black veins, its arena ringed in black
+  // under the Circle in the sky, its title card naming it. It gains the Circle's attacks, each telegraphed (the ring closes
+  // on it and its mark flares, the ground is marked, then it strikes) and scaled to it. After each one its mark lies open:
+  // strike it (or land the Pearl) and the curse burns back, a few seconds of extra damage with a stagger. The tier sets how
+  // much: 0-1 its own corrupted attack and one of the Circle's, slowly; 2-3 faster, more of them, and a shadow double that
+  // echoes its attacks a beat later from his other side; 4 everything, and at a quarter of its health the corruption surges.
+  // Reaching the last world past HIGH_END (finalHigh) it fights as tier 3 at least, and the heart of the curse follows.
+  // Beaten without a death to it this cycle, the curse eases more; a death to it feeds the curse.
+  const BFAM = { mossback: { atk: 'grasp', word: 'THE BLACK ROOTS' }, colossus: { atk: 'close', word: 'THE CIRCLE TIGHTENS' }, wyrm: { atk: 'fall', word: 'BLACK GLASS FALLS' },
+    tyiga: { atk: 'cring', word: 'THE CIRCLE OPENS' }, sleeper: { atk: 'close', word: 'THE NIGHTMARE CLOSES' }, benedict: { atk: 'beam', word: 'A BLACK CUT' },
+    w7king: { atk: 'spike', word: 'BLACK GLASS RISES' }, w8goat: { atk: 'grasp', word: 'THE HANDS OF THE CIRCLE' } };
+  const B_ALL = ['cring', 'grasp', 'close', 'fall', 'spike', 'beam'];
+  const B_CAD = [[8, 10], [7.5, 9.5], [5.8, 7.2], [5.2, 6.6], [4.4, 5.6]];
+  const B_BUSY = ['enter', 'dying', 'down', 'w5morph', 'w8morph'];
+  const B_ECHO = ['ring', 'spike', 'fall', 'beam', 'mine', 'cring', 'cgrasp', 'cclose'];
+  const B_LUNGE = ['strike', 'dash', 'pounce', 'leap', 'charge'];
+  const bTier = () => finalHigh() ? Math.max(3, tier()) : tier();
+  const noStun = (e) => e.def === BOSSES.sleeper || e.def === BOSSES.w7king; // (their fights are run by their arenas' rules, not by their own step)
+  const canHit = (e) => e.def !== BOSSES.w7king || !window.W7 || !W7.kingVuln || !!W7.kingVuln(e);
+  // (the Sleeper is struck through its crutches while it dreams: a blow on one, with its mark open, counts on the mark)
+  const markOf = (e) => e && e.cB ? e : e && e.type === 'w6crutch' && boss && boss.cB && boss.def === BOSSES.sleeper && !boss.dead ? boss : null;
+  function bossInit(e) {
+    const fam = BFAM[e.type] || { atk: 'cring', word: 'THE CIRCLE ANSWERS' }, bt = bTier();
+    e.cursed = true; e.cid = e.cid || Math.random();
+    e.hp = e.maxHp = Math.round(e.maxHp * 1.08);
+    const set = bt >= 4 ? B_ALL.slice() : bt >= 2 ? [fam.atk, 'cring', fam.atk === 'grasp' ? 'close' : 'grasp'] : [fam.atk, fam.atk === 'cring' ? 'grasp' : 'cring'];
+    e.cB = { bt, fam, set: [...new Set(set)], n: 0, age: 0, wind: 0, k: null, open: 0, pts: 0, burn: 0, stun: 0, surge: false, fired: 0, burns: 0, echoes: 0, named: false, titled: false, hint: false,
+      dbl: bt >= 2 ? { x: e.x, y: e.y, a: 0, q: [], last: -9, flash: 0, lash: 0 } : null };
+    e.cBossT = rand(4.5, 6);
   }
+  function bossBusy(e) {
+    if (e.dead || B_BUSY.includes(e.state) || e.w4shift > 0 || e.plan === 'roar' || e.ent || e.cB.age < 3.5 || !P || P.state === 'dead' || stillT > 0 || busy()) return true;
+    if (e.def === BOSSES.sleeper && window.W6 && W6.B && !['asleep', 'down', 'board', 'waking'].includes(W6.B.mode)) return true;
+    return false;
+  }
+  function bossStep(e, dt) {
+    const B = e.cB; B.age += dt;
+    if (!B.named && boss === e) { B.named = true; const el = document.getElementById('bossname'); if (el && !/Corrupted/.test(el.textContent)) el.textContent = e.def.name + ' · Corrupted'; }
+    if (canHit(e)) B.open = Math.max(0, B.open - dt); B.burn = Math.max(0, B.burn - dt); // (the mark waits while the fight's own rules shut him out)
+    if (B.open <= 0 && B.pts > 0) B.pts = Math.max(0, B.pts - dt * .5);
+    if (B.bt >= 4 && !B.surge && e.hp <= e.maxHp * .25) { B.surge = true; floatText(e.x, e.y - e.z, e.hh + 60, 'THE CORRUPTION SURGES', '#E8C8D0', 16); sfx('roar'); shakeMag = Math.max(shakeMag, 10); flashT = Math.max(flashT, .1);
+      fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .7, max: .7, r: 170, col: '#200810', flat: 1 }); e.cBossT = Math.min(e.cBossT, 1.2); }
+    if (B.dbl) dblStep(e, dt);
+    if (B.wind > 0) { B.wind -= dt; if (B.wind <= 0) bossFire(e, B.k); return; }
+    if (B.burn > 0 || bossBusy(e)) return;
+    e.cBossT -= dt; if (e.cBossT > 0) return;
+    const c = B_CAD[B.bt]; e.cBossT = rand(c[0], c[1]) * (B.surge ? .78 : 1);
+    B.k = B.set[B.n++ % B.set.length]; B.wind = .8;
+    floatText(e.x, e.y - e.z, e.hh + 44, B.k === B.fam.atk ? B.fam.word : 'THE CIRCLE ANSWERS', '#C8C2CC', 12); sfx('growl');
+  }
+  function bossFire(e, k) {
+    const B = e.cB, d = (m) => Math.max(4, Math.round(edmg(e) * m)), lo = leftWall() + 24, hi = rightWall() - 24, yy = (y) => clamp(y, FLOOR_TOP + 8, FLOOR_BOT);
+    const put = (h) => { h.cMine = 1; h.cTag = 1; hazards.push(h); return h; };
+    if (e.dead || !P || P.state === 'dead') return;
+    if (k === 'cring') put({ kind: 'cring', x: e.x, y: e.y, r: 0, speed: 230 + 15 * B.bt, delay: .5, dmg: d(.55), t: 99 });
+    else if (k === 'grasp') { const n = B.bt >= 4 ? 5 : B.bt >= 2 ? 4 : 3; for (let i = 0; i < n; i++) { const t = .9 + i * .22; put({ kind: 'cgrasp', x: clamp(P.x + (i ? rand(-60, 60) : 0), lo, hi), y: yy(P.y + (i ? rand(-18, 18) : 0)), r: 26, t, max: t, dmg: d(.5) }); } }
+    else if (k === 'close') put({ kind: 'cclose', x: clamp(P.x, lo, hi), y: yy(P.y), r0: 150, r1: 44, r: 150, t: 1.6, max: 1.6, dmg: d(.6) });
+    else if (k === 'fall') { const n = B.bt >= 2 ? 4 : 3; for (let i = 0; i < n; i++) { const t = .95 + i * .2; put({ kind: 'fall', x: clamp(P.x + rand(-55, 55), lo, hi), y: yy(P.y + rand(-16, 16)), r: 24, t, max: t, dmg: d(.5), col: '60,40,56' }); } }
+    else if (k === 'spike') { const s = Math.sign(P.x - e.x) || 1; for (let i = 0; i < 6; i++) { const t = .75 + i * .09; put({ kind: 'spike', x: clamp(e.x + s * (40 + i * 36), lo, hi), y: yy(e.y + (P.y - e.y) * (i + 1) / 6), r: 18, t, max: t, dmg: d(.5), col: '70,50,66' }); } }
+    else if (k === 'beam') put({ kind: 'beam', y: yy(P.y), t: 1.25, max: 1.25, dmg: d(.6), col: '120,30,50' });
+    B.fired++; B.open = 3; e.sqx = 1.12; e.sqy = .92;
+    if (!B.hint) { B.hint = true; floatText(e.x, e.y - e.z, e.hh + 72, 'ITS MARK LIES OPEN · STRIKE IT', '#F0D0C8', 12); }
+  }
+  function burnBack(e) {
+    const B = e.cB; B.pts = 0; B.open = 0; B.wind = 0; B.burn = 4; B.burns++;
+    if (!noStun(e) && !B_BUSY.includes(e.state) && !(e.w4shift > 0)) B.stun = .8;
+    e.flash = .2; e.jit = .3; hitstop = Math.max(hitstop, .1); shakeMag = Math.max(shakeMag, 8); sfx('hit-crystal'); sfx('growl');
+    floatText(e.x, e.y - e.z, e.hh + 60, 'THE CURSE BURNS BACK', '#FFF0D0', 15);
+    burst(e.x, e.y, e.z + e.hh * .55, ['#FFFFFF', '#FFE6B0', '#8A2030', '#1A1014'], 24, 'spark', 0, true);
+    for (const h of hazards) if (h.cMine && h.kind === 'cclose' && !h.done) { h.done = true; h.t = -1; }
+    e.cBossT = Math.max(e.cBossT, 5.5);
+  }
+  HAZARD_FX.cclose = { // the Circle's ring closing on him where he stood: get out of it before it shuts
+    update(h) { const k = 1 - Math.max(0, h.t) / h.max; h.r = lerp(h.r0, h.r1, sm(k));
+      if (h.t <= 0 && !h.done) { h.done = true; if (Math.hypot(P.x - h.x, (P.y - h.y) * 2.2) < h.r1 + 6 && P.z < 20) playerDamage(h.dmg, h.x, true);
+        burst(h.x, h.y, 6, ['#0A0608', '#4A3A44', '#A02030'], 16, 'rock', 0, true); fx.push({ kind: 'ring', x: h.x, y: h.y, z: 2, t: .35, max: .35, r: h.r1 * 1.5, col: '#2A0A12', flat: 1 }); shakeMag = Math.max(shakeMag, 7); sfx('crunch'); } },
+    draw(h, t) { const k = 1 - Math.max(0, h.t) / h.max, a = h.done ? Math.max(0, 1 + h.t / .4) : 1; if (a <= 0) return; ctx.save(); ctx.globalAlpha = a;
+      ctx.fillStyle = `rgba(90,10,20,${.08 + .3 * k})`; ell(h.x, h.y, h.r1, h.r1 * .3); ctx.fill();
+      ctx.setLineDash([5, 5]); ctx.strokeStyle = `rgba(230,120,120,${.5 + .3 * Math.sin(t * 16)})`; ctx.lineWidth = 1.3; ell(h.x, h.y, h.r1, h.r1 * .3); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(8,4,8,.88)'; ctx.lineWidth = 9; ell(h.x, h.y, h.r, h.r * .3); ctx.stroke();
+      ctx.strokeStyle = `rgba(180,30,44,${.6 + .3 * Math.sin(t * 12)})`; ctx.lineWidth = 2; ell(h.x, h.y, h.r, h.r * .3); ctx.stroke(); ctx.restore(); } };
+  // ---------------- the shadow double: it stands on his other side and gives back the lord's last attack a beat later ----------------
+  function dblStep(e, dt) {
+    const D = e.cB.dbl, lo = leftWall() + 30, hi = rightWall() - 30, k = Math.min(1, dt * 2.5);
+    D.x += (clamp(2 * P.x - e.x, lo, hi) - D.x) * k; D.y += (clamp(e.y, FLOOR_TOP + 6, FLOOR_BOT) - D.y) * k;
+    D.a += ((e.cB.burn > 0 || e.cB.age < 2 ? .2 : 1) - D.a) * Math.min(1, dt * 3); D.flash = Math.max(0, D.flash - dt); D.lash = Math.max(0, D.lash - dt);
+    let found = null, spots = null, lash = false;
+    for (const h of hazards) { if (h.cTag) continue; h.cTag = 1; if (h.cMine || h.cEcho) continue;
+      if (B_ECHO.includes(h.kind)) { if (h.t > .2 && h.t < 100) (found || (found = [])).push(h); }
+      else if (typeof h.x === 'number' && typeof h.y === 'number' && Number.isFinite(h.x) && Number.isFinite(h.y)) (spots || (spots = [])).push(h);
+      else lash = true; } // (a lord's own kind of attack: the shadow answers where it struck with the Circle's hands, or, where it has no place, with a lunge of its own)
+    if (found) echoQueue(e, found, false);
+    else if (spots) echoQueue(e, spots.slice(0, 3).map(h => ({ kind: 'cgrasp', x: h.x, y: clamp(h.y, FLOOR_TOP + 8, FLOOR_BOT), r: 26, t: .85, max: .85, dmg: Math.max(4, Math.round(edmg(e) * .65)) })), false);
+    else if (lash) echoQueue(e, [], true);
+    for (const q of D.q) { q.t -= dt; if (q.t <= 0 && !q.done) { q.done = true; echoFire(e, q); } }
+    if (D.q.length) D.q = D.q.filter(q => !q.done);
+  }
+  function echoQueue(e, hs, melee) {
+    const B = e.cB, D = B.dbl, T = now(); if (!D || T - D.last < (B.bt >= 4 ? 1.3 : 1.8) || B.burn > 0 || B.age < 3 || !P || P.state === 'dead') return;
+    D.last = T; const lo = leftWall() + 24, hi = rightWall() - 24, cx = P.x;
+    const clones = hs.slice(0, 6).map(h => { const c = Object.assign({}, h); c.cEcho = 1; c.cTag = 1; c.hit = false; c.done = false; c.fired = false;
+      if (typeof c.x === 'number') c.x = clamp(2 * cx - h.x, lo, hi); if (typeof c.dmg === 'number') c.dmg = Math.max(2, Math.round(c.dmg * .6)); return c; });
+    D.q.push({ t: .6, clones, melee });
+  }
+  function echoFire(e, q) {
+    const D = e.cB.dbl; if (e.dead || e.cB.burn > 0 || !P) return;
+    D.flash = .35; e.cB.echoes++;
+    for (const c of q.clones) hazards.push(c);
+    if (q.melee) { const s = Math.sign(P.x - D.x) || 1, reach = Math.min(110, e.hw * .7 + 60); D.lash = .3; sfx('swing');
+      fx.push({ kind: 'slash', x: D.x + s * 34, y: D.y, z: 50, ang: s > 0 ? 0 : Math.PI, t: .3, max: .3, size: 70, col: '#3A1A2A' });
+      if (Math.abs(P.x - D.x) < reach && Math.abs(P.y - D.y) < 26 && P.z < 44 && P.state !== 'dead') playerDamage(Math.max(3, Math.round(edmg(e) * .5)), D.x, false); }
+    if (rl('dblTxt', 6)) floatText(D.x, D.y, e.hh + 30, 'ITS SHADOW ANSWERS', '#B8A8C0', 11);
+  }
+  let DBL_DRAW = false; // (the shadow is drawn through every hand that draws its lord, but without the lord's own marks)
+  function drawDouble(e, D, t) {
+    const warn = D.q.length ? 1 : 0, a = D.a * (.5 + .25 * warn + (D.flash > 0 ? .2 : 0)), cy = D.y - e.z - e.hh * (e.size || 1) * .55;
+    ctx.save(); ctx.fillStyle = `rgba(0,0,0,${.25 * D.a})`; ell(D.x, D.y, e.hw * .8, 6); ctx.fill(); ctx.restore();
+    { const sx = e.x, sy = e.y, sf = e.facing, fl = e.flash, tt = TINT; e.x = D.x; e.y = D.y; e.facing = Math.sign(P.x - D.x) || -sf; e.flash = 0;
+      ctx.save(); ctx.globalAlpha *= a; TINT = '#140A12'; DBL_DRAW = true; try { drawEnemy(e, t); } catch (err) { console.error(err); } finally { DBL_DRAW = false; TINT = tt; ctx.restore(); e.x = sx; e.y = sy; e.facing = sf; e.flash = fl; } }
+    if (warn || D.lash > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(D.x, cy, 0, D.x, cy, 40); g.addColorStop(0, `rgba(220,40,50,${.5 * D.a})`); g.addColorStop(1, 'rgba(220,40,50,0)'); ctx.fillStyle = g; ctx.fillRect(D.x - 40, cy - 40, 80, 80); ctx.restore(); }
+    circleMark(D.x, cy, 6, t);
+  }
+  // ---------------- its mark: the Circle's ring, red-black veins out of it, and when it lies open, a glowing heart ----------------
+  function bossMark(e, x, y, sc, t) {
+    const B = e.cB, r = 9 + Math.min(5, e.hh / 40), n = lite() || LITE ? 4 : 7, len = Math.min(80, e.hh * .55);
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < n; i++) { const a0 = hsh(i + 1) * TAU, L2 = (.5 + hsh(i + 9) * .6) * len * (1 + .12 * Math.sin(t * 2 + i)); ctx.beginPath(); ctx.moveTo(x, y);
+      for (let s = 1; s <= 4; s++) { const aa = a0 + (hsh(i * 7 + s) - .5) * .9; ctx.lineTo(x + Math.cos(aa) * L2 * s / 4, y + Math.sin(aa) * L2 * s / 4 * .9); }
+      ctx.strokeStyle = 'rgba(14,6,10,.75)'; ctx.lineWidth = 3; ctx.stroke(); ctx.strokeStyle = `rgba(${(170 + 50 * Math.sin(t * 3 + i)) | 0},30,40,.85)`; ctx.lineWidth = 1.1; ctx.stroke(); }
+    if (B.wind > 0) { const k = B.wind / .8, R = e.hw * .9 + 30 + 90 * k; ctx.strokeStyle = `rgba(8,4,8,${.85 * (1 - k * .5)})`; ctx.lineWidth = 7; ell(e.x, e.y, R, R * .3); ctx.stroke();
+      ctx.strokeStyle = 'rgba(190,30,44,.8)'; ctx.lineWidth = 1.6; ell(e.x, e.y, R, R * .3); ctx.stroke(); }
+    const open = B.open > 0 || B.wind > 0, pulse = .6 + .4 * Math.sin(t * 10);
+    if (B.burn > 0 || open) { const k = B.burn > 0 ? 1 : B.wind > 0 ? 1 : Math.min(1, B.open / .5); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.2); g.addColorStop(0, B.burn > 0 ? `rgba(255,236,190,${.8 * k})` : `rgba(255,70,60,${.75 * k * pulse})`); g.addColorStop(1, 'rgba(255,60,40,0)'); ctx.fillStyle = g; ctx.fillRect(x - r * 3.2, y - r * 3.2, r * 6.4, r * 6.4);
+      ctx.globalCompositeOperation = 'source-over';
+      if (B.open > 0 && B.burn <= 0) { ctx.strokeStyle = `rgba(255,220,200,${.85 * pulse})`; ctx.lineWidth = 1.5; circle(x, y, r * 1.9); ctx.stroke(); for (let i = 0; i < Math.min(3, B.pts | 0); i++) { ctx.fillStyle = '#FFE6C0'; circle(x - 8 + i * 8, y - r * 2.4, 2); ctx.fill(); } } }
+    ctx.restore();
+    if (B.burn > 0) { ctx.save(); ctx.globalAlpha = .55; circleMark(x, y, r * .8, t); ctx.restore(); } else circleMark(x, y, r, t);
+  }
+  // ---------------- a stagger (it holds still a moment), the shadow's cue for a lunge, extra damage while the curse burns back ----------------
+  { const _u = updateEnemy; updateEnemy = function (e, dt) {
+    const B = e && e.cB; if (!B || e.dead || !NG()) return _u(e, dt);
+    if (B.stun > 0) { B.stun -= dt; e.flash = Math.max(0, e.flash - dt); e.jit = .06; e.vx = 0; e.sqx += (1 - e.sqx) * Math.min(1, dt * 12); e.sqy += (1 - e.sqy) * Math.min(1, dt * 12); return; }
+    const s0 = e.state, r = _u(e, dt);
+    if (B.dbl && s0 !== e.state && B_LUNGE.includes(e.state)) echoQueue(e, [], true);
+    return r; }; }
+  { const _h = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) {
+    const M = markOf(e), B = M && M.cB; if (!B || e.dead || M.dead || !NG()) return _h(e, dmg, dir, m, crit);
+    const pearl = !!(m && m.pearl && !m.trump), own = pearl || !!(CTX && CTX.own && CTX.e === e);
+    if (B.burn > 0 && own && M === e) dmg = Math.round(dmg * 1.35);
+    const hp0 = e.hp, r = _h(e, dmg, dir, m, crit);
+    if (own && e.hp < hp0 && B.burn <= 0 && (M === e ? !e.dead : B.open > 0)) { const add = B.open > 0 ? (pearl ? 3 : 1) : (pearl ? 1 : 0); if (add && rl('bwp' + M.cid, .12)) { B.pts += add; if (B.pts >= (B.bt >= 4 ? 4 : 3)) burnBack(M); } }
+    return r; }; }
+  { const _k = killEnemy; killEnemy = function (e, dir, m) { const was = e.dead, r = _k(e, dir, m);
+    if (NG() && e.cB && !was && e.dead) { const c = CS(); if (!c.bfell[e.type]) ease(4, 'a corrupted lord beaten cleanly'); e.cB.open = e.cB.wind = 0; if (e.cB.dbl) e.cB.dbl.q = [];
+      for (const h of hazards) if (h.cMine || h.cEcho) { h.done = true; h.t = Math.min(h.t, -1); } }
+    return r; }; }
+  { const _g = gameOver; gameOver = function () { if (NG() && boss && boss.cB && !boss.dead && stage && stage.bossRoom) { const c = CS(); c.bfell[boss.type] = 1; feed(3, 'a death to a corrupted lord'); } return _g(); }; }
+  { const _bn = banner; banner = function (title, sub, dur) { // (its title card names it corrupted)
+    if (NG() && boss && boss.cB && !boss.dead && title === boss.def.name && !boss.cB.titled) { boss.cB.titled = true; sub = 'CORRUPTED BY THE BLACK CIRCLE' + (sub ? ' · ' + sub : ''); }
+    return _bn(title, sub, dur); }; }
+  { const _ml2 = mechList; mechList = function (list, t) { _ml2(list, t); if (!NG() || !boss || boss.dead || !boss.cB || !boss.cB.dbl || boss.cB.dbl.a < .05) return; const e = boss, D = e.cB.dbl;
+    list.push([D.y - .02, () => drawDouble(e, D, t)]); }; }
+  { const _mb2 = mechBoxes; mechBoxes = function (box) { _mb2(box); if (NG() && boss && !boss.dead && boss.cB && boss.cB.dbl) box(boss.cB.dbl.x, boss.cB.dbl.y, boss.z, boss.hw * 2.4, boss.hh * 1.6 + 40); }; }
   function circleArena(t) { // the boss's floor is the Circle: a ring of black laid round the fight
     const Lx = lockX !== null ? lockX : Math.max(0, stage.len - VW), cx = Lx + VW / 2 - camX, cy = (FLOOR_TOP + FLOOR_BOT) / 2 + 6, R = VW * .44;
     ctx.save(); ctx.fillStyle = 'rgba(40,36,44,.32)'; ell(cx, cy, R, R * .22); ctx.fill();
@@ -796,7 +956,7 @@
     _br(t); if (!NG() || !stage) return;
     try {
       if (L.fx && L.fx.k === 'puppet') { const k = fxAmt(); ctx.save(); ctx.fillStyle = `rgba(236,186,118,${.78 * k})`; ctx.fillRect(0, Y_OFF, VW, VIEW_H); const g = ctx.createRadialGradient(VW / 2, FLOOR_TOP - 30, 10, VW / 2, FLOOR_TOP - 30, VW * .6); g.addColorStop(0, `rgba(255,236,190,${.6 * k})`); g.addColorStop(1, 'rgba(255,236,190,0)'); ctx.fillStyle = g; ctx.fillRect(0, Y_OFF, VW, VIEW_H); ctx.restore(); }
-      if (finalHigh()) { skyCircle(t); if (stage.bossRoom) circleArena(t); }
+      if (finalHigh() || stage.bossRoom) { skyCircle(t); if (stage.bossRoom) circleArena(t); }
       if (patCursed() && stage.theme === 'moonBoss') moonPattern(t);
       drawRoad(t);
     } catch (err) { console.error(err); } }; }
@@ -1003,8 +1163,9 @@
     state: () => NG() ? Object.assign({ tier: tier(), teff: teff(), hornSt: hornSt(), finalHigh: finalHigh() }, JSON.parse(JSON.stringify(CS()))) : null,
     live: () => L, log: () => LOG.slice(),
     set: (v, h) => { if (!NG()) return null; const c = CS(); if (v != null) c.v = clamp(+v, 0, 100); if (h != null) c.horn = clamp(+h, 0, 100); return c; },
+    boss: { FAM: BFAM, tier: bTier, fire: (k) => boss && boss.cB && bossFire(boss, k || boss.cB.set[0]), burn: () => boss && boss.cB && burnBack(boss), cad: B_CAD },
     feed, ease, tier, teff, hornSt, hornWords, hornNotes, onHornBlow, fxAmt,
-    fx: (k, dur) => startFx(k, dur), road: makeRoad, burnAt, curseFoe, corruptItem, cleanseAll, finalHigh, isCursedEnd,
+    fx: (k, dur) => NG() ? startFx(k, dur) : null, road: makeRoad, burnAt, curseFoe, corruptItem, cleanseAll, finalHigh, isCursedEnd,
     dev: { heart() { if (!NG()) return; const c = CS(); c.endCyc = save.cycle | 0; c.endHigh = true; c.heartDone = false; if (isFinal(stageIdx)) startHeart(); return 'heart'; },
       endHigh(on) { const c = CS(); c.endCyc = save.cycle | 0; c.endHigh = !!on; c.heartDone = false; persist(); return on; },
       finishHeart() { if (L.heart) L.heart.prog = 1; } },
