@@ -132,7 +132,7 @@
   function statsHtml(spec) {
     const st = spec.stats || statsOf(spec.picks), top = Math.max(6, ...STATS.map(s => st.p[s]));
     const bar = (s) => `<div style="display:flex;align-items:center;gap:6px;font:700 10px Georgia,serif;letter-spacing:.06em"><span style="width:46px;text-align:right;opacity:.85">${STAT_NAME[s].toUpperCase()}</span><span style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden"><span style="display:block;height:100%;width:${Math.round(100 * st.p[s] / top)}%;background:linear-gradient(90deg,#9FE2D3,#F2D68A)"></span></span><span style="width:12px;opacity:.8">${st.p[s]}</span></div>`;
-    return `<div class="pmStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:2px 14px;margin:4px auto 6px;max-width:520px">${STATS.map(bar).join('')}</div><div class="pmStatTx" style="font-size:10.5px;opacity:.75;margin-bottom:6px">${statLines(st).join(' · ') || 'Even all round.'}</div>`;
+    return `<div class="pmStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));gap:2px 14px;margin:4px auto 6px;width:100%;max-width:520px;box-sizing:border-box">${STATS.map(bar).join('')}</div><div class="pmStatTx" style="font-size:10.5px;opacity:.75;margin-bottom:6px">${statLines(st).join(' · ') || 'Even all round.'}</div>`;
   }
 
   const HEAVYK = /H|X/;
@@ -194,7 +194,9 @@
     if (ours && e && (e.hp < hp0 || e.dead)) { const T = TY[m.pm]; if (T && T.onHit) T.onHit(e, m, base, dir); } }; }
   { const _cc = critChance; critChance = function (e) { const c = _cc(e); return mine() ? Math.min(.6, c + stat().crit) : c; }; }
   { const _ml2 = moveListHtml; moveListHtml = function (id) { let h = _ml2(id); if (id === ID && SPEC()) { const st = SPEC().stats || statsOf(SPEC().picks), li = `<li class="got"><b>Forged stats</b><br><em>${STATS.map(s => STAT_NAME[s] + ' ' + st.p[s]).join(' · ')}${st.p.win ? ' · Gleam ' + st.p.win : ''}: ${statLines(st).join(', ') || 'even all round'}.</em></li>`; h = h.replace('<ul class="moves">', '<ul class="moves">' + li); } return h; }; }
-  { const _rf = renderForge; renderForge = function (note) { _rf(note); try { if (!SPEC() || !save.owned[ID]) return; for (const c of document.querySelectorAll('#forgeCards .card')) { const nm = c.querySelector('.nm'); if (nm && nm.textContent === WP().name && !c.querySelector('.pmStats')) { const d = document.createElement('div'); d.innerHTML = statsHtml(SPEC()); const ul = c.querySelector('ul'); c.insertBefore(d, ul); } } } catch (e) { console.error(e); } }; }
+  { const _rf = renderForge; renderForge = function (note) { _rf(note); try { if (!SPEC() || !save.owned[ID]) return; for (const c of document.querySelectorAll('#forgeCards .card')) { const nm = c.querySelector('.nm'); if (nm && nm.textContent === WP().name && !c.querySelector('.pmStats')) { const d = document.createElement('div'); d.style.width = '100%'; d.innerHTML = statsHtml(SPEC()); const ul = c.querySelector('ul'); c.insertBefore(d, ul);
+      // (every move of the kind is its own from the start: none waits on a level, so the card lists them all as known)
+      if (ul && !ul.children.length) ul.innerHTML = rows(WP()).map(([what, how, name]) => `<li class="got"><b>${name}</b><br><em>${how} · ${what}</em></li>`).join(''); } } } catch (e) { console.error(e); } }; }
   { const _ue = updateEnemy; updateEnemy = function (e, dt) { const T = mine() ? TY[kind()] : null; if (!T || !T.enemy) return _ue(e, dt); const x0 = e.x, y0 = e.y; _ue(e, dt); T.enemy(e, dt, x0, y0); }; }
   const _up = updatePlayer;
   updatePlayer = function (dt) {
@@ -417,7 +419,7 @@
     const active = () => clock() - B.lastAct < 3 || P.state === 'charge';
     TY.swordstaff = {
       reset() { B.tempo = 0; B.lastAct = -99; },
-      peek: () => ({ tempo: B.tempo, drops: S.objs.filter(o => o.kind === 'drop').length }),
+      peek: () => ({ tempo: B.tempo, drops: S.objs.filter(o => o.kind === 'drop').length, toBeat: BEAT - phase(clock()), beat: BEAT }),
       tree: () => ({
         L:    { name: 'Downbeat', dur: .42, h: [.16, .4], x0: 0, x1: 80, dmg: 9, kb: 70, lunge: 50, depth: 22, desc: 'Tap on the beat (the closing ring): harder, tempo +1.' },
         LL:   { name: 'Offbeat', dur: .42, h: [.16, .44], x0: 0, x1: 76, dmg: 9, kb: 90, ends: 1, depth: 24, lunge: 30, desc: 'Both blades, front and back.' },
@@ -540,9 +542,9 @@
       reset() { M.jh = false; for (const e of enemies) { e.pmFloat = null; e.pmCrash = null; e.pmLift = 0; } },
       peek: () => ({ adrift: adrift().length, crashing: foes().filter(e => e.pmCrash).length, pull: foes().reduce((s, e) => s + (e.pmLift || 0), 0) }),
       tree: () => ({
-        L:    { name: 'Waxing', dur: .34, h: [.3, .6], x0: 0, x1: 72, dmg: 10, kb: 90, lunge: 40, depth: 24, lift: 1, desc: 'Each blow pulls (+1). Three pulls: they float ADRIFT.' },
-        LL:   { name: 'Waning', dur: .38, h: [.3, .62], x0: 0, x1: 72, dmg: 11, kb: 100, lunge: 40, depth: 24, lift: 1 },
-        LLL:  { name: 'Full Moon', dur: .6, h: [.2, .8], x0: 0, x1: 78, dmg: 8, kb: 160, around: 1, multi: .2, depth: 30, power: 1, lift: 1, desc: 'A circle overhead, all round.' },
+        L:    { name: 'Waxing', dur: .34, h: [.3, .6], x0: 0, x1: 72, dmg: 10, kb: 45, lunge: 40, depth: 24, lift: 1, desc: 'Each blow pulls (+1). Three pulls: they float ADRIFT.' },
+        LL:   { name: 'Waning', dur: .38, h: [.3, .62], x0: 0, x1: 72, dmg: 11, kb: 55, lunge: 40, depth: 24, lift: 1 },
+        LLL:  { name: 'Full Moon', dur: .6, h: [.2, .8], x0: 0, x1: 84, dmg: 8, kb: 100, around: 1, multi: .2, depth: 30, power: 1, lift: 2, desc: 'A circle overhead, all round: +2 pull.' },
         H:    { name: 'Gravity Well', dur: .55, h: [.42, .58], x0: 0, x1: 80, dmg: 18, kb: 60, shock: 100, power: 2, depth: 28, lift: 1, well: 1, desc: 'Nobody adrift: a pound that drags them in.' },
         Hs:   { name: 'Spring Tide', seq: ['H'], dur: .5, h: [3, 3], x0: 0, x1: 0, dmg: 18, kb: 0, power: 2, spring: 1, desc: 'Foes adrift: every one crashes down on whoever is under it.' },
         HH:   { name: 'Perigee', dur: .6, h: [.2, .75], x0: 0, x1: 84, dmg: 15, kb: 180, around: 1, depth: 32, power: 2, lift: 2, desc: 'A wide swing all round: +2 pull.' },
@@ -580,7 +582,7 @@
         if (e.pmLift && clock() - (e.pmLiftT || 0) > 3) e.pmLift = 0;
         const F = e.pmFloat;
         if (F) { F.t -= dt; e.air = true; e.state = 'hurt'; e.t = Math.max(e.t, .25); e.plan = null;
-          const tz = F.z + 6 * Math.sin(clock() * 3 + e.x * .05); e.z += (tz - e.z) * Math.min(1, dt * 5); e.vz = 0; e.vx *= Math.pow(.15, dt);
+          const tz = F.z + 6 * Math.sin(clock() * 3 + e.x * .05); e.z += (tz - e.z) * Math.min(1, dt * 5); e.vz = 0; e.vx *= Math.pow(.002, dt);
           if (Math.random() < dt * 3) bubbles(e.x, e.y, e.z, 1, 20);
           if (F.t <= 0) { if (F.crash) crashDown(e, F.crash); else { e.pmFloat = null; e.vz = -60; e.pmCool = clock() + 1.5; } } }
         if (e.pmCrash && e.z <= 1) landed(e, e.pmCrash);
@@ -632,7 +634,7 @@
     const C = { moons: [], R: 46, w: 3.4, guard: 0, wide: false, big: 0, cd: new WeakMap(), eclipse: null };
     const MAXM = 6;
     const mpos = (o, i) => { const R = C.R * RK(); return { x: P.x + Math.cos(o.a) * R, y: P.y + Math.sin(o.a) * R * .34, z: P.z + 32 + Math.sin(o.a) * 6 }; };
-    function addMoon(from) { if (C.moons.length >= MAXM) { sparkle(from.x, from.y, from.z || 30, 5); return; } const a = C.moons.length ? C.moons[C.moons.length - 1].a - TWO / MAXM : 0; C.moons.push({ a, t: 0, life: 14, mode: 'orbit', x: from.x, y: from.y, z: from.z || 30, k: 0 }); sfx('hit-crystal', .4); }
+    function addMoon(from) { if (C.moons.length >= MAXM) { sparkle(from.x, from.y, from.z || 30, 5); return; } const a = C.moons.length ? C.moons[C.moons.length - 1].a - TWO / MAXM : 0; C.moons.push({ a, t: 0, life: 14, mode: 'orbit', x: from.x, y: from.y, z: from.z || 30, k: 0 }); sfx('hit-crystal', .4); ev('moon'); }
     function cast(m, vy, vz) { addObj({ kind: 'cast', x: P.x + fc() * 20, y: P.y, z: P.z + 36, dir: fc(), vy: vy || 0, vz: vz || 0, d: 0, out: 170 * RK(), back: false, hit: new Set(), m, spin: 0, bw: 60, bh: 60 }); sfx('whoosh'); }
     function moonHit(e, x, y, z, big) {
       if ((C.cd.get(e) || 0) > clock() || !touch(e, x, y, z, big ? 14 : 9)) return false;
@@ -640,6 +642,7 @@
     }
     TY.chakram = {
       reset() { C.moons = []; C.guard = 0; C.big = 0; C.eclipse = null; },
+      peek: () => ({ moons: C.moons.length, orbit: C.moons.filter(o => o.mode === 'orbit').length, flying: C.moons.filter(o => o.mode === 'fly').length, grind: C.moons.filter(o => o.mode === 'grind').length, R: Math.round(C.R), guard: C.guard > 0 }),
       tree: () => ({
         L:    { name: 'Cast', dur: .3, h: [.3, .5], x0: 0, x1: 50, dmg: 9, kb: 70, cast: 1, desc: 'Throws a ring; back, it joins your orbit (6 at most).' },
         LL:   { name: 'Cast', dur: .3, h: [.3, .5], x0: 0, x1: 50, dmg: 9, kb: 70, cast: 2 },
@@ -662,10 +665,11 @@
         ['line up, fire the line', 'Hold Heavy, gleam', t.HC.name], ['orbit swings wide', 'Hold Attack', t.X.name], ['shots break on them', 'Dodge, Attack', t.R.name], ['moons trail you', 'Run, Attack', t.D.name]],
       pick(m) { const n = C.moons.filter(o => o.mode === 'orbit').length; if (m.key === 'H' && n) return WP().tree.Hl; if (m.key === 'Hl' && !n) return WP().tree.H; return m; },
       began(m) {
-        if (m.loose) loose(m);
+        // (loosed, the next Heavy is the second of a pair: Heavy, Heavy sends them grinding)
+        if (m.loose) { loose(m); P.seq = 'H'; }
         if (m.flare) { C.big = 3; note('CONSTELLATION', pal().edge, 13); }
         if (m.guard) { C.guard = 1.4; sfx('hit-metal', .4); }
-        if (m.eclipse) { const e = nearest(P.x, P.y, 280); if (e && C.moons.length) { C.eclipse = { e, t: 0 }; for (const o of C.moons) o.mode = 'grind'; note('ECLIPSE', pal().edge, 13); } }
+        if (m.eclipse) { const e = nearest(P.x, P.y, 280); if (e && C.moons.length) { C.eclipse = { e, t: 0 }; for (const o of C.moons) o.mode = 'grind'; note('ECLIPSE', pal().edge, 13); ev('eclipse'); } }
         if (m.syzygy) syzygy(m);
         if (m.shower) for (const o of C.moons) { const e = nearest(o.x, o.y, 240, null, (q) => q.z < 60); if (e) { o.mode = 'fall'; o.tgt = e; o.k = 0; o.fx = o.x; o.fy = o.y; o.fz = o.z; } }
       },
@@ -692,8 +696,9 @@
           else if (o.mode === 'fly') { const e = o.tgt && !o.tgt.dead ? o.tgt : null; o.k += dt;
             if (e) { tx = e.x; ty = e.y; tz = e.z + e.hh * .5; } else { tx = o.x + Math.cos(o.a0) * 600 * dt * 30; ty = o.y; tz = o.z; }
             const d = Math.hypot(tx - o.x, ty - o.y, tz - o.z) || 1, v = Math.min(d, 640 * dt); o.x += (tx - o.x) / d * v; o.y += (ty - o.y) / d * v; o.z += (tz - o.z) / d * v;
-            if (e && touch(e, o.x, o.y, o.z, 12)) { hitE(e, o.m.dmg, Math.sign(e.x - P.x) || 1, o.m, { kb: 220 }); sparkle(o.x, o.y, o.z, 8); o.gone = true; }
-            if (o.k > 1.2) { sparkle(o.x, o.y, o.z, 6); o.gone = true; } return; }
+            if (e && touch(e, o.x, o.y, o.z, 12)) { hitE(e, o.m.dmg, Math.sign(e.x - P.x) || 1, o.m, { kb: 220 }); sparkle(o.x, o.y, o.z, 8); ev('looseHit'); o.mode = 'orbit'; o.life = Math.max(2, o.life - 5); }
+            else if (o.k > 1.2) { sparkle(o.x, o.y, o.z, 6); o.mode = 'orbit'; o.life = Math.max(2, o.life - 5); }
+            return; }
           else if (o.mode === 'fall') { const e = o.tgt; o.k += dt / .3; const u = Math.min(1, o.k);
             if (!e || e.dead) { o.mode = 'orbit'; return; }
             o.x = lerp(o.fx, e.x, u); o.y = lerp(o.fy, e.y, u); o.z = lerp(o.fz + 60, e.z + e.hh * .5, u * u) + (1 - u) * 60;
@@ -727,12 +732,13 @@
     function loose(m) {
       const L = C.moons.filter(o => o.mode === 'orbit'), tg = foes().filter(e => Math.abs(e.x - P.x) < 420).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x));
       L.forEach((o, i) => { o.mode = 'fly'; o.k = 0; o.m = m; o.tgt = tg.length ? tg[i % tg.length] : null; o.a0 = o.a; });
-      note('LOOSE!', pal().edge, 13); sfx('whoosh');
+      note('LOOSE!', pal().edge, 13); sfx('whoosh'); ev('loose');
     }
     function syzygy(m) {
       const n = C.moons.length;
       if (!n) { cast(Object.assign({}, m, { dmg: 26 })); return; }
-      const len = 380 * RK(), d = m.dmg * n * (m.perfect ? 1.5 : 1); note(m.perfect ? 'SYZYGY!' : 'SYZYGY', pal().edge, 15); sfx('shoot'); shakeMag = Math.max(shakeMag, 5);
+      // (each moon past the first adds most of a blow: six make four)
+      const len = 380 * RK(), d = m.dmg * (1 + .6 * (n - 1)) * (m.perfect ? 1.5 : 1); note(m.perfect ? 'SYZYGY!' : 'SYZYGY', pal().edge, 15); sfx('shoot'); ev('syzygy'); shakeMag = Math.max(shakeMag, 5);
       for (const e of foes()) { const dx = (e.x - P.x) * fc(); if (dx > -10 && dx < len + e.hw && Math.abs(e.y - P.y) < 22 + e.hw * .3 && e.z < 90) hitE(e, d, fc(), m, { kb: 260, wall: 1 }); }
       addObj({ kind: 'beam', x: P.x, y: P.y, z: P.z + 40, dir: fc(), len, max: .3, bw: 420 });
       C.moons.forEach((o, i) => { o.x = P.x + fc() * (len * (i + 1) / (n + 1)); });
@@ -769,6 +775,7 @@
     const add = (n) => { const was = G.layers; G.layers = Math.min(5, G.layers + n); if (G.layers > was) G.flash = .4; };
     TY.shieldspear = {
       reset() { G.layers = 0; },
+      peek: () => ({ layers: G.layers, guarding: P.state === 'charge' }),
       tree: () => ({
         L:    { name: 'Prick', dur: .24, h: [.3, .6], x0: 0, x1: 86, dmg: 7, kb: 50, lunge: 40, depth: 20, desc: 'Quick spear jabs.' },
         LL:   { name: 'Prick', dur: .26, h: [.3, .6], x0: 0, x1: 88, dmg: 8, kb: 60, lunge: 40, depth: 20 },
@@ -792,7 +799,7 @@
         const front = Math.sign(fromX - P.x) === P.facing || Math.abs(fromX - P.x) < 12;
         if (P.state !== 'charge' || !front) return false;
         const just = (P.ct || 0) < .22 + .03 * stat().p.grd, src = typeof HIT_SRC !== 'undefined' ? HIT_SRC : null;
-        add(just ? 2 : 1); G.lastCatch = clock(); P.inv = Math.max(P.inv, .3); hitstop = Math.max(hitstop, just ? .1 : .06); sfx('hit-metal', .6); sfx('hit-crystal');
+        add(just ? 2 : 1); G.lastCatch = clock(); ev(just ? 'just' : 'catch'); P.inv = Math.max(P.inv, .3); hitstop = Math.max(hitstop, just ? .1 : .06); sfx('hit-metal', .6); sfx('hit-crystal');
         floatText(P.x, P.y, P.z + 84, just ? 'JUST!' : 'CAUGHT', just ? '#FFF2C0' : '#F2D68A', just ? 16 : 13); sparkle(P.x + P.facing * 18, P.y, P.z + 40, just ? 14 : 8);
         if (src && src.kind === 'proj' && src.p) src.p.life = 0;
         if (src && src.e && just && !src.e.boss) { src.e.state = 'hurt'; src.e.t = .6; src.e.plan = null; src.e.vx = P.facing * 120; }
@@ -800,19 +807,19 @@
       },
       timing() { if (P.state !== 'charge') return null; const since = clock() - G.lastCatch; if (since < .3) return { open: true, over: 0, mul: 1, since: 0, at: G.lastCatch }; return null; },
       began(m) {
-        if (m.lance) { const L = G.layers; G.layers = 0; P.move = Object.assign({}, P.move, { x1: P.move.x1 + Math.round(40 * L * RK()), dmg: P.move.dmg + 8 * L, layersUsed: L }); if (L) note('PEARL LANCE ×' + L, '#FFF2C0', 13); }
-        if (m.burst) { const L = G.layers; G.layers = 0; if (L) { const R = (70 + 18 * L) * RK(), d = (12 + 7 * L) * (m.perfect ? 1.2 : 1); note('NACRE BURST', '#FFF2C0', 15); flashT = Math.max(flashT, .05); sfx('hit-crystal'); sfx('slam');
+        if (m.lance) { const L = G.layers; G.layers = 0; P.move = Object.assign({}, P.move, { x1: P.move.x1 + Math.round(40 * L * RK()), dmg: P.move.dmg + 8 * L, layersUsed: L }); if (L) { note('PEARL LANCE ×' + L, '#FFF2C0', 13); ev('lance'); } }
+        if (m.burst) { const L = G.layers; G.layers = 0; if (L) { const R = (70 + 18 * L) * RK(), d = (12 + 7 * L) * (m.perfect ? 1.2 : 1); note('NACRE BURST', '#FFF2C0', 15); ev('burst'); flashT = Math.max(flashT, .05); sfx('hit-crystal'); sfx('slam');
           fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .4, max: .4, r: R, col: '#FFF2C0', flat: 1 }); addObj({ kind: 'burst', x: P.x, y: P.y, r: R, max: .35, bw: R + 20, bh: 80 });
           for (const e of foes()) if (Math.hypot(e.x - P.x, (e.y - P.y) * 2) < R + e.hw && e.z < 90) hitE(e, d, Math.sign(e.x - P.x) || fc(), m, { kb: 280, launch: 200, perfect: m.perfect }); } }
-        if (m.spit && G.layers > 0) { G.layers--; addObj({ kind: 'spit', x: P.x + fc() * 30, y: P.y, z: P.z + 42, dir: fc(), d: 0, hit: new Set(), n: 2, m, bw: 40, bh: 40 }); sfx('shoot'); }
+        if (m.spit && G.layers > 0) { G.layers--; ev('spit'); addObj({ kind: 'spit', x: P.x + fc() * 30, y: P.y, z: P.z + 42, dir: fc(), d: 0, hit: new Set(), n: 2, m, bw: 40, bh: 40 }); sfx('shoot'); }
       },
       extras(m, k) {
         if (m.carry && k < .72) for (const [e] of P.hits) if (e && !e.dead && !e.boss && e.x !== undefined) { e.x = P.x + fc() * (e.hw + 30); e.y += (P.y - e.y) * .3; e.state = 'hurt'; e.t = Math.max(e.t, .3); }
         return false;
       },
       onHit(e, m) {
-        if (m.ram && !P._pmRam) { P._pmRam = P.moveId; }
-        if (m.ram && P._pmRam === P.moveId && P._pmRamGot !== P.moveId) { P._pmRamGot = P.moveId; add(1); }
+        // (one layer a ram, however many it lands on)
+        if (m.ram && P._pmRamGot !== P.moveId) { P._pmRamGot = P.moveId; add(1); ev('ram'); }
         if (m.snap && !e.boss && !e.dead) { e.state = 'hurt'; e.t = .9; e.plan = null; e.vx = 0; }
       },
       obj(o, dt) { if (o.kind !== 'spit') return; o.x += o.dir * 560 * dt; o.d += 560 * dt;
@@ -861,9 +868,10 @@
     const R = { reef: null, wheel: null };
     const away = () => !!(R.reef || R.wheel);
     const nearReef = (d = 90) => R.reef && Math.abs(P.x - R.reef.x) < d && Math.abs(P.y - R.reef.y) < 40;
-    function plant(x, y) { x = clamp(x, leftWall() + 20, rightWall() - 20); R.reef = { x, y, t: 0 }; R.wheel = null; shakeMag = Math.max(shakeMag, 6); sfx('slam'); dust(x, y, 10); note('REEF', '#F2D68A', 13); fx.push({ kind: 'ring', x, y, z: 2, t: .35, max: .35, r: 60, col: pal().edge, flat: 1 }); }
+    function plant(x, y) { x = clamp(x, leftWall() + 20, rightWall() - 20); R.reef = { x, y, t: 0 }; ev('plant'); R.wheel = null; shakeMag = Math.max(shakeMag, 6); sfx('slam'); dust(x, y, 10); note('REEF', '#F2D68A', 13); fx.push({ kind: 'ring', x, y, z: 2, t: .35, max: .35, r: 60, col: pal().edge, flat: 1 }); }
     TY.warshield = {
       reset() { R.reef = null; R.wheel = null; },
+      peek: () => ({ reef: !!R.reef, reefX: R.reef ? Math.round(R.reef.x) : null, wheel: !!R.wheel }),
       tree: () => ({
         L:    { name: 'Clap', dur: .4, h: [.32, .58], x0: 0, x1: 66, dmg: 12, kb: 160, lunge: 40, depth: 26, power: 1, desc: 'Shield bashes.' },
         LL:   { name: 'Clap', dur: .42, h: [.32, .58], x0: 0, x1: 66, dmg: 13, kb: 180, lunge: 40, depth: 26, power: 1 },
@@ -896,13 +904,14 @@
         ['rolls back through them', 'Hold Heavy, reef standing', t.pHC.name], ['off it, high, and down', 'Jump by it, Heavy', t.pJH.name], ['roll it, it stands', 'Run, Attack', t.D.name], ['plant in coral', 'Hold Heavy, gleam', t.HC.name]],
       pick(m) {
         const k = m.key, tr = WP().tree;
+        if (k === 'SIG') return m;
         if (away()) { if (k[0] !== 'p') { const alt = k === 'HC' ? 'pHC' : k === 'DX' ? 'pD' : 'p' + k; return tr[alt] || tr.pL; } return m; }
         if (k[0] === 'p') return tr[k.slice(1)] || tr.L;
         return m;
       },
       began(m) {
-        if (m.wheel) { R.wheel = addObj({ kind: 'wheel', x: P.x + fc() * 30, y: P.y, dir: fc(), d: 0, out: 280 * RK(), hit: new Set(), m, spin: 0, bw: 80, bh: 90 }); sfx('whoosh'); }
-        if (m.recall && R.reef) { addObj({ kind: 'wheel', x: R.reef.x, y: R.reef.y, back: 1, hit: new Set(), m, spin: 0, dir: Math.sign(P.x - R.reef.x) || 1, bw: 80, bh: 90 }); R.wheel = S.objs[S.objs.length - 1]; R.reef = null; sfx('whoosh'); }
+        if (m.wheel) { ev('wheel'); R.wheel = addObj({ kind: 'wheel', x: P.x + fc() * 30, y: P.y, dir: fc(), d: 0, out: 280 * RK(), hit: new Set(), m, spin: 0, bw: 80, bh: 90 }); sfx('whoosh'); }
+        if (m.recall && R.reef) { ev('recallRoll'); addObj({ kind: 'wheel', x: R.reef.x, y: R.reef.y, back: 1, hit: new Set(), m, spin: 0, dir: Math.sign(P.x - R.reef.x) || 1, bw: 80, bh: 90 }); R.wheel = S.objs[S.objs.length - 1]; R.reef = null; sfx('whoosh'); }
         if (m.bell && R.reef) { if (Math.abs(P.x - R.reef.x) < 170) { P.facing = Math.sign(R.reef.x - P.x) || P.facing; P.vx = (R.reef.x - P.facing * 30 - P.x) * 5; } }
         if (m.spring && nearReef(100)) { P.vz = 520; const e = nearest(P.x, P.y, 300); P.jvx = e ? clamp((e.x - P.x) / .7, -300, 300) : -fc() * 120; if (e) P.facing = Math.sign(e.x - P.x) || P.facing; sfx('jump'); note('SPRING', pal().edge, 12); }
         if (m.wallJump && nearReef(110)) { const e = nearest(P.x, P.y, 320); if (e) P.facing = Math.sign(e.x - P.x) || P.facing; P.vx = P.facing * 420; }
@@ -922,7 +931,7 @@
         if (Math.abs(e.x - F.x) < e.hw + 10 && Math.abs(e.y - F.y) < 28 && e.z < 70 && Math.abs(e.vx) > 120) {
           const d = Math.sign(e.vx); e.x = F.x - d * (e.hw + 12); e.vx = -d * 120; e.pmSplat = clock() + .5; e.pmToReef = 0;
           hitE(e, 12, -d, { pm: 'warshield', key: 'SPLAT', kb: 120, power: 2, pe: .5 }); if (!e.dead) { e.state = 'hurt'; e.t = .9; e.plan = null; }
-          floatText(e.x, e.y, e.z + e.hh + 18, 'REEF!', '#F2D68A', 14); sfx('hit-metal'); shakeMag = Math.max(shakeMag, 5); sparkle(F.x, F.y, 40, 10); F.ring = .3;
+          floatText(e.x, e.y, e.z + e.hh + 18, 'REEF!', '#F2D68A', 14); ev('splat'); sfx('hit-metal'); shakeMag = Math.max(shakeMag, 5); sparkle(F.x, F.y, 40, 10); F.ring = .3;
         }
       },
       step(dt) {
@@ -936,7 +945,7 @@
           else { o.x += o.dir * 440 * dt; o.d += 440 * dt; if (o.d >= o.out || o.x < leftWall() + 20 || o.x > rightWall() - 20) { o.gone = true; plant(o.x, o.y); } }
           for (const e of foes()) { if (o.hit.has(e) || !touch(e, o.x, o.y, 20, 18)) continue; o.hit.add(e); hitE(e, o.m.dmg, o.dir, o.m, { kb: 300 }); }
           if (o.t > 3) { o.gone = true; R.wheel = null; } }
-        if (o.kind === 'coral') { const at = o.n * .25; if (o.t >= at && o.n < o.waves) { o.n++; const r = (40 + 50 * o.n) * RK(); sfx('hit-crystal'); fx.push({ kind: 'nova', x: o.x, y: o.y, z: 0, t: .4, max: .4, r, col: '#F08A7A', style: 'crystal', seed: Math.random() * 6 });
+        if (o.kind === 'coral') { const at = o.n * .25; if (o.t >= at && o.n < o.waves) { o.n++; ev('coral'); const r = (40 + 50 * o.n) * RK(); sfx('hit-crystal'); fx.push({ kind: 'nova', x: o.x, y: o.y, z: 0, t: .4, max: .4, r, col: '#F08A7A', style: 'crystal', seed: Math.random() * 6 });
             for (const e of foes()) { const d = Math.hypot(e.x - o.x, (e.y - o.y) * 2); if (d < r + e.hw && d > r - 60 && e.z < 60) hitE(e, 12, Math.sign(e.x - o.x) || 1, o.m, { kb: 100, launch: 320 }); } }
           if (o.n >= o.waves && o.t > at + .3) o.gone = true; }
       },
@@ -953,7 +962,7 @@
       chargePose(pose, ct) { if (away()) { pose.crouch = 0; pose.arm = .3; pose.elbow = 1.6; pose.backArm = -.4; pose.backElbow = 1.4; pose.openHand = 1; pose.lean = -.1; pose.sink = 6; pose.legs = { f: 12, b: -12, fk: 7, bk: 4 }; return; }
         const q = Math.min(1, ct / .45); pose.crouch = 0; pose.arm = lerp(.5, -2.3, q); pose.elbow = .3; pose.grip = lerp(-1.4, -.3, q); pose.lean = -.25 * q; pose.sink = 4; pose.legs = { f: 10, b: -12, fk: 4, bk: 6 }; pose.backArm = -1.8; pose.backElbow = .3; pose.twoHand = 1; pose.gripGap = 8; },
     };
-    function bell(m) { const F = R.reef, r = 125 * RK(); F.ring = .5; sfx('hit-metal'); play(220, .7, .09, 'sine'); play(331, .6, .05, 'sine'); shakeMag = Math.max(shakeMag, 6); note('DONG', '#F2D68A', 16);
+    function bell(m) { const F = R.reef, r = 125 * RK(); F.ring = .5; sfx('hit-metal'); play(220, .7, .09, 'sine'); play(331, .6, .05, 'sine'); shakeMag = Math.max(shakeMag, 6); note('DONG', '#F2D68A', 16); ev('bell');
       for (let i = 0; i < 3; i++) fx.push({ kind: 'ring', x: F.x, y: F.y, z: 2 + i * 20, t: .3 + i * .1, max: .3 + i * .1, r: r * (.6 + i * .25), col: '#F2D68A', flat: 1 });
       for (const e of foes()) if (Math.hypot(e.x - F.x, (e.y - F.y) * 2) < r + e.hw && e.z < 90) hitE(e, m.dmg, Math.sign(e.x - F.x) || 1, m, { kb: 260, launch: 220 }); }
     const FI = { w: 'fists' };
@@ -998,6 +1007,7 @@
     const raise = (n = 1) => { F.lvl = Math.min(3, F.lvl + n); F.t = 0; };
     TY.trident = {
       reset() { F.lvl = 0; F.v = 0; F.t = 0; },
+      peek: () => ({ flood: F.lvl, whirls: S.objs.filter(o => o.kind === 'whirl').length }),
       tree: () => ({
         L:    { name: 'Tine', dur: .26, h: [.3, .6], x0: 0, x1: 92, dmg: 8, kb: 60, lunge: 40, depth: 22, desc: 'Thrusts.' },
         LL:   { name: 'Tine', dur: .28, h: [.3, .6], x0: 0, x1: 92, dmg: 9, kb: 70, lunge: 40, depth: 22 },
@@ -1017,10 +1027,10 @@
       rows: (t) => [['the street floods; they wade', 'Heavy', t.H.name], ['drain it all at once', 'Hold Heavy, gleam', t.HC.name], ['spouts in three lanes', 'Attack ×3', t.LLL.name],
         ['a geyser under one', 'Hold Attack', t.X.name], ['pull them in', 'Heavy, Heavy', t.HH.name], ['surf the flood', 'Run, Attack', t.D.name], ['splash grows with the water', 'Jump, Heavy', t.JH.name]],
       began(m) {
-        if (m.flood) { raise(); note(['', 'THE TIDE RISES', 'DEEPER', 'FLOODED'][F.lvl], '#9FE2D3', 14); sfx('hit-goo'); play(130 + 30 * F.lvl, .4, .07, 'sine');
+        if (m.flood) { raise(); ev('flood'); note(['', 'THE TIDE RISES', 'DEEPER', 'FLOODED'][F.lvl], '#9FE2D3', 14); sfx('hit-goo'); play(130 + 30 * F.lvl, .4, .07, 'sine');
           for (const d of [1, -1]) addObj({ kind: 'wave', x: P.x + d * 30, y: P.y, dir: d, d: 0, hit: new Set(), m, bw: 60, bh: 60 });
           if (cur() === 'storm') for (const e of foes()) if (!e.air && e.z < 10) { fx.push({ kind: 'bolt', x: P.x, y: P.y, z: 4, x2: e.x, y2: e.y, z2: 6, t: .2, max: .2, col: '#C8D0FF', seed: Math.random() * 99 }); hitE(e, 3 + 2 * F.lvl, Math.sign(e.x - P.x) || 1, m, { kb: 30, power: 0 }); } }
-        if (m.drain) { const lv = F.lvl, R = (70 + 45 * lv) * RK() * (m.perfect ? 1.3 : 1) * (cur() === 'abyss' ? 1.4 : 1); F.lvl = 0; F.t = 0;
+        if (m.drain) { const lv = F.lvl, R = (70 + 45 * lv) * RK() * (m.perfect ? 1.3 : 1) * (cur() === 'abyss' ? 1.4 : 1); F.lvl = 0; F.t = 0; ev(lv ? 'drain' : 'eddy');
           addObj({ kind: 'whirl', x: clamp(P.x + fc() * 90, leftWall() + 20, rightWall() - 20), y: P.y, r: R, lv, m, max: 1.2, tick: 0, bw: R + 40, bh: 120 }); note(lv ? 'MAELSTROM' : 'EDDY', '#9FE2D3', 15); sfx('hit-goo'); }
         if (m.geyser) { const e = inFront(240, 50) || nearest(P.x, P.y, 240); const x = e ? e.x : P.x + fc() * 90, y = e ? e.y : P.y; addObj({ kind: 'geyser', x, y, m, max: .7, done: false, bw: 60, bh: 200 }); }
         if (m.splash) P.move = Object.assign({}, P.move, { shock: (70 + 30 * F.lvl) * RK() });
@@ -1039,16 +1049,16 @@
       },
       enemy(e, dt, x0, y0) {
         if (F.lvl <= 0 || e.dead || e.air || e.z > 4 || !['idle', 'walk', 'wind'].includes(e.state)) return;
-        const k = (e.boss ? SLOWB : SLOW)[F.lvl]; e.x = x0 + (e.x - x0) * k; e.y = y0 + (e.y - y0) * k;
+        const k = (e.boss ? SLOWB : SLOW)[F.lvl]; if (e.x !== x0 || e.y !== y0) ev('wade'); e.x = x0 + (e.x - x0) * k; e.y = y0 + (e.y - y0) * k;
         if (Math.random() < dt * 4 && Math.abs(e.x - x0) > .3) bubbles(e.x, e.y, 2, 1, 30);
       },
       obj(o, dt) {
         if (o.kind === 'wave') { o.x += o.dir * 330 * dt; o.d += 330 * dt;
           for (const e of foes()) { if (o.hit.has(e) || Math.abs(e.x - o.x) > e.hw + 12 || Math.abs(e.y - o.y) > 40 || e.z > 50) continue; o.hit.add(e); hitE(e, o.m.dmg + 3 * F.lvl, o.dir, o.m, { kb: 220, launch: 140 }); }
           if (o.d > (180 + 60 * F.lvl) * RK()) o.gone = true; }
-        if (o.kind === 'spout' && !o.done && o.t > .08) { o.done = true; sfx('hit-goo', .5); bubbles(o.x, o.y, 10, 8, 120);
+        if (o.kind === 'spout' && !o.done && o.t > .08) { o.done = true; ev('spout'); sfx('hit-goo', .5); bubbles(o.x, o.y, 10, 8, 120);
           for (const e of foes()) if (Math.abs(e.x - o.x) < e.hw + 18 + 4 * o.big && Math.abs(e.y - o.y) < 16 + e.hw * .3 && e.z < 80) hitE(e, o.m.dmg * .9 + 3 * o.big, fc(), o.m, { kb: 60, launch: 300 + 60 * o.big }); }
-        if (o.kind === 'geyser' && !o.done && o.t > .16) { o.done = true; sfx('hit-goo'); shakeMag = Math.max(shakeMag, 4); bubbles(o.x, o.y, 10, 14, 160);
+        if (o.kind === 'geyser' && !o.done && o.t > .16) { o.done = true; ev('geyser'); sfx('hit-goo'); shakeMag = Math.max(shakeMag, 4); bubbles(o.x, o.y, 10, 14, 160);
           for (const e of foes()) if (Math.abs(e.x - o.x) < e.hw + 26 && Math.abs(e.y - o.y) < 24 && e.z < 100) hitE(e, o.m.dmg + 4 * F.lvl, Math.sign(e.x - P.x) || 1, o.m, { kb: 40, launch: 560 + 60 * F.lvl }); }
         if (o.kind === 'whirl') { o.tick -= dt;
           for (const e of foes()) { if (e.boss) continue; const dx = o.x - e.x, dy = o.y - e.y, d = Math.hypot(dx, dy * 2); if (d < o.r + e.hw && d > 6) { e.x += dx / d * 150 * dt; e.y += Math.sign(dy) * Math.min(Math.abs(dy), 50 * dt); } }
@@ -1105,9 +1115,10 @@
   {
     const N = { beads: [], zap: 0 };
     const live = () => N.beads.filter(b => b.e && !b.e.dead && enemies.includes(b.e));
-    function bead(e) { if (!e || e.dead) return; const b = N.beads.find(q => q.e === e); if (b) { b.t = 0; return; } if (N.beads.length >= 6) N.beads.shift(); N.beads.push({ e, t: 0 }); sparkle(e.x, e.y, e.z + e.hh * .55, 5, ['#F2D68A', '#FFFFFF']); }
+    function bead(e) { if (!e || e.dead) return; const b = N.beads.find(q => q.e === e); if (b) { b.t = 0; return; } if (N.beads.length >= 6) N.beads.shift(); N.beads.push({ e, t: 0 }); ev('bead'); sparkle(e.x, e.y, e.z + e.hh * .55, 5, ['#F2D68A', '#FFFFFF']); }
     TY.lance = {
       reset() { N.beads = []; },
+      peek: () => ({ beads: live().length, pulling: S.objs.filter(o => o.kind === 'pull').length }),
       tree: () => ({
         L:    { name: 'Thread', dur: .28, h: [.32, .6], x0: 0, x1: 96, dmg: 8, kb: 50, lunge: 60, depth: 20, desc: 'Each foe pierced is strung on the thread (6 at most).' },
         LL:   { name: 'Thread', dur: .3, h: [.32, .6], x0: 0, x1: 98, dmg: 9, kb: 60, lunge: 60, depth: 20 },
@@ -1131,7 +1142,7 @@
       began(m) {
         if (m.clasp) clasp(m);
         if (m.whip) whip(m);
-        if (m.joust) { P._joust = { list: [], f: fc(), sp: (m.perfect ? 600 : 470) * RK() }; sfx('whoosh'); note(m.perfect ? 'JOUST!' : 'JOUST', '#F2D68A', 14); }
+        if (m.joust) { ev('joust'); P._joust = { list: [], f: fc(), sp: (m.perfect ? 600 : 470) * RK() }; sfx('whoosh'); note(m.perfect ? 'JOUST!' : 'JOUST', '#F2D68A', 14); }
       },
       extras(m, k, dt) {
         holdEnds(m, k);
@@ -1175,14 +1186,14 @@
     };
     function clasp(m) {
       const L = live(); if (L.length < 2) return; const n = L.length, boss = L.find(b => b.e.boss), cx = boss ? boss.e.x : L.reduce((s, b) => s + b.e.x, 0) / n, cy = boss ? boss.e.y : L.reduce((s, b) => s + b.e.y, 0) / n, d = m.dmg + 3 * n;
-      note('THE CLASP ×' + n, '#F2D68A', 15); sfx('whoosh'); fx.push({ kind: 'ring', x: cx, y: cy, z: 30, t: .4, max: .4, r: 50, col: '#F2D68A' });
+      note('THE CLASP ×' + n, '#F2D68A', 15); ev('clasp'); sfx('whoosh'); fx.push({ kind: 'ring', x: cx, y: cy, z: 30, t: .4, max: .4, r: 50, col: '#F2D68A' });
       for (const b of L) { const e = b.e; if (e.boss) { addObj({ kind: 'pullB', max: .22 }); hitE(e, d * 1.2, Math.sign(e.x - P.x) || 1, m, { kb: 60 }); continue; }
         addObj({ kind: 'pull', e, x0: e.x, y0: e.y, cx: cx + rand(-8, 8), cy, max: .22, d, m, bw: 80, bh: 120 }); }
       if (cur() === 'tide' && S0()) PN.addPool(cx, cy, d * wm(), S0());
       if (cur() === 'abyss') for (const e of foes()) if (!e.boss && !L.some(b => b.e === e) && Math.hypot(e.x - cx, e.y - cy) < 140) { e.x += (cx - e.x) * .5; e.y += (cy - e.y) * .5; }
       N.beads = [];
     }
-    function whip(m) { const L = live(); if (!L.length) return; const pts = [{ x: P.x + fc() * 30, y: P.y }].concat(L.map(b => ({ x: b.e.x, y: b.e.y, e: b.e }))); addObj({ kind: 'whip', pts, m, max: .35, hit: new Set(), bw: 400 }); sfx('swing'); sfx('hit-crystal', .4); }
+    function whip(m) { const L = live(); if (!L.length) return; const pts = [{ x: P.x + fc() * 30, y: P.y }].concat(L.map(b => ({ x: b.e.x, y: b.e.y, e: b.e }))); addObj({ kind: 'whip', pts, m, max: .35, hit: new Set(), bw: 400 }); ev('whip'); sfx('swing'); sfx('hit-crystal', .4); }
     const T2 = { th: 1, gg: 13 };
     const thr = (pose, m, k, a, b, len = 60) => { if (k > a && k < b) pose.streak = { len, a: .75, col: pal().trail }; };
     POSE('lance', {
@@ -1208,6 +1219,7 @@
   // EXPORTS, and the weapon rebuilt now this file is here
   // ======================================================================================================
   function forgeKind(type, n = 0) { for (let s = 1; s < 20000; s++) { const pk = PW.randomPicks(s), d = PW.design(s, pk); if (d.type === type && n-- <= 0) { PW.forgeNow(s, pk); return WEAPONS[ID].name; } } return null; }
-  window.PEARLM = { build, rows, TY, S, KF, forge: forgeKind, mine, kinds: () => Object.keys(TY), statsOf, statsHtml, statLines, TRAIT_STATS };
+  const peek = () => { const T = kind() && TY[kind()]; return Object.assign({ kind: kind(), ev: Object.assign({}, S.ev), objs: S.objs.length }, T && T.peek ? T.peek() : {}); };
+  window.PEARLM = { build, rows, TY, S, KF, forge: forgeKind, mine, kinds: () => Object.keys(TY), statsOf, statsHtml, statLines, TRAIT_STATS, peek, clearEv: () => { S.ev = {}; } };
   try { PW.reregister(); } catch (e) { console.error(e); }
 })();
