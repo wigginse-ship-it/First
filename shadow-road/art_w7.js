@@ -1807,7 +1807,7 @@
     // what they have thrown is turned with them
     for (const h of hazards) if (h.kind === 'w7fire') { h.x = 2 * m.s - h.x; h.vx = -h.vx; }
     for (const p of projs) if (p.owner === 'e' && p.vx) { p.x = 2 * m.s - p.x; p.vx = -p.vx; }
-    floatText(clamp(m.s, camX + 150, camX + VW - 150), P.y, 120, back ? 'TURNED ABOUT · ' + back + (back > 1 ? ' BACKS' : ' BACK') + ' TO YOU' : 'THE GLASS TURNS', back ? '#FFE08A' : '#E8F4FF', 15);
+    floatText(clamp(m.s, camX + 150, camX + VW - 150), P.y, 120, back ? 'TURNED ABOUT ×' + back : 'THE GLASS TURNS', back ? '#FFE08A' : '#E8F4FF', 15);
     if (back >= 2) sfx('crit');
     m.turns = (m.turns || 0) + 1;
   }
