@@ -386,6 +386,7 @@
   }
   function enemyCurse(e, dt) {
     if (!e.cursed) return;
+    if (e.cRoad && L.road && Math.abs(e.x - P.x) > 110) e.y += (L.road.y - e.y) * Math.min(1, dt * 8); // (a thing of the road keeps to it until it is on him)
     if (e.boss && finalHigh()) return bossCurse(e, dt);
     if (e.cTrait === 'mask' && ['idle', 'walk', 'recover'].includes(e.state) && Math.abs(e.x - P.x) < 300) { e.cAtkT -= dt; if (e.cAtkT <= 0) { e.cAtkT = rand(5.5, 8.5); borrowed(e, MASKS[e.cMask].atk); } }
   }
@@ -664,8 +665,8 @@
   function pearlBlacken(list, t) {
     if (!pearlBlack()) return;
     const O = PEARLNG.O; if (!O) return;
-    const dark = (x, y, z, r) => list.push([y + .07, () => { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(14,6,20,.78)'; circle(x, y - z, r * 1.25 + 2); ctx.fill(); ctx.restore();
-      onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(150,90,220,${.5 + .3 * Math.sin(t * 7)})`; ctx.lineWidth = 1.2; circle(x, y - z, r * 1.25 + 2.5); ctx.stroke(); ctx.restore(); }); }]);
+    const dark = (x, y, z, r) => list.push([y + .07, () => { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(14,6,20,.78)'; circle(x, y - z, r * 1.8 + 2); ctx.fill(); ctx.restore();
+      onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(46,24,66,.9)'; circle(x, y - z, r * 1.8 + 2); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(150,90,220,${.5 + .3 * Math.sin(t * 7)})`; ctx.lineWidth = 1.2; circle(x, y - z, r * 1.25 + 2.5); ctx.stroke(); ctx.restore(); }); }]);
     if (O.on && !O.throws.length) dark(O.x, O.y, O.z, O.r || 7);
     for (const th of O.throws) { dark(th.x, th.y, th.z, th.r || 7);
       if (th.cRet && !th.cCaught && !th.cHit && th.phase === 'back') { const R = th.cRet; list.push([FLOOR_TOP - 3, () => onMain(() => { // where it will come back: a violet streak on the floor
@@ -727,7 +728,8 @@
     _dp(cx, cy, rot, a, lit, t); if (!patCursed()) return;
     const R = W7.PAT_R || 300, fl = Math.sin(t * 23) > .55 ? 1 : 0; ctx.save(); ctx.translate(cx, cy); ctx.scale(1, W7.PAT_SQ || .17); ctx.rotate(rot);
     for (const [a0, a1] of DARK) { const pulse = .7 + .25 * Math.sin(t * 3 + a0); ctx.fillStyle = `rgba(4,2,8,${(.72 + .2 * fl) * pulse * a})`; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R + 10, a0, a1); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = `rgba(170,30,40,${.5 * a})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, R + 4, a0, a1); ctx.stroke(); }
+      ctx.strokeStyle = `rgba(200,36,48,${(.6 + .3 * Math.sin(t * 5 + a0)) * a})`; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(Math.cos(a0) * 30, Math.sin(a0) * 30); ctx.lineTo(Math.cos(a0) * (R + 6), Math.sin(a0) * (R + 6)); ctx.arc(0, 0, R + 6, a0, a1); ctx.lineTo(Math.cos(a1) * 30, Math.sin(a1) * 30); ctx.stroke();
+      for (let k = 0; k < 9; k++) { const u = hsh(a0 * 10 + k), aa = lerp(a0, a1, hsh(k + a1)), rr = 40 + u * (R - 40), q = Math.max(0, Math.sin(t * 4 + k * 1.7)); ctx.fillStyle = `rgba(230,60,60,${.7 * q * a})`; ctx.beginPath(); ctx.arc(Math.cos(aa) * rr, Math.sin(aa) * rr, 5, 0, TAU); ctx.fill(); } }
     if (Math.sin(t * 7.3) > .82) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(0, 0, R + 10, 0, TAU); ctx.fill(); }
     ctx.restore(); }; }
   // ---------------- Tir-na Nog'th's Pattern runs backward in places ----------------
@@ -737,8 +739,8 @@
     ctx.save(); ctx.lineCap = 'round';
     for (const tile of [0, AW_W]) { const cx = 690 + tile - x0; if (cx < -R - 40 || cx > VW + R + 40) continue;
       for (const i of MOON_REV) { const r = R * (1 - i * .12), gap = i * 1.9 + .6, gw = .32;
-        ctx.strokeStyle = 'rgba(10,4,18,.55)'; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.ellipse(cx, cy, r, r * ry, 0, gap + gw, gap + TAU - gw); ctx.stroke();
-        ctx.strokeStyle = `rgba(150,60,200,${.55 + .2 * Math.sin(t * 9 + i)})`; ctx.lineWidth = 1.4; ctx.setLineDash([10, 16]); ctx.lineDashOffset = t * 40; ctx.beginPath(); ctx.ellipse(cx, cy, r, r * ry, 0, gap + gw, gap + TAU - gw); ctx.stroke(); ctx.setLineDash([]); } }
+        ctx.strokeStyle = 'rgba(10,4,18,.7)'; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.ellipse(cx, cy, r, r * ry, 0, gap + gw, gap + TAU - gw); ctx.stroke();
+        ctx.strokeStyle = `rgba(190,90,255,${.75 + .2 * Math.sin(t * 9 + i)})`; ctx.lineWidth = 2.2; ctx.setLineDash([12, 12]); ctx.lineDashOffset = t * 40; ctx.beginPath(); ctx.ellipse(cx, cy, r, r * ry, 0, gap + gw, gap + TAU - gw); ctx.stroke(); ctx.setLineDash([]); } }
     ctx.restore();
   }
   function patternStep(dt) {
