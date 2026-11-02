@@ -896,10 +896,17 @@
         ctx.beginPath(); ctx.ellipse(x, y, r * (i % 2 ? .14 : .3), r * (i % 2 ? .3 : .16), -.6 + a, 0, TAU); stroke(OUT, Math.max(.8, r * .2)); ctx.beginPath(); ctx.ellipse(x, y, r * (i % 2 ? .14 : .3), r * (i % 2 ? .3 : .16), -.6 + a, 0, TAU); stroke(p.metalLt, Math.max(.4, r * .1)); } }],
     coral: ['back', (r) => { ctx.lineCap = 'round'; const br = (x0, y0, x1, y1, w) => { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .2, (y0 + y1) / 2, x1, y1); stroke(OUT, w + 1.2); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .2, (y0 + y1) / 2, x1, y1); stroke('#E2604E', w); ctx.beginPath(); ctx.moveTo(x0 + w * .2, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .25, (y0 + y1) / 2, x1, y1); stroke('#FFA090', w * .35); };
       const w = Math.max(.9, r * .26); br(-r * .2, -r * .6, -r * 1.1, -r * 1.9, w); br(-r * .8, -r * 1.25, -r * 1.7, -r * 1.5, w * .7); br(r * .3, -r * .7, r * .5, -r * 2, w * .85); br(r * .42, -r * 1.4, r * 1.2, -r * 1.75, w * .6); }],
-    scallop: ['back', (r, p) => { ctx.save(); ctx.translate(r * .55, 0); ctx.scale(.62, 1); const R = r * 1.75;
-      const g = ctx.createLinearGradient(-R, -R, R, R); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.45, p.blade); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; shellPath(R, R); ctx.fill();
-      ctx.save(); shellPath(R, R); ctx.clip(); ctx.strokeStyle = 'rgba(60,110,110,.45)'; ctx.lineWidth = Math.max(.4, r * .1); for (let i = 0; i < 7; i++) { const a = Math.PI * .75 + i / 6 * Math.PI * 1.5; ctx.beginPath(); ctx.moveTo(0, R * .7); ctx.lineTo(Math.cos(a) * R * 1.1, Math.sin(a) * R * 1.1); ctx.stroke(); } ctx.restore();
-      shellPath(R, R); stroke(p.metal, Math.max(.7, r * .16)); shellPath(R * 1.06, R * 1.05); stroke(OUT, inkW(r, .1)); ctx.restore(); }],
+    // a scallop shell fanned out behind the pearl, centred on it and the same on both sides: its hinge under the pearl, ears
+    // either side of the hinge, ribs running up into a scalloped rim, silvered inside like a mirror
+    scallop: ['back', (r, p) => { ctx.save(); const R = r * 1.95, hy = r * .62, n = 9, A0 = Math.PI * 1.06, A1 = Math.PI * 1.94;
+      const fan = (k = 1) => { ctx.beginPath(); ctx.moveTo(0, hy); for (let i = 0; i <= n * 2; i++) { const a = A0 + (A1 - A0) * i / (n * 2), rr = R * k * (i % 2 ? 1.06 : .97); ctx.lineTo(Math.cos(a) * rr, hy + Math.sin(a) * rr); } ctx.closePath(); };
+      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(0, hy - r * .1); ctx.lineTo(sd * r * .62, hy - r * .22); ctx.lineTo(sd * r * .7, hy + r * .18); ctx.lineTo(0, hy + r * .2); ctx.closePath(); ctx.fillStyle = p.bladeDk; ctx.fill(); stroke(OUT, inkW(r, .09)); } // the ears
+      const g = ctx.createLinearGradient(0, hy - R, 0, hy); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, p.blade); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; fan(); ctx.fill();
+      ctx.save(); fan(); ctx.clip();
+      ctx.strokeStyle = 'rgba(60,110,110,.42)'; ctx.lineWidth = Math.max(.4, r * .09); for (let i = 1; i < n * 2; i += 2) { const a = A0 + (A1 - A0) * i / (n * 2); ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(Math.cos(a) * R * 1.1, hy + Math.sin(a) * R * 1.1); ctx.stroke(); } // the ribs
+      ctx.fillStyle = 'rgba(255,255,255,.32)'; ctx.beginPath(); ctx.ellipse(0, hy - R * .58, R * .7, R * .2, 0, 0, TAU); ctx.fill(); // the mirror's sheen, a band of light across it
+      ctx.restore();
+      fan(); stroke(p.metal, Math.max(.7, r * .15)); fan(1.05); stroke(OUT, inkW(r, .1)); ctx.restore(); }],
     horn: ['front', (r, p) => { const x0 = r * .6, x1 = r * 3.1, w = r * .42;
       ctx.beginPath(); ctx.moveTo(x0, -w); ctx.quadraticCurveTo(x1 * .7, -w * .5, x1, 0); ctx.quadraticCurveTo(x1 * .7, w * .5, x0, w); ctx.closePath();
       const g = ctx.createLinearGradient(0, -w, 0, w); g.addColorStop(0, '#FFFDF4'); g.addColorStop(.6, '#EADFC6'); g.addColorStop(1, '#B8A684'); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .1));
