@@ -31,7 +31,10 @@
     location.reload();
   }
 
+  // a dev game is a fresh run of its own: nothing carried over from the saved game (no progress, gear, shards, sigils,
+  // cards, relics or Pearl), only what the dev screen picks. (The real save was put aside by backup(), and comes back on restore.)
   function applyOpts() {
+    save = freshSave();
     save.started = true;
     save.cycle = Math.max(0, opts.cycle | 0);
     // weapons: as saved, every one at the level that teaches its last move (and the best arrows), or one of them so, in his hands (no tempering past it)
