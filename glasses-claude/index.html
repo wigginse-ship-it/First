@@ -93,7 +93,7 @@
   <div class="row">
     <button class="primary" id="b-mic" style="flex:3">🎤 Speak</button>
     <button id="b-paste" style="flex:1">📋</button>
-    <button id="b-type" style="flex:1">⌨</button>
+    <button id="b-type" style="flex:2">⌨ Keyboard</button>
   </div>
   <div class="row" id="typebox" style="display:none">
     <input id="typed" placeholder="Type a message" enterkeyhint="send">
@@ -376,7 +376,8 @@ $("b-read").onclick = () => {
 /* ---------- other chat controls ---------- */
 function toggleType(force) {
   const b = $("typebox"), open = force === true ? true : b.style.display === "none";
-  b.style.display = open ? "flex" : "none"; if (open) $("typed").focus();
+  b.style.display = open ? "flex" : "none";
+  if (open) { const t = $("typed"); t.focus(); t.click(); setTimeout(() => t.focus(), 150); }
 }
 $("b-type").onclick = () => toggleType();
 $("b-paste").onclick = async () => {
