@@ -8,8 +8,8 @@
 // reflection of the king, having no original left to follow, has taken the Pearl of Judgement (the sea's reflection of the
 // Jewel of Judgement) and is walking the Pattern backward, to turn the sea over: Rebma to be the city and Amber the drowned
 // reflection of it.
-//   rebma      - Faiella-bionin, the Stair into the Sea (waves 1-2; the swell overhead: rule 'w7surge', the ninth wave)
-//   rebma2     - The Streets of Rebma (wave 3, then the Sea-Bishop at the well; rule 'w7toll', the drowned bell and the vents)
+//   rebma      - Faiella-bionin, the Stair into the Sea (waves 1-2; rule 'w7torch', the cressets flare)
+//   rebma2     - The Streets of Rebma (wave 3, then the Sea-Bishop at the well; rule 'w7turn', the glass turns)
 //   rebmaBoss  - The Pattern of Rebma: the King in the Glass (rule 'w7glass': his three shapes)
 (() => {
   if (STAGES.length !== 6) { console.error('data_w7.js: expected six worlds before Rebma, found ' + STAGES.length); return; }
@@ -34,7 +34,7 @@
     w7triton:  { name: 'Bronze Triton', draw: 'w7triton', mat: 'w7bronze', move: 'ground', hp: 96, spd: 62, hw: 18, hh: 74, dmg: 16, plans: ['w7conch', 'w7trident', 'w7conch'], wind: .75, cd: [1.2, 2.0], reach: 74, weight: .7, poise: 2, shards: [8, 12], sigil: .3 },
     // a knight of Alexander's kind, gone down into the sea in a bell of glass: light blows glance off it until it cracks
     w7bellk:   { name: 'Knight in the Glass Bell', draw: 'w7bellk', mat: 'w7glass', move: 'ground', hp: 180, spd: 40, hw: 24, hh: 74, dmg: 18, plans: ['w7bellslam', 'w7bellroll', 'w7bellslam'], wind: .85, cd: [1.3, 2.1], reach: 58, weight: .35, poise: 5, shards: [12, 16], sigil: .5 },
-    // he keeps the well that goes down to the Pattern, and will not let you by (see the 'w7toll' rule)
+    // he keeps the well that goes down to the Pattern, and will not let you by (see the 'w7turn' rule)
     w7bishop:  { name: 'The Sea-Bishop', noRandom: 1, draw: 'w7bishop', mat: 'w7nacre', move: 'ground', hp: 360, spd: 70, hw: 26, hh: 78, dmg: 17, plans: ['w7crozier', 'w7bless', 'w7plunge', 'w7crozier'], wind: .6, cd: [.8, 1.4], reach: 84, weight: .4, poise: 7, shards: [26, 34], sigil: 1, kind: 'creature' },
   });
 
@@ -56,8 +56,8 @@
     boss: 'w7king' });
 
   ZONES.push({ trans: ['w7gate', 'w7well'], zones: [
-    { theme: 'rebma', len: 2400, waves: [0, 1], pods: [760, 1700], mech: 'w7surge' },
-    { theme: 'rebma2', len: 1900, waves: [2], pods: [1200], mech: 'w7toll', title: 'The Streets of Rebma', sub: 'THE DROWNED BELL TOLLS · BE OFF THE GROUND WHEN IT STRIKES, OR RIDE THE BUBBLES' },
+    { theme: 'rebma', len: 2400, waves: [0, 1], pods: [760, 1700], mech: 'w7torch', title: 'Faiella-bionin', sub: 'A FLARING TORCH BLINDS WHAT FACES IT · KEEP IT AT YOUR BACK' },
+    { theme: 'rebma2', len: 1900, waves: [2], pods: [1200], mech: 'w7turn', title: 'The Streets of Rebma', sub: 'THE GLASS TURNS THEM ABOUT · STRIKE THEIR BACKS' },
     { theme: 'rebmaBoss', len: 1000, waves: [], boss: 1, mech: 'w7glass', title: 'The Pattern of Rebma', sub: 'THE KING IN THE GLASS IS WALKING IT BACKWARD' } ] });
 
   // the Trump of Rebma, for the choice after the dream (branch.js frames it and turns it up)

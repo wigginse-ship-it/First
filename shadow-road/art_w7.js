@@ -4,12 +4,13 @@
 // sea-charts, Byzantine mosaic dimmed by fathoms of water, stained glass with the sea behind it, pearl and verdigris.
 //   rebma      - Faiella-bionin, the Stair into the Sea: the great stair going down off the cliffs of Kolvir under the
 //                waves, its torches burning green-gold in the water; overhead the underside of the sea, and far below the
-//                pearl towers of Rebma (rule 'w7surge': the swell overhead draws the water back down the stair, then the
-//                ninth wave drives it up again; stand in the lee of a newel-post or be carried)
+//                pearl towers of Rebma (rule 'w7torch': the cressets of the stair flare, and whatever is facing the
+//                fire is dazzled; keep the torch at your back)
 //   rebma2     - The Streets of Rebma: Amber turned about in nacre and green bronze; the surface overhead is a mirror
-//                that hangs the city upside down above itself; a campanile with the Drowned Bell (rule 'w7toll': the bell
-//                tolls and the stroke goes through the street like a hammer; be off the ground when it lands, or in a
-//                column of bubbles from the vents, which lift whatever stands in them)
+//                that hangs the city upside down above itself; a campanile with the Drowned Bell (rule 'w7turn': when
+//                the bell strikes, a sheet of the mirror comes down into the street and every standing foe is reflected
+//                across it, turned the other way; take them from behind)
+// Rebma's rules are both about which way a thing is turned: it is Amber's mirror.
 //   rebmaBoss  - The Pattern of Rebma: a hall under the palace, the reversed Pattern laid in lapis and gold in its floor,
 //                an apse of dim gold mosaic and a rose window with the sea behind it (rule 'w7glass': the King in the Glass)
 // Foes: Drowned of the Fleet, Torchbearer of Faiella, Halberdier of Moire, Siren of the Stair, Hippocamp Rider, Bronze
@@ -311,16 +312,15 @@
       ctx.fillStyle = `rgba(${rgb},${a * (.4 + .6 * hsh(i + 11))})`; ctx.fillRect(x, y, 1 + d, 1 + d); }
     ctx.restore();
   }
-  W7.surge = 0; // the ninth wave: -1 the undertow drawing down the stair, +1 the surge driving up it (the 'w7surge' rule)
   THEMES.rebma = {
     name: 'faiella-bionin', sky: ['#5EA89C', '#164E5E', '#0A2E40', '#061E2C'], sun: [0.5, -0.32, '210,246,232'], haze: '70,150,150',
     floorA: '#7A9E96', floorB: '#2A4446', path: '#C89A3A', skyKind: 'none',
     grade: { desat: .1, top: 'rgba(90,200,190,.2)', bot: 'rgba(8,30,60,.5)', vig: 'rgba(2,12,20,.72)' },
     liveSky(camX, t) { surfaceBand(camX, t); },
     liveFloor(camX, t) {
-      // the torches on the newel-posts, streaming with the water (they lean down the stair in the undertow, up it in the surge)
-      if (W7.newels) { const mx = camX * .45, lean = W7.surge * 1.4 + Math.sin(t * .7) * .12;
-        for (const nx of W7.newels) { const x0 = (((nx - mx) % AW_W) + AW_W) % AW_W; for (const ox of [0, -AW_W]) { const x = x0 + ox; if (x < -30 || x > VW + 30) continue; waterFlame(x, FLOOR_TOP - 28 - 37, .9, t, lean, 1); } } }
+      // the torches on the newel-posts, streaming with the water (they flare up with any cresset on the stair that is drawing the light in)
+      if (W7.newels) { const mx = camX * .45, lean = Math.sin(t * .7) * .12, fk = W7.torchK || 0;
+        for (const nx of W7.newels) { const x0 = (((nx - mx) % AW_W) + AW_W) % AW_W; for (const ox of [0, -AW_W]) { const x = x0 + ox; if (x < -30 || x > VW + 30) continue; waterFlame(x, FLOOR_TOP - 28 - 37, .9 + fk * .3, t, lean, 1); } } }
       // the light off the swell overhead, netting the stair
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 1;
       for (let i = 0; i < 9; i++) { const y = FLOOR_TOP + 10 + i * 12, a = .06 + .04 * Math.sin(t * 1.3 + i); ctx.strokeStyle = `rgba(${RGB.surf},${a})`; ctx.beginPath();
@@ -1643,102 +1643,238 @@
   // THE RULES OF THE PLACES
   // ======================================================================================================
   const busy = () => waveActive || enemies.some(e => !e.dead);
-  const loose = (e) => ['hurt', 'down'].includes(e.state) || e.air || e.z > 6;
+  // REBMA'S RULE: Amber's reflection, where it matters which way a thing is turned. On the stair the torches flare, and
+  // whatever is facing the fire is dazzled; in the streets the glass turns, and whatever stands in it is turned about.
+  // Both open a foe's back to you, and both are things you can set up.
+  const W7R = W7.RULE = { DAZE_T: 2.2, DAZE_DMG: 1.3, P_DAZE: .6, TURN_T: 1.6, BACK_DMG: 1.5 };
+  // who the rules can take hold of: not the King, not what is still coming on or dying
+  const holdable = (e) => !e.dead && !e.boss && !['enter', 'dying'].includes(e.state);
+  const facingTo = (x, f, tx) => Math.abs(tx - x) < 16 || Math.sign(tx - x) === f;
+  // a foe dazzled, or turned about: whatever it was doing it stops, and it stays as it is turned for a while
+  function hold(e, key, t) {
+    e[key] = Math.max(e[key] || 0, t); e.plan = null; e.w7T = null;
+    if (!['hurt', 'down'].includes(e.state) && !e.air) recover(e, t);
+  }
+  W7.hold = hold;
 
-  // ---------------- FAIELLA-BIONIN: THE NINTH WAVE ----------------
-  // Every so often a great swell passes over the stair. First the sea draws back down it (the undertow: the torches lean
-  // down the stair, the silt streams after it), and then the ninth wave comes and drives everything up it. On the ground
-  // you can lean into it; in the air, or knocked down, you go where it takes you; and whatever it takes into the steps is
-  // dashed on them. The great mooring-stones set in the landing break it: in their lee the water is still.
-  const STONES = [520, 860, 1220, 1560, 1900, 2200];
-  W7.leeOf = (x, y) => { const m = mech; if (!m || m.kind !== 'w7surge' || !m.stones) return null; for (const s of m.stones) if (x < s.x - 6 && x > s.x - 78 && Math.abs(y - s.y) < 24) return s; return null; };
-  MECH_FX.w7surge = {
-    start(m) { m.phase = 'calm'; m.t = 6; m.stones = STONES.map((x, i) => ({ x, y: FLOOR_TOP + 30 + ((i * 37) % 60) })); m.k = 0; },
+  // ---------------- FAIELLA-BIONIN: THE TORCHES ----------------
+  // Bronze cressets stand on the landings of the stair, burning green-gold under the waves. Every so often one of them
+  // draws the sea's light into itself (the stair darkens round it, its flame swells, a ring on the stones shows how far
+  // its light will reach) and then it FLARES. Everything inside the ring that is facing the fire is dazzled: a foe
+  // stands blind for a couple of seconds, open and easier to hurt; the prince is only staggered for a moment. Keep the
+  // torch at your back and the foes coming at you are looking straight into it. Strike a torch to make it flare sooner
+  // (it flares quicker when stoked, so turn round in time). A spent torch gutters low until the sea lets it burn again.
+  const TORCH_X = [430, 790, 1150, 1510, 1870, 2230];
+  const TORCH = { swell: 1.7, stoke: 1.05, spent: 3, rx: 240, ry: .8 };
+  W7.torchReach = (T, x, y) => { const dx = (x - T.x) / TORCH.rx, dy = (y - T.y) / ((FLOOR_BOT - FLOOR_TOP) * TORCH.ry); return dx * dx + dy * dy < 1; };
+  W7.inTorchGlare = (T, x, y, f) => W7.torchReach(T, x, y) && facingTo(x, f, T.x);
+  function torchFlare(m, T) {
+    T.st = 'spent'; T.t = TORCH.spent; T.flash = .45; m.flashK = 1; m.flashX = T.x; m.flashY = T.y;
+    sfx('whoosh'); sfx('hit-crystal', 1); shakeMag = Math.max(shakeMag, 5);
+    if (sfxOn && actx) { tone(784, .5, 'sine', .07, 6); tone(1175, .7, 'triangle', .04, 4, .02); noise(.4, .05, 2400); }
+    fx.push({ kind: 'ring', x: T.x, y: T.y, z: 2, t: .5, max: .5, r: TORCH.rx, col: '#F6FFE0', flat: 1 });
+    for (let i = 0; i < 14; i++) { const a = rand(0, TAU), v = rand(80, 220); parts.push({ x: T.x + Math.cos(a) * 6, y: T.y, z: 78 + Math.sin(a) * 6, vx: Math.cos(a) * v, vy: 0, vz: Math.sin(a) * v, life: .5, max: .5, col: pick(['#F6FFE0', '#B8FFC8', '#FFFFFF']), size: rand(2, 3.4), shape: 'star', rot: 0, vr: 6 }); }
+    bubbles(T.x, T.y, 76, 10, 50);
+    let n = 0;
+    for (const e of enemies) { if (!holdable(e) || !W7.inTorchGlare(T, e.x, e.y, e.facing)) continue;
+      hold(e, 'w7daze', e.type === 'w7bishop' ? W7R.DAZE_T * .5 : W7R.DAZE_T); n++;
+      floatText(e.x, e.y, e.z + e.hh + 22, 'DAZZLED', '#F6FFD8', 13); }
+    if (P.state !== 'dead' && P.state !== 'dodge' && !zoneTrans && W7.inTorchGlare(T, P.x, P.y, P.facing)) {
+      P.state = 'hurt'; P.t = Math.max(P.t || 0, W7R.P_DAZE); P.vx = 0; W7.glareP = 1;
+      floatText(P.x, P.y, 100, 'DAZZLED · TURN YOUR BACK TO IT', '#F6FFD8', 13); }
+    if (n >= 2) sfx('crit');
+    m.flares = (m.flares || 0) + 1;
+  }
+  function torchSwell(m, T, dur) { T.st = 'swell'; T.t = dur; T.dur = dur; m.next = rand(6.5, 8.5);
+    if (sfxOn && actx) tone(196, dur, 'sine', .06, 18);
+    if ((m.told || 0) < 2) { m.told = (m.told || 0) + 1; floatText(P.x, P.y, 112, 'THE TORCH IS FLARING · TURN YOUR BACK TO IT', '#E8FFD0', 14); } }
+  MECH_FX.w7torch = {
+    start(m) { m.torches = TORCH_X.map((x, i) => ({ x, y: Math.round(FLOOR_TOP + (FLOOR_BOT - FLOOR_TOP) * (i % 2 ? .66 : .2)), st: 'burn', t: 0, dur: 1, flash: 0, hit: 0 })); m.next = 5; m.flashK = 0; m.told = 0; m.flares = 0; W7.glareP = 0; W7.torchK = 0; },
     update(m, dt) {
+      W7.glareP = Math.max(0, (W7.glareP || 0) - dt * 1.6); m.flashK = Math.max(0, m.flashK - dt * 2.4);
       if (stillT > 0) return;
-      m.t -= dt;
-      if (m.phase === 'calm') { if (!busy()) m.t = Math.max(m.t, 3); if (m.t <= 0) { m.phase = 'draw'; m.t = 1.7; floatText(P.x, P.y, 110, 'THE SEA DRAWS BACK...', '#C8F0E4', 15); if (sfxOn && actx) { tone(110, 1.6, 'sine', .08, -40); noise(1.6, .05, 400); } } }
-      else if (m.phase === 'draw') { if (m.t <= 0) { m.phase = 'surge'; m.t = 2.3; floatText(P.x, P.y, 120, 'THE NINTH WAVE!', '#FFFFFF', 18); shakeMag = Math.max(shakeMag, 8); sfx('whoosh'); sfx('slam', .6); if (sfxOn && actx) noise(2, .09, 900); } }
-      else if (m.t <= 0) { m.phase = 'calm'; m.t = rand(8, 10); }
-      const tgt = m.phase === 'draw' ? -.55 : m.phase === 'surge' ? 1 : 0; m.k += (tgt - m.k) * Math.min(1, dt * 3); W7.surge = m.k;
-      const k = m.k; if (Math.abs(k) < .05) return;
-      const dir = k > 0 ? -1 : 1, f = Math.abs(k); // the undertow runs down the stair (to the right), the surge up it (to the left)
-      if (!['dodge', 'dead'].includes(P.state) && !W7.leeOf(P.x, P.y)) P.x += dir * f * ((P.z > 4 || P.state === 'hurt' || P.state === 'down') ? 300 : k > 0 ? 150 : 70) * dt;
-      for (const e of enemies) { if (e.dead || e.boss || e.state === 'enter' || W7.leeOf(e.x, e.y)) continue;
-        const lo = loose(e); e.x += dir * f * (lo ? 330 : 110) * dt;
-        const atWall = dir < 0 ? e.x < leftWall() + 10 : e.x > rightWall() - 10;
-        if (atWall) { e.x = clamp(e.x, leftWall() + 10, rightWall() - 10); if (lo && f > .6 && !(e.w7dashT > 0)) { e.w7dashT = 1.2; const d = Math.round(10 + e.maxHp * .14); floatText(e.x, e.y, e.hh + 26, 'DASHED ON THE STEPS', '#E8F8F0', 13); strike(e, d, -dir, { dmg: d, kb: 200, launch: 260, power: 2, trump: 1 }); } } }
-      for (const h of hazards) if (h.kind === 'w7fire') h.x += dir * f * 120 * dt;
-      if (Math.random() < dt * 60 * f) parts.push({ x: camX + rand(0, VW), y: rand(FLOOR_TOP, FLOOR_BOT), z: rand(2, 90), vx: dir * rand(200, 420), vy: 0, vz: rand(-10, 10), life: .5, max: .5, col: pick(['rgba(220,240,230,.6)', 'rgba(200,190,150,.5)', 'rgba(255,255,255,.5)']), size: rand(1.4, 3), shape: 'streak', rot: 0, vr: 0 });
-      for (const e of enemies) if (e.w7dashT > 0) e.w7dashT -= dt;
+      let swell = 0;
+      for (const T of m.torches) { T.flash = Math.max(0, T.flash - dt); T.hit = Math.max(0, T.hit - dt);
+        if (T.st === 'swell') { T.t -= dt; swell = Math.max(swell, 1 - T.t / T.dur); if (T.t <= 0) torchFlare(m, T); }
+        else if (T.st === 'spent') { T.t -= dt; if (T.t <= 0) T.st = 'burn'; } }
+      W7.torchK = swell;
+      // strike a torch and it flares
+      const mv = P.move, k = P.state === 'atk' && mv ? P.t / mv.dur : -1;
+      if (k >= 0 && k >= mv.h[0] && k <= mv.h[1]) for (const T of m.torches) {
+        if (T.hit > 0 || Math.abs(P.y - T.y) > 26) continue; const ax = (T.x - P.x) * P.facing; if (ax < -10 || ax > (mv.x1 || 40) + 22) continue;
+        T.hit = .3; T.flash = Math.max(T.flash, .08); sfx('hit-metal', .5); bubbles(T.x, T.y, 70, 4, 30);
+        if (T.st === 'burn') { torchSwell(m, T, TORCH.stoke); floatText(T.x, T.y, 110, 'STOKED', '#E8FFD0', 12); } }
+      // and every so often, while there is fighting, the one nearest you draws the light in by itself
+      if (!busy() || m.torches.some(T => T.st === 'swell')) return;
+      m.next -= dt; if (m.next > 0) return;
+      let best = null, bd = 1e9; for (const T of m.torches) { if (T.st !== 'burn' || T.x < camX + 30 || T.x > camX + VW - 30) continue; const d = Math.abs(T.x - P.x); if (d < bd) { bd = d; best = T; } }
+      if (best) torchSwell(m, best, TORCH.swell); else m.next = 1;
     },
-    boxes(m, box) { for (const s of m.stones) if (Math.abs(s.x - camX - VW / 2) < VW) box(s.x, s.y, 0, 40, 60); },
+    boxes(m, box) { for (const T of m.torches) if (T.x > camX - 80 && T.x < camX + VW + 80) box(T.x, T.y, 0, 40, 110); },
     list(m, list, t) {
-      for (const s of m.stones) { if (s.x < camX - 60 || s.x > camX + VW + 60) continue;
-        list.push([s.y, () => drawStone(s, t, m)]);
-        if (Math.abs(m.k) > .2) list.push([s.y - 1, () => onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(200,255,240,${.12 * Math.abs(m.k)})`; ctx.beginPath(); ctx.ellipse(s.x - 42, s.y, 38, 16, 0, 0, TAU); ctx.fill(); ctx.restore(); })]); }
+      const live = m.torches.filter(T => T.x > camX - 300 && T.x < camX + VW + 300);
+      list.push([FLOOR_TOP - 1.2, () => onMain(() => drawTorchFloor(m, live, t))]);
+      for (const T of live) { if (T.x < camX - 60 || T.x > camX + VW + 60) continue; list.push([T.y, () => drawTorch(T, t)]); list.push([T.y + .05, () => onMain(() => drawTorchFlame(T, t))]); }
+      for (const e of enemies) if (e.w7daze > 0 && !e.dead) list.push([e.y + .2, () => onMain(() => drawDazed(e, t))]);
       if (W7.bub.length) list.push([FLOOR_BOT + 10, () => onMain(drawBubbles)]);
+      list.push([FLOOR_BOT + 20, () => onMain(() => drawTorchGlare(m, live, t))]);
     },
   };
-  // a mooring-stone of the stair: a squat carved bollard, green with weed, a bronze ring and a length of chain on it
-  function drawStone(s, t, m) {
-    const sp = propSprite('w7stone', 70, 80, 35, 70, (th, sd) => {
-      cel(PB([-15, 0, -17, -22, -12, -34, 0, -38, 12, -34, 17, -22, 15, 0]), '#7A8A84', { d: 3, dark: '#3E4E4A', lite: '#C8D6CE', w: 1.4, tex: () => {
-        ctx.strokeStyle = 'rgba(30,50,46,.5)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-14, -24); ctx.quadraticCurveTo(0, -20, 14, -24); ctx.stroke();
-        for (let i = 0; i < 14; i++) { ctx.fillStyle = i % 2 ? 'rgba(60,120,80,.55)' : 'rgba(120,60,70,.4)'; ell(-12 + hsh(i) * 24, -2 - hsh(i + 5) * 18, 2 + hsh(i + 2) * 2, 1.5); ctx.fill(); } } });
-      ctx.strokeStyle = PAL.bronze; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(0, -18, 6, 0, TAU); ctx.stroke(); ctx.strokeStyle = PAL.verdL; ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(0, -18, 6, Math.PI, Math.PI * 1.6); ctx.stroke();
-      ctx.strokeStyle = '#3A4A48'; ctx.lineWidth = 2; ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.moveTo(4, -13); ctx.quadraticCurveTo(14, -2, 26, -1); ctx.stroke(); ctx.setLineDash([]);
-    }, { foot: 12, seed: 71, haze: .08 });
-    propDraw(sp, s.x, s.y, { sh: 22 });
+  // a cresset of the stair: a tall fluted standard of green bronze on three feet, the bowl on top (the flame is drawn live)
+  function drawTorch(T, t) {
+    const sp = propSprite('w7cresset', 60, 100, 30, 92, () => {
+      cel(PB([-13, 0, -4, -8, -3, -64, 3, -64, 4, -8, 13, 0, 6, 0, 0, -5, -6, 0]), PAL.bronze, { d: 2, dark: PAL.bronzeD, lite: PAL.verdL, w: 1.2 });
+      ctx.fillStyle = 'rgba(10,30,26,.45)'; for (let i = -1; i <= 1; i++) ctx.fillRect(i * 1.6 - .3, -62, .7, 54);
+      ctx.fillStyle = PAL.verd; ctx.fillRect(-6, -40, 12, 3); ctx.fillStyle = PAL.verdL; ctx.fillRect(-6, -40, 12, 1);
+      cel(PB([-15, -70, 15, -70, 10, -62, -10, -62]), PAL.bronzeD, { d: 2, dark: '#1E2A24', lite: PAL.gold, w: 1.2 });
+      ctx.fillStyle = PAL.gold; ctx.fillRect(-15, -71.5, 30, 1.6);
+    }, { foot: 10, seed: 77, haze: .06 });
+    propDraw(sp, T.x, T.y, { sh: 18, flash: T.flash > .3 || T.hit > .2 });
+  }
+  function drawTorchFlame(T, t) {
+    const k = T.st === 'swell' ? sm(1 - T.t / T.dur) : 0, low = T.st === 'spent' ? .45 + .55 * cl01(1 - T.t / TORCH.spent) : 1, y = T.y - 72;
+    const pulse = T.st === 'swell' ? 1 + .12 * Math.sin(t * (10 + k * 22)) * k : 1;
+    waterFlame(T.x, y, (1 + k * 1.3) * low * pulse, t, Math.sin(t * .8 + T.x) * .15, 1);
+    glowM(T.x, y - 10, 46 + k * 60, RGB.flame, (.2 + k * .45) * low);
+    if (T.flash > 0) glowM(T.x, y - 10, 160, '246,255,224', T.flash * 1.6);
+  }
+  // under the figures: the pool of light round each torch, and while one is swelling, the reach of its flare
+  function drawTorchFloor(m, live, t) {
+    for (const T of live) {
+      const low = T.st === 'spent' ? .4 : 1, ry = (FLOOR_BOT - FLOOR_TOP) * TORCH.ry;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(T.x, T.y); ctx.scale(1, .32);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 120); g.addColorStop(0, `rgba(${RGB.flame},${.2 * low})`); g.addColorStop(1, `rgba(${RGB.flame},0)`); ctx.fillStyle = g; ctx.fillRect(-120, -120, 240, 240); ctx.restore();
+      if (T.st !== 'swell') continue;
+      const k = 1 - T.t / T.dur;
+      ctx.save(); ctx.fillStyle = `rgba(232,255,200,${.06 + .14 * k})`; ell(T.x, T.y, TORCH.rx, ry); ctx.fill();
+      ctx.strokeStyle = `rgba(240,255,210,${.5 + .45 * k})`; ctx.lineWidth = 2.2; ctx.setLineDash([10, 6]); ctx.lineDashOffset = -t * 30; ell(T.x, T.y, TORCH.rx, ry); ctx.stroke(); ctx.setLineDash([]);
+      // the light drawn in: rings closing on the torch
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) { const q = 1 - ((k * 2.2 + i / 3) % 1); ctx.strokeStyle = `rgba(220,255,200,${.4 * (1 - q) + .1})`; ctx.lineWidth = 1.6; ell(T.x, T.y, TORCH.rx * q, ry * q); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+  // over everything: the stair darkening round a swelling torch (one radial gradient), the flash of the flare, and the
+  // glare left in the prince's eyes if he was looking into it
+  function drawTorchGlare(m, live, t) {
+    const S = live.find(T => T.st === 'swell');
+    if (S && DET()) { const k = sm(1 - S.t / S.dur), cy = S.y - 50, R = 360;
+      const g = ctx.createRadialGradient(S.x, cy, 60, S.x, cy, R); g.addColorStop(0, 'rgba(2,14,20,0)'); g.addColorStop(1, `rgba(2,14,20,${.42 * k})`);
+      ctx.fillStyle = g; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40); }
+    if (m.flashK > 0) { const k = m.flashK, cy = m.flashY - 60;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(m.flashX, cy, 10, m.flashX, cy, 420); g.addColorStop(0, `rgba(246,255,226,${.85 * k})`); g.addColorStop(.35, `rgba(220,255,214,${.35 * k})`); g.addColorStop(1, 'rgba(200,255,220,0)');
+      ctx.fillStyle = g; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40);
+      ctx.strokeStyle = `rgba(250,255,230,${.5 * k})`; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + .2, r0 = 30, r1 = 120 + 240 * (1 - k); ctx.moveTo(m.flashX + Math.cos(a) * r0, cy + Math.sin(a) * r0 * .6); ctx.lineTo(m.flashX + Math.cos(a) * r1, cy + Math.sin(a) * r1 * .6); } ctx.stroke(); ctx.restore(); }
+    if (W7.glareP > 0) { ctx.save(); ctx.globalAlpha = Math.min(1, W7.glareP) * .55; ctx.fillStyle = '#F2FFE8'; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40); ctx.restore(); }
+  }
+  // a dazzled foe: little stars of light going round its head, its hands up
+  function drawDazed(e, t) {
+    const hy = e.y - e.z - e.hh - 4, k = Math.min(1, e.w7daze / .4);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 3; i++) { const a = t * 5 + i / 3 * TAU, x = e.x + Math.cos(a) * 14, y = hy + Math.sin(a) * 4, r = 3.4;
+      ctx.fillStyle = `rgba(246,255,214,${.9 * k})`; ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * .3, y - r * .3); ctx.lineTo(x + r, y); ctx.lineTo(x + r * .3, y + r * .3); ctx.lineTo(x, y + r); ctx.lineTo(x - r * .3, y + r * .3); ctx.lineTo(x - r, y); ctx.lineTo(x - r * .3, y - r * .3); ctx.closePath(); ctx.fill(); }
+    glowM(e.x, hy + 10, 22, '246,255,214', .25 * k);
+    ctx.restore();
   }
   function drawBubbles() { ctx.save(); for (const b of W7.bub) { const a = 1 - b.t / b.max, y = b.y - b.z; ctx.strokeStyle = `rgba(230,250,248,${.75 * a})`; ctx.lineWidth = .8; circle(b.x, y, b.r); ctx.stroke(); ctx.fillStyle = `rgba(255,255,255,${.6 * a})`; circle(b.x - b.r * .35, y - b.r * .35, b.r * .3); ctx.fill(); } ctx.restore(); }
   W7.drawBubbles = drawBubbles;
 
-  // ---------------- THE STREETS OF REBMA: THE DROWNED BELL, AND THE VENTS ----------------
-  // The bell in the campanile tolls while there is fighting in the street; under the water the stroke goes through the
-  // paving like a hammer, and whatever is standing on it is struck. Be off the ground when it lands (the water bears a
-  // jump up a long way), or in one of the columns of bubbles that the vents in the street breathe: they lift whatever is
-  // in them and hold it up, helpless, and a foe held up there is yours.
-  const VENTS = [420, 700, 980, 1260, 1520];
-  W7.inVent = (x, y) => { const m = mech; if (!m || m.kind !== 'w7toll' || !m.vents) return null; for (const v of m.vents) if (v.on > .3 && Math.abs(x - v.x) < 30 && Math.abs(y - v.y) < 15) return v; return null; };
-  MECH_FX.w7toll = {
-    start(m) { m.vents = VENTS.map((x, i) => ({ x, y: FLOOR_TOP + 26 + ((i * 43) % 64), on: 0, t: i * 1.3, period: 5.6 })); m.bellT = 8; m.warned = 0; W7.bellSwing = 0; W7.bellRing = 0; m.bish = null; m.bishDone = false; },
+  // ---------------- THE STREETS OF REBMA: THE GLASS TURNS ----------------
+  // Rebma is Amber turned about, and the sea's mirror hangs low over its streets. While there is fighting, the bell in
+  // the campanile swings, and a sheet of the mirror comes down into the street: a bright seam standing across it, and in
+  // it you can see where every foe that is standing will be, reflected to the far side of the seam and turned the other
+  // way. When the bell strikes the glass turns, and they are. The prince of Amber is no reflection, and stays where he is.
+  // A turned foe stands as it was put for a moment, and if its back is to you (a gold ring marks those in the glass), it
+  // can neither see you nor guard, and your blows land harder. What you are holding in your blows (knocked down, in the
+  // air, reeling) is not the glass's to take: keep a foe in your combo and it stays with you.
+  const turnable = (e) => holdable(e) && !e.air && !['hurt', 'down'].includes(e.state) && !(e.z > (e.def.hover || 0) + 30);
+  const mirrorX = (s, x) => clamp(2 * s - x, leftWall() + 20, rightWall() - 20);
+  W7.turnTarget = (m, e) => ({ x: mirrorX(m.s, e.x), f: -e.facing });
+  function glassTurn(m) {
+    W7.bellRing = 1; m.flash = .5; shakeMag = Math.max(shakeMag, 6); flashT = Math.max(flashT, .05);
+    sfx('hit-crystal', 1); sfx('whoosh', .6);
+    if (sfxOn && actx) { tone(262, 2, 'sine', .1, -4); tone(392, 1.6, 'triangle', .05, -3, .01); tone(1047, .6, 'sine', .04, 0, .02); }
+    let back = 0;
+    for (const e of enemies) { if (!turnable(e)) continue;
+      const T = W7.turnTarget(m, e); bubbles(e.x, e.y, 30, 6, 40);
+      for (let i = 0; i < 5; i++) parts.push({ x: e.x + rand(-10, 10), y: e.y, z: rand(10, e.hh), vx: rand(-60, 60), vy: 0, vz: rand(30, 120), life: .5, max: .5, col: pick(['#E8F8FF', '#BEEAD8', '#FFFFFF']), size: rand(2, 3), shape: 'star', rot: 0, vr: 6 });
+      e.x = T.x; e.facing = T.f; e.vx = 0; hold(e, 'w7turn', e.type === 'w7bishop' ? W7R.TURN_T * .5 : W7R.TURN_T);
+      bubbles(e.x, e.y, 30, 6, 40);
+      if (Math.sign(P.x - e.x) === -e.facing) { back++; floatText(e.x, e.y, e.hh + 24, 'TURNED ABOUT', '#FFE08A', 12); } }
+    // what they have thrown is turned with them
+    for (const h of hazards) if (h.kind === 'w7fire') { h.x = 2 * m.s - h.x; h.vx = -h.vx; }
+    for (const p of projs) if (p.owner === 'e' && p.vx) { p.x = 2 * m.s - p.x; p.vx = -p.vx; }
+    if (back >= 2) sfx('crit');
+    m.turns = (m.turns || 0) + 1;
+  }
+  MECH_FX.w7turn = {
+    start(m) { m.ph = 'calm'; m.next = 6; m.t = 0; m.s = 0; m.k = 0; m.flash = 0; m.told = 0; m.turns = 0; W7.bellSwing = 0; W7.bellRing = 0; m.bish = null; m.bishDone = false; },
     update(m, dt) {
+      W7.bellRing = Math.max(0, W7.bellRing - dt * .8); m.flash = Math.max(0, m.flash - dt);
       if (stillT > 0) return;
-      for (const v of m.vents) { v.t += dt; const ph = v.t % v.period, act = ph < 3.6; v.on += ((act ? 1 : 0) - v.on) * Math.min(1, dt * 4);
-        if (v.on > .3 && Math.random() < dt * 40 * v.on) W7.bub.push({ x: v.x + rand(-22, 22), y: v.y + rand(-6, 6), z: rand(0, 20), vx: rand(-8, 8), vz: rand(70, 130), r: rand(1.2, 3.4), t: 0, max: rand(1, 2.2) }); }
-      if (P.state !== 'dead' && W7.inVent(P.x, P.y)) { if (P.z < 66) P.vz = Math.max(P.vz, 150); else P.vz = Math.max(P.vz, 20); if (P.state === 'idle' || P.state === 'walk' || P.state === 'run') P.state = P.z > 2 ? 'jump' : P.state; P.jvx = P.jvx || 0; P.jvy = P.jvy || 0; }
-      for (const e of enemies) if (!e.dead && !e.boss && e.type !== 'w7bishop' && e.def.move !== 'fly' && !['enter', 'w7act', 'dying'].includes(e.state) && W7.inVent(e.x, e.y)) { if (e.z < 56) { e.air = true; e.state = 'hurt'; e.t = .4; e.vz = Math.max(e.vz, 170); e.plan = null; if (!(e.w7ventMsg > 0)) { e.w7ventMsg = 2; floatText(e.x, e.y, e.hh + 20, 'BORNE UP', '#DCF4FF', 12); } } }
-      for (const e of enemies) if (e.w7ventMsg > 0) e.w7ventMsg -= dt;
-      // the bell
-      if (busy()) m.bellT -= dt; else m.bellT = Math.max(m.bellT, 4);
-      const warn = m.bellT < 1.8; W7.bellSwing = warn ? Math.sin((1.8 - m.bellT) * 7) * cl01((1.8 - m.bellT) / 1.2) : W7.bellSwing * Math.pow(.2, dt);
-      W7.bellRing = Math.max(0, W7.bellRing - dt * .8); m.warnK = warn ? 1 - m.bellT / 1.8 : 0;
-      if (warn && !m.warned) { m.warned = 1; floatText(P.x, P.y, 110, 'THE BELL IS SWINGING', '#E8F8C8', 15); if (sfxOn && actx) { tone(523, .4, 'sine', .05, 0, 0); tone(523, .4, 'sine', .05, 0, .9); } }
-      if (m.bellT <= 0) { m.bellT = rand(9, 11); m.warned = 0; toll(m); }
+      if (m.ph === 'calm') {
+        W7.bellSwing *= Math.pow(.2, dt); m.k = 0;
+        if (busy()) m.next -= dt; else m.next = Math.max(m.next, 3);
+        if (m.next <= 0) { const foes = enemies.filter(e => turnable(e) && e.x > camX && e.x < camX + VW);
+          if (!foes.length) m.next = 1;
+          else { const mx = foes.reduce((a, e) => a + e.x, 0) / foes.length, side = Math.sign(mx - P.x) || P.facing;
+            m.s = clamp(P.x + side * rand(80, 120), leftWall() + 70, rightWall() - 70); m.ph = 'tell'; m.t = 1.8;
+            if (sfxOn && actx) { tone(523, .4, 'sine', .05, 0, 0); tone(523, .4, 'sine', .05, 0, .9); }
+            if (m.told < 2) { m.told++; floatText(P.x, P.y, 112, 'THE GLASS IS TURNING · TAKE THEM FROM BEHIND', '#E8F4FF', 14); } } }
+      } else {
+        m.t -= dt; m.k = cl01(1 - m.t / 1.8); W7.bellSwing = Math.sin(m.k * 1.8 * 7) * cl01(m.k * 1.5);
+        if (m.t <= 0) { m.ph = 'calm'; m.next = rand(8, 10); glassTurn(m); }
+      }
       bishopUpdate(m, dt);
     },
-    boxes(m, box) {},
+    boxes(m, box) { if (m.ph === 'tell') box(m.s, FLOOR_BOT, 0, VW, 300); },
     list(m, list, t) {
-      list.push([FLOOR_TOP - 1, () => onMain(() => drawVents(m, t))]);
+      if (m.ph === 'tell' || m.flash > 0) list.push([FLOOR_TOP - 1.1, () => onMain(() => drawSeamFloor(m, t))]);
+      if (m.ph === 'tell') for (const e of enemies) if (turnable(e)) list.push([e.y - .02, () => onMain(() => drawTurnGhost(m, e, t))]);
+      for (const e of enemies) if (e.w7turn > 0 && !e.dead && Math.sign(P.x - e.x) === -e.facing) list.push([e.y + .2, () => onMain(() => drawBackMark(e, t))]);
+      if (m.ph === 'tell' || m.flash > 0) list.push([FLOOR_BOT + 12, () => onMain(() => drawSeam(m, t))]);
       if (W7.bub.length) list.push([FLOOR_BOT + 10, () => onMain(drawBubbles)]);
     },
   };
-  function toll(m) {
-    W7.bellRing = 1; shakeMag = Math.max(shakeMag, 12); flashT = Math.max(flashT, .08); zoom = Math.max(zoom, .03);
-    if (sfxOn && actx) { tone(130, 2.4, 'sine', .14, -6); tone(196, 2, 'triangle', .07, -4); tone(392, 1.2, 'sine', .04, -8); }
-    fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .5, max: .5, r: 260, col: '#E8FFE8', flat: 1 });
-    if (P.state !== 'dead' && P.z < 14 && !W7.inVent(P.x, P.y)) { playerDamage(Math.round(maxHp() * .24), P.x + P.facing, true); floatText(P.x, P.y, 90, 'THE BELL TOLLS', '#E8FFE8', 15); }
-    for (const e of enemies) if (!e.dead && !e.boss && e.state !== 'enter' && e.z < 14 && !W7.inVent(e.x, e.y)) { const d = Math.round(8 + e.maxHp * (e.type === 'w7bishop' ? .05 : .12)); strike(e, d, Math.sign(e.x - P.x) || 1, { dmg: d, kb: 60, launch: 200, power: 1, trump: 1 }); }
+  // the seam where the mirror meets the street: a line of light across the paving
+  function drawSeamFloor(m, t) {
+    const a = m.ph === 'tell' ? .35 + .5 * m.k : m.flash * 1.6;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(m.s - 40, 0, m.s + 40, 0); g.addColorStop(0, 'rgba(200,236,255,0)'); g.addColorStop(.5, `rgba(220,244,255,${.3 * a})`); g.addColorStop(1, 'rgba(200,236,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(m.s - 40, FLOOR_TOP, 80, FLOOR_BOT - FLOOR_TOP + 8);
+    ctx.strokeStyle = `rgba(240,250,255,${a})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(m.s, FLOOR_TOP); ctx.lineTo(m.s, FLOOR_BOT + 6); ctx.stroke();
+    ctx.restore();
   }
-  function drawVents(m, t) {
-    for (const v of m.vents) { if (v.x < camX - 60 || v.x > camX + VW + 60) continue;
-      ctx.fillStyle = '#1A2426'; ell(v.x, v.y, 30, 10); ctx.fill(); ctx.strokeStyle = PAL.bronze; ctx.lineWidth = 2; ell(v.x, v.y, 30, 10); ctx.stroke(); ctx.strokeStyle = PAL.verdL; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(v.x, v.y, 30, 10, 0, Math.PI, Math.PI * 1.7); ctx.stroke();
-      ctx.strokeStyle = '#0A1012'; ctx.lineWidth = 1.6; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(v.x + i * 9, v.y - 7); ctx.lineTo(v.x + i * 9, v.y + 7); } ctx.stroke();
-      if (v.on > .05) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(0, v.y - 120, 0, v.y); g.addColorStop(0, 'rgba(200,240,240,0)'); g.addColorStop(1, `rgba(200,240,240,${.22 * v.on})`); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(v.x - 26, v.y); ctx.lineTo(v.x - 32, v.y - 120); ctx.lineTo(v.x + 32, v.y - 120); ctx.lineTo(v.x + 26, v.y); ctx.closePath(); ctx.fill(); ctx.restore(); }
-    }
-    if (m.warnK > 0) { // the warning: the paving shivers with rings before the stroke
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 3; i++) { const q = (t * 1.6 + i / 3) % 1; ctx.strokeStyle = `rgba(232,255,220,${.35 * m.warnK * (1 - q)})`; ctx.lineWidth = 2; ell(P.x, P.y, 30 + q * 220, (30 + q * 220) / 2.6); ctx.stroke(); } ctx.restore(); }
+  // the sheet of the mirror itself, coming down out of the surface: pale glass, rippling, its edge bright
+  function drawSeam(m, t) {
+    const k = m.ph === 'tell' ? sm(Math.min(1, m.k * 1.6)) : 1, y0 = Y_OFF, y1 = lerp(Y_OFF + 10, FLOOR_BOT + 6, k), w = 18, a = m.ph === 'tell' ? .55 + .3 * m.k : m.flash * 2;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(m.s - w, 0, m.s + w, 0); g.addColorStop(0, 'rgba(190,230,255,0)'); g.addColorStop(.42, `rgba(210,240,255,${.22 * a})`); g.addColorStop(.5, `rgba(250,253,255,${.5 * a})`); g.addColorStop(.58, `rgba(210,240,255,${.22 * a})`); g.addColorStop(1, 'rgba(190,230,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(m.s - w, y0, w * 2, y1 - y0);
+    ctx.strokeStyle = `rgba(250,253,255,${.8 * a})`; ctx.lineWidth = 1.2;
+    ctx.beginPath(); for (let y = y0; y <= y1; y += 8) { const dx = Math.sin(y * .09 + t * 4) * 2.2; y === y0 ? ctx.moveTo(m.s + dx, y) : ctx.lineTo(m.s + dx, y); } ctx.stroke();
+    for (let i = 0; i < 6; i++) { const y = y0 + ((t * 40 + i * 37) % Math.max(1, y1 - y0)); ctx.fillStyle = `rgba(255,255,255,${.5 * a})`; ctx.fillRect(m.s - 6, y, 12, 1); }
+    ctx.restore();
+  }
+  // where a foe will be when the glass turns: its reflection, pale, the wrong way round, with a ring under it (gold when
+  // it will have its back to you) and a dotted line back through the seam to where it stands now
+  function drawTurnGhost(m, e, t) {
+    const T = W7.turnTarget(m, e), back = Math.sign(P.x - T.x) === -T.f, k = sm(Math.min(1, m.k * 2.2)), col = back ? '255,214,120' : '220,240,255';
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col},${.35 * k})`; ctx.lineWidth = 1.2; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(T.x, e.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = `rgba(${col},${.16 * k})`; ell(T.x, e.y, e.hw + 14, 8); ctx.fill(); ctx.strokeStyle = `rgba(${col},${.9 * k})`; ctx.lineWidth = back ? 2.4 : 1.6; ell(T.x, e.y, e.hw + 14, 8); ctx.stroke();
+    // a chevron on the ring, pointing the way it will face
+    ctx.fillStyle = `rgba(${col},${.95 * k})`; const cx = T.x + T.f * (e.hw + 16); poly([cx + T.f * 7, e.y, cx - T.f * 2, e.y - 5, cx - T.f * 2, e.y + 5]); ctx.fill();
+    const g = Object.create(e); g.x = T.x; g.facing = T.f; g.flash = 0; g.elite = false;
+    ctx.globalAlpha = .42 * k; TINT = back ? '#FFE6A8' : '#DCF0FF'; try { drawEnemy(g, t); } finally { TINT = null; }
+    ctx.restore();
+  }
+  // a foe turned about with its back to you: a gold crescent on its back
+  function drawBackMark(e, t) {
+    const k = Math.min(1, e.w7turn / .4), cy = e.y - e.z - e.hh * .55, bx = e.x - e.facing * (e.hw + 4), p = .7 + .3 * Math.sin(t * 9);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,214,120,${.85 * k * p})`; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.ellipse(bx, cy, 7, e.hh * .32, 0, e.facing > 0 ? Math.PI * .6 : -Math.PI * .4, e.facing > 0 ? Math.PI * 1.4 : Math.PI * .4); ctx.stroke();
+    glowM(bx, cy, 26, '255,214,120', .3 * k); ctx.restore();
   }
   // the Sea-Bishop keeps the well that goes down to the Pattern; when the street is clear, he comes up out of it
   function bishopUpdate(m, dt) {
@@ -2102,6 +2238,8 @@
     const decay = () => { e.flash = Math.max(0, e.flash - dt); e.jit = Math.max(0, e.jit - dt); e.flinch = Math.max(0, (e.flinch || 0) - dt); e.sqx += (1 - e.sqx) * Math.min(1, dt * 8); e.sqy += (1 - e.sqy) * Math.min(1, dt * 8); };
     if (e.def === BOSSES.w7king) { if (e.dead) return _upd(e, dt); decay(); e.state = 'w7act'; e.w7a = 'king'; e.vx = 0; e.vz = 0; e.air = false; e.plan = null; e.rageT = 0; e.enraged = false; return; } // (the 'w7glass' rule moves him)
     if (e.dead) return _upd(e, dt);
+    // dazzled by a torch, or turned about by the glass: it stands as it is, doing nothing, until it comes to itself
+    for (const k of ['w7daze', 'w7turn']) if (e[k] > 0) { e[k] -= dt; if (e[k] > 0 && ['idle', 'walk', 'wind', 'block', 'evade'].includes(e.state)) { e.plan = null; recover(e, e[k]); } }
     if (e.type === 'w7bellk' && e.w7bare && e.state === 'idle' && e.plan !== 'w7stab') e.plan = 'w7stab';
     if (SWIM[e.type] && !['enter', 'w7act', 'dying', 'hurt', 'down'].includes(e.state)) { // they swim: they circle and weave rather than walk
       const r = _upd(e, dt), ph = performance.now() / 1000 * SWIM[e.type][2] + (e.slot || 0);
@@ -2115,9 +2253,16 @@
     return _upd(e, dt);
   };
   // blows: the King is under the water or behind his reflection; the glass bell turns light blows; the halberdier blocks
-  const heavyHit = (m) => m.trump || m.power === 2 || m.launch || m.smash || m.shock || (m.key && m.key.includes('H')) || m.key === 'X';
+  const heavyHit = (m) => m.trump || m.w7back || m.power === 2 || m.launch || m.smash || m.shock || (m.key && m.key.includes('H')) || m.key === 'X';
   const _strike = strike;
   strike = function (e, base, dir, m, echo) {
+    // Rebma's rules: a dazzled foe is easier to hurt; one turned about by the glass, struck from behind, is hurt worse,
+    // and the blow counts as a heavy one (it cracks a glass bell; no guard turns it)
+    if (!e.boss && !e.dead && m) {
+      if (e.w7daze > 0) base *= W7.RULE.DAZE_DMG;
+      if (e.w7turn > 0 && Math.sign(P.x - e.x) === -e.facing) { base *= W7.RULE.BACK_DMG; m = Object.assign({}, m, { w7back: 1 });
+        if (!(e.w7bk > performance.now())) { e.w7bk = performance.now() + 700; floatText(e.x, e.y, e.z + e.hh + 30, 'FROM BEHIND', '#FFE08A', 12); } }
+    }
     if (e.def === BOSSES.w7king) {
       if (e.dead) return;
       if (!W7.kingVuln(e)) { if (!(e.w7msg > performance.now())) { e.w7msg = performance.now() + 800; floatText(e.x, e.y - e.z + 30, 90, W7.G.mode === 'p2' ? 'HE IS UNDER THE WATER' : 'NOT NOW', '#DCF4F0', 12); }
