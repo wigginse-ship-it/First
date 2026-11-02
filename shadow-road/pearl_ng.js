@@ -687,7 +687,7 @@
     if (!LOCO.includes(st) && st !== 'dodge') { CUR.vx *= Math.pow(st === 'atk' ? .05 : .01, dt); CUR.vy *= Math.pow(st === 'atk' ? .05 : .01, dt); CUR.glide = false; return; }
     if (runTap && LOCO.includes(st)) fling(mx, my); // a double-tap throws the current as a dodge does (but leaves him open)
     const sp = spd(), inp = Math.hypot(mx, my), dodging = st === 'dodge';
-    CUR.flingT = Math.max(0, (CUR.flingT || 0) - dt);
+    { const was = CUR.flingT || 0; CUR.flingT = Math.max(0, was - dt); if (was > 0 && CUR.flingT === 0) CUR.post = .3; CUR.post = Math.max(0, (CUR.post || 0) - (was > 0 ? 0 : dt)); } // (post: just after the fling, still easing down)
     // lay the current: gather speed along the stick, bleed the part of the speed that goes across it (a curve, not a skid)
     const cr = T.cruise * sp;
     if (inp > .15) { const nx = mx / inp, ny = my / inp, a = T.acc * sp * (dodging ? .35 : 1), top = cr * Math.min(1, inp);
@@ -698,7 +698,10 @@
     else { const c = Math.pow(dodging ? .8 : T.coast, dt); CUR.vx *= c; CUR.vy *= c; CUR.lay = Math.max(0, CUR.lay - dt * 3); }
     // over cruising speed (a fling, a bounce) it eases back down, slowly while the fling is still being thrown
     const s = speedE();
-    if (s > cr) { const k = (cr + (s - cr) * Math.pow(CUR.flingT > 0 ? T.overFling : T.over, dt)) / s; CUR.vx *= k; CUR.vy *= k; }
+    // the fling's speed is all at the front of the dodge: held through its first half, then it eases quickly back to cruising
+    // speed over the second half and the moment after, so the glide it leaves him in carries no second burst
+    const ease = CUR.flingT > T.flingDur * .5 ? T.overFling : (CUR.flingT > 0 || CUR.post > 0) ? .004 : T.over;
+    if (s > cr) { const k = (cr + (s - cr) * Math.pow(ease, dt)) / s; CUR.vx *= k; CUR.vy *= k; }
     if (speedE() < 4 && inp < .15) { CUR.vx = CUR.vy = 0; }
     P.x += CUR.vx * dt; P.y += CUR.vy * dt;
     // the screen's edges (and a locked fight's walls), the street's near and far sides: off them like a pinball
