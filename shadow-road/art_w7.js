@@ -1759,7 +1759,7 @@
   function drawTorchGlare(m, live, t) {
     const S = live.find(T => T.st === 'swell');
     if (S && DET()) { const k = sm(1 - S.t / S.dur), cy = S.y - 50, R = 360;
-      const g = ctx.createRadialGradient(S.x, cy, 60, S.x, cy, R); g.addColorStop(0, 'rgba(2,14,20,0)'); g.addColorStop(1, `rgba(2,14,20,${.42 * k})`);
+      const g = ctx.createRadialGradient(S.x, cy, 60, S.x, cy, R); g.addColorStop(0, 'rgba(2,14,20,0)'); g.addColorStop(.45, `rgba(2,14,20,${.3 * k})`); g.addColorStop(1, `rgba(2,14,20,${.6 * k})`);
       ctx.fillStyle = g; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40); }
     if (m.flashK > 0) { const k = m.flashK, cy = m.flashY - 60;
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(m.flashX, cy, 10, m.flashX, cy, 420); g.addColorStop(0, `rgba(246,255,226,${.85 * k})`); g.addColorStop(.35, `rgba(220,255,214,${.35 * k})`); g.addColorStop(1, 'rgba(200,255,220,0)');
@@ -1771,7 +1771,7 @@
   function drawDazed(e, t) {
     const hy = e.y - e.z - e.hh - 4, k = Math.min(1, e.w7daze / .4);
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 3; i++) { const a = t * 5 + i / 3 * TAU, x = e.x + Math.cos(a) * 14, y = hy + Math.sin(a) * 4, r = 3.4;
+    for (let i = 0; i < 3; i++) { const a = t * 5 + i / 3 * TAU, x = e.x + Math.cos(a) * 15, y = hy + Math.sin(a) * 5, r = 5;
       ctx.fillStyle = `rgba(246,255,214,${.9 * k})`; ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * .3, y - r * .3); ctx.lineTo(x + r, y); ctx.lineTo(x + r * .3, y + r * .3); ctx.lineTo(x, y + r); ctx.lineTo(x - r * .3, y + r * .3); ctx.lineTo(x - r, y); ctx.lineTo(x - r * .3, y - r * .3); ctx.closePath(); ctx.fill(); }
     glowM(e.x, hy + 10, 22, '246,255,214', .25 * k);
     ctx.restore();
@@ -1800,10 +1800,11 @@
       for (let i = 0; i < 5; i++) parts.push({ x: e.x + rand(-10, 10), y: e.y, z: rand(10, e.hh), vx: rand(-60, 60), vy: 0, vz: rand(30, 120), life: .5, max: .5, col: pick(['#E8F8FF', '#BEEAD8', '#FFFFFF']), size: rand(2, 3), shape: 'star', rot: 0, vr: 6 });
       e.x = T.x; e.facing = T.f; e.vx = 0; hold(e, 'w7turn', e.type === 'w7bishop' ? W7R.TURN_T * .5 : W7R.TURN_T);
       bubbles(e.x, e.y, 30, 6, 40);
-      if (Math.sign(P.x - e.x) === -e.facing) { back++; floatText(e.x, e.y, e.hh + 24, 'TURNED ABOUT', '#FFE08A', 12); } }
+      if (Math.sign(P.x - e.x) === -e.facing) back++; }
     // what they have thrown is turned with them
     for (const h of hazards) if (h.kind === 'w7fire') { h.x = 2 * m.s - h.x; h.vx = -h.vx; }
     for (const p of projs) if (p.owner === 'e' && p.vx) { p.x = 2 * m.s - p.x; p.vx = -p.vx; }
+    floatText(m.s, P.y, 120, back ? 'TURNED ABOUT · ' + back + (back > 1 ? ' BACKS' : ' BACK') + ' TO YOU' : 'THE GLASS TURNS', back ? '#FFE08A' : '#E8F4FF', 15);
     if (back >= 2) sfx('crit');
     m.turns = (m.turns || 0) + 1;
   }
@@ -2261,7 +2262,7 @@
     if (!e.boss && !e.dead && m) {
       if (e.w7daze > 0) base *= W7.RULE.DAZE_DMG;
       if (e.w7turn > 0 && Math.sign(P.x - e.x) === -e.facing) { base *= W7.RULE.BACK_DMG; m = Object.assign({}, m, { w7back: 1 });
-        if (!(e.w7bk > performance.now())) { e.w7bk = performance.now() + 700; floatText(e.x, e.y, e.z + e.hh + 30, 'FROM BEHIND', '#FFE08A', 12); } }
+        if (!(W7.bkT > performance.now())) { W7.bkT = performance.now() + 1200; floatText(e.x, e.y, e.z + e.hh + 30, 'FROM BEHIND', '#FFE08A', 12); } }
     }
     if (e.def === BOSSES.w7king) {
       if (e.dead) return;
