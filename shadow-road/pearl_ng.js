@@ -35,7 +35,7 @@
   const forged = () => !!(typeof save !== 'undefined' && save && save.pearlForge && save.owned && save.owned[WID]);
   const held = () => !!(P && (P.w === WID || P.pwProxy) && forged()); // (pwProxy: while the weapon's poses borrow another weapon's, pearl_weapon.js)
   const evoOn = () => owned() && SW.evolve && !forged();
-  const curOn = () => !!SW.currents && (owned() || held());
+  const curOn = () => !!SW.currents && (forged() ? held() : owned()); // (once the Pearl is reforged, only its own weapon glides; before that, all of them do)
   const foes = () => enemies.filter(e => !e.dead && e.state !== 'enter' && e.state !== 'w5morph' && e.state !== 'w5riddle');
   const sm = (k) => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
   const bub = (x, y, z, n, sp) => { if (W7.bubbles) W7.bubbles(x, y, z, n, sp); };
