@@ -453,18 +453,13 @@ function drawDeath(e, t) {
     };
     piece(false); piece(true);
   } else if (e.death === 'crumple') {
-    const c = Math.min(1, el / .2), wob = Math.sin(el * 30) * .22 * Math.max(0, 1 - el / .6);
-    const fall = el > .75 ? Math.min(1, (el - .75) / .3) : 0;
-    ctx.rotate(dl * fall * 1.35);
-    ctx.translate(0, -e.hh * .5); ctx.rotate(wob); ctx.translate(0, e.hh * .5);
-    ctx.transform(1, 0, -.28 * c * dl, 1, 0, 0);
-    ctx.scale(1 + .16 * c, 1 - .36 * c);
-    // bent at the middle where the staff caught it: the upper body folds over at a sharp angle
-    const ky = -e.hh * .48, kink = -dl * .75 * c;
-    ctx.save(); ctx.beginPath(); ctx.rect(-400, ky, 800, 400); ctx.clip(); draw(); ctx.restore();
-    ctx.save(); ctx.translate(0, ky); ctx.rotate(kink); ctx.translate(0, -ky); ctx.beginPath(); ctx.rect(-400, ky - 400, 800, 400 + 2); ctx.clip(); draw(); ctx.restore();
+    // one motion: it buckles and goes over together, crumpling as it falls (no pause, no fold drawn as a cut)
+    const q = Math.min(1, el / .45), c = 1 - (1 - q) * (1 - q), fall = c, wide = e.boss || e.hw > e.hh * .7; // (a wide beast or a boss slumps flat where it stands instead of tipping over)
+    ctx.rotate(dl * fall * (wide ? .12 : 1.35));
+    ctx.transform(1, 0, -.28 * c * dl * (wide ? .5 : 1), 1, 0, 0);
+    ctx.scale(1 + (wide ? .2 : .16) * c, 1 - (wide ? .42 : .36) * c);
+    draw();
     FLASH = false;
-    ctx.strokeStyle = 'rgba(30,20,35,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-e.hw * .7, ky); ctx.lineTo(e.hw * .7, ky); ctx.stroke(); // the crease
     for (const d of e.dents) { // dents and bends where the staff landed
       const x = d.x * e.hw, y = -d.y * e.hh;
       ctx.strokeStyle = 'rgba(30,20,35,.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, d.r, .3, Math.PI - .3); ctx.stroke();
