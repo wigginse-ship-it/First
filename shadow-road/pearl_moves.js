@@ -92,7 +92,9 @@
   // ======================================================================================================
   // THE STATE OF THE STREET: what each kind has left about (reset with each place)
   // ======================================================================================================
-  const S = { stage: null, zone: -1, objs: [], path: [], presses: [], begun: -1 };
+  const S = { stage: null, zone: -1, objs: [], path: [], presses: [], begun: -1, ev: {} };
+  // what each kind's trick has done (a count per event, for the tests and the dev panel)
+  const ev = (k) => { S.ev[k] = (S.ev[k] || 0) + 1; };
   const TY = {};
   function resetPlace() { S.objs = []; S.path = []; for (const t in TY) if (TY[t].reset) TY[t].reset(); }
   const addObj = (o) => { if (S.objs.length < 60) S.objs.push(o); return o; };
@@ -246,7 +248,7 @@
     function addEcho(x, y, facing) {
       if (E.list.length >= ECHO_N) E.list.shift();
       x = clamp(x, leftWall() + 8, rightWall() - 8);
-      E.list.push({ x, y, facing, t: 0, life: 5, q: [], cur: null, ct: 0, hits: new Map(), uses: 0, z: 0, born: 0 });
+      E.list.push({ x, y, facing, t: 0, life: 5, q: [], cur: null, ct: 0, hits: new Map(), uses: 0, z: 0, born: 0 }); ev('echo');
       sparkle(x, y, 30, 10); bubbles(x, y, 10, 6, 40); sfx('hit-crystal', .4);
       fx.push({ kind: 'ring', x, y, z: 2, t: .3, max: .3, r: 30, col: pal().edge, flat: 1 });
     }
@@ -258,12 +260,13 @@
         const dx = (e.x - o.x) * o.facing;
         if (m.around ? Math.abs(e.x - o.x) > m.x1 + e.hw : dx < (m.x0 || 0) - e.hw || dx > m.x1 + e.hw) continue;
         o.hits.set(e, o.ct);
-        hitE(e, m.dmg * ECHO_K, m.around ? Math.sign(e.x - o.x) || o.facing : o.facing, Object.assign({}, m, { pe: m.pe * .5, echoOf: 1 }));
+        if (hitE(e, m.dmg * ECHO_K, m.around ? Math.sign(e.x - o.x) || o.facing : o.facing, Object.assign({}, m, { pe: m.pe * .5, echoOf: 1 }))) ev('echoHit');
         fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .5, ang: rand(-.6, .6), t: .2, max: .2, size: 26, col: pal().edge });
       }
     }
     TY.glaive = {
       reset() { E.list = []; },
+      peek: () => ({ echoes: E.list.length, copying: E.list.filter(o => o.cur).length, rushing: S.objs.filter(o => o.kind === 'rush').length }),
       tree: (sp) => ({
         L:    { name: 'Wake Cut', dur: .3, h: [.32, .6], x0: 0, x1: 84, dmg: 9, kb: 70, depth: 22, lunge: 60, desc: 'A rising cut.' },
         LL:   { name: 'Backwash', dur: .34, h: [.3, .62], x0: -10, x1: 86, dmg: 10, kb: 90, depth: 24, lunge: 50, desc: 'A turning backhand.' },
@@ -286,6 +289,8 @@
       pick(m) { if (m.key === 'H' && E.list.length) return WP().tree.Hr; if (m.key === 'Hr' && !E.list.length) return WP().tree.H; return m; },
       began(m) {
         if (m.rewind) startRewind(m);
+        // (called home, the next Heavy is the second of a pair: Heavy, Heavy runs on into the spiral)
+        if (m.recall) P.seq = 'H';
         if (m.noEcho || m.key === 'SIG') { if (m.recall) for (const o of E.list) o.recall = 1; return; }
         const em = m.echoAs ? WP().tree[m.echoAs] : m;
         for (const o of E.list) if (o.q.length < 3) o.q.push({ m: em, at: ECHO_LAG + .06 * E.list.indexOf(o) });
@@ -333,7 +338,7 @@
       if (cur() === 'nacre') for (const e of foes().filter(e => Math.hypot(e.x - o.x, e.y - o.y) < 130).slice(0, 2)) { hitE(e, 5, Math.sign(e.x - o.x) || 1, { kb: 60, power: 0, el: 1, pm: 'glaive', key: 'SHARD', pe: 0 }); sparkle(e.x, e.y, e.hh * .6, 5, ['#FFFFFF', '#F6C2D4']); } }
     function recall(m) {
       if (!E.list.length) return;
-      note('HOME!', pal().edge, 14); sfx('whoosh'); sfx('hit-crystal');
+      note('HOME!', pal().edge, 14); sfx('whoosh'); sfx('hit-crystal'); ev('recall');
       for (const o of E.list) {
         addObj({ kind: 'rush', x0: o.x, y0: o.y, x: o.x, y: o.y, t: 0, max: .26, hit: new Set(), m, dir: Math.sign(P.x - o.x) || 1, pose: poseOf(WP().tree.D, .45), bw: 200 });
         if (cur() === 'tide' && S0()) PN.addPool(o.x, o.y, m.dmg * wm(), S0());
@@ -356,7 +361,7 @@
       return pts;
     }
     function startRewind(m) { const pts = rewindPts(); let len = 0; const cum = [0]; for (let i = 1; i < pts.length; i++) { len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); cum.push(len); }
-      P._rw = { pts, cum, len, hit: new Set(), hit2: new Set(), f: fc() }; sfx('whoosh'); note(m.perfect ? 'EBB!' : 'REWIND', pal().edge, 14); }
+      P._rw = { pts, cum, len, hit: new Set(), hit2: new Set(), f: fc() }; sfx('whoosh'); ev('rewind'); note(m.perfect ? 'EBB!' : 'REWIND', pal().edge, 14); }
     function stepRewind(m, k, dt) {
       const R = P._rw; if (!R) return; P.facing = R.f; P.inv = Math.max(P.inv, .12);
       const u = sst(spn(k, .08, .78)), d = u * R.len; let i = 1; while (i < R.cum.length - 1 && R.cum[i] < d) i++;
@@ -412,6 +417,7 @@
     const active = () => clock() - B.lastAct < 3 || P.state === 'charge';
     TY.swordstaff = {
       reset() { B.tempo = 0; B.lastAct = -99; },
+      peek: () => ({ tempo: B.tempo, drops: S.objs.filter(o => o.kind === 'drop').length }),
       tree: () => ({
         L:    { name: 'Downbeat', dur: .42, h: [.16, .4], x0: 0, x1: 80, dmg: 9, kb: 70, lunge: 50, depth: 22, desc: 'Tap on the beat (the closing ring): harder, tempo +1.' },
         LL:   { name: 'Offbeat', dur: .42, h: [.16, .44], x0: 0, x1: 76, dmg: 9, kb: 90, ends: 1, depth: 24, lunge: 30, desc: 'Both blades, front and back.' },
@@ -438,11 +444,11 @@
         if (m.key !== 'HC') {
           if (now - B.lastAct > BEAT * 2.4) { B.beat0 = t; on = true; } else on = offB(t) <= WIN;
           B.lastAct = now;
-          if (on) { B.tempo = Math.min(4, B.tempo + 1); B.lastOn = now; P.move = Object.assign({}, P.move, { dmg: Math.round(P.move.dmg * 1.35), onBeat: 1 }); play(NOTES[B.tempo + 1], .16, .06);
+          if (on) { B.tempo = Math.min(4, B.tempo + 1); B.lastOn = now; ev('onBeat'); P.move = Object.assign({}, P.move, { dmg: Math.round(P.move.dmg * 1.35), onBeat: 1 }); play(NOTES[B.tempo + 1], .16, .06);
             floatText(P.x, P.y, P.z + 92, '♪'.repeat(B.tempo), '#F2D68A', 13); }
         } else B.lastAct = now;
         if (m.key === 'LLLL') P.move = Object.assign({}, P.move, { dmg: Math.round(P.move.dmg * (1 + .25 * B.tempo)) });
-        if (m.key === 'H' && B.tempo >= 3) { addObj({ kind: 'drop', x: P.x, y: P.y, n: 0, next: B.beat0 + (Math.floor((now - B.beat0) / BEAT) + 1) * BEAT, m: P.move, bw: 160, bh: 80 }); note('DROP!', '#F2D68A', 17); B.tempo = 0; play(98, .4, .12, 'sine'); }
+        if (m.key === 'H' && B.tempo >= 3) { addObj({ kind: 'drop', x: P.x, y: P.y, n: 0, next: B.beat0 + (Math.floor((now - B.beat0) / BEAT) + 1) * BEAT, m: P.move, bw: 160, bh: 80 }); note('DROP!', '#F2D68A', 17); ev('drop'); B.tempo = 0; play(98, .4, .12, 'sine'); }
         if (m.key === 'HC' && m.perfect) fermata(m);
       },
       extras(m, k) { holdEnds(m, k); return false; },
@@ -458,7 +464,7 @@
         if (B.tempo > 0 && now - B.lastOn > BEAT * 2.5) { B.tempo--; B.lastOn += BEAT; }
       },
       obj(o) { if (o.kind !== 'drop') return; if (clock() < o.next) return; o.next += BEAT; o.n++;
-        shakeMag = Math.max(shakeMag, 6); sfx('slam'); play([98, 110, 82][o.n % 3], .3, .1, 'sine'); fx.push({ kind: 'ring', x: o.x, y: o.y, z: 2, t: .35, max: .35, r: 110 * RK(), col: '#F2D68A', flat: 1 });
+        shakeMag = Math.max(shakeMag, 6); sfx('slam'); ev('pulse'); play([98, 110, 82][o.n % 3], .3, .1, 'sine'); fx.push({ kind: 'ring', x: o.x, y: o.y, z: 2, t: .35, max: .35, r: 110 * RK(), col: '#F2D68A', flat: 1 });
         for (const e of foes()) if (Math.hypot(e.x - o.x, (e.y - o.y) * 2) < 100 * RK() + e.hw && e.z < 60) hitE(e, 12, Math.sign(e.x - o.x) || 1, o.m, { kb: 150, launch: 220, power: 2 });
         if (o.n >= 3) o.gone = true; },
       draw(list, t) {
@@ -474,7 +480,7 @@
       chargePose(pose, ct) { pose.crouch = 0; pose.arm = -1.35; pose.elbow = 1.1; pose.grip = ct * 16; pose.lean = -.05; pose.sink = 4; pose.legs = { f: 10, b: -10, fk: 5, bk: 4 }; pose.backArm = 1.6; pose.yaw = .3; },
     };
     function fermata(m) {
-      slowmo = Math.max(slowmo, .45); flashT = Math.max(flashT, .06); note('FERMATA', '#F2D68A', 17); play(NOTES[7], .5, .07);
+      slowmo = Math.max(slowmo, .45); flashT = Math.max(flashT, .06); note('FERMATA', '#F2D68A', 17); ev('fermata'); play(NOTES[7], .5, .07);
       const n = 1 + B.tempo, list = foes().filter(e => e.x > camX - 10 && e.x < camX + VW + 10).slice(0, 7);
       list.forEach((e, j) => { for (let i = 0; i < n; i++) echoes.push({ e, dmg: 8 * wm(), dir: Math.sign(e.x - P.x) || fc(), m: Object.assign({}, m, { perfect: 0, power: 1, kb: 60 }), t: .08 + j * .03 + i * .09 });
         fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .5, ang: rand(-1, 1), t: .4, max: .4, size: 44, col: '#FFF2C0' }); });
@@ -517,13 +523,13 @@
     }
     function float(e, dur, z, crash) {
       if (e.boss || e.dead) return;
-      e.pmFloat = { t: dur, z: z || 74 + rand(0, 26), crash: crash || 0 }; e.pmLift = 0; e.air = true; e.vz = Math.max(e.vz || 0, 120);
+      e.pmFloat = { t: dur, z: z || 74 + rand(0, 26), crash: crash || 0 }; e.pmLift = 0; ev('adrift'); e.air = true; e.vz = Math.max(e.vz || 0, 120);
       floatText(e.x, e.y, e.z + e.hh + 20, 'ADRIFT', '#DDE6FF', 11); bubbles(e.x, e.y, 10, 5, 50);
     }
     function crashDown(e, d) { if (!e || e.dead) return; e.pmFloat = null; e.pmCrash = { d }; e.air = true; e.vz = -900; e.state = 'hurt'; e.t = Math.max(e.t, .5); }
     function spring(m) { const L = adrift(); if (!L.length) return 0; note('SPRING TIDE', '#DDE6FF', 15); sfx('whoosh'); for (const e of L) crashDown(e, m.dmg * (.8 + e.z / 160)); return L.length; }
     function landed(e, C) {
-      e.pmCrash = null; shakeMag = Math.max(shakeMag, 7); sfx('slam'); dust(e.x, e.y, 10);
+      e.pmCrash = null; shakeMag = Math.max(shakeMag, 7); sfx('slam'); dust(e.x, e.y, 10); ev('crash');
       fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .35, max: .35, r: 70 * RK(), col: '#DDE6FF', flat: 1 });
       const m = { pm: 'flail', key: 'HCRASH', kb: 160, launch: 260, power: 2, pe: .5 };
       hitE(e, C.d, P.facing, m, { kb: 60, launch: 120 });
@@ -532,6 +538,7 @@
     }
     TY.flail = {
       reset() { M.jh = false; for (const e of enemies) { e.pmFloat = null; e.pmCrash = null; e.pmLift = 0; } },
+      peek: () => ({ adrift: adrift().length, crashing: foes().filter(e => e.pmCrash).length, pull: foes().reduce((s, e) => s + (e.pmLift || 0), 0) }),
       tree: () => ({
         L:    { name: 'Waxing', dur: .34, h: [.3, .6], x0: 0, x1: 72, dmg: 10, kb: 90, lunge: 40, depth: 24, lift: 1, desc: 'Each blow pulls (+1). Three pulls: they float ADRIFT.' },
         LL:   { name: 'Waning', dur: .38, h: [.3, .62], x0: 0, x1: 72, dmg: 11, kb: 100, lunge: 40, depth: 24, lift: 1 },
@@ -553,7 +560,7 @@
         ['everything near falls up', 'Hold Heavy, gleam', t.HC.name], ['adrift at once', 'Hold Attack', t.X.name], ['up to the adrift', 'Dodge, Attack', t.R.name], ['they fall with you', 'Jump, Heavy', t.JH.name]],
       pick(m) { if (m.key === 'H' && adrift().length) return WP().tree.Hs; if (m.key === 'Hs' && !adrift().length) return WP().tree.H; return m; },
       began(m) {
-        if (m.spring) spring(m);
+        if (m.spring) { spring(m); P.seq = 'H'; }
         if (m.key === 'JH') M.jh = true;
         if (m.hook) { const e = nearest(P.x, P.y, 300, null, (o) => !!o.pmFloat); P._hook = e ? { e, x0: P.x, z0: P.z } : null; if (e) { P.facing = Math.sign(e.x - P.x) || P.facing; sfx('whoosh'); } }
       },
@@ -590,7 +597,7 @@
       chargePose(pose, ct) { pose.crouch = 0; pose.arm = -1.5; pose.elbow = .3; pose.grip = -ct * 18; pose.lean = -.1; pose.sink = 5; pose.legs = { f: 12, b: -12, fk: 6, bk: 4 }; pose.backArm = 1.2; pose.yaw = .2; pose.glow = perfectGlow() || 'rgba(221,230,255,.6)'; },
     };
     function invert(m) {
-      const R = (m.perfect ? 300 : 240) * RK(); note('THE SKY TURNS', '#DDE6FF', 15); flashT = Math.max(flashT, .05); sfx('charge', 3);
+      const R = (m.perfect ? 300 : 240) * RK(); note('THE SKY TURNS', '#DDE6FF', 15); ev('invert'); flashT = Math.max(flashT, .05); sfx('charge', 3);
       fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .5, max: .5, r: R, col: '#DDE6FF', flat: 1 });
       for (const e of foes()) { if (Math.hypot(e.x - P.x, (e.y - P.y) * 2) > R + e.hw) continue;
         if (e.boss) { hitE(e, m.dmg * 2.6, Math.sign(e.x - P.x) || 1, m, { kb: 100 }); continue; }
