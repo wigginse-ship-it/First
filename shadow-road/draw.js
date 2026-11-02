@@ -436,7 +436,10 @@ function drawDeath(e, t) {
     const cutY = -e.hh * .5, ang = e.cut * dl;
     const piece = (upper) => {
       ctx.save();
-      if (upper) { // the top half is thrown clear, spinning, and lands beside the legs
+      if (Math.abs(e.cut) > .9) { // split down its length: the two halves part and fall away from each other, one to each side
+        const k = Math.min(1, el / .55), sd = Math.sign(ang) * (upper ? 1 : -1);
+        ctx.translate(sd * 10 * k, 0); ctx.rotate(sd * 1.25 * k * k);
+      } else if (upper) { // the top half is thrown clear, spinning, and lands beside the legs
         const k = Math.min(el, .9);
         ctx.translate(-dl * 70 * k, Math.min(e.hh * .42, -170 * el + 460 * el * el));
         ctx.translate(0, cutY); ctx.rotate(-dl * 2.4 * k); ctx.translate(0, -cutY);

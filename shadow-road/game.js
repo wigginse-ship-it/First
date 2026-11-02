@@ -481,7 +481,10 @@ function killEnemy(e, dir, m) {
     }
     dropLoot(e);
     if (e.death === 'slice') {
-      e.cut = rand(-.45, .45);
+      // the cut follows the blow: a blade swept up or down through a wide arc splits it on the near-vertical, leaning the way
+      // the blade travelled; a level cleave, a spin or a thrust cuts across it as before
+      const ar = m && m.arc, sweep = ar ? ar[1] - ar[0] : 0;
+      e.cut = ar && !m.around && Math.abs(sweep) > 1.5 ? Math.sign(sweep) * rand(1.15, 1.42) : rand(-.45, .45);
       for (let i = -6; i <= 6; i++) burst(e.x + Math.cos(e.cut) * i * e.hw * .25, e.y, cy + Math.sin(-e.cut) * i * e.hw * .25, cols, 2, e.def.mat, dir);
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: cy, ang: -e.cut, t: .3, max: .3, size: 46 + e.hw, col: '#FFFFFF' });
       sfx('slice');
