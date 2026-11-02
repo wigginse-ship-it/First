@@ -316,7 +316,7 @@
     if (th.t > 5) { caught(th); return; }
     th.trail.push(th.x, th.y - th.z); if (th.trail.length > 16) th.trail.splice(0, 2);
     // its hangers flung out behind its flight (trailed further than at his shoulder), wobbling a little with the spin
-    if (th.sw) swStep(th.sw, th.x, th.y - th.z, dt, { drag: .0011, push: .07 * Math.sin(th.spin * .35) });
+    if (th.sw) swStep(th.sw, th.x, th.y - th.z, dt, { drag: .0006, gain: .45, push: .07 * Math.sin(th.spin * .35) });
     if (S.f.has('maelstrom') && th.pools < 4 && !th.ghost && th.t - (th.lastPool || 0) > .16) { th.lastPool = th.t; th.pools++; addPool(th.x, th.y, th.dmg, S); }
     if (Math.random() < dt * 24 && parts.length < 380) parts.push({ x: th.x, y: th.y, z: th.z + rand(-3, 3), vx: rand(-20, 20), vy: 0, vz: rand(-10, 20), life: .3, max: .3, col: pick(palCols(S)), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 4 });
     // it strikes all it passes through: each foe once on the way out and once on the way back
@@ -852,11 +852,12 @@
   // The pendulum lives in the world's frame; blitOrb turns its angles into the picture's by the facing (the picture is
   // mirrored, so the angle's sign flips with it and a turn never makes it jump). The pearl_weapon.js ornaments share it.
   const HANG = { anchor: 1, drops: 1, chain: 3, ribbons: 3 };
-  const SW_MAX = .6, SW_G = 1100, SW_W2 = 46, SW_C = 3.4, SW_K = 170, SW_KC = 10;
+  const SW_MAX = .6, SW_G = 1800, SW_A = 2400, SW_W2 = 46, SW_C = 4.6, SW_K = 170, SW_KC = 10; // (SW_A: the sideways shove that tips it a radian)
   const SW0 = Object.assign([0, 0, 0], { fl: 0, t: 0 });
   const swNew = () => ({ a: [0, 0, 0], v: [0, 0, 0], px: null, py: 0, vx: 0, vy: 0, t: Math.random() * 9, fl: 0 });
   const swCopy = (s) => Object.assign({}, s, { a: s.a.slice(), v: s.v.slice() });
-  // one step, x and y the pivot's place in the picture (x, y - z). o.drag: how far its speed trails it; o.push: a lean
+  // one step, x and y the pivot's place in the picture (x, y - z). o.drag: how far its speed trails it; o.push: a lean;
+  // o.gain: how hard its acceleration shoves it
   function swStep(s, x, y, dt, o) {
     if (!s || !(dt > 0)) return; dt = Math.min(dt, 1 / 30); s.t += dt; o = o || {};
     if (s.px === null || Math.abs(x - s.px) > 140 || Math.abs(y - s.py) > 140) { s.px = x; s.py = y; s.vx = s.vy = 0; return; } // (a jump: a catch, a new place)
@@ -865,11 +866,11 @@
     const g = clamp(1 - ay / SW_G, .35, 2), sp = Math.hypot(vx, vy), a = s.a, v = s.v;
     s.fl += (clamp(sp / 260, 0, 1) - s.fl) * Math.min(1, dt * 4);
     // where it would settle: straight down, a breath of idle sway (the orb's bob), trailed back by its speed, and any lean
-    const rest = .05 * Math.sin(s.t * 1.9) + clamp(vx * (o.drag ?? .0005), -.32, .32) + (o.push || 0);
+    const rest = .05 * Math.sin(s.t * 1.9) + clamp(vx * (o.drag ?? .0003), -.22, .22) + (o.push || 0), kA = (o.gain ?? 1) * SW_W2 / SW_A;
     // the first link: a pendulum on a pivot shoved by the orb's acceleration (it lags as the orb speeds up, swings back, settles)
-    v[0] += (-SW_W2 * g * Math.sin(a[0] - rest) + ax * SW_W2 / SW_G * Math.cos(a[0]) - SW_C * v[0]) * dt;
+    v[0] += (-SW_W2 * g * Math.sin(a[0] - rest) + ax * kA * Math.cos(a[0]) - SW_C * v[0]) * dt;
     // each further link follows the one above it, a little late
-    for (let i = 1; i < 3; i++) v[i] += (-SW_K * (a[i] - a[i - 1]) + ax * .3 * SW_W2 / SW_G - SW_KC * v[i]) * dt;
+    for (let i = 1; i < 3; i++) v[i] += (-SW_K * (a[i] - a[i - 1]) + ax * .3 * kA - SW_KC * v[i]) * dt;
     for (let i = 0; i < 3; i++) { a[i] += v[i] * dt; if (a[i] > SW_MAX) { a[i] = SW_MAX; if (v[i] > 0) v[i] *= -.25; } else if (a[i] < -SW_MAX) { a[i] = -SW_MAX; if (v[i] < 0) v[i] *= -.25; } }
   }
   // the angles as a painter takes them: for a picture mirrored (facing < 0) the sign flips. With no pendulum (a card, the
@@ -917,7 +918,7 @@
     core: ['front', (r) => { ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * .99, 0, TAU); ctx.clip(); const g = ctx.createRadialGradient(r * .15, r * .1, 0, r * .15, r * .1, r * .6); g.addColorStop(0, 'rgba(8,6,16,.95)'); g.addColorStop(.7, 'rgba(30,20,60,.7)'); g.addColorStop(1, 'rgba(30,20,60,0)'); ctx.fillStyle = g; ctx.fillRect(-r, -r, r * 2, r * 2); ctx.fillStyle = '#86F2D6'; ctx.beginPath(); ctx.arc(r * .05, 0, r * .09, 0, TAU); ctx.fill(); ctx.restore(); }],
     // (each ribbon's points turned about its root by the links' angles, the further ones more, and fluttering with speed)
     ribbons: ['back', (r, p, sw = SW0) => { ctx.lineCap = 'round'; for (const [y, k] of [[-r * .35, 1], [r * .3, .8]]) {
-      const x0 = -r * .6, pt = (x, yy, i) => { const a = sw[i] + sw.fl * .16 * Math.sin(sw.t * 11 - i * 1.4 + k * 3), c = Math.cos(a), s = Math.sin(a), dx = x - x0, dy = yy - y; return [x0 + dx * c - dy * s, y + dx * s + dy * c]; };
+      const x0 = -r * .6, pt = (x, yy, i) => { const a = sw[i] * .6 + sw.fl * .14 * Math.sin(sw.t * 11 - i * 1.4 + k * 3), c = Math.cos(a), s = Math.sin(a), dx = x - x0, dy = yy - y; return [x0 + dx * c - dy * s, y + dx * s + dy * c]; };
       const A = pt(-r * 1.6, y - r * .6 * k, 0), B = pt(-r * 2.1, y + r * .5 * k, 1), E = pt(-r * 3, y - r * .2, 2), path = () => { ctx.beginPath(); ctx.moveTo(x0, y); ctx.bezierCurveTo(A[0], A[1], B[0], B[1], E[0], E[1]); };
       path(); stroke(OUT, Math.max(1, r * .32)); path(); stroke(p.accent, Math.max(.5, r * .2)); } }],
     fin: ['front', (r, p) => { ctx.beginPath(); ctx.moveTo(-r * .5, -r * .85); ctx.quadraticCurveTo(-r * .4, -r * 1.9, -r * 1.25, -r * 2.05); ctx.quadraticCurveTo(-r * .2, -r * 1.55, r * .45, -r * .9); ctx.closePath(); const g = ctx.createLinearGradient(0, -r * 2, 0, -r * .8); g.addColorStop(0, p.edge); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .08)); }],

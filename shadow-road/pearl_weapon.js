@@ -230,7 +230,7 @@
     halo: ['haft', (x, y, p, w) => { ctx.fillStyle = C('#14102A'); ctx.fillRect(x - 2, -w / 2 - .5, 4, w + 1); ctx.beginPath(); ctx.rect(x - 2, -w / 2 - .5, 4, w + 1); outline(.7); if (det()) { ctx.fillStyle = '#6FE0C0'; ctx.fillRect(x - .3, -w / 2 - .5, .6, w + 1); } }],
     core: ['pommel', (x) => { pearl(x, 0, 3.4, PAL.abyss); }],
     // (sw: the streamers' link angles, drawHangers below; each point turned about the root, the further ones more)
-    ribbons: ['pommel', (x, y, p, sw) => { for (const [dy, k] of [[-1, 1], [1, -.7]]) { const pt = (px, py, i) => { if (!sw) return [px, py]; const a = sw[i] + sw.fl * .2 * Math.sin(sw.t * 12 - i * 1.4 + k * 3), c = Math.cos(a), s = Math.sin(a), ex = px - x, ey = py - dy; return [x + ex * c - ey * s, dy + ex * s + ey * c]; };
+    ribbons: ['pommel', (x, y, p, sw) => { for (const [dy, k] of [[-1, 1], [1, -.7]]) { const pt = (px, py, i) => { if (!sw) return [px, py]; const a = sw[i] * .7 + sw.fl * .18 * Math.sin(sw.t * 12 - i * 1.4 + k * 3), c = Math.cos(a), s = Math.sin(a), ex = px - x, ey = py - dy; return [x + ex * c - ey * s, dy + ex * s + ey * c]; };
       const A = pt(x - 5, dy + 6 * k, 0), B = pt(x - 9, dy - 4 * k, 1), E = pt(x - 15, dy + 5 * k, 2); rod(() => { ctx.moveTo(x, dy); ctx.bezierCurveTo(A[0], A[1], B[0], B[1], E[0], E[1]); }, 1.5, p.accent); } }],
     fin: ['head', (x, y, p) => { cel(PF((ox, oy) => { ctx.moveTo(x - 4 + ox, 3 + oy); ctx.quadraticCurveTo(x - 4 + ox, 9 + oy, x - 11 + ox, 10.5 + oy); ctx.quadraticCurveTo(x - 4 + ox, 7 + oy, x + 3 + ox, 3 + oy); }), p.bladeDk, { d: .8, r: .6, lite: p.blade, w: .9 }); }],
     cage: ['collar', (x, y, p) => { band(x, 4.2, 8.4, p); band(x - 4.6, 2.2, 6.4, p); }],
