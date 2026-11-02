@@ -24,6 +24,7 @@
   small { display:block; font-weight:400; font-size:.65em; opacity:.75; }
   #voice { color:#ff9f43; font-size:.6em; min-height:1.4em; }
   #dbg { margin-top:auto; color:#8a8a8a; font-size:.55em; }
+  #dbg.warn { color:#ff9f43; font-size:.85em; font-weight:700; }
 </style>
 </head>
 <body>
@@ -59,7 +60,7 @@
   var navT = null, navT2 = null, wantVoice = true, fatal = false, listening = false, rec = null, heardAt = 0;
   var dbg = document.getElementById("dbg"), sel = 0, last = 0, wheelAt = 0, timer = null, armed = false, items = [];
   var dwellOn = store.get("dwell") !== "off";
-  function note(t) { dbg.textContent = "Last input: " + t; if (!armed) { armed = true; show(); } startVoice(); }
+  function note(t) { if (dbg.className) dbg.className = ""; dbg.textContent = "Last input: " + t; if (!armed) { armed = true; show(); } startVoice(); }
   function label() { document.getElementById("tg").textContent = "⏱ Hold-to-open: " + (dwellOn ? "on" : "off"); }
 
   function screen(id) {
@@ -90,7 +91,7 @@
     clearTimeout(navT); clearTimeout(navT2);
     navT2 = setTimeout(function () { dbg.textContent = "Trying another way to open…"; try { window.open(url, "_blank"); } catch (e) {} }, 1200);
     navT = setTimeout(function () {
-      dbg.textContent = "⚠ The glasses blocked opening " + url + " from this page. Add that address as its own web app in the Meta app instead.";
+      dbg.className = "warn"; dbg.textContent = "⚠ The glasses blocked opening " + url + " from this page. Add that address as its own web app in the Meta app instead.";
     }, 3500);
   }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition, vEl = document.getElementById("voice");
