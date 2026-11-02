@@ -1006,12 +1006,17 @@
   // -1 (pained) .. 1 (pleased), look -1..1, snore 0..1, t }
   // ======================================================================================================
   const HS = .74; // (it is drawn at this fraction of its painted size)
+  const NOX = {};
   const SLEEP_ANCHORS = [[-86, -26], [86, -26], [-30, 2], [34, 4]].map(([x, y]) => [x * HS, y * HS]); // where the crutches hold it up (local, before its size)
   function sleeperHead(o) {
-    const t = o.t || 0, sag = o.sag || 0, eyes = o.eyes || 0, mo = o.mouth || 0, mood = o.mood || 0, look = o.look || 0, br = Math.sin(t * 1.1) * (1 - eyes * .6);
+    const t = o.t || 0, sag = o.sag || 0, eyes = o.eyes || 0, mo = o.mouth || 0, mood = o.mood || 0, look = o.look || 0;
+    // its expression (sleeperFace below blends these; each 0..1, lid 1 = as open as `eyes` says)
+    const X = o.X || NOX, xv = (k) => X[k] || 0, lidK = X.lid ?? 1, puff = xv('puff');
+    const br = Math.sin(t * (1.1 - xv('smile') * .25)) * (1 - eyes * .6) * (1 + xv('smile') * .4 - xv('grit') * .5);
     const S = (x, y) => [x, y + (y > -60 ? (y + 60) * sag * .35 : 0)]; // the sag stretches its lower half downward
     const out = [0, -154 - br * 1.5, 44, -150, 78, -134, 94, -108, 100, -80, 112, -52, 126, -26, 120, -4, 98, 8, 70, 4, 40, 12, 0, 16, -40, 12, -70, 4, -98, 8, -120, -4, -126, -26, -112, -52, -100, -80, -94, -108, -78, -134, -44, -150];
-    const pts = []; for (let i = 0; i < out.length; i += 2) { const [x, y] = S(out[i], out[i + 1]); pts.push(x * (1 + br * .006), y); }
+    // (puffed cheeks swell its jowls outward)
+    const pts = []; for (let i = 0; i < out.length; i += 2) { const [x, y] = S(out[i], out[i + 1]), pf = puff * .08 * Math.max(0, 1 - Math.abs(out[i + 1] + 40) / 50); pts.push(x * (1 + br * .006 + pf), y); }
     const skin = PB(pts);
     // the skin: pale, soft, lit from the upper left; dabbed, mottled, a flush on the cheeks
     cel(skin, FLESH, { d: 7, r: 3, w: 2.2, dark: '#B88A66', lite: FLESHL, tex: () => {
@@ -1019,54 +1024,100 @@
       const sh = ctx.createLinearGradient(0, -60, 0, 20); sh.addColorStop(0, 'rgba(120,70,60,0)'); sh.addColorStop(1, 'rgba(110,60,50,.42)'); ctx.fillStyle = sh; ctx.fillRect(-130, -60, 260, 80); // the weight of its lower half, in shade
       const sd = ctx.createLinearGradient(-130, 0, 130, 0); sd.addColorStop(0, 'rgba(255,244,226,.18)'); sd.addColorStop(.6, 'rgba(0,0,0,0)'); sd.addColorStop(1, 'rgba(110,60,60,.3)'); ctx.fillStyle = sd; ctx.fillRect(-130, -160, 260, 180);
       for (let i = 0; i < 60; i++) dab(-110 + hsh(i) * 220, -150 + hsh(i + 9) * 160, 2 + hsh(i + 3) * 5, hsh(i + 5) < .5 ? 'rgba(255,240,222,.22)' : 'rgba(160,100,80,.14)', 1);
-      for (const s of [-1, 1]) { const [cx, cy] = S(s * 62, -50); ctx.fillStyle = `rgba(230,120,110,${.18 + (o.flush || 0) * .3})`; ell(cx, cy, 22, 14); ctx.fill(); }
+      for (const s of [-1, 1]) { const [cx, cy] = S(s * (62 + puff * 6), -50 + puff * 4); ctx.fillStyle = `rgba(230,120,110,${.18 + (o.flush || 0) * .3 + puff * .12})`; ell(cx, cy, 22 + puff * 9, 14 + puff * 7); ctx.fill();
+        if (puff > .05) { ctx.fillStyle = `rgba(255,246,232,${puff * .55})`; ell(cx - s * 6, cy - 7 - puff * 3, 10 + puff * 5, 6 + puff * 2, -s * .3); ctx.fill(); } }
+      // (a puffed cheek is round and taut: a crease curving under it)
+      if (puff > .05) { ctx.strokeStyle = `rgba(130,70,55,${puff * .6})`; ctx.lineWidth = 1.6; for (const s of [-1, 1]) { const [cx, cy] = S(s * 66, -36); ctx.beginPath(); ctx.arc(cx, cy - 16, 26 + puff * 6, s > 0 ? .25 : Math.PI - 1.15, s > 0 ? 1.15 : Math.PI - .25); ctx.stroke(); } }
       // the folds of its sagging: soft creases that deepen as it sags
       ctx.strokeStyle = `rgba(130,80,60,${.35 + sag * .35})`; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
       for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(...S(s * 18, -62)); ctx.quadraticCurveTo(...S(s * 40, -46), ...S(s * 44, -24)); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(...S(s * 70, -40)); ctx.quadraticCurveTo(...S(s * 84, -24), ...S(s * 70, -8)); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(...S(s * 50, -16)); ctx.quadraticCurveTo(...S(s * 30, -4), ...S(s * 10, -2)); ctx.stroke(); }
       ctx.strokeStyle = 'rgba(255,240,224,.5)'; ctx.lineWidth = 1; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(...S(s * 20, -64)); ctx.quadraticCurveTo(...S(s * 42, -48), ...S(s * 46, -26)); ctx.stroke(); }
-      for (let i = 0; i < 4; i++) { ctx.strokeStyle = 'rgba(150,100,80,.25)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-40, -132 + i * 4); ctx.quadraticCurveTo(0, -136 + i * 4 - mood * 2, 40, -132 + i * 4); ctx.stroke(); } // the brow's wrinkles
+      const rw = Math.min(1, xv('raise') + xv('raiseR') * .5 + xv('panic')); // (raised brows ruck the forehead up)
+      for (let i = 0; i < 4; i++) { ctx.strokeStyle = `rgba(150,100,80,${.25 + rw * .35})`; ctx.lineWidth = 1 + rw * .6; ctx.beginPath(); ctx.moveTo(-40 - rw * 8, -132 + i * (4 + rw * 1.5)); ctx.quadraticCurveTo(0, -136 + i * (4 + rw * 1.5) - mood * 2 - rw * 4 + xv('knit') * 3, 40 + rw * 8, -132 + i * (4 + rw * 1.5)); ctx.stroke(); } // the brow's wrinkles
     } });
     // a few long hairs, lifting in a breeze from nowhere
     if (DET()) { ctx.strokeStyle = 'rgba(70,50,40,.55)'; ctx.lineWidth = .8; for (let i = 0; i < 7; i++) { const x = -40 + i * 13, y = -150 + Math.abs(i - 3) * 1.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6 + Math.sin(t * 1.3 + i) * 4, y - 10, x + 14 + Math.sin(t * 1.1 + i) * 6, y - 8 - i % 3 * 3); ctx.stroke(); } }
     // its ears
     for (const s of [-1, 1]) { const [ex, ey] = S(s * 106, -80); ctx.save(); ctx.translate(ex, ey); ctx.scale(s, 1); cel(PB([0, -14, 10, -16, 14, -2, 10, 14, 2, 16, -2, 0]), '#DDB48C', { d: 2, r: 1, w: 1.6, dark: '#A87A5A' }); if (DET()) { ctx.strokeStyle = 'rgba(120,70,50,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5, 0, 6, -1.4, 1.4); ctx.stroke(); } ctx.restore(); }
     // its brows, and its eyes
+    const knit = xv('knit'), squint = xv('squint'), arc = xv('arc'), rem = xv('rem'), panic = xv('panic');
+    // (the knot between its brows when it frowns)
+    if (knit > .05) { ctx.strokeStyle = `rgba(110,60,45,${knit * .75})`; ctx.lineWidth = 1.7; ctx.lineCap = 'round'; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 5, -118); ctx.quadraticCurveTo(s * 9, -110, s * 6, -101); ctx.stroke(); } }
     for (const s of [-1, 1]) {
-      const ex = s * 40 + look * 3, ey = -92, open = eyes > 0 ? (s > 0 ? clamp(eyes * 2, 0, 1) : clamp(eyes * 2 - 1, 0, 1)) : 0; // the right eye opens first
-      ctx.strokeStyle = C('#6A4430'); ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ex - s * 22, ey - 18 - mood * 2 + (s > 0 ? 0 : 0)); ctx.quadraticCurveTo(ex, ey - 28 - open * 6 + mood * 3, ex + s * 22, ey - 18 + mood * 3); ctx.stroke(); // the brow
-      if (DET()) { ctx.fillStyle = 'rgba(150,90,70,.35)'; ell(ex, ey + 8, 20, 7); ctx.fill(); } // the bag beneath
+      const ex = s * 40 + look * 3, ey = -92, rb = xv('raise') + (s > 0 ? xv('raiseR') : 0) + panic * .6;
+      let open = eyes > 0 ? (s > 0 ? clamp(eyes * 2, 0, 1) : clamp(eyes * 2 - 1, 0, 1)) : 0; // the right eye opens first
+      open *= lidK * (1 - squint * .55); if (s < 0) open = Math.max(open, xv('peek'));
+      // the brow: knitting draws its inner end down and in, raising lifts it all
+      const ix = ex - s * (22 - knit * 6), iy = ey - 18 - mood * 2 + knit * 10 - rb * 12, oy = ey - 18 + mood * 3 - rb * 7 - knit * 3 + squint * 3, cy = ey - 28 - Math.min(1, open) * 6 + mood * 3 - rb * 13 + knit * 4;
+      ctx.strokeStyle = C('#6A4430'); ctx.lineWidth = 3.4 + knit * .9 + rb * .5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ix, iy); ctx.quadraticCurveTo(ex - s * knit * 4, cy, ex + s * 22, oy); ctx.stroke();
+      if (DET()) { ctx.fillStyle = 'rgba(150,90,70,.35)'; ell(ex, ey + 8 + squint * 2, 20, 7 + squint * 2); ctx.fill(); } // the bag beneath
       if (open < .05) { // shut: a heavy, drooping lid, a curve of lashes, the eye moving under it as it dreams
-        ctx.fillStyle = C('#D2A47E'); ctx.beginPath(); ctx.moveTo(ex - 25, ey + 1); ctx.bezierCurveTo(ex - 18, ey - 16, ex + 18, ey - 16, ex + 25, ey + 1); ctx.quadraticCurveTo(ex, ey + 9, ex - 25, ey + 1); ctx.fill();
-        if (DET()) { const rem = Math.sin(t * 4.3 + s) * 5; ctx.fillStyle = 'rgba(255,236,214,.45)'; ell(ex + rem, ey - 5, 8, 3.4); ctx.fill(); ctx.fillStyle = 'rgba(120,70,50,.3)'; ell(ex, ey + 4, 22, 3); ctx.fill(); } // the dreaming eye, moving under the lid
-        ctx.strokeStyle = C('#3A2418'); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(ex - 24, ey + 1); ctx.quadraticCurveTo(ex, ey + 9, ex + 24, ey + 1); ctx.stroke();
-        ctx.lineWidth = 1.3; for (let k = 0; k < 8; k++) { const u = (k + .5) / 8, x = ex - 22 + u * 44, y = ey + 1 + Math.sin(u * Math.PI) * 4; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + (u - .5) * 3, y + 3, x + (u - .5) * 7, y + 5); ctx.stroke(); }
-      } else { // open: an almond of white, an iris that spirals, a lid lifting
-        const h = 13 * open;
-        ctx.save(); ctx.beginPath(); ctx.moveTo(ex - 21, ey); ctx.quadraticCurveTo(ex, ey - h * 1.6, ex + 21, ey); ctx.quadraticCurveTo(ex, ey + h * 1.1, ex - 21, ey); ctx.closePath();
+        const tw = rem * Math.sin(t * 37 + s * 2) * 1.4, y0 = ey + 1 + tw + arc * 4, yl = y0 + squint * (s > 0 ? -4 : 3), yr = y0 + squint * (s > 0 ? 3 : -4);
+        const cyL = ey + 9 + tw - arc * 26 - squint * 3; // (the lash line sags in plain sleep, arches up in content, pinches when it scrunches)
+        ctx.fillStyle = C('#D2A47E'); ctx.beginPath(); ctx.moveTo(ex - 25, yl); ctx.bezierCurveTo(ex - 18, ey - 16 + squint * 6, ex + 18, ey - 16 + squint * 6, ex + 25, yr); ctx.quadraticCurveTo(ex, cyL, ex - 25, yl); ctx.fill();
+        if (DET()) { const rp = Math.sin(t * (4.3 + rem * 13) + s) * (5 + rem * 4); ctx.fillStyle = `rgba(255,236,214,${.45 + rem * .25})`; ell(ex + rp, ey - 5, 8, 3.4 + rem); ctx.fill(); ctx.fillStyle = 'rgba(120,70,50,.3)'; ell(ex, ey + 4, 22, 3); ctx.fill(); } // the dreaming eye, moving under the lid
+        if (rem > .3 && Math.sin(t * 6.1 + s * 1.7) > .5) { const cy2 = (yl + yr) / 2 + (cyL - y0) * .5; ctx.fillStyle = C('#F8F2E6'); ell(ex, cy2 + 1, 16, 3.8 * rem); ctx.fill(); ctx.fillStyle = C('#3A5A9A'); circle(ex + Math.sin(t * 26 + s) * 8, cy2 + 1, 3.2); ctx.fill(); } // (in its REM the lid flickers up a crack: the eye beneath, darting)
+        ctx.strokeStyle = C('#3A2418'); ctx.lineWidth = 2.2 + squint * .8; ctx.beginPath(); ctx.moveTo(ex - 24, yl); ctx.quadraticCurveTo(ex, cyL, ex + 24, yr); ctx.stroke();
+        ctx.lineWidth = 1.3; const ll = 1 - squint * .5; for (let k = 0; k < 8; k++) { const u = (k + .5) / 8, x = ex - 24 + u * 48, y = (1 - u) * (1 - u) * yl + 2 * u * (1 - u) * cyL + u * u * yr; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + (u - .5) * 3 * ll, y + 3 * ll, x + (u - .5) * 7 * ll, y + 5 * ll); ctx.stroke(); }
+        if (squint > .15) { ctx.strokeStyle = `rgba(110,60,45,${squint * .7})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(ex - 18, ey - 7); ctx.quadraticCurveTo(ex, ey - 13 + squint * 2, ex + 18, ey - 7); ctx.stroke(); } // (the lid creased, screwed tight)
+      } else { // open: an almond of white, an iris that spirals, a lid lifting (wider in a panic, a slit when drowsy)
+        const h = 13 * open * (1 + panic * .75), w = 21 * (1 + panic * .25);
+        ctx.save(); ctx.beginPath(); ctx.moveTo(ex - w, ey); ctx.quadraticCurveTo(ex, ey - h * 1.6, ex + w, ey); ctx.quadraticCurveTo(ex, ey + h * 1.1, ex - w, ey); ctx.closePath();
         ctx.fillStyle = C('#F8F2E6'); ctx.fill(); ctx.save(); ctx.clip();
-        const ix = ex + look * 7, iy = ey - 1, R = 11;
-        ctx.fillStyle = C('#3A5A9A'); circle(ix, iy, R); ctx.fill();
-        if (DET()) { ctx.strokeStyle = '#A8C8F0'; ctx.lineWidth = 1.4; ctx.beginPath(); for (let a = 0; a < TAU * 3; a += .2) { const r = a / (TAU * 3) * R; const px = ix + Math.cos(a - t * 3 * s) * r, py = iy + Math.sin(a - t * 3 * s) * r; a ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); } // the spiral of a dream, turning
-        ctx.fillStyle = C('#0A0A14'); circle(ix, iy, 3.4 + (1 - open) * 2); ctx.fill(); if (DET()) { ctx.fillStyle = '#FFFFFF'; circle(ix - 3, iy - 4, 2.2); ctx.fill(); }
+        const ix2 = ex + look * 7, iy = ey - 1, R = 11 * (1 - panic * .28);
+        ctx.fillStyle = C('#3A5A9A'); circle(ix2, iy, R); ctx.fill();
+        if (DET()) { ctx.strokeStyle = '#A8C8F0'; ctx.lineWidth = 1.4; ctx.beginPath(); for (let a = 0; a < TAU * 3; a += .2) { const r = a / (TAU * 3) * R; const px = ix2 + Math.cos(a - t * 3 * s) * r, py = iy + Math.sin(a - t * 3 * s) * r; a ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); } // the spiral of a dream, turning
+        ctx.fillStyle = C('#0A0A14'); circle(ix2, iy, (3.4 + (1 - Math.min(1, open)) * 2) * (1 - panic * .45)); ctx.fill(); if (DET()) { ctx.fillStyle = '#FFFFFF'; circle(ix2 - 3, iy - 4, 2.2); ctx.fill(); }
         ctx.fillStyle = 'rgba(120,80,60,.3)'; ctx.fillRect(ex - 22, ey - 20, 44, 8); ctx.restore();
         ctx.lineWidth = 2; ctx.strokeStyle = C('#3A2418'); ctx.stroke(); ctx.restore();
         ctx.strokeStyle = C('#3A2418'); ctx.lineWidth = 1.3; for (let k = 0; k < 6; k++) { const u = (k + .5) / 6, x = ex - 19 + u * 38, y = ey - Math.sin(u * Math.PI) * h * .8; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (u - .5) * 6, y - 4); ctx.stroke(); } // lashes, now upward
+        if (DET()) { ctx.strokeStyle = 'rgba(120,70,50,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(ex - 20, ey - 3); ctx.quadraticCurveTo(ex, ey - h * 1.6 * .5 - 8, ex + 20, ey - 3); ctx.stroke(); } // the fold of the lid above it
       }
+      if (squint > .1) { ctx.strokeStyle = `rgba(110,60,45,${squint * .8})`; ctx.lineWidth = 1.5; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(ex + s * 27, ey + k * 4); ctx.lineTo(ex + s * (33 + squint * 4), ey + k * 7 - 1); ctx.stroke(); } } // crow's feet, screwed up
     }
     // the nose: soft, drooping, its tip propped on nothing
     const [nx, ny] = S(4, -60);
     if (DET()) { ctx.fillStyle = 'rgba(120,70,50,.28)'; ell(nx + 4, ny + 14, 22, 6); ctx.fill(); } // the shadow it casts on the lip
     ctx.fillStyle = C('#DDB08A'); ctx.beginPath(); ctx.moveTo(-6, -98); ctx.quadraticCurveTo(-12, -72, nx - 17, ny + 4); ctx.quadraticCurveTo(nx, ny + 18, nx + 19, ny + 4); ctx.quadraticCurveTo(15, -74, 8, -98); ctx.fill(); outline(1.2);
     if (DET()) { ctx.fillStyle = 'rgba(120,70,50,.55)'; ell(nx - 7, ny + 5, 4, 2.4); ctx.fill(); ell(nx + 9, ny + 5, 4, 2.4); ctx.fill(); ctx.fillStyle = 'rgba(255,240,220,.6)'; ell(nx - 2, ny - 6, 5, 3); ctx.fill(); ctx.strokeStyle = 'rgba(150,100,70,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, -94); ctx.quadraticCurveTo(14, -72, nx + 14, ny); ctx.stroke(); }
-    // the mouth: slack in sleep, round in alarm, its lips soft and heavy
-    const [mx, my] = S(0, -32), mw = 26 - mo * 6, mh = 3 + mo * 16;
-    ctx.fillStyle = C('#5A1E20'); ctx.beginPath(); ctx.moveTo(mx - mw, my); ctx.quadraticCurveTo(mx, my - mh * .6 - mood * 6, mx + mw, my + mood * -2); ctx.quadraticCurveTo(mx, my + mh + 2 - mood * 4, mx - mw, my); ctx.closePath(); ctx.fill();
-    if (DET() && mo > .3) { ctx.fillStyle = '#F2EAD8'; ctx.fillRect(mx - mw * .5, my - mh * .45, mw, 3); } // teeth
-    ctx.strokeStyle = C('#A85A50'); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mx - mw - 2, my); ctx.quadraticCurveTo(mx, my + mh + 5 - mood * 4, mx + mw + 2, my); ctx.stroke(); // the lower lip
-    ctx.strokeStyle = C('#3A1A14'); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(mx - mw, my); ctx.quadraticCurveTo(mx, my - mh * .6 - mood * 6, mx + mw, my); ctx.stroke();
+    // the mouth: slack in sleep, smiling, smirking, pursed, gritted, round in a snore or a yawn, its lips soft and heavy
+    const smile = xv('smile'), smirk = xv('smirk'), Oo = xv('O'), purse = xv('purse'), grit = xv('grit'), yawn = xv('yawn'), frown = xv('frown'), mum = xv('mumble');
+    const mumO = mum * (.5 + .5 * Math.sin(t * 13)) * (.6 + .4 * Math.sin(t * 5.3)); // (its lips working over words)
+    const [mx0, my] = S(0, -32), mx = mx0 + xv('shift') * 9 + smirk * 3;
+    const mw = Math.max(6, (26 - mo * 6) * (1 + grit * .2 + smile * .18 - purse * .5 - Oo * .52 - puff * .3 - mum * .2) - yawn * 2);
+    const gap = Math.max(1.5, 3 + mo * 16 + Oo * 16 + yawn * 30 + grit * 7 + mumO * 6 - purse * 2 - puff * 2 - smile * 3);
+    const uE = gap * .35 + mood * 2, lE = gap * .65 + smile * 2.5, rk = .5 + .5 * clamp(Math.max(Oo, yawn, purse), 0, 1);
+    const cL = -smile * 10 + frown * 7, cR = -smile * 10 - smirk * 12 + frown * 7 - mood * 2;
+    const upper = () => ctx.bezierCurveTo(mx - mw * rk, my - uE / .75 + cL * .3, mx + mw * rk, my - uE / .75 + cR * .3, mx + mw, my + cR);
+    ctx.beginPath(); ctx.moveTo(mx - mw, my + cL); upper(); ctx.bezierCurveTo(mx + mw * rk, my + lE / .75 + cR * .2, mx - mw * rk, my + lE / .75 + cL * .2, mx - mw, my + cL); ctx.closePath();
+    ctx.fillStyle = C('#5A1E20'); ctx.fill();
+    if (DET() && (gap > 9 || grit > .35)) { ctx.save(); ctx.clip();
+      if (gap > 11) { ctx.fillStyle = '#A8444C'; ell(mx, my + lE * .95, mw * .6, lE * .5); ctx.fill(); } // its tongue
+      if (grit > .35) { ctx.fillStyle = '#F2EAD8'; ctx.fillRect(mx - mw, my - uE - 4, mw * 2, uE + lE + 8); ctx.strokeStyle = 'rgba(90,50,40,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(mx - mw, my + (lE - uE) * .4); ctx.lineTo(mx + mw, my + (lE - uE) * .4); for (let x = mx - mw + 6; x < mx + mw; x += 6.5) { ctx.moveTo(x, my - uE - 4); ctx.lineTo(x, my + lE + 4); } ctx.stroke(); } // teeth, clenched
+      else if (yawn < .5) { ctx.fillStyle = '#F2EAD8'; ctx.fillRect(mx - mw * .6, my - uE / .75 * .75 + cR * .15 - 1, mw * 1.2, 3.5); } // teeth
+      ctx.restore(); }
+    const lw = 3 + purse * 2.2;
+    if (purse > .2) { ctx.strokeStyle = C('#A85A50'); ctx.lineWidth = 2 + purse * 2; ctx.beginPath(); ctx.moveTo(mx - mw - 1, my + cL); upper(); ctx.stroke(); } // the upper lip, pushed out
+    ctx.strokeStyle = C('#A85A50'); ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(mx - mw - 2, my + cL); ctx.bezierCurveTo(mx - mw * rk, my + lE / .75 + cL * .2 + 3, mx + mw * rk, my + lE / .75 + cR * .2 + 3, mx + mw + 2, my + cR); ctx.stroke(); // the lower lip
+    ctx.strokeStyle = C('#3A1A14'); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(mx - mw, my + cL); upper(); ctx.stroke();
+    if (DET()) { ctx.strokeStyle = 'rgba(120,60,45,.7)'; ctx.lineWidth = 1.5;
+      const dimple = (s, k, cy) => { if (k < .1) return; ctx.globalAlpha *= Math.min(1, k); ctx.beginPath(); ctx.moveTo(mx + s * (mw + 3), my + cy - 7); ctx.quadraticCurveTo(mx + s * (mw + 9), my + cy, mx + s * (mw + 4), my + cy + 6); ctx.stroke(); ctx.globalAlpha /= Math.min(1, k); };
+      dimple(-1, smile * .6 - frown, cL); dimple(1, smile * .6 + smirk - frown, cR); // (the creases at the corners of a smile, or a smirk's one)
+      if (frown > .2 || grit > .3) { ctx.globalAlpha *= .6; for (const s of [-1, 1]) { const cy = s < 0 ? cL : cR; ctx.beginPath(); ctx.moveTo(mx + s * (mw + 2), my + cy + 2); ctx.quadraticCurveTo(mx + s * (mw + 6), my + cy + 9, mx + s * (mw + 3), my + cy + 15); ctx.stroke(); } ctx.globalAlpha /= .6; } // the down-turned lines of a grimace
+      if (purse > .2) { ctx.strokeStyle = `rgba(120,60,45,${purse * .7})`; ctx.lineWidth = 1.2; for (let q = 0; q < 6; q++) { const an = q / 6 * TAU + .26, r0 = mw + 5; ctx.beginPath(); ctx.moveTo(mx + Math.cos(an) * r0, my + 2 + Math.sin(an) * r0 * .7); ctx.lineTo(mx + Math.cos(an) * (r0 + 4), my + 2 + Math.sin(an) * (r0 + 4) * .7); ctx.stroke(); } } } // (the puckers round pursed lips)
     if (DET() && o.drool) { ctx.fillStyle = 'rgba(220,240,255,.7)'; ell(mx + mw * .7, my + 6 + o.drool * 8, 2, 4 + o.drool * 6); ctx.fill(); }
+    // the marks of its moods: a bead of sweat, a vein of temper, the start-lines of a fright, the murmur of talk in its sleep
+    const sw = xv('sweat'); if (sw > .05) { const u = (t * .45) % 1, dx = 86, dy = -122 + u * 24; ctx.save(); ctx.globalAlpha *= sw * Math.min(1, (1 - u) * 4, u * 8 + .2);
+      ctx.beginPath(); ctx.moveTo(dx, dy - 14); ctx.bezierCurveTo(dx + 3, dy - 7, dx + 8, dy - 2, dx + 8, dy + 3); ctx.arc(dx, dy + 3, 8, 0, Math.PI); ctx.bezierCurveTo(dx - 8, dy - 2, dx - 3, dy - 7, dx, dy - 14); ctx.closePath();
+      ctx.fillStyle = C('#CFE6FA'); ctx.fill(); outline(1.5); if (DET()) { ctx.fillStyle = 'rgba(255,255,255,.9)'; ell(dx - 3, dy + 2, 2, 3.6, .3); ctx.fill(); } ctx.restore(); }
+    const vn = xv('vein'); if (vn > .05) { const p = (1 + Math.sin(t * 11) * .12) * Math.min(1, vn * 1.3); ctx.save(); ctx.translate(-70, -122); ctx.scale(p, p); ctx.strokeStyle = C('#B82A2A'); ctx.lineWidth = 3.6; ctx.lineCap = 'round';
+      for (let q = 0; q < 4; q++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(3, -11); ctx.quadraticCurveTo(3, -3, 11, -3); ctx.stroke(); } ctx.restore(); }
+    const stl = xv('startle'); if (stl > .05) { ctx.strokeStyle = `rgba(40,24,20,${Math.min(1, stl)})`; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+      for (let q = -2; q <= 2; q++) { const an = -Math.PI / 2 + q * .34, r0 = 98 + Math.abs(q) * 4, r1 = r0 + 12 + stl * 10; ctx.beginPath(); ctx.moveTo(Math.cos(an) * r0, -70 + Math.sin(an) * r0); ctx.lineTo(Math.cos(an) * r1, -70 + Math.sin(an) * r1); ctx.stroke(); } }
+    if (mum > .05) { ctx.lineWidth = 2.8; ctx.lineCap = 'round'; for (let q = 0; q < 2; q++) { const u = (t * .7 + q * .5) % 1, x0 = mx - mw - 14 - u * 26, y0 = my - 2 - u * 24; ctx.strokeStyle = `rgba(60,36,50,${Math.min(1, mum * Math.sin(u * Math.PI) * 1.4)})`;
+        ctx.beginPath(); ctx.moveTo(x0, y0); for (let j = 0; j < 3; j++) ctx.quadraticCurveTo(x0 - j * 7 - 3.5, y0 - 9, x0 - j * 7 - 7, y0); ctx.stroke(); } }
   }
   // its snoring: big soft Z's drifting up from the corner of its mouth (drawn on the page, not in ink)
   function snoreZs(x, y, t, a, s = 1) {
@@ -1077,12 +1128,85 @@
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(30,30,70,.6)'; ctx.strokeText('Z', 0, 0); ctx.fillStyle = '#F4F0FF'; ctx.fillText('Z', 0, 0); ctx.restore(); }
     ctx.restore();
   }
+  // ---- its expressions: read off what it is doing and dreaming (the 'w6sleep' rule's state, the hazards it has cast, the
+  // blows it takes), blended smoothly. Drawing only: nothing here touches the fight ----
+  const FACE_K = ['smile', 'smirk', 'O', 'purse', 'grit', 'yawn', 'mumble', 'puff', 'knit', 'raise', 'raiseR', 'squint', 'rem', 'sweat', 'vein', 'startle', 'panic', 'peek', 'arc', 'frown', 'shift', 'lid'];
+  function faceTargets(e, a, t, X, dt) {
+    const B = W6.B || {}, ph = e.phase || 1, md = B.mode, T = { lid: 1 }, hurt = a.hurt || e.flash > 0;
+    const up = (k, v) => { if (v > (T[k] || 0)) T[k] = v; };
+    const set = (o, w = 1) => { for (const k in o) T[k] = lerp(T[k] ?? (k === 'lid' ? 1 : 0), o[k], w); };
+    let snore = null, piece = 9, rem = B.rem > 0 ? 1 : 0, bell = 0, slap = 0, slapHit = 0, jolt = null, tooth = 0;
+    const HZ = typeof hazards !== 'undefined' ? hazards : [];
+    for (const h of HZ) { const k = h.kind;
+      if (k === 'w6drop') { if (h.art !== 'pillow') tooth = 1; } else if (k === 'w6snore') snore = h;
+      else if (k === 'w6piece') piece = Math.min(piece, h.el); else if (k === 'w6rem') rem = 1; else if (k === 'w6bell') bell = 1; else if (k === 'w6jolt') jolt = h;
+      else if (k === 'w6slap') { slap = 1; if (h.hit && h.el - h.tell < .4) slapHit = 1; } }
+    // an idle turn now and then, so it never sets hard: which one, and how far into it (env rises and falls over ~2.6 s)
+    const cyc = Math.floor(t / 6.5), cu = t - cyc * 6.5, iv = Math.floor(hsh(cyc * 3.7 + (e.phase || 1)) * 5), env = cu < 2.6 ? Math.sin(cu / 2.6 * Math.PI) : 0;
+    if (B.broken > X.nb) X.nmT = 1.8; X.nb = B.broken || 0; X.nmT = Math.max(0, X.nmT - dt);
+    // the moment it casts a dream (the same choice the rule makes), and each sheep it counts
+    if (ph === 1 && B.dreamN && B.dreamN !== X.dn) { const lv = (B.broken || 0) + (B.regrows || 0), L = lv >= 2 ? ['pillows', 'sheep', 'snore', 'sand'] : lv >= 1 ? ['pillows', 'sheep', 'snore'] : ['pillows', 'sheep']; X.castK = L[(B.dreamN - 1) % L.length]; X.castT = 2; }
+    X.dn = B.dreamN; X.castT = Math.max(0, (X.castT || 0) - dt);
+    if ((B.sheep || 0) > (X.ns || 0)) X.cntT = .8; X.ns = B.sheep || 0; X.cntT = Math.max(0, (X.cntT || 0) - dt);
+    const casting = X.castT > 0 && X.castK !== 'snore';
+    const brK = clamp((B.broken || 0) / 4, 0, 1), lowHp = e.maxHp ? 1 - e.hp / e.maxHp : 0;
+    if (ph === 1) {
+      if (md === 'collapse' || (md === 'down' && B.t < 1.4)) { // startled awake, nearly: its face hits the quilt
+        set({ raise: 1, peek: .5, O: .55, startle: md === 'down' ? 1 - B.t / 1.4 : 1, sweat: .7, arc: 0 }); }
+      else if (md === 'down') { const fl = Math.sin(t * 2.3) > .3 ? .45 : .2; // dazed, one eye fluttering half-open, drooling
+        set({ raise: .55, peek: fl, O: .3, knit: .15, sweat: .5 }); }
+      else if (md === 'rise') set({ knit: .8, grit: .7, squint: .5, sweat: .4 }); // (heaving itself back up)
+      else { // asleep: peacefully, smugly, snoring, or troubled as its crutches go
+        set({ smile: .75 - brK * .7, arc: .15 - brK * .5, knit: brK * .6, frown: brK * .35, sweat: brK > .3 ? (brK - .2) * .8 : 0 });
+        if (casting) set({ smile: .45, smirk: 1, raiseR: .55, arc: 1, knit: 0, frown: 0, mumble: X.castK === 'sheep' ? .7 : 0 }, .85 * Math.min(1, X.castT / .5)); // dreaming at you, pleased with itself
+        if (X.cntT > 0) up('mumble', .8); // (counting them over)
+        if (B.inhale > 0) set({ puff: 1, purse: .75, smile: 0, smirk: 0, knit: .3, raise: .25, arc: 0 }); // drawing the snore in
+        else if (snore && snore.delay <= 0 && snore.r < 300) set({ O: 1, puff: .45, raise: .45, smile: 0, smirk: 0, arc: 0, frown: 0 }, sm(1 - snore.r / 300) * .6 + .4); // SNNNOOORRK
+        else if (!casting && env > 0) { // idle: a mumble, a REM flicker, a deeper smile, a twitch of a bad dream
+          if (iv === 1) up('mumble', env); else if (iv === 2) up('rem', env); else if (iv === 3) { up('smile', .75 + env * .35); up('arc', env * 1.15); } else if (iv === 4) { up('knit', env * .7); up('frown', env * .4); } }
+        if (X.nmT > 0) set({ knit: 1, grit: .9, squint: .7, sweat: 1, smile: 0, smirk: 0, arc: 0, frown: .5, mumble: 0 }, Math.min(1, X.nmT / .4)); // a nightmare: a crutch has gone
+      }
+    } else if (ph === 2) {
+      if (md === 'turn') set({ raiseR: sm(B.t / 1.6), purse: .5, knit: .3, smile: .2, arc: .3 });
+      else { // on the Board: concentrating, scheming; it smirks as each piece goes out
+        set({ raiseR: 1, knit: .45 + lowHp * .3, purse: .8, shift: Math.sin(t * .8) * .6, arc: .2, sweat: lowHp > .5 ? .5 : 0 });
+        if (env > 0 && iv < 2) { up('mumble', env * .7); T.purse = lerp(T.purse, .3, env); } // (muttering over its move)
+        if (piece < 1.6) set({ smirk: 1, smile: .4, purse: 0, knit: .1, shift: .3, arc: .9 }, piece < 1.3 ? 1 : (1.6 - piece) / .3);
+      }
+    } else {
+      if (md === 'wake') { const k = sm(B.t / .7) * (1 - sm((B.t - 1.4) / .4)); set({ yawn: k, lid: .35, squint: .3 * k, raise: .2, puff: 0 }); } // a vast yawn
+      else { // waking: drowsy, cross, then panicking as the dream closes
+        set({ lid: .5, knit: .35, frown: .35 });
+        if (env > 0 && iv === 1) set({ yawn: env, lid: .3, knit: 0, frown: 0 }, env); else if (env > 0 && iv === 2) T.lid = lerp(.5, .05, Math.max(0, Math.sin(cu * 9))); // an idle yawn, or a heavy blink
+        if (rem) set({ rem: 1, lid: .95, raise: .5, knit: 0, frown: .1 });
+        if (tooth) set({ raise: .8, knit: .5, O: .5, sweat: .7, lid: .9, frown: 0 });
+        if (slap) set({ knit: 1, frown: .7, lid: .3, squint: .3, vein: .6, puff: .3, O: 0 });
+        if (slapHit) set({ grit: 1, squint: .9, knit: 1, vein: 1 });
+        if (bell) set({ squint: 1, knit: 1, grit: .8, vein: 1, lid: .2, frown: .4, yawn: 0 }); // the alarm: screwed-up fury
+        if (jolt && !jolt.done) set({ raise: .7, knit: .4, sweat: 1, lid: .85, O: .3 }, sm(jolt.el / jolt.wait)); // it feels itself falling
+        if (jolt && jolt.done) X.panT = 1.3; X.panT = Math.max(0, X.panT - dt);
+        if (X.panT > 0) set({ panic: 1, lid: 1, raise: 1, O: 1, startle: 1, sweat: 1, knit: 0, squint: 0, frown: 0, grit: 0, yawn: 0 }, Math.min(1, X.panT / .4));
+      }
+    }
+    if (hurt) set({ squint: 1, knit: 1, grit: .9, smile: 0, smirk: 0, arc: 0, lid: (T.lid ?? 1) * .4, O: 0, yawn: 0, puff: 0, purse: 0 }, .9); // a flinch at every blow
+    return T;
+  }
+  function sleeperFace(e, a, t) {
+    const X = e.w6X || (e.w6X = { lid: 1, _t: t, nb: 0, nmT: 0, panT: 0 }), dt = clamp(t - X._t, 0, .1); X._t = t;
+    if (!dt) return X;
+    const T = faceTargets(e, a, t, X, dt), fast = a.hurt || e.flash > 0;
+    for (const k of FACE_K) { const tg = T[k] ?? (k === 'lid' ? 1 : 0), cur = X[k] ?? (k === 'lid' ? 1 : 0), r = fast || k === 'startle' || k === 'panic' || (k === 'shift') ? 16 : tg > cur ? 7 : 4.5;
+      X[k] = cur + (tg - cur) * Math.min(1, dt * r); }
+    return X;
+  }
   CREATURES.w6sleeper = function (e, a) {
     a = a || {}; const t = a.t || 0;
     const S = e.w6S || {}; ctx.scale(HS, HS); if (e.state === 'w6act' && e.flash <= 0) W6.skipHatch = true;
-    sleeperHead({ t, sag: S.sag || 0, eyes: S.eyes || 0, mouth: S.mouth || 0, mood: (S.mood || 0) + (a.hurt ? -.6 : 0), look: S.look || 0, flush: S.flush || 0, drool: S.drool || 0 });
+    // (its expression now carries the feeling; the rule's old mood is kept only as a faint tint)
+    const X = sleeperFace(e, a, t);
+    sleeperHead({ t, sag: S.sag || 0, eyes: S.eyes || 0, mouth: (S.mouth || 0) * (1 - Math.min(1, (X.purse || 0) + (X.puff || 0) + (X.grit || 0))), mood: (S.mood || 0) * .3, look: S.look || 0, flush: Math.min(1, (S.flush || 0) + (X.grit || 0) * .4 + (X.vein || 0) * .5), drool: S.drool || 0, X });
   };
-  W6.sleeperHead = sleeperHead; W6.HS = HS; W6.snoreZs = snoreZs; W6.ANCH = SLEEP_ANCHORS;
+  W6.sleeperHead = sleeperHead; W6.sleeperFace = sleeperFace; W6.HS = HS; W6.snoreZs = snoreZs; W6.ANCH = SLEEP_ANCHORS;
 
   // the attacks, rules and passages plug into world.js and zones.js, which load after this file: data_w6.js calls this once they exist
   const late = () => {
@@ -1429,7 +1553,7 @@
   function toPhase(e, n) {
     phaseDrop(e); e.phase = n; e.dmg = Math.round(e.baseDmg * [1, 1.12, 1.25][n - 1]);
     for (const c of B.crutches) if (!c.dead) { c.dead = true; c.w6counted = 1; c.state = 'dying'; c.death = 'w6snap'; c.t = c.dmax = 1.2; c.vx = 0; c.deadAt = performance.now() / 1000; c.dir = Math.sign(c.x - e.x) || 1; }
-    hazards = hazards.filter(h => !SHZ.includes(h.kind)); B.inhale = 0; e.w6S.flush = 0;
+    hazards = hazards.filter(h => !SHZ.includes(h.kind)); B.inhale = 0; e.w6S.flush = 0; e.w6S.drool = 0; // (a new dream wipes its chin)
     for (const c of corpses) if (c.type === 'w6crutch') { c.remove2 = 1; puffAt(c.x, c.y); } corpses = corpses.filter(c => !c.remove2);
     shakeMag = 14; flashT = .2; sfx('roar'); zoom = .06;
     if (n === 2) { B.mode = 'turn'; B.t = 0; banner('The Dream of the Board', 'IT PLAYS AGAINST YOU · STAY OFF THE SQUARES IT LIGHTS', 2.8); }
@@ -1785,7 +1909,7 @@
       const e = SB();
       if (!e && stage.bossRoom) { // before it is woken into the fight: it is already there, asleep on its crutches, snoring
         const x = stage.len - VW / 2, y = FLOOR_TOP + 16, z = 62, s = 1.15, fake = { x, y, z, size: s, w6S: { sag: 0 } };
-        list.push([y, () => { shadow(x, y, 120); ctx.save(); ctx.translate(x, y - z); ctx.scale(s * W6.HS, s * W6.HS); sleeperHead({ t, mouth: .12 + Math.max(0, Math.sin(t * 1.3)) * .12 }); ctx.restore(); }]);
+        list.push([y, () => { shadow(x, y, 120); ctx.save(); ctx.translate(x, y - z); ctx.scale(s * W6.HS, s * W6.HS); sleeperHead({ t, mouth: .12 + Math.max(0, Math.sin(t * 1.3)) * .12, X: { smile: .6, arc: .65, mumble: Math.max(0, Math.sin(t * .9) - .6) * 2.2 } }); ctx.restore(); }]); // (peaceful, now and then murmuring)
         for (let i = 0; i < 4; i++) { const [fx, fy] = CRUTCH_FEET[i], cx = x + fx, cy = FLOOR_TOP + fy, [ax, ay] = anchorAt(fake, i);
           list.push([cy, () => { ctx.save(); ctx.translate(cx, cy); CREATURES.w6crutch({ w6top: [ax - cx, ay - cy], hp: 1, maxHp: 1, flash: 0, slot: i }, { t }); W6.skipHatch = false; ctx.restore(); }]); }
         list.push([y + .1, () => onMain(() => snoreZs(x + 30, y - z - 20, t, 1, 1.4))]);
@@ -1968,7 +2092,7 @@
     ctx.save(); ctx.globalAlpha = e.fade !== undefined ? e.fade : 1;
     if (d === 'w6wake') { // the Sleeper wakes: its eyes fly open, and it is gone like a soap bubble, leaving the paint it was made of
       const S = e.w6S || {}; S.eyes = 1; S.mouth = 1 - k * .4; S.mood = .2;
-      if (k < .999) { ctx.save(); ctx.translate(e.x, e.y - e.z - k * 40); ctx.scale(e.size * W6.HS * (1 + k * .15), e.size * W6.HS * (1 + k * .15)); ctx.globalAlpha *= 1 - sm((k - .35) / .65); sleeperHead({ t, eyes: 1, mouth: S.mouth, mood: .1, flush: 1 }); ctx.restore();
+      if (k < .999) { ctx.save(); ctx.translate(e.x, e.y - e.z - k * 40); ctx.scale(e.size * W6.HS * (1 + k * .15), e.size * W6.HS * (1 + k * .15)); ctx.globalAlpha *= 1 - sm((k - .35) / .65); sleeperHead({ t, eyes: 1, mouth: S.mouth, mood: .1, flush: 1, X: { panic: 1 - k * .6, raise: 1, O: .8, startle: 1 - k } }); ctx.restore();
         onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 40; i++) { const u = hsh(i), life = cl01(k * 1.6 - u * .6), x = e.x + (hsh(i + 3) - .5) * 220 * (1 + life), y = e.y - e.z - 80 - life * 160 + (hsh(i + 7) - .5) * 120;
           ctx.fillStyle = `rgba(${['255,236,200', '200,220,255', '255,200,170'][i % 3]},${.7 * Math.sin(life * Math.PI)})`; ctx.save(); ctx.translate(x, y); ctx.rotate(hsh(i + 9) * 3); ctx.fillRect(-6, -1.4, 12, 2.8); ctx.restore(); } ctx.restore(); }); }
     } else if (d === 'w6melt') { // the clock melts into a puddle of gold, its numbers floating on it
