@@ -229,7 +229,9 @@
     cloud: ['haft', (x, y, p, w) => { cel(PE(x, 0, 2.8, 2.2), '#3A4282', { d: .8, r: .6, w: .9 }); if (det()) { ctx.fillStyle = '#FFF2A0'; ctx.beginPath(); ctx.ellipse(x, 0, 1.5, .9, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#1E1838'; ctx.beginPath(); ctx.arc(x, 0, .5, 0, TAU); ctx.fill(); } }],
     halo: ['haft', (x, y, p, w) => { ctx.fillStyle = C('#14102A'); ctx.fillRect(x - 2, -w / 2 - .5, 4, w + 1); ctx.beginPath(); ctx.rect(x - 2, -w / 2 - .5, 4, w + 1); outline(.7); if (det()) { ctx.fillStyle = '#6FE0C0'; ctx.fillRect(x - .3, -w / 2 - .5, .6, w + 1); } }],
     core: ['pommel', (x) => { pearl(x, 0, 3.4, PAL.abyss); }],
-    ribbons: ['pommel', (x, y, p) => { for (const [dy, k] of [[-1, 1], [1, -.7]]) rod(() => { ctx.moveTo(x, dy); ctx.bezierCurveTo(x - 5, dy + 6 * k, x - 9, dy - 4 * k, x - 15, dy + 5 * k); }, 1.5, p.accent); }],
+    // (sw: the streamers' link angles, drawHangers below; each point turned about the root, the further ones more)
+    ribbons: ['pommel', (x, y, p, sw) => { for (const [dy, k] of [[-1, 1], [1, -.7]]) { const pt = (px, py, i) => { if (!sw) return [px, py]; const a = sw[i] + sw.fl * .2 * Math.sin(sw.t * 12 - i * 1.4 + k * 3), c = Math.cos(a), s = Math.sin(a), ex = px - x, ey = py - dy; return [x + ex * c - ey * s, dy + ex * s + ey * c]; };
+      const A = pt(x - 5, dy + 6 * k, 0), B = pt(x - 9, dy - 4 * k, 1), E = pt(x - 15, dy + 5 * k, 2); rod(() => { ctx.moveTo(x, dy); ctx.bezierCurveTo(A[0], A[1], B[0], B[1], E[0], E[1]); }, 1.5, p.accent); } }],
     fin: ['head', (x, y, p) => { cel(PF((ox, oy) => { ctx.moveTo(x - 4 + ox, 3 + oy); ctx.quadraticCurveTo(x - 4 + ox, 9 + oy, x - 11 + ox, 10.5 + oy); ctx.quadraticCurveTo(x - 4 + ox, 7 + oy, x + 3 + ox, 3 + oy); }), p.bladeDk, { d: .8, r: .6, lite: p.blade, w: .9 }); }],
     cage: ['collar', (x, y, p) => { band(x, 4.2, 8.4, p); band(x - 4.6, 2.2, 6.4, p); }],
     anchor: ['pommel', (x, y, p) => { rod(() => { ctx.moveTo(x, 0); ctx.lineTo(x - 7, 0); ctx.moveTo(x - 4, -3.4); ctx.lineTo(x - 4, 3.4); ctx.moveTo(x - 9, -4.6); ctx.quadraticCurveTo(x - 4.4, 0, x - 9, 4.6); }, 1.3, p.metal, p.metalLt); }],
@@ -248,7 +250,8 @@
     const hybPiece = (x, back) => { // the second Form of a hybrid, at the butt end
       if (!spec.hyb) return;
       if (spec.hyb === 'edge') { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, back ? -1 : 1); curvedBlade(0, 15, 5, .35, q, { serrate: serr }); ctx.restore(); }
-      else if (spec.hyb === 'orb') { chainLinks(x - 9, x, 4, 0, p, 3); pearl(x - 13, 5.5, 4.4, q); }
+      else if (spec.hyb === 'orb') { const fn = () => { chainLinks(x - 9, x, 4, 0, p, 3); pearl(x - 13, 5.5, 4.4, q); };
+        if (HLIST) HLIST.push({ tx: 0, ty: 0, rot: 0, piv: [x, 0], rest: -1.17, fn }); else fn(); }
       else if (spec.hyb === 'shell') scallopShield(x - 4, 3.4, 8.5, q);
       else { cel(PL([x, -2.2, x - 16, 0, x, 2.2]), q.blade, { d: 1, r: .6, dark: q.bladeDk, lite: q.edge, w: 1 }); }
     };
@@ -334,15 +337,23 @@
     }
     return S;
   }
+  // ---------------- the hangers: the ornaments that hang (a drop, a charm, shards on threads, the hybrid's pearl on a chain)
+  // and the streaming ribbons. While the kept picture is painted (HLIST set) they are listed instead of painted, and
+  // drawHangers draws them live over it: each turned about its pivot so it hangs down under gravity whatever the weapon's
+  // angle, and swung by the pivot's own motion (the orb's pendulum, pearl_ng.js). HANGW: the pivot in the ornament's own
+  // space; str: a streamer (it bends with the swing, it does not hang)
+  const HANGW = { drops: { piv: [-.5, 2.5] }, charm: { piv: [1, 1.5] }, shards: { piv: [-.5, 2] }, ribbons: { piv: [0, 0], str: 1 } };
+  let HLIST = null;
+  const HSW = new Map();
   function paintWeapon(spec) {
     const S = paintBody(spec), p = spec.pal, used = { haft: 0, collar: 0, head: 0, pommel: 0 };
-    const at = (x, y, rot, fn) => { ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); fn(); ctx.restore(); };
+    const at = (x, y, rot, fn, part) => { const h = HLIST && HANGW[part]; if (h) { HLIST.push({ tx: x, ty: y, rot: rot || 0, piv: h.piv, str: h.str, rest: 0, fn }); return; } ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); fn(); ctx.restore(); };
     for (const part of spec.parts) { const o = ORN[part]; if (!o || o[0] === 'flag') continue;
       const slot = o[0], n = used[slot]++;
       if (slot === 'haft') { const h = S.haft[n % S.haft.length], hx = Array.isArray(h) ? h : [h, 0, 0]; at(hx[0], hx[1], hx[2], () => o[1](0, 0, p, S.w)); }
-      else if (slot === 'collar') at(S.collar[0] + n * (S.cstep ?? -5.5), S.collar[1], 0, () => o[1](0, 0, p));
-      else if (slot === 'head') at(S.head[0] - n * 4, S.head[1], 0, () => o[1](0, 0, p));
-      else at(S.pommel[0] - n * 4, S.pommel[1], 0, () => o[1](0, 0, p));
+      else if (slot === 'collar') at(S.collar[0] + n * (S.cstep ?? -5.5), S.collar[1], 0, (sw) => o[1](0, 0, p, sw), part);
+      else if (slot === 'head') at(S.head[0] - n * 4, S.head[1], 0, (sw) => o[1](0, 0, p, sw), part);
+      else at(S.pommel[0] - n * 4, S.pommel[1], 0, (sw) => o[1](0, 0, p, sw), part);
     }
     return S;
   }
@@ -374,13 +385,34 @@
     const x0 = Math.floor(S.x0), y0 = Math.floor(S.y0), w = Math.ceil(S.x1 - x0), h = Math.ceil(S.y1 - y0);
     c = document.createElement('canvas'); c.width = Math.max(4, w * W_SC); c.height = Math.max(4, h * W_SC); c.bx = x0; c.by = y0; c.bw = w; c.bh = h; c.slots = S; c.tint = {};
     const ok = OUTK, ik = INK, fl = FLASH, ti = TINT; OUTK = .62; INK = '#170D0C'; FLASH = false; TINT = null;
-    try { ART.withCtx(c.getContext('2d'), () => { ctx.setTransform(W_SC, 0, 0, W_SC, -x0 * W_SC, -y0 * W_SC); paintWeapon(spec); }); } finally { OUTK = ok; INK = ik; FLASH = fl; TINT = ti; }
+    c.hang = []; HLIST = c.hang;
+    try { ART.withCtx(c.getContext('2d'), () => { ctx.setTransform(W_SC, 0, 0, W_SC, -x0 * W_SC, -y0 * W_SC); paintWeapon(spec); }); } finally { OUTK = ok; INK = ik; FLASH = fl; TINT = ti; HLIST = null; }
     CACHE.set(spec.key, c); return c;
   }
   function tinted(c, col) { // one colour all over (a hit flash, a shadow afterimage)
     let t = c.tint[col]; if (t) return t;
     t = document.createElement('canvas'); t.width = c.width; t.height = c.height; const g = t.getContext('2d'); g.drawImage(c, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, t.width, t.height);
     if (Object.keys(c.tint).length > 8) c.tint = {}; c.tint[col] = t; return t;
+  }
+  // the hangers, live over the kept picture. Down is found from the canvas's own transform (so they hang under gravity
+  // as the weapon turns, on an icon as in his hand); the swing steps once a frame, on the game's clock, only for the
+  // weapon in his hand (step), from where its pivot really goes on the canvas
+  function drawHangers(spec, c, step) {
+    const L = c.hang; if (!L || !L.length) return;
+    const m = ctx.getTransform(), dm = m.a * m.d - m.b * m.c; if (!dm) return;
+    const sg = dm < 0 ? -1 : 1, sc = Math.sqrt(Math.abs(dm)) || 1, gr = Math.atan2(m.a / dm, -m.c / dm) - Math.PI / 2, clk = PN.CUR.clock, now = performance.now() / 1000;
+    const ok = OUTK, ik = INK; OUTK = .62; INK = '#170D0C';
+    try {
+      for (let i = 0; i < L.length; i++) { const h = L[i], key = spec.key + '#' + i, cr = Math.cos(h.rot), sr = Math.sin(h.rot);
+        let s = HSW.get(key); if (!s) { if (HSW.size > 24) HSW.clear(); s = ART.swNew(); s.clk = clk; HSW.set(key, s); }
+        if (step && clk !== s.clk) { const lx = h.tx + h.piv[0] * cr - h.piv[1] * sr, ly = h.ty + h.piv[0] * sr + h.piv[1] * cr, dt = clk - s.clk; s.clk = clk;
+          if (dt > .2) s.px = null; ART.swStep(s, (m.a * lx + m.c * ly + m.e) / sc, (m.b * lx + m.d * ly + m.f) / sc, dt, { drag: .0004 }); }
+        const A = step ? ART.swView(s, sg, now) : ART.swView(null, sg, now);
+        ctx.save(); ctx.translate(h.tx, h.ty); if (h.rot) ctx.rotate(h.rot);
+        if (h.str) h.fn(A);
+        else { ctx.translate(h.piv[0], h.piv[1]); ctx.rotate(gr - h.rot + h.rest + A[0]); ctx.translate(-h.piv[0], -h.piv[1]); h.fn(); }
+        ctx.restore(); }
+    } finally { OUTK = ok; INK = ik; }
   }
   const GLOWS = { quick: { per: .45, a: .3 }, heavy: { per: 1.7, a: .42 }, wild: { per: .3, a: .32, flick: 1 }, patient: { per: 2.8, a: .26 } };
   function drawPW(pose) {
@@ -393,7 +425,7 @@
       let k = .6 + .4 * Math.sin(now * TAU / G.per); if (G.flick) k = .5 + .5 * Math.random();
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ART.glow(hd[0], hd[1], 16 + 6 * spec.mass, spec.pal.glow, G.a * k); ctx.restore(); }
     if (pose.vector) { paintWeapon(spec); }
-    else { const c = picture(spec), img = FLASH ? tinted(c, '#FFFFFF') : TINT ? tinted(c, TINT) : c; ctx.drawImage(img, c.bx, c.by, c.bw, c.bh); }
+    else { const c = picture(spec), img = FLASH ? tinted(c, '#FFFFFF') : TINT ? tinted(c, TINT) : c; ctx.drawImage(img, c.bx, c.by, c.bw, c.bh); drawHangers(spec, c, !pose.noHand && !TINT && mode === 'play'); }
     if (det() && !pose.noGlow && pose.glow) { const c = picture(spec); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; ctx.fillStyle = pose.glow; rrect(c.bx + c.bw * .45, -7, c.bw * .5, 14, 6); ctx.fill(); ctx.restore(); }
     if (withHand) gripFront(hand, 17.1);
   }
