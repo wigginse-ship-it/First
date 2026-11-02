@@ -661,7 +661,7 @@
   // CURRENTS, NOT FOOTSTEPS
   // ======================================================================================================
   // tuning (world units a second; the street's depth is drawn at about .6 of its width, so depth speeds are scaled by YK)
-  const T = { cruise: 265, acc: 820, turn: .16, coast: .2, over: .3, overFling: .78, fling: 340, flingDur: .34,
+  const T = { cruise: 290, acc: 820, turn: .16, coast: .2, over: .3, overFling: .78, fling: 375, flingDur: .34,
     hitMin: 300, bounce: .78, bounceMin: 90, YK: .62 };
   const LOCO = ['idle', 'walk', 'run'];
   const speedE = () => Math.hypot(CUR.vx, CUR.vy / T.YK); // speed, depth counted as the screen draws it
