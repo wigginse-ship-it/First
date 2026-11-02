@@ -136,7 +136,10 @@
       if (fist && amp > .01) e = lerp(e, 1.25 + .35 * Math.max(0, sw), amp);
       if (bal > .01) { a = lerp(a, fist ? .35 : C.arm - .25, bal); e = lerp(e, fist ? .5 : C.elbow, bal); }
       if (C.slow !== undefined) { // (the great sword is carried point-up ahead off the mark, hoisted up and over to trail behind him at speed)
-        const fast = sm((sn - .35) / .5) * (1 - Math.max(skid, brake, coast * .5)), wa = lerp(C.slow, C.fast, fast);
+        // and it sways as he skates: swung with each push stroke, rocking slowly as he glides or coasts, wobbling on a skid or a
+        // braking edge (the hammer's weight keeps it steadier)
+        const tt = performance.now() / 1000, sway = (sw * .22 + Math.sin(tt * 2.1 + 1) * .07 * (1 - amp) + Math.sin(tt * 6.3) * .11 * bal) * (w === 'hammer' ? .6 : 1);
+        const fast = sm((sn - .35) / .5) * (1 - Math.max(skid, brake, coast * .5)), wa = lerp(C.slow, C.fast, fast) + sway;
         const g0 = (pose.arm ?? 1.1) - (pose.elbow || 0) + (pose.grip || 0) + (pose.lean || 0);
         pose.grip = lerp(g0, wa, q) - (pose.lean || 0) - lerp(pose.arm ?? 1.1, a, q) + lerp(pose.elbow || 0, e, q);
       }
