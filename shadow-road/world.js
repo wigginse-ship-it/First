@@ -558,12 +558,6 @@ function startStage(i) {
       if (n === 0) delete save.pity.any;
     } else if (n === 0) { save.pity.any = Math.min(.5, (save.pity.any || 0) + .2); }
   });
-  // in a new cycle every weapon should be in hand already; any that is not is carried in every world, for certain
-  if ((save.cycle || 0) >= 1) for (const id of pool) if (!carriers.some(c => c.weapon === id)) {
-    let w, slot, n = 0; // (each on a foe of its own)
-    do { w = 1 + Math.floor(Math.random() * (stage.waves.length - 1)); slot = Math.floor(Math.random() * stage.waves[w].length); } while (carriers.some(c => c.wave === w && c.slot === slot) && ++n < 20);
-    carriers.push({ weapon: id, wave: w, slot });
-  }
   persist();
   enterZone(0);
   $('#bossbar').hidden = true; $('#go').hidden = true;
