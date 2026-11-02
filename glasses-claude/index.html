@@ -20,7 +20,7 @@
   .top .title { color:var(--dim); font-size:.8em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
   button { font:inherit; color:var(--fg); background:var(--btn); border:2px solid var(--line);
     border-radius:14px; padding:10px 14px; min-height:52px; cursor:pointer; }
-  button:focus-visible, button:active, input:focus, select:focus, textarea:focus { outline:3px solid var(--accent); outline-offset:1px; }
+  button:focus, button:focus-visible, button:active, a:focus, input:focus, select:focus, textarea:focus { outline:3px solid var(--accent); outline-offset:1px; }
   button.primary { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
   button.rec { background:#ff4d4d; border-color:#ff4d4d; color:#000; font-weight:700; animation:pulse 1.2s infinite; }
   button.on { border-color:var(--accent); color:var(--accent); }
@@ -261,9 +261,34 @@ const saveChats = () => {
 const apiKey = () => LS.get("gc.key", "");
 
 /* ---------- views ---------- */
+const NAV_VIEWS = ["menu", "history", "lib", "settings", "dev"];
+const navView = () => { const v = document.querySelector(".view.on"); return v && NAV_VIEWS.includes(v.id.slice(2)) ? v : null; };
+function focusables(v) { return [...v.querySelectorAll("button, a[href], input:not([type=hidden]), select, textarea")].filter(el => !el.disabled && el.offsetParent !== null); }
+function stepFocus(d) {
+  const v = navView(); if (!v) return false;
+  const list = focusables(v); if (!list.length) return false;
+  const i = list.indexOf(document.activeElement);
+  const n = i < 0 ? (d > 0 ? 0 : list.length - 1) : Math.max(0, Math.min(list.length - 1, i + d));
+  list[n].focus({ preventScroll: true }); list[n].scrollIntoView({ block: "nearest" });
+  return true;
+}
+document.addEventListener("keydown", e => {
+  const t = e.target, tag = t && t.tagName;
+  if (!navView()) return;
+  const down = e.key === "ArrowDown" || e.key === "PageDown", up = e.key === "ArrowUp" || e.key === "PageUp";
+  if (tag === "TEXTAREA" && !((down && t.selectionStart === t.value.length) || (up && t.selectionStart === 0))) return;
+  if ((down || up) && stepFocus(down ? 1 : -1)) e.preventDefault();
+}, true);
+let wheelAt = 0;
+document.addEventListener("wheel", e => {
+  if (!navView()) return;
+  e.preventDefault(); const n = Date.now(); if (n - wheelAt < 200) return; wheelAt = n;
+  stepFocus(e.deltaY > 0 ? 1 : -1);
+}, { passive: false });
 function show(name) {
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + name));
   LS.set("gc.view", name === "login" ? "chat" : name);
+  if (NAV_VIEWS.includes(name)) { const v = $("v-" + name), f = focusables(v)[0]; if (f && f.tagName === "BUTTON") f.focus({ preventScroll: true }); }
 }
 function applySize() { document.body.className = settings.size === "medium" ? "" : settings.size; }
 
