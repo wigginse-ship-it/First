@@ -457,8 +457,9 @@ function drawDeath(e, t) {
     // the same height as in life: no squash. It goes over and folds at the middle, the upper body bent at an angle where the
     // staff caught it (two pieces meeting at the bend, overlapping so no seam shows; no line drawn across it)
     const q = Math.min(1, el / .45), c = 1 - (1 - q) * (1 - q), wide = e.boss || e.hw > e.hh * .7; // (a wide beast or a boss slumps where it stands instead of tipping over)
-    ctx.rotate(dl * c * (wide ? .1 : 1.2));
-    const ky = -e.hh * .5, kink = -dl * c * (wide ? .35 : .8);
+    const K = e.crk || { k: .8, y: .5, r: 1.2 };
+    ctx.rotate(dl * c * (wide ? .1 * K.r : K.r));
+    const ky = -e.hh * K.y, kink = -dl * c * (wide ? .44 * K.k : K.k);
     ctx.save(); ctx.beginPath(); ctx.rect(-400, ky - 1, 800, 400); ctx.clip(); draw(); ctx.restore();
     ctx.save(); ctx.translate(0, ky); ctx.rotate(kink); ctx.translate(0, -ky); ctx.beginPath(); ctx.rect(-400, ky - 400, 800, 400 + 3); ctx.clip(); draw(); ctx.restore();
     FLASH = false;

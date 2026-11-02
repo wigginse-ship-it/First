@@ -487,6 +487,7 @@ function killEnemy(e, dir, m) {
       sfx('slice');
     } else if (e.death === 'crumple') {
       e.dents = [0, 1, 2].map(() => ({ x: rand(-.6, .6), y: rand(.25, .85), r: rand(3, 6) }));
+      e.crk = { k: rand(.45, 1.15), y: rand(.38, .62), r: rand(.85, 1.45) }; // (each one folds its own way: how sharply, where, and how far over)
       burst(e.x, e.y, cy, cols, 14, e.def.mat === 'flesh' ? 'rock' : e.def.mat, dir);
       sfx('crunch'); shakeMag = Math.max(shakeMag, 5);
     } else if (e.death === 'splat') {
