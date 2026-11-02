@@ -173,7 +173,7 @@
   // the road: a charged heavy is about REF times the weapon's tempering (wMult), so the throw is REF times the best tempering
   // among his weapons (fists in hand do not make it weak), grown with the choices from 58% (a bare speck) to 100% (five),
   // 115% once reforged, and shaped by the Temper. Bosses take half, as they shrug off arrows.
-  const REF = 53;
+  const REF = 16; // (toned down from 53: no foe is felled by one throw, out and back, even full grown; it wears them down)
   const wBest = () => { let m = 1; if (typeof wMult === 'function' && save && save.owned) for (const id in save.owned) if (save.owned[id] && id !== 'fists' && save.wl[id]) m = Math.max(m, wMult(id)); return m; };
   const legDmg = (S, mul = 1) => REF * wBest() * S.dmgK * mul;
   function stats(picks, wpn) {
