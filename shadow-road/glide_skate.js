@@ -3,7 +3,7 @@
 // driven by that real motion, in place of a single static stance:
 //  push strokes while he gathers speed: one leg drives out and back behind him while he rides the other, bent, under his
 //    hips, then it swings back in and the other pushes; quick hard strokes from a standstill, slower longer ones nearer
-//    cruising speed, none at all at top speed (the low, crouched tuck);
+//    cruising speed, none at all at top speed (gliding tall);
 //  let go of the stick and he rides on with both feet together, rising a little, then sets an edge to brake as he slows;
 //  steer against the way he is going and he skids side-on, weight thrown back against the slide, before pushing off again;
 //  curves lean him round them, the inside knee deeper, the arms out for balance.
@@ -61,11 +61,11 @@
 
   // ---------------- the stances ----------------
   // legs in his facing frame: f the near foot, b the far one (+ ahead of the hips), fk/bk the knees, fl/bl a lifted foot
-  const READY = { f: 3, b: -3, fk: 7, bk: 7, w: 1.15, sink: 4.5, lean: .26 };   // off the mark: knees bent, ready to drive
-  const TUCK = { f: -6, b: 6, fk: 9, bk: 9, w: 1, sink: 8, lean: .45 };         // top speed: the low crouch, weight over both blades
+  const READY = { f: 3, b: -3, fk: 4, bk: 4, w: 1.15, sink: 2.2, lean: .18 };   // off the mark: knees a little bent, ready to drive
+  const TUCK = { f: 3, b: -2, fk: 3, bk: 3, w: .95, sink: 1.5, lean: .16 };      // top speed: gliding tall, a soft knee and a little lean, weight over both blades
   const RIDE = { f: 2.5, b: -1.5, fk: 4, bk: 4, w: .85, sink: 3, lean: .14 };   // coasting: feet together, rising
-  const BRAKE = { f: 9, b: -7, fk: 7, bk: 3, w: 1.6, sink: 5.5, lean: -.14 };   // an edge set: the lead knee bent, the other foot dragged behind
-  const SKID = { f: 7, b: -14, fk: 11, bk: 2, w: 1.5, sink: 8.5, lean: .3 };    // side-on, the braking leg braced into the slide behind him
+  const BRAKE = { f: 9, b: -7, fk: 5, bk: 2, w: 1.6, sink: 3, lean: -.14 };   // an edge set: the lead knee bent, the other foot dragged behind
+  const SKID = { f: 7, b: -14, fk: 7, bk: 2, w: 1.5, sink: 4.5, lean: .22 };    // side-on, the braking leg braced into the slide behind him
   const KEYS = ['f', 'b', 'fk', 'bk', 'w', 'sink', 'lean'];
   const mix = (A, B, q) => { const o = {}; for (const k of KEYS) o[k] = lerp(A[k], B[k] ?? A[k], q); o.fl = lerp(A.fl || 0, B.fl || 0, q); o.bl = lerp(A.bl || 0, B.bl || 0, q); return o; };
   // one leg through a stroke cycle (u 0..1): drive out behind, swing back in with the foot lifted, then ride it
@@ -91,13 +91,13 @@
     if (amp > .005) {
       const A = lerp(1, .85, sn), uN = ((SK.ph / TAU) % 1 + 1) % 1, uF = (uN + .5) % 1;
       const n = stroke(uN, A), fr = stroke(uF, A), bob = 1.6 * Math.abs(Math.sin(SK.ph * 2));
-      S = mix(S, { f: n.f, b: fr.f, fk: n.k, bk: fr.k, fl: n.l, bl: fr.l, w: 1.25, sink: S.sink + 1 + bob * A, lean: Math.max(S.lean, .42 + .1 * (1 - sn)) }, Math.min(1, amp * 1.7));
+      S = mix(S, { f: n.f, b: fr.f, fk: n.k, bk: fr.k, fl: n.l, bl: fr.l, w: 1.25, sink: S.sink + .5 + bob * A * .6, lean: Math.max(S.lean, .24 + .06 * (1 - sn)) }, Math.min(1, amp * 1.7));
     }
     if (coast > .005) S = mix(S, RIDE, coast * (1 - brake) * (1 - sn * .55));
     if (brake > .005) { const B = Object.assign({}, BRAKE); if (fw < 0) { B.f = -BRAKE.b; B.b = -BRAKE.f; B.fk = BRAKE.bk; B.bk = BRAKE.fk; B.lean = -BRAKE.lean; } S = mix(S, B, brake); }
     if (skid > .005) S = mix(S, SKID, skid);
     // a curve: the inside knee deeper, the stance wider, the body lower and turned into it
-    if (ac > .01) { if (c > 0) S.fk += 4 * ac; else S.bk += 4 * ac; S.w += .45 * ac; S.sink += 1.5 * ac; }
+    if (ac > .01) { if (c > 0) S.fk += 4 * ac; else S.bk += 4 * ac; S.w += .45 * ac; S.sink += .7 * ac; }
     // ---- set it on the pose, eased in from whatever he was doing ----
     const L0 = pose.legs || { f: 7, b: -7, fk: 3, bk: 3, w: 1 }, q = on;
     const L = { f: lerp(L0.f, S.f, q), b: lerp(L0.b, S.b, q), fk: lerp(L0.fk, S.fk, q), bk: lerp(L0.bk, S.bk, q), w: lerp(L0.w || 1, S.w, q) };
