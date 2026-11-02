@@ -49,7 +49,7 @@
     // curves: how fast his heading swings, toward us (+) or away
     if (s > 60 && SK.h0 !== null && against < .3) SK.turn = ap(SK.turn, wrap(h - SK.h0) / dt, dt, .12); else SK.turn = ap(SK.turn, 0, dt, .1);
     SK.h0 = s > 20 ? h : null;
-    SK.curve = clamp(SK.turn * P.facing / 1.8, -1, 1) * sm(s / (cr * .6));
+    SK.curve = clamp(SK.turn * P.facing / 1.8, -1, 1) * sm(s / (cr * .6)) * Math.min(1, Math.abs(Math.cos(h)) * 1.6); // (a curve through straight toward or away from us is the walk's own turn)
     // coasting (the stick let go), and the edge he sets to brake as it bleeds away
     SK.coast = ap(SK.coast, held ? 0 : 1, dt, held ? .08 : .2);
     SK.brake = ap(SK.brake, sm((175 - s) / 120) * (s > 6 ? 1 : 0), dt, .15);
@@ -120,9 +120,9 @@
   const CARRY = {
     fists: { arm: 2.25, elbow: .35, swing: .8, sElbow: 1.1 },
     sword: { arm: 1.95, elbow: .25, swing: .14, sElbow: .3, slow: -.25, fast: 3.42 - TAU },
-    hammer: { arm: 1.85, elbow: .2, swing: .12, sElbow: .25, slow: 2.55, fast: 3.3 },
-    staff: { arm: .95, elbow: .55, swing: .22, sElbow: .55, slow: .12, fast: .12 },
-    rapier: { arm: 1.35, elbow: .3, swing: .35, sElbow: .45, slow: .55, fast: .55 },
+    hammer: { arm: 1.85, elbow: .2, swing: .12, sElbow: .25, slow: 2.9, fast: 3.3 },
+    staff: { arm: .95, elbow: .55, swing: .22, sElbow: .55, slow: -.02, fast: -.04 },
+    rapier: { arm: 1.35, elbow: .3, swing: .35, sElbow: .45, slow: .2, fast: .06 },
   };
   function arms(pose, q, amp, sn, ac, skid, coast, brake) {
     const w = base(P.w), C = CARRY[w] || CARRY.fists, fist = w === 'fists' || !CARRY[w];
