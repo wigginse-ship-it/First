@@ -503,16 +503,18 @@
     watchfire: [[261.6, 0, .2], [329.6, .2, .2], [392, .4, .2], [523.3, .6, .7]], // warm, rising
     standard:  [[196, 0, .18], [293.7, .2, .18], [392, .4, .3], [293.7, .72, .16], [392, .9, .7]], // a regal fanfare
   };
+  W8.MELODY = MELODY; W8.hornCall = (short, id) => hornCall(short, id);
   function hornCall(short, id) {
     if (typeof sfxOn === 'undefined' || !sfxOn || !actx) return;
     try {
       const t0 = actx.currentTime + .03, lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 2; lp.connect(actx.destination);
-      const notes = MELODY[id] || (short ? [[196, 0, .26], [293.7, .24, .55]] : [[196, 0, .3], [293.7, .3, .3], [392, .62, .85]]);
+      const base = MELODY[id] || (short ? [[196, 0, .26], [293.7, .24, .55]] : [[196, 0, .3], [293.7, .3, .3], [392, .62, .85]]);
+      const notes = W8.hornNotes ? W8.hornNotes(base, short, id) || base : base; // (corruption.js: the curse detunes the call)
       lp.frequency.setValueAtTime(500, t0);
-      for (const [f, d, L] of notes) { lp.frequency.setTargetAtTime(1900, t0 + d, .05); lp.frequency.setTargetAtTime(900, t0 + d + L * .6, .1);
+      for (const [f, d, L, sl] of notes) { lp.frequency.setTargetAtTime(1900, t0 + d, .05); lp.frequency.setTargetAtTime(900, t0 + d + L * .6, .1);
         for (const [type, det, v] of [['sawtooth', 0, .055], ['sawtooth', 7, .04], ['triangle', -1200, .05]]) {
           const o = actx.createOscillator(), g = actx.createGain(); o.type = type; o.detune.value = det;
-          o.frequency.setValueAtTime(f * .94, t0 + d); o.frequency.exponentialRampToValueAtTime(f, t0 + d + .07);
+          o.frequency.setValueAtTime(f * .94, t0 + d); o.frequency.exponentialRampToValueAtTime(f, t0 + d + .07); if (sl) o.frequency.exponentialRampToValueAtTime(f * sl, t0 + d + L);
           g.gain.setValueAtTime(.0001, t0 + d); g.gain.exponentialRampToValueAtTime(v, t0 + d + .05); g.gain.setValueAtTime(v, t0 + d + L - .1); g.gain.exponentialRampToValueAtTime(.0001, t0 + d + L);
           o.connect(g).connect(lp); o.start(t0 + d); o.stop(t0 + d + L + .03); } }
     } catch (e) {}
@@ -541,7 +543,7 @@
     const c = CINE; c.t += dt;
     if (c.t > .3 && c.t < c.end) for (const k in pressed) if (pressed[k]) { c.t = Math.max(c.t, c.end); endPanel(); break; }
     W8.hornInHand = c.t > c.a * .75 && c.t < c.T - .06;
-    if (!c.called && c.t >= c.blow) { c.called = true; hornCall(!c.full, c.v[c.v.length - 1]); shakeMag = Math.max(shakeMag, 2); }
+    if (!c.called && c.t >= c.blow) { c.called = true; if (W8.onHornBlow) { try { W8.onHornBlow(c); } catch (e) { console.error(e); } } hornCall(!c.full, c.v[c.v.length - 1]); shakeMag = Math.max(shakeMag, 2); }
     if (c.t >= c.blow && c.t < c.end) emit(c, dt);
     if (c.t >= c.T) finish();
   }
@@ -549,7 +551,7 @@
   // one before has drifted far enough to clear it
   const WORD_PX = 15.6, WORD_V = 110;
   function wordsFor(c, f) {
-    const id = c.v[c.v.length - 1], name = id && V[id] ? V[id].name : 'The Long March', ws = name.split(' ');
+    const id = c.v[c.v.length - 1], name = id && V[id] ? V[id].name : 'The Long March', ws0 = name.split(' '), ws = (W8.hornWords && W8.hornWords(ws0, id)) || ws0;
     const seq = f > 0 ? ws.slice().reverse() : ws, out = []; let at = c.blow + .06, prevW = 0;
     try { ctx.save(); ctx.font = `700 ${WORD_PX}px Cinzel, Georgia, serif`; } catch (e) {}
     seq.forEach((w, i) => { let wd = w.length * 9; try { wd = ctx.measureText(w).width; } catch (e) {} if (i) at += (prevW / 2 + wd / 2 + 12) / WORD_V; out.push({ w, at }); prevW = wd; });
