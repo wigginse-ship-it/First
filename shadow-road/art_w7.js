@@ -1677,21 +1677,21 @@
     bubbles(T.x, T.y, 76, 10, 50);
     let n = 0;
     for (const e of enemies) { if (!holdable(e) || !W7.inTorchGlare(T, e.x, e.y, e.facing)) continue;
-      hold(e, 'w7daze', e.type === 'w7bishop' ? W7R.DAZE_T * .5 : W7R.DAZE_T); n++;
-      floatText(e.x, e.y, e.z + e.hh + 22, 'DAZZLED', '#F6FFD8', 13); }
+      hold(e, 'w7daze', e.type === 'w7bishop' ? W7R.DAZE_T * .5 : W7R.DAZE_T); n++; }
+    if (n) floatText(T.x, T.y, 130, n > 1 ? n + ' DAZZLED' : 'DAZZLED', '#F6FFD8', 15);
     if (P.state !== 'dead' && P.state !== 'dodge' && !zoneTrans && W7.inTorchGlare(T, P.x, P.y, P.facing)) {
       P.state = 'hurt'; P.t = Math.max(P.t || 0, W7R.P_DAZE); P.vx = 0; W7.glareP = 1;
-      floatText(P.x, P.y, 100, 'DAZZLED · TURN YOUR BACK TO IT', '#F6FFD8', 13); }
+      floatText(clamp(P.x, camX + 110, camX + VW - 110), P.y, 96, 'YOU LOOKED INTO IT', '#F6FFD8', 13); }
     if (n >= 2) sfx('crit');
     m.flares = (m.flares || 0) + 1;
   }
   function torchSwell(m, T, dur) { T.st = 'swell'; T.t = dur; T.dur = dur; m.next = rand(6.5, 8.5);
     if (sfxOn && actx) tone(196, dur, 'sine', .06, 18);
-    if ((m.told || 0) < 2) { m.told = (m.told || 0) + 1; floatText(P.x, P.y, 112, 'THE TORCH IS FLARING · TURN YOUR BACK TO IT', '#E8FFD0', 14); } }
+    if ((m.told || 0) < 2) { m.told = (m.told || 0) + 1; floatText(clamp(P.x, camX + 170, camX + VW - 170), P.y, 112, 'THE TORCH FLARES · TURN YOUR BACK TO IT', '#E8FFD0', 14); } }
   MECH_FX.w7torch = {
     start(m) { m.torches = TORCH_X.map((x, i) => ({ x, y: Math.round(FLOOR_TOP + (FLOOR_BOT - FLOOR_TOP) * (i % 2 ? .66 : .2)), st: 'burn', t: 0, dur: 1, flash: 0, hit: 0 })); m.next = 5; m.flashK = 0; m.told = 0; m.flares = 0; W7.glareP = 0; W7.torchK = 0; },
     update(m, dt) {
-      W7.glareP = Math.max(0, (W7.glareP || 0) - dt * 1.6); m.flashK = Math.max(0, m.flashK - dt * 2.4);
+      W7.glareP = Math.max(0, (W7.glareP || 0) - dt * 2); m.flashK = Math.max(0, m.flashK - dt * 2.4);
       if (stillT > 0) return;
       let swell = 0;
       for (const T of m.torches) { T.flash = Math.max(0, T.flash - dt); T.hit = Math.max(0, T.hit - dt);
@@ -1758,14 +1758,17 @@
   // glare left in the prince's eyes if he was looking into it
   function drawTorchGlare(m, live, t) {
     const S = live.find(T => T.st === 'swell');
+    if (S) { const k = sm(1 - S.t / S.dur), fy = S.y - 80, w = 10 + 26 * k; // a pillar of light up out of the swelling torch, over the heads of the fight
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(S.x - w, 0, S.x + w, 0); g.addColorStop(0, 'rgba(200,255,210,0)'); g.addColorStop(.5, `rgba(226,255,214,${.18 + .3 * k})`); g.addColorStop(1, 'rgba(200,255,210,0)');
+      ctx.fillStyle = g; ctx.fillRect(S.x - w, Y_OFF, w * 2, fy - Y_OFF); ctx.restore(); }
     if (S && DET()) { const k = sm(1 - S.t / S.dur), cy = S.y - 50, R = 360;
       const g = ctx.createRadialGradient(S.x, cy, 60, S.x, cy, R); g.addColorStop(0, 'rgba(2,14,20,0)'); g.addColorStop(.45, `rgba(2,14,20,${.3 * k})`); g.addColorStop(1, `rgba(2,14,20,${.6 * k})`);
       ctx.fillStyle = g; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40); }
     if (m.flashK > 0) { const k = m.flashK, cy = m.flashY - 60;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(m.flashX, cy, 10, m.flashX, cy, 420); g.addColorStop(0, `rgba(246,255,226,${.85 * k})`); g.addColorStop(.35, `rgba(220,255,214,${.35 * k})`); g.addColorStop(1, 'rgba(200,255,220,0)');
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(m.flashX, cy, 10, m.flashX, cy, 420); g.addColorStop(0, `rgba(246,255,226,${.75 * k})`); g.addColorStop(.3, `rgba(220,255,214,${.28 * k})`); g.addColorStop(1, 'rgba(200,255,220,0)');
       ctx.fillStyle = g; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40);
       ctx.strokeStyle = `rgba(250,255,230,${.5 * k})`; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + .2, r0 = 30, r1 = 120 + 240 * (1 - k); ctx.moveTo(m.flashX + Math.cos(a) * r0, cy + Math.sin(a) * r0 * .6); ctx.lineTo(m.flashX + Math.cos(a) * r1, cy + Math.sin(a) * r1 * .6); } ctx.stroke(); ctx.restore(); }
-    if (W7.glareP > 0) { ctx.save(); ctx.globalAlpha = Math.min(1, W7.glareP) * .55; ctx.fillStyle = '#F2FFE8'; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40); ctx.restore(); }
+    if (W7.glareP > 0) { ctx.save(); ctx.globalAlpha = Math.min(1, W7.glareP) * .32; ctx.fillStyle = '#F2FFE8'; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40); ctx.restore(); }
   }
   // a dazzled foe: little stars of light going round its head, its hands up
   function drawDazed(e, t) {
@@ -1804,7 +1807,7 @@
     // what they have thrown is turned with them
     for (const h of hazards) if (h.kind === 'w7fire') { h.x = 2 * m.s - h.x; h.vx = -h.vx; }
     for (const p of projs) if (p.owner === 'e' && p.vx) { p.x = 2 * m.s - p.x; p.vx = -p.vx; }
-    floatText(m.s, P.y, 120, back ? 'TURNED ABOUT · ' + back + (back > 1 ? ' BACKS' : ' BACK') + ' TO YOU' : 'THE GLASS TURNS', back ? '#FFE08A' : '#E8F4FF', 15);
+    floatText(clamp(m.s, camX + 150, camX + VW - 150), P.y, 120, back ? 'TURNED ABOUT · ' + back + (back > 1 ? ' BACKS' : ' BACK') + ' TO YOU' : 'THE GLASS TURNS', back ? '#FFE08A' : '#E8F4FF', 15);
     if (back >= 2) sfx('crit');
     m.turns = (m.turns || 0) + 1;
   }
@@ -1821,7 +1824,7 @@
           else { const mx = foes.reduce((a, e) => a + e.x, 0) / foes.length, side = Math.sign(mx - P.x) || P.facing;
             m.s = clamp(P.x + side * rand(80, 120), leftWall() + 70, rightWall() - 70); m.ph = 'tell'; m.t = 1.8;
             if (sfxOn && actx) { tone(523, .4, 'sine', .05, 0, 0); tone(523, .4, 'sine', .05, 0, .9); }
-            if (m.told < 2) { m.told++; floatText(P.x, P.y, 112, 'THE GLASS IS TURNING · TAKE THEM FROM BEHIND', '#E8F4FF', 14); } } }
+            if (m.told < 2) { m.told++; floatText(clamp(P.x, camX + 170, camX + VW - 170), P.y, 112, 'THE GLASS IS TURNING · TAKE THEM FROM BEHIND', '#E8F4FF', 14); } } }
       } else {
         m.t -= dt; m.k = cl01(1 - m.t / 1.8); W7.bellSwing = Math.sin(m.k * 1.8 * 7) * cl01(m.k * 1.5);
         if (m.t <= 0) { m.ph = 'calm'; m.next = rand(8, 10); glassTurn(m); }
