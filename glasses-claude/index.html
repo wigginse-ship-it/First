@@ -50,6 +50,8 @@
   .err { color:#ff7a7a; font-size:.8em; min-height:1.2em; }
   .hint { color:var(--dim); font-size:.7em; }
   .center { margin:auto 0; }
+  .menu button { width:100%; text-align:left; margin-bottom:8px; }
+  .menu small { color:var(--dim); font-size:.7em; margin-left:6px; }
 </style>
 </head>
 <body>
@@ -75,7 +77,7 @@
 <!-- CHAT -->
 <section id="v-chat" class="view">
   <div class="top">
-    <button class="small" id="b-history">History</button>
+    <button class="small" id="b-history">☰ Menu</button>
     <div class="title" id="c-title">New chat</div>
     <button class="small" id="b-settings">⚙</button>
   </div>
@@ -88,6 +90,7 @@
     <button id="b-up" aria-label="Scroll up">▲</button>
     <button id="b-down" aria-label="Scroll down">▼</button>
     <button id="b-read">🔊 Read</button>
+    <button id="b-save" aria-label="Save answer">★</button>
     <button id="b-new">＋ New</button>
   </div>
   <div class="row">
@@ -99,6 +102,28 @@
     <input id="typed" placeholder="Type a message" enterkeyhint="send">
     <button class="primary" id="b-send" style="flex:0 0 90px">Send</button>
   </div>
+</section>
+
+<!-- MENU -->
+<section id="v-menu" class="view">
+  <div class="top"><button class="small" id="m-back">← Chat</button><div class="title">Menu</div></div>
+  <div class="scroll menu" id="m-list"></div>
+</section>
+
+<!-- LIBRARY (projects / saved / skills / memory / activity) -->
+<section id="v-lib" class="view">
+  <div class="top">
+    <button class="small" id="l-back">← Menu</button>
+    <div class="title" id="l-title"></div>
+    <button class="small" id="l-add">＋ Add</button>
+  </div>
+  <div id="l-form" style="display:none">
+    <input id="l-a" autocomplete="off">
+    <textarea id="l-b" rows="3" style="margin-top:6px"></textarea>
+    <div class="row" style="margin-top:6px"><button class="primary small" id="l-save">Save</button><button class="small" id="l-cancel">Cancel</button></div>
+  </div>
+  <div class="hint" id="l-hint"></div>
+  <div class="scroll" id="l-list"></div>
 </section>
 
 <!-- HISTORY -->
@@ -178,6 +203,28 @@ const DEFAULT_SYS = "You are replying on the small heads-up display of smart gla
 let settings = Object.assign({ model:"claude-sonnet-5-5", auto:"1", send:"1", rate:"1", voice:"", lang:"en-US",
   size:"medium", sys:DEFAULT_SYS, pin:"" }, LS.get("gc.settings", {}));
 let chats = LS.get("gc.chats", []);            // [{id,title,updated,messages:[{role,content}]}]
+const DEFAULT_SKILLS = [
+  { id:"s1", name:"Summarize this chat", prompt:"Summarize our conversation so far in three short bullets." },
+  { id:"s2", name:"Explain simply", prompt:"Explain your last answer in simpler words, in two sentences." },
+  { id:"s3", name:"Next steps", prompt:"What are the next steps I should take? Give me up to three." },
+  { id:"s4", name:"Draft a reply", prompt:"Draft a short, friendly reply I can send based on this conversation." },
+];
+const DB = { projects: LS.get("gc.projects", []), saved: LS.get("gc.saved", []), skills: LS.get("gc.skills", DEFAULT_SKILLS),
+  memory: LS.get("gc.memory", []), activity: LS.get("gc.activity", []), active: LS.get("gc.active", null) };
+const persist = k => LS.set("gc." + k, DB[k]);
+function logAct(type, text) { DB.activity.unshift({ t: Date.now(), type, text: String(text).slice(0, 100) }); DB.activity.length = Math.min(DB.activity.length, 200); persist("activity"); }
+const uid = () => String(Date.now()) + Math.random().toString(36).slice(2, 6);
+function buildSystem() {
+  let sys = settings.sys || DEFAULT_SYS;
+  const proj = DB.projects.find(p => p.id === (current && current.projectId));
+  if (proj) sys += "\n\nCurrent project: " + proj.name + (proj.instructions ? "\n" + proj.instructions : "");
+  if (DB.memory.length) sys += "\n\nThings the user has asked you to remember:\n" + DB.memory.map(m => "- " + m.text).join("\n");
+  return sys;
+}
+function titleText() {
+  const proj = DB.projects.find(p => p.id === (current ? current.projectId : DB.active));
+  return (proj ? proj.name + " · " : "") + (current ? current.title : "New chat");
+}
 let current = null;                              // active chat object
 let busy = false, abortCtl = null, speaking = false, listening = false, recog = null;
 
@@ -235,7 +282,7 @@ function openChat(c) {
   current = c; if (c) LS.set("gc.lastChat", c.id); renderChat();
 }
 function renderChat() {
-  $("c-title").textContent = current ? current.title : "New chat";
+  $("c-title").textContent = titleText();
   const m = current ? current.messages : [];
   const lastA = [...m].reverse().find(x => x.role === "assistant");
   const lastU = [...m].reverse().find(x => x.role === "user");
@@ -273,13 +320,15 @@ function plain(text) {   // for speech
 async function ask(userText) {
   if (busy || !userText.trim()) return;
   stopSpeaking();
+  const rm = userText.match(/^\s*(?:hey claude,?\s*)?remember(?: that)?\s+(.{3,})/i);
+  if (rm) { DB.memory.unshift({ id: uid(), text: rm[1].trim(), t: Date.now() }); persist("memory"); logAct("memory", rm[1].trim()); }
   if (!current) {
-    current = { id: String(Date.now()), title: userText.slice(0, 48), updated: Date.now(), messages: [] };
-    chats.unshift(current); LS.set("gc.lastChat", current.id);
+    current = { id: String(Date.now()), title: userText.slice(0, 48), updated: Date.now(), messages: [], projectId: DB.active };
+    chats.unshift(current); LS.set("gc.lastChat", current.id); logAct("chat", "Started: " + current.title);
   }
   current.messages.push({ role: "user", content: userText.trim() });
   current.updated = Date.now(); saveChats();
-  $("c-title").textContent = current.title;
+  $("c-title").textContent = titleText();
   $("question").innerHTML = "<b>You:</b> " + esc(userText.trim());
   const ans = $("answer"); ans.innerHTML = ""; ans.classList.add("cursor"); $("scroll").scrollTop = 0;
   $("live").textContent = "Thinking…";
@@ -291,7 +340,7 @@ async function ask(userText) {
       headers: { "content-type":"application/json", "x-api-key": apiKey(), "anthropic-version":"2023-06-01",
                  "anthropic-dangerous-direct-browser-access":"true" },
       body: JSON.stringify({ model: settings.model, max_tokens: 1500, stream: true,
-        system: settings.sys || DEFAULT_SYS,
+        system: buildSystem(),
         messages: current.messages.map(m => ({ role:m.role, content:m.content })) }),
     });
     if (!res.ok) {
@@ -316,7 +365,7 @@ async function ask(userText) {
     }
     if (!acc) acc = "(no response)";
     current.messages.push({ role:"assistant", content: acc });
-    current.updated = Date.now(); saveChats();
+    current.updated = Date.now(); saveChats(); logAct("asked", userText.trim());
     ans.innerHTML = md(acc);
     if (settings.auto === "1") speak(acc);
   } catch (e) {
@@ -413,7 +462,87 @@ $("typed").addEventListener("keydown", e => { if (e.key === "Enter") $("b-send")
 $("b-up").onclick = () => $("scroll").scrollBy({ top: -$("scroll").clientHeight * .85 });
 $("b-down").onclick = () => $("scroll").scrollBy({ top: $("scroll").clientHeight * .85 });
 $("b-new").onclick = newChat;
-$("b-history").onclick = () => { renderHistory(); show("history"); };
+$("b-save").onclick = () => {
+  const m = current ? current.messages : [];
+  const a = [...m].reverse().find(x => x.role === "assistant"), q = [...m].reverse().find(x => x.role === "user");
+  if (!a) { $("live").textContent = "Nothing to save yet"; return; }
+  DB.saved.unshift({ id: uid(), title: (q ? q.content : "Saved answer").slice(0, 60), content: a.content, t: Date.now() });
+  persist("saved"); logAct("saved", q ? q.content : "answer"); $("live").textContent = "★ Saved";
+};
+$("b-history").onclick = () => { renderMenu(); show("menu"); };
+const MENU = [
+  ["💬", "Chat", () => show("chat")],
+  ["🕘", "Previous chats", () => { renderHistory(); show("history"); }],
+  ["📁", "Projects", () => openLib("projects")],
+  ["★", "Saved answers", () => openLib("saved")],
+  ["⚡", "Skills", () => openLib("skills")],
+  ["🧠", "Memory", () => openLib("memory")],
+  ["📜", "Activity", () => openLib("activity")],
+  ["⚙", "Settings", () => { fillSettings(); show("settings"); }],
+];
+function renderMenu() {
+  const l = $("m-list"); l.innerHTML = "";
+  MENU.forEach(([ic, name, fn]) => {
+    const b = document.createElement("button"); b.textContent = ic + "  " + name;
+    const p = DB.projects.find(x => x.id === DB.active);
+    if (name === "Projects" && p) b.innerHTML += "<small>active: " + esc(p.name) + "</small>";
+    b.onclick = fn; l.append(b);
+  });
+}
+$("m-back").onclick = () => show("chat");
+
+const when = t => new Date(t).toLocaleString();
+const LIBS = {
+  projects: { title: "Projects", add: ["Project name", "Instructions for Claude in this project"], hint: "Tap a project to make it active for new chats.",
+    items: () => DB.projects, label: x => x.name, sub: x => (DB.active === x.id ? "✔ active · " : "") + (x.instructions || "").slice(0, 60),
+    tap: x => { DB.active = DB.active === x.id ? null : x.id; LS.set("gc.active", DB.active); logAct("project", (DB.active ? "Active: " : "Cleared: ") + x.name); renderLib(); },
+    create: (a, b) => { DB.projects.unshift({ id: uid(), name: a, instructions: b }); persist("projects"); logAct("project", "Created " + a); } },
+  saved: { title: "Saved answers", add: null, hint: "Tap ★ in a chat to save an answer here.",
+    items: () => DB.saved, label: x => x.title, sub: x => when(x.t),
+    tap: x => { stopAll(); current = null; LS.del("gc.lastChat"); renderChat(); $("question").innerHTML = "<b>Saved:</b> " + esc(x.title); $("answer").innerHTML = md(x.content); show("chat"); } },
+  skills: { title: "Skills", add: ["Skill name", "What Claude should do when you run it"], hint: "Tap a skill to run it in the current chat.",
+    items: () => DB.skills, label: x => x.name, sub: x => x.prompt.slice(0, 60),
+    tap: x => { logAct("skill", x.name); show("chat"); ask(x.prompt); },
+    create: (a, b) => { if (!b) return; DB.skills.unshift({ id: uid(), name: a, prompt: b }); persist("skills"); } },
+  memory: { title: "Memory", add: ["Something for Claude to remember", null], hint: "Claude sees these in every chat. You can also say “remember that …”.",
+    items: () => DB.memory, label: x => x.text, sub: x => when(x.t),
+    create: a => { DB.memory.unshift({ id: uid(), text: a, t: Date.now() }); persist("memory"); logAct("memory", a); } },
+  activity: { title: "Activity", add: null, hint: "Most recent first.", noDelete: true,
+    items: () => DB.activity, label: x => x.text, sub: x => when(x.t) + " · " + x.type },
+};
+let libKey = null;
+function openLib(k) { libKey = k; $("l-form").style.display = "none"; renderLib(); show("lib"); }
+function renderLib() {
+  const c = LIBS[libKey], l = $("l-list"); l.innerHTML = "";
+  $("l-title").textContent = c.title; $("l-hint").textContent = c.hint || ""; $("l-add").style.display = c.add ? "" : "none";
+  const items = c.items();
+  if (!items.length) l.innerHTML = '<div class="hint">Nothing here yet.</div>';
+  items.forEach(x => {
+    const d = document.createElement("div"); d.className = "item";
+    const o = document.createElement("button"); o.className = "open";
+    o.innerHTML = `<span>${esc(c.label(x))}</span><small>${esc(c.sub(x) || "")}</small>`;
+    o.onclick = () => c.tap && c.tap(x); d.append(o);
+    if (!c.noDelete) {
+      const del = document.createElement("button"); del.textContent = "🗑"; del.setAttribute("aria-label", "Delete");
+      del.onclick = () => { if (del.dataset.arm) { const arr = c.items(), i = arr.indexOf(x); arr.splice(i, 1); persist(libKey);
+          if (libKey === "projects" && DB.active === x.id) { DB.active = null; LS.set("gc.active", null); } renderLib(); }
+        else { del.dataset.arm = 1; del.textContent = "Sure?"; setTimeout(() => { del.dataset.arm = ""; del.textContent = "🗑"; }, 3000); } };
+      d.append(del);
+    }
+    l.append(d);
+  });
+}
+$("l-back").onclick = () => { renderMenu(); show("menu"); };
+$("l-add").onclick = () => {
+  const c = LIBS[libKey]; $("l-form").style.display = "block";
+  $("l-a").placeholder = c.add[0]; $("l-a").value = ""; $("l-b").value = "";
+  $("l-b").style.display = c.add[1] ? "" : "none"; $("l-b").placeholder = c.add[1] || ""; $("l-a").focus();
+};
+$("l-cancel").onclick = () => { $("l-form").style.display = "none"; };
+$("l-save").onclick = () => {
+  const c = LIBS[libKey], a = $("l-a").value.trim(), b = $("l-b").value.trim();
+  if (!a) return; c.create(a, b); $("l-form").style.display = "none"; renderLib();
+};
 $("b-settings").onclick = () => { fillSettings(); show("settings"); };
 
 /* ---------- history ---------- */
@@ -435,7 +564,8 @@ function renderHistory() {
   list.forEach(({ c, snip }) => {
     const d = document.createElement("div"); d.className = "item";
     const o = document.createElement("button"); o.className = "open";
-    o.innerHTML = `<span>${esc(c.title)}</span><small>${esc(snip || new Date(c.updated).toLocaleString() + " · " + Math.ceil(c.messages.length / 2) + " Q&A")}</small>`;
+    const pj = DB.projects.find(p => p.id === c.projectId);
+    o.innerHTML = `<span>${esc(c.title)}</span><small>${esc(snip || (pj ? pj.name + " · " : "") + new Date(c.updated).toLocaleString() + " · " + Math.ceil(c.messages.length / 2) + " Q&A")}</small>`;
     o.onclick = () => { stopAll(); openChat(c); show("chat"); };
     const x = document.createElement("button"); x.textContent = "🗑"; x.setAttribute("aria-label", "Delete chat");
     x.onclick = () => { if (x.dataset.arm) { chats = chats.filter(k => k !== c); if (current === c) current = null; saveChats(); renderHistory(); }
@@ -488,7 +618,7 @@ $("h-export").onclick = () => {
   a.href = URL.createObjectURL(new Blob([JSON.stringify(chats)], { type: "application/json" }));
   a.download = "glasses-claude-chats.json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 };
-$("h-back").onclick = () => show("chat");
+$("h-back").onclick = () => { renderMenu(); show("menu"); };
 $("h-new").onclick = newChat;
 
 /* ---------- settings ---------- */
