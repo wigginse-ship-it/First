@@ -565,21 +565,25 @@ function startStage(i) {
   banner(stage.name, stage.sub + (save.cycle ? ' · CYCLE ' + (save.cycle + 1) : ''), 2.4);
 }
 const waveAt = (i) => 520 + i * ((stage.len - 1300) / stage.waves.length);
-function updateWorld(dt) {
-  if (!waveActive && waveIdx < stage.waves.length && P.x > waveAt(waveIdx)) {
-    waveActive = true; lockX = clamp(camX, 0, stage.len - VW); $('#go').hidden = true;
-    const wave = stage.waves[waveIdx];
-    wave.forEach((t, j) => spawnQ.push({ type: t, side: j % 2 ? -1 : 1, at: j * .8, drop: null }));
-    if (zoneIdx === 1 && waveIdx === 0 && !stage.secret) { // the approach's first wave brings strangers: a couple of foes from this or earlier worlds, and a champion
-      boostDrop();
-      const firstWorld = (k) => STAGES.findIndex(st => (st.waves || []).some(w => w.some(t => t.replace(/[*!]/g, '') === k))); // the first world a foe appears in
-      const pool = Object.keys(EDEF).filter(k => !wave.includes(k) && !EDEF[k].noRandom && firstWorld(k) >= 0 && (firstWorld(k) <= Math.min(stageIdx, 4) || firstWorld(k) === stageIdx)); // (only foes already met on the road: none from later worlds, nor from the roads past the Rim not taken)
-      for (let j = 0; j < 2; j++) spawnQ.push({ type: pick(pool), side: j % 2 ? 1 : -1, at: 1.2 + j * 1.4, drop: null });
-      spawnQ.push({ type: pick(wave.map(t => t.replace('*', '')).filter(t => EDEF[t] && EDEF[t].move !== 'fly')), side: 1, at: 3.4, drop: null, champ: true });
-      spawnQ.sort((a, b) => a.at - b.at);
-    }
-    for (const d of carriers) if (d.wave === stage.w0 + waveIdx && !save.owned[d.weapon]) spawnQ[d.slot].drop = d.weapon; // nothing marks the carrier
+// the next wave starts once he has walked far enough on (pacing.js may hold it back a little, or bring it on early)
+function waveReady() { return P.x > waveAt(waveIdx); }
+// a wave begins: the screen locks and its foes are queued, each tagged (wj) with its place in the wave's list
+function beginWave() {
+  waveActive = true; lockX = clamp(camX, 0, stage.len - VW); $('#go').hidden = true;
+  const wave = stage.waves[waveIdx];
+  wave.forEach((t, j) => spawnQ.push({ type: t, side: j % 2 ? -1 : 1, at: j * .8, drop: null, wj: j }));
+  if (zoneIdx === 1 && waveIdx === 0 && !stage.secret) { // the approach's first wave brings strangers: a couple of foes from this or earlier worlds, and a champion
+    boostDrop();
+    const firstWorld = (k) => STAGES.findIndex(st => (st.waves || []).some(w => w.some(t => t.replace(/[*!]/g, '') === k))); // the first world a foe appears in
+    const pool = Object.keys(EDEF).filter(k => !wave.includes(k) && !EDEF[k].noRandom && firstWorld(k) >= 0 && (firstWorld(k) <= Math.min(stageIdx, 4) || firstWorld(k) === stageIdx)); // (only foes already met on the road: none from later worlds, nor from the roads past the Rim not taken)
+    for (let j = 0; j < 2; j++) spawnQ.push({ type: pick(pool), side: j % 2 ? 1 : -1, at: 1.2 + j * 1.4, drop: null });
+    spawnQ.push({ type: pick(wave.map(t => t.replace('*', '')).filter(t => EDEF[t] && EDEF[t].move !== 'fly')), side: 1, at: 3.4, drop: null, champ: true });
+    spawnQ.sort((a, b) => a.at - b.at);
   }
+  for (const d of carriers) if (d.wave === stage.w0 + waveIdx && !save.owned[d.weapon]) spawnQ[d.slot].drop = d.weapon; // nothing marks the carrier
+}
+function updateWorld(dt) {
+  if (!waveActive && waveIdx < stage.waves.length && waveReady()) beginWave();
   if (!stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length && P.x > stage.len - (typeof exitX === 'function' && typeof threshKind === 'function' && THRESH[threshKind()] ? stage.len - exitX() + 18 : 90)) startZoneTrans(); // on to the next place: you step into the landmark at the end of the road
   if (stage.bossRoom && !bossSpawned && P.x > stage.len - VW * .75) {
     setZoom(VIEW_BOSS); // pull the camera back so the whole arena and the boss fit
