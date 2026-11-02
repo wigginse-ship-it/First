@@ -549,7 +549,7 @@
     if (T >= 1) { const fa = [0, .34, .46, .56, .68][T] * (1 + .08 * Math.sin(t * .7)); g.globalAlpha = Math.min(1, fa); g.drawImage(fogCanvas(), -VW * .06 + VW * .03 * Math.sin(t * .3), Y_OFF - VIEW_H * .02, VW * 1.12, VIEW_H * 1.04); g.globalAlpha = 1;
       L.flickT -= 1 / 60; if (L.flickT <= 0) { L.flickT = rand(1.5, 5) / T; L.flick = rand(.12, .3); } if (L.flick > 0) { L.flick -= 1 / 60; g.fillStyle = `rgba(8,4,10,${Math.min(.32, L.flick) * (.4 + .2 * T)})`; view(); } }
     // the Circle's greys and reds: drained colour, a red in the corners
-    const drain = (T >= 2 ? .2 + .14 * (T - 2) : 0) + (f && f.k === 'drain' ? .65 * k : 0) + (finalHigh() ? .25 : 0) + (L.pulse ? .5 * Math.max(0, 1 - L.pulse.t / 2.5) : 0);
+    const drain = (T >= 2 ? .2 + .14 * (T - 2) : 0) + (f && f.k === 'drain' ? .65 * k : 0) + (finalHigh() ? .4 : 0) + (L.pulse ? .5 * Math.max(0, 1 - L.pulse.t / 2.5) : 0);
     if (drain > 0) { if (lite()) { g.fillStyle = `rgba(110,106,114,${Math.min(.55, drain * .5)})`; view(); }
       else { g.globalCompositeOperation = 'saturation'; g.fillStyle = `rgba(128,128,128,${Math.min(1, drain)})`; view(); g.globalCompositeOperation = 'source-over'; }
       const rg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .55, VIEW_H * .3, VW / 2, Y_OFF + VIEW_H * .55, VW * .72); rg.addColorStop(0, 'rgba(150,20,30,0)'); rg.addColorStop(1, `rgba(150,20,30,${Math.min(.4, drain * .32)})`);
@@ -834,13 +834,13 @@
     L.road = null; L.fx = null;
     banner(z.title, z.sub, 3); sfx('roar'); shakeMag = 8; flashT = .2;
   }
-  const heartIdx = (H) => Math.floor(H.prog * (H.pts.length - 1));
+  const heartIdx = (H) => Math.min(H.pts.length - 1, Math.floor(Math.min(1, H.prog) * (H.pts.length - 1)));
   function heartStep(dt) {
     const H = L.heart; if (!H) return; H.t += dt;
     if (H.done) { H.white = Math.max(0, H.white - dt * .5); H.endT -= dt; if (H.endT <= 0 && !H.cleared) { H.cleared = true; CS().heartDone = true; persist(); stageClear(); } return; }
     // tracing: the next stretch of the line, if he is on it
     const i = heartIdx(H), pts = H.pts;
-    for (let j = i; j < Math.min(pts.length, i + 7); j++) { const [x, y] = pts[j]; if (Math.abs(P.x - x) < 18 && Math.abs(P.y - y) < 11 && P.z < 30) { H.prog = Math.max(H.prog, (j + 1) / (pts.length - 1)); } }
+    for (let j = i; j < Math.min(pts.length, i + 7); j++) { const [x, y] = pts[j]; if (Math.abs(P.x - x) < 18 && Math.abs(P.y - y) < 11 && P.z < 30) { H.prog = Math.min(1, Math.max(H.prog, (j + 1) / (pts.length - 1))); } }
     // the line burns Chaos where it is drawn
     H.burnT -= dt; if (H.burnT <= 0) { H.burnT = .5; const n = heartIdx(H); for (const e of enemies) { if (e.dead) continue; for (let j = 0; j < n; j += 3) { const [x, y] = pts[j]; if (Math.abs(e.x - x) < 14 + e.hw * .3 && Math.abs(e.y - y) < 10) { strike(e, 6 + stageIdx, Math.sign(e.x - x) || 1, { dmg: 6, kb: 80, power: 0, el: 1, cEnv: 1, noStun: 1 }, true); burst(e.x, e.y, 6, ['#FFFFFF', '#9FC0FF', '#EED48A'], 4, 'spark'); break; } } } }
     // Chaos pours in from the edges
