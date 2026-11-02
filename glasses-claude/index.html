@@ -110,6 +110,24 @@
   <div class="scroll menu" id="m-list"></div>
 </section>
 
+<!-- UPDATE APP -->
+<section id="v-dev" class="view">
+  <div class="top"><button class="small" id="d-back">← Menu</button><div class="title">Update this app</div></div>
+  <div class="scroll" id="d-scroll">
+    <label for="d-req">What should change?</label>
+    <textarea id="d-req" rows="3" placeholder="e.g. make the answer text bigger"></textarea>
+    <div class="row" style="margin-top:6px"><button id="d-mic" style="flex:0 0 70px">🎤</button><button class="primary" id="d-build">Build preview</button></div>
+    <div class="hint" id="d-status" style="margin-top:6px"></div>
+    <div id="d-result"></div>
+    <label for="d-token">GitHub token (fine-grained, this repo only, Contents: read &amp; write)</label>
+    <input id="d-token" type="password" autocomplete="off" placeholder="github_pat_...">
+    <label for="d-repo">Repo</label><input id="d-repo">
+    <label for="d-branch">Branch</label><input id="d-branch">
+    <div class="row" style="margin-top:10px"><button id="d-revert">Revert last promote</button></div>
+    <div class="hint" style="margin-top:6px">Nothing goes live until you tap Promote. Every change is also a git commit, so it can always be undone.</div>
+  </div>
+</section>
+
 <!-- LIBRARY (projects / saved / skills / memory / activity) -->
 <section id="v-lib" class="view">
   <div class="top">
@@ -140,6 +158,10 @@
     <button class="small" id="h-export">Export</button>
   </div>
   <input type="file" id="h-file" accept=".json,application/json" style="display:none">
+  <div class="row">
+    <button class="small" id="h-log">Load build log</button>
+    <a class="small" href="transcript.md" download style="flex:1;text-align:center;color:var(--accent);padding:10px 0">Download log</a>
+  </div>
   <div class="hint" id="h-msg"></div>
   <div class="scroll" id="h-list"></div>
 </section>
@@ -478,6 +500,7 @@ const MENU = [
   ["⚡", "Skills", () => openLib("skills")],
   ["🧠", "Memory", () => openLib("memory")],
   ["📜", "Activity", () => openLib("activity")],
+  ["🛠", "Update this app", () => { fillDev(); show("dev"); }],
   ["⚙", "Settings", () => { fillSettings(); show("settings"); }],
 ];
 function renderMenu() {
@@ -608,6 +631,10 @@ function doImport(text) {
   if (!saveChats()) { chats = before; $("h-msg").textContent = "⚠ Too big for this device's storage — import a smaller file"; return; }
   $("h-msg").textContent = "Imported " + add.length + " chat" + (add.length === 1 ? "" : "s"); renderHistory();
 }
+$("h-log").onclick = async () => {
+  try { const r = await fetch("transcript.json?v=" + Date.now()); if (!r.ok) throw 0; doImport(await r.text()); }
+  catch { $("h-msg").textContent = "⚠ Couldn't load the build log"; }
+};
 $("h-import").onclick = () => $("h-file").click();
 $("h-file").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (f) doImport(await f.text()); };
 $("h-paste").onclick = async () => {
@@ -629,6 +656,102 @@ $("s-back").onclick = () => show("chat");
 $("s-done").onclick = () => show("chat");
 $("s-up").onclick = () => $("s-scroll").scrollBy({ top: -$("s-scroll").clientHeight * .8 });
 $("s-down").onclick = () => $("s-scroll").scrollBy({ top: $("s-scroll").clientHeight * .8 });
+
+/* ---------- update this app (edits its own file on GitHub) ---------- */
+const DEV_DIR = "glasses-claude/";
+let dev = Object.assign({ token:"", repo:"wigginse-ship-it/First", branch:"claude/happy-fermat-kpuzeu" }, LS.get("gc.dev", {}));
+function fillDev() { $("d-token").value = dev.token; $("d-repo").value = dev.repo; $("d-branch").value = dev.branch; renderCand(); }
+["token","repo","branch"].forEach(k => $("d-" + k).addEventListener("change", () => { dev[k] = $("d-" + k).value.trim(); LS.set("gc.dev", dev); }));
+const dstat = t => { $("d-status").textContent = t; };
+const b64 = t => { const b = new TextEncoder().encode(t); let s = ""; b.forEach(c => s += String.fromCharCode(c)); return btoa(s); };
+const unb64 = t => new TextDecoder().decode(Uint8Array.from(atob(t.replace(/\s/g, "")), c => c.charCodeAt(0)));
+async function ghApi(path, method, body) {
+  if (!dev.token) throw new Error("Add your GitHub token below first");
+  const r = await fetch("https://api.github.com/repos/" + dev.repo + "/contents/" + DEV_DIR + path + (method === "GET" ? "?ref=" + encodeURIComponent(dev.branch) : ""), {
+    method, headers: { Authorization: "Bearer " + dev.token, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+    body: body ? JSON.stringify(Object.assign({ branch: dev.branch }, body)) : undefined });
+  if (r.status === 404 && method === "GET") return null;
+  if (!r.ok) { let m = r.status; try { m = (await r.json()).message; } catch {} throw new Error("GitHub: " + m); }
+  return r.json();
+}
+async function getFile(path) { const j = await ghApi(path, "GET"); return j && { sha: j.sha, text: unb64(j.content) }; }
+async function putFile(path, text, message, sha) { return ghApi(path, "PUT", { message, content: b64(text), sha: sha || undefined }); }
+function checkHtml(t) {
+  if (!/<!doctype html>/i.test(t) || !t.includes("</html>")) throw new Error("Result isn't a complete page");
+  for (const m of t.matchAll(/<script>([\s\S]*?)<\/script>/g)) { try { new Function(m[1]); } catch (e) { throw new Error("Script error: " + e.message); } }
+}
+const EDIT_SYS = "You edit a single-file HTML web app (a Claude chat UI for smart-glasses displays: black background, large text, big touch targets). " +
+  "Given the full current file and a requested change, reply with ONLY a JSON object: {\"summary\":\"one plain sentence\",\"edits\":[{\"old\":\"exact text from the file\",\"new\":\"replacement\"}]}. " +
+  "Each \"old\" must appear EXACTLY ONCE in the file and be copied character-for-character; keep edits small. Keep every existing feature working, never remove the sign-in/lock or the API key handling, and do not add external scripts or network calls.";
+async function buildPreview() {
+  const req = $("d-req").value.trim(); if (!req) return dstat("Say what should change first");
+  $("d-build").disabled = true; $("d-result").innerHTML = "";
+  try {
+    dstat("Reading the current app…");
+    const cur = await getFile("index.html"); if (!cur) throw new Error("Can't find index.html on that repo/branch");
+    dstat("Asking Claude to make the change…");
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
+      headers: { "content-type":"application/json", "x-api-key": apiKey(), "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+      body: JSON.stringify({ model: settings.model, max_tokens: 8000, system: EDIT_SYS,
+        messages: [{ role:"user", content: "<file>\n" + cur.text + "\n</file>\n\nRequested change: " + req }] }) });
+    if (!r.ok) { let m = r.status; try { m = (await r.json()).error.message; } catch {} throw new Error(m); }
+    const raw = (await r.json()).content.map(c => c.text || "").join("");
+    let out; try { out = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)); } catch { throw new Error("Claude's reply wasn't usable — try rewording"); }
+    if (!Array.isArray(out.edits) || !out.edits.length) throw new Error("No changes were proposed");
+    let t = cur.text;
+    for (const e of out.edits) {
+      if (typeof e.old !== "string" || typeof e.new !== "string" || !e.old) throw new Error("Malformed edit");
+      if (t.split(e.old).length !== 2) throw new Error("An edit didn't match the file exactly once — try again");
+      t = t.replace(e.old, () => e.new);
+    }
+    checkHtml(t);
+    dstat("Saving preview…");
+    const prev = await getFile("next.html");
+    await putFile("next.html", t, "Preview: " + (out.summary || req).slice(0, 60), prev && prev.sha);
+    LS.set("gc.cand", { text: t, baseSha: cur.sha, summary: out.summary || req, request: req, at: Date.now() });
+    logAct("update", "Preview built: " + (out.summary || req));
+    dstat("Preview ready (GitHub needs about a minute to publish it)."); renderCand();
+  } catch (e) { dstat("⚠ " + e.message); }
+  $("d-build").disabled = false;
+}
+function renderCand() {
+  const c = LS.get("gc.cand", null), box = $("d-result"); box.innerHTML = "";
+  if (!c) return;
+  box.innerHTML = '<div class="item" style="display:block;margin-top:8px"><div class="q"><b>Proposed:</b> ' + esc(c.summary) + '</div>' +
+    '<a href="next.html?v=' + c.at + '" style="color:var(--accent)">Open preview ↗ (uses your same data)</a>' +
+    '<div class="row" style="margin-top:8px"><button class="primary" id="d-go">Promote live</button><button id="d-drop">Discard</button></div></div>';
+  $("d-go").onclick = promote; $("d-drop").onclick = () => { LS.del("gc.cand"); renderCand(); dstat("Discarded"); };
+}
+async function promote() {
+  const c = LS.get("gc.cand", null); if (!c) return;
+  $("d-go").disabled = true;
+  try {
+    dstat("Checking the live app hasn't changed…");
+    const cur = await getFile("index.html");
+    if (cur.sha !== c.baseSha) throw new Error("The live app changed since this preview — build it again");
+    checkHtml(c.text);
+    LS.set("gc.prev", { text: cur.text, at: Date.now() });
+    await putFile("index.html", c.text, "Glasses update: " + c.summary.slice(0, 60), cur.sha);
+    LS.del("gc.cand"); logAct("update", "Promoted: " + c.summary); renderCand();
+    dstat("Live in about a minute. Then tap Reload latest in Settings.");
+  } catch (e) { dstat("⚠ " + e.message); if ($("d-go")) $("d-go").disabled = false; }
+}
+async function revertLast() {
+  const p = LS.get("gc.prev", null); if (!p) return dstat("Nothing saved to revert to (use git history)");
+  try {
+    dstat("Reverting…"); const cur = await getFile("index.html"); checkHtml(p.text);
+    await putFile("index.html", p.text, "Glasses update: revert", cur.sha);
+    LS.del("gc.prev"); logAct("update", "Reverted last change"); dstat("Reverted. Live in about a minute, then Reload latest.");
+  } catch (e) { dstat("⚠ " + e.message); }
+}
+$("d-build").onclick = buildPreview; $("d-revert").onclick = revertLast; $("d-back").onclick = () => { renderMenu(); show("menu"); };
+$("d-mic").onclick = () => {
+  if (!SR) return dstat("Voice isn't available here — tap the box and use the keyboard's mic");
+  const r = new SR(); r.lang = settings.lang || "en-US"; r.interimResults = false;
+  r.onresult = e => { $("d-req").value = (($("d-req").value + " ") + e.results[0][0].transcript).trim(); };
+  r.onerror = e => dstat("Mic: " + e.error); r.onend = () => { $("d-mic").textContent = "🎤"; };
+  try { r.start(); $("d-mic").textContent = "…"; } catch (e) { dstat("Mic: " + e.message); }
+};
 
 /* ---------- boot ---------- */
 applySize();
