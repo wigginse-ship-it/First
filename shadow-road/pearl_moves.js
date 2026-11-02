@@ -171,7 +171,8 @@
   { const _b = begin; begin = function (m) {
     if (m && typeof m === 'object' && m.pm && mine()) { const T = TY[m.pm]; if (T && T.pick) m = T.pick(m) || m; }
     const r = _b(m);
-    if (mine() && P.move && P.move.pm && (P.state === 'atk' || P.state === 'air') && S.begun !== P.moveId) { S.begun = P.moveId; const T = TY[P.move.pm]; if (T && T.began) T.began(P.move); }
+    // (kept on him, not here: a new place makes a new him, whose move ids start again from one)
+    if (mine() && P.move && P.move.pm && (P.state === 'atk' || P.state === 'air') && P._pmBegun !== P.moveId) { P._pmBegun = P.moveId; const T = TY[P.move.pm]; if (T && T.began) T.began(P.move); }
     return r;
   }; }
   // the perfect window: the kind's own (the beat, a caught blow), and Patient's wider gleam on top
@@ -225,6 +226,9 @@
     return pose;
   }; }
   { const _ml = mechList; mechList = function (list, t) { _ml(list, t); if (!mine()) return; const T = TY[kind()]; if (T && T.draw) try { T.draw(list, t); } catch (e) { console.error(e); } }; }
+  // what must lie over the figures (beads on a foe, a moon passing in front of him): painted after the ink layer is laid
+  // down, which covers anything painted under it (drawScene alone passes the time; the endings' scenes do not)
+  { const _ie = inkEnd; inkEnd = function (t) { _ie(t); if (t === undefined || !mine()) return; const T = TY[kind()]; if (T && T.over) try { T.over(t); } catch (e) { console.error(e); } }; }
   { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (!mine()) return; for (const o of S.objs) if (Number.isFinite(o.x) && Number.isFinite(o.y)) box(o.x, o.y, o.z || 0, o.bw || 90, o.bh || 150); const T = TY[kind()]; if (T && T.boxes) T.boxes(box); }; }
 
   // a ghost of him, painted as light (the glaive's echoes and their rush home)
@@ -631,7 +635,7 @@
   // front of him and fires the line down the street; a held Attack widens the orbit; out of a dodge they close in a guard.
   // ======================================================================================================
   {
-    const C = { moons: [], R: 46, w: 3.4, guard: 0, wide: false, big: 0, cd: new WeakMap(), eclipse: null };
+    const C = { moons: [], R: 60, w: 3.4, guard: 0, wide: false, big: 0, cd: new WeakMap(), eclipse: null };
     const MAXM = 6;
     const mpos = (o, i) => { const R = C.R * RK(); return { x: P.x + Math.cos(o.a) * R, y: P.y + Math.sin(o.a) * R * .34, z: P.z + 32 + Math.sin(o.a) * 6 }; };
     function addMoon(from) { if (C.moons.length >= MAXM) { sparkle(from.x, from.y, from.z || 30, 5); return; } const a = C.moons.length ? C.moons[C.moons.length - 1].a - TWO / MAXM : 0; C.moons.push({ a, t: 0, life: 14, mode: 'orbit', x: from.x, y: from.y, z: from.z || 30, k: 0 }); sfx('hit-crystal', .4); ev('moon'); }
@@ -640,6 +644,12 @@
       if ((C.cd.get(e) || 0) > clock() || !touch(e, x, y, z, big ? 14 : 9)) return false;
       C.cd.set(e, clock() + .32); hitE(e, big ? 5.5 : 3.5, Math.sign(e.x - P.x) || 1, { pm: 'chakram', key: 'MOON', kb: 60, power: 0, pe: .12 + stat().flow * .5 }); return true;
     }
+    // a moon, or a cast: a little ring of the weapon's blade, glowing
+    const disc = (x, y, z, r, a, sp) => { ctx.save(); ctx.translate(x, y - z); ctx.globalCompositeOperation = 'lighter'; glow(0, 0, r * 2.6, .6 * a); ctx.restore();
+      ctx.save(); ctx.translate(x, y - z); ctx.scale(1, .55); ctx.rotate(sp || 0); ctx.lineWidth = r * .55; ctx.strokeStyle = pal().blade; ctx.beginPath(); ctx.arc(0, 0, r, 0, TWO); ctx.stroke();
+      ctx.lineWidth = 1; ctx.strokeStyle = pal().metal; ctx.stroke(); ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(Math.cos(sp || 0) * r, Math.sin(sp || 0) * r, 1.4, 0, TWO); ctx.fill(); ctx.restore(); };
+    const behindM = (o) => o.mode === 'orbit' && Math.sin(o.a) < 0 && P.state !== 'charge';
+    const moonR = () => (C.big > 0 ? 12 : 9.5);
     TY.chakram = {
       reset() { C.moons = []; C.guard = 0; C.big = 0; C.eclipse = null; },
       peek: () => ({ moons: C.moons.length, orbit: C.moons.filter(o => o.mode === 'orbit').length, flying: C.moons.filter(o => o.mode === 'fly').length, grind: C.moons.filter(o => o.mode === 'grind').length, R: Math.round(C.R), guard: C.guard > 0 }),
@@ -683,7 +693,7 @@
       step(dt) {
         if (!(P.move && (P.state === 'atk' || P.state === 'air') && (P.move.wide || P.move.train))) { C.wide = false; C.train = false; }
         C.guard = Math.max(0, C.guard - dt); C.big = Math.max(0, C.big - dt);
-        const tgtR = C.guard > 0 ? 24 : C.wide ? 110 : 46, w = C.guard > 0 ? 7 : C.wide ? 2.2 : 3.4; C.R += (tgtR - C.R) * Math.min(1, dt * 6); C.w = w;
+        const tgtR = C.guard > 0 ? 24 : C.wide ? 120 : 60, w = C.guard > 0 ? 7 : C.wide ? 2.2 : 3.4; C.R += (tgtR - C.R) * Math.min(1, dt * 6); C.w = w;
         const charging = P.state === 'charge', E = C.eclipse;
         if (E && (E.e.dead || (E.t += dt) > 1.3)) { C.eclipse = null; for (const o of C.moons) if (o.mode === 'grind') o.mode = 'orbit'; }
         C.moons.forEach((o, i) => {
@@ -717,18 +727,17 @@
         if (!o.back) for (const e of foes()) { if (o.hit.has(e) || !touch(e, o.x, o.y, o.z, 12)) continue; o.hit.add(e); hitE(e, o.m.dmg, o.dir, o.m); sparkle(o.x, o.y, o.z, 5); }
         if (o.t > 2.5) o.gone = true; },
       draw(list, t) {
-        const disc = (x, y, z, r, a, sp) => { ctx.save(); ctx.translate(x, y - z); ctx.globalCompositeOperation = 'lighter'; glow(0, 0, r * 2.4, .35 * a); ctx.restore();
-          ctx.save(); ctx.translate(x, y - z); ctx.scale(1, .55); ctx.rotate(sp || 0); ctx.lineWidth = r * .55; ctx.strokeStyle = C2(pal().blade); ctx.beginPath(); ctx.arc(0, 0, r, 0, TWO); ctx.stroke();
-          ctx.lineWidth = 1; ctx.strokeStyle = C2(pal().metal); ctx.stroke(); ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(Math.cos(sp || 0) * r, Math.sin(sp || 0) * r, 1.4, 0, TWO); ctx.fill(); ctx.restore(); };
-        C.moons.forEach((o, i) => list.push([o.y + (o.mode === 'orbit' && Math.sin(o.a) < 0 ? -.4 : .4), () => onMain(() => disc(o.x, o.y, o.z, (C.big > 0 ? 7.5 : 5.5), Math.min(1, o.life), o.a * 3))]));
-        for (const o of S.objs) if (o.kind === 'cast') list.push([o.y + .3, () => onMain(() => disc(o.x, o.y, o.z, 7, 1, o.spin))]);
+        // the orbit itself, faint, while any moon keeps to it
+        if (C.moons.some(o => o.mode === 'orbit') && P.state !== 'charge') list.push([P.y - .45, () => onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ring(P.x, P.y, P.z + 32, C.R * RK(), .22, 1.4); ctx.restore(); })]);
+        // (the moons behind him go in with the figures; the rest, and the casts, over them: see over)
+        for (const o of C.moons) if (behindM(o)) list.push([o.y - .4, () => onMain(() => disc(o.x, o.y, o.z, moonR(), Math.min(1, o.life), o.a * 3))]);
         if (C.guard > 0) list.push([P.y + .3, () => onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ring(P.x, P.y, P.z + 32, 26, .5 * Math.min(1, C.guard * 2), 2.5); ctx.restore(); })]);
         if (P.state === 'charge' && C.moons.length) list.push([P.y + .35, () => onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${rgb()},${(.2 + .4 * Math.min(1, P.ct / .45)).toFixed(2)})`; ctx.lineWidth = 2; ctx.setLineDash([4, 8]); ctx.beginPath(); ctx.moveTo(P.x, P.y - P.z - 40); ctx.lineTo(P.x + fc() * 380 * RK(), P.y - P.z - 40); ctx.stroke(); ctx.restore(); })]);
       },
+      over() { for (const o of C.moons) if (!behindM(o)) disc(o.x, o.y, o.z, moonR(), Math.min(1, o.life), o.a * 3); for (const o of S.objs) if (o.kind === 'cast') disc(o.x, o.y, o.z, 7, 1, o.spin); },
       carry(pose, st) { if (st === 'jump') { pose.arm = .5; pose.elbow = 1; pose.grip = -.9; return; } pose.arm = st === 'run' ? 1.8 : 1.25; pose.elbow = .9; pose.grip = st === 'run' ? .6 : -.5; pose.backArm = 1.45; },
       chargePose(pose, ct) { pose.crouch = 0; pose.arm = -.1; pose.elbow = 0; pose.grip = 0; pose.ext = .6; pose.lean = .1; pose.sink = 5; pose.legs = { f: 14, b: -12, fk: 7, bk: 2 }; pose.backArm = 2.6; pose.backElbow = .3; pose.yaw = -.1; },
     };
-    const C2 = (c) => (typeof C === 'function' ? c : c);
     function loose(m) {
       const L = C.moons.filter(o => o.mode === 'orbit'), tg = foes().filter(e => Math.abs(e.x - P.x) < 420).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x));
       L.forEach((o, i) => { o.mode = 'fly'; o.k = 0; o.m = m; o.tgt = tg.length ? tg[i % tg.length] : null; o.a0 = o.a; });
@@ -1069,14 +1078,14 @@
       draw(list, t) {
         if (F.v > .03) list.push([FLOOR_TOP - 1, () => onMain(() => { // the flood over the street, and its rings round every foot in it
           const a = .08 + .06 * F.v, x0 = camX - 20, w = VW + 40; ctx.save(); ctx.globalCompositeOperation = 'lighter';
-          ctx.fillStyle = `rgba(${rgb()},${a.toFixed(3)})`; ctx.fillRect(x0, FLOOR_TOP, w, FLOOR_BOT - FLOOR_TOP + 14);
-          ctx.strokeStyle = `rgba(230,255,250,${(.12 + .08 * F.v).toFixed(2)})`; ctx.lineWidth = 1.2;
+          ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(40,140,150,${(a + .04).toFixed(3)})`; ctx.fillRect(x0, FLOOR_TOP, w, FLOOR_BOT - FLOOR_TOP + 14); ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = `rgba(230,255,250,${(.22 + .12 * F.v).toFixed(2)})`; ctx.lineWidth = 1.6;
           for (let r = 0; r < 4; r++) { const y = FLOOR_TOP + (r + .5) * (FLOOR_BOT - FLOOR_TOP) / 4; ctx.beginPath(); for (let x = 0; x <= w; x += 24) { const yy = y + Math.sin(x * .05 + t * 1.6 + r * 2) * 2.2; x ? ctx.lineTo(x0 + x, yy) : ctx.moveTo(x0, yy); } ctx.stroke(); }
-          for (const e of foes()) if (e.z < 6) ring(e.x, e.y, 0, e.hw * .8 + 4 * Math.sin(t * 5 + e.x), .3, 1.2, '230,255,250');
-          if (P.z < 6) ring(P.x, P.y, 0, 14 + 3 * Math.sin(t * 5), .35, 1.2, '230,255,250');
+          for (const e of foes()) if (e.z < 6) ring(e.x, e.y, 0, e.hw * .8 + 4 * Math.sin(t * 5 + e.x), .5, 1.4, '230,255,250');
+          if (P.z < 6) ring(P.x, P.y, 0, 14 + 3 * Math.sin(t * 5), .5, 1.4, '230,255,250');
           ctx.restore(); })]);
         for (const o of S.objs) {
-          if (o.kind === 'wave') list.push([o.y + .2, () => onMain(() => { const h = 30 + 10 * F.lvl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(${rgb()},.35)`; ctx.beginPath(); ctx.moveTo(o.x - o.dir * 30, o.y); ctx.quadraticCurveTo(o.x, o.y - h * 1.4, o.x + o.dir * 10, o.y); ctx.fill(); ctx.strokeStyle = 'rgba(240,255,252,.7)'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); })]);
+          if (o.kind === 'wave') list.push([o.y + .2, () => onMain(() => { const h = 30 + 10 * F.lvl; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(${rgb()},.6)`; ctx.beginPath(); ctx.moveTo(o.x - o.dir * 30, o.y); ctx.quadraticCurveTo(o.x, o.y - h * 1.4, o.x + o.dir * 10, o.y); ctx.fill(); ctx.strokeStyle = 'rgba(240,255,252,.95)'; ctx.lineWidth = 2.6; ctx.stroke(); ctx.restore(); })]);
           if (o.kind === 'spout' || o.kind === 'geyser') list.push([o.y + .2, () => onMain(() => { const k = o.t / (o.max || .5), hgt = (o.kind === 'geyser' ? 150 : 80 + 20 * (o.big || 0)) * Math.sin(Math.min(1, k * 1.6) * PI * .5) * (1 - k * .6), wd = o.kind === 'geyser' ? 16 : 10;
             ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(0, o.y, 0, o.y - hgt); g.addColorStop(0, `rgba(${rgb()},.55)`); g.addColorStop(1, 'rgba(240,255,252,.1)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(o.x - wd, o.y); ctx.quadraticCurveTo(o.x - wd * .4, o.y - hgt * .5, o.x, o.y - hgt); ctx.quadraticCurveTo(o.x + wd * .4, o.y - hgt * .5, o.x + wd, o.y); ctx.fill(); ctx.restore(); })]);
           if (o.kind === 'whirl') list.push([o.y - .5, () => onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 4; i++) { const rr = o.r * (1 - i * .22) * (o.t > 1 ? Math.max(0, 1 - (o.t - 1) * 5) : 1); ctx.strokeStyle = `rgba(${rgb()},${(.25 + i * .1).toFixed(2)})`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(o.x, o.y, rr, rr * .32, 0, t * (4 + i) % TWO, t * (4 + i) % TWO + 4.2); ctx.stroke(); } ctx.restore(); })]);
@@ -1094,11 +1103,11 @@
       H: KF([[0, { ...T2, a: .9, g: -1.4, l: 0 }], [.4, { a: -.9, g: -1.6, l: -.3, s: 0, y: .4, lg: [7, -9, 3, 6] }], [.56, { a: 1.25, g: -1.75, l: .3, s: 10, y: .4, lg: [14, -12, 12, 4] }], [1, { a: 1.2, g: -1.7, l: .2, s: 7 }]]),
       HH: KF([[0, { ...T2, a: .1, g: 0, l: .2, s: 6, lg: [15, -14, 9, 2] }], [.3, { a: -.2, sw: 1, y: .4 }], [.6, { a: .1, sw: -1, y: -.5, l: .1 }], [1, { a: .2, sw: -1, y: 0, s: 3 }]], { fn: (p, m, k) => { if (k > .3 && k < .64) p.flat = { r: (WP().reach || 60) + 20, k: spn(k, .3, .6), rev: true, col: pal().trail, w: 6 }; } }),
       HC: KF([[0, { ...T2, a: 1.2, g: -1.75, l: .2, s: 7 }], [.3, { a: -.6, g: -.4, l: -.2, s: 2, y: .3 }], [.55, { a: .4, g: .4, x: 1, l: .5, s: 8, lg: [16, -14, 10, 0], y: 0 }], [1, { a: .5, x: 0, l: .2, s: 3 }]], { fn: (p, m, k) => thr(p, m, k, .3, .62) }),
-      X: KF([[0, { ...T2, a: .4, g: 0 }], [.25, { a: -1.3, g: -.4, l: -.2, s: 2 }], [.45, { a: 1.1, g: .4, l: .5, s: 8, lg: [14, -12, 10, 2] }], [1, { a: 1, g: .3, l: .3, s: 5 }]]),
+      X: KF([[0, { ...T2, a: .4, g: 0 }], [.25, { a: -1.3, g: -.4, l: -.2, s: 2 }], [.45, { a: .45, g: 0, l: .4, s: 5, lg: [14, -12, 10, 2] }], [1, { a: .4, g: 0, l: .25, s: 3 }]]),
       A: KF([[0, { ...T2, a: .4, g: 0, x: -.4, lg: [7, -9, 10, 8] }], [.22, { x: -.4 }], [.6, { a: .5, x: 1, l: .3 }], [1, { x: 0 }]], { fn: (p, m, k) => thr(p, m, k, .22, .64) }),
       AA: KF([[0, { ...T2, a: -.3, g: 0, x: -.4, lg: [8, -8, 12, 6] }], [.22, { x: -.4 }], [.6, { a: -.2, x: 1, l: .2 }], [1, { x: 0 }]], { fn: (p, m, k) => thr(p, m, k, .22, .64) }),
       AAA: KF([[0, { ...T2, a: -1.3, g: -.3, x: -.3, r: 0, lg: [6, -8, 12, 10] }], [.25, { r: -.2 }], [.62, { a: 1.1, g: .2, x: 1, l: .4, r: .45 }], [1, { a: 1, x: 0, r: .3 }]], { fn: (p, m, k) => thr(p, m, k, .25, .66) }),
-      JH: KF([[0, { ...T2, a: -1.6, g: -.4, l: -.1, lg: [6, -8, 12, 10] }], [.15, { a: 1.5, g: .1, x: .8, l: .35, lg: [4, -10, 14, 14] }], [1, { a: 1.5 }]]),
+      JH: KF([[0, { ...T2, a: -1.6, g: -.4, l: -.1, lg: [6, -8, 12, 10] }], [.15, { a: 1.25, g: .1, x: .3, l: .35, lg: [4, -10, 14, 14] }], [1, { a: 1.25 }]]),
       D: KF([[0, { ...T2, a: .2, g: 0, x: .8, l: .35, s: 10, cr: 1, lg: [14, -12, 12, 10], fl: 18, st: 1.08, oy: -2 }], [1, { a: .2 }]], { fn: (p, m, k) => { p.yaw = .3 + .08 * Math.sin(k * 25); thr(p, m, k, .1, .8); } }),
       DX: KF([[0, { ...T2, a: .3, g: 0, l: .3, s: 6 }], [.4, { a: -.8, x: -.3, l: -.3, s: 0, r: -.3, lg: [6, -12, 14, 6] }], [.74, { a: .9, x: 1, l: .6, r: .5, s: 8, lg: [16, -14, 10, 1] }], [1, { a: .8, x: 0, l: .3, r: 0, s: 5 }]], { fn: (p, m, k) => thr(p, m, k, .5, .78) }),
       R: KF([[0, { ...T2, a: .1, g: 0, l: .3, s: 7, lg: [14, -14, 9, 2] }], [.15, { sp: 0 }], [.8, { sp: -2 * TWO }], [1, { sp: -2 * TWO, a: .4, s: 3, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => { if (k > .15 && k < .82) p.flat = { r: (WP().reach || 60) + 18, k: (k * 2) % 1, rev: false, col: pal().trail, w: 5 }; } }),
@@ -1172,14 +1181,14 @@
           for (let i = 1; i <= seg; i++) for (const e of foes()) { if (o.hit.has(e) || segD(e, L[i - 1].x, L[i - 1].y, L[i].x, L[i].y) > e.hw + 8 || e.z > 80) continue; o.hit.add(e); hitE(e, o.m.dmg * .8, P.facing, o.m, { kb: 100 }); }
           if (o.t >= o.max) o.gone = true; }
       },
-      draw(list, t) {
+      over(t) {
         const L = live(); if (!L.length && !S.objs.some(o => o.kind === 'whip')) return;
-        list.push([FLOOR_BOT + 1, () => onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        { ctx.save(); ctx.globalCompositeOperation = 'lighter';
           const pt = (e) => [e.x, e.y - e.z - e.hh * .55];
-          if (L.length > 1) { for (const [w, a] of [[5, .18], [1.6, .8]]) { ctx.strokeStyle = `rgba(242,214,138,${a})`; ctx.lineWidth = w; ctx.beginPath(); L.forEach((b, i) => { const [x, y] = pt(b.e), sag = i ? 6 * Math.sin(t * 3 + i) : 0; i ? ctx.quadraticCurveTo((x + pt(L[i - 1].e)[0]) / 2, (y + pt(L[i - 1].e)[1]) / 2 + 10 + sag, x, y) : ctx.moveTo(x, y); }); ctx.stroke(); } }
-          for (const b of L) { const [x, y] = pt(b.e); glow(x, y, 10, .5, '242,214,138'); }
+          if (L.length > 1) { for (const [w, a] of [[7, .3], [2.4, .95]]) { ctx.strokeStyle = `rgba(242,214,138,${a})`; ctx.lineWidth = w; ctx.beginPath(); L.forEach((b, i) => { const [x, y] = pt(b.e), sag = i ? 6 * Math.sin(t * 3 + i) : 0; i ? ctx.quadraticCurveTo((x + pt(L[i - 1].e)[0]) / 2, (y + pt(L[i - 1].e)[1]) / 2 + 10 + sag, x, y) : ctx.moveTo(x, y); }); ctx.stroke(); } }
+          for (const b of L) { const [x, y] = pt(b.e); glow(x, y, 16, .75, '242,214,138'); }
           for (const o of S.objs) if (o.kind === 'whip') { const u = o.t / o.max, n = o.pts.length, i = Math.min(n - 1, Math.floor(u * (n - 1))); const p = o.pts[i]; glow(p.x, p.y - 34, 26, .7, '255,242,192'); }
-          ctx.restore(); for (const b of L) { const [x, y] = pt(b.e); PN.art.pearlBody(x, y, 3, t, 1, pal()); } })]);
+          ctx.restore(); for (const b of L) { const [x, y] = pt(b.e); PN.art.pearlBody(x, y, 5, t, 1, pal()); } }
       },
       carry(pose, st) { if (st === 'jump') { pose.arm = .1; pose.elbow = .9; pose.grip = -.9; return; } pose.arm = st === 'run' ? .5 : .95; pose.elbow = st === 'run' ? 1.4 : .6; pose.grip = st === 'run' ? -1 : -1.3; pose.backArm = 1.45; },
       chargePose(pose, ct) { const q = Math.min(1, ct / .45); pose.crouch = 0; pose.arm = .25; pose.elbow = 1.5; pose.grip = -1.5; pose.ext = -.4 * q; pose.lean = .35 * q; pose.sink = 8 * q; pose.legs = { f: 16, b: -16, fk: 9, bk: 2 }; pose.backArm = 2.4; pose.yaw = -.25; pose.glow = perfectGlow() || null; },
@@ -1202,15 +1211,15 @@
       LLL: KF([[0, { ...T2, a: .1, g: 0, l: 0, s: 3 }], [.34, { x: -.8, l: -.25, s: 6, lg: [10, -16, 6, 6] }], [.6, { x: 1, l: .6, s: 10, lg: [20, -18, 12, 0], sh: 4, st: 1.08 }], [1, { x: 0, l: .2, s: 4, sh: 0, st: 1, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => thr(p, m, k, .34, .66, 100) }),
       H: KF([[0, { ...T2, a: .15, e: 1.4, g: -1.5, l: .1, s: 4 }], [.38, { x: -.5, l: .2, s: 7, lg: [14, -16, 8, 2] }], [.58, { x: 1, l: .55, s: 9, lg: [19, -17, 11, 0], sh: 4 }], [1, { x: 0, l: .2, s: 4, sh: 0, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => thr(p, m, k, .38, .64, 80) }),
       Hc: KF([[0, { ...T2, a: .1, g: 0, l: .1 }], [.25, { a: -.5, g: -.4, l: -.35, s: 4, lg: [8, -14, 4, 7], y: -.3, ba: -.4 }], [.5, { a: -.3, g: -.3, l: -.4, s: 6, y: -.4 }], [1, { a: .1, g: 0, l: .05, s: 2, y: 0, lg: [10, -10, 4, 3] }]]),
-      HH: KF([[0, { ...T2, a: .2, g: 0, l: .1 }], [.3, { a: -1.6, g: -.6, l: -.2, y: .4 }], [.5, { a: .9, g: .3, l: .4, s: 6, y: -.3, lg: [15, -13, 9, 1] }], [1, { a: .6, l: .15, s: 3, y: 0 }]], { tr: [[.3, .5]] }),
+      HH: KF([[0, { ...T2, a: .2, g: 0, l: .1 }], [.3, { a: -1.6, g: -.6, l: -.2, y: .4 }], [.5, { a: .6, g: .2, l: .4, s: 6, y: -.3, lg: [15, -13, 9, 1] }], [1, { a: .45, g: .1, l: .15, s: 3, y: 0 }]], { tr: [[.3, .5]] }),
       HC: KF([[0, { ...T2, a: .25, e: 1.5, g: -1.5, l: .35, s: 8, lg: [16, -16, 9, 2] }], [.08, { x: 1, l: .55, s: 9, lg: [20, -16, 10, 0], st: 1.12, fl: 18 }], [.72, { x: 1, l: .6 }], [1, { x: 0, l: .15, s: 3, st: 1, fl: 4, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => thr(p, m, k, .08, .74, 90) }),
       X: KF([[0, { ...T2, a: .3, g: -.2, l: -.3, s: 7, lg: [10, -16, 6, 5], y: -.3 }], [1, { a: .3 }]], { fn: (p, m, k) => { p.lean = -.3 + .05 * Math.sin(k * 30); } }),
       A: KF([[0, { ...T2, a: .4, g: 0, x: -.4, lg: [7, -9, 10, 8] }], [.22, { x: -.4 }], [.6, { a: .5, x: 1, l: .3 }], [1, { x: 0 }]], { fn: (p, m, k) => thr(p, m, k, .22, .64) }),
       AA: KF([[0, { ...T2, a: -.2, g: 0, x: -.4, lg: [8, -8, 12, 6] }], [.22, { x: -.4 }], [.6, { a: -.2, x: 1, l: .2 }], [1, { x: 0 }]], { fn: (p, m, k) => thr(p, m, k, .22, .64) }),
       AAA: KF([[0, { ...T2, a: -.4, g: 0, x: -.3, lg: [6, -8, 12, 10] }], [.25, { a: 1.2, x: -.3, r: .3 }], [.62, { a: 1.5, x: 1, l: .3, r: .45 }], [1, { a: 1.4, x: 0, r: .3 }]], { fn: (p, m, k) => thr(p, m, k, .25, .66) }),
-      JH: KF([[0, { ...T2, a: -.6, g: 0, l: -.1, lg: [6, -8, 12, 10] }], [.15, { a: 1, g: 0, x: 1, l: .5, r: .4, lg: [4, -12, 14, 12] }], [1, { a: 1, r: .4 }]], { fn: (p, m, k) => thr(p, m, k, .15, 1) }),
+      JH: KF([[0, { ...T2, a: -.6, g: 0, l: -.1, lg: [6, -8, 12, 10] }], [.15, { a: .8, g: 0, x: .4, l: .5, r: .3, lg: [4, -12, 14, 12] }], [1, { a: .8, r: .3 }]], { fn: (p, m, k) => thr(p, m, k, .15, 1) }),
       D: KF([[0, { ...T2, a: .2, e: 1.5, g: -1.5, x: 1, l: .5, s: 8, lg: [18, -16, 10, 0], st: 1.1, fl: 18 }], [.66, { x: 1 }], [1, { x: 0, l: .15, s: 3, st: 1, fl: 4, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => thr(p, m, k, .1, .68, 80) }),
-      DX: KF([[0, { ...T2, a: .2, g: 0, l: .3, s: 6 }], [.4, { a: -.4, x: -.4, l: -.3, s: 0, lg: [6, -12, 14, 6] }], [.74, { a: .7, x: 1, l: .55, s: 8, lg: [16, -14, 10, 1] }], [1, { a: .6, x: 0, l: .25, s: 5 }]], { fn: (p, m, k) => thr(p, m, k, .5, .78) }),
+      DX: KF([[0, { ...T2, a: .2, g: 0, l: .3, s: 6 }], [.4, { a: -.4, x: -.4, l: -.3, s: 0, lg: [6, -12, 14, 6] }], [.74, { a: .45, x: 1, l: .55, s: 8, lg: [16, -14, 10, 1] }], [1, { a: .4, x: 0, l: .25, s: 5 }]], { fn: (p, m, k) => thr(p, m, k, .5, .78) }),
       R: KF([[0, { ...T2, a: .1, g: 0, l: .3, s: 7, lg: [14, -14, 9, 2], th: 0 }], [.15, { sp: 0 }], [.7, { sp: -TWO }], [1, { sp: -TWO, a: .4, s: 3, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => { if (k > .15 && k < .74) p.flat = { r: (WP().reach || 60) + 24, k: spn(k, .15, .7), rev: false, col: pal().trail, w: 5 }; } }),
     });
   }
