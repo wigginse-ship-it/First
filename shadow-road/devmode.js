@@ -34,10 +34,10 @@
   function applyOpts() {
     save.started = true;
     save.cycle = Math.max(0, opts.cycle | 0);
-    // weapons: as saved, every one at its top level (and the best arrows), or one of them at its top level, in his hands
+    // weapons: as saved, every one at the level that teaches its last move (and the best arrows), or one of them so, in his hands (no tempering past it)
     const A = opts.arsenal === true ? 'all' : opts.arsenal || '';
-    if (A === 'all') { for (const id of WEAPON_ORDER) { save.owned[id] = true; save.wl[id] = Math.max(save.wl[id] || 1, WMAX()); } if (typeof ARROW_TIERS !== 'undefined') save.alv = ARROW_TIERS.length; }
-    else if (A && WEAPONS[A]) { save.owned[A] = true; save.wl[A] = Math.max(save.wl[A] || 1, WMAX()); save.weapon = A; }
+    if (A === 'all') { for (const id of WEAPON_ORDER) { save.owned[id] = true; save.wl[id] = WLEARN; } if (typeof ARROW_TIERS !== 'undefined') save.alv = ARROW_TIERS.length; }
+    else if (A && WEAPONS[A]) { save.owned[A] = true; save.wl[A] = WLEARN; save.weapon = A; }
     // the relics of the road's ends: none, one of the three, or all three
     const R = opts.relic, all = R === 'all';
     save.silverArm = all || R === 'arm'; save.w7relic = all || R === 'pearl'; save.w8relic = all || R === 'horn';
@@ -90,7 +90,7 @@
       <div class="opts">
         <label><input type="checkbox" data-o="god"> Invincible</label>
         <label><input type="checkbox" data-o="elites"> Every foe armored</label>
-        <label>Weapons <select data-o="arsenal"><option value="">(as saved)</option><option value="all">All weapons, max level, best arrows</option>${WEAPON_ORDER.filter(id => id !== 'fists' && id !== 'pearlw' && WEAPONS[id]).map(id => `<option value="${id}">${WEAPONS[id].name}, max level</option>`).join('')}</select></label>
+        <label>Weapons <select data-o="arsenal"><option value="">(as saved)</option><option value="all">All weapons, all moves (Lv 7), best arrows</option>${WEAPON_ORDER.filter(id => id !== 'fists' && id !== 'pearlw' && WEAPONS[id]).map(id => `<option value="${id}">${WEAPONS[id].name}, all moves (Lv 7)</option>`).join('')}</select></label>
         <label>Relic <select data-o="relic"><option value="">None</option><option value="arm">The Silver Arm (equipped)</option><option value="pearl">The Pearl of Judgement</option><option value="horn">The Horn of Lorraine</option><option value="all">All three</option></select></label>
         <label>Card <select data-o="card"><option value="">(as saved)</option>${TRUMP_ORDER.map(k => `<option value="${k}">${TRUMPS[k].name}</option>`).join('')}</select></label>
         <label>Card level <select data-o="clv">${[1, 2, 3].map(l => `<option value="${l}">${['I', 'II', 'III'][l - 1]}</option>`).join('')}</select></label>
