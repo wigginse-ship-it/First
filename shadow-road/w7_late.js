@@ -533,12 +533,17 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
       if (END.cAge == null) END.cAge = 0; END.cAge += dt; if (!END.goC && END.t > MO_HOLD) END.t = MO_HOLD; moirePad(); }
     const T = END.t;
     if (T < SECT[1] + .8) { // A: the hall, live: he walks to the Pearl and takes it up; the Pattern burns
-      const pr = W7.pearl; if (pr && !END.took) { const dx = pr.x - 16 - P.x; if (Math.abs(dx) > 4 || Math.abs(pr.y - P.y) > 4) { P.state = 'walk'; P.facing = Math.sign(dx) || 1; P.walk += dt * 9; P.x += clamp(dx, -70 * dt, 70 * dt); P.y += clamp(pr.y - P.y, -40 * dt, 40 * dt); } else { P.state = 'idle'; P.facing = 1; if (T > 2.8) { END.took = 1; W7.pearl = null; sfx('learned'); flashT = .12; } } }
+      const pr = W7.pearl; if (pr && !END.took) { const dx = pr.x - 16 - P.x; if (Math.abs(dx) > 4 || Math.abs(pr.y - P.y) > 4) { P.state = 'walk'; P.facing = Math.sign(dx) || 1; P.walk += dt * 9; P.x += clamp(dx, -70 * dt, 70 * dt); P.y += clamp(pr.y - P.y, -40 * dt, 40 * dt); } else { P.state = 'idle'; P.facing = 1;
+        // it rises to him: lifted slowly off the Pattern, drifting up to hang at his hand, and only then is it his
+        if (T > 2.8) { if (END.riseAt == null) { END.riseAt = T; END.rx0 = pr.x; END.ry0 = pr.y; if (sfxOn && actx) { tone(660, .9, 'sine', .05, 0); tone(990, 1.2, 'sine', .035, 0, .25); } }
+          const k = cl01((T - END.riseAt) / 1.6), e = k * k * (3 - 2 * k); pr.vz = 0;
+          pr.x = lerp(END.rx0, P.x + P.facing * 10, e); pr.y = lerp(END.ry0, P.y, e); pr.z = 50 * e + Math.sin(T * 3) * 2 * e;
+          if (k >= 1) { END.took = 1; W7.pearl = null; sfx('learned'); flashT = .12; } } } }
       if (END.took) { P.state = 'idle'; }
       if (W7.G) { W7.G.patLit = lerp(.5, 1.4, cl01(T / 4)); W7.G.spin = .25; W7.G.patRot = (W7.G.patRot || 0) + dt * .25; }
       updateFx(dt);
       END.orig(t);
-      if (END.took && W7.drawPearl) { ctx.save(); ctx.translate(-camX, 0); W7.drawPearl(P.x + P.facing * 10, P.y - 50, 1, t, true); ctx.restore(); }
+      if (END.took && W7.drawPearl) { ctx.save(); ctx.translate(-camX, 0); W7.drawPearl(P.x + P.facing * 10, P.y - 50 - Math.sin(T * 3) * 2, 1, t, true); ctx.restore(); }
       textPanel(LINES.a, VW * .08, Y_OFF + 30, VW * .55, cl01((T - .6) / 1) * (1 - cl01((T - SECT[1] + .4) / .6)));
       if (T > SECT[1]) { ctx.fillStyle = `rgba(4,8,16,${cl01((T - SECT[1]) / .8)})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF); }
       paperFrame(); return;
