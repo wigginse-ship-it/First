@@ -108,6 +108,14 @@
     <div class="title">Previous chats</div>
     <button class="small" id="h-new">＋ New</button>
   </div>
+  <input id="h-q" type="search" placeholder="Search all chats…" autocomplete="off">
+  <div class="row">
+    <button class="small" id="h-import">Import file</button>
+    <button class="small" id="h-paste">Paste import</button>
+    <button class="small" id="h-export">Export</button>
+  </div>
+  <input type="file" id="h-file" accept=".json,application/json" style="display:none">
+  <div class="hint" id="h-msg"></div>
   <div class="scroll" id="h-list"></div>
 </section>
 
@@ -142,6 +150,7 @@
     <label for="s-pin">Lock PIN (optional — asked each time the app opens or you tap Lock)</label>
     <input id="s-pin" type="password" inputmode="numeric" placeholder="Leave empty for none">
     <div class="row" style="margin-top:12px">
+      <button id="s-reload">Reload latest</button>
       <button id="s-lock">Lock now</button>
       <button id="s-out">Sign out</button>
     </div>
@@ -154,7 +163,7 @@
 const $ = id => document.getElementById(id);
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 const DEFAULT_SYS = "You are replying on the small heads-up display of smart glasses and your reply may be read aloud. " +
@@ -168,7 +177,11 @@ let current = null;                              // active chat object
 let busy = false, abortCtl = null, speaking = false, listening = false, recog = null;
 
 const saveSettings = () => LS.set("gc.settings", settings);
-const saveChats = () => LS.set("gc.chats", chats);
+const saveChats = () => {
+  const ok = LS.set("gc.chats", chats);
+  if (!ok) { const m = $("h-msg"), l = $("live"); if (m) m.textContent = "⚠ Storage full — delete some chats"; if (l) l.textContent = "⚠ Storage full — chats not saved"; }
+  return ok;
+};
 const apiKey = () => LS.get("gc.key", "");
 
 /* ---------- views ---------- */
@@ -204,6 +217,7 @@ function enterApp() {
   openChat(chats.find(c => c.id === last) || null);
   show("chat");
 }
+$("s-reload").onclick = () => { location.replace(location.pathname + "?v=" + Date.now()); };
 $("s-lock").onclick = () => { stopAll(); showLogin(); };
 $("s-out").onclick = () => { stopAll(); LS.del("gc.key"); showLogin(); };
 
@@ -399,12 +413,24 @@ $("b-settings").onclick = () => { fillSettings(); show("settings"); };
 
 /* ---------- history ---------- */
 function renderHistory() {
+  const q = ($("h-q").value || "").trim().toLowerCase();
   const l = $("h-list"); l.innerHTML = "";
-  if (!chats.length) { l.innerHTML = '<div class="hint">No chats yet.</div>'; return; }
-  [...chats].sort((a, b) => b.updated - a.updated).forEach(c => {
+  let list = [...chats].sort((a, b) => b.updated - a.updated).map(c => ({ c, snip: "" }));
+  if (q) {
+    list = list.filter(x => {
+      if (x.c.title.toLowerCase().includes(q)) return true;
+      const m = x.c.messages.find(m => m.content.toLowerCase().includes(q));
+      if (!m) return false;
+      const k = m.content.toLowerCase().indexOf(q);
+      x.snip = "…" + m.content.slice(Math.max(0, k - 30), k + 70).replace(/\s+/g, " ") + "…";
+      return true;
+    });
+  }
+  if (!list.length) { l.innerHTML = '<div class="hint">' + (q ? "No matches." : "No chats yet.") + "</div>"; return; }
+  list.forEach(({ c, snip }) => {
     const d = document.createElement("div"); d.className = "item";
     const o = document.createElement("button"); o.className = "open";
-    o.innerHTML = `<span>${esc(c.title)}</span><small>${new Date(c.updated).toLocaleString()} · ${Math.ceil(c.messages.length / 2)} Q&amp;A</small>`;
+    o.innerHTML = `<span>${esc(c.title)}</span><small>${esc(snip || new Date(c.updated).toLocaleString() + " · " + Math.ceil(c.messages.length / 2) + " Q&A")}</small>`;
     o.onclick = () => { stopAll(); openChat(c); show("chat"); };
     const x = document.createElement("button"); x.textContent = "🗑"; x.setAttribute("aria-label", "Delete chat");
     x.onclick = () => { if (x.dataset.arm) { chats = chats.filter(k => k !== c); if (current === c) current = null; saveChats(); renderHistory(); }
@@ -412,6 +438,51 @@ function renderHistory() {
     d.append(o, x); l.append(d);
   });
 }
+$("h-q").addEventListener("input", renderHistory);
+
+/* ---------- import / export ---------- */
+function toChat(o) {
+  if (!o || typeof o !== "object") return null;
+  let raw = [];
+  if (Array.isArray(o.chat_messages)) {           // claude.ai data export
+    raw = o.chat_messages.map(m => ({ role: m.sender === "human" ? "user" : "assistant",
+      content: m.text || (m.content || []).filter(t => t.type === "text").map(t => t.text).join("\n") }));
+  } else if (Array.isArray(o.messages)) {         // this app's own export
+    raw = o.messages.map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") }));
+  } else return null;
+  const msgs = [];
+  for (const m of raw) {
+    if (!m.content || !m.content.trim()) continue;
+    const last = msgs[msgs.length - 1];
+    if (last && last.role === m.role) last.content += "\n\n" + m.content;
+    else msgs.push({ role: m.role, content: m.content });
+  }
+  while (msgs.length && msgs[0].role !== "user") msgs.shift();
+  if (!msgs.length) return null;
+  const t = Date.parse(o.updated_at || o.created_at) || o.updated || Date.now();
+  return { id: "i-" + (o.uuid || o.id || t), title: (o.name || o.title || msgs[0].content).slice(0, 60).replace(/\s+/g, " "),
+           updated: t, imported: true, messages: msgs };
+}
+function doImport(text) {
+  let data; try { data = JSON.parse(text); } catch { $("h-msg").textContent = "⚠ Not valid JSON"; return; }
+  const arr = Array.isArray(data) ? data : (data.conversations || [data]);
+  const have = new Set(chats.map(c => c.id));
+  const add = arr.map(toChat).filter(c => c && !have.has(c.id));
+  if (!add.length) { $("h-msg").textContent = "Nothing new to import"; return; }
+  const before = chats; chats = chats.concat(add);
+  if (!saveChats()) { chats = before; $("h-msg").textContent = "⚠ Too big for this device's storage — import a smaller file"; return; }
+  $("h-msg").textContent = "Imported " + add.length + " chat" + (add.length === 1 ? "" : "s"); renderHistory();
+}
+$("h-import").onclick = () => $("h-file").click();
+$("h-file").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (f) doImport(await f.text()); };
+$("h-paste").onclick = async () => {
+  try { doImport(await navigator.clipboard.readText()); } catch { $("h-msg").textContent = "⚠ Clipboard blocked — use Import file"; }
+};
+$("h-export").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(chats)], { type: "application/json" }));
+  a.download = "glasses-claude-chats.json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
 $("h-back").onclick = () => show("chat");
 $("h-new").onclick = newChat;
 
