@@ -123,6 +123,7 @@
     <input id="d-token" type="password" autocomplete="off" placeholder="github_pat_...">
     <label for="d-repo">Repo</label><input id="d-repo">
     <label for="d-branch">Branch</label><input id="d-branch">
+    <label for="d-src">Old chats file in a private repo (owner/repo/conversations.json)</label><input id="d-src" placeholder="wigginse-ship-it/claude-chats/conversations.json">
     <div class="row" style="margin-top:10px"><button id="d-revert">Revert last promote</button></div>
     <div class="hint" style="margin-top:6px">Nothing goes live until you tap Promote. Every change is also a git commit, so it can always be undone.</div>
   </div>
@@ -155,6 +156,7 @@
   <div class="row">
     <button class="small" id="h-import">Import file</button>
     <button class="small" id="h-paste">Paste import</button>
+    <button class="small" id="h-gh">From GitHub</button>
     <button class="small" id="h-export">Export</button>
   </div>
   <input type="file" id="h-file" accept=".json,application/json" style="display:none">
@@ -625,12 +627,33 @@ function doImport(text) {
   let data; try { data = JSON.parse(text); } catch { $("h-msg").textContent = "⚠ Not valid JSON"; return; }
   const arr = Array.isArray(data) ? data : (data.conversations || [data]);
   const have = new Set(chats.map(c => c.id));
-  const add = arr.map(toChat).filter(c => c && !have.has(c.id));
+  const add = arr.map(toChat).filter(c => c && !have.has(c.id)).sort((a, b) => b.updated - a.updated);
   if (!add.length) { $("h-msg").textContent = "Nothing new to import"; return; }
-  const before = chats; chats = chats.concat(add);
-  if (!saveChats()) { chats = before; $("h-msg").textContent = "⚠ Too big for this device's storage — import a smaller file"; return; }
-  $("h-msg").textContent = "Imported " + add.length + " chat" + (add.length === 1 ? "" : "s"); renderHistory();
+  const before = chats, put = n => { chats = before.concat(add.slice(0, n)); return LS.set("gc.chats", chats); };
+  let n = add.length;
+  if (!put(n)) {                                   // too big: keep the newest chats that fit
+    let lo = 0, hi = add.length - 1, best = 0;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (put(mid)) { best = mid; lo = mid + 1; } else hi = mid - 1; }
+    n = best; put(n);
+  }
+  if (!n) { chats = before; $("h-msg").textContent = "⚠ No room left in this device's storage — delete some chats first"; return; }
+  $("h-msg").textContent = n === add.length ? "Imported " + n + " chat" + (n === 1 ? "" : "s")
+    : "Imported the newest " + n + " of " + add.length + " (storage is full)";
+  renderHistory();
 }
+async function importFromGitHub() {
+  const src = (dev.src || "").trim().split("/");
+  if (src.length < 3) { $("h-msg").textContent = "⚠ Set the chats file under Menu → Update this app (owner/repo/file.json)"; return; }
+  if (!dev.token) { $("h-msg").textContent = "⚠ Add your GitHub token under Menu → Update this app"; return; }
+  $("h-msg").textContent = "Fetching from GitHub…";
+  try {
+    const r = await fetch("https://api.github.com/repos/" + src[0] + "/" + src[1] + "/contents/" + src.slice(2).join("/"),
+      { headers: { Authorization: "Bearer " + dev.token, Accept: "application/vnd.github.raw+json", "X-GitHub-Api-Version": "2022-11-28" } });
+    if (!r.ok) { $("h-msg").textContent = r.status === 404 ? "⚠ Not found — check the path, and that your token can read that repo" : "⚠ GitHub said " + r.status; return; }
+    doImport(await r.text());
+  } catch (e) { $("h-msg").textContent = "⚠ " + e.message; }
+}
+$("h-gh").onclick = importFromGitHub;
 $("h-log").onclick = async () => {
   try { const r = await fetch("transcript.json?v=" + Date.now()); if (!r.ok) throw 0; doImport(await r.text()); }
   catch { $("h-msg").textContent = "⚠ Couldn't load the build log"; }
@@ -659,9 +682,9 @@ $("s-down").onclick = () => $("s-scroll").scrollBy({ top: $("s-scroll").clientHe
 
 /* ---------- update this app (edits its own file on GitHub) ---------- */
 const DEV_DIR = "glasses-claude/";
-let dev = Object.assign({ token:"", repo:"wigginse-ship-it/First", branch:"claude/happy-fermat-kpuzeu" }, LS.get("gc.dev", {}));
-function fillDev() { $("d-token").value = dev.token; $("d-repo").value = dev.repo; $("d-branch").value = dev.branch; renderCand(); }
-["token","repo","branch"].forEach(k => $("d-" + k).addEventListener("change", () => { dev[k] = $("d-" + k).value.trim(); LS.set("gc.dev", dev); }));
+let dev = Object.assign({ token:"", repo:"wigginse-ship-it/First", branch:"claude/happy-fermat-kpuzeu", src:"" }, LS.get("gc.dev", {}));
+function fillDev() { $("d-token").value = dev.token; $("d-repo").value = dev.repo; $("d-branch").value = dev.branch; $("d-src").value = dev.src || ""; renderCand(); }
+["token","repo","branch","src"].forEach(k => $("d-" + k).addEventListener("change", () => { dev[k] = $("d-" + k).value.trim(); LS.set("gc.dev", dev); }));
 const dstat = t => { $("d-status").textContent = t; };
 const b64 = t => { const b = new TextEncoder().encode(t); let s = ""; b.forEach(c => s += String.fromCharCode(c)); return btoa(s); };
 const unb64 = t => new TextDecoder().decode(Uint8Array.from(atob(t.replace(/\s/g, "")), c => c.charCodeAt(0)));
