@@ -22,38 +22,44 @@
   .item.main.dwell::after { background:#000; }
   @keyframes fill { from { width:0 } to { width:100% } }
   small { display:block; font-weight:400; font-size:.65em; opacity:.75; }
+  #voice { color:#ff9f43; font-size:.6em; min-height:1.4em; }
   #dbg { margin-top:auto; color:#8a8a8a; font-size:.55em; }
 </style>
 </head>
 <body>
 <main>
+  <div id="voice">🎤 Voice: starting…</div>
+
   <!-- Step 1: sign in (done on claude.ai itself; nothing is typed or stored here) -->
   <section id="gate">
     <h1>Sign in to Claude</h1>
     <p>You sign in on claude.ai's own page. After that, open this launcher again.</p>
-    <a class="item main" data-href="https://claude.ai/login" data-signin="1">🔐 Sign in<small>Opens claude.ai login</small></a>
-    <a class="item" data-skip="1">✅ I'm already signed in</a>
+    <a class="item main" data-say="sign in|log in|login" href="https://claude.ai/login" data-href="https://claude.ai/login" data-signin="1">🔐 Sign in<small>Say “sign in”</small></a>
+    <a class="item" data-say="already|signed in|skip|continue" data-skip="1">✅ I'm already signed in<small>Say “already signed in”</small></a>
+    <a class="item" data-dwelloff="1" data-voice="1">🎤 Talk to it</a>
   </section>
 
   <!-- Step 2: shortcuts -->
   <section id="menu">
     <h1>Claude</h1>
-    <a class="item main" data-href="https://claude.ai/new">💬 New chat<small>Dictate with the mic button in Claude</small></a>
-    <a class="item" data-href="https://claude.ai/recents">🕘 Past chats</a>
-    <a class="item" data-href="https://claude.ai/projects">📁 Projects</a>
-    <a class="item" data-href="https://claude.ai/code">⌨ Claude Code sessions</a>
-    <a class="item" data-href="https://claude.ai/login" data-signin="1">🔐 Sign in again</a>
+    <a class="item main" data-say="new chat|new|chat|ask" href="https://claude.ai/new" data-href="https://claude.ai/new">💬 New chat<small>Dictate with the mic button in Claude</small></a>
+    <a class="item" data-say="past|recent|history|old" href="https://claude.ai/recents" data-href="https://claude.ai/recents">🕘 Past chats</a>
+    <a class="item" data-say="project" href="https://claude.ai/projects" data-href="https://claude.ai/projects">📁 Projects</a>
+    <a class="item" data-say="code" href="https://claude.ai/code" data-href="https://claude.ai/code">⌨ Claude Code sessions</a>
+    <a class="item" data-say="sign in|log in|login" href="https://claude.ai/login" data-href="https://claude.ai/login" data-signin="1">🔐 Sign in again</a>
+    <a class="item" data-dwelloff="1" data-voice="1">🎤 Talk to it</a>
     <a class="item" data-dwelloff="1" data-toggle="1" id="tg">⏱ Hold-to-open</a>
   </section>
-  <div id="dbg">Scroll to move, pinch to select, or pause 3 seconds on an option. Last input: none yet</div>
+  <div id="dbg">Say a command, or scroll and pause 3 seconds on an option, or pinch. Last input: none yet</div>
 </main>
 <script>
 (function () {
   var store = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
                 set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  var navT = null, navT2 = null, wantVoice = true, fatal = false, listening = false, rec = null, heardAt = 0;
   var dbg = document.getElementById("dbg"), sel = 0, last = 0, wheelAt = 0, timer = null, armed = false, items = [];
   var dwellOn = store.get("dwell") !== "off";
-  function note(t) { dbg.textContent = "Last input: " + t; }
+  function note(t) { dbg.textContent = "Last input: " + t; if (!armed) { armed = true; show(); } startVoice(); }
   function label() { document.getElementById("tg").textContent = "⏱ Hold-to-open: " + (dwellOn ? "on" : "off"); }
 
   function screen(id) {
@@ -74,12 +80,50 @@
   function go(fromDwell) {
     var now = Date.now(); if (now - last < 800) return; last = now;
     var el = items[sel];
+    if (el.dataset.voice) { wantVoice = true; fatal = false; startVoice(true); return; }
     if (el.dataset.toggle) { dwellOn = !dwellOn; store.set("dwell", dwellOn ? "on" : "off"); label(); armed = false; show(); return; }
     if (el.dataset.skip) { store.set("signedin", "1"); screen("menu"); return; }
     if (el.dataset.signin) store.set("signedin", "1");
     dbg.textContent = (fromDwell ? "Opening (held)… " : "Opening… ") + el.textContent.trim().split("\n")[0];
-    try { window.location.assign(el.dataset.href); } catch (e) { window.open(el.dataset.href, "_self"); }
+    var url = el.dataset.href;
+    try { window.location.assign(url); } catch (e) {}
+    clearTimeout(navT); clearTimeout(navT2);
+    navT2 = setTimeout(function () { dbg.textContent = "Trying another way to open…"; try { window.open(url, "_blank"); } catch (e) {} }, 1200);
+    navT = setTimeout(function () {
+      dbg.textContent = "⚠ The glasses blocked opening " + url + " from this page. Add that address as its own web app in the Meta app instead.";
+    }, 3500);
   }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, vEl = document.getElementById("voice");
+  function vtxt(t) { vEl.textContent = t; }
+  function command(t) {
+    t = t.toLowerCase();
+    for (var i = 0; i < items.length; i++) {
+      var say = items[i].dataset.say; if (!say) continue;
+      if (say.split("|").some(function (w) { return t.indexOf(w) >= 0; })) { sel = i; armed = false; show(); go(); return true; }
+    }
+    return false;
+  }
+  function startVoice(force) {
+    if (!SR) { vtxt("🎤 Voice isn't supported by this browser — use scroll + hold, or pinch"); return; }
+    if (listening || !wantVoice || (fatal && !force)) return;
+    try { rec = new SR(); } catch (e) { vtxt("🎤 Voice failed: " + e.message); return; }
+    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
+    rec.onstart = function () { listening = true; vtxt('🎤 Listening — say "sign in", "new chat", "past chats", "projects"'); };
+    rec.onresult = function (e) {
+      var t = ""; for (var i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+      vtxt('🎤 Heard: "' + t + '"'); var n = Date.now();
+      if (n - heardAt > 1500 && command(t)) heardAt = n;
+    };
+    rec.onerror = function (e) {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed" || e.error === "audio-capture") {
+        fatal = true; vtxt("🎤 Mic blocked (" + e.error + ") — allow the microphone, then choose “Talk to it”");
+      } else if (e.error !== "no-speech" && e.error !== "aborted") vtxt("🎤 Mic problem: " + e.error);
+    };
+    rec.onend = function () { listening = false; if (wantVoice && !fatal) setTimeout(startVoice, 700); };
+    try { rec.start(); } catch (e) { vtxt("🎤 Voice failed: " + e.message); }
+  }
+  ["pointerdown", "touchstart", "pointermove"].forEach(function (ev) { document.addEventListener(ev, function () { startVoice(); }, { passive: true }); });
+  window.addEventListener("pagehide", function () { clearTimeout(navT); clearTimeout(navT2); wantVoice = false; try { rec && rec.abort(); } catch (e) {} });
   document.addEventListener("keydown", function (e) {
     var k = e.key; note("key " + k);
     if (k === "ArrowDown" || k === "PageDown" || (k === "Tab" && !e.shiftKey)) { e.preventDefault(); move(1); }
@@ -92,14 +136,14 @@
   }, { passive: false });
   function bind(el) {
     var pick = function (why) { note(why); sel = items.indexOf(el); if (sel < 0) return; armed = false; show(); go(); };
-    el.addEventListener("click", function (e) { e.preventDefault(); pick("click"); });
+    el.addEventListener("click", function (e) { if (!el.getAttribute("href")) e.preventDefault(); pick("click"); });
     el.addEventListener("pointerup", function () { pick("tap"); });
-    el.addEventListener("touchend", function (e) { e.preventDefault(); pick("touch"); });
+    el.addEventListener("touchend", function (e) { if (!el.getAttribute("href")) e.preventDefault(); pick("touch"); });
   }
   [].forEach.call(document.querySelectorAll(".item"), bind);
   document.addEventListener("click", function (e) { if (!e.target.closest || !e.target.closest(".item")) { note("click (page)"); go(); } });
   window.addEventListener("pageshow", function () { last = 0; screen(store.get("signedin") ? "menu" : "gate"); });
-  label(); screen(store.get("signedin") ? "menu" : "gate");
+  label(); screen(store.get("signedin") ? "menu" : "gate"); startVoice();
 })();
 </script>
 </body>
