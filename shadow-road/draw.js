@@ -711,8 +711,8 @@ function drawScene(t) {
   for (const h of hazards) if (h.kind !== 'beam') drawHazard(h, t);
   for (const e of enemies) if (e.boss && e.state === 'wind' && e.plan !== 'roar') drawTell(e, t);
   // every figure is painted into the ink layer; this box (generous, so swings and debris fit) is where the ink work happens
-  const boxes = [], box = (x, y, z, hw, hh) => boxes.push([x - hw, y - z - hh, x + hw, y + 12]);
-  box(P.x, P.y, P.z, 160, 170);
+  const boxes = [], box = (x, y, z, hw, hh, low = 12) => boxes.push([x - hw, y - z - hh, x + hw, y + low]);
+  box(P.x, P.y, P.z, 160, 170, 64); // (deep enough below his feet for a great sword's point carried low)
   // the fallen (and the falling) get a box sized to the body: a boss lying on its side, or cut in two and thrown, reaches far
   // past a fixed box, and was cut off at its edge wherever the prince's own box did not happen to reach
   const fallen = (c) => { const R = Math.max(110, (Math.max(c.hw || 0, c.hh || 0) * 1.7 + 80 + (c.def.tail || 0)) * (c.champ ? 1.3 : 1)); box(c.x, c.y - (c.z || 0) + R * .5, 0, R, R * 1.5); }; // (a boss's hw and hh already carry its size)

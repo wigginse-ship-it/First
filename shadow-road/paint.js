@@ -200,7 +200,7 @@ let heroWC = null, heroWG = null, heroWOn = false;
 function heroInk(cx, cy, fn) {
   if (PAINT_Q === 0 || PAINT_LITE || ctx !== inkG || HB.on || TINT || FLASH) { fn(); return; } // (lighter paint: he is painted with the others)
   const m = ctx.getTransform(); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  for (const [px, py] of [[cx - 135, cy - 150], [cx + 135, cy - 150], [cx - 135, cy + 18], [cx + 135, cy + 18]]) { const X = m.a * px + m.c * py + m.e, Y = m.b * px + m.d * py + m.f; x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); }
+  for (const [px, py] of [[cx - 135, cy - 150], [cx + 135, cy - 150], [cx - 135, cy + 64], [cx + 135, cy + 64]]) { const X = m.a * px + m.c * py + m.e, Y = m.b * px + m.d * py + m.f; x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); }
   x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(inkC.width, Math.ceil(x1)); y1 = Math.min(inkC.height, Math.ceil(y1));
   const w = x1 - x0, h = y1 - y0; if (w < 4 || h < 4) { fn(); return; }
   if (!heroC || heroC.width < w || heroC.height < h) { retire(heroC); retire(heroSC); retire(heroWC); [heroC, heroG] = texCanvas(w + 64, h + 64); [heroSC, heroSG] = texCanvas(w + 64, h + 64); [heroWC, heroWG] = texCanvas(w + 64, h + 64); }
