@@ -40,15 +40,16 @@
     // how hard he is gathering speed: full while the current still accelerates him, nothing at top speed or coasting
     const gather = held && against < .2 ? clamp(SK.aF / (T.acc * (cr / T.cruise) * .55), 0, 1) : 0;
     const want = gather * (1 - .3 * clamp(s / cr, 0, 1));
-    SK.amp = ap(SK.amp, want, dt, want > SK.amp ? .12 : .22);
+    if (SK.amp < .02 && s < 40) SK.ph = 0;
+    SK.amp = ap(SK.amp, want, dt, want > SK.amp ? .05 : .32);
     // stroke rate: quick, choppy strides off the mark, long and slow ones near cruising speed (cycles a second, two strokes each)
-    SK.rate = lerp(1.55, .8, sm(s / cr));
+    SK.rate = lerp(1.45, .75, sm(s / cr));
     if (SK.amp > .01 || (SK.ph % Math.PI) > .05) SK.ph += TAU * SK.rate * dt * (SK.amp > .01 ? 1 : 1.4);
     if (SK.ph > TAU * 64) SK.ph -= TAU * 64;
     // curves: how fast his heading swings, toward us (+) or away
     if (s > 60 && SK.h0 !== null && against < .3) SK.turn = ap(SK.turn, wrap(h - SK.h0) / dt, dt, .12); else SK.turn = ap(SK.turn, 0, dt, .1);
     SK.h0 = s > 20 ? h : null;
-    SK.curve = clamp(SK.turn * (Math.sign(CUR.vx) || P.facing) / 2.6, -1, 1) * sm(s / (cr * .6));
+    SK.curve = clamp(SK.turn * P.facing / 1.8, -1, 1) * sm(s / (cr * .6));
     // coasting (the stick let go), and the edge he sets to brake as it bleeds away
     SK.coast = ap(SK.coast, held ? 0 : 1, dt, held ? .08 : .2);
     SK.brake = ap(SK.brake, sm((175 - s) / 120) * (s > 6 ? 1 : 0), dt, .15);
@@ -69,10 +70,11 @@
   const mix = (A, B, q) => { const o = {}; for (const k of KEYS) o[k] = lerp(A[k], B[k] ?? A[k], q); o.fl = lerp(A.fl || 0, B.fl || 0, q); o.bl = lerp(A.bl || 0, B.bl || 0, q); return o; };
   // one leg through a stroke cycle (u 0..1): drive out behind, swing back in with the foot lifted, then ride it
   function stroke(u, A) {
-    const reach = 15 * A, k = 2.5 + 8.5 * (1 - A * .35);
-    if (u < .5) { const e = .5 - .5 * Math.cos(Math.PI * u / .5); return { f: lerp(3.5, -reach, e), k: lerp(10.5, 1.5, e), l: e > .85 ? (e - .85) * 6 * A : 0 }; }
-    if (u < .7) { const r = (u - .5) / .2, e = .5 - .5 * Math.cos(Math.PI * r); return { f: lerp(-reach, 5, e), k: lerp(1.5, 12, Math.sin(Math.PI * Math.min(1, r * 1.2))) + 3 * e, l: Math.sin(Math.PI * r) * (3 + 4 * A) }; }
-    const r = (u - .7) / .3; return { f: lerp(5, 3.5, r), k: lerp(12, 10.5, r) * (k / 11) + (1 - k / 11) * 6, l: 0 };
+    const reach = 17 * A;
+    if (u < .4) { const e = Math.sin(Math.PI / 2 * u / .4); return { f: lerp(4, -reach, e), k: lerp(10.5, 1.2, e), l: 0 }; }
+    if (u < .52) { const r = (u - .4) / .12; return { f: -reach - .8 * r, k: 1.2, l: r * 1.6 * A }; }
+    if (u < .72) { const r = (u - .52) / .2, e = .5 - .5 * Math.cos(Math.PI * r); return { f: lerp(-reach - .8, 5.5, e), k: 1.2 + 12 * Math.sin(Math.PI * Math.min(1, r * 1.15)) + 9 * e * (1 - r), l: Math.sin(Math.PI * r) * (3 + 4 * A) + 1.6 * A * (1 - r) }; }
+    const r = (u - .72) / .28; return { f: lerp(5.5, 4, r), k: lerp(11.5, 10.5, r), l: 0 };
   }
   const base = (w) => { w = WEAPONS[w] && WEAPONS[w].pearl ? WEAPONS[w].base : w; return w; };
 
@@ -87,9 +89,9 @@
     S.lean = lerp(S.lean, clamp(fw / 650, -.3, .5), sm((s - 120) / 140));
     // the strokes: each leg half a cycle behind the other
     if (amp > .005) {
-      const A = clamp(.55 + .45 * (1 - sn) + .25 * sn, .5, 1), uN = ((SK.ph / TAU) % 1 + 1) % 1, uF = (uN + .5) % 1;
+      const A = lerp(1, .85, sn), uN = ((SK.ph / TAU) % 1 + 1) % 1, uF = (uN + .5) % 1;
       const n = stroke(uN, A), fr = stroke(uF, A), bob = 1.6 * Math.abs(Math.sin(SK.ph * 2));
-      S = mix(S, { f: n.f, b: fr.f, fk: n.k, bk: fr.k, fl: n.l, bl: fr.l, w: 1.25, sink: S.sink + 1 + bob * A, lean: Math.max(S.lean, .42 + .1 * (1 - sn)) }, amp);
+      S = mix(S, { f: n.f, b: fr.f, fk: n.k, bk: fr.k, fl: n.l, bl: fr.l, w: 1.25, sink: S.sink + 1 + bob * A, lean: Math.max(S.lean, .42 + .1 * (1 - sn)) }, Math.min(1, amp * 1.7));
     }
     if (coast > .005) S = mix(S, RIDE, coast * (1 - brake) * (1 - sn * .55));
     if (brake > .005) { const B = Object.assign({}, BRAKE); if (fw < 0) { B.f = -BRAKE.b; B.b = -BRAKE.f; B.fk = BRAKE.bk; B.bk = BRAKE.fk; B.lean = -BRAKE.lean; } S = mix(S, B, brake); }
@@ -112,12 +114,15 @@
   // ---------------- the arms ----------------
   // counter-swung with the strokes (the near arm comes forward as the near leg drives back), held low and back in the
   // tuck, out for balance on a curve or a skid; a weapon arm keeps its weapon well clear of the street
-  const CARRY = { // arm/elbow/grip in the tuck, how far the arm may swing, and the free hand's rest
+  // arm/elbow in the tuck, how far the weapon arm may swing; wa: the weapon's own angle on the screen (0 ahead, PI/2 straight
+  // down), slow (off the mark, braking) and fast (the tuck): the grip is worked out from it so the weapon holds its line
+  // while the arm swings and the body leans, and never dips into the street
+  const CARRY = {
     fists: { arm: 2.25, elbow: .35, swing: .8, sElbow: 1.1 },
-    sword: { arm: 1.95, elbow: .25, grip: -1.15, swing: .14, sElbow: .3 },     // the great sword trailing behind, its point well up off the street
-    hammer: { arm: 1.85, elbow: .2, grip: -1.25, swing: .12, sElbow: .25 },   // the hammer carried low behind, the head held clear
-    staff: { arm: .95, elbow: .55, grip: -.55, swing: .22, sElbow: .55 },     // the bo held level, a balancing pole
-    rapier: { arm: 1.35, elbow: .3, grip: -.5, swing: .35, sElbow: .45 },     // the point carried low ahead
+    sword: { arm: 1.95, elbow: .25, swing: .14, sElbow: .3, slow: -.25, fast: 3.42 - TAU },
+    hammer: { arm: 1.85, elbow: .2, swing: .12, sElbow: .25, slow: 2.55, fast: 3.3 },
+    staff: { arm: .95, elbow: .55, swing: .22, sElbow: .55, slow: .12, fast: .12 },
+    rapier: { arm: 1.35, elbow: .3, swing: .35, sElbow: .45, slow: .55, fast: .55 },
   };
   function arms(pose, q, amp, sn, ac, skid, coast, brake) {
     const w = base(P.w), C = CARRY[w] || CARRY.fists, fist = w === 'fists' || !CARRY[w];
@@ -130,8 +135,12 @@
       let a = restA - sw * C.swing * (fist ? 1.15 : 1), e = lerp(restE, C.sElbow, amp);
       if (fist && amp > .01) e = lerp(e, 1.25 + .35 * Math.max(0, sw), amp);
       if (bal > .01) { a = lerp(a, fist ? .35 : C.arm - .25, bal); e = lerp(e, fist ? .5 : C.elbow, bal); }
+      if (C.slow !== undefined) { // (the great sword is carried point-up ahead off the mark, hoisted up and over to trail behind him at speed)
+        const fast = sm((sn - .35) / .5) * (1 - Math.max(skid, brake, coast * .5)), wa = lerp(C.slow, C.fast, fast);
+        const g0 = (pose.arm ?? 1.1) - (pose.elbow || 0) + (pose.grip || 0) + (pose.lean || 0);
+        pose.grip = lerp(g0, wa, q) - (pose.lean || 0) - lerp(pose.arm ?? 1.1, a, q) + lerp(pose.elbow || 0, e, q);
+      }
       pose.arm = lerp(pose.arm ?? 1.1, a, q); pose.elbow = lerp(pose.elbow || 0, e, q);
-      if (C.grip !== undefined) pose.grip = lerp(pose.grip || 0, C.grip, q);
       delete pose.armSwing;
     }
     // the free (far) arm

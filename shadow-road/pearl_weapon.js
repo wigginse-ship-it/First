@@ -566,6 +566,7 @@
     const W0 = { tree: buildTree(spec).tree, sig: PN.stats(picks, true), pearl: spec };
     tx.querySelector('h2').textContent = spec.name; tx.querySelector('.sub').textContent = `A ${spec.tag}. It is yours for good: it stays on your weapon wheel through every cycle of the road, and you glide on the Currents while it is in your hands.`;
     tx.querySelector('ul').innerHTML = moveRows(W0).map(([a, b, c]) => `<li><b>${c}</b><br><em>${a} · ${b}</em></li>`).join('');
+    if (window.PEARLM) tx.querySelector('ul').insertAdjacentHTML('beforebegin', PEARLM.statsHtml(spec)); // (what the five choices made of it: pearl_moves.js)
     scene = { el, t0: performance.now() - (o.skip ? 3000 : 0), spec, picks, seed, prev, shown: false };
     const take = () => { if (!scene) return; const S2 = scene; scene = null; el.remove(); app.classList.remove('nocontrols'); window.removeEventListener('keydown', key, true);
       const W = forgeNow(S2.seed, S2.picks); mode = 'play'; clearInput(); for (const q in pressed) pressed[q] = false;

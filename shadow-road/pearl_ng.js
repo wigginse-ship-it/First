@@ -966,8 +966,8 @@
   const dropsPair = (has) => has.anchor || has.chain;
   function fittingsBack(r, p, o) {
     if (o.edge) return;
-    ctx.beginPath(); ctx.arc(0, 0, r * 1.06, 0, TAU); stroke(OUT, Math.max(.9, r * .2)); ctx.beginPath(); ctx.arc(0, 0, r * 1.06, 0, TAU); stroke(MDK(p), Math.max(.5, r * .12));
-    ctx.beginPath(); ctx.arc(0, 0, r * 1.06, Math.PI * .95, Math.PI * 1.75); stroke(p.metalLt, Math.max(.3, r * .06));
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.035, 0, TAU); stroke(OUT, Math.max(.8, r * .12)); ctx.beginPath(); ctx.arc(0, 0, r * 1.035, 0, TAU); stroke(MDK(p), Math.max(.35, r * .06));
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.035, Math.PI * .95, Math.PI * 1.75); stroke(p.metalLt, Math.max(.25, r * .035));
   }
   function fittingsFront(r, p, o) {
     const h = o.has, m = o.mounts;
@@ -1022,12 +1022,12 @@
     ctx.save(); ctx.rotate(tilt); ctx.lineCap = 'round';
     for (let i = 0; i < 2; i++) { const R2 = R * (1 - i * .12), h0 = t * (2.1 - i * .3) + i * Math.PI;
       for (let pass = 0; pass < 2; pass++) for (let j = 0; j < N; j++) { const u0 = j / N, u1 = (j + 1) / N, a = h0 - u0 * 2.2, b = h0 - u1 * 2.2, m = (a + b) / 2;
-        if ((Math.sin(m) < 0) !== !!o.back) continue; const wk = (1 - u0) * Math.max(.5, r * .2);
+        if ((Math.sin(m) < 0) !== !!o.back) continue; const wk = (1 - u0 * .8) * Math.max(.6, r * .26);
         ctx.beginPath(); ctx.moveTo(Math.cos(a) * R2, Math.sin(a) * R2 * ry); ctx.lineTo(Math.cos(b) * R2, Math.sin(b) * R2 * ry);
         if (pass === 0) stroke(o.back ? 'rgba(20,70,84,.7)' : 'rgba(26,96,108,.85)', wk + Math.max(.5, r * .07));
         else stroke(o.back ? `rgba(110,190,190,${.55 * (1 - u0)})` : `rgba(226,255,248,${.95 * (1 - u0 * .6)})`, wk * .6); }
       // a droplet at its head
-      if ((Math.sin(h0) < 0) === !!o.back) { const x = Math.cos(h0) * R2, y = Math.sin(h0) * R2 * ry; glass(() => { ctx.beginPath(); ctx.arc(x, y, r * .13, 0, TAU); }, '200,250,240', .55, r * .5, x - r * .04, y - r * .05, r * .05); } }
+      if ((Math.sin(h0) < 0) === !!o.back) { const x = Math.cos(h0) * R2, y = Math.sin(h0) * R2 * ry; glass(() => { ctx.beginPath(); ctx.arc(x, y, r * .17, 0, TAU); }, '200,250,240', .6, r * .6, x - r * .05, y - r * .06, r * .06); } }
     ctx.restore();
   }
   // nacre shards: crystals of mother-of-pearl drifting round on a tilted orbit, each turning on its own axis
@@ -1035,7 +1035,7 @@
     const t = o.t, R = r * 1.85, ry = .42;
     ctx.save(); ctx.rotate(-.15);
     for (let i = 0; i < 4; i++) { const a = t * .55 + i * TAU / 4, s = Math.sin(a); if ((s < 0) !== !!o.back) continue;
-      const x = Math.cos(a) * R, y = s * R * ry + Math.sin(t * 1.3 + i) * r * .08, S = r * (i % 2 ? .3 : .38) * (1 + .15 * s), sp = t * 2.4 + i * 1.7, wk = Math.max(.18, Math.abs(Math.cos(sp)));
+      const x = Math.cos(a) * R, y = s * R * ry + Math.sin(t * 1.3 + i) * r * .08, S = r * (i % 2 ? .38 : .48) * (1 + .15 * s), sp = t * 2.4 + i * 1.7, wk = Math.max(.3, Math.abs(Math.cos(sp)));
       ctx.save(); ctx.translate(x, y); ctx.rotate(.35 * Math.sin(t * .8 + i)); ctx.scale(wk, 1);
       const path = () => { ctx.beginPath(); ctx.moveTo(0, -S * 1.45); ctx.lineTo(S * .62, -S * .1); ctx.lineTo(0, S); ctx.lineTo(-S * .62, -S * .1); ctx.closePath(); };
       const g = ctx.createLinearGradient(-S, -S, S, S); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.45, p.accent); g.addColorStop(1, p.bladeDk);
@@ -1053,12 +1053,11 @@
     for (let i = 0; i < 8; i++) { if ((i % 2 === 0) !== !!o.back) continue; const u = (t * .38 + hs(i) ) % 1, sd = i % 4 < 2 ? -1 : 1;
       const x = sd * r * (.55 + .5 * hs(i + 3)) + Math.sin(u * 7 + i) * r * .12, y = r * (.9 - u * 3), s = r * (.09 + .1 * hs(i + 7)) * (.6 + .6 * u), al = Math.sin(Math.PI * u);
       ctx.save(); ctx.globalAlpha *= al; glass(() => { ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); }, '230,255,252', .18, s, x - s * .35, y - s * .38, s * .3); ctx.restore(); }
-    if (!o.back) { // the foam caught on the pearl's shoulders, the same on both sides
-      ctx.fillStyle = '#FFFFFF';
-      for (const sd of [-1, 1]) for (const [a, s] of [[-.95, .2], [-.7, .26], [-.45, .18]]) { const aa = sd > 0 ? a : Math.PI - a, b = .03 * Math.sin(t * 3 + a * 5); const x = Math.cos(aa) * r * (1 + b), y = Math.sin(aa) * r * (1 + b);
-        ctx.beginPath(); ctx.arc(x, y, r * s, 0, TAU); stroke('rgba(42,27,44,.6)', inkW(r, .1)); }
-      for (const sd of [-1, 1]) for (const [a, s] of [[-.95, .2], [-.7, .26], [-.45, .18]]) { const aa = sd > 0 ? a : Math.PI - a, b = .03 * Math.sin(t * 3 + a * 5); const x = Math.cos(aa) * r * (1 + b), y = Math.sin(aa) * r * (1 + b);
-        ctx.fillStyle = '#E4F6F2'; ctx.beginPath(); ctx.arc(x, y, r * s, 0, TAU); ctx.fill(); ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(x - r * s * .2, y - r * s * .25, r * s * .7, 0, TAU); ctx.fill(); } }
+    if (!o.back) { // a lace of foam over the pearl's crown, the same on both sides, its blobs bobbing
+      const cap = []; for (let i = 0; i < 9; i++) { const u = i / 8, a = -Math.PI * (.86 - u * .72), s = r * (.17 + .1 * Math.sin(Math.PI * u)), b = r * .03 * Math.sin(t * 3.4 + Math.abs(u - .5) * 9); cap.push([Math.cos(a) * r * 1.02, Math.sin(a) * r * 1.02 - b, s]); }
+      for (const [x, y, s] of cap) { ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); stroke('rgba(42,27,44,.7)', inkW(r, .1)); }
+      for (const [x, y, s] of cap) { ctx.fillStyle = '#D6EEEA'; ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); ctx.fill(); }
+      for (const [x, y, s] of cap) { ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(x - s * .2, y - s * .25, s * .72, 0, TAU); ctx.fill(); } }
   }
   // storm in the pearl: forked lightning flickering through it, re-struck many times a second; sparks leap off it
   function pntStaticArc(r, p, o) {
@@ -1092,7 +1091,7 @@
   }
   // the slack tide's dial: a gilt bezel behind, engraved hours, and a pearl marker going slowly round it as the tide turns
   function pntDial(r, p, o) {
-    const t = o.t, R = r * 1.3, w = Math.max(1, r * .34);
+    const t = o.t, R = r * 1.32, w = Math.max(.9, r * .26);
     ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); stroke(OUT, w + Math.max(.8, r * .14));
     ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); stroke(MDK(p), w);
     ctx.beginPath(); ctx.arc(-r * .02, -r * .03, R, 0, TAU); stroke(p.metal, w * .7);
@@ -1166,8 +1165,8 @@
   function pntCoralLance(r, p, o) {
     const t = o.t, limbs = [], tips = [], h = o.has, along = h.horn || h.tines, W = Math.max(.7, r * .2);
     if (!along) { limbs.push([r * 1.05, 0, r * 3, 0, W * 1.1, 0, r * 2, 0]); tips.push([r * 3, 0, W]); }
-    const xs = along ? [1.6, 2.3] : [1.5, 2.1, 2.6];
-    xs.forEach((x, i) => { for (const sd of [-1, 1]) coralTree(limbs, tips, r * x, sd * r * (along ? .26 : .05), sd * (Math.PI / 2 - .55), r * (.55 - i * .08), W * .75, 1, -sd, t, i * 1.7 + (sd > 0 ? .8 : 0), 2); });
+    const xs = along ? [1.6, 2.35] : [1.55, 2.3];
+    xs.forEach((x, i) => { for (const sd of [-1, 1]) coralTree(limbs, tips, r * x, sd * r * (along ? .26 : .05), sd * (Math.PI / 2 - .7), r * (.62 - i * .12), W * .8, 0, -sd, t, i * 1.7 + (sd > 0 ? .8 : 0), 1); });
     coralLimbs(limbs, tips, r);
   }
   // the coral guard: a crown of red coral growing up behind the pearl from its top mount, the same on both sides,
@@ -1217,8 +1216,8 @@
     for (const [y, k, ph] of [[-r * .3, 1, 0], [r * .3, -1, 1.7]]) {
       const x0 = -r * 1.08, pts = [];
       for (let i = 0; i <= N; i++) { const u = i / N, li = Math.min(2, Math.floor(u * 3)), a = sw[li] * .6 * u + sw.fl * .2 * Math.sin(sw.t * 11 - u * 5 + ph) * u;
-        const bx = -u * r * 3.1, by = k * Math.sin(u * 3.4 + t * 3.2 + ph) * r * .32 * u + k * u * r * .2, c = Math.cos(a), s = Math.sin(a); pts.push([x0 + bx * c - by * s, y + bx * s + by * c, u]); }
-      const edge = (side) => pts.map(([x, yy, u], i) => { const j = Math.min(N, i + 1), jj = Math.max(0, i - 1), dx = pts[j][0] - pts[jj][0], dy = pts[j][1] - pts[jj][1], d = Math.hypot(dx, dy) || 1, tw = Math.cos(u * 4.2 - t * 4.5 + ph), w = r * .22 * (1 - u * .25) * (.25 + .75 * Math.abs(tw)); return [x - dy / d * w * side, yy + dx / d * w * side, tw]; });
+        const bx = -u * r * 2.75, by = k * Math.sin(u * 3.4 + t * 3.2 + ph) * r * .32 * u + k * u * r * .2, c = Math.cos(a), s = Math.sin(a); pts.push([x0 + bx * c - by * s, y + bx * s + by * c, u]); }
+      const edge = (side) => pts.map(([x, yy, u], i) => { const j = Math.min(N, i + 1), jj = Math.max(0, i - 1), dx = pts[j][0] - pts[jj][0], dy = pts[j][1] - pts[jj][1], d = Math.hypot(dx, dy) || 1, tw = Math.cos(u * 4.2 - t * 4.5 + ph), w = r * .27 * (1 - u * .2) * (.25 + .75 * Math.abs(tw)); return [x - dy / d * w * side, yy + dx / d * w * side, tw]; });
       const A = edge(1), B = edge(-1);
       for (let i = 0; i < N; i++) { ctx.beginPath(); ctx.moveTo(A[i][0], A[i][1]); ctx.lineTo(A[i + 1][0], A[i + 1][1]); ctx.lineTo(B[i + 1][0], B[i + 1][1]); ctx.lineTo(B[i][0], B[i][1]); ctx.closePath(); const tw = A[i][2]; ctx.fillStyle = tw > 0 ? (tw > .75 ? lit : p.accent) : dark; ctx.fill(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = .3; ctx.stroke(); }
       // the forked tail, and the ink round it all
@@ -1277,28 +1276,32 @@
   }
   // the moonstruck charm: a gilt crescent moon with a pearl in its arms, floating at the upper front, bobbing and rocking
   function pntCharm(r, p, o) {
-    const t = o.t, x = r * 1.32, y = -r * 1.2 + Math.sin(t * 2.3) * r * .13, R = r * .44;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(.25 * Math.sin(t * 1.5) - .3);
-    const path = () => { ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.arc(R * .42, -R * .18, R * .82, 0, TAU, true); };
+    const t = o.t, x = r * 1.35, y = -r * 1.22 + Math.sin(t * 2.3) * r * .14, R = r * .5;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(.22 * Math.sin(t * 1.5) - .35);
+    const path = () => { ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.arc(R * .5, -R * .22, R * .74, 0, TAU, true); };
     const g = ctx.createLinearGradient(-R, -R, R, R); g.addColorStop(0, p.metalLt); g.addColorStop(.5, p.metal); g.addColorStop(1, MDK(p));
-    path(); ctx.fillStyle = g; ctx.fill('evenodd'); ctx.save(); path(); ctx.clip('evenodd'); ctx.beginPath(); ctx.arc(-R * .06, -R * .04, R * .9, Math.PI * .7, Math.PI * 1.35); stroke('rgba(255,250,224,.9)', Math.max(.25, r * .05)); ctx.restore();
-    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.moveTo(R * .42 + R * .82, -R * .18); ctx.arc(R * .42, -R * .18, R * .82, 0, TAU, true); stroke(OUT, inkW(r, .06));
-    nacreBody(R * .3, -R * .02, R * .3, t, 1, p);
+    path(); ctx.fillStyle = g; ctx.fill('evenodd'); ctx.save(); path(); ctx.clip('evenodd'); ctx.beginPath(); ctx.arc(-R * .05, -R * .04, R * .82, Math.PI * .65, Math.PI * 1.3); stroke('rgba(255,250,224,.9)', Math.max(.25, r * .06)); ctx.beginPath(); ctx.arc(0, 0, R * .98, Math.PI * .05, Math.PI * .55); stroke('rgba(60,36,10,.35)', Math.max(.25, r * .06)); ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.moveTo(R * .5 + R * .74, -R * .22); ctx.arc(R * .5, -R * .22, R * .74, 0, TAU, true); stroke(OUT, inkW(r, .07));
     ctx.restore();
-    glint(x + R * .9, y - R * 1.1, r * .22, Math.max(0, Math.sin(t * 2.1)) ** 6);
+    glint(x + R * .7, y - R * .2, r * .26, Math.max(0, Math.sin(t * 2.1)) ** 4);
   }
   // the rogue wave: two crests of sea curling in under the pearl from either side, rising and falling together, spray
   // flicking off their lips
   function pntWave(r, p, o) {
-    const t = o.t, k = .5 + .5 * Math.sin(t * 2), base = r * 1.42, B = p.b;
+    const t = o.t, k = Math.sin(t * 2.2), base = r * 1.32, B = p.b;
     for (const sd of [-1, 1]) { ctx.save(); ctx.scale(sd, 1);
-      const cx = r * (.95 - .12 * k), cy = r * (.62 - .2 * k), path = () => { ctx.beginPath(); ctx.moveTo(r * .05, base); ctx.lineTo(r * 1.75, base); ctx.quadraticCurveTo(r * 1.7, cy - r * .1, cx + r * .1, cy - r * .2); ctx.quadraticCurveTo(cx - r * .38, cy - r * .1, cx - r * .5, cy + r * .28); ctx.quadraticCurveTo(cx - r * .15, cy + r * .02, cx + r * .02, cy + r * .3); ctx.quadraticCurveTo(r * .5, base - r * .25, r * .05, base); ctx.closePath(); };
-      const g = ctx.createLinearGradient(0, cy - r * .2, 0, base); g.addColorStop(0, B[1]); g.addColorStop(.45, B[2]); g.addColorStop(1, B[3]); path(); ctx.fillStyle = g; ctx.fill();
-      ctx.save(); path(); ctx.clip(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = Math.max(.25, r * .05); for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.moveTo(r * (.6 + i * .4), base - r * .05); ctx.quadraticCurveTo(r * (1.2 + i * .2), cy + r * .3, r * (1.5 + i * .1), cy + r * (.1 + i * .2)); ctx.stroke(); } ctx.restore();
+      const ty = r * (.2 - .12 * k), lx = r * (1.02 - .06 * k), ly = r * (.5 - .08 * k);
+      const path = () => { ctx.beginPath(); ctx.moveTo(r * .2, base); ctx.lineTo(r * 2.05, base); ctx.quadraticCurveTo(r * 2.05, r * .6, r * 1.55, ty); ctx.quadraticCurveTo(r * 1.12, ty - r * .18, lx, ly); ctx.quadraticCurveTo(r * 1.08, r * .78, r * 1.32, r * .66); ctx.quadraticCurveTo(r * 1.2, r * 1.05, r * .2, base); ctx.closePath(); };
+      const g = ctx.createLinearGradient(0, ty, 0, base); g.addColorStop(0, B[1]); g.addColorStop(.4, B[2]); g.addColorStop(1, B[3]); path(); ctx.fillStyle = g; ctx.fill();
+      ctx.save(); path(); ctx.clip();
+      // the hollow under the lip, shadowed; the back of the wave streaked with light
+      ctx.fillStyle = mix(B[3], '#0A2030', .35); ctx.beginPath(); ctx.ellipse(r * 1.28, r * .78, r * .3, r * .2, -.4, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = Math.max(.25, r * .05); for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(r * (1.95 - i * .12), base - r * .05); ctx.quadraticCurveTo(r * (1.95 - i * .1), r * (.75 - i * .05), r * (1.6 - i * .15), ty + r * (.18 + i * .12)); ctx.stroke(); }
+      ctx.restore();
       path(); stroke(OUT, inkW(r, .08));
-      // the foam along its lip
-      ctx.beginPath(); ctx.moveTo(r * 1.6, cy + r * .1); ctx.quadraticCurveTo(r * 1.5, cy - r * .12, cx + r * .1, cy - r * .2); ctx.quadraticCurveTo(cx - r * .38, cy - r * .1, cx - r * .5, cy + r * .28); stroke('#FFFFFF', Math.max(.5, r * .13));
-      for (let i = 0; i < 3; i++) { const u = (t * 1.1 + i / 3) % 1, x = cx - r * .45 - u * r * .4, y = cy + r * .2 - Math.sin(u * Math.PI) * r * .35 + u * r * .2; ctx.globalAlpha = 1 - u; ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(x, y, r * .06 * (1 - u * .5), 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+      // the foam along its crest and lip
+      ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(r * 1.9, r * .5); ctx.quadraticCurveTo(r * 1.85, ty + r * .05, r * 1.55, ty); ctx.quadraticCurveTo(r * 1.12, ty - r * .18, lx, ly); stroke('#FFFFFF', Math.max(.5, r * .14));
+      for (let i = 0; i < 3; i++) { const u = (t * 1.2 + i / 3) % 1, x = lx - u * r * .25, y = ly - Math.sin(u * Math.PI) * r * .3 + u * r * .25; ctx.globalAlpha = 1 - u; ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(x, y, r * .07 * (1 - u * .5), 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
       ctx.restore(); }
   }
   // still water: rings spreading slowly over a calm under the pearl
@@ -1321,7 +1324,7 @@
   }
   // the held thunder: a gilt-clasped bolt floating by the pearl, trembling, flaring now and then with sparks
   function pntBolt(r, p, o) {
-    const t = o.t, n = Math.floor(t * 12), side = o.has.charm ? -1 : 1, x = side * r * 1.3 + (hs(n) - .5) * r * .05, y = -r * 1.45 + (hs(n + 1) - .5) * r * .05, fl = (t % 1.3) / 1.3 > .85;
+    const t = o.t, n = Math.floor(t * 12), side = o.has.charm ? -1 : 1, hi = o.has.cloud ? -r * .95 : -r * 1.45, x = side * r * (o.has.cloud ? 1.45 : 1.3) + (hs(n) - .5) * r * .05, y = hi + (hs(n + 1) - .5) * r * .05, fl = (t % 1.3) / 1.3 > .85;
     ctx.save(); ctx.translate(x, y); ctx.rotate(.15 * side); const s = r;
     const path = () => { ctx.beginPath(); ctx.moveTo(-s * .1, -s * .62); ctx.lineTo(s * .32, -s * .62); ctx.lineTo(s * .06, -s * .08); ctx.lineTo(s * .34, -s * .08); ctx.lineTo(-s * .24, s * .72); ctx.lineTo(-s * .02, s * .1); ctx.lineTo(-s * .3, s * .1); ctx.closePath(); };
     const g = ctx.createLinearGradient(-s * .3, -s * .6, s * .3, s * .7); g.addColorStop(0, '#FFFDF0'); g.addColorStop(.5, fl ? '#FFFFFF' : '#FFE27A'); g.addColorStop(1, fl ? '#FFF2A0' : '#D89A2A');
@@ -1465,7 +1468,7 @@
       const r = h * .13, cx = w / 2 - r * .3, cy = h * .47 + Math.sin(t * 2) * h * .015;
       glow(cx, cy, r * 4, pal.glow, .28 + .1 * Math.sin(t * 3));
       // the new part's flare, behind the orb (its light round the pearl, never over it)
-      g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .35 + .25 * Math.sin(t * 4); glow(cx, cy, r * 2.4, '255,240,200', .5); g.restore();
+      g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = .2 + .15 * Math.sin(t * 4); glow(cx, cy, r * 2.4, '255,240,200', .4); g.restore();
       g.save(); g.translate(cx, cy); drawOrb(next, r, pal, t, t * 2.2); g.restore();
       g.strokeStyle = T.req ? 'rgba(255,210,122,.75)' : 'rgba(242,214,138,.55)'; g.lineWidth = 2; g.strokeRect(5, 5, w - 10, h - 10); });
   }
@@ -1530,7 +1533,7 @@
     onMain(() => { if (tr.length >= 6) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         for (let i = 2; i < tr.length; i += 2) { const k = i / tr.length; ctx.strokeStyle = `rgba(${pal.glow},${(.55 * k).toFixed(2)})`; ctx.lineWidth = th.r * 1.5 * k + 1; ctx.beginPath(); ctx.moveTo(tr[i - 2], tr[i - 1]); ctx.lineTo(tr[i], tr[i + 1]); ctx.stroke(); }
         ctx.restore(); }
-      glow(th.x, y, th.r * 3.2, pal.glow, th.perfect ? .5 : .3); });
+      glow(th.x, y, th.r * 3.2, pal.glow, th.perfect ? .4 : .14); });
     blitOrb(S.picks, th.x, y, th.r, th.phase === 'back' ? -th.dir : th.dir, th.spin, th.ghost ? .8 : 1, th.sw);
   }
   function orbItems(list, t) {
@@ -1539,7 +1542,7 @@
     if (O.on && P && !O.rise && !O.throws.length) {
       const pk = ES().picks, pal = palOf(pk), r = O.r * (1 + .25 * O.pop), sy = O.y - O.z, front = O.chg !== null;
       const k = O.chg !== null ? clamp(O.chg / GLEAM, 0, 1) : 0, gl = O.chg !== null && O.chg >= GLEAM && O.chg <= GLEAM + PCW();
-      list.push([O.y - .02, () => { shadowAt(O.x, O.y, O.z, r); onMain(() => glow(O.x, sy, r * (3.4 + 2 * k), gl ? '255,244,200' : pal.glow, .2 + .25 * O.flash + .25 * k + (gl ? .3 : 0))); }]);
+      list.push([O.y - .02, () => { shadowAt(O.x, O.y, O.z, r); { const ga = .25 * O.flash + .25 * k + (gl ? .3 : 0); if (ga > .01) onMain(() => glow(O.x, sy, r * (3.4 + 2 * k), gl ? '255,244,200' : pal.glow, ga)); } }]);
       list.push([front ? P.y + .3 : P.y - .3, () => { blitOrb(pk, O.x, sy, r, P.facing, t * (hasSpin(pk) ? 9 : 2.4), 1, O.sw);
         if (pk.includes('static') || pk.includes('thunder') || pk.includes('squall')) { if (Math.random() < .35) { ctx.save(); ctx.strokeStyle = '#E8ECFF'; ctx.lineWidth = .8; ctx.beginPath(); const a = rand(0, TAU); let x = O.x + Math.cos(a) * r, y = sy + Math.sin(a) * r; ctx.moveTo(x, y); for (let i = 0; i < 3; i++) { x += Math.cos(a) * r * .5 + rand(-2, 2); y += Math.sin(a) * r * .5 + rand(-2, 2); ctx.lineTo(x, y); } ctx.stroke(); ctx.restore(); } } }]);
     }
