@@ -454,11 +454,13 @@ function drawDeath(e, t) {
     piece(false); piece(true);
   } else if (e.death === 'crumple') {
     // one motion: it buckles and goes over together, crumpling as it falls (no pause, no fold drawn as a cut)
-    const q = Math.min(1, el / .45), c = 1 - (1 - q) * (1 - q), fall = c, wide = e.boss || e.hw > e.hh * .7; // (a wide beast or a boss slumps flat where it stands instead of tipping over)
-    ctx.rotate(dl * fall * (wide ? .12 : 1.35));
-    ctx.transform(1, 0, -.28 * c * dl * (wide ? .5 : 1), 1, 0, 0);
-    ctx.scale(1 + (wide ? .2 : .16) * c, 1 - (wide ? .42 : .36) * c);
-    draw();
+    // the same height as in life: no squash. It goes over and folds at the middle, the upper body bent at an angle where the
+    // staff caught it (two pieces meeting at the bend, overlapping so no seam shows; no line drawn across it)
+    const q = Math.min(1, el / .45), c = 1 - (1 - q) * (1 - q), wide = e.boss || e.hw > e.hh * .7; // (a wide beast or a boss slumps where it stands instead of tipping over)
+    ctx.rotate(dl * c * (wide ? .1 : 1.2));
+    const ky = -e.hh * .5, kink = -dl * c * (wide ? .35 : .8);
+    ctx.save(); ctx.beginPath(); ctx.rect(-400, ky - 1, 800, 400); ctx.clip(); draw(); ctx.restore();
+    ctx.save(); ctx.translate(0, ky); ctx.rotate(kink); ctx.translate(0, -ky); ctx.beginPath(); ctx.rect(-400, ky - 400, 800, 400 + 3); ctx.clip(); draw(); ctx.restore();
     FLASH = false;
     for (const d of e.dents) { // dents and bends where the staff landed
       const x = d.x * e.hw, y = -d.y * e.hh;
