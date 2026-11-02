@@ -883,80 +883,504 @@
     if (!s) { const q = .09 * Math.sin(t * 1.9); return Object.assign([q * k, q * 1.2 * k, q * 1.4 * k], { fl: 0, t }); }
     return Object.assign([s.a[0] * k, s.a[1] * k, s.a[2] * k], { fl: s.fl, t: s.t });
   }
-  // the parts each trait adds to the orb: [layer, painter(r, pal)] (orb space: the pearl at 0,0 of radius r, facing +x)
-  const shellPath = (rx, ry, n = 12) => { ctx.beginPath(); ctx.moveTo(0, ry * 1.05); for (let i = 0; i <= n; i++) { const a = Math.PI * .62 + i / n * Math.PI * 1.76, rr = i % 2 ? .97 : 1.08; ctx.lineTo(Math.cos(a) * rx * rr, Math.sin(a) * ry * rr); } ctx.closePath(); };
+  // ---------------- the parts: materials ----------------
+  // Every part is drawn from a few materials, so they sit together as one piece of work: GILT (the Current's metal, an
+  // ink line, a shadowed body, the metal, and a thin line of light along its top), NACRE (white through the Current's
+  // blade colours), GLASS (water, tears and bubbles: see-through, a bright rim on the lit side and a highlight), and the
+  // sea's own (red coral, storm cloud). The light is from the upper left, as on the pearl.
+  const METAL_DK = { pearl: '#8A6626', tide: '#8A6626', nacre: '#9A7434', storm: '#8A7A34', abyss: '#4C4092' };
+  for (const k in METAL_DK) if (PAL[k] && !PAL[k].metalDk) PAL[k].metalDk = METAL_DK[k];
+  const MDK = (p) => p.metalDk || '#8A6626';
+  const MIX = new Map();
+  const hex3 = (c) => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
+  // two #rrggbb colours mixed, k of the way from a to b (kept: these are asked for every frame)
+  function mix(a, b, k) {
+    const key = a + b + k; let v = MIX.get(key); if (v) return v;
+    const A = hex3(a), B = hex3(b); v = '#' + A.map((x, i) => Math.round(x + (B[i] - x) * k).toString(16).padStart(2, '0')).join('');
+    if (MIX.size > 400) MIX.clear(); MIX.set(key, v); return v;
+  }
+  const hs = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  // gilt wire along a path: ink, the metal's shadow, the metal, and light along its upper side
+  function gilt(path, w, p) {
+    path(); stroke(OUT, w + Math.max(.7, w * .8)); path(); stroke(MDK(p), w);
+    ctx.save(); ctx.translate(0, -w * .14); path(); stroke(p.metal, w * .6); ctx.translate(-w * .05, -w * .14); path(); stroke(p.metalLt, w * .24); ctx.restore();
+  }
+  // a gilt fill: light at the upper left, shadow to the lower right, an ink line
+  function goldFill(path, x0, y0, x1, y1, p, iw) {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, p.metalLt); g.addColorStop(.45, p.metal); g.addColorStop(1, MDK(p));
+    path(); ctx.fillStyle = g; ctx.fill(); stroke(OUT, iw);
+  }
+  // a small gilt bead (a rivet, a finial, a ball end), with its glint
+  function bead(x, y, s, p, r) {
+    const g = ctx.createRadialGradient(x - s * .35, y - s * .4, s * .1, x, y, s); g.addColorStop(0, p.metalLt); g.addColorStop(.55, p.metal); g.addColorStop(1, MDK(p));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .06));
+    if (s > .9) { ctx.fillStyle = 'rgba(255,255,240,.95)'; ctx.beginPath(); ctx.arc(x - s * .35, y - s * .38, s * .26, 0, TAU); ctx.fill(); }
+  }
+  // a four-pointed glint, for a catch of light that comes and goes (k: 0..1)
+  function glint(x, y, s, k) {
+    if (k <= .02 || s < .3) return; ctx.save(); ctx.globalAlpha *= Math.min(1, k); ctx.fillStyle = '#FFFFFF'; ctx.beginPath();
+    ctx.moveTo(x, y - s); ctx.quadraticCurveTo(x, y, x + s * .7, y); ctx.quadraticCurveTo(x, y, x, y + s); ctx.quadraticCurveTo(x, y, x - s * .7, y); ctx.quadraticCurveTo(x, y, x, y - s); ctx.fill(); ctx.restore();
+  }
+  // glass: a see-through body of colour rgb, darker at its lower right, a bright rim at its upper left and a highlight
+  function glass(path, rgb, a, r, hx, hy, hs_) {
+    path(); ctx.fillStyle = `rgba(${rgb},${a})`; ctx.fill();
+    ctx.save(); path(); ctx.clip();
+    ctx.lineWidth = Math.max(.4, r * .1); ctx.strokeStyle = `rgba(${rgb},${Math.min(1, a + .35)})`; ctx.translate(r * .05, r * .05); path(); ctx.stroke(); ctx.translate(-r * .1, -r * .1); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = Math.max(.25, r * .05); path(); ctx.stroke();
+    ctx.restore();
+    if (hs_) { ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.ellipse(hx, hy, hs_, hs_ * .55, -.6, 0, TAU); ctx.fill(); }
+    path(); stroke('rgba(42,27,44,.75)', inkW(r, .06));
+  }
+  // red coral limbs, cel-shaded: ink, the coral, a light stripe along the lit side, pale polyps at the tips
+  function coralLimbs(limbs, tips, r) {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const seg = (L) => { ctx.beginPath(); ctx.moveTo(L[0], L[1]); ctx.quadraticCurveTo(L[6], L[7], L[2], L[3]); };
+    for (const L of limbs) { seg(L); stroke(OUT, L[4] + Math.max(.8, r * .14)); }
+    for (const L of limbs) { seg(L); stroke('#D2503F', L[4]); }
+    ctx.save(); ctx.translate(-r * .05, -r * .05); for (const L of limbs) { seg(L); stroke('#FF9A82', L[4] * .38); } ctx.restore();
+    for (const [x, y, w] of tips) { ctx.fillStyle = '#FFD6C8'; ctx.beginPath(); ctx.arc(x, y, w * .62, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .05)); ctx.fillStyle = '#C8403A'; ctx.beginPath(); ctx.arc(x, y, w * .22, 0, TAU); ctx.fill(); }
+  }
+  // a coral limb tree: from x,y at angle a, length len, width w; d deep; sd the side (+1 right, -1 left: the branching
+  // mirrors, the sea's sway does not); the sway grows out along it
+  function coralTree(limbs, tips, x, y, a, len, w, d, sd, t, ph, maxD) {
+    const a2 = a + Math.sin(t * 1.7 + ph + d * .9) * .07 * (d + 1), x1 = x + Math.cos(a2) * len, y1 = y + Math.sin(a2) * len;
+    const bend = len * .18 * sd, mx = (x + x1) / 2 + Math.sin(a2) * bend, my = (y + y1) / 2 - Math.cos(a2) * bend;
+    limbs.push([x, y, x1, y1, w, d, mx, my]);
+    if (d < maxD) { coralTree(limbs, tips, x1, y1, a2 - .55 * sd, len * .64, w * .72, d + 1, sd, t, ph + 1.3, maxD); coralTree(limbs, tips, x1, y1, a2 + .38 * sd, len * .56, w * .68, d + 1, sd, t, ph + 2.2, maxD); }
+    else tips.push([x1, y1, w]);
+  }
+
+  // ---------------- the fittings: how the parts are set on the pearl ----------------
+  // A gilt band hugs the pearl's rim wherever a part grows from it (the top, the front, the back, the bottom), a bail
+  // hangs under it for what hangs, and a thin bezel of gilt shows round the pearl behind, so every part is set in
+  // the same mount rather than stuck on. MOUNT: which rim each part grows from
+  const MOUNT = { coral: 'top', fin: 'top', horn: 'front', tines: 'front', corallance: 'front', ribbons: 'rear', chain: 'bottom', anchor: 'bottom', drops: 'bottom' };
+  function band(a, w, r, p) {
+    const r0 = r * .9, r1 = r * 1.17, path = () => { ctx.beginPath(); ctx.arc(0, 0, r1, a - w, a + w); ctx.arc(0, 0, r0, a + w, a - w, true); ctx.closePath(); };
+    goldFill(path, -r1 * .8, -r1, r1 * .8, r1, p, inkW(r, .08));
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.1, a - w * .85, a + w * .85); stroke('rgba(255,248,214,.85)', Math.max(.25, r * .04)); // its light
+    ctx.beginPath(); ctx.arc(0, 0, r * .97, a - w * .85, a + w * .85); stroke(MDK(p), Math.max(.25, r * .035)); // an engraved line
+    for (const s of [-1, 1]) bead(Math.cos(a + s * w) * r * 1.035, Math.sin(a + s * w) * r * 1.035, r * .09, p, r); // a rivet at each end
+  }
+  function bail(x, y, r, p) { const R = r * .15; gilt(() => { ctx.beginPath(); ctx.ellipse(x, y, R * .8, R, 0, 0, TAU); }, Math.max(.45, r * .085), p); }
+  // (drops: whether the tear hangs as a pair, either side, when something else hangs from the middle)
+  const dropsPair = (has) => has.anchor || has.chain;
+  function fittingsBack(r, p, o) {
+    if (o.edge) return;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.06, 0, TAU); stroke(OUT, Math.max(.9, r * .2)); ctx.beginPath(); ctx.arc(0, 0, r * 1.06, 0, TAU); stroke(MDK(p), Math.max(.5, r * .12));
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.06, Math.PI * .95, Math.PI * 1.75); stroke(p.metalLt, Math.max(.3, r * .06));
+  }
+  function fittingsFront(r, p, o) {
+    const h = o.has, m = o.mounts;
+    if (m.top) band(-Math.PI / 2 - (h.fin && !h.coral ? .3 : 0), h.fin && h.coral ? .62 : .42, r, p);
+    if (m.front) band(0, .42, r, p);
+    if (m.rear) band(Math.PI, .48, r, p);
+    if (h.chain || h.anchor || (h.drops && !dropsPair(h))) { band(Math.PI / 2, .34, r, p); bail(0, r * 1.3, r, p); }
+    if (h.drops && dropsPair(h)) for (const s of [-1, 1]) { const a = Math.PI / 2 + s * .78; band(a, .2, r, p); bail(Math.cos(a) * r * 1.27, Math.sin(a) * r * 1.27, r * .8, p); }
+  }
+
+  // ---------------- the parts ----------------
+  // PART: each trait's part, as the layers it is drawn in: [z, painter(r, pal, o)]. Below z 20 it is behind the pearl,
+  // above it in front; the parts of every pick are drawn together in z order, so they interleave (a ring's far half
+  // behind the pearl, its near half in front of it, a cage's bars the same). The orb's space: the pearl at 0,0 of radius
+  // r, facing +x, y down. o: t (seconds: every part moves), sw (the hangers' pendulum angles), has (the parts present:
+  // each part makes room for the others), back (which half is asked for), end (where the chain's last link hangs)
+  const HALF = (o) => o.back ? [Math.PI, TAU] : [0, Math.PI];
+  // the moon's ring: a broad gilt band, tilted, slowly precessing, a moonlet riding round it
+  function pntMoonRing(r, p, o) {
+    const t = o.t, R = r * (o.has.swirl ? 1.9 : 1.72), ry = .36 + .07 * Math.sin(t * 1.1 + 1.3), tilt = -.3 + .09 * Math.sin(t * 1.1), [a0, a1] = HALF(o);
+    ctx.save(); ctx.rotate(tilt);
+    const arc = (dy) => () => { ctx.beginPath(); ctx.ellipse(0, dy, R, R * ry, 0, a0, a1); };
+    arc(0)(); stroke(OUT, Math.max(1.2, r * .32)); arc(0)(); stroke(MDK(p), Math.max(.8, r * .22));
+    arc(-r * .035)(); stroke(p.metal, Math.max(.5, r * .13)); arc(-r * .075)(); stroke(p.metalLt, Math.max(.22, r * .045));
+    // engraved marks round it, turning with it
+    ctx.strokeStyle = MDK(p); ctx.lineWidth = Math.max(.2, r * .03);
+    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + t * .5, s = Math.sin(a); if ((s < 0) !== !!o.back) continue; const x = Math.cos(a) * R, y = s * R * ry; ctx.beginPath(); ctx.moveTo(x, y - r * .08); ctx.lineTo(x, y + r * .05); ctx.stroke(); }
+    // the moonlet
+    const ma = t * 1.3, s = Math.sin(ma); if ((s < 0) === !!o.back) { const mr = r * .2 * (1 + .15 * s); nacreBody(Math.cos(ma) * R, s * R * ry - r * .02, mr, t, 1, p); }
+    ctx.restore();
+  }
+  // the moon's shadow over the pearl (the Pearl Moon of the first designs), its terminator drifting slowly
+  function pntMoonShade(r, p, o) {
+    if (r < 2.5) return; const d = .1 * Math.sin(o.t * .7);
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * .97, 0, TAU); ctx.clip(); ctx.fillStyle = p === PAL.abyss ? 'rgba(4,2,12,.4)' : 'rgba(30,80,92,.3)';
+    ctx.beginPath(); ctx.arc(r * (.55 + d), r * .2, r * 1.05, 0, TAU); ctx.arc(r * (1.2 + d), r * .1, r * 1.1, 0, TAU, true); ctx.fill('evenodd'); ctx.restore();
+  }
+  // the cage: an armillary of gilt hoops, three meridians turning about the upright, a fixed equator, finials
+  function pntCage(r, p, o) {
+    const R = r * 1.22, w = Math.max(.45, r * .1), t = o.t;
+    // the equator: its far half behind, its near half (the lower) in front
+    gilt(() => { ctx.beginPath(); ctx.ellipse(0, 0, R, R * .3, 0, o.back ? Math.PI : 0, o.back ? TAU : Math.PI); }, w, p);
+    for (let k = 0; k < 3; k++) { const ph = t * .9 + k * Math.PI / 3, c = Math.cos(ph), s = Math.sin(ph), rx = Math.max(.01, R * Math.abs(c));
+      const right = c * s > 0; // its right half faces us
+      const a0 = (right !== !!o.back) ? -Math.PI / 2 : Math.PI / 2;
+      gilt(() => { ctx.beginPath(); ctx.ellipse(0, 0, rx, R, 0, a0, a0 + Math.PI); }, w * (o.back ? .85 : 1), p); }
+    if (!o.back) { bead(0, -R - r * .08, r * .16, p, r); if (!(o.has.chain || o.has.anchor || o.has.drops)) bead(0, R + r * .06, r * .12, p, r); }
+  }
+  // water orbiting: tapering bands of sea water round the pearl, the far half dark, the near half lit
+  function pntSwirl(r, p, o) {
+    const t = o.t, R = r * 1.5, ry = .46, tilt = -.18, N = 14;
+    ctx.save(); ctx.rotate(tilt); ctx.lineCap = 'round';
+    for (let i = 0; i < 2; i++) { const R2 = R * (1 - i * .12), h0 = t * (2.1 - i * .3) + i * Math.PI;
+      for (let pass = 0; pass < 2; pass++) for (let j = 0; j < N; j++) { const u0 = j / N, u1 = (j + 1) / N, a = h0 - u0 * 2.2, b = h0 - u1 * 2.2, m = (a + b) / 2;
+        if ((Math.sin(m) < 0) !== !!o.back) continue; const wk = (1 - u0) * Math.max(.5, r * .2);
+        ctx.beginPath(); ctx.moveTo(Math.cos(a) * R2, Math.sin(a) * R2 * ry); ctx.lineTo(Math.cos(b) * R2, Math.sin(b) * R2 * ry);
+        if (pass === 0) stroke(o.back ? 'rgba(20,70,84,.7)' : 'rgba(26,96,108,.85)', wk + Math.max(.5, r * .07));
+        else stroke(o.back ? `rgba(110,190,190,${.55 * (1 - u0)})` : `rgba(226,255,248,${.95 * (1 - u0 * .6)})`, wk * .6); }
+      // a droplet at its head
+      if ((Math.sin(h0) < 0) === !!o.back) { const x = Math.cos(h0) * R2, y = Math.sin(h0) * R2 * ry; glass(() => { ctx.beginPath(); ctx.arc(x, y, r * .13, 0, TAU); }, '200,250,240', .55, r * .5, x - r * .04, y - r * .05, r * .05); } }
+    ctx.restore();
+  }
+  // nacre shards: crystals of mother-of-pearl drifting round on a tilted orbit, each turning on its own axis
+  function pntShards(r, p, o) {
+    const t = o.t, R = r * 1.85, ry = .42;
+    ctx.save(); ctx.rotate(-.15);
+    for (let i = 0; i < 4; i++) { const a = t * .55 + i * TAU / 4, s = Math.sin(a); if ((s < 0) !== !!o.back) continue;
+      const x = Math.cos(a) * R, y = s * R * ry + Math.sin(t * 1.3 + i) * r * .08, S = r * (i % 2 ? .3 : .38) * (1 + .15 * s), sp = t * 2.4 + i * 1.7, wk = Math.max(.18, Math.abs(Math.cos(sp)));
+      ctx.save(); ctx.translate(x, y); ctx.rotate(.35 * Math.sin(t * .8 + i)); ctx.scale(wk, 1);
+      const path = () => { ctx.beginPath(); ctx.moveTo(0, -S * 1.45); ctx.lineTo(S * .62, -S * .1); ctx.lineTo(0, S); ctx.lineTo(-S * .62, -S * .1); ctx.closePath(); };
+      const g = ctx.createLinearGradient(-S, -S, S, S); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.45, p.accent); g.addColorStop(1, p.bladeDk);
+      path(); ctx.globalAlpha = .92; ctx.fillStyle = g; ctx.fill(); ctx.globalAlpha = 1;
+      // its facets: the lit face and the shadowed one, split down the middle
+      ctx.fillStyle = Math.cos(sp) > 0 ? 'rgba(255,255,255,.45)' : 'rgba(40,20,50,.18)'; ctx.beginPath(); ctx.moveTo(0, -S * 1.45); ctx.lineTo(-S * .62, -S * .1); ctx.lineTo(0, S); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0, -S * 1.45); ctx.lineTo(0, S); stroke('rgba(255,255,255,.75)', Math.max(.2, r * .03));
+      path(); ctx.lineWidth = inkW(r, .06) / wk; ctx.strokeStyle = OUT; ctx.stroke(); ctx.restore();
+      glint(x - S * .1, y - S * .9, S * .9, Math.pow(Math.abs(Math.cos(sp)), 12)); }
+    ctx.restore();
+  }
+  // foam: bubbles rising past the pearl, wobbling, swelling as they go, half of them behind it
+  function pntFoam(r, p, o) {
+    const t = o.t;
+    for (let i = 0; i < 8; i++) { if ((i % 2 === 0) !== !!o.back) continue; const u = (t * .38 + hs(i) ) % 1, sd = i % 4 < 2 ? -1 : 1;
+      const x = sd * r * (.55 + .5 * hs(i + 3)) + Math.sin(u * 7 + i) * r * .12, y = r * (.9 - u * 3), s = r * (.09 + .1 * hs(i + 7)) * (.6 + .6 * u), al = Math.sin(Math.PI * u);
+      ctx.save(); ctx.globalAlpha *= al; glass(() => { ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); }, '230,255,252', .18, s, x - s * .35, y - s * .38, s * .3); ctx.restore(); }
+    if (!o.back) { // the foam caught on the pearl's shoulders, the same on both sides
+      ctx.fillStyle = '#FFFFFF';
+      for (const sd of [-1, 1]) for (const [a, s] of [[-.95, .2], [-.7, .26], [-.45, .18]]) { const aa = sd > 0 ? a : Math.PI - a, b = .03 * Math.sin(t * 3 + a * 5); const x = Math.cos(aa) * r * (1 + b), y = Math.sin(aa) * r * (1 + b);
+        ctx.beginPath(); ctx.arc(x, y, r * s, 0, TAU); stroke('rgba(42,27,44,.6)', inkW(r, .1)); }
+      for (const sd of [-1, 1]) for (const [a, s] of [[-.95, .2], [-.7, .26], [-.45, .18]]) { const aa = sd > 0 ? a : Math.PI - a, b = .03 * Math.sin(t * 3 + a * 5); const x = Math.cos(aa) * r * (1 + b), y = Math.sin(aa) * r * (1 + b);
+        ctx.fillStyle = '#E4F6F2'; ctx.beginPath(); ctx.arc(x, y, r * s, 0, TAU); ctx.fill(); ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(x - r * s * .2, y - r * s * .25, r * s * .7, 0, TAU); ctx.fill(); } }
+  }
+  // storm in the pearl: forked lightning flickering through it, re-struck many times a second; sparks leap off it
+  function pntStaticArc(r, p, o) {
+    const n = Math.floor(o.t * 11), path = (k) => { ctx.beginPath(); let x = -r, y = (hs(n + k * 9) - .5) * r * .6; ctx.moveTo(x, y); for (let i = 1; i <= 6; i++) { x = -r + i * r / 3; y = (i % 2 ? -1 : 1) * r * (.12 + .18 * hs(n * 7 + i + k)) + (k ? r * .3 : 0); ctx.lineTo(x, y); } };
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * .96, 0, TAU); ctx.clip(); ctx.lineJoin = 'round';
+    for (let k = 0; k < 2; k++) { if (k && hs(n + 5) < .5) continue; path(k); stroke('rgba(70,80,200,.85)', Math.max(.6, r * (k ? .12 : .2))); path(k); stroke('#FFF6C0', Math.max(.3, r * (k ? .04 : .075))); }
+    ctx.restore();
+    if (hs(n + 2) < .45) { const a = hs(n + 3) * TAU; let x = Math.cos(a) * r, y = Math.sin(a) * r; ctx.beginPath(); ctx.moveTo(x, y); for (let i = 0; i < 3; i++) { x += Math.cos(a) * r * .22 + (hs(n + i) - .5) * r * .3; y += Math.sin(a) * r * .22 + (hs(n + i + 4) - .5) * r * .3; ctx.lineTo(x, y); }
+      ctx.save(); ctx.lineCap = 'round'; stroke('rgba(90,100,220,.9)', Math.max(.4, r * .1)); ctx.beginPath(); ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r); stroke('#FFFFFF', Math.max(.2, r * .04)); ctx.restore(); }
+  }
+  // the deep in the pearl: a whirlpool of black water turning in it, a pale eye at its heart
+  function pntAbyssCore(r, p, o) {
+    const t = o.t; ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * .97, 0, TAU); ctx.clip();
+    const g = ctx.createRadialGradient(r * .12, r * .1, 0, r * .12, r * .1, r * .78); g.addColorStop(0, 'rgba(6,4,14,.96)'); g.addColorStop(.65, 'rgba(26,18,56,.75)'); g.addColorStop(1, 'rgba(26,18,56,0)'); ctx.fillStyle = g; ctx.fillRect(-r, -r, r * 2, r * 2);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); for (let k = 0; k <= 12; k++) { const u = k / 12, a = -t * 1.6 + i * TAU / 3 + u * 3.2, R = r * (.08 + .62 * u); const x = r * .12 + Math.cos(a) * R, y = r * .1 + Math.sin(a) * R * .9; k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } stroke(`rgba(110,224,192,${.5})`, Math.max(.25, r * .05)); }
+    const pu = .5 + .5 * Math.sin(t * 2.6); ctx.fillStyle = `rgba(134,242,214,${.75 + .25 * pu})`; ctx.beginPath(); ctx.arc(r * .12, r * .1, r * (.07 + .03 * pu), 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  // the black tide: a ring of obsidian behind, its runes turning one way and a far ring of light the other
+  function pntHalo(r, p, o) {
+    const t = o.t, R = r * 1.56, w = Math.max(1, r * .4);
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); stroke(OUT, w + Math.max(.8, r * .12));
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); stroke('#1C1634', w);
+    ctx.beginPath(); ctx.arc(0, 0, R - w * .3, 0, TAU); stroke('#2E2656', w * .25);
+    ctx.beginPath(); ctx.arc(0, 0, R + w * .22, Math.PI * 1.02, Math.PI * 1.6); stroke('rgba(220,210,255,.45)', Math.max(.2, r * .05)); // its sheen
+    ctx.strokeStyle = 'rgba(110,224,192,.85)'; ctx.lineWidth = Math.max(.3, r * .07); ctx.lineCap = 'round';
+    for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + t * .7; ctx.beginPath(); ctx.arc(0, 0, R, a, a + .32); ctx.stroke(); ctx.beginPath(); ctx.arc(Math.cos(a + .45) * R, Math.sin(a + .45) * R, r * .045, 0, TAU); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(110,224,192,.4)'; ctx.lineWidth = Math.max(.25, r * .05);
+    for (let i = 0; i < 2; i++) { const a = -t * .45 + i * Math.PI; ctx.beginPath(); ctx.arc(0, 0, R + w * .75, a, a + 1.3); ctx.stroke(); }
+  }
+  // the slack tide's dial: a gilt bezel behind, engraved hours, and a pearl marker going slowly round it as the tide turns
+  function pntDial(r, p, o) {
+    const t = o.t, R = r * 1.3, w = Math.max(1, r * .34);
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); stroke(OUT, w + Math.max(.8, r * .14));
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); stroke(MDK(p), w);
+    ctx.beginPath(); ctx.arc(-r * .02, -r * .03, R, 0, TAU); stroke(p.metal, w * .7);
+    ctx.beginPath(); ctx.arc(0, 0, R + w * .38, Math.PI * .9, Math.PI * 1.8); stroke(p.metalLt, Math.max(.25, r * .05));
+    ctx.beginPath(); ctx.arc(0, 0, R - w * .38, Math.PI * .1, Math.PI * .8); stroke('rgba(40,24,8,.4)', Math.max(.25, r * .05));
+    ctx.strokeStyle = MDK(p); ctx.lineCap = 'round';
+    for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, L = i % 3 ? .1 : .2; ctx.lineWidth = Math.max(.25, r * (i % 3 ? .04 : .07)); ctx.beginPath(); ctx.moveTo(Math.cos(a) * (R - r * L), Math.sin(a) * (R - r * L)); ctx.lineTo(Math.cos(a) * (R + r * L), Math.sin(a) * (R + r * L)); ctx.stroke(); }
+    const a = -Math.PI / 2 + t * .5, mx = Math.cos(a) * R, my = Math.sin(a) * R;
+    ctx.save(); ctx.translate(mx, my); ctx.rotate(a + Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -w * .75); ctx.lineTo(w * .32, 0); ctx.lineTo(-w * .32, 0); ctx.closePath(); ctx.fillStyle = p.metalLt; ctx.fill(); stroke(OUT, inkW(r, .05)); ctx.restore();
+    nacreBody(mx, my, r * .17, t, 1, p);
+  }
+  // the scallop: a fan of shell behind the pearl, hinged under it, the same on both sides; it breathes, and a sheen of
+  // mirror light runs across it
+  function pntScallop(r, p, o) {
+    const t = o.t, br = 1 + .035 * Math.sin(t * 1.6), R = r * 1.95 * br, hy = r * .62, n = 9, A0 = Math.PI * 1.06, A1 = Math.PI * 1.94;
+    const fan = (k = 1) => { ctx.beginPath(); ctx.moveTo(0, hy); for (let i = 0; i <= n * 2; i++) { const a = A0 + (A1 - A0) * i / (n * 2), rr = R * k * (i % 2 ? 1.06 : .97); ctx.lineTo(Math.cos(a) * rr, hy + Math.sin(a) * rr); } ctx.closePath(); };
+    for (const sd of [-1, 1]) { const path = () => { ctx.beginPath(); ctx.moveTo(0, hy - r * .1); ctx.lineTo(sd * r * .64, hy - r * .24); ctx.lineTo(sd * r * .72, hy + r * .18); ctx.lineTo(0, hy + r * .22); ctx.closePath(); };
+      path(); ctx.fillStyle = p.bladeDk; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = Math.max(.2, r * .03); for (let i = 1; i < 3; i++) { ctx.beginPath(); ctx.moveTo(0, hy - r * .05 + i * r * .08); ctx.lineTo(sd * r * .66, hy - r * .2 + i * r * .12); ctx.stroke(); } path(); stroke(OUT, inkW(r, .08)); } // the ears
+    const g = ctx.createLinearGradient(0, hy - R, 0, hy); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.45, p.blade); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; fan(); ctx.fill();
+    ctx.save(); fan(); ctx.clip();
+    // the ribs, each lit on one side and shadowed on the other (cel-shaded), a soft iridescence over the inside
+    for (let i = 0; i < n * 2; i += 2) { const a0 = A0 + (A1 - A0) * i / (n * 2), a1 = A0 + (A1 - A0) * (i + 1) / (n * 2);
+      ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(Math.cos(a0) * R * 1.1, hy + Math.sin(a0) * R * 1.1); ctx.lineTo(Math.cos(a1) * R * 1.1, hy + Math.sin(a1) * R * 1.1); ctx.closePath(); ctx.fillStyle = 'rgba(30,70,80,.16)'; ctx.fill(); }
+    ctx.strokeStyle = 'rgba(40,90,96,.45)'; ctx.lineWidth = Math.max(.3, r * .06); for (let i = 1; i < n * 2; i += 2) { const a = A0 + (A1 - A0) * i / (n * 2); ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(Math.cos(a) * R * 1.1, hy + Math.sin(a) * R * 1.1); ctx.stroke(); }
+    ctx.globalAlpha = .22; ctx.fillStyle = '#F6C2D4'; ctx.beginPath(); ctx.ellipse(-R * .35, hy - R * .55, R * .4, R * .2, -.5, 0, TAU); ctx.fill(); ctx.fillStyle = '#F2D68A'; ctx.beginPath(); ctx.ellipse(R * .4, hy - R * .5, R * .35, R * .18, .5, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+    // growth lines, following the rim
+    ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = Math.max(.2, r * .03); for (const k of [.55, .75]) { ctx.beginPath(); ctx.arc(0, hy, R * k, A0, A1); ctx.stroke(); }
+    // the mirror's sheen, sweeping across it
+    const u = ((t * .4) % 1.6) - .3, sx = -R + u * R * 2; const sg = ctx.createLinearGradient(sx - R * .3, 0, sx + R * .3, 0); sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(.5, 'rgba(255,255,255,.55)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sg; ctx.save(); ctx.transform(1, 0, -.4, 1, 0, 0); ctx.fillRect(sx - R * .3, hy - R * 1.2, R * .6, R * 1.3); ctx.restore();
+    ctx.restore();
+    fan(); stroke(MDK(p), Math.max(.8, r * .17)); fan(); stroke(p.metal, Math.max(.5, r * .1)); ctx.save(); ctx.translate(0, -r * .03); fan(); stroke('rgba(255,246,206,.7)', Math.max(.2, r * .035)); ctx.restore(); fan(1.04); stroke(OUT, inkW(r, .1));
+  }
+  // the narwhal's horn: ivory, its spiral grooves running out along it as it turns, set in a gilt ferrule
+  function pntHorn(r, p, o) {
+    const t = o.t, x0 = r * 1.05, x1 = r * 3.2, w = r * .38;
+    const body = () => { ctx.beginPath(); ctx.moveTo(x0, -w); ctx.quadraticCurveTo(x1 * .62, -w * .62, x1, 0); ctx.quadraticCurveTo(x1 * .62, w * .62, x0, w); ctx.closePath(); };
+    const g = ctx.createLinearGradient(0, -w, 0, w); g.addColorStop(0, '#FFFDF4'); g.addColorStop(.35, '#F2E8D0'); g.addColorStop(.75, '#D2C2A0'); g.addColorStop(1, '#9A8664'); ctx.fillStyle = g; body(); ctx.fill();
+    ctx.save(); body(); ctx.clip();
+    // the grooves: each a twist of shadow with a lit lip, sliding out toward the tip
+    const N = 7, ph = (t * 1.4) % 1;
+    for (let i = -1; i < N; i++) { const u = (i + ph) / N, x = x0 + (x1 - x0) * u, hw = w * (1 - u * .92);
+      ctx.beginPath(); ctx.moveTo(x - hw * .55, -hw * 1.1); ctx.quadraticCurveTo(x + hw * .2, 0, x + hw * .55, hw * 1.1); stroke('rgba(110,88,56,.55)', Math.max(.3, r * .07 * (1 - u * .5)));
+      ctx.beginPath(); ctx.moveTo(x - hw * .55 - r * .06, -hw * 1.1); ctx.quadraticCurveTo(x + hw * .2 - r * .06, 0, x + hw * .55 - r * .06, hw * 1.1); stroke('rgba(255,255,248,.6)', Math.max(.2, r * .035)); }
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.ellipse(x0 + (x1 - x0) * .35, -w * .45, (x1 - x0) * .32, w * .14, -.05, 0, TAU); ctx.fill();
+    ctx.restore();
+    body(); stroke(OUT, inkW(r, .1));
+    // the ferrule
+    const fr = () => { ctx.beginPath(); ctx.rect(x0 - r * .14, -w * 1.12, r * .34, w * 2.24); };
+    goldFill(fr, 0, -w * 1.1, 0, w * 1.1, p, inkW(r, .07)); ctx.beginPath(); ctx.moveTo(x0 - r * .1, -w * .8); ctx.lineTo(x0 - r * .1, w * .5); stroke('rgba(255,248,214,.85)', Math.max(.2, r * .05));
+    // a glint running out to its point now and then
+    const gu = (t * .5) % 1; if (gu < .35) { const u = gu / .35, x = x0 + (x1 - x0) * u; glint(x, -w * (1 - u) * .4, r * .32 * (1 - u * .4), Math.sin(Math.PI * u)); }
+  }
+  // the trident tines: a gilt socket and crosspiece, three barbed tines (the outer two flexing a little), glints
+  // running out along them in turn
+  function pntTines(r, p, o) {
+    const t = o.t, fx = .05 * Math.sin(t * 2.6), w = Math.max(.5, r * .15);
+    ctx.lineCap = 'round';
+    const tine = (y0, y1, len, k) => { const yy = y1 * (1 + fx * k); gilt(() => { ctx.beginPath(); ctx.moveTo(r * 1.55, y0); ctx.quadraticCurveTo(r * 2.05, y0, r * len, yy); }, w, p); return yy; };
+    const ends = [[tine(-r * .62, -r * .78, 2.55, 1), 2.55], [tine(r * .62, r * .78, 2.55, 1), 2.55], [tine(0, 0, 3.0, 0), 3.0]];
+    // the crosspiece, curved back, and the socket
+    gilt(() => { ctx.beginPath(); ctx.moveTo(r * 1.55, -r * .66); ctx.quadraticCurveTo(r * 1.32, 0, r * 1.55, r * .66); }, w * 1.25, p);
+    gilt(() => { ctx.beginPath(); ctx.moveTo(r * 1.05, 0); ctx.lineTo(r * 1.45, 0); }, w * 1.5, p);
+    bead(r * 1.42, 0, r * .14, p, r);
+    // barbed heads
+    for (const [y, L] of ends) { const x = r * L, hd = () => { ctx.beginPath(); ctx.moveTo(x - r * .06, y - r * .22); ctx.lineTo(x + r * .42, y); ctx.lineTo(x - r * .06, y + r * .22); ctx.lineTo(x + r * .08, y); ctx.closePath(); };
+      goldFill(hd, x, y - r * .2, x, y + r * .2, p, inkW(r, .06)); ctx.beginPath(); ctx.moveTo(x + r * .02, y - r * .02); ctx.lineTo(x + r * .34, y); stroke('rgba(255,250,224,.9)', Math.max(.2, r * .035)); }
+    const gi = Math.floor(t * 1.2) % 3, gu = (t * 1.2) % 1; if (gu < .5) { const [y, L] = ends[gi], u = gu / .5; glint(r * (1.6 + (L - 1.4) * u), y * u - r * .05, r * .3, Math.sin(Math.PI * u)); }
+  }
+  // the coral lance: coral grown along the horn (or the tines), or, alone, a lance of coral itself; its sprigs sway
+  function pntCoralLance(r, p, o) {
+    const t = o.t, limbs = [], tips = [], h = o.has, along = h.horn || h.tines, W = Math.max(.7, r * .2);
+    if (!along) { limbs.push([r * 1.05, 0, r * 3, 0, W * 1.1, 0, r * 2, 0]); tips.push([r * 3, 0, W]); }
+    const xs = along ? [1.6, 2.3] : [1.5, 2.1, 2.6];
+    xs.forEach((x, i) => { for (const sd of [-1, 1]) coralTree(limbs, tips, r * x, sd * r * (along ? .26 : .05), sd * (Math.PI / 2 - .55), r * (.55 - i * .08), W * .75, 1, -sd, t, i * 1.7 + (sd > 0 ? .8 : 0), 2); });
+    coralLimbs(limbs, tips, r);
+  }
+  // the coral guard: a crown of red coral growing up behind the pearl from its top mount, the same on both sides,
+  // swaying as if under water
+  function pntCoral(r, p, o) {
+    const t = o.t, limbs = [], tips = [], H = o.has.cloud ? .78 : 1, W = Math.max(.9, r * .27);
+    for (const sd of [-1, 1]) coralTree(limbs, tips, sd * r * .2, -r * .7, -Math.PI / 2 + sd * .42, r * .95 * H, W, 0, sd, t, 0, 2);
+    coralTree(limbs, tips, 0, -r * .8, -Math.PI / 2, r * .7 * H, W * .85, 1, 1, t, .6, 2);
+    coralLimbs(limbs, tips, r);
+  }
+  // the squall: a storm cloud over the pearl, its billows drifting; its eye blinks; now and then it strikes the pearl
+  function pntCloud(r, p, o) {
+    const t = o.t, cy = -r * (o.has.coral ? 2.35 : 1.85), P_ = [[-.64, .02, .38], [.64, .02, .38], [-.32, -.2, .48], [.32, -.2, .48], [0, -.34, .52], [0, .06, .44]];
+    const pts = P_.map(([x, y, s], i) => [r * x + Math.sin(t * 1.3 + i * 1.9) * r * .05, cy + r * y + Math.cos(t * 1.1 + i) * r * .04, r * s]);
+    const ph = (t % 1.7) / 1.7, strike = ph > .82 && ph < .9;
+    if (strike) { // the bolt, down to the pearl's crown
+      const n = Math.floor(t * 30), path = () => { ctx.beginPath(); let y = cy + r * .3; ctx.moveTo(0, y); for (let i = 1; i <= 4; i++) { y = cy + r * .3 + (-r * .95 - cy - r * .3) * i / 4; ctx.lineTo(i < 4 ? (hs(n + i) - .5) * r * .5 : 0, y); } };
+      ctx.lineJoin = 'round'; path(); stroke('rgba(80,90,210,.9)', Math.max(.6, r * .16)); path(); stroke('#FFF8C8', Math.max(.3, r * .06)); }
+    for (const [x, y, s] of pts) { ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); stroke(OUT, Math.max(1, r * .2)); }
+    for (const [x, y, s] of pts) { ctx.fillStyle = strike ? '#6E78C0' : '#3C4482'; ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); ctx.fill(); }
+    for (const [x, y, s] of pts) { ctx.fillStyle = strike ? '#C8CEFF' : '#6A74B8'; ctx.beginPath(); ctx.arc(x - s * .18, y - s * .22, s * .72, 0, TAU); ctx.fill(); }
+    for (const [x, y, s] of pts) { ctx.fillStyle = strike ? '#FFFFFF' : '#9AA2DC'; ctx.beginPath(); ctx.arc(x - s * .3, y - s * .42, s * .34, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(20,16,50,.45)'; ctx.beginPath(); ctx.ellipse(0, cy + r * .3, r * .9, r * .12, 0, 0, TAU); ctx.fill(); // its dark underside
+    const bl = (t % 3.4) / 3.4, open = bl > .95 ? Math.abs(bl - .975) / .025 : 1, ey = cy - r * .02;
+    ctx.fillStyle = '#FFF2A0'; ctx.beginPath(); ctx.ellipse(0, ey, r * .24, r * .13 * Math.max(.12, open), 0, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .05));
+    if (open > .3) { ctx.fillStyle = '#2A2050'; ctx.beginPath(); ctx.ellipse(Math.sin(t * .9) * r * .06, ey, r * .07, r * .09 * open, 0, 0, TAU); ctx.fill(); }
+  }
+  // the dorsal fin: translucent, with rays, set in the top mount and swept back; it ripples
+  function pntFin(r, p, o) {
+    const t = o.t, k = o.has.coral ? .8 : 1, root0 = [r * .3, -r * .88], root1 = [-r * .62, -r * .78];
+    const tip = [-r * (1.25 + .08 * Math.sin(t * 3.4)) * k, -r * (2.05 - .06 * Math.cos(t * 3.4)) * k - r * (1 - k) * .3];
+    const mid = (u) => [lerp(tip[0], root1[0], u) + Math.sin(t * 5 - u * 4) * r * .08, lerp(tip[1], root1[1], u) - Math.sin(Math.PI * u) * r * .28];
+    const m1 = mid(.33), m2 = mid(.66);
+    const path = () => { ctx.beginPath(); ctx.moveTo(root0[0], root0[1]); ctx.quadraticCurveTo(r * .1, -r * 1.75 * k, tip[0], tip[1]); ctx.quadraticCurveTo(m1[0] + r * .1, m1[1] + r * .2, m2[0], m2[1]); ctx.quadraticCurveTo(m2[0] + r * .15, m2[1] + r * .25, root1[0], root1[1]); ctx.closePath(); };
+    const g = ctx.createLinearGradient(root0[0], root0[1] - r, root1[0], root1[1]); g.addColorStop(0, p.edge); g.addColorStop(1, p.bladeDk);
+    ctx.save(); ctx.globalAlpha = .82; path(); ctx.fillStyle = g; ctx.fill(); ctx.restore();
+    ctx.save(); path(); ctx.clip(); ctx.strokeStyle = mix(p.bladeDk, '#203040', .3); ctx.lineWidth = Math.max(.25, r * .045);
+    for (const q of [[tip[0], tip[1]], m1, m2]) { ctx.beginPath(); ctx.moveTo(lerp(root0[0], root1[0], .45), -r * .85); ctx.quadraticCurveTo((q[0] - r * .1) * .7, q[1] * .75, q[0], q[1]); ctx.stroke(); }
+    ctx.restore();
+    ctx.beginPath(); ctx.moveTo(root0[0], root0[1]); ctx.quadraticCurveTo(r * .1, -r * 1.75 * k, tip[0], tip[1]); stroke('rgba(255,255,255,.85)', Math.max(.3, r * .08)); // its leading edge, lit
+    path(); stroke(OUT, inkW(r, .08));
+  }
+  // the ribbons: two silk ribbons streaming back from the rear mount, twisting as they flutter (one face the colour,
+  // the other its shade), forked at the tails; swung by the pendulum and faster with speed
+  function pntRibbons(r, p, o) {
+    const sw = o.sw, t = o.t, N = 12, dark = mix(p.accent, '#2A1B2C', .38), lit = mix(p.accent, '#FFFFFF', .3);
+    for (const [y, k, ph] of [[-r * .3, 1, 0], [r * .3, -1, 1.7]]) {
+      const x0 = -r * 1.08, pts = [];
+      for (let i = 0; i <= N; i++) { const u = i / N, li = Math.min(2, Math.floor(u * 3)), a = sw[li] * .6 * u + sw.fl * .2 * Math.sin(sw.t * 11 - u * 5 + ph) * u;
+        const bx = -u * r * 3.1, by = k * Math.sin(u * 3.4 + t * 3.2 + ph) * r * .32 * u + k * u * r * .2, c = Math.cos(a), s = Math.sin(a); pts.push([x0 + bx * c - by * s, y + bx * s + by * c, u]); }
+      const edge = (side) => pts.map(([x, yy, u], i) => { const j = Math.min(N, i + 1), jj = Math.max(0, i - 1), dx = pts[j][0] - pts[jj][0], dy = pts[j][1] - pts[jj][1], d = Math.hypot(dx, dy) || 1, tw = Math.cos(u * 4.2 - t * 4.5 + ph), w = r * .22 * (1 - u * .25) * (.25 + .75 * Math.abs(tw)); return [x - dy / d * w * side, yy + dx / d * w * side, tw]; });
+      const A = edge(1), B = edge(-1);
+      for (let i = 0; i < N; i++) { ctx.beginPath(); ctx.moveTo(A[i][0], A[i][1]); ctx.lineTo(A[i + 1][0], A[i + 1][1]); ctx.lineTo(B[i + 1][0], B[i + 1][1]); ctx.lineTo(B[i][0], B[i][1]); ctx.closePath(); const tw = A[i][2]; ctx.fillStyle = tw > 0 ? (tw > .75 ? lit : p.accent) : dark; ctx.fill(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = .3; ctx.stroke(); }
+      // the forked tail, and the ink round it all
+      const e = pts[N], dx = (e[0] - pts[N - 1][0]) * .9, dy = (e[1] - pts[N - 1][1]) * .9, fa = [A[N][0] + dx, A[N][1] + dy], fb = [B[N][0] + dx, B[N][1] + dy];
+      ctx.beginPath(); ctx.moveTo(A[N][0], A[N][1]); ctx.lineTo(fa[0], fa[1]); ctx.lineTo(e[0], e[1]); ctx.lineTo(fb[0], fb[1]); ctx.lineTo(B[N][0], B[N][1]); ctx.closePath(); ctx.fillStyle = A[N - 1][2] > 0 ? p.accent : dark; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(A[0][0], A[0][1]); for (let i = 1; i <= N; i++) ctx.lineTo(A[i][0], A[i][1]); ctx.lineTo(fa[0], fa[1]); ctx.lineTo(e[0], e[1]); ctx.lineTo(fb[0], fb[1]); for (let i = N; i >= 0; i--) ctx.lineTo(B[i][0], B[i][1]);
+      stroke(OUT, inkW(r, .07)); }
+  }
+  // the tether: links of kelp-gold hanging from the bail, face-on and edge-on in turn, each swung by its own link
+  function pntChain(r, p, o) {
+    const sw = o.sw, n = o.has.anchor ? 3 : 4, step = r * .34, w = Math.max(.4, r * .09);
+    let x = 0, y = r * 1.42;
+    for (let i = 0; i < n; i++) { const a = sw[Math.min(i, 2)], c = Math.cos(a), s = Math.sin(a), cx = x - s * step * .5, cy = y + c * step * .5;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+      if (i % 2 === 0) gilt(() => { ctx.beginPath(); ctx.ellipse(0, 0, r * .14, r * .25, 0, 0, TAU); }, w, p);
+      else { const lk = () => { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-r * .055, -r * .27, r * .11, r * .54, r * .055) : ctx.rect(-r * .055, -r * .27, r * .11, r * .54); }; goldFill(lk, -r * .06, 0, r * .06, 0, p, inkW(r, .06)); }
+      ctx.restore(); x -= s * step; y += c * step; }
+    o.end = [x, y, sw[2]];
+  }
+  // the anchor: ring, stock with ball ends, shank, arms and barbed flukes, in gilt; it hangs from the bail (or the
+  // tether's last link) and swings
+  function pntAnchor(r, p, o) {
+    const sw = o.sw, E = o.end, px = E ? E[0] : 0, py = E ? E[1] : r * 1.42, a = E ? E[2] : sw[0], s = r * 1.05, w = Math.max(.5, s * .13);
+    ctx.save(); ctx.translate(px, py); ctx.rotate(a); ctx.lineCap = 'round';
+    gilt(() => { ctx.beginPath(); ctx.arc(0, s * .14, s * .13, 0, TAU); }, w * .75, p);
+    gilt(() => { ctx.beginPath(); ctx.moveTo(0, s * .28); ctx.lineTo(0, s * 1.22); }, w * 1.15, p);
+    gilt(() => { ctx.beginPath(); ctx.moveTo(-s * .34, s * .46); ctx.lineTo(s * .34, s * .46); }, w * .85, p);
+    for (const sd of [-1, 1]) bead(sd * s * .38, s * .46, s * .085, p, r);
+    gilt(() => { ctx.beginPath(); ctx.moveTo(-s * .55, s * .9); ctx.quadraticCurveTo(-s * .5, s * 1.3, 0, s * 1.3); ctx.quadraticCurveTo(s * .5, s * 1.3, s * .55, s * .9); }, w, p);
+    for (const sd of [-1, 1]) { const fx = sd * s * .56, fy = s * .86, fl = () => { ctx.beginPath(); ctx.moveTo(fx - sd * s * .02, fy - s * .22); ctx.lineTo(fx + sd * s * .14, fy + s * .1); ctx.lineTo(fx - sd * s * .02, fy + s * .02); ctx.lineTo(fx - sd * s * .16, fy + s * .12); ctx.closePath(); };
+      goldFill(fl, fx - s * .15, fy - s * .2, fx + s * .15, fy + s * .15, p, inkW(r, .06)); }
+    bead(0, s * 1.31, s * .1, p, r);
+    ctx.restore();
+  }
+  // the weeping tear: rose glass, gilt-capped, hung from the bail (a pair, either side, when the middle is taken); a
+  // bead of it swells at its point and drips
+  function pntTear(x, y, a, s, r, p, t, ph) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    const path = () => { ctx.beginPath(); ctx.moveTo(0, s * .2); ctx.bezierCurveTo(s * .2, s * .45, s * .4, s * .72, s * .38, s * .92); ctx.arc(0, s * .92, s * .38, 0, Math.PI); ctx.bezierCurveTo(-s * .4, s * .72, -s * .2, s * .45, 0, s * .2); ctx.closePath(); };
+    const g = ctx.createLinearGradient(0, s * .2, 0, s * 1.3); g.addColorStop(0, 'rgba(255,226,236,.75)'); g.addColorStop(.55, 'rgba(240,120,150,.72)'); g.addColorStop(1, 'rgba(176,40,74,.92)');
+    path(); ctx.fillStyle = g; ctx.fill();
+    ctx.save(); path(); ctx.clip(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(s * .12, s * 1.02, s * .2, s * .13, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,240,246,.85)'; ctx.lineWidth = Math.max(.25, s * .06); ctx.beginPath(); ctx.moveTo(-s * .16, s * .55); ctx.quadraticCurveTo(-s * .3, s * .85, -s * .18, s * 1.08); ctx.stroke(); ctx.restore();
+    path(); stroke('rgba(42,27,44,.85)', inkW(r, .06));
+    goldFill(() => { ctx.beginPath(); ctx.ellipse(0, s * .22, s * .16, s * .1, 0, 0, TAU); }, -s * .1, s * .15, s * .1, s * .3, p, inkW(r, .04));
+    ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(-s * .14, s * .8, s * .06, 0, TAU); ctx.fill();
+    // the drip
+    const u = (t * .5 + ph) % 1;
+    if (u < .7) { const b = s * .1 * (u / .7); if (b > .15) { ctx.fillStyle = 'rgba(200,60,90,.85)'; ctx.beginPath(); ctx.arc(0, s * 1.3 + b * .6, b, 0, TAU); ctx.fill(); } }
+    else { const k = (u - .7) / .3, dy = s * 1.4 + k * k * s * 2.2; ctx.globalAlpha *= 1 - k; ctx.fillStyle = 'rgba(200,60,90,.9)'; ctx.beginPath(); ctx.ellipse(0, dy, s * .08, s * .11, 0, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+  function pntDrops(r, p, o) {
+    const sw = o.sw, t = o.t;
+    if (dropsPair(o.has)) for (const sd of [-1, 1]) { const a = Math.PI / 2 + sd * .78; pntTear(Math.cos(a) * r * 1.27, Math.sin(a) * r * 1.27 + r * .1, sw[sd < 0 ? 1 : 2], r * .62, r, p, t, sd < 0 ? 0 : .5); }
+    else pntTear(0, r * 1.38, sw[1], r * .9, r, p, t, 0);
+  }
+  // the moonstruck charm: a gilt crescent moon with a pearl in its arms, floating at the upper front, bobbing and rocking
+  function pntCharm(r, p, o) {
+    const t = o.t, x = r * 1.32, y = -r * 1.2 + Math.sin(t * 2.3) * r * .13, R = r * .44;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(.25 * Math.sin(t * 1.5) - .3);
+    const path = () => { ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.arc(R * .42, -R * .18, R * .82, 0, TAU, true); };
+    const g = ctx.createLinearGradient(-R, -R, R, R); g.addColorStop(0, p.metalLt); g.addColorStop(.5, p.metal); g.addColorStop(1, MDK(p));
+    path(); ctx.fillStyle = g; ctx.fill('evenodd'); ctx.save(); path(); ctx.clip('evenodd'); ctx.beginPath(); ctx.arc(-R * .06, -R * .04, R * .9, Math.PI * .7, Math.PI * 1.35); stroke('rgba(255,250,224,.9)', Math.max(.25, r * .05)); ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.moveTo(R * .42 + R * .82, -R * .18); ctx.arc(R * .42, -R * .18, R * .82, 0, TAU, true); stroke(OUT, inkW(r, .06));
+    nacreBody(R * .3, -R * .02, R * .3, t, 1, p);
+    ctx.restore();
+    glint(x + R * .9, y - R * 1.1, r * .22, Math.max(0, Math.sin(t * 2.1)) ** 6);
+  }
+  // the rogue wave: two crests of sea curling in under the pearl from either side, rising and falling together, spray
+  // flicking off their lips
+  function pntWave(r, p, o) {
+    const t = o.t, k = .5 + .5 * Math.sin(t * 2), base = r * 1.42, B = p.b;
+    for (const sd of [-1, 1]) { ctx.save(); ctx.scale(sd, 1);
+      const cx = r * (.95 - .12 * k), cy = r * (.62 - .2 * k), path = () => { ctx.beginPath(); ctx.moveTo(r * .05, base); ctx.lineTo(r * 1.75, base); ctx.quadraticCurveTo(r * 1.7, cy - r * .1, cx + r * .1, cy - r * .2); ctx.quadraticCurveTo(cx - r * .38, cy - r * .1, cx - r * .5, cy + r * .28); ctx.quadraticCurveTo(cx - r * .15, cy + r * .02, cx + r * .02, cy + r * .3); ctx.quadraticCurveTo(r * .5, base - r * .25, r * .05, base); ctx.closePath(); };
+      const g = ctx.createLinearGradient(0, cy - r * .2, 0, base); g.addColorStop(0, B[1]); g.addColorStop(.45, B[2]); g.addColorStop(1, B[3]); path(); ctx.fillStyle = g; ctx.fill();
+      ctx.save(); path(); ctx.clip(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = Math.max(.25, r * .05); for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.moveTo(r * (.6 + i * .4), base - r * .05); ctx.quadraticCurveTo(r * (1.2 + i * .2), cy + r * .3, r * (1.5 + i * .1), cy + r * (.1 + i * .2)); ctx.stroke(); } ctx.restore();
+      path(); stroke(OUT, inkW(r, .08));
+      // the foam along its lip
+      ctx.beginPath(); ctx.moveTo(r * 1.6, cy + r * .1); ctx.quadraticCurveTo(r * 1.5, cy - r * .12, cx + r * .1, cy - r * .2); ctx.quadraticCurveTo(cx - r * .38, cy - r * .1, cx - r * .5, cy + r * .28); stroke('#FFFFFF', Math.max(.5, r * .13));
+      for (let i = 0; i < 3; i++) { const u = (t * 1.1 + i / 3) % 1, x = cx - r * .45 - u * r * .4, y = cy + r * .2 - Math.sin(u * Math.PI) * r * .35 + u * r * .2; ctx.globalAlpha = 1 - u; ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(x, y, r * .06 * (1 - u * .5), 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+      ctx.restore(); }
+  }
+  // still water: rings spreading slowly over a calm under the pearl
+  function pntStillring(r, p, o) {
+    const t = o.t, y = r * 1.75;
+    ctx.save(); ctx.translate(0, y); ctx.scale(1, .3);
+    for (let i = 0; i < 3; i++) { const u = (t * .4 + i / 3) % 1, R = r * (.5 + 1.6 * u), a = Math.sin(Math.PI * u) * (1 - u * .4);
+      ctx.beginPath(); ctx.arc(0, r * .25, R, 0, TAU); ctx.strokeStyle = `rgba(20,70,80,${.5 * a})`; ctx.lineWidth = Math.max(.5, r * .12); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.strokeStyle = `rgba(255,250,226,${.9 * a})`; ctx.lineWidth = Math.max(.4, r * .09); ctx.stroke(); }
+    ctx.restore();
+  }
+  // the maelstrom: a whirlpool turning under the pearl, dark water and white spiral arms
+  function pntMaelstrom(r, p, o) {
+    const t = o.t; ctx.save(); ctx.translate(0, r * 1.3); ctx.scale(1, .38);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.1); g.addColorStop(0, 'rgba(8,30,40,.8)'); g.addColorStop(.6, 'rgba(24,90,104,.45)'); g.addColorStop(1, 'rgba(24,90,104,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r * 2.1, 0, TAU); ctx.fill();
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) { const path = () => { ctx.beginPath(); for (let k = 0; k <= 16; k++) { const u = k / 16, a = -t * 2.4 + i * TAU / 4 + u * 3.6, R = r * (.25 + 1.75 * u); k ? ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R) : ctx.moveTo(Math.cos(a) * R, Math.sin(a) * R); } };
+      path(); stroke('rgba(10,50,60,.7)', Math.max(.6, r * .2)); path(); stroke(i % 2 ? 'rgba(160,232,224,.8)' : 'rgba(240,255,252,.9)', Math.max(.35, r * .09)); }
+    ctx.restore();
+  }
+  // the held thunder: a gilt-clasped bolt floating by the pearl, trembling, flaring now and then with sparks
+  function pntBolt(r, p, o) {
+    const t = o.t, n = Math.floor(t * 12), side = o.has.charm ? -1 : 1, x = side * r * 1.3 + (hs(n) - .5) * r * .05, y = -r * 1.45 + (hs(n + 1) - .5) * r * .05, fl = (t % 1.3) / 1.3 > .85;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(.15 * side); const s = r;
+    const path = () => { ctx.beginPath(); ctx.moveTo(-s * .1, -s * .62); ctx.lineTo(s * .32, -s * .62); ctx.lineTo(s * .06, -s * .08); ctx.lineTo(s * .34, -s * .08); ctx.lineTo(-s * .24, s * .72); ctx.lineTo(-s * .02, s * .1); ctx.lineTo(-s * .3, s * .1); ctx.closePath(); };
+    const g = ctx.createLinearGradient(-s * .3, -s * .6, s * .3, s * .7); g.addColorStop(0, '#FFFDF0'); g.addColorStop(.5, fl ? '#FFFFFF' : '#FFE27A'); g.addColorStop(1, fl ? '#FFF2A0' : '#D89A2A');
+    path(); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .07));
+    ctx.beginPath(); ctx.moveTo(-s * .04, -s * .55); ctx.lineTo(s * .2, -s * .55); stroke('rgba(255,255,255,.9)', Math.max(.2, r * .05));
+    goldFill(() => { ctx.beginPath(); ctx.rect(-s * .2, -s * .14, s * .5, s * .12); }, 0, -s * .14, 0, 0, p, inkW(r, .05)); // its clasp
+    ctx.restore();
+    if (fl) for (let i = 0; i < 3; i++) { const a = hs(n * 3 + i) * TAU; let sx = x + Math.cos(a) * r * .4, sy = y + Math.sin(a) * r * .5; ctx.beginPath(); ctx.moveTo(sx, sy); sx += Math.cos(a) * r * .3; sy += Math.sin(a) * r * .3; ctx.lineTo(sx + (hs(i + n) - .5) * r * .2, sy); stroke('#FFF6C0', Math.max(.3, r * .06)); }
+  }
   const PART = {
-    ring: ['both', (r, p, back) => { ctx.save(); ctx.rotate(-.32); const a0 = back ? Math.PI : 0, a1 = back ? TAU : Math.PI;
-      ctx.beginPath(); ctx.ellipse(0, 0, r * 1.7, r * .44, 0, a0, a1); stroke(OUT, Math.max(1, r * .24));
-      ctx.beginPath(); ctx.ellipse(0, 0, r * 1.7, r * .44, 0, a0, a1); stroke(p.metal, Math.max(.6, r * .14));
-      ctx.beginPath(); ctx.ellipse(0, -r * .02, r * 1.7, r * .44, 0, a0, a1); stroke('rgba(255,242,190,.85)', Math.max(.3, r * .05)); ctx.restore(); }],
-    // (the tether's links, each turned by its own link angle from the pearl's underside, so the chain bends as it swings)
-    chain: ['front', (r, p, sw = SW0) => { let x = -r * .29, y = r * .84; const dx = -r * .42, dy = r * .32;
-      for (let i = 0; i < 4; i++) { const a = sw[Math.min(i, 2)], k = i ? 1 : .5, c = Math.cos(a), s = Math.sin(a); x += (dx * c - dy * s) * k; y += (dx * s + dy * c) * k;
-        ctx.beginPath(); ctx.ellipse(x, y, r * (i % 2 ? .14 : .3), r * (i % 2 ? .3 : .16), -.6 + a, 0, TAU); stroke(OUT, Math.max(.8, r * .2)); ctx.beginPath(); ctx.ellipse(x, y, r * (i % 2 ? .14 : .3), r * (i % 2 ? .3 : .16), -.6 + a, 0, TAU); stroke(p.metalLt, Math.max(.4, r * .1)); } }],
-    coral: ['back', (r) => { ctx.lineCap = 'round'; const br = (x0, y0, x1, y1, w) => { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .2, (y0 + y1) / 2, x1, y1); stroke(OUT, w + 1.2); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .2, (y0 + y1) / 2, x1, y1); stroke('#E2604E', w); ctx.beginPath(); ctx.moveTo(x0 + w * .2, y0); ctx.quadraticCurveTo((x0 + x1) / 2 - r * .25, (y0 + y1) / 2, x1, y1); stroke('#FFA090', w * .35); };
-      const w = Math.max(.9, r * .26); br(-r * .2, -r * .6, -r * 1.1, -r * 1.9, w); br(-r * .8, -r * 1.25, -r * 1.7, -r * 1.5, w * .7); br(r * .3, -r * .7, r * .5, -r * 2, w * .85); br(r * .42, -r * 1.4, r * 1.2, -r * 1.75, w * .6); }],
-    // a scallop shell fanned out behind the pearl, centred on it and the same on both sides: its hinge under the pearl, ears
-    // either side of the hinge, ribs running up into a scalloped rim, silvered inside like a mirror
-    scallop: ['back', (r, p) => { ctx.save(); const R = r * 1.95, hy = r * .62, n = 9, A0 = Math.PI * 1.06, A1 = Math.PI * 1.94;
-      const fan = (k = 1) => { ctx.beginPath(); ctx.moveTo(0, hy); for (let i = 0; i <= n * 2; i++) { const a = A0 + (A1 - A0) * i / (n * 2), rr = R * k * (i % 2 ? 1.06 : .97); ctx.lineTo(Math.cos(a) * rr, hy + Math.sin(a) * rr); } ctx.closePath(); };
-      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(0, hy - r * .1); ctx.lineTo(sd * r * .62, hy - r * .22); ctx.lineTo(sd * r * .7, hy + r * .18); ctx.lineTo(0, hy + r * .2); ctx.closePath(); ctx.fillStyle = p.bladeDk; ctx.fill(); stroke(OUT, inkW(r, .09)); } // the ears
-      const g = ctx.createLinearGradient(0, hy - R, 0, hy); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, p.blade); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; fan(); ctx.fill();
-      ctx.save(); fan(); ctx.clip();
-      ctx.strokeStyle = 'rgba(60,110,110,.42)'; ctx.lineWidth = Math.max(.4, r * .09); for (let i = 1; i < n * 2; i += 2) { const a = A0 + (A1 - A0) * i / (n * 2); ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(Math.cos(a) * R * 1.1, hy + Math.sin(a) * R * 1.1); ctx.stroke(); } // the ribs
-      ctx.fillStyle = 'rgba(255,255,255,.32)'; ctx.beginPath(); ctx.ellipse(0, hy - R * .58, R * .7, R * .2, 0, 0, TAU); ctx.fill(); // the mirror's sheen, a band of light across it
-      ctx.restore();
-      fan(); stroke(p.metal, Math.max(.7, r * .15)); fan(1.05); stroke(OUT, inkW(r, .1)); ctx.restore(); }],
-    horn: ['front', (r, p) => { const x0 = r * .6, x1 = r * 3.1, w = r * .42;
-      ctx.beginPath(); ctx.moveTo(x0, -w); ctx.quadraticCurveTo(x1 * .7, -w * .5, x1, 0); ctx.quadraticCurveTo(x1 * .7, w * .5, x0, w); ctx.closePath();
-      const g = ctx.createLinearGradient(0, -w, 0, w); g.addColorStop(0, '#FFFDF4'); g.addColorStop(.6, '#EADFC6'); g.addColorStop(1, '#B8A684'); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .1));
-      ctx.strokeStyle = 'rgba(120,100,70,.7)'; ctx.lineWidth = Math.max(.35, r * .06); for (let i = 1; i < 6; i++) { const x = x0 + (x1 - x0) * i / 6, hw = w * (1 - i / 6.5); ctx.beginPath(); ctx.moveTo(x - hw * .5, -hw); ctx.lineTo(x + hw * .5, hw); ctx.stroke(); } }],
-    tines: ['front', (r, p) => { ctx.lineCap = 'round'; const t = (y0, y1, len) => { ctx.beginPath(); ctx.moveTo(r * .7, y0); ctx.quadraticCurveTo(r * 1.6, y0, r * len, y1); stroke(OUT, Math.max(1.2, r * .3)); ctx.beginPath(); ctx.moveTo(r * .7, y0); ctx.quadraticCurveTo(r * 1.6, y0, r * len, y1); stroke(p.metal, Math.max(.6, r * .16)); };
-      t(-r * .35, -r * .9, 2.3); t(r * .35, r * .9, 2.3); t(0, 0, 2.7); ctx.fillStyle = p.metalLt; for (const [x, y] of [[2.3, -.9], [2.3, .9], [2.7, 0]]) { ctx.beginPath(); ctx.moveTo(r * x, r * y - r * .22); ctx.lineTo(r * (x + .38), r * y); ctx.lineTo(r * x, r * y + r * .22); ctx.closePath(); ctx.fill(); stroke(OUT, inkW(r, .07)); } }],
-    swirl: ['both', (r, p, back) => { ctx.lineCap = 'round'; for (let i = 0; i < 2; i++) { const R = r * (1.45 + i * .3), a0 = back ? Math.PI * 1.05 + i : .1 + i, a1 = a0 + Math.PI * .85; ctx.beginPath(); ctx.ellipse(0, r * .1, R, R * .5, -.2, a0, a1); stroke(back ? 'rgba(40,120,130,.85)' : 'rgba(210,250,242,.95)', Math.max(.6, r * (.16 - i * .04))); } }],
-    foam: ['front', (r) => { ctx.fillStyle = '#FFFFFF'; for (const [x, y, s] of [[-.5, -1.02, .3], [-.1, -1.18, .34], [.32, -1.1, .3], [.66, -.9, .22]]) { ctx.beginPath(); ctx.arc(r * x, r * y, r * s, 0, TAU); ctx.fill(); }
-      ctx.beginPath(); ctx.moveTo(-r * .8, -r * .85); ctx.quadraticCurveTo(-r * .1, -r * 1.55, r * .8, -r * .95); ctx.quadraticCurveTo(r * .3, -r * 1.05, r * .55, -r * .7); stroke('rgba(60,140,150,.7)', Math.max(.4, r * .07)); }],
-    shards: ['front', (r, p) => { for (const [a, d, s] of [[-2.3, 1.7, .36], [-.8, 1.9, .3], [2.4, 1.65, .28]]) { const x = Math.cos(a) * r * d, y = Math.sin(a) * r * d * .8, S = r * s; ctx.beginPath(); ctx.moveTo(x, y - S * 1.4); ctx.lineTo(x + S * .6, y); ctx.lineTo(x, y + S); ctx.lineTo(x - S * .6, y); ctx.closePath();
-      const g = ctx.createLinearGradient(x - S, y - S, x + S, y + S); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, p.accent); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .07)); } }],
-    drops: ['front', (r, p, sw = SW0) => { const x = r * .15, y = r * 1.05; ctx.translate(x, r * .88); ctx.rotate(sw[1]); ctx.translate(-x, -r * .88); ctx.fillStyle = p.metal; ctx.beginPath(); ctx.arc(x, y, r * .2, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .06));
-      ctx.beginPath(); ctx.moveTo(x, y + r * .15); ctx.quadraticCurveTo(x + r * .42, y + r * .75, x, y + r * 1); ctx.quadraticCurveTo(x - r * .42, y + r * .75, x, y + r * .15); const g = ctx.createLinearGradient(x, y, x, y + r); g.addColorStop(0, '#FFE0EA'); g.addColorStop(1, '#C8405A'); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .07));
-      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(x - r * .08, y + r * .5, r * .07, 0, TAU); ctx.fill(); }],
-    static: ['front', (r) => { ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * .98, 0, TAU); ctx.clip(); ctx.beginPath(); ctx.moveTo(-r, r * .1); for (let i = 1; i <= 6; i++) ctx.lineTo(-r + i * r / 3, r * (i % 2 ? -.18 : .22)); stroke('#5E66C8', Math.max(.6, r * .2)); ctx.beginPath(); ctx.moveTo(-r, r * .1); for (let i = 1; i <= 6; i++) ctx.lineTo(-r + i * r / 3, r * (i % 2 ? -.18 : .22)); stroke('#FFF2A0', Math.max(.35, r * .09)); ctx.restore(); }],
-    cloud: ['back', (r) => { const y = -r * 1.65; ctx.fillStyle = '#4A5288'; for (const [x, yy, s] of [[-.55, 0, .42], [0, -.18, .55], [.55, 0, .4]]) { ctx.beginPath(); ctx.arc(r * x, y + r * yy, r * s, 0, TAU); ctx.fill(); }
-      ctx.fillStyle = '#7A84C8'; ctx.beginPath(); ctx.arc(-r * .1, y - r * .3, r * .3, 0, TAU); ctx.fill(); ctx.fillStyle = '#FFF2A0'; ctx.beginPath(); ctx.ellipse(0, y + r * .05, r * .2, r * .11, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#2A2050'; ctx.beginPath(); ctx.arc(0, y + r * .05, r * .07, 0, TAU); ctx.fill(); }],
-    halo: ['back', (r, p) => { ctx.beginPath(); ctx.arc(0, 0, r * 1.5, 0, TAU); stroke('rgba(20,14,40,.85)', Math.max(1, r * .45)); ctx.beginPath(); ctx.arc(0, 0, r * 1.5, 0, TAU); stroke('rgba(110,224,192,.75)', Math.max(.3, r * .08)); ctx.beginPath(); ctx.arc(0, 0, r * 1.72, -.6, 1.4); stroke('rgba(110,224,192,.45)', Math.max(.3, r * .06)); }],
-    core: ['front', (r) => { ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * .99, 0, TAU); ctx.clip(); const g = ctx.createRadialGradient(r * .15, r * .1, 0, r * .15, r * .1, r * .6); g.addColorStop(0, 'rgba(8,6,16,.95)'); g.addColorStop(.7, 'rgba(30,20,60,.7)'); g.addColorStop(1, 'rgba(30,20,60,0)'); ctx.fillStyle = g; ctx.fillRect(-r, -r, r * 2, r * 2); ctx.fillStyle = '#86F2D6'; ctx.beginPath(); ctx.arc(r * .05, 0, r * .09, 0, TAU); ctx.fill(); ctx.restore(); }],
-    // (each ribbon's points turned about its root by the links' angles, the further ones more, and fluttering with speed)
-    ribbons: ['back', (r, p, sw = SW0) => { ctx.lineCap = 'round'; for (const [y, k] of [[-r * .35, 1], [r * .3, .8]]) {
-      const x0 = -r * .6, pt = (x, yy, i) => { const a = sw[i] * .6 + sw.fl * .14 * Math.sin(sw.t * 11 - i * 1.4 + k * 3), c = Math.cos(a), s = Math.sin(a), dx = x - x0, dy = yy - y; return [x0 + dx * c - dy * s, y + dx * s + dy * c]; };
-      const A = pt(-r * 1.6, y - r * .6 * k, 0), B = pt(-r * 2.1, y + r * .5 * k, 1), E = pt(-r * 3, y - r * .2, 2), path = () => { ctx.beginPath(); ctx.moveTo(x0, y); ctx.bezierCurveTo(A[0], A[1], B[0], B[1], E[0], E[1]); };
-      path(); stroke(OUT, Math.max(1, r * .32)); path(); stroke(p.accent, Math.max(.5, r * .2)); } }],
-    fin: ['front', (r, p) => { ctx.beginPath(); ctx.moveTo(-r * .5, -r * .85); ctx.quadraticCurveTo(-r * .4, -r * 1.9, -r * 1.25, -r * 2.05); ctx.quadraticCurveTo(-r * .2, -r * 1.55, r * .45, -r * .9); ctx.closePath(); const g = ctx.createLinearGradient(0, -r * 2, 0, -r * .8); g.addColorStop(0, p.edge); g.addColorStop(1, p.bladeDk); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .08)); }],
-    cage: ['front', (r, p) => { for (const [k, rot] of [[.42, 0], [1, 0], [.42, Math.PI / 2]]) { ctx.beginPath(); if (rot) ctx.ellipse(0, 0, r * 1.15, r * 1.15 * k, 0, 0, TAU); else ctx.ellipse(0, 0, r * 1.15 * k, r * 1.15, 0, 0, TAU); stroke(OUT, Math.max(.9, r * .22)); ctx.beginPath(); if (rot) ctx.ellipse(0, 0, r * 1.15, r * 1.15 * k, 0, 0, TAU); else ctx.ellipse(0, 0, r * 1.15 * k, r * 1.15, 0, 0, TAU); stroke(p.metal, Math.max(.5, r * .12)); }
-      ctx.fillStyle = p.metalLt; ctx.beginPath(); ctx.arc(0, -r * 1.2, r * .2, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .06)); }],
-    anchor: ['front', (r, p, sw = SW0) => { const x = -r * .1, y = r * 1.2; ctx.translate(x, r * .98); ctx.rotate(sw[0]); ctx.translate(-x, -r * .98); ctx.lineCap = 'round'; const a = () => { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + r * 1.1); ctx.moveTo(x - r * .3, y + r * .25); ctx.lineTo(x + r * .3, y + r * .25); ctx.moveTo(x - r * .5, y + r * .75); ctx.quadraticCurveTo(x, y + r * 1.35, x + r * .5, y + r * .75); };
-      a(); stroke(OUT, Math.max(1.1, r * .26)); a(); stroke(p.metal, Math.max(.5, r * .13)); ctx.beginPath(); ctx.arc(x, y - r * .05, r * .14, 0, TAU); stroke(p.metal, Math.max(.4, r * .08)); }],
-    charm: ['front', (r, p) => { const x = r * 1.25, y = -r * 1.05, R = r * .42; ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.arc(x + R * .45, y - R * .2, R * .85, 0, TAU, true); ctx.fillStyle = p.metalLt; ctx.fill('evenodd'); ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); stroke(OUT, inkW(r, .06)); }],
-    wave: ['front', (r, p) => { ctx.beginPath(); ctx.moveTo(-r * 1.4, r * 1.05); ctx.quadraticCurveTo(-r * .3, r * .55, r * .35, r * .95); ctx.quadraticCurveTo(r * .8, r * 1.2, r * .55, r * .7); ctx.quadraticCurveTo(r * 1.3, r * .8, r * 1.3, r * 1.3); ctx.lineTo(-r * 1.4, r * 1.3); ctx.closePath();
-      const g = ctx.createLinearGradient(0, r * .6, 0, r * 1.3); g.addColorStop(0, '#FFFFFF'); g.addColorStop(1, p.b[3]); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .07)); }],
-    stillring: ['back', (r, p) => { ctx.beginPath(); ctx.ellipse(0, -r * 1.45, r * .95, r * .26, 0, 0, TAU); stroke(OUT, Math.max(.9, r * .2)); ctx.beginPath(); ctx.ellipse(0, -r * 1.45, r * .95, r * .26, 0, 0, TAU); stroke('#FFF2C8', Math.max(.45, r * .1)); }],
-    dial: ['back', (r, p) => { ctx.fillStyle = p.metal; ctx.beginPath(); ctx.arc(-r * .3, -r * .1, r * 1.42, 0, TAU); ctx.fill(); stroke(OUT, inkW(r, .08)); ctx.strokeStyle = p.metalLt; ctx.lineWidth = Math.max(.35, r * .07);
-      for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(-r * .3 + Math.cos(a) * r * 1.18, -r * .1 + Math.sin(a) * r * 1.18); ctx.lineTo(-r * .3 + Math.cos(a) * r * 1.36, -r * .1 + Math.sin(a) * r * 1.36); ctx.stroke(); } }],
-    maelstrom: ['back', (r, p) => { ctx.save(); ctx.scale(1, .42); ctx.translate(0, r * 2.6); for (let i = 0; i < 3; i++) { ctx.beginPath(); for (let k = 0; k <= 20; k++) { const a = k / 20 * Math.PI * 1.6 + i * 2.1, R = r * (.4 + k / 20 * 1.6); k ? ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R) : ctx.moveTo(Math.cos(a) * R, Math.sin(a) * R); } stroke(i ? 'rgba(160,232,224,.75)' : 'rgba(30,100,112,.9)', Math.max(.5, r * .16)); } ctx.restore(); }],
-    corallance: ['front', (r) => { ctx.lineCap = 'round'; const br = (x0, y0, x1, y1, w) => { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); stroke(OUT, w + 1.2); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); stroke('#E2604E', w); };
-      const w = Math.max(.8, r * .24); br(r * .7, 0, r * 3, -r * .1, w); br(r * 1.7, -r * .05, r * 2.3, -r * .7, w * .7); br(r * 2.2, -r * .08, r * 2.7, r * .5, w * .6); br(r * 1.3, 0, r * 1.6, r * .55, w * .55); }],
-    bolt: ['front', (r) => { const x = r * 1.2, y = -r * 1.5; ctx.beginPath(); ctx.moveTo(x - r * .1, y - r * .6); ctx.lineTo(x + r * .32, y - r * .6); ctx.lineTo(x + r * .05, y - r * .05); ctx.lineTo(x + r * .35, y - r * .05); ctx.lineTo(x - r * .25, y + r * .7); ctx.lineTo(x - r * .02, y + r * .1); ctx.lineTo(x - r * .3, y + r * .1); ctx.closePath(); ctx.fillStyle = '#FFF2A0'; ctx.fill(); stroke(OUT, inkW(r, .07)); }],
+    ring: [[12, pntMoonRing], [21, pntMoonShade], [32, pntMoonRing]],
+    chain: [[40, pntChain]],
+    coral: [[7, pntCoral]],
+    scallop: [[3, pntScallop]],
+    horn: [[35, pntHorn]],
+    tines: [[35, pntTines]],
+    swirl: [[11, pntSwirl], [33, pntSwirl]],
+    foam: [[13, pntFoam], [44, pntFoam]],
+    shards: [[13, pntShards], [34, pntShards]],
+    drops: [[42, pntDrops]],
+    static: [[22, pntStaticArc]],
+    cloud: [[8, pntCloud]],
+    halo: [[1, pntHalo]],
+    core: [[21, pntAbyssCore]],
+    ribbons: [[9, pntRibbons]],
+    fin: [[10, pntFin]],
+    cage: [[14, pntCage], [31, pntCage]],
+    anchor: [[41, pntAnchor]],
+    charm: [[46, pntCharm]],
+    wave: [[4, pntWave]],
+    stillring: [[6, pntStillring]],
+    dial: [[2, pntDial]],
+    maelstrom: [[5, pntMaelstrom]],
+    corallance: [[36, pntCoralLance]],
+    bolt: [[47, pntBolt]],
   };
   // the Edge traits: they make the orb the spinning Nacre Blade (drawn on their own, rotated), not parts round the pearl
   const SPIN = { crescent: 1, serrate: 1, thunder: 1 };
-  // (only: 'still' leaves the hangers out, for the cached pictures; 'hang' draws just the hangers, live, swung by sw.
-  // With no sw, a card's gentle idle sway from t)
+  // the layers of an orb's picks, the fittings among them, sorted by z (kept per set of picks)
+  const LAY = new Map();
+  function layersOf(picks) {
+    const key = picks.join(','); let L = LAY.get(key); if (L) return L;
+    const has = {}, mounts = {}, list = [];
+    for (const id of picks) { const T = TR[id]; if (!T) continue; has[T.part] = 1; if (MOUNT[T.part]) mounts[MOUNT[T.part]] = 1; }
+    const edge = picks.some(id => TR[id] && SPIN[TR[id].part]);
+    for (const k in has) if (PART[k]) for (const [z, fn] of PART[k]) list.push({ z, fn, hang: !!HANG[k] });
+    if (Object.keys(has).some(k => PART[k])) { list.push({ z: 15, fn: fittingsBack }); list.push({ z: 30, fn: fittingsFront }); }
+    list.sort((a, b) => a.z - b.z);
+    L = { has, mounts, edge, list }; if (LAY.size > 64) LAY.clear(); LAY.set(key, L); return L;
+  }
+  // every part of the picks in one layer ('back': behind the pearl; 'front'), live: each moves with t. (only: 'still'
+  // leaves out the hangers, 'hang' draws only them; sw: the hangers' pendulum, or with none a gentle idle sway from t)
   function drawOrbParts(picks, r, pal, t, layer, only, sw) {
     if (!sw) sw = swView(null, 1, t || 0);
-    for (const id of picks) { const T = TR[id]; if (!T || SPIN[T.part]) continue; const P_ = PART[T.part]; if (!P_) continue;
-      const h = !!HANG[T.part]; if ((only === 'still' && h) || (only === 'hang' && !h)) continue;
-      const L = P_[0]; if (L === 'both') { ctx.save(); P_[1](r, pal, layer === 'back'); ctx.restore(); } else if (L === layer) { ctx.save(); P_[1](r, pal, sw); ctx.restore(); } }
+    const L = layersOf(picks), back = layer === 'back', o = { t: t || 0, sw, has: L.has, mounts: L.mounts, edge: L.edge, back, end: null };
+    for (const e of L.list) { if ((e.z < 20) !== back) continue; if ((only === 'still' && e.hang) || (only === 'hang' && !e.hang)) continue; ctx.save(); e.fn(r, pal, o); ctx.restore(); }
   }
+  // one part alone (the shell burst's flying pieces)
+  function orbPart(part, r, pal, t) { const P_ = PART[part]; if (!P_) return; const o = { t, sw: swView(null, 1, t), has: {}, mounts: {}, edge: false, back: true, end: null }; for (const [z, fn] of P_) { o.back = z < 20; ctx.save(); fn(r, pal, o); ctx.restore(); } }
   function drawSpinner(picks, r, pal, spin) {
     if (!hasSpin(picks)) return;
     const ar = r * BLADE_R, lit = picks.includes('thunder'), teeth = picks.includes('serrate');
@@ -967,7 +1391,7 @@
     if (FLASH || TINT) return; const ar = r * BLADE_R;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${rgb || '190,245,235'},.22)`; ctx.lineWidth = ar * 1.6; ctx.beginPath(); ctx.arc(0, 0, ar * 1.7, spin, spin + 4.2); ctx.stroke(); ctx.restore();
   }
-  // the whole orb, at 0,0 (cards draw it straight; the street uses the cached picture below)
+  // the whole orb, at 0,0 (cards draw it straight; the street uses blitOrb below)
   // (an Edge orb's pearl is the small hub of its blades, and the other parts sit round that hub)
   function drawOrb(picks, r, pal, t, spin) {
     const hr = hasSpin(picks) ? r * HUB : r;
@@ -977,8 +1401,8 @@
     drawOrbParts(picks, hr, pal, t, 'front');
   }
   const palOf = (picks) => PAL[prof(picks).current[0] || 'pearl'];
-  // cached: the orb's still parts as pictures (the parts behind the pearl, the parts in front; redrawn only when a pick
-  // changes them), its spinning crescents, and the pearl itself, its Pattern turning, as a ring of kept frames
+  // cached: the spinning crescents and the nacre pearl as pictures, and the relic pearl, its Pattern turning, as a ring
+  // of kept frames. The parts are drawn live (they all move; each is a handful of strokes)
   const SPR = new Map(), SC = 4;
   function withCtx(g, fn) { const old = ctx; ctx = g; try { fn(); } finally { ctx = old; } }
   // (each picture is painted at about the scale it is shown at, so it is never shrunk a long way and left ragged)
@@ -987,9 +1411,9 @@
     const key = kind + picks.join(',') + '|' + r.toFixed(1) + '@' + sc;
     let c = SPR.get(key); if (c) return c;
     if (SPR.size > 36) SPR.clear();
-    const ext = r * (kind === 'spin' ? 2.8 : 3.4); c = document.createElement('canvas'); c.width = c.height = Math.max(8, Math.ceil(ext * 2 * sc)); c.ext = ext;
+    const ext = r * (kind === 'spin' ? 2.8 : 1.2) + 1; c = document.createElement('canvas'); c.width = c.height = Math.max(8, Math.ceil(ext * 2 * sc)); c.ext = ext;
     const g = c.getContext('2d'), pal = palOf(picks);
-    withCtx(g, () => { g.setTransform(sc, 0, 0, sc, ext * sc, ext * sc); if (kind === 'spin') drawSpinner(picks, r, pal, 0); else if (kind === 'nacre') nacreBody(0, 0, r, 0, 1 + Math.min(4, picks.length), pal); else drawOrbParts(picks, r, pal, 0, kind, 'still'); });
+    withCtx(g, () => { g.setTransform(sc, 0, 0, sc, ext * sc, ext * sc); if (kind === 'spin') drawSpinner(picks, r, pal, 0); else nacreBody(0, 0, r, 0, 1 + Math.min(4, picks.length), pal); });
     SPR.set(key, c); return c;
   }
   // the pearl's frames: the Pattern in it turns at 1.5 a second, both ways, so CORE_N frames go once round in CORE_P seconds
@@ -1003,24 +1427,20 @@
     CORE.set(key, c); return c;
   }
   const hasSpin = (picks) => picks.some(id => TR[id] && SPIN[TR[id].part]);
-  // (hang: whether it asks after the hangers, drawn live, or the still parts, in the cached pictures)
-  const hasLayer = (picks, layer, hang) => picks.some(id => TR[id] && PART[TR[id].part] && !SPIN[TR[id].part] && !!HANG[TR[id].part] === !!hang && (PART[TR[id].part][0] === layer || PART[TR[id].part][0] === 'both'));
   // (sw: the orb's pendulum, for its hangers; without one they sway gently on their own)
   function blitOrb(picks, x, y, r, facing, spin, alpha = 1, sw) {
-    ctx.save(); ctx.translate(x, y); if (alpha < 1) ctx.globalAlpha *= alpha; const sc = resOf();
-    const glowRgb = picks && picks.length ? palOf(picks).glow : null, edge = hasSpin(picks), hr = edge ? r * HUB : r;
+    ctx.save(); ctx.translate(x, y); if (alpha < 1) ctx.globalAlpha *= alpha; const sc = resOf(), now = performance.now() / 1000;
+    const pal = picks && picks.length ? palOf(picks) : null, glowRgb = pal ? pal.glow : null, edge = hasSpin(picks), hr = edge ? r * HUB : r;
     orbGlow(r, glowRgb); // (behind everything it is: it never covers the orb's own detail)
+    const parts = picks && picks.length && layersOf(picks).list.length, A = parts ? swView(sw, facing, now) : null;
     ctx.save(); if (facing < 0) ctx.scale(-1, 1);
+    if (parts) drawOrbParts(picks, hr, pal, now, 'back', null, A);
     if (edge) { bladeSweep(r, spin, glowRgb); const s = sprite(picks, r, 'spin', sc); ctx.save(); ctx.rotate(spin); ctx.drawImage(s, -s.ext, -s.ext, s.ext * 2, s.ext * 2); ctx.restore(); }
-    if (hasLayer(picks, 'back')) { const c = sprite(picks, hr, 'back', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
-    const hb = hasLayer(picks, 'back', 1), hf = hasLayer(picks, 'front', 1), A = hb || hf ? swView(sw, facing, performance.now() / 1000) : null;
-    if (hb) drawOrbParts(picks, hr, palOf(picks), 0, 'back', 'hang', A);
     ctx.restore();
     // (the pearl is not turned with him: its light stays at the upper left, as on the relic; an Edge orb's is the small hub)
-    const k = picks && picks.length && !V2() ? sprite(picks, hr, 'nacre', sc) : coreSprite(hr, performance.now() / 1000, sc); ctx.drawImage(k, -k.ext, -k.ext, k.ext * 2, k.ext * 2);
+    const k = picks && picks.length && !V2() ? sprite(picks, hr, 'nacre', sc) : coreSprite(hr, now, sc); ctx.drawImage(k, -k.ext, -k.ext, k.ext * 2, k.ext * 2);
     if (facing < 0) ctx.scale(-1, 1);
-    if (hasLayer(picks, 'front')) { const c = sprite(picks, hr, 'front', sc); ctx.drawImage(c, -c.ext, -c.ext, c.ext * 2, c.ext * 2); }
-    if (hf) drawOrbParts(picks, hr, palOf(picks), 0, 'front', 'hang', A);
+    if (parts) drawOrbParts(picks, hr, pal, now, 'front', null, A);
     ctx.restore();
   }
   // a soft light of its own behind the Pearl, slowly breathing: pearl-white while it is bare, its Current's colour once shaped
@@ -1063,7 +1483,7 @@
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${pal.glow},${.85 * fa})`; ctx.lineWidth = 5 * fa + 1; ctx.beginPath(); ctx.ellipse(s.x, s.y - 20, R, R * .55, 0, 0, TAU); ctx.stroke();
       ctx.strokeStyle = `rgba(255,255,255,${.8 * fa})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(s.x, s.y - 20, R * .9, R * .5, 0, 0, TAU); ctx.stroke();
       ctx.fillStyle = `rgba(${pal.glow},${.12 * fa})`; ctx.beginPath(); ctx.ellipse(s.x, s.y, R, R / 2.4, 0, 0, TAU); ctx.fill(); ctx.restore();
-      if (S.f.has('scallop') || S.f.has('coral')) { ctx.save(); ctx.globalAlpha = fa; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + s.t * 3; ctx.save(); ctx.translate(s.x + Math.cos(a) * R * .85, s.y - 20 + Math.sin(a) * R * .47); ctx.scale(.5, .5); PART[S.f.has('coral') ? 'coral' : 'scallop'][1](8, pal); ctx.restore(); } ctx.restore(); }
+      if (S.f.has('scallop') || S.f.has('coral')) { ctx.save(); ctx.globalAlpha = fa; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + s.t * 3; ctx.save(); ctx.translate(s.x + Math.cos(a) * R * .85, s.y - 20 + Math.sin(a) * R * .47); ctx.scale(.5, .5); orbPart(S.f.has('coral') ? 'coral' : 'scallop', 8, pal, s.t); ctx.restore(); } ctx.restore(); }
       return; }
     if (s.k === 'shard') { ctx.save(); ctx.translate(s.x, y); ctx.rotate(s.spin); ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(1.8, 0); ctx.lineTo(0, 3); ctx.lineTo(-1.8, 0); ctx.closePath(); ctx.fillStyle = pal.accent; ctx.fill(); stroke(OUT, .6); ctx.restore(); return; }
     ctx.save(); ctx.globalCompositeOperation = 'lighter';

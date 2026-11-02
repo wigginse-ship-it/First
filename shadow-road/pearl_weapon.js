@@ -84,6 +84,7 @@
   function reword(s, spec) { if (!s) return s; const n = TYPES[spec.type].short; return s.replace(WORDS, (w) => (w[0] === w[0].toUpperCase() ? n[0].toUpperCase() + n.slice(1) : n)); }
   const clone = (o) => JSON.parse(JSON.stringify(o));
   function buildTree(spec) {
+    if (window.PEARLM) return PEARLM.build(spec); // (each kind's own moveset: pearl_moves.js)
     const B = WEAPONS[spec.base], t = clone(B.tree), sc = spec.sc, has = spec.has;
     delete t.HC1; delete t.HC2; delete t.J7;
     if (spec.base === 'sword') { t.H = Object.assign(clone(B.charged[0]), { name: 'Overhead' }); } // (the great sword's heavy is its charge: a plain heavy for this one)
@@ -454,7 +455,7 @@
   function register(F) {
     const spec = design(F.seed, F.picks), built = buildTree(spec), B = WEAPONS[spec.base];
     WEAPONS[ID] = { name: spec.name, short: spec.noun, reach: Math.round(B.reach * built.reachK), look: ID, base: spec.base, pearl: spec, sig: built.sig,
-      parry: !!spec.sc.shell, tree: built.tree,
+      parry: !!spec.sc.shell && !built.pm, pm: !!built.pm, tree: built.tree,
       desc: `The Pearl of Judgement, reforged: a ${spec.tag}. Light + Heavy fires its ${built.sig.name}; hold Heavy for ${built.tree.HC.name}.` };
     W_SPEED[ID] = (W_SPEED[spec.base] || 1) * (spec.tmp === 'quick' ? 1.06 : spec.tmp === 'heavy' ? .95 : 1);
     TRAIL[ID] = spec.pal.trail; DEATH_BY[ID] = TYPES[spec.type].death;
@@ -484,7 +485,7 @@
   { const _pl = play; play = function (i, zone) { sync(); restoreHand(); scenePending = false; return _pl(i, zone); }; }
   // the poses: the closest weapon's own, the picture its own
   { const _pp = playerPose; playerPose = function () {
-    if (!P || P.w !== ID || !WEAPONS[ID] || !WEAPONS[ID].pearl) return _pp();
+    if (!P || P.w !== ID || !WEAPONS[ID] || !WEAPONS[ID].pearl || WEAPONS[ID].pm) return _pp(); // (its own moveset poses itself: pearl_moves.js)
     const base = WEAPONS[ID].base; let pose;
     P.w = base; P.pwProxy = true;
     try { pose = _pp(); } finally { P.w = ID; P.pwProxy = false; }
@@ -539,6 +540,7 @@
     return WEAPONS[ID];
   }
   function moveRows(W) {
+    if (window.PEARLM) return PEARLM.rows(W);
     const t = W.tree, fin = t.LLLL ? 'LLLL' : 'LLL';
     return [['Light combo', `Attack ×${fin.length}`, t[fin].name], ['Heavy', 'Heavy', t.H.name], ['Charged heavy', 'Hold Heavy, let go in the gleam', t.HC.name], ['Jump attack', 'Jump, then Heavy', t.JH ? t.JH.name : 'Air Heavy'], ['Signature', 'Light + Heavy together', W.sig.name + (W.sig.charge ? ' (hold both to gather it)' : '')]];
   }
@@ -561,7 +563,7 @@
     </style><canvas width="960" height="420"></canvas><div class="tx"><div class="kk">THE PEARL OF JUDGEMENT IS REFORGED</div><h2></h2><div class="sub"></div><ul></ul><button type="button">Take it up</button></div>`;
     app.appendChild(el);
     const cvs = el.querySelector('canvas'), g = cvs.getContext('2d'), tx = el.querySelector('.tx');
-    const W0 = { tree: buildTree(spec).tree, sig: PN.stats(picks, true) };
+    const W0 = { tree: buildTree(spec).tree, sig: PN.stats(picks, true), pearl: spec };
     tx.querySelector('h2').textContent = spec.name; tx.querySelector('.sub').textContent = `A ${spec.tag}. It is yours for good: it stays on your weapon wheel through every cycle of the road, and you glide on the Currents while it is in your hands.`;
     tx.querySelector('ul').innerHTML = moveRows(W0).map(([a, b, c]) => `<li><b>${c}</b><br><em>${a} · ${b}</em></li>`).join('');
     scene = { el, t0: performance.now() - (o.skip ? 3000 : 0), spec, picks, seed, prev, shown: false };
@@ -612,7 +614,7 @@
   const devOK = () => !!(window.DEV && DEV.active);
   function randomPicks(seed) { const r = mulberry((seed ^ 0x13579BDF) >>> 0), pk = []; for (let i = 0; i < PN.PICKS; i++) { const o = PN.offers(pk, seed); if (!o.length) break; pk.push(o[Math.floor(r() * o.length)].id); } return pk; }
   window.PEARLW = {
-    ID, TYPES, design, buildTree, randomPicks, forgeNow, openScene, drawBig, picture, spec: () => WEAPONS[ID] && WEAPONS[ID].pearl, scene: () => scene, sync, moveRows,
+    ID, TYPES, design, buildTree, randomPicks, reregister: () => { const F = forgedRec(); if (F) { register(F); sync(); } }, forgeNow, openScene, drawBig, picture, spec: () => WEAPONS[ID] && WEAPONS[ID].pearl, scene: () => scene, sync, moveRows,
     dev: {
       card() { if (!devOK()) return 'dev games only'; if (!PN.evoOn()) return 'the Pearl is not evolving (NG+, the Pearl, the switch, and not yet reforged)'; return PN.pick(null); },
       auto() { if (!devOK()) return 'dev games only'; if (!PN.evoOn()) return 'the Pearl is not evolving'; return PN.autoPick(); },
