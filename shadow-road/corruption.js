@@ -978,6 +978,25 @@
     const sv = devEl.querySelector('#cdV'), sh = devEl.querySelector('#cdH'); if (document.activeElement !== sv) sv.value = c.v; if (document.activeElement !== sh) sh.value = c.horn;
   }
   setInterval(() => { try { devHud(); } catch (e) {} }, 250);
+  // ---------------- THE CURSE METER (for testing): a bar under his health in every New Game+ game. Set SHOW_METER to
+  // false to hide it again (the curse is meant to be felt, not read)
+  const SHOW_METER = true;
+  const TIER_NAMES = ['UNTOUCHED', 'WHISPERS', 'TAINT', 'BLIGHT', 'CONSUMED'], HORN_NAMES = ['', 'SOUR', 'TURNING', 'TURNED', 'BLACK'];
+  let meterEl = null;
+  function meter() {
+    const show = SHOW_METER && NG() && (mode === 'play' || mode === 'pause');
+    if (!show) { if (meterEl) meterEl.hidden = true; return; }
+    if (!meterEl) { const bars = document.querySelector('.hud-l .bars'); if (!bars) return;
+      meterEl = document.createElement('div'); meterEl.id = 'curseMeter'; meterEl.style.cssText = 'margin:3px 0 1px;pointer-events:none;font:700 8px/1.1 sans-serif;letter-spacing:.08em;color:#D8B8D0;filter:drop-shadow(0 1px 1px #000)';
+      meterEl.innerHTML = '<div style="position:relative;height:6px;width:min(150px,30vw);background:rgba(20,10,24,.75);border:1px solid #6A4A6A;border-radius:3px;overflow:hidden"><div id="cmFill" style="height:100%;width:0;background:linear-gradient(90deg,#7A5A8A,#A03050,#200810)"></div>' +
+        TIERS.map(x => `<div style="position:absolute;top:0;bottom:0;left:${x}%;width:1px;background:rgba(255,255,255,.35)"></div>`).join('') + '</div><div id="cmTxt" style="margin-top:1px"></div>';
+      bars.appendChild(meterEl); }
+    meterEl.hidden = false;
+    const c = CS(), t = tier(), hs = hornSt();
+    meterEl.querySelector('#cmFill').style.width = c.v.toFixed(1) + '%';
+    meterEl.querySelector('#cmTxt').textContent = `CURSE ${Math.round(c.v)} · ${TIER_NAMES[t]}${hs ? ' · HORN ' + HORN_NAMES[hs] : ''}`;
+  }
+  setInterval(() => { try { meter(); } catch (e) {} }, 250);
 
   window.CURSE = {
     TIERS, TIER_NAME, HORN_ST, HIGH_END, RESIDUE, HORN_KEEP, WT, CURSED_VERSE, MASKS, WCURSE, ACURSE,
