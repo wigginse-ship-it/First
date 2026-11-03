@@ -118,9 +118,10 @@
   function statsOf(picks) {
     const p = { pow: 0, spd: 0, rch: 0, crit: 0, imp: 0, grd: 0, flow: 0, win: 0 };
     for (const id of picks || []) { const t = TRAIT_STATS[id]; if (t) for (const s in t) p[s] += t[s]; }
-    return { p, pow: 1 + .045 * p.pow, spd: Math.max(.78, 1 - .025 * p.spd), rch: 1 + .035 * p.rch, crit: .015 * p.crit, imp: 1 + .07 * p.imp, grd: Math.max(.6, 1 - .035 * p.grd), flow: .05 * p.flow, win: .05 * p.win };
+    return { p, pow: 1 + .065 * p.pow, spd: Math.max(.74, 1 - .032 * p.spd), rch: 1 + .04 * p.rch, crit: .022 * p.crit, imp: 1 + .08 * p.imp, grd: Math.max(.55, 1 - .045 * p.grd), flow: .06 * p.flow, win: .06 * p.win };
   }
   const stat = () => (SPEC() && SPEC().stats) || statsOf([]);
+  const FORGED_K = 1.45; // the reforged Pearl is the last weapon of the run, and it should feel it: every blow of its moveset (its own things included) lands 45% harder than its numbers
   const pct = (v) => Math.round(v * 100);
   function statLines(st) {
     const out = [];
@@ -190,7 +191,7 @@
   // Power and Impact on every blow of the moveset (its own things included); the kind hears of each blow that lands
   { const _st = strike; strike = function (e, base, dir, m, echo) {
     const ours = m && m.pm && mine(); let mm = m;
-    if (ours) { const st = stat(); base *= st.pow; if (st.imp !== 1) mm = Object.assign({}, m, { kb: (m.kb || 0) * st.imp, launch: m.launch ? m.launch * (1 + (st.imp - 1) * .5) : m.launch }); }
+    if (ours) { const st = stat(); base *= st.pow * FORGED_K; if (st.imp !== 1) mm = Object.assign({}, m, { kb: (m.kb || 0) * st.imp, launch: m.launch ? m.launch * (1 + (st.imp - 1) * .5) : m.launch }); }
     const hp0 = e ? e.hp : 0; _st(e, base, dir, mm, echo);
     if (ours && e && (e.hp < hp0 || e.dead)) { const T = TY[m.pm]; if (T && T.onHit) T.onHit(e, m, base, dir); } }; }
   { const _cc = critChance; critChance = function (e) { const c = _cc(e); return mine() ? Math.min(.6, c + stat().crit) : c; }; }
