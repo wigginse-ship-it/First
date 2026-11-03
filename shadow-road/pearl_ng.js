@@ -721,8 +721,8 @@
       if (big) { const nx = P.x - e.x || -Math.sign(CUR.vx) || 1, ny = (P.y - e.y) * 2, nd = Math.hypot(nx, ny) || 1, ux = nx / nd, uy = ny / nd, vyE = CUR.vy / T.YK, dot = CUR.vx * ux + vyE * uy;
         if (dot < 0) { CUR.vx = (CUR.vx - 2 * dot * ux) * T.bounce; CUR.vy = (vyE - 2 * dot * uy) * T.bounce * T.YK; P.x = e.x + ux * (e.hw + 13); bounceFx(P.x, P.y, Math.sign(ux) || 1); } }
       if (!cool(CUR.cd, e, .4)) continue;
-      const q = clamp((sE - 200) / 240, .25, 1.4), d = Math.max(1, Math.round((5 + 12 * q) * W() * (e.boss ? .6 : 1))), dir = Math.sign(CUR.vx) || P.facing;
-      strike(e, d, dir, { dmg: d, kb: 120 + sE * .55, launch: sE > 480 ? 160 : 0, power: sE > 480 ? 1 : 0, el: 1, current: 1, pearl: 1, wall: sE > 480 ? 1 : 0 }, true);
+      const q = clamp((sE - 200) / 240, .25, 1.4), d = Math.max(1, Math.round((5 + 12 * q) * W() * (e.boss ? .6 : 1) * (forged() ? 1.8 : 1))), dir = Math.sign(CUR.vx) || P.facing;
+      strike(e, d, dir, { dmg: d, kb: (120 + sE * .55) * (forged() ? 1.2 : 1), launch: sE > 480 ? 160 : 0, power: sE > 480 ? 1 : 0, el: 1, current: 1, pearl: 1, wall: sE > 480 ? 1 : 0 }, true);
       if (!big && !e.boss) { CUR.vx *= .9; CUR.vy *= .9; }
       bub(e.x, e.y, 20, 4, 60);
     }
