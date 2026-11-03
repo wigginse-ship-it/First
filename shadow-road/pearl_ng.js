@@ -172,7 +172,7 @@
   // THE THROW'S WEIGHT. Each leg (out, and back) is meant to land about like one of his charged heavies at this point of
   // the road: a charged heavy is about REF times the weapon's tempering (wMult), so the throw is REF times the best tempering
   // among his weapons (fists in hand do not make it weak), grown with the choices from 58% (a bare speck) to 100% (five),
-  // 115% once reforged, and shaped by the Temper. Bosses take half, as they shrug off arrows.
+  // 115% once reforged, and shaped by the Temper. Bosses take the same as anything else.
   const REF = 16; // (toned down from 53: no foe is felled by one throw, out and back, even full grown; it wears them down)
   const wBest = () => { let m = 1; if (typeof wMult === 'function' && save && save.owned) for (const id in save.owned) if (save.owned[id] && id !== 'fists' && save.wl[id]) m = Math.max(m, wMult(id)); return m; };
   const legDmg = (S, mul = 1) => REF * wBest() * S.dmgK * mul;
@@ -325,7 +325,7 @@
       if (set.has(e) || (!back && !ahead(e)) || !touches(e, th.x, th.y, th.z, reach)) continue;
       set.add(e); const dir = back ? -th.dir : th.dir;
       hitFoe(th, e, dir, 1, S.form === 'orb' ? { kb: 260 * S.kb, launch: 120, wall: 1 } : S.straight ? { kb: 220 * S.kb, wall: 1 } : { kb: 190 * S.kb });
-      if (S.rehit) echoes.push({ e, dmg: Math.max(1, Math.round(th.dmg * .4 * (e.boss ? .5 : 1))), dir, m: { dmg: 1, kb: 40, power: 0, el: 1, pearl: 1 }, t: S.rehit });
+      if (S.rehit) echoes.push({ e, dmg: Math.max(1, Math.round(th.dmg * .4)), dir, m: { dmg: 1, kb: 40, power: 0, el: 1, pearl: 1 }, t: S.rehit });
       sparkle(e.x, e.y, e.z + e.hh * .5, 6, palCols(S));
     }
   }
@@ -339,7 +339,7 @@
   }
   // a foe struck by the Pearl: a real blow (it can crit), then what the Current does
   function hitFoe(s, e, dir, mul = 1, extra) {
-    const S = s.S, d = Math.max(1, Math.round(s.dmg * mul * (e.boss ? (s.k === 'throw' ? .5 : .6) : 1))), hp0 = e.hp;
+    const S = s.S, d = Math.max(1, Math.round(s.dmg * mul)), hp0 = e.hp;
     strike(e, d, dir, Object.assign({ dmg: d, el: 1, pearl: 1, pform: S.form || 'speck', pcur: S.cur || null, kb: 170 * S.kb, power: s.k === 'shard' ? 0 : S.power, perfect: s.perfect ? 1 : 0, launch: 0, wall: S.power >= 2 ? 1 : 0 }, extra), true);
     if (e.hp < hp0 || e.dead) { procs(s, e, d, dir); return true; }
     return false;
@@ -384,7 +384,7 @@
   }
   function anchorShock(x, y, d, dir, not) {
     fx.push({ kind: 'ring', x, y, z: 2, t: .35, max: .35, r: 70, col: '#F2D68A', flat: 1 }); shakeMag = Math.max(shakeMag, 4); sfx('slam', .4);
-    for (const o of foes()) if (o !== not && Math.hypot(o.x - x, (o.y - y) * 2) < 64 + o.hw && o.z < 50) { const q = Math.max(1, Math.round(d * .5 * (o.boss ? .6 : 1))); strike(o, q, Math.sign(o.x - x) || dir, { dmg: q, kb: 160, launch: 220, power: 1, el: 1, pearl: 1 }, true); }
+    for (const o of foes()) if (o !== not && Math.hypot(o.x - x, (o.y - y) * 2) < 64 + o.hw && o.z < 50) { const q = Math.max(1, Math.round(d * .5)); strike(o, q, Math.sign(o.x - x) || dir, { dmg: q, kb: 160, launch: 220, power: 1, el: 1, pearl: 1 }, true); }
   }
   function addPool(x, y, d, S) {
     O.pools.push({ x, y, t: 0, max: 1.7, r: 46 * Math.sqrt(S.size), tick: .15, d: Math.max(1, Math.round(d * .16)), pal: S.pal });
@@ -393,7 +393,7 @@
   function poolsStep(dt) {
     for (const p of O.pools) { p.t += dt; p.tick -= dt;
       for (const e of foes()) { if (e.boss) continue; const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy * 2); if (d < p.r * 1.9 && d > 6) { e.x += dx / d * 110 * dt; e.y += Math.sign(dy) * Math.min(Math.abs(dy), 40 * dt); } }
-      if (p.tick <= 0) { p.tick = .3; for (const e of foes()) if (Math.hypot(e.x - p.x, (e.y - p.y) * 2) < p.r + e.hw && e.z < 40) nick(e, e.boss ? Math.max(1, Math.round(p.d * .6)) : p.d, Math.sign(e.x - p.x) || 1); }
+      if (p.tick <= 0) { p.tick = .3; for (const e of foes()) if (Math.hypot(e.x - p.x, (e.y - p.y) * 2) < p.r + e.hw && e.z < 40) nick(e, p.d, Math.sign(e.x - p.x) || 1); }
       if (Math.random() < dt * 14) bub(p.x + rand(-p.r, p.r) * .6, p.y, 4, 1, 20); }
     O.pools = O.pools.filter(p => p.t < p.max);
   }
@@ -421,7 +421,7 @@
     if (s.k === 'burst') {
       const R = s.R * sm(s.t / (s.max * .7));
       for (const e of foes()) if (!s.hit.has(e) && Math.hypot(e.x - s.x, (e.y - s.y) * 2) < R + e.hw && e.z < 100) { s.hit.set(e, s.t); const d = legDmg(S, .6);
-        const hp0 = e.hp, q = Math.max(1, Math.round(d * (e.boss ? .5 : 1))); strike(e, q, Math.sign(e.x - s.x) || P.facing, { dmg: q, kb: 300 * S.kb, power: Math.max(1, S.power), el: 1, pearl: 1 }, true);
+        const hp0 = e.hp, q = Math.max(1, Math.round(d)); strike(e, q, Math.sign(e.x - s.x) || P.facing, { dmg: q, kb: 300 * S.kb, power: Math.max(1, S.power), el: 1, pearl: 1 }, true);
         if ((e.hp < hp0 || e.dead) && S.f.has('coral') && !e.dead && !e.boss) { e.state = 'hurt'; e.t = Math.max(e.t, .5); e.plan = null; } }
       for (const p of projs) if (p.owner === 'e' && !p.ground && !p.orbit && Math.hypot(p.x - s.x, (p.y - s.y) * 2) < R + 10) turnShot(p, S, S.f.has('scallop'));
       if (s.t >= s.max) s.dead = true;
@@ -447,7 +447,7 @@
     fx.push({ kind: 'ring', x: P.x, y: P.y, z: P.z + 46, t: .22, max: .22, r: 44, col: '#FFF4D0' });
     if (S.f.has('heldthunder')) { const fx0 = P.x + P.facing * 120;
       for (const e of near(fx0, P.y, 170).slice(0, 6)) { fx.push({ kind: 'bolt', x: e.x + rand(-16, 16), y: e.y, z: e.z + 240, x2: e.x, y2: e.y, z2: e.z + e.hh * .5, t: .3, max: .3, col: '#FFF2C0', seed: Math.random() * 99 });
-        const q = Math.max(1, Math.round(legDmg(S, .7) * (e.boss ? .5 : 1))); strike(e, q, Math.sign(e.x - P.x) || P.facing, { dmg: q, kb: 120, launch: 260, power: 2, el: 1, pearl: 1 }, true); }
+        const q = Math.max(1, Math.round(legDmg(S, .7))); strike(e, q, Math.sign(e.x - P.x) || P.facing, { dmg: q, kb: 120, launch: 260, power: 2, el: 1, pearl: 1 }, true); }
       sfx('shoot'); shakeMag = Math.max(shakeMag, 6); }
   }
   const BUSY = ['hurt', 'down', 'dead'];
