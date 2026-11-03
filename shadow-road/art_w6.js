@@ -89,16 +89,34 @@
     ctx.restore();
   }
   // a crutch of the dream: a forked prop of turned wood, its fork padded with a cushion
+  const occlude6 = (x, y, r, a = .4) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(90,50,40,${a})`); g.addColorStop(1, 'rgba(90,50,40,0)'); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
   function crutchShape(x0, y0, x1, y1, w = 3, fork = 9) {
     const a = Math.atan2(y1 - y0, x1 - x0), nx = -Math.sin(a), ny = Math.cos(a), L = Math.hypot(x1 - x0, y1 - y0), mx = x0 + (x1 - x0) * .62, my = y0 + (y1 - y0) * .62;
+    const big = w >= 5 && DET(), P = (u, o = 0) => [x0 + (x1 - x0) * u + nx * o, y0 + (y1 - y0) * u + ny * o]; // (the boss's own crutches get the fine work)
     ctx.lineCap = 'round';
-    ctx.strokeStyle = WOODD; ctx.lineWidth = w + 1.6; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(mx, my); ctx.stroke();
-    ctx.strokeStyle = WOOD; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(mx, my); ctx.stroke();
-    ctx.strokeStyle = WOODL; ctx.lineWidth = w * .3; ctx.beginPath(); ctx.moveTo(x0 + nx * w * .25, y0 + ny * w * .25); ctx.lineTo(mx + nx * w * .25, my + ny * w * .25); ctx.stroke();
-    for (const s of [-1, 1]) { const ex = x1 + nx * s * fork, ey = y1 + ny * s * fork; ctx.strokeStyle = WOODD; ctx.lineWidth = w * .8 + 1.4; ctx.beginPath(); ctx.moveTo(mx, my); ctx.quadraticCurveTo(mx + (x1 - mx) * .5 + nx * s * fork * .3, my + (y1 - my) * .5 + ny * s * fork * .3, ex, ey); ctx.stroke(); ctx.strokeStyle = WOOD; ctx.lineWidth = w * .8; ctx.stroke(); }
-    ctx.strokeStyle = WOODD; ctx.lineWidth = w * .9 + 1.4; ctx.beginPath(); ctx.moveTo(x1 + nx * fork * 1.1, y1 + ny * fork * 1.1); ctx.lineTo(x1 - nx * fork * 1.1, y1 - ny * fork * 1.1); ctx.stroke(); // the crosspiece
-    ctx.strokeStyle = '#C8B8A0'; ctx.lineWidth = w * 1.5; ctx.stroke(); ctx.strokeStyle = '#F2E6D0'; ctx.lineWidth = w * .5; ctx.stroke(); // its cushion
-    ctx.fillStyle = '#3A2A20'; ell(x0, y0, w * .9, w * .4); ctx.fill(); // the rubber foot
+    ctx.strokeStyle = C(WOODD); ctx.lineWidth = w + 1.6; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(mx, my); ctx.stroke();
+    ctx.strokeStyle = C(WOOD); ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(mx, my); ctx.stroke();
+    if (big) { // turned ash: a shadowed flank, the grain running along it, a polish worn bright where hands have held it
+      ctx.strokeStyle = 'rgba(60,34,18,.45)'; ctx.lineWidth = w * .35; ctx.beginPath(); ctx.moveTo(...P(0, -w * .3)); ctx.lineTo(...P(.62, -w * .3)); ctx.stroke();
+      ctx.strokeStyle = 'rgba(70,40,20,.5)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 4; i++) { const o = (i - 1.5) * w * .2, u0 = .06 + hsh(i + x0) * .1, u1 = .5 + hsh(i * 3 + y0) * .1, k = .2 + i * .1; ctx.moveTo(...P(u0, o)); ctx.quadraticCurveTo(...P((u0 + u1) / 2, o + w * .12), ...P(u1, o)); if (i % 2) { ctx.moveTo(...P(k, o)); ctx.quadraticCurveTo(...P(k + .02, o + w * .14), ...P(k + .045, o)); } } ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,236,200,.55)'; ctx.lineWidth = w * .18; ctx.beginPath(); ctx.moveTo(...P(.08, w * .28)); ctx.lineTo(...P(.58, w * .28)); ctx.stroke();
+    } else { ctx.strokeStyle = C(WOODL); ctx.lineWidth = w * .3; ctx.beginPath(); ctx.moveTo(x0 + nx * w * .25, y0 + ny * w * .25); ctx.lineTo(mx + nx * w * .25, my + ny * w * .25); ctx.stroke(); }
+    for (const s of [-1, 1]) { const ex = x1 + nx * s * fork, ey = y1 + ny * s * fork; ctx.strokeStyle = C(WOODD); ctx.lineWidth = w * .8 + 1.4; ctx.beginPath(); ctx.moveTo(mx, my); ctx.quadraticCurveTo(mx + (x1 - mx) * .5 + nx * s * fork * .3, my + (y1 - my) * .5 + ny * s * fork * .3, ex, ey); ctx.stroke(); ctx.strokeStyle = C(WOOD); ctx.lineWidth = w * .8; ctx.stroke();
+      if (big) { ctx.strokeStyle = s > 0 ? 'rgba(255,232,196,.45)' : 'rgba(60,34,18,.35)'; ctx.lineWidth = w * .2; ctx.stroke(); } }
+    if (big) { // the hand-grip across the fork, a wing nut through it, and a brass ferrule where the fork meets the shaft
+      const [gx, gy] = P(.8), gs = fork * .62; ctx.strokeStyle = C(WOODD); ctx.lineWidth = w * .7 + 1.4; ctx.beginPath(); ctx.moveTo(gx + nx * gs, gy + ny * gs); ctx.lineTo(gx - nx * gs, gy - ny * gs); ctx.stroke(); ctx.strokeStyle = C('#B08050'); ctx.lineWidth = w * .7; ctx.stroke();
+      ctx.fillStyle = C('#9A9AA2'); circle(gx + nx * gs, gy + ny * gs, w * .32); ctx.fill(); outline(.8); circle(gx - nx * gs, gy - ny * gs, w * .32); ctx.fill(); outline(.8);
+      const [fx, fy] = P(.6), [bx, by] = P(.64); ctx.strokeStyle = C('#7A5A24'); ctx.lineWidth = w + 2.4; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(bx, by); ctx.stroke(); ctx.strokeStyle = C('#D8B060'); ctx.lineWidth = w + .8; ctx.stroke(); ctx.lineCap = 'round';
+      ctx.fillStyle = 'rgba(255,248,220,.8)'; circle(...P(.62, w * .3), w * .14); ctx.fill(); }
+    ctx.strokeStyle = C(WOODD); ctx.lineWidth = w * .9 + 1.4; ctx.beginPath(); ctx.moveTo(x1 + nx * fork * 1.1, y1 + ny * fork * 1.1); ctx.lineTo(x1 - nx * fork * 1.1, y1 - ny * fork * 1.1); ctx.stroke(); // the crosspiece
+    ctx.strokeStyle = C('#C8B8A0'); ctx.lineWidth = w * 1.5; ctx.stroke(); ctx.strokeStyle = C('#F2E6D0'); ctx.lineWidth = w * .5; ctx.stroke(); // its cushion
+    if (big) { // the cushion's leather, stitched round, a dent where the weight bears on it
+      ctx.save(); ctx.translate(x1, y1); ctx.rotate(a);
+      ctx.strokeStyle = 'rgba(120,96,70,.6)'; ctx.lineWidth = .7; ctx.setLineDash([1.6, 1.4]); ctx.beginPath(); ctx.moveTo(-w * .55, -fork); ctx.lineTo(-w * .55, fork); ctx.moveTo(w * .55, -fork); ctx.lineTo(w * .55, fork); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(110,80,56,.3)'; ell(w * .3, 0, w * .4, fork * .5); ctx.fill(); ctx.restore(); }
+    ctx.fillStyle = C('#3A2A20'); ell(x0, y0, w * .9, w * .4); ctx.fill(); // the rubber foot
+    if (big) { const [rx, ry] = P(.035); ctx.strokeStyle = C('#2A1E16'); ctx.lineWidth = w * 1.25; ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(rx, ry); ctx.stroke(); ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(160,140,130,.5)'; ctx.lineWidth = .8; ctx.beginPath(); for (const u of [.012, .024]) { ctx.moveTo(...P(u, -w * .6)); ctx.lineTo(...P(u, w * .6)); } ctx.stroke(); } // its rubber shoe, ribbed
     return L;
   }
   // a soft watch, draped over an edge: its face slumps and runs; s scale, droop how far it has run (0..1), lean its tilt
@@ -1007,7 +1025,8 @@
   // ======================================================================================================
   const HS = .74; // (it is drawn at this fraction of its painted size)
   const NOX = {};
-  const SLEEP_ANCHORS = [[-86, -26], [86, -26], [-30, 2], [34, 4]].map(([x, y]) => [x * HS, y * HS]); // where the crutches hold it up (local, before its size)
+  const RAW_ANCH = [[-86, -26], [86, -26], [-30, 2], [34, 4]];
+  const SLEEP_ANCHORS = RAW_ANCH.map(([x, y]) => [x * HS, y * HS]); // where the crutches hold it up (local, before its size)
   function sleeperHead(o) {
     const t = o.t || 0, sag = o.sag || 0, eyes = o.eyes || 0, mo = o.mouth || 0, mood = o.mood || 0, look = o.look || 0;
     // its expression (sleeperFace below blends these; each 0..1, lid 1 = as open as `eyes` says)
@@ -1036,11 +1055,18 @@
       ctx.strokeStyle = 'rgba(255,240,224,.5)'; ctx.lineWidth = 1; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(...S(s * 20, -64)); ctx.quadraticCurveTo(...S(s * 42, -48), ...S(s * 46, -26)); ctx.stroke(); }
       const rw = Math.min(1, xv('raise') + xv('raiseR') * .5 + xv('panic')); // (raised brows ruck the forehead up)
       for (let i = 0; i < 4; i++) { ctx.strokeStyle = `rgba(150,100,80,${.25 + rw * .35})`; ctx.lineWidth = 1 + rw * .6; ctx.beginPath(); ctx.moveTo(-40 - rw * 8, -132 + i * (4 + rw * 1.5)); ctx.quadraticCurveTo(0, -136 + i * (4 + rw * 1.5) - mood * 2 - rw * 4 + xv('knit') * 3, 40 + rw * 8, -132 + i * (4 + rw * 1.5)); ctx.stroke(); } // the brow's wrinkles
+      // a glossy forehead and a soft bounce of cool light from the quilt up under its jowls
+      { const g = ctx.createRadialGradient(-34, -128, 2, -34, -128, 34); g.addColorStop(0, 'rgba(255,252,240,.5)'); g.addColorStop(1, 'rgba(255,252,240,0)'); ctx.fillStyle = g; ctx.fillRect(-70, -164, 72, 72); }
+      ctx.fillStyle = 'rgba(255,255,250,.55)'; ell(-38, -134, 9, 3.2, -.25); ctx.fill();
+      { const [, by] = S(0, 16), g = ctx.createLinearGradient(0, by - 22, 0, by); g.addColorStop(0, 'rgba(170,180,236,0)'); g.addColorStop(1, 'rgba(170,180,236,.3)'); ctx.fillStyle = g; ctx.fillRect(-130, by - 22, 260, 24); }
+      // where its crutches bear up into it: the soft flesh dimpled round each cushion
+      for (const i of o.props || []) { const [ax, ay] = S(...RAW_ANCH[i]); const g = ctx.createRadialGradient(ax, ay - 2, 1, ax, ay - 2, 20); g.addColorStop(0, 'rgba(110,60,50,.42)'); g.addColorStop(.6, 'rgba(120,70,55,.14)'); g.addColorStop(1, 'rgba(120,70,55,0)'); ctx.fillStyle = g; ctx.fillRect(ax - 20, ay - 22, 40, 40);
+        ctx.strokeStyle = 'rgba(255,240,224,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(ax, ay + 4, 15, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
     } });
     // a few long hairs, lifting in a breeze from nowhere
     if (DET()) { ctx.strokeStyle = 'rgba(70,50,40,.55)'; ctx.lineWidth = .8; for (let i = 0; i < 7; i++) { const x = -40 + i * 13, y = -150 + Math.abs(i - 3) * 1.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6 + Math.sin(t * 1.3 + i) * 4, y - 10, x + 14 + Math.sin(t * 1.1 + i) * 6, y - 8 - i % 3 * 3); ctx.stroke(); } }
-    // its ears
-    for (const s of [-1, 1]) { const [ex, ey] = S(s * 106, -80); ctx.save(); ctx.translate(ex, ey); ctx.scale(s, 1); cel(PB([0, -14, 10, -16, 14, -2, 10, 14, 2, 16, -2, 0]), '#DDB48C', { d: 2, r: 1, w: 1.6, dark: '#A87A5A' }); if (DET()) { ctx.strokeStyle = 'rgba(120,70,50,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5, 0, 6, -1.4, 1.4); ctx.stroke(); } ctx.restore(); }
+    // its ears (the light coming red through them, their roots in shade)
+    for (const s of [-1, 1]) { const [ex, ey] = S(s * 106, -80); ctx.save(); ctx.translate(ex, ey); ctx.scale(s, 1); cel(PB([0, -14, 10, -16, 14, -2, 10, 14, 2, 16, -2, 0]), '#DDB48C', { d: 2, r: 1, w: 1.6, dark: '#A87A5A', tex: () => { const g = ctx.createRadialGradient(8, 0, 1, 8, 0, 13); g.addColorStop(0, 'rgba(236,110,90,.4)'); g.addColorStop(1, 'rgba(236,110,90,0)'); ctx.fillStyle = g; ctx.fillRect(-4, -16, 22, 32); occlude6(0, 0, 7, .3); } }); if (DET()) { ctx.strokeStyle = 'rgba(120,70,50,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5, 0, 6, -1.4, 1.4); ctx.stroke(); } ctx.restore(); }
     // its brows, and its eyes
     const knit = xv('knit'), squint = xv('squint'), arc = xv('arc'), rem = xv('rem'), panic = xv('panic');
     // (the knot between its brows when it frowns)
@@ -1204,7 +1230,7 @@
     const S = e.w6S || {}; ctx.scale(HS, HS); if (e.state === 'w6act' && e.flash <= 0) W6.skipHatch = true;
     // (its expression now carries the feeling; the rule's old mood is kept only as a faint tint)
     const X = sleeperFace(e, a, t);
-    sleeperHead({ t, sag: S.sag || 0, eyes: S.eyes || 0, mouth: (S.mouth || 0) * (1 - Math.min(1, (X.purse || 0) + (X.puff || 0) + (X.grit || 0))), mood: (S.mood || 0) * .3, look: S.look || 0, flush: Math.min(1, (S.flush || 0) + (X.grit || 0) * .4 + (X.vein || 0) * .5), drool: S.drool || 0, X });
+    sleeperHead({ t, sag: S.sag || 0, eyes: S.eyes || 0, mouth: (S.mouth || 0) * (1 - Math.min(1, (X.purse || 0) + (X.puff || 0) + (X.grit || 0))), mood: (S.mood || 0) * .3, look: S.look || 0, flush: Math.min(1, (S.flush || 0) + (X.grit || 0) * .4 + (X.vein || 0) * .5), drool: S.drool || 0, X, props: (e.phase || 1) === 1 && W6.B && W6.B.crutches ? W6.B.crutches.filter(c => !c.dead && c.state !== 'enter' && c.w6i !== undefined).map(c => c.w6i) : null });
   };
   W6.sleeperHead = sleeperHead; W6.sleeperFace = sleeperFace; W6.HS = HS; W6.snoreZs = snoreZs; W6.ANCH = SLEEP_ANCHORS;
 

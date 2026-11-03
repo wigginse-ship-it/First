@@ -955,6 +955,29 @@
     if (DET()) { ctx.strokeStyle = 'rgba(140,110,180,.45)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(s.R[2], s.R[3]); for (let k = 4; k < s.R.length - 2; k += 2) ctx.lineTo(s.R[k], s.R[k + 1]); ctx.stroke(); }
   }
   function wisps(list, t) { for (let i = 0; i < list.length; i += 4) smokeTongue(list[i], list[i + 1], list[i + 2], list[i + 3], -list[i + 2] * .6, t, i); }
+  // locks of fur laid over a body: each a tapered, slightly bent stroke from its root along angle a; all of them in one dark
+  // pass and their tips caught by the light in a second (two fills however many locks). list: [x, y, a, L, w, ...]
+  function furLocks(list, dark, lit, bend = .25) {
+    if (!DET()) return;
+    for (const [col, k0] of [[dark, 0], [lit, .45]]) {
+      ctx.fillStyle = col; ctx.beginPath();
+      for (let i = 0; i < list.length; i += 5) {
+        const x = list[i], y = list[i + 1], a = list[i + 2], L = list[i + 3], w = list[i + 4], ca = Math.cos(a), sa = Math.sin(a), bx = x + ca * L * k0, by = y + sa * L * k0, ww = w * (1 - k0 * .9);
+        const tx = x + ca * L - sa * L * bend * .3, ty = y + sa * L + ca * L * bend * .3, mx = (bx + tx) / 2 - sa * L * bend * .2, my = (by + ty) / 2 + ca * L * bend * .2;
+        ctx.moveTo(bx - sa * ww, by + ca * ww); ctx.quadraticCurveTo(mx - sa * ww * .6, my + ca * ww * .6, tx, ty); ctx.quadraticCurveTo(mx + sa * ww * .4, my - ca * ww * .4, bx + sa * ww, by - ca * ww); ctx.closePath();
+      }
+      ctx.fill();
+    }
+  }
+  // a field of locks scattered over a box (stable: hashed from seed), all lying along angle a
+  function lockField(n, seed, x0, y0, w, h, a, L, wd) {
+    const out = []; for (let i = 0; i < n; i++) out.push(x0 + hsh(i * 1.37 + seed) * w, y0 + hsh(i * 2.71 + seed + 5) * h, a + (hsh(i * 4.1 + seed) - .5) * .5, L * (.65 + hsh(i * 3.3 + seed) * .7), wd);
+    return out;
+  }
+  // soft occlusion: a dark pool where two masses meet (inside a clip)
+  function occlude(x, y, r, a = .5, rgb = '0,0,0') { if (!DET()) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
+  // a form turned in light: lit along its top edge, falling into shade toward its underside (inside a clip)
+  function volume(y0, y1, x0, x1, lit, dark) { if (!DET()) return; const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, lit); g.addColorStop(.45, 'rgba(0,0,0,0)'); g.addColorStop(1, dark); ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); }
   // ---------------------------------------------------------------- the shadow-wolf
   function tyWolf(e, a, t) {
     const st = e.state, plan = e.plan, wind = a.wind || 0, ph = a.walk || 0, moving = ph ? 1 : 0;
@@ -969,7 +992,9 @@
     // the tail: a long plume of fur that frays into smoke
     const tw = Math.sin(t * 1.6) * 4;
     wisps([-74, B - 4 + tw * 1.3, 14, 5, -66, B - 8 + tw, 12, 4], t);
-    cel(furPath([-44, B - 6, -58, B - 12 + tw * .6, -72, B - 8 + tw * 1.2, -80, B + 2 + tw * 1.4, -70, B + 4 + tw, -56, B + 4 + tw * .4, -46, B + 6], 5, 3), TY.fur, { d: 3, r: 1.4, w: 1.6, dark: TY.furDk, lite: TY.furLit });
+    cel(furPath([-44, B - 6, -58, B - 12 + tw * .6, -72, B - 8 + tw * 1.2, -80, B + 2 + tw * 1.4, -70, B + 4 + tw, -56, B + 4 + tw * .4, -46, B + 6], 5, 3), TY.fur, { d: 3, r: 1.4, w: 1.6, dark: TY.furDk, lite: TY.furLit, tex: () => {
+      const L = []; for (let i = 0; i < 7; i++) { const u = i / 6; L.push(-46 - u * 28, B - 4 + tw * u * 1.2 - (i % 2) * 3, Math.PI - .1 + (i % 2) * .2, 12, 2); } furLocks(L, 'rgba(6,3,10,.5)', 'rgba(140,112,190,.5)'); // the plume combed back in locks
+    } });
     const leg = (front, off, far) => { // long sinewy legs: the fore straight as columns, the hind bent at the hock; bone claws
       const s = Math.sin(ph + off) * moving, lift = Math.max(0, Math.cos(ph + off)) * 6 * moving, col = far ? '#0E0914' : TY.fur;
       const hx = front ? 18 : -34, hy = B + (front ? 6 : 2);
@@ -979,22 +1004,39 @@
       else { k = [hx + 10 + s * 5, hy + 20 - crouch * 3]; w = [hx - 6 + s * 9, -14 - lift + crouch * 5]; p = [hx - 1 + s * 11, -1.5 - lift]; }
       if (down) { k = [hx + (front ? 10 : -10), hy + 14]; w = [hx + (front ? 24 : -24), -4]; p = [hx + (front ? 32 : -30), -1]; }
       seg(hx, hy, k[0], k[1], front ? 20 : 26, 11, col, 4); seg(k[0], k[1], w[0], w[1], 10, 7, col, 1); seg(w[0], w[1], p[0], p[1], 7.4, 7, col, 0);
+      if (DET()) { // the light along the front of the leg, and the fur feathering off the back of the joints
+        ctx.strokeStyle = far ? 'rgba(80,60,112,.45)' : 'rgba(156,128,212,.6)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(hx + 6, hy + 2); ctx.quadraticCurveTo((hx + k[0]) / 2 + 7, (hy + k[1]) / 2, k[0] + 3.6, k[1]); ctx.lineTo(w[0] + 2.6, w[1] - 1); ctx.stroke();
+        const ba = front ? 2.0 : 2.4; furLocks([k[0] - 3, k[1] - 4, ba, 8, 2.2, k[0] - 3, k[1] + 1, ba + .2, 6, 1.8], far ? '#08050C' : '#120C1A', far ? 'rgba(60,46,86,.5)' : 'rgba(120,96,164,.55)', .5);
+      }
       cel(PB([p[0] - 6, p[1] - 2, p[0], p[1] - 5, p[0] + 7, p[1] - 3, p[0] + 9, p[1] + 1.4, p[0] - 6, p[1] + 1.4]), far ? '#08060C' : '#160E1C', { d: 1.4, r: .7, w: 1.2, lite: TY.furLit });
       for (let c = 0; c < 3; c++) horn(p[0] + 6 + c * .4, p[1] - 3 + c * 1.6, p[0] + 10, p[1] - 2 + c * 1.5, p[0] + 12.5 + c * .3, p[1] + 1.3 + c * .2, 2.4, .3, far ? '#9A8C72' : TY.bone, .8);
     };
     leg(false, Math.PI, true); leg(true, 0, true);
     // the body: massive forequarters, a back sloping down to lean haunches; a mass of dark fur, the shape inside glowing through
     const body = furPath([28, B - 26, 40, B - 8, 36, B + 6, 24, B + 16, 10, B + 14, -6, B + 8, -20, B + 10, -36, B + 14, -48, B + 8, -52, B - 4, -44, B - 12, -28, B - 16, -10, B - 22, 6, B - 30, 18, B - 34], 6, 7);
+    const breath = Math.sin(t * 1.8), heave = (down ? 1.6 : 1) * (howl > .3 ? 1.5 : 1); // its flanks heave with each breath
+    ctx.save(); ctx.translate(4, B + 6); ctx.scale(1 + breath * .006 * heave, 1 + breath * .018 * heave); ctx.translate(-4, -B - 6);
     cel(body, TY.fur, { d: 6, r: 2.2, w: 2.2, dark: TY.furDk, lite: TY.furLit, under: () => {
-      const g = ctx.createRadialGradient(10, B - 4, 2, 10, B - 4, 44); g.addColorStop(0, `rgba(${BRUISE},.5)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-50, B - 50, 100, 80);
-    }, tex: () => { // fur brushed in long strokes, swept back from the head
-      ctx.lineWidth = .9; ctx.strokeStyle = 'rgba(130,104,170,.5)'; ctx.beginPath();
-      for (let i = 0; i < 30; i++) { const x = -46 + (i * 37) % 86, y = B - 26 + (i * 13) % 36; ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 4, y + 1, x - 9, y + 4); } ctx.stroke();
-      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); for (let i = 0; i < 16; i++) { const x = -44 + (i * 53) % 80, y = B + (i * 7) % 14; ctx.moveTo(x, y); ctx.lineTo(x - 7, y + 5); } ctx.stroke();
+      volume(B - 36, B + 18, -56, 44, 'rgba(150,120,210,.3)', 'rgba(4,2,8,.42)'); // lit along the spine, the belly falling into shade
+      const g = ctx.createRadialGradient(10, B - 4, 2, 10, B - 4, 44); g.addColorStop(0, `rgba(${BRUISE},.55)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-50, B - 50, 100, 80);
+    }, tex: () => { // fur in locks, swept back from the head, the tips catching a violet light; dark tufts lower down
+      furLocks(lockField(30, 3, -50, B - 28, 84, 24, Math.PI - .35, 15, 1.5), 'rgba(10,5,16,.32)', 'rgba(176,146,226,.5)', .4);
+      furLocks(lockField(16, 8, -48, B - 2, 78, 14, Math.PI - .9, 11, 1.3), 'rgba(0,0,0,.3)', 'rgba(110,86,150,.35)', .4);
+      ctx.lineWidth = .8; ctx.strokeStyle = 'rgba(130,104,170,.35)'; ctx.beginPath();
+      for (let i = 0; i < 18; i++) { const x = -46 + (i * 37) % 86, y = B - 26 + (i * 13) % 36; ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 4, y + 1, x - 9, y + 4); } ctx.stroke();
+      occlude(19, B + 12, 17, .55); occlude(-33, B + 10, 16, .5); occlude(30, B - 22, 14, .45); // where the legs and the ruff meet the body
+      // the shape inside, showing through its ribs: ember fissures that brighten as it breathes in (and blaze as it attacks)
+      const glow = .3 + .2 * breath + Math.max(howl, maw, crouch) * .5;
+      add(() => { const g = ctx.createRadialGradient(4, B - 4, 1, 4, B - 4, 26); g.addColorStop(0, `rgba(${EMBER},${.22 * glow})`); g.addColorStop(1, `rgba(${EMBER},0)`); ctx.fillStyle = g; ctx.fillRect(-24, B - 32, 56, 56); });
+      cracks([[-6, B - 15, -9, B - 8, -6, B - 1, -8, B + 5], [6, B - 17, 3, B - 9, 6, B - 2], [3, B - 9, -1, B - 5], [16, B - 13, 14, B - 6, 16, B]], cl01(glow) * .5);
     } });
+    ctx.restore();
     leg(false, 0, false); leg(true, Math.PI, false);
     // the ruff: a great collar of fur and smoke standing up behind the head
-    cel(furPath([16, B - 30, 14, B - 46, 24, B - 54, 36, B - 50, 44, B - 38, 42, B - 22, 30, B - 14, 20, B - 18], 6, 11), '#261C34', { d: 3.4, r: 1.6, w: 1.8, dark: TY.furDk, lite: '#8A6CB4' });
+    cel(furPath([16, B - 30, 14, B - 46, 24, B - 54, 36, B - 50, 44, B - 38, 42, B - 22, 30, B - 14, 20, B - 18], 6, 11), '#261C34', { d: 3.4, r: 1.6, w: 1.8, dark: TY.furDk, lite: '#8A6CB4', tex: () => {
+      volume(B - 56, B - 12, 10, 48, 'rgba(170,140,230,.3)', 'rgba(0,0,0,.45)');
+      const L = []; for (let i = 0; i < 12; i++) { const an = -2.2 + i * .2, r = 6 + (i % 3) * 5; L.push(30 + Math.cos(an) * r, B - 34 + Math.sin(an) * r, an + Math.PI + .4, 12, 2.4); } furLocks(L, 'rgba(8,4,12,.55)', 'rgba(170,140,230,.55)'); // the ruff standing up in locks
+    } });
     // the head: a long skull and muzzle held low; it lifts to howl and gapes to devour
     const hr = -howl * .8 + crouch * .3 + maw * .25 + (dash ? .15 : 0) + (down ? .4 : 0), open = Math.max(howl * .7, maw * .95, a.atk ? .5 : 0, dash ? .4 : 0, .06 + Math.sin(t * 1.4) * .03);
     ctx.save(); ctx.translate(40, B - 30); ctx.rotate(hr); ctx.scale(1.15, 1.15);
@@ -1008,10 +1050,14 @@
     if (open > .2) { ctx.fillStyle = C(TY.maw); poly([-2, 4, 34, 2, 30, 6 + open * 26, 0, 12]); ctx.fill(); glowAt(14, 8 + open * 7, 20, EMBER, .3 + open * .45); }
     const skull = furPath([-12, -12, 2, -16, 16, -13, 30, -7, 38, -3, 38, 3, 20, 5, 2, 8, -14, 5], 2.4, 9, 2);
     cel(skull, '#241A32', { d: 3.2, r: 1.4, w: 1.8, dark: TY.furDk, lite: '#8C70B8', tex: () => {
+      volume(-17, 8, -16, 40, 'rgba(170,140,230,.3)', 'rgba(0,0,0,.5)'); // the brow lit, the jaw in shadow
+      occlude(-4, -2, 12, .45); // the hollow behind the eyes
+      furLocks([-8, -10, Math.PI - .2, 9, 2, -10, -4, Math.PI - .5, 8, 2, -6, 2, Math.PI - .7, 7, 1.8, 0, -13, Math.PI - .1, 8, 1.8], 'rgba(8,4,12,.5)', 'rgba(150,124,200,.5)'); // the cheek ruff
       ctx.strokeStyle = 'rgba(140,120,180,.55)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(8, -13); ctx.quadraticCurveTo(22, -9, 36, -3); ctx.stroke(); // the line of the muzzle
       ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.moveTo(24, 2); ctx.quadraticCurveTo(16, -1, 6, 2); ctx.stroke(); // the lip
     } });
     ctx.fillStyle = C(TY.bone); for (let x = 10; x <= 34; x += 4.6) { poly([x, 3, x + 1.2, 9.4 + (x > 30 ? 3.4 : 0), x + 2.4, 3]); ctx.fill(); outline(.6); } // the upper fangs
+    if (DET()) { ctx.strokeStyle = 'rgba(255,248,230,.85)'; ctx.lineWidth = .5; ctx.beginPath(); for (let x = 10; x <= 34; x += 4.6) { ctx.moveTo(x + 1.6, 3.6); ctx.lineTo(x + 1.3, 7.6 + (x > 30 ? 3 : 0)); } ctx.stroke(); } // a glint down each
     ctx.fillStyle = C('#0A0408'); ell(37.6, -2.6, 1.6, 1.1); ctx.fill(); // the nose
     eyeRow([[17, -8.6, 1.2], [10, -10.6, 1], [3.6, -12, .82]], wind > .4 || howl > .3 || maw > .3, a.hurt);
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(1, -15); ctx.lineTo(21, -11); ctx.stroke(); // the brow, drawn down over the eyes
@@ -1037,6 +1083,7 @@
     else { ctx.moveTo(-r * .4, r * .74); ctx.quadraticCurveTo(0, r * .18, r * .4, r * .74); ctx.quadraticCurveTo(0, r * .46, -r * .4, r * .74); }
     ctx.fill();
     if (DET() && r > 5) {
+      ctx.fillStyle = 'rgba(255,255,255,.6)'; ell(r * .3, -r * .72, r * .26, r * .1, -.4); ctx.fill(); // a glint of glaze
       if (kind < 0) { ctx.strokeStyle = 'rgba(60,70,120,.6)'; ctx.lineWidth = Math.max(.6, r * .07); ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(s * r * .36, -r * .06); ctx.quadraticCurveTo(s * r * .46, r * .3, s * r * .38, r * .62); } ctx.stroke(); }
       else { ctx.fillStyle = 'rgba(200,80,70,.3)'; for (const s of [-1, 1]) { ell(s * r * .5, r * .22, r * .18, r * .12); ctx.fill(); } }
     }
@@ -1051,6 +1098,7 @@
     { const tx = 15 + curl * 3, ty = -15 + curl * 9; horn(tx - 1.4, ty + .4, tx + 1.2, ty - .6, tx + 3.6, ty + .4, 2.2, .3, '#1A1016', .7); }
     cel(PB([-3, -8, 9, -10, 19, -8, 21, 0, 19, 8, 8, 9, -3, 7]), col, { d: 2.2, r: 1, w: 1.6, dark: dk, lite: lt, tex: () => {
       ctx.strokeStyle = 'rgba(110,90,80,.5)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(4, -4); ctx.quadraticCurveTo(10, 0, 16, -3); ctx.moveTo(3, 3); ctx.quadraticCurveTo(10, 4, 17, 2); ctx.stroke(); // the lines of the palm
+      if (!far) { ctx.fillStyle = 'rgba(255,255,255,.6)'; ell(11, -6.4, 4.4, 1.2, -.1); ctx.fill(); } occlude(19, 0, 6, .25); // a glint of glaze on its back; the shadow at the knuckles
     } });
     for (let i = 0; i < 4; i++) { // the fingers, long and jointed, with nails of black lacquer
       const by = -6 + i * 4.2, L = [14, 16, 15, 12][i], sp = (i - 1.5) * .1, a1 = sp + curl * .9, a2 = sp + curl * 2.1;
@@ -1105,6 +1153,8 @@
     // the aureole: a disc of beaten gold, tooled with rays and punched dots, the dark of the Abyss inside it
     const hx = cx - 6, hy = cy - 4;
     cel(PE(hx, hy, 46, 46), MK.gold, { d: 4, r: 1.6, w: 2, dark: MK.giltDk, lite: MK.goldLit, tex: () => {
+      { const g = ctx.createLinearGradient(hx + 30, hy - 40, hx - 30, hy + 40); g.addColorStop(0, 'rgba(255,246,206,.55)'); g.addColorStop(.3, 'rgba(255,236,170,0)'); g.addColorStop(.55, 'rgba(255,240,190,.28)'); g.addColorStop(.7, 'rgba(90,50,10,0)'); g.addColorStop(1, 'rgba(70,36,8,.4)'); ctx.fillStyle = g; ctx.fillRect(hx - 46, hy - 46, 92, 92); } // beaten gold: a hot glint, a second soft band, the far side in umber
+      ctx.strokeStyle = 'rgba(255,240,190,.5)'; ctx.lineWidth = .8; circle(hx, hy, 43.4); ctx.stroke(); // a bead of light round its outer lip
       ctx.strokeStyle = 'rgba(110,70,24,.6)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 28; i++) { const an = i / 28 * TAU; ctx.moveTo(hx + Math.cos(an) * 37, hy + Math.sin(an) * 37); ctx.lineTo(hx + Math.cos(an) * 44, hy + Math.sin(an) * 44); } ctx.stroke();
       ctx.fillStyle = MK.robeDk; circle(hx, hy, 36); ctx.fill();
       const g = ctx.createRadialGradient(hx + 4, hy + 6, 4, hx, hy, 36); g.addColorStop(0, `rgba(${BRUISE},.55)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(hx - 36, hy - 36, 72, 72);
@@ -1123,9 +1173,11 @@
     cel(robe, MK.robe, { d: 5, r: 1.6, w: 2, dark: MK.robeDk, lite: MK.robeLit, under: () => {
       const g = ctx.createLinearGradient(0, cy + 30, 0, 0); g.addColorStop(0, 'rgba(255,120,60,0)'); g.addColorStop(1, 'rgba(255,120,60,.22)'); ctx.fillStyle = g; ctx.fillRect(cx - 8 + sw * .5, cy + 30, 16, -cy - 30); // the void inside it, warm at the hem
     }, tex: () => { // folds hanging straight down, swaying with the hem
+      { const g = ctx.createLinearGradient(cx - 38, 0, cx + 38, 0); g.addColorStop(0, 'rgba(0,0,0,.45)'); g.addColorStop(.4, 'rgba(0,0,0,0)'); g.addColorStop(.85, 'rgba(110,86,160,.22)'); g.addColorStop(1, 'rgba(0,0,0,.2)'); ctx.fillStyle = g; ctx.fillRect(cx - 40, cy, 80, -cy + 4); } // the mantle turned round its shoulders
       ctx.lineWidth = 1.1; for (let i = 0; i < 6; i++) { const x = cx - 22 + i * 9; ctx.strokeStyle = i % 2 ? 'rgba(0,0,0,.5)' : 'rgba(120,96,160,.45)'; ctx.beginPath(); ctx.moveTo(x * .7, cy + 22); ctx.quadraticCurveTo(x, cy + 50, x * 1.12 + sw * .8, -6); ctx.stroke(); }
     } });
     smokeLobe(cx + 1, cy + 34, 11, '#0E0812', 1); // the dark under its chin
+    if (DET()) { ctx.save(); robe(0, 0); ctx.clip(); occlude(cx, cy + 36, 30, .6); ctx.restore(); } // the shadow the mask casts down the mantle
     // the mask itself
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.sin(t * .5) * .04 + (down ? .3 : 0) - X.o * .06 + tilt);
     const fx = 3;
@@ -1133,6 +1185,11 @@
       const g = ctx.createLinearGradient(-26, 0, 26, 0); g.addColorStop(0, 'rgba(90,100,140,.32)'); g.addColorStop(.6, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(-30, -42, 60, 82);
     }, tex: () => {
       for (const [x, y] of [[-11, 10], [fx + 14, 10]]) { const g = ctx.createRadialGradient(x, y, 0, x, y, 9); g.addColorStop(0, 'rgba(210,100,100,.32)'); g.addColorStop(1, 'rgba(210,100,100,0)'); ctx.fillStyle = g; ctx.fillRect(x - 9, y - 9, 18, 18); } // rouge
+      // the glaze: a broad soft sheen on the brow and a hard window-glint, the cheekbone and the bridge of the nose catching it too
+      { const g = ctx.createRadialGradient(8, -26, 1, 8, -26, 16); g.addColorStop(0, 'rgba(255,255,255,.7)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(-10, -42, 36, 32); }
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ell(12, -29, 4.2, 1.6, -.5); ctx.fill(); ell(6.6, -26.4, 1.2, .8, -.5); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; ell(20, 3, 3.4, 1.4, -.9); ctx.fill(); ell(-17, 4, 2.2, 1, -.6); ctx.fill();
+      { const g = ctx.createLinearGradient(0, 18, 0, 38); g.addColorStop(0, 'rgba(70,60,80,0)'); g.addColorStop(1, 'rgba(70,60,80,.35)'); ctx.fillStyle = g; ctx.fillRect(-28, 18, 56, 22); } // its chin turning away into shadow
       ctx.strokeStyle = 'rgba(120,110,95,.32)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(-22, -20); ctx.lineTo(-14, -16); ctx.lineTo(-16, -8); ctx.moveTo(14, -32); ctx.lineTo(18, -24); ctx.lineTo(24, -22); ctx.moveTo(-8, 30); ctx.lineTo(-2, 26); ctx.lineTo(4, 31); ctx.stroke(); // the glaze crazed with age
     } });
     // seams of gold where it was broken and mended
@@ -1178,7 +1235,8 @@
   function pinion(x, y, ang, L, w, far, tip = DR.ember) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
     cel(PB([0, -w * .3, L * .45, -w, L * .9, -w * .7, L * 1.04, 0, L * .7, w * .55, L * .2, w * .5]), far ? '#120A1C' : DR.pin, { d: w * .3, r: w * .12, w: 1.1, dark: '#07040C', lite: far ? '#3A2650' : DR.pinLit, tex: () => {
-      ctx.fillStyle = far ? '#8A3A1C' : tip; ctx.fillRect(L * .74, -w * 1.2, L * .4, w * 2.4); // the ember tip
+      ctx.fillStyle = far ? '#5A2414' : shade(tip, -.35); ctx.fillRect(L * .66, -w * 1.2, L * .5, w * 2.4); ctx.fillStyle = far ? '#8A3A1C' : tip; ctx.fillRect(L * .76, -w * 1.2, L * .4, w * 2.4); // the ember tip, dipped deeper toward its end
+      if (!far) { ctx.fillStyle = 'rgba(255,236,190,.35)'; ctx.fillRect(L * .9, -w * 1.2, L * .2, w * .9); } // and its end catching the light
       ctx.strokeStyle = 'rgba(0,0,0,.42)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 1; i < 5; i++) { const u = i / 5 * L; ctx.moveTo(u, 0); ctx.lineTo(u + L * .08, -w * .8); ctx.moveTo(u, 0); ctx.lineTo(u + L * .08, w * .5); } ctx.stroke(); // the barbs of the vane
     } });
     if (L > 22) { ctx.strokeStyle = C(far ? '#6A5A48' : DR.gold); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(L * .5, -w * .15, L * .9, 0); ctx.stroke(); } // the quill, on the great feathers
@@ -1202,6 +1260,7 @@
       ctx.strokeStyle = 'rgba(255,138,60,.32)'; ctx.lineWidth = .8; ctx.beginPath(); // veins of ember running out to the edge
       for (let i = 0; i < 4; i++) { const p = tips[i], q = tips[i + 1], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2; ctx.moveTo(W[0] * .6 + E[0] * .4, W[1] * .6 + E[1] * .4); ctx.quadraticCurveTo(mx * .6 - 6, my * .6 - 12, mx + (-18 - mx) * .3, my + (-24 - my) * .3); } ctx.stroke();
       ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const f of F) { ctx.moveTo(W[0] - 2, W[1] + 3); ctx.lineTo(f[0] + 2, f[1] + 2); } ctx.stroke(); // the shadow under each spar
+      if (!far) { const g = ctx.createLinearGradient(-14, -22, -70, 6); g.addColorStop(0, 'rgba(0,0,0,.35)'); g.addColorStop(.55, 'rgba(255,110,60,0)'); g.addColorStop(1, 'rgba(255,120,60,.26)'); ctx.fillStyle = g; ctx.fillRect(-90, -64, 92, 80); } // thin at its trailing edge, the light coming through it
     } });
     // the arm and its finger-spars, with a hooked claw of gold at the wrist
     seg(0, 0, E[0], E[1], 10, 7, far ? '#140A1E' : DR.hide, 1); seg(E[0], E[1], W[0], W[1], 7, 5, far ? '#140A1E' : DR.hide, .5);
@@ -1267,8 +1326,10 @@
     // the body: lean and long, a keel of a breast tapering to narrow hips; diapered with gold along the breast, scaled on the back
     const body = PB([22, -6, 16, -12, 2, -13, -14, -10, -27, -4, -26, 3, -12, 7, 4, 9, 16, 6]);
     cel(body, DR.hide, { d: 3.6, r: 1.5, w: 2, dark: DR.hideDk, lite: DR.hideLit, under: () => {
+      volume(-14, 10, -30, 26, 'rgba(160,120,220,.3)', 'rgba(0,0,0,.4)');
       const g = ctx.createRadialGradient(8, -2, 2, 8, -2, 24); g.addColorStop(0, `rgba(${BRUISE},.45)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-30, -20, 60, 34);
     }, tex: () => {
+      occlude(4, -10, 10, .5); occlude(-12, 4, 9, .4); // under the wing root, and where the thigh meets the belly
       for (let r = 0; r < 2; r++) for (let i = 0; i < 4; i++) { const x = 17 - i * 6 - r * 3, y = -1 + r * 4.4 + i * .8;
         ctx.fillStyle = r % 2 ? '#34204C' : '#2C1A42'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI); ctx.fill(); ctx.strokeStyle = 'rgba(216,160,64,.62)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.arc(x, y, 3, .2, Math.PI - .2); ctx.stroke(); }
       ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 9; i++) { const x = -22 + (i * 17) % 34, y = -10 + (i * 5) % 6; ctx.moveTo(x - 2.6, y); ctx.quadraticCurveTo(x, y + 2.2, x + 2.6, y); } ctx.stroke();
@@ -1280,6 +1341,9 @@
     const nk = taper(14, -8, 36 - rear * 6 + (swoop ? 12 : 0), -26 + lunge * 12 + (swoop ? 10 : 0), H[0] - 4, H[1] + 4, 13, 7, 12);
     for (let i = 12; i >= 2; i -= 2) { const k = i * 2; pinion(nk.R[k] + 1, nk.R[k + 1], 2.5 + i * .04 + Math.sin(t * 1.2 + i) * .05 + fold * .3, 9 + i * .5, 3.6, false, DR.ember); }
     cel(stripPath(nk), DR.hide, { d: 2.6, r: 1.1, w: 1.7, dark: DR.hideDk, lite: DR.hideLit, tex: () => {
+      ctx.strokeStyle = 'rgba(150,112,206,.45)'; ctx.lineWidth = .7; ctx.beginPath(); // its throat scaled like a snake's, small overlapping arcs
+      for (let k = 2; k < nk.M.length - 2; k += 2) { const x = (nk.M[k] + nk.L[k]) / 2, y = (nk.M[k + 1] + nk.L[k + 1]) / 2, r = 2.4 - k * .05; ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, Math.PI); const x2 = (nk.M[k] * 2 + nk.R[k]) / 3, y2 = (nk.M[k + 1] * 2 + nk.R[k + 1]) / 3; ctx.moveTo(x2 + r, y2); ctx.arc(x2, y2, r, 0, Math.PI); }
+      ctx.stroke();
       ctx.strokeStyle = 'rgba(216,160,64,.55)'; ctx.lineWidth = .8; ctx.beginPath(); for (let k = 4; k < nk.L.length - 2; k += 4) { ctx.moveTo(nk.L[k], nk.L[k + 1]); ctx.lineTo(nk.M[k] * .5 + nk.L[k] * .5, nk.M[k + 1] * .5 + nk.L[k + 1] * .5 - 1); } ctx.stroke();
     } });
     if (hot) glowAt(nk.L[12], nk.L[13], 14, EMBER, .25 + .35 * Math.max(flameW, flaming ? 1 : 0)); // the throat kindling

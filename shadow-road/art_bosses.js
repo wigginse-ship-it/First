@@ -117,6 +117,13 @@
           if (onx * LX + ony * LY > .45) { ctx.moveTo(x0 + (mx - x0) * .08, y0 + (my - y0) * .08); ctx.lineTo(x1 + (mx - x1) * .08, y1 + (my - y1) * .08); }
         }
         ctx.stroke();
+        ctx.strokeStyle = shade(col, -.42); ctx.lineWidth = 1.1; ctx.beginPath(); // and a shadowed bevel on the sides turned away
+        for (let i = 0; i < q.length; i += 2) {
+          const x0 = q[i], y0 = q[i + 1], x1 = q[(i + 2) % q.length], y1 = q[(i + 3) % q.length], ex = x1 - x0, ey = y1 - y0, el = Math.hypot(ex, ey) || 1;
+          let onx = ey / el, ony = -ex / el; if (onx * (mx - x0) + ony * (my - y0) > 0) { onx = -onx; ony = -ony; }
+          if (onx * LX + ony * LY < -.45) { ctx.moveTo(x0 + (mx - x0) * .07, y0 + (my - y0) * .07); ctx.lineTo(x1 + (mx - x1) * .07, y1 + (my - y1) * .07); }
+        }
+        ctx.stroke();
       }
       return [mx, my];
     };
@@ -151,7 +158,7 @@
       for (let i = 0; i < bot.length; i += 2) { const j = Math.min(i, top.length - 2); for (let m = 0; m < 3; m++) { const u = .35 + m * .22, x = lerp2(top[j], bot[i], u) + (hsh(i + m * 13 + k0) - .5) * 4, y = lerp2(top[j + 1], bot[i + 1], u); dk.push(x, y, .9, .7); if (m === 0) lt.push(x + 1.6, y - 2.2, .7, .5); } }
       dots(dk, shade(pal.moss, -.3)); dots(lt, shade(pal.moss, .5)); ctx.restore();
       ctx.strokeStyle = shade(pal.moss, -.35); ctx.lineWidth = 1; ctx.beginPath(); // hanging strands
-      for (let i = 2; i < bot.length - 2; i += 2) { const sw = Math.sin(t * 1.8 + i) * 1.2, l = 6 + (i % 4) * 2 + hsh(i + k0) * 4; ctx.moveTo(bot[i], bot[i + 1] - 1); ctx.quadraticCurveTo(bot[i] + sw, bot[i + 1] + l * .5, bot[i] + sw * 1.6, bot[i + 1] + l); }
+      for (let i = 2; i < bot.length - 2; i += 4) { const sw = Math.sin(t * 1.8 + i) * 1.2, l = 4 + hsh(i + k0) * 4; ctx.moveTo(bot[i], bot[i + 1] - 1); ctx.quadraticCurveTo(bot[i] + sw, bot[i + 1] + l * .5, bot[i] + sw * 1.6, bot[i + 1] + l); }
       ctx.stroke();
       ctx.strokeStyle = shade(pal.moss, .35); ctx.lineWidth = .8; ctx.beginPath(); // sprigs standing up out of the cushion
       for (let i = 2; i < top.length - 2; i += 4) { const sw = Math.sin(t * 2.1 + i) * .8; ctx.moveTo(top[i], top[i + 1] + 1); ctx.lineTo(top[i] + sw - 1, top[i + 1] - 3.4); ctx.moveTo(top[i] + 1.4, top[i + 1] + 1); ctx.lineTo(top[i] + sw + 2, top[i + 1] - 2.6); }
@@ -181,6 +188,8 @@
     const stone = [20, -80, 21, -101, 27, -109, 34, -104, 37, -80];
     fillPoly(stone, '#8A8478', 0);
     detPoly([20, -80, 21, -101, 27, -109, 26, -80], '#625C54');
+    if (DET()) { orbShade(() => poly(stone), 33, -104, 26, .3, .45); dots([23, -92, .6, .5, 31, -98, .5, .4, 33, -86, .7, .5, 24, -84, .5, .5, 29, -82, .6, .4, 35, -95, .4, .4], 'rgba(30,26,22,.55)');
+      ctx.fillStyle = C(pal.moss); ctx.beginPath(); ctx.moveTo(26.6, -108.6); ctx.quadraticCurveTo(31, -110, 34.2, -104); ctx.quadraticCurveTo(31, -104.6, 30, -102); ctx.quadraticCurveTo(28.6, -105, 26.6, -108.6); ctx.fill(); }
     if (DET()) { ctx.strokeStyle = '#B4AEA0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(28, -108); ctx.lineTo(34, -104); ctx.lineTo(36.4, -82); ctx.stroke(); line([29, -100, 31, -94, 29, -88], '#5A544C', .8); }
     poly(stone); outline(1.4);
     ctx.fillStyle = C(pal.lichen); ell(26, -97, 3, 1.6, .3); ctx.fill(); ell(31, -88, 2.2, 1.3); ctx.fill();
@@ -192,7 +201,9 @@
     horn(-8, -112, -22, -116, -34, -128, 5, 2, pal.bark, 2, 1.2);
     horn(-4, -126, 8, -130, 16, -146, 4.4, 1.6, pal.bark, 2, 1.2);
     horn(-6, -80, -18, -110, -3, -142, 12, 6, pal.bark, 0, 1.4);
-    if (DET()) { ctx.strokeStyle = shade(pal.bark, -.45); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-8, -86); ctx.quadraticCurveTo(-16, -108, -6, -134); ctx.moveTo(-3, -88); ctx.quadraticCurveTo(-11, -106, -2, -126); ctx.stroke(); ctx.fillStyle = shade(pal.bark, -.55); ell(-10, -104, 1.6, 3); ctx.fill(); }
+    if (DET()) { ctx.strokeStyle = shade(pal.bark, -.45); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-8, -86); ctx.quadraticCurveTo(-16, -108, -6, -134); ctx.moveTo(-3, -88); ctx.quadraticCurveTo(-11, -106, -2, -126); ctx.stroke(); ctx.fillStyle = shade(pal.bark, -.55); ell(-10, -104, 1.6, 3); ctx.fill();
+      ctx.strokeStyle = shade(pal.bark, .3); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-2, -84); ctx.quadraticCurveTo(-14.6, -110, -.4, -138); ctx.moveTo(-12, -96); ctx.lineTo(-11.4, -100); ctx.moveTo(-10.6, -117); ctx.lineTo(-9.6, -122); ctx.stroke(); // the lit side of the bark and its ridges
+      ctx.strokeStyle = shade(pal.bark, -.3); ctx.beginPath(); ctx.arc(-10, -104, 2.6, 0, TAU); ctx.moveTo(-11, -126); ctx.arc(-12, -126, 1, 0, TAU); ctx.stroke(); }
     // ferns at the foot of the tree
     if (pal.fern) { ctx.strokeStyle = C(pal.fern); ctx.lineWidth = 1.6; ctx.lineCap = 'round'; for (const [x, d] of [[-18, -1], [6, 1], [-26, -1]]) { ctx.beginPath(); ctx.moveTo(x, -80); ctx.quadraticCurveTo(x + d * 6, -92, x + d * 12, -90 + Math.sin(t * 2 + x) * 1); ctx.stroke(); } }
     const clumps = [[-32, -130, 12], [-18, -146, 15], [0, -152, 15], [16, -142, 13], [-4, -134, 14], [-24, -154, 11], [10, -158, 11], [24, -132, 9]];
@@ -201,6 +212,13 @@
       for (const [x, y, w, d] of [[-14, -98, 7, -1], [-4, -112, 6, 1], [-12, -124, 5, -1], [-2, -92, 5, 1]]) { ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(w * .6, -w * .55, w * 1.15, -.4); ctx.quadraticCurveTo(w * .6, w * .25, 0, 1.6); ctx.closePath(); ctx.fillStyle = C('#D2843A'); ctx.fill(); outline(.9);
         ctx.fillStyle = '#F6C070'; ell(w * .5, -w * .28, w * .36, w * .13); ctx.fill(); ctx.strokeStyle = '#7A3A16'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(w * .15, .9); ctx.quadraticCurveTo(w * .6, .6, w * 1.05, -.2); ctx.stroke(); ctx.restore(); }
+    }
+    if (pal.bloom && !e.dead && DET()) { // a few leaves (petals in spring) let go of the crown and drift down past the shell
+      const n = phase === 2 ? 5 : 3, ga = ctx.globalAlpha;
+      for (let i = 0; i < n; i++) { const life = (t * .2 + i / n) % 1, x = -30 + ((i * 29) % 56) + Math.sin(t * 1.9 + i * 2.1) * 5 - life * 16, y = -134 + life * 74;
+        ctx.globalAlpha = ga * Math.sin(life * Math.PI) * .9; ctx.fillStyle = phase === 2 ? pal.leaf[3 - (i % 2)] : i % 2 ? pal.bloom : pal.leaf[3];
+        ell(x, y, 2, 1, Math.sin(t * 3 + i * 1.7) * 1.4); ctx.fill(); }
+      ctx.globalAlpha = ga;
     }
     if (pal.bloom) { // blossoms (in autumn, the last of them gone to orange)
       for (let i = 0; i < 9; i++) { const an = i * 2.1 + .5, d = 6 + (i * 7) % 18, x = -6 + Math.cos(an) * d * 1.5, y = -142 + Math.sin(an) * d * .8;
@@ -241,6 +259,10 @@
       ctx.strokeStyle = shade(skin, -.45); ctx.lineWidth = .9; ctx.beginPath();
       ctx.moveTo(-2, -15); ctx.lineTo(1, -9); ctx.lineTo(-6, -5); ctx.moveTo(1, -9); ctx.lineTo(9, -10.5); ctx.moveTo(-6, -5); ctx.lineTo(-10, 1); ctx.moveTo(-2, -4); ctx.lineTo(4, -2); ctx.lineTo(3, 3); ctx.stroke();
       ctx.fillStyle = shade(skin, -.22); for (const [x, y] of [[-8, -1], [-4, 1], [-9, 3], [0, 0]]) { ell(x, y, 1.6, 1.1); ctx.fill(); }
+      dots([-10, -6, .7, .5, -7, -9, .6, .5, -3, -11, .7, .5, 4, -13, .6, .4, 8, -2, .7, .5, 12, -1, .6, .5, 6, 1, .5, .4, -6, -2.5, .5, .4, 16, -6, .6, .4], shade(skin, -.38)); // pebbled hide
+      dots([-6, -13, .7, .4, 2, -15.2, .8, .4, 9, -14.6, .6, .3], shade(skin, .42));
+      ctx.strokeStyle = shade(skin, -.45); ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(3, -4); ctx.quadraticCurveTo(8, -2.6, 14, -4.4); ctx.moveTo(4, -2); ctx.quadraticCurveTo(9, -.6, 13, -2); ctx.moveTo(15.4, -9); ctx.quadraticCurveTo(17.4, -7, 16.6, -4.6); ctx.stroke(); // the creases under the eye
+      const g = ctx.createLinearGradient(0, -16, 0, 4); g.addColorStop(0, 'rgba(255,246,220,.12)'); g.addColorStop(.5, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(14,8,6,.28)'); ctx.fillStyle = g; ctx.fillRect(-16, -18, 48, 24);
     });
     // the horn-colored beak sheath
     const beak = [15, -14, 21, -11.5, 25, -6, 30, -2.5, 28.5, 4.5, 25.5, 2, 17, 3, 18, -4];
@@ -250,9 +272,9 @@
     ctx.fillStyle = C('#1A1012'); ell(24.4, -6.4, 1.2, .7, .4); ctx.fill(); // nostril
     // deep-set glowing eye under a heavy brow plate
     fillPoly([5, -9.6, 14, -10.4, 13.6, -6, 6, -5.6], '#1A1214', 0);
-    const ey = a.hurt ? .35 : 1, eg = 1 + wind * .8;
+    const blink = !a.hurt && !wind && !atk && (t % 5.3) > 5.12, ey = a.hurt ? .35 : blink ? .12 : 1, eg = 1 + wind * .8; // (a slow blink now and then)
     glow(eyeCol, (rage ? 14 : 9) * eg, () => { ctx.fillStyle = C(eyeCol); ctx.beginPath(); ctx.moveTo(6.4, -7.6); ctx.quadraticCurveTo(10, -9.6 * ey - (1 - ey) * 7.6, 13.4, -8.2); ctx.quadraticCurveTo(10, -6.4, 6.4, -7.6); ctx.closePath(); ctx.fill(); });
-    if (!a.hurt) { ctx.fillStyle = C('#2A1408'); ell(10.6, -7.9, .6, 1.1); ctx.fill(); }
+    if (!a.hurt && !blink) { ctx.fillStyle = C('#2A1408'); ell(10.6, -7.9, .6, 1.1); ctx.fill(); if (DET()) { ctx.fillStyle = 'rgba(255,255,240,.9)'; circle(11.4, -8.6, .38); ctx.fill(); } }
     if (wind) add(() => { const g = ctx.createRadialGradient(10, -8, 0, 10, -8, 10); g.addColorStop(0, `rgba(255,220,140,${.5 * wind})`); g.addColorStop(1, 'rgba(255,160,80,0)'); ctx.fillStyle = g; circle(10, -8, 10); ctx.fill(); });
     fillPoly([3, -11.5, 9, -14, 15.6, -12.4, 14.4, -9.4, 6, -9.2], shade(skin, -.08), 1.1); // brow
     if (DET()) line([5, -11.4, 9, -13.2, 15, -11.8], shade(skin, .35), .8);
@@ -275,7 +297,10 @@
       clipIn(scale, () => { ctx.fillStyle = shade(col, -.2); ctx.fillRect(sx, sy + .8, 12, 4); ctx.fillStyle = shade(col, .4); ctx.fillRect(sx + 6.4, sy - 3, 3, 1.4); });
       scale(); outline(.8);
     }
-    if (DET()) { ctx.strokeStyle = shade(col, -.42); ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 3; i++) { const yy = ky - 2 + i * 4; ctx.moveTo(kx - 7, yy); ctx.quadraticCurveTo(kx - 3, yy + 2, kx + 1, yy); } ctx.stroke(); }
+    if (DET()) { ctx.strokeStyle = shade(col, -.42); ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 3; i++) { const yy = ky - 2 + i * 4; ctx.moveTo(kx - 7, yy); ctx.quadraticCurveTo(kx - 3, yy + 2, kx + 1, yy); } ctx.stroke();
+      dots([x - 6, -24 + bob, .7, .5, x - 3, -20 + bob, .6, .5, kx - 6, ky + 4, .7, .5, kx - 4, ky + 8, .6, .4, fx - 4, -10 - lift, .6, .4], shade(col, -.36));
+      ctx.save(); poly([x - 9.5, -31 + bob, x + 9.5, -31 + bob, kx + 7, ky, kx - 7, ky]); ctx.clip(); // the shadow of the shell's rim on the top of the leg
+      const g = ctx.createLinearGradient(0, -31 + bob, 0, -18 + bob); g.addColorStop(0, 'rgba(12,8,6,.55)'); g.addColorStop(1, 'rgba(12,8,6,0)'); ctx.fillStyle = g; ctx.fillRect(x - 14, -32 + bob, 30, 15); ctx.restore(); }
     // the broad foot and its blunt ivory nails
     ell(fx + 1, -4 - lift, 11, 4.6); ctx.fillStyle = C(shade(col, -.12)); ctx.fill(); outline(1.2);
     for (let c = 0; c < 3; c++) horn(fx + 2 + c * 4, -5 - lift, fx + 6 + c * 4, -5 - lift, fx + 8 + c * 4, -lift, 4.4, 1.2, pal.rim, 0, 1);
@@ -292,6 +317,7 @@
     ctx.restore();
     glow(rage ? '#FF7A3A' : pal.eye, 8, () => { ctx.fillStyle = C(rage ? '#FF9A5A' : pal.eye); ell(31, cy - 1.4, 1.8, .9); ctx.fill(); });
     mossPatch(sh, 14, 19, pal, t, 0);
+    orbShade(() => circle(cx, cy, R), cx + 16, cy - 20, R * 1.25, .3, .55);
     if (phase >= 2) for (let k = 0; k < 24; k += 3) { const [bx, by] = sh.P(k, .98), an = Math.atan2(by - cy, bx - cx); horn(bx, by, bx + Math.cos(an) * 8, by + Math.sin(an) * 8, bx + Math.cos(an - .5) * 14, by + Math.sin(an - .5) * 14, 5, .6, pal.thorn, 0, 1); }
     circle(cx, cy, R); outline(2.4);
     canopy([[-6, cy - R - 2, 9], [6, cy - R - 4, 8], [0, cy - R - 8, 7]], pal, t, 1.4);
@@ -347,6 +373,15 @@
       if (pal.crack) glow(pal.crack, 10, () => { draw(); ctx.globalAlpha = .75 + .25 * Math.sin(t * 4); ctx.strokeStyle = C(pal.crack); ctx.lineWidth = 1.1; ctx.stroke(); });
     }
     mossPatch(sh, 13, 17, pal, t, 0); mossPatch(sh, 18, 21, pal, t, .04); mossPatch(sh, 8, 11, pal, t, .02);
+    { // cushions of moss heaped along the crown of the shell, each one a little inked mound, shaded and lit
+      const md = []; for (const [th, r] of [[3.42, 5.4], [3.7, 6.6], [4.02, 7], [4.36, 6], [4.62, 4.6], [5.3, 4.4]]) md.push([cx + Math.cos(th) * (rx - 3), cy + Math.sin(th) * (ry - 3), r, th]);
+      ctx.strokeStyle = FLASH ? '#FFFFFF' : OUT; ctx.lineWidth = 2.4; for (const [x, y, r, th] of md) { clump(x, y, r, 8, th * 3); ctx.stroke(); }
+      ctx.fillStyle = C(shade(pal.moss, -.12)); for (const [x, y, r, th] of md) { clump(x, y, r, 8, th * 3); ctx.fill(); }
+      if (DET()) { ctx.fillStyle = shade(pal.moss, .22); for (const [x, y, r, th] of md) { clump(x + r * .2, y - r * .25, r * .62, 7, th * 5); ctx.fill(); }
+        const hi = []; for (const [x, y, r] of md) hi.push(x + r * .4, y - r * .5, r * .26, r * .16); dots(hi, shade(pal.moss, .55)); }
+    }
+    orbShade(dome, cx + 24, cy - 44, 92, .26, .5);
+    clipIn(dome, () => { const g = ctx.createLinearGradient(0, cy - 16, 0, cy); g.addColorStop(0, 'rgba(10,8,4,0)'); g.addColorStop(1, 'rgba(10,8,4,.5)'); ctx.fillStyle = g; ctx.fillRect(cx - rx, cy - 16, rx * 2, 16); }); // the dome darkens down into the rim
     // glowing mushrooms in the moss (more of them, and bigger, as the fungus takes him over)
     for (const [x, y, s] of [[-44, -64, 1], [-38, -66, .7], [46, -60, .8], ...(phase >= 2 ? [[-20, -80, .9], [30, -76, 1.1], [52, -50, .7]] : []), ...(P3 ? [[-52, -48, 1.2], [8, -84, .8], [38, -70, .9]] : [])]) {
       ctx.fillStyle = C('#D8CFB8'); ctx.fillRect(x - .8 * s, y + bob, 1.6 * s, 4 * s);
@@ -365,6 +400,17 @@
     band(); ctx.fillStyle = C(pal.rim); ctx.fill();
     clipIn(band, () => { ctx.fillStyle = shade(pal.rim, -.35); ctx.fillRect(-70, cy + 1, 140, 6); ctx.strokeStyle = shade(pal.rim, -.5); ctx.lineWidth = .9; ctx.beginPath(); for (let x = -56; x <= 56; x += 14) { ctx.moveTo(x, cy - 4); ctx.lineTo(x + 1, cy + 5); } ctx.stroke(); ctx.fillStyle = shade(pal.rim, .4); ctx.fillRect(-60, cy - 3.4, 120, 1.2); });
     band(); outline(2);
+    if (DET()) { // vines and roots trailing down off the rim of the shell, swaying as he moves
+      const vc = shade(P3 ? pal.lichen : pal.moss, -.3);
+      ctx.strokeStyle = vc; ctx.lineWidth = 1.3; ctx.beginPath();
+      const lv = [], tips = [];
+      for (const [x, l, k] of [[-56, 12, 0], [-22, 15, 2], [22, 10, 3], [56, 13, 5]]) { const sw = Math.sin(t * 1.7 + k * 1.9 + ph) * 2.2, y0 = cy - 3;
+        ctx.moveTo(x, y0); ctx.quadraticCurveTo(x + sw * .5, y0 + l * .55, x + sw, y0 + l); tips.push(x + sw, y0 + l);
+        for (let m = 1; m <= 3; m++) { const u = m / 3.4, d = m % 2 ? 1.7 : -1.7; lv.push(x + sw * u * u + d, y0 + l * u, 1.9, 1.1); } }
+      ctx.stroke();
+      if (!P3) { dots(lv, pal.leaf[2]); const hi = []; for (let i = 0; i < lv.length; i += 4) hi.push(lv[i] + .5, lv[i + 1] - .4, .8, .4); dots(hi, pal.leaf[3]); }
+      else { const sp = []; for (let i = 0; i < tips.length; i += 2) sp.push(tips[i], tips[i + 1] + 1, 1, 1); dots(sp, pal.tip); }
+    }
     // near legs and the head
     mossLeg(-44, 0, pal.skin, ph, walking, bob, pal);
     mossLeg(44, 1, pal.skin, ph, walking, bob, pal);
@@ -491,6 +537,7 @@
       fillPoly([-5.6, -.6, -2.6, -1, -3.4, 2.4, -5.2, 1.8], brass, 1); // a torn stub of the plate left on its rivet
     } else {
       brassPlate(() => poly([-5.6, 0, 6.4, -1, 6, tl - 3, -4.6, tl - 2]), brass, [-6, -2, -1.4, -2, -1.4, tl, -6, tl], () => { ctx.moveTo(5.2, 0); ctx.lineTo(4.9, tl - 3.5); }, 1.1);
+      cylShade(() => poly([-5.6, 0, 6.4, -1, 6, tl - 3, -4.6, tl - 2]), 6.4, 0, -5.6, 0, .8);
       if (DET()) { ctx.strokeStyle = shade(brass, -.45); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-5.2, tl * .45); ctx.lineTo(6.2, tl * .42); ctx.stroke(); }
       rivet(3.6, 2.2, .8, brass); rivet(3.6, tl - 5, .8, brass);
     }
@@ -499,6 +546,8 @@
     const sa = Math.atan2(ay - ky, ax - kx) - Math.PI / 2, sl = Math.hypot(ax - kx, ay - ky);
     ctx.save(); ctx.translate(kx, ky); ctx.rotate(sa);
     brassPlate(() => poly([-3.4, 1, 5, 1.4, 6.2, sl - 2.4, 2, sl + .4, -3, sl - 1]), brass, [-4, 0, .4, 0, .2, sl + 1, -4, sl + 1], () => { ctx.moveTo(5.2, 2); ctx.lineTo(6, sl - 2.8); }, 1.1);
+    cylShade(() => poly([-3.4, 1, 5, 1.4, 6.2, sl - 2.4, 2, sl + .4, -3, sl - 1]), 6.2, 0, -3.4, 0, .8);
+    if (DET()) { ctx.strokeStyle = shade(brass, -.5); ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(-2.6, sl * .5); ctx.quadraticCurveTo(1.6, sl * .5 - 1.6, 5.4, sl * .5); ctx.stroke(); ctx.strokeStyle = shade(brass, .4); ctx.beginPath(); ctx.moveTo(-2.4, sl * .5 + .6); ctx.quadraticCurveTo(1.6, sl * .5 - 1, 5.4, sl * .5 + .6); ctx.stroke(); } // a ridge across the greave
     rivet(2.6, 3.6, .75, brass); rivet(3, sl - 3.2, .75, brass);
     ctx.restore();
     // the knee: a round cap with a bolt
@@ -529,6 +578,7 @@
     const pc = CB.plume; // (faded in phase two; in overdrive scorched black, its ends smouldering)
     plume(); ctx.fillStyle = C(pc); ctx.fill();
     clipIn(plume, () => { ctx.fillStyle = shade(pc, -.38); poly([-26 - fl * 2, hy - 8, 6, hy - 9.6, 6, hy + 4, -26 - fl * 2, hy + 4]); ctx.fill(); ctx.strokeStyle = shade(pc, .35); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(2, hy - 13); ctx.quadraticCurveTo(-8, hy - 16, -16 - fl, hy - 11); ctx.moveTo(-4, hy - 12); ctx.quadraticCurveTo(-12, hy - 13, -19 - fl, hy - 6); ctx.stroke(); });
+    if (DET()) { ctx.save(); plume(); ctx.clip(); ctx.strokeStyle = shade(pc, -.5); ctx.lineWidth = .4; ctx.beginPath(); for (let i = 0; i < 6; i++) { const o = i * 1.3; ctx.moveTo(3 - i * 1.4, hy - 12 + o * .3); ctx.quadraticCurveTo(-8 - i, hy - 14 + o, -18 - fl * 1.2, hy - 9 + o * 1.4); } ctx.stroke(); ctx.restore(); } // its horsehair
     plume(); outline(1.1);
     if (phase === 3) add(() => { ctx.strokeStyle = `rgba(255,120,50,${.6 + .3 * Math.sin(t * 10)})`; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-13 - fl, hy - 12.4); ctx.lineTo(-15.6 - fl, hy - 9.4); ctx.lineTo(-12.4 - fl, hy - 8.8); ctx.lineTo(-16.4 - fl * 1.1, hy - 4.6); ctx.lineTo(-12 - fl, hy - 5.6); ctx.stroke(); });
     // the great helm
@@ -542,6 +592,11 @@
       ctx.strokeStyle = shade(hc, .5); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(4, hy - 11.4); ctx.quadraticCurveTo(9, hy - 10, 9.8, hy - 4); ctx.stroke();
       if (phase === 3) { const g = ctx.createLinearGradient(0, hy + 8, 0, hy - 6); g.addColorStop(0, 'rgba(216,176,96,.5)'); g.addColorStop(.35, 'rgba(184,112,64,.35)'); g.addColorStop(.65, 'rgba(138,74,160,.35)'); g.addColorStop(1, 'rgba(74,106,200,0)'); ctx.fillStyle = g; ctx.fillRect(-10, hy - 6, 22, 14); } // heat tint rising up the helm from the fire below
       ctx.fillStyle = '#1E1612'; for (let i = 0; i < 3; i++) ctx.fillRect(4.6, hy + 2.2 + i * 1.5, 5.4, .8); // breathing grille
+      if (!LITE) { const g = ctx.createRadialGradient(5.4, hy - 8.4, .5, 3, hy - 4, 14); g.addColorStop(0, 'rgba(255,250,230,.3)'); g.addColorStop(.35, 'rgba(255,250,230,0)'); g.addColorStop(.75, 'rgba(14,8,6,.12)'); g.addColorStop(1, 'rgba(14,8,6,.42)'); ctx.fillStyle = g; ctx.fillRect(-10, hy - 13, 22, 22); }
+      ctx.strokeStyle = shade(hc, -.5); ctx.lineWidth = .55; ctx.beginPath(); ctx.moveTo(-8.4, hy - 4.6); ctx.quadraticCurveTo(-4, hy - 6.8, 1.4, hy - 6.2); ctx.moveTo(-8.2, hy - 2.6); ctx.quadraticCurveTo(-4, hy - 4.6, 1.4, hy - 4); ctx.stroke(); // an engraved brow band
+      ctx.strokeStyle = shade(hc, .35); ctx.beginPath(); ctx.moveTo(-8.2, hy - 4); ctx.quadraticCurveTo(-4, hy - 6.2, 1.4, hy - 5.6); ctx.stroke();
+      ctx.strokeStyle = shade(hc, -.45); ctx.beginPath(); for (let i = 0; i < 4; i++) { const x = -6.6 + i * 2.1; ctx.moveTo(x, hy - 4.2 - i * .4); ctx.quadraticCurveTo(x + .8, hy - 5.6 - i * .4, x + 1.6, hy - 4.4 - i * .4); } ctx.stroke(); // its little scrolls
+      if (CB.patina) { ctx.strokeStyle = CB.patina; ctx.globalAlpha = .55; ctx.lineWidth = .6; ctx.beginPath(); for (const x of [-5, -1, 3]) { ctx.moveTo(x, hy - 1); ctx.lineTo(x + .2, hy + 2.6); } ctx.stroke(); ctx.globalAlpha = 1; } // verdigris weeping from the rivets
     });
     helm(); outline(1.3);
     if (phase >= 2) { // the faceplate cracked across; in overdrive the jaw is broken open on the fire inside
@@ -581,11 +636,16 @@
       ctx.fillStyle = C(shade(CB.coil, -.25)); ctx.fillRect(x, -7.2, 2, 14.4);
       if (DET()) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(${CB.coilGlow},${cg * .8})`; ctx.fillRect(x + .3, -6.8, 1.4, 13.6); ctx.restore(); }
     }
+    cylShade(drum, 0, -7.4, 0, 7.6);
+    if (DET()) { ctx.strokeStyle = 'rgba(14,10,8,.55)'; ctx.lineWidth = .4; ctx.beginPath(); for (const x of [12, 15.4, 18.8]) for (let y = -6.4; y < 7; y += 1.3) { ctx.moveTo(x, y); ctx.lineTo(x + 2, y + .5); } ctx.stroke(); } // the windings of each coil
     const barrel = () => rrect(22, -5, 17, 10, 2);
     brassPlate(barrel, '#5A4E48', [21, 1, 40, 1, 40, 6, 21, 6], () => { ctx.moveTo(23, -4.2); ctx.lineTo(38, -4.2); }, 1.3);
-    for (const x of [25, 31]) { rrect(x, -5.8, 2.6, 11.6, 1); ctx.fillStyle = C(shade(CB.brass, .05)); ctx.fill(); outline(.9); }
+    cylShade(barrel, 0, -5, 0, 5);
+    if (DET()) { ctx.strokeStyle = 'rgba(20,14,12,.5)'; ctx.lineWidth = .5; ctx.beginPath(); for (let x = 28.4; x < 37; x += 1.6) { ctx.moveTo(x, -3.6); ctx.lineTo(x, -1.6); } ctx.stroke(); } // rifling flutes along the barrel
+    for (const x of [25, 31]) { rrect(x, -5.8, 2.6, 11.6, 1); ctx.fillStyle = C(shade(CB.brass, .05)); ctx.fill(); cylShade(() => rrect(x, -5.8, 2.6, 11.6, 1), 0, -5.8, 0, 5.8); rrect(x, -5.8, 2.6, 11.6, 1); outline(.9); }
     const brake = () => rrect(38, -6.8, 8, 13.6, 2);
     brassPlate(brake, CB.brass, [37, 1.5, 47, 1.5, 47, 8, 37, 8], () => { ctx.moveTo(39.6, -6.2); ctx.lineTo(45, -6.2); }, 1.3);
+    cylShade(brake, 0, -6.8, 0, 6.8);
     ctx.fillStyle = C('#1A1210'); ctx.fillRect(40, -5.6, 1.6, 3.6); ctx.fillRect(40, 2, 1.6, 3.6); ctx.fillRect(43, -5.6, 1.6, 3.6); ctx.fillRect(43, 2, 1.6, 3.6);
     const bc = rage ? '#FFD0A0' : CB.bore, br = 3.4 + (planWind ? wind * 1.6 : 0);
     glow(rage ? '#FF7A4A' : '#FFE27A', 6 + (planWind ? wind * 12 : 0), () => { ell(46.4, 0, 1.8, br); ctx.fillStyle = C(bc); ctx.fill(); });
@@ -611,7 +671,8 @@
     const flow = (pose.flow || 0) + Math.abs(sw) * 4 + (pose.run ? 6 : 0);
     CB = CBP[phase];
     const hot = P3, brass = CB.brass;
-    const lean = () => { ctx.translate(jx, HIP + jy); ctx.rotate(pose.lean || 0); ctx.translate(0, -HIP); };
+    const br = e.dead || down ? 0 : Math.sin(t * 2.1) * .32; // (it breathes: the boiler rises and settles on its hips with the fire's draught)
+    const lean = () => { ctx.translate(jx, HIP + jy - br); ctx.rotate(pose.lean || 0); ctx.translate(0, -HIP); };
     if (P3 && !e.dead) add(() => { // overdrive: a red heat pulse about it, and the air shimmering over its head
       const pr = .5 + .5 * Math.sin(t * 5), g = ctx.createRadialGradient(0, SHO + 10, 4, 0, SHO + 10, 46);
       g.addColorStop(0, `rgba(255,80,40,${.2 + .16 * pr})`); g.addColorStop(1, 'rgba(255,40,20,0)'); ctx.fillStyle = g; circle(0, SHO + 10, 46); ctx.fill();
@@ -623,6 +684,8 @@
     for (const [x, h] of [[-13, 21], [-6.6, 27]]) {
       const st = () => rrect(x - 2.6, SHO - 4 - h, 5.2, h, 1.2);
       brassPlate(st, '#5A4A3E', [x - 3, SHO - 4 - h, x - .6, SHO - 4 - h, x - .6, SHO, x - 3, SHO], () => { ctx.moveTo(x + 1.8, SHO - 3 - h); ctx.lineTo(x + 1.8, SHO - 6); }, 1.1);
+      cylShade(st, x + 2.6, 0, x - 2.6, 0);
+      if (DET()) { dots([x + .8, SHO - h + 8, .35, .35, x + .8, SHO - h + 13, .35, .35, x + .8, SHO - 8, .35, .35], 'rgba(255,236,200,.6)'); ctx.fillStyle = 'rgba(20,12,10,.35)'; ctx.fillRect(x - 2.6, SHO - 2 - h, 5.2, 2.4); } // rivets, and soot under the cap
       fillPoly([x - 3.6, SHO - 4 - h, x + 3.6, SHO - 4 - h, x + 3, SHO - 1.6 - h, x - 3, SHO - 1.6 - h], '#3A302A', 1); // the cap
       ctx.fillStyle = C(shade(CB.brass, -.1)); ctx.fillRect(x - 2.6, SHO - h + 4, 5.2, 1.4);
       if (DET()) { ctx.fillStyle = P3 || rage ? `rgba(255,120,60,${.7 + .3 * Math.sin(t * 12 + x)})` : 'rgba(40,30,30,.9)'; ell(x, SHO - 4 - h, 2.6, .9); ctx.fill(); }
@@ -637,7 +700,11 @@
       ctx.fillStyle = shade(CB.cape, -.4); ctx.beginPath(); ctx.moveTo(-9, SHO); ctx.quadraticCurveTo(-18 - flow, SHO + 14, -26 - flow * 1.5, 0); ctx.lineTo(-30 - flow * 2, 4); ctx.lineTo(-30 - flow * 2, SHO); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = shade(CB.cape, -.5); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-6, SHO + 2); ctx.quadraticCurveTo(-12 - flow * .6, SHO + 18, -12 - flow, -4); ctx.moveTo(-4, SHO + 8); ctx.quadraticCurveTo(-6 - flow * .4, HIP + 4, -7 - flow * .6, -6); ctx.stroke();
       ctx.strokeStyle = shade(CB.cape, .3); ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-5, SHO - 1); ctx.quadraticCurveTo(-9 - flow * .4, SHO + 10, -9 - flow * .7, HIP + 2); ctx.stroke();
+      if (!LITE) { const x0 = -24 - flow * 1.4, g = ctx.createLinearGradient(x0, 0, 2, 0); // the heavy cloth hangs in folds: soft bands of light and shade across it
+        g.addColorStop(0, 'rgba(10,6,8,.4)'); g.addColorStop(.18, 'rgba(255,240,220,.2)'); g.addColorStop(.32, 'rgba(10,6,8,.36)'); g.addColorStop(.5, 'rgba(255,240,220,.22)'); g.addColorStop(.66, 'rgba(10,6,8,.3)'); g.addColorStop(.84, 'rgba(255,240,220,.14)'); g.addColorStop(1, 'rgba(10,6,8,.35)');
+        ctx.fillStyle = g; ctx.fillRect(x0 - 8, SHO - 6, 40 + flow * 1.4, 60); }
       ctx.fillStyle = shade(CB.brass, .05); ctx.fillRect(-30, SHO - 4, 34, 2.2); // brass-trimmed top edge
+      ctx.strokeStyle = shade(CB.trim, .1); ctx.globalAlpha = .7; ctx.lineWidth = .7; ctx.setLineDash([1.2, 1]); ctx.beginPath(); ctx.moveTo(-30, SHO - .8); ctx.lineTo(4, SHO - .8); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; // a stitched border under it
       if (phase >= 2) { // scorched along its hem (charred through in overdrive)
         ctx.fillStyle = P3 ? 'rgba(14,8,8,.6)' : 'rgba(30,20,14,.45)'; ctx.beginPath(); ctx.moveTo(-34, -14 + wv); ctx.quadraticCurveTo(-16, -17, -2, -12); ctx.lineTo(-2, 4); ctx.lineTo(-34, 4); ctx.closePath(); ctx.fill();
         if (P3) { ctx.fillStyle = 'rgba(14,8,8,.4)'; ctx.fillRect(-34, SHO - 2, 40, 10); }
@@ -674,6 +741,7 @@
     cog(0, HIP + 2.4, 3.6, 8, -spin * 1.6, shade(CB.cog, -.1), .8); // the hip cog, turning with the phase
     brassPlate(() => poly([-11, HIP - 1, -2, HIP - 1, -3, HIP + 9, -10.4, HIP + 8]), shade(brass, -.25), [-12, HIP - 2, -8, HIP - 2, -8, HIP + 10, -12, HIP + 10], null, 1.1);
     brassPlate(() => poly([1, HIP - 1, 11, HIP - 1, 11.6, HIP + 8.4, 2.4, HIP + 9.6]), brass, [0, HIP - 2, 4, HIP - 2, 4.4, HIP + 11, 0, HIP + 11], () => { ctx.moveTo(10.4, HIP); ctx.lineTo(10.8, HIP + 8); }, 1.1);
+    cylShade(() => poly([1, HIP - 1, 11, HIP - 1, 11.6, HIP + 8.4, 2.4, HIP + 9.6]), 11.6, 0, 1, 0, .7);
     rivet(7.6, HIP + 2, .8, brass); rivet(7.8, HIP + 6.4, .8, brass);
     // the boiler chest: broad shoulders over a narrower waist
     const seams = () => { ctx.beginPath(); ctx.moveTo(-15, SHO + 4); ctx.quadraticCurveTo(0, SHO + 1, 16, SHO + 4); ctx.moveTo(-13, HIP - 9); ctx.quadraticCurveTo(0, HIP - 7, 14, HIP - 9); ctx.moveTo(-12, HIP - 5); ctx.quadraticCurveTo(0, HIP - 3.4, 12, HIP - 5); ctx.moveTo(0, SHO + 4); ctx.lineTo(0, SHO + 6.4); };
@@ -689,6 +757,17 @@
       ctx.strokeStyle = shade(brass, .5); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-12, HIP - 8.2); ctx.quadraticCurveTo(0, HIP - 6.2, 13.6, HIP - 8.2); ctx.moveTo(-11, HIP - 4.2); ctx.quadraticCurveTo(0, HIP - 2.6, 11.6, HIP - 4.2); ctx.stroke();
       ctx.strokeStyle = shade(brass, .55); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(15, SHO + 3); ctx.quadraticCurveTo(15.6, SHO + 12, 10.6, HIP - 4.4); ctx.stroke(); // rim light
       for (let i = 0; i < 7; i++) { const x = -11 + i * 3.8; rivet(x, SHO + 3.6 + Math.abs(x) * .04 - (Math.abs(x) < 6 ? .8 : 0), .7, brass); }
+      for (const x of [-8, 8]) { rivet(x, HIP - 7.4, .55, brass); rivet(x * .9, HIP - 3.4, .55, brass); } // the lames riveted on
+      if (!P3) { // engraving: a sun in splendour cut round the furnace hatch, a scroll on the breast (dark cut, a lit lip under it)
+        const eng = (dx, dy) => { ctx.beginPath(); for (let i = 0; i < 11; i++) { const an = Math.PI + .2 + i / 10 * (Math.PI - .4), r0 = 8.2, r1 = i % 2 ? 9.8 : 11.2; ctx.moveTo(dx + Math.cos(an) * r0, SHO + 12 + dy + Math.sin(an) * r0 * .9); ctx.lineTo(dx + Math.cos(an) * r1, SHO + 12 + dy + Math.sin(an) * r1 * .9); }
+          ctx.moveTo(12.6 + dx, SHO + 9 + dy); ctx.arc(11.6 + dx, SHO + 9 + dy, 1, 0, Math.PI * 1.6); ctx.quadraticCurveTo(10, SHO + 6 + dy, 12.4 + dx, SHO + 6.4 + dy); ctx.quadraticCurveTo(14.6 + dx, SHO + 7.4 + dy, 13.6 + dx, SHO + 11 + dy); ctx.quadraticCurveTo(12, SHO + 14 + dy, 9 + dx, SHO + 13 + dy); };
+        ctx.lineWidth = .5; ctx.strokeStyle = shade(brass, .4); eng(-.3, .35); ctx.stroke(); ctx.strokeStyle = shade(brass, -.5); eng(0, 0); ctx.stroke();
+      }
+      if (!LITE) { // the round of the breastplate: a broad soft shine high on the lit side, shadow tucked under the pauldron and the helm
+        const k = phase === 1 ? .32 : phase === 2 ? .16 : .08, g = ctx.createRadialGradient(9, SHO - 1, .5, 9, SHO - 1, 10); g.addColorStop(0, `rgba(255,250,232,${k})`); g.addColorStop(1, 'rgba(255,250,232,0)'); ctx.fillStyle = g; ctx.fillRect(-1, SHO - 11, 20, 20);
+        const o = ctx.createRadialGradient(2, SHO + 7.6, 1, 2, SHO + 7.6, 11); o.addColorStop(0, 'rgba(14,8,6,.34)'); o.addColorStop(1, 'rgba(14,8,6,0)'); ctx.fillStyle = o; ctx.fillRect(-9, SHO - 4, 22, 23);
+        const n = ctx.createRadialGradient(1.5, SHO - 5.6, .5, 1.5, SHO - 5.6, 6.5); n.addColorStop(0, 'rgba(14,8,6,.45)'); n.addColorStop(1, 'rgba(14,8,6,0)'); ctx.fillStyle = n; ctx.fillRect(-6, SHO - 12, 15, 13);
+      }
       if (phase === 1) { // still polished: a clean bright sheen runs down the breastplate
         ctx.fillStyle = 'rgba(255,250,226,.32)'; poly([6, SHO - 6, 9.6, SHO - 6, 3.6, HIP + 2, 0, HIP + 2]); ctx.fill();
         ctx.fillStyle = 'rgba(255,250,226,.2)'; poly([11, SHO - 4, 12.2, SHO - 4, 7, HIP + 2, 5.8, HIP + 2]); ctx.fill();
@@ -697,7 +776,9 @@
       }
       if (CB.patina) { // verdigris in the seams and along the plate edges
         ctx.globalAlpha = .7; ctx.strokeStyle = CB.patina; ctx.lineWidth = 1.3; seams(); ctx.stroke(); ctx.lineWidth = 2.4; chest(); ctx.stroke();
-        ctx.fillStyle = CB.patina; ell(13, SHO + 1, 2.4, 1.2, .4); ctx.fill(); ell(-2, HIP - 5.6, 3, .9); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.fillStyle = CB.patina; ell(13, SHO + 1, 2.4, 1.2, .4); ctx.fill(); ell(-2, HIP - 5.6, 3, .9); ctx.fill();
+        ctx.globalAlpha = .5; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 7; i++) { const x = -11 + i * 3.8, y = SHO + 4.2; ctx.moveTo(x, y); ctx.lineTo(x + .15, y + 2 + (i * 7 % 5) * .8); } for (const x of [-8, 8]) { ctx.moveTo(x, HIP - 7); ctx.lineTo(x, HIP - 4.6); } ctx.stroke(); // weeping down from the rivets
+        dots([4, SHO + 1, .5, .4, -9, SHO + 6, .6, .4, 13, SHO + 12, .5, .5, -3, HIP - 9.6, .5, .3], CB.patina); ctx.globalAlpha = 1;
       }
       if (P3) { // heat tint: temper bands of straw, purple and blue ringed about the core
         ctx.lineWidth = 2.6; ctx.globalAlpha = .55;
@@ -776,6 +857,7 @@
     ctx.save(); ctx.translate(-7, SHO - 3.4); ctx.rotate(-.55 - (planWind && e.plan === 'volley' ? .5 * wind : 0));
     rrect(-3, -3.4, 6, 6.8, 1.6); ctx.fillStyle = C(CB.frame); ctx.fill(); outline(1);
     brassPlate(() => rrect(0, -3.2, 15, 6.4, 1.8), shade(brass, -.2), [-1, .6, 16, .6, 16, 4, -1, 4], () => { ctx.moveTo(1, -2.6); ctx.lineTo(14, -2.6); }, 1.1);
+    cylShade(() => rrect(0, -3.2, 15, 6.4, 1.8), 0, -3.2, 0, 3.2, .8);
     ctx.fillStyle = C(shade(brass, .05)); ctx.fillRect(5, -3.6, 1.6, 7.2); ctx.fillRect(10, -3.6, 1.6, 7.2);
     rrect(14, -4, 3.4, 8, 1.2); ctx.fillStyle = C('#3A302A'); ctx.fill(); outline(1);
     glow(rage ? '#FF7A8A' : '#EED48A', 6, () => { ell(17.2, 0, 1, 2.4); ctx.fillStyle = C(rage ? '#FF7A8A' : '#EED48A'); ctx.fill(); });
@@ -795,6 +877,11 @@
       pa(k, 7 - k); ctx.fillStyle = C(col); ctx.fill();
       clipIn(() => pa(k, 7 - k), () => { ctx.fillStyle = shade(col, -.35); ctx.fillRect(-12, SHO - 8, 7, 20); if (k === 0) { ctx.fillStyle = shade(col, .5); ell(5, SHO - 3.4, 4, 1.4, -.3); ctx.fill(); }
         if (P3) { ctx.lineWidth = 1.8; ctx.globalAlpha = .6; for (const [r, c] of [[4, '#D8B060'], [6, '#8A4AA0'], [8, '#4A6AC8']]) { ctx.strokeStyle = c; circle(1, SHO + 12, r + 4); ctx.stroke(); } ctx.globalAlpha = 1; } });
+      if (DET()) { orbShade(() => pa(k, 7 - k), 6, SHO - 4 + k * 2.6, 13 - k, .22, .5);
+        ctx.save(); pa(k, 7 - k); ctx.clip(); ctx.lineWidth = .5; // an engraved border following the rim of the plate
+        ctx.strokeStyle = shade(col, .42); ctx.beginPath(); ctx.ellipse(1 - .25, SHO + 1 + k * 2.6 + .35, 8.4 - k * .8, 5.6 - k, -.25, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
+        ctx.strokeStyle = shade(col, -.5); ctx.beginPath(); ctx.ellipse(1, SHO + 1 + k * 2.6, 8.4 - k * .8, 5.6 - k, -.25, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke(); ctx.restore();
+        if (k === (P3 ? 2 : phase === 2 ? 1 : 0)) for (let i = 0; i < 5; i++) { const an = Math.PI * (1.12 + i * .19); rivet(1 + Math.cos(an - .25) * (8.6 - k * .8), SHO + 1 + k * 2.6 + Math.sin(an - .25) * (5.8 - k) * .98, .5, col); } }
       pa(k, 7 - k); outline(1.2);
     }
     if (phase >= 2) { // the bare shoulder: a ball joint, its strut and a cog (in overdrive the torn plate edge glows)
@@ -844,7 +931,17 @@
       const h = (hueBase + t * 40 + k * 46) % 360;
       ctx.fillStyle = C(P3 ? (k % 2 ? 'rgba(58,42,74,.92)' : 'rgba(40,28,54,.92)') : `hsla(${h},${rage ? 80 : 68}%,${far ? 44 : 58}%,.9)`); ctx.fill();
       if (DET()) { // each pane is two facets: one catching the light, one in shadow
-        ctx.save(); ctx.clip(); ctx.fillStyle = P3 ? 'rgba(232,192,106,.18)' : `hsla(${h},75%,${far ? 64 : 76}%,.6)`; ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(ctl[0], ctl[1]); ctx.closePath(); ctx.fill(); ctx.restore();
+        ctx.save(); ctx.clip(); ctx.fillStyle = P3 ? 'rgba(232,192,106,.18)' : `hsla(${h},75%,${far ? 64 : 76}%,.6)`; ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(ctl[0], ctl[1]); ctx.closePath(); ctx.fill();
+        // light passing through the glass: bright near the bone, deepening and shifting hue toward the trailing edge
+        const ex = (pts[2] + pts[4]) / 2, ey = (pts[3] + pts[5]) / 2, g = ctx.createLinearGradient(pts[0], pts[1], ex, ey);
+        if (P3) { g.addColorStop(0, 'rgba(255,220,150,.22)'); g.addColorStop(.6, 'rgba(120,70,160,0)'); g.addColorStop(1, 'rgba(10,4,16,.4)'); }
+        else { g.addColorStop(0, `hsla(${h + 40},90%,92%,.5)`); g.addColorStop(.55, `hsla(${h},80%,60%,0)`); g.addColorStop(1, `hsla(${h - 50},80%,28%,.42)`); }
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = P3 ? 'rgba(255,220,150,.55)' : 'rgba(255,255,255,.6)'; ctx.lineWidth = .55; ctx.beginPath(); // a fracture in the glass, and a refracted streak
+        const fx = lerp2(pts[0], ex, .35), fy = lerp2(pts[1], ey, .35); ctx.moveTo(fx, fy); ctx.lineTo(lerp2(fx, pts[2], .45), lerp2(fy, pts[3], .45) + 2); ctx.moveTo(fx, fy); ctx.lineTo(lerp2(fx, ex, .6) - 1, lerp2(fy, ey, .6)); ctx.lineTo(lerp2(fx, pts[4], .7), lerp2(fy, pts[5], .7));
+        ctx.stroke();
+        ctx.strokeStyle = P3 ? 'rgba(232,192,106,.7)' : `hsla(${h + 150},95%,72%,.85)`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(pts[2], pts[3]); ctx.quadraticCurveTo(ctl[0], ctl[1], pts[4], pts[5]); ctx.stroke(); // the prismatic fringe along the trailing edge
+        ctx.restore();
       }
       outline(1.2);
     };
@@ -906,11 +1003,22 @@
         ctx.fillStyle = segCol(i, 36); poly([-L * 1.4, r * .42, L * 1.2, r * .3, L * 1.2, r * 1.1, -L * 1.4, r * 1.1]); ctx.fill(); // the shadowed belly facet
         ctx.strokeStyle = P3 ? '#5A4A6E' : `hsl(${hue(i)},${sat}%,84%)`; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-L * .9, -r * .3); ctx.lineTo(L * .4, r * .32); ctx.stroke(); // a facet edge
         ctx.fillStyle = P3 ? '#E8C06A' : `hsl(${hue(i) + 30},40%,86%)`; ctx.fillRect(-L * 1.2, r * .74, L * 2.4, r * .12); // a pale ventral scute
+        if (!LITE) { // light refracted through the crystal: a bright core, hue-shifted, dark at the far wall
+          const g = ctx.createRadialGradient(L * .25, -r * .2, r * .05, 0, 0, r * 1.15);
+          if (P3) { g.addColorStop(0, 'rgba(255,214,140,.32)'); g.addColorStop(.45, 'rgba(140,90,180,.06)'); g.addColorStop(1, 'rgba(6,2,12,.45)'); }
+          else { g.addColorStop(0, `hsla(${hue(i) + 50},95%,90%,.55)`); g.addColorStop(.45, `hsla(${hue(i) + 20},85%,65%,.08)`); g.addColorStop(1, `hsla(${hue(i) - 40},70%,22%,.45)`); }
+          ctx.fillStyle = g; ctx.fillRect(-L * 1.5, -r * 1.2, L * 3, r * 2.4);
+        }
+        ctx.strokeStyle = P3 ? 'rgba(232,192,106,.35)' : 'rgba(255,255,255,.35)'; ctx.lineWidth = .5; ctx.beginPath(); // the star cut: facets meeting at the table
+        for (let k = 0; k < ring.length; k += 4) { ctx.moveTo(L * .15, r * .02); ctx.lineTo(ring[k], ring[k + 1]); } ctx.stroke();
         ctx.fillStyle = 'rgba(255,255,255,.85)'; poly([L * .1, -r * .9, L * .6, -r * .92, L * .4, -r * .66, -L * .1, -r * .66]); ctx.fill(); // a specular glint
+        ctx.lineWidth = 1; ctx.strokeStyle = P3 ? 'rgba(255,200,110,.5)' : `hsla(${hue(i) + 120},95%,70%,.7)`; ctx.beginPath(); ctx.moveTo(-L * .95, r * .78); ctx.lineTo(L * .5, r * .94); ctx.lineTo(L * 1.05, r * .46); ctx.stroke(); // dispersion: a coloured fringe along the lower edge
       });
       poly(ring); outline(1.6);
       if (P3) { ctx.strokeStyle = C('#E8C06A'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-L, -r * .82); ctx.lineTo(L * .5, -r * .96); ctx.lineTo(L * 1.05, -r * .48); ctx.stroke(); }
       add(() => { ctx.fillStyle = P3 ? 'rgba(255,200,110,.35)' : `hsla(${hue(i)},95%,72%,${.18 + phase * .1 + (rage ? .1 : 0)})`; ell(0, r * .02, L * .7, r * .2); ctx.fill(); }); // the living light inside
+      const gl = (t * 9) % (N + 10) - i; // a glint running down the length of it, segment to segment
+      if (!e.dead && gl > -1 && gl < 1) add(() => { const k = 1 - Math.abs(gl), x = L * .4, y = -r * .8, s = 3 + k * 6; ctx.fillStyle = `rgba(255,255,255,${.85 * k})`; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * .18, y - s * .18); ctx.lineTo(x + s, y); ctx.lineTo(x + s * .18, y + s * .18); ctx.lineTo(x, y + s); ctx.lineTo(x - s * .18, y + s * .18); ctx.lineTo(x - s, y); ctx.lineTo(x - s * .18, y - s * .18); ctx.closePath(); ctx.fill(); });
       if (phase >= 2 && i % 3 === 1 && DET()) { ctx.strokeStyle = P3 ? 'rgba(255,220,140,.9)' : 'rgba(255,255,255,.75)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-L * .2, -r * .7); ctx.lineTo(L * .2, -r * .2); ctx.lineTo(-L * .1, r * .3); ctx.stroke(); } // fractures
       if ((i % 2 === 0 || phase >= 2) && i > 0) { // dorsal crystal spines
         const h = (8 + (i % 4 === 0 ? 6 : 0)) * (phase >= 2 ? 1.3 : 1) * (1 - i / (N + 8));
@@ -919,6 +1027,12 @@
       ctx.restore();
     }
     legs(false);
+    if (!e.dead && DET()) { // shards of its own crystal hanging in the air about it, turning and catching the light
+      for (let j = 0; j < 6; j++) { const si = 2 + j * 2.4, i0 = Math.floor(si), x = X[i0] + Math.sin(t * 1.3 + j * 2) * 6, y = Y[i0] - R[i0] - 12 - (j % 3) * 7 + Math.sin(t * 1.9 + j) * 4, sp = Math.cos(t * 2.6 + j * 1.7), s = 2.4 + (j % 2);
+        ctx.fillStyle = P3 ? (sp > 0 ? '#E8C06A' : '#3A2A4E') : `hsla(${hue(i0) + 60},85%,${62 + sp * 20}%,.9)`; const hw = s * (.5 + .5 * Math.abs(sp)); ctx.beginPath(); ctx.moveTo(x, y - s * 1.7); ctx.lineTo(x + hw, y - s * .1); ctx.lineTo(x, y + s * 1.3); ctx.lineTo(x - hw * .6, y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = .8; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(x, y - s * 1.7); ctx.lineTo(x + hw, y - s * .1); ctx.lineTo(x, y); ctx.closePath(); ctx.fill();
+        if (sp > .85) add(() => { ctx.fillStyle = `rgba(255,255,255,${(sp - .85) * 6})`; circle(x, y - s * .4, s * .9); ctx.fill(); }); }
+    }
     wyrmWing(X[3] + 6, Y[3] - R[3] * .55, flap, false, hueBase, t, phase, rage);
     // ---- the head
     const open = atk ? .62 : windBreath ? .42 * wind : windDive ? .2 * wind : .06 + Math.sin(t * 2) * .03;
@@ -945,6 +1059,9 @@
       ctx.fillStyle = hl; poly([-8, -17, 13, -14.6, 17.4, -10, 40, -7.4, 40, -5.6, 16, -7.4, 4, -9.4, -10, -8]); ctx.fill(); // the lit top plane
       ctx.strokeStyle = P3 ? gold : shade(hb, .6); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(17.4, -9.2); ctx.lineTo(24, -2); ctx.moveTo(4, -9.4); ctx.lineTo(-1, -1.6); ctx.moveTo(-10, -8); ctx.lineTo(-12, 2); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,.8)'; poly([20, -9.6, 32, -7.8, 31, -7, 20, -8.6]); ctx.fill(); // a specular glint down the snout
+      ctx.fillStyle = P3 ? 'rgba(232,192,106,.12)' : 'rgba(255,255,255,.14)'; poly([17.4, -9.2, 24, -2, 36, -6.6]); ctx.fill(); poly([4, -9.4, -1, -1.6, 12, -2]); ctx.fill(); // more cut facets, alternately lit
+      ctx.fillStyle = P3 ? 'rgba(0,0,0,.25)' : 'rgba(20,6,40,.2)'; poly([24, -2, 36, -6.6, 41.6, -1, 38, 1.8]); ctx.fill(); poly([-12, 2, -1, -1.6, -10, -8]); ctx.fill();
+      if (!LITE) { const g = ctx.createLinearGradient(0, -16, 0, 4); g.addColorStop(0, 'rgba(255,255,255,.14)'); g.addColorStop(.5, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(10,0,20,.3)'); ctx.fillStyle = g; ctx.fillRect(-16, -17, 60, 22); }
     });
     skull(); outline(1.6);
     // the cheek frills, a brow ridge over the slit of the eye, and a glowing nostril
@@ -952,12 +1069,18 @@
     fillPoly([4, -12, 16, -11.4, 14.6, -8.4, 5, -8.8], hd, 1.1);
     const eyeCol = P3 ? '#FFFFFF' : rage ? '#FFD08A' : '#DFF8FF', glowCol = rage ? '#FFB060' : P3 ? '#FFE8A0' : '#9FE8F0';
     glow(glowCol, 10 + wind * 10, () => { ctx.fillStyle = C(eyeCol); ctx.beginPath(); ctx.moveTo(7, -7.6); ctx.quadraticCurveTo(11, -10.2, 15.6, -8.4); ctx.quadraticCurveTo(11.6, -5.6, 7, -7.6); ctx.closePath(); ctx.fill(); });
-    if (!a.hurt) { ctx.fillStyle = C(OUT); ell(12, -7.9, .7, 1.7); ctx.fill(); } else { ctx.fillStyle = C(hd); ctx.fillRect(6.6, -8.6, 9, 1.4); }
+    if (!a.hurt) { ctx.fillStyle = C(OUT); ell(12, -7.9, .7, 1.7); ctx.fill(); if (DET()) { ctx.fillStyle = '#FFFFFF'; circle(13.4, -8.6, .4); ctx.fill(); } } else { ctx.fillStyle = C(hd); ctx.fillRect(6.6, -8.6, 9, 1.4); }
     glow(glowCol, 6, () => { ctx.fillStyle = C(eyeCol); ell(37.4, -4.6, 1.4, .6, .3); ctx.fill(); });
     // the swept-back crown of horns
     horn(8, -14, -6, -30, -24, -46, 6, .6, gold, 4, 1.2);
     horn(2, -14, -12, -24, -34, -32, 6.4, .6, gold, 4, 1.2);
     horn(14, -13, 10, -22, 2, -28, 3.6, .4, gold, 0, 1);
+    { // a jewel set in the temple behind the eye, its colour turning against the body's
+      const jw = [-7.4, -6.6, -4, -10.4, -.6, -6.8, -4, -3.4], jc = P3 ? '#E8603A' : `hsl(${hue(0) + 180},80%,62%)`;
+      glow(jc, 6 + wind * 8, () => { fillPoly(jw, jc, 0); });
+      detPoly([-7.4, -6.6, -4, -10.4, -4, -6.8], 'rgba(255,255,255,.55)'); detPoly([-4, -3.4, -.6, -6.8, -4, -6.8], 'rgba(0,0,0,.3)');
+      poly(jw); outline(.9);
+    }
     ctx.restore();
     ctx.restore();
     if (P3 && !e.dead && !FLASH && typeof parts !== 'undefined' && e.x !== undefined && Math.random() < .4) parts.push({ x: e.x - e.facing * rand(20, 150), y: e.y, z: e.z + rand(0, 50), vx: 0, vy: 0, vz: rand(20, 60), life: .8, max: .8, col: pick(['#E8C06A', '#FFF0C0']), size: 2.5, shape: 'star', rot: 0, vr: 4 });

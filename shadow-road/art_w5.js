@@ -940,6 +940,9 @@
   // ======================================================================================================
   const BN = { skin: '#B6C2D8', skinDk: '#6E7A98', skinLt: '#E6ECF6', hair: '#2A3048', coat: '#34446E', coatDk: '#161E3C', coatLt: '#6A7EB0', cloak: '#222C52', cloakDk: '#0C1230', cloakLt: '#4E5E92',
     legs: '#262E50', boots: '#1A2038', blade: '#DCE4F2', silver: '#C8D0DE', silverDk: '#6A748E', silverLt: '#FFFFFF', gilt: '#D8D0B0' };
+  // soft modelling inside a clip: a form lit along one edge falling into shade, and a pool of shade where parts meet
+  const volume = (x0, y0, x1, y1, lit, dark) => { const g = ctx.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, lit); g.addColorStop(.5, 'rgba(0,0,0,0)'); g.addColorStop(1, dark); ctx.fillStyle = g; ctx.fillRect(Math.min(x0, x1) - 40, Math.min(y0, y1) - 40, Math.abs(x1 - x0) + 80, Math.abs(y1 - y0) + 80); };
+  const occlude = (x, y, r, a = .45) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(4,8,26,${a})`); g.addColorStop(1, 'rgba(4,8,26,0)'); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
   // his pose for what he is doing: the stance of the feet, how far he sinks and leans, and where his two arms are
   function benPose(e, a, t) {
     const st = e.state, plan = e.plan, w = a.wind || 0, act = st === 'w5act' ? e.w5a : null, k = e.w5k ?? 1, ph = e.phase || 1;
@@ -1003,11 +1006,16 @@
     if (e.w5vis !== undefined) ctx.globalAlpha *= cl01(e.w5vis); // stepping through the air in his feint
     if (p.spin) { const c = Math.cos(p.spin); ctx.scale(Math.max(.2, Math.abs(c)), 1); if (c < 0) ctx.scale(-1, 1); }
     const upper = (fn) => { ctx.save(); ctx.translate(0, HIP); ctx.rotate(p.lean); ctx.translate(0, -HIP); fn(); ctx.restore(); };
+    glowAt(2, SHO + 14, 50 + Math.sin(t * 1.7) * 3, '190,206,245', .14); // the cold light a ghost gives off, breathing
     // the cloak, thrown back off the shoulders, its hem going to mist
     upper(() => {
       const fl = p.flow + Math.sin(t * .8) * 2;
       cel(PB([-4, SHO - 2, -12, SHO + 4, -20 - fl, -24 + bob * .5, -24 - fl * 1.4, -6 + bob * .3, -10 - fl * .4, -4 + bob * .3, -2, HIP + 6]), BN.cloak, { d: 3, r: 1.2, w: 1.7, dark: BN.cloakDk, lite: BN.cloakLt, tex: () => {
-        ctx.strokeStyle = 'rgba(6,10,30,.5)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-6 - i * 3, SHO + 4); ctx.quadraticCurveTo(-10 - i * 3 - fl * .5, -30, -12 - i * 3 - fl, -8); } ctx.stroke(); } });
+        volume(0, SHO, -20 - fl, -4, 'rgba(120,140,200,.22)', 'rgba(2,4,18,.5)'); // the cloth turning away from the moon
+        ctx.strokeStyle = 'rgba(6,10,30,.5)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-6 - i * 3, SHO + 4); ctx.quadraticCurveTo(-10 - i * 3 - fl * .5, -30, -12 - i * 3 - fl, -8); } ctx.stroke();
+        ctx.strokeStyle = 'rgba(150,170,226,.35)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(-7.4 - i * 3, SHO + 5); ctx.quadraticCurveTo(-11.4 - i * 3 - fl * .5, -30, -13.4 - i * 3 - fl, -8); } ctx.stroke(); // the crest of each fold
+        ctx.strokeStyle = 'rgba(200,210,236,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-4, SHO - 1); ctx.quadraticCurveTo(-11, SHO + 2, -12, SHO + 4); ctx.stroke(); // a silver edge to the collar
+      } });
       for (let i = 0; i < 4; i++) mistTongue(-22 - p.flow * 1.2 + i * 4, -6 + bob * .3, 7 + i % 2 * 4, 4, -4, t, i);
     });
     // the far arm and the sword
@@ -1023,6 +1031,7 @@
     const leg = (hx, fx, kb, near) => {
       const col = near ? BN.legs : shade(BN.legs, -.2), kx = (hx + fx) / 2 + kb * .8 + 2, ky = (HIP + 0) / 2 - kb * .3 + 2;
       seg(hx, HIP, kx, ky, 9.6, 7.2, col, 1);
+      if (DET()) { ctx.strokeStyle = near ? 'rgba(130,150,206,.55)' : 'rgba(90,104,150,.4)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(hx + 4, HIP + 1); ctx.lineTo(kx + 3.2, ky); if (mist <= .5) ctx.lineTo(fx + 2.4, -10); ctx.stroke(); } // the moon along the front of the leg
       if (mist > .5) { for (let i = 0; i < 3; i++) mistTongue(kx - 2 + i * 2.4, ky + 1, 10 + i * 3, 6 - i, (i - 1) * 3, t, i + (near ? 5 : 0)); return; }
       seg(kx, ky, fx, -9, 7.2, 5.4, col, .9); ctx.save(); ctx.translate(fx, 0); ctx.scale(1.15, 1.15); boot(0, near ? BN.boots : shade(BN.boots, -.2)); ctx.restore();
       if (mist > 0) mistTongue(fx, -4, -8, 6 * mist, 0, t, near ? 3 : 4);
@@ -1032,17 +1041,26 @@
     upper(() => {
       const ty = SHO - 2, torso = PB([-11.6, ty + 2, 0, ty - 3, 11.6, ty + 2, 12, ty + 12, 8.6, HIP - 2, 9, HIP + 4, -9, HIP + 4, -8.8, HIP - 2, -12, ty + 12]);
       cel(torso, BN.coat, { d: 3.6, r: 1.4, w: 1.9, dark: BN.coatDk, lite: BN.coatLt, tex: () => {
+        volume(12, ty, -12, HIP + 4, 'rgba(140,160,220,.3)', 'rgba(4,8,26,.45)'); // modelled round the chest, the light from the moon ahead of him
+        occlude(-1, ty - 1, 7, .5); occlude(4, SHO + 3, 6, .35); // under the chin, and in the shoulder where the arm hangs
+        ctx.strokeStyle = 'rgba(200,210,236,.5)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(-8.6, HIP - 4); ctx.quadraticCurveTo(0, HIP - 2.4, 8.4, HIP - 4); ctx.moveTo(-9, ty + 4); ctx.quadraticCurveTo(-4, ty + 1, 0, ty - 1.4); ctx.quadraticCurveTo(5, ty + 1, 9.4, ty + 4); ctx.stroke(); // silver piping at the collar and the skirt
+        ctx.strokeStyle = 'rgba(160,176,214,.35)'; ctx.lineWidth = .6; ctx.beginPath(); for (let i = 0; i < 4; i++) { const y = ty + 6 + i * 4.4; ctx.moveTo(-1.6, y); ctx.quadraticCurveTo(-4.4, y + 1.6, -6.6, y + .4); ctx.moveTo(2.2, y); ctx.quadraticCurveTo(5, y + 1.6, 7.2, y + .4); } ctx.stroke(); // frogging across the breast
         ctx.strokeStyle = 'rgba(10,16,40,.45)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-6, ty + 9); ctx.quadraticCurveTo(0, ty + 12, 7, ty + 8.6); ctx.moveTo(-4, ty + 14); ctx.quadraticCurveTo(-1, ty + 19, -2, HIP); ctx.stroke(); // the chest, the folds
         ctx.fillStyle = 'rgba(12,18,44,.5)'; ctx.fillRect(-1, ty, 1.6, HIP - ty + 2); // the line of buttons down the front
         ctx.fillStyle = 'rgba(214,222,236,.85)'; for (let y = ty + 4; y < HIP - 2; y += 4.2) { circle(.2, y, .7); ctx.fill(); }
       } });
       ctx.strokeStyle = C(BN.silver); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(9, ty + 2); ctx.lineTo(-7, HIP - 1); ctx.stroke(); // the baldric
+      if (DET()) { ctx.strokeStyle = 'rgba(40,48,80,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(9.4, ty + 3.1); ctx.lineTo(-6.6, HIP); ctx.stroke(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(8.6, ty + 1.3); ctx.lineTo(-7.4, HIP - 1.9); ctx.stroke();
+        ctx.fillStyle = BN.gilt; for (let k = 1; k < 4; k++) { circle(9 - 16 * k / 4, ty + 2 + (HIP - 3 - ty) * k / 4, .7); ctx.fill(); } } // studs along it
       ctx.fillStyle = C('#141A34'); ctx.fillRect(-9, HIP - 2.6, 18, 4); ctx.fillStyle = C(BN.silver); ctx.fillRect(1, HIP - 3, 4, 4.8);
       // the head: long and gaunt, close-cropped hair, a long straight nose, eyes of white light under a heavy brow
       ctx.fillStyle = C(BN.skinDk); ctx.fillRect(-1, NECK - 2, 5, 8);
       const head = PB([-6.4, HY - 6, 0, HY - 10.4, 6.6, HY - 8.4, 9, HY - 3, 11.2, HY + 1.6, 9.4, HY + 3, 9.8, HY + 6, 8, HY + 9.4, 2, HY + 8, -2.6, HY + 4, -7, HY]);
       cel(head, BN.skin, { d: 2.4, r: 1, w: 1.5, dark: BN.skinDk, lite: BN.skinLt, tex: () => {
+        volume(10, HY - 9, -6, HY + 8, 'rgba(255,255,255,.3)', 'rgba(30,40,80,.4)'); // lit from the moon before him
+        occlude(6.6, HY - 1.2, 3.6, .5); // the deep sockets under his brow
         ctx.fillStyle = 'rgba(80,90,120,.45)'; poly([2, HY + 1.6, 7, HY + 2.4, 3.4, HY + 4.6]); ctx.fill(); // the hollow of the cheek
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ell(10, HY + .4, .9, 2, .2); ctx.fill(); ell(5, HY - 6.6, 2.2, .7, -.2); ctx.fill(); // light down the nose, on the brow
         ctx.strokeStyle = 'rgba(70,80,110,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(8.8, HY + 3.4); ctx.quadraticCurveTo(7.6, HY + 4.6, 7.8, HY + 6.4); ctx.stroke(); // the line from nose to mouth
       } });
       ctx.fillStyle = C(BN.hair); ctx.beginPath(); ctx.moveTo(7.6, HY - 7.4); ctx.quadraticCurveTo(4, HY - 11.6, -2, HY - 10.8); ctx.quadraticCurveTo(-7.6, HY - 9, -7.2, HY - 1); ctx.lineTo(-4.6, HY + 1.4); ctx.quadraticCurveTo(-4, HY - 4, -1, HY - 5.6); ctx.quadraticCurveTo(3, HY - 7.4, 7.6, HY - 7.4); ctx.fill(); outline(1); // the cropped hair
