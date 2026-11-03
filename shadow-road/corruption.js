@@ -1420,6 +1420,9 @@
   // ---------------- the cursed ending: after the world's own, a closing scene of the curse walked ----------------
   const CODA_LINES = [['I had cursed Amber, blind, in Eric\'s dark.', 'AND THE CURSE WALKED WITH ME THROUGH EVERY SHADOW'], ['The Pattern I drew holds.', 'BUT THE ROAD I MADE RUNS ON, BLACK, TO THE CIRCLE'], ['What I loosed I must still answer for.', 'LORRAINE BURNS GREY BEHIND ME']];
   const isCursedEnd = () => NG() && CS().heartDone && CS().endCyc === (save.cycle | 0) && CS().endHigh;
+  // (each line stays up long enough to read: 2.6s and .05s a letter, with .6s to come and .6s to go)
+  const CODA_FADE = .6, CODA_AT = []; let CODA_END = 0;
+  { let at = .3; for (const [a, b] of CODA_LINES) { const hold = 2.6 + .05 * (a.length + b.length); CODA_AT.push([at, hold]); at += CODA_FADE * 2 + hold; } const L2 = CODA_AT[CODA_AT.length - 1]; CODA_END = L2[0] + CODA_FADE + L2[1] + 1.2; }
   { const _wc = winCard; winCard = function (i) { const r = _wc(i); if (!isCursedEnd() || L.codaDone) return r;
     const c = CS(); c.ends[endingId(i)] = 'cursed'; persist();
     const ov = document.getElementById('winOv'); if (ov) ov.style.visibility = 'hidden';
@@ -1428,12 +1431,12 @@
     if (h2) h2.textContent = 'A road of his own making';
     $('#winText').textContent = 'He reached the end of the road with the Black Circle in him, and walked a Pattern of his own at its heart while Chaos poured in. It holds. But the Black Road he made runs on from his feet to Lorraine, and what he loosed in Eric\'s dungeon is not finished with him. Walk the road again, gentler, and it may let him go.'; }
   function endCoda() { const ov = document.getElementById('winOv'); if (ov) ov.style.visibility = ''; L.coda = null; L.codaDone = true; cursedWinText(); }
-  const codaSkip = () => { if (L.coda && L.coda.t > 1) { if (L.coda.t < 9) L.coda.t = 9; else endCoda(); } };
+  const codaSkip = () => { if (L.coda && L.coda.t > 1) { const last = CODA_AT[CODA_AT.length - 1][0]; if (L.coda.t < last) L.coda.t = last; else endCoda(); } }; // (a first press goes to the last line, a second ends it)
   for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, (e) => { if (L.coda) { codaSkip(); e.stopPropagation(); } }, true);
   function drawCoda(t) {
     const C = L.coda, nowT = performance.now(), dt = Math.min(.05, (nowT - C.last) / 1000); C.last = nowT; C.t += dt; const T = C.t;
-    const line = Math.min(2, Math.floor(T / 3.4));
-    if (T > 11.5) { endCoda(); return; }
+    let line = 0; for (let i = 0; i < CODA_AT.length; i++) if (T >= CODA_AT[i][0]) line = i;
+    if (T > CODA_END) { endCoda(); return; }
     const g = ctx; g.save();
     const sk = g.createLinearGradient(0, Y_OFF, 0, FLOOR_TOP); sk.addColorStop(0, '#08060A'); sk.addColorStop(.7, '#2A2430'); sk.addColorStop(1, '#5A5260'); g.fillStyle = sk; g.fillRect(0, Y_OFF, VW, FLOOR_TOP - Y_OFF);
     const cxs = VW * .5, cys = FLOOR_TOP - 34; g.lineWidth = 7; g.strokeStyle = 'rgba(6,4,8,.95)'; circle(cxs, cys, 22); g.stroke(); g.lineWidth = 1.2; g.strokeStyle = 'rgba(190,40,50,.7)'; circle(cxs, cys, 26); g.stroke();
@@ -1450,10 +1453,10 @@
     // ash falling
     for (let i = 0; i < 40; i++) { const x = (hsh(i) * VW + T * 8 * (hsh(i + 1) - .5)) % VW, y = Y_OFF + ((hsh(i + 2) * VIEW_H + T * (18 + hsh(i + 3) * 20)) % VIEW_H); g.fillStyle = `rgba(200,195,205,${.3 + .3 * hsh(i + 4)})`; g.fillRect(x, y, 1.6, 1.6); }
     // the words, one line at a time
-    { const u = T - line * 3.4, a = Math.min(sm(u / .6), line < 2 ? sm((3.4 - u) / .5) : 1); g.textAlign = 'center'; g.globalAlpha = a;
+    { const [st, hold] = CODA_AT[line], u = T - st, last = line === CODA_AT.length - 1, a = Math.min(sm(u / CODA_FADE), last ? 1 : sm((CODA_FADE * 2 + hold - u) / CODA_FADE)); g.textAlign = 'center'; g.globalAlpha = a;
       g.font = '700 17px Cinzel, Georgia, serif'; g.lineWidth = 4; g.strokeStyle = 'rgba(10,6,10,.85)'; g.strokeText(CODA_LINES[line][0], VW / 2, Y_OFF + 40); g.fillStyle = '#EDE4F0'; g.fillText(CODA_LINES[line][0], VW / 2, Y_OFF + 40);
       g.font = '600 10px Cinzel, Georgia, serif'; g.lineWidth = 3; g.strokeText(CODA_LINES[line][1], VW / 2, Y_OFF + 58); g.fillStyle = '#C8A0B0'; g.fillText(CODA_LINES[line][1], VW / 2, Y_OFF + 58); g.globalAlpha = 1; }
-    const fade = Math.min(sm(T / 1.2), sm((11.5 - T) / 1)); g.fillStyle = `rgba(0,0,0,${1 - fade})`; view();
+    const fade = Math.min(sm(T / 1.2), sm((CODA_END - T) / 1)); g.fillStyle = `rgba(0,0,0,${1 - fade})`; view();
     g.restore();
   }
   function playerPoseSafe() { try { const s = P.state; P.state = 'idle'; const p = playerPose(); P.state = s; return p; } catch (e) { return { walk: 0 }; } }

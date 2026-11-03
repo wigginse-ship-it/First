@@ -1743,21 +1743,21 @@
     const dawn = cl01((T - 3.6) / 6) * .5 + .5;
     dawnSky(dawn, t); brushOver();
     stairDown(cl01((T - 7) / 5), cl01((T - 3.6) / 7) * .78, t);
-    if (T > 9) { const a = cl01((T - 9) / 1.2) * (1 - cl01((T - 17.5) / 1)); ctx.fillStyle = `rgba(4,6,16,${.55 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
+    if (T > 9) { const a = cl01((T - 9) / 1.2) * (1 - cl01((T - 21.5) / 1)); ctx.fillStyle = `rgba(4,6,16,${.55 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
       const h = Math.min(230, (VH - Y_OFF) * .78), cx = VW * .3, cy = Y_OFF + (VH - Y_OFF) / 2 + (1 - cl01((T - 9) / 1.4)) * 40; if (a > 0) princeTrump(cx, cy, h, a, t);
       ctx.textAlign = 'left'; ctx.font = '700 10px Cinzel, Georgia, serif';
       const x0 = cx + h * .31 + 22, tw = VW - x0 - 24; let ly = Y_OFF + (VH - Y_OFF) * .3;
-      LINES.forEach((l, i) => { const la = cl01((T - 10.5 - i * 1.4) / 1) * (1 - cl01((T - 17.5) / 1));
+      LINES.forEach((l, i) => { const la = cl01((T - 10.5 - i * 2.4) / 1) * (1 - cl01((T - 21.5) / 1));
         const words = l.split(' '), rows = []; let row = ''; for (const w of words) { const tr = row ? row + ' ' + w : w; if (ctx.measureText(tr).width > tw && row) { rows.push(row); row = w; } else row = tr; } rows.push(row);
         for (const r of rows) { if (la > 0) { ctx.fillStyle = `rgba(240,244,252,${la})`; ctx.fillText(r, x0, ly); } ly += 15; } ly += 6; }); }
-    if (T > 18) { const k = T - 18, a = cl01(k / 1.2); ctx.fillStyle = `rgba(4,6,16,${.85 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
+    if (T > 22) { const k = T - 22, a = cl01(k / 1.2); ctx.fillStyle = `rgba(4,6,16,${.85 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
       let y = VH + 10 - k * 15; ctx.textAlign = 'center';
       for (const [s, sz] of CREDITS) { y += sz + 8; if (!s) continue; const fa = cl01((y - Y_OFF) / 40) * cl01((VH - y) / 40); ctx.fillStyle = `rgba(232,238,250,${fa})`; ctx.font = `700 ${sz}px Cinzel, Georgia, serif`; ctx.fillText(s, VW / 2, y); }
       if (y < Y_OFF - 10) finishEnding(); }
     if (T > 2) { ctx.fillStyle = 'rgba(200,210,230,.55)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); }
     paperFrame();
   }
-  function skipEnding() { if (!END || END.t < 1.5) return; if (END.t < 9) END.t = 9; else if (END.t < 18) END.t = 18; else finishEnding(); }
+  function skipEnding() { if (!END || END.t < 1.5) return; if (END.t < 9) END.t = 9; else if (END.t < 22) END.t = 22; else finishEnding(); }
   function finishEnding() {
     if (!END) return; const sc = END.sc; END = null; W5.ending = false;
     app.classList.remove('nocontrols'); if (stageIdx === STAGES.length - 1) save.stage = Math.max(save.stage, STAGES.length - 1); // the last world always ends the road

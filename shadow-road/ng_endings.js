@@ -301,7 +301,7 @@
       relicGround(b, w, T, t, 520);
       const ax = VW * .63, ay = Y_OFF + VIEW_H * .44 + Math.sin(T * 1.1) * 4, k = sm((T - .4) / 1.4);
       glowR(ax, ay, 130, w === 'rebma' ? '170,230,240' : '210,222,255', .5 * k);
-      if (window.W5 && W5.kit && W5.kit.silverArm) { const SA_ = W5.kit.silverArm, s = 4.4; ctx.save(); ctx.globalAlpha = k; ctx.translate(ax, ay); ctx.rotate(Math.sin(T * .5) * .1);
+      if (window.W5 && W5.kit && W5.kit.silverArm) { const SA_ = W5.kit.silverArm, s = 3.6; ctx.save(); ctx.globalAlpha = k; ctx.translate(ax, ay); ctx.rotate(Math.sin(T * .5) * .1);
         try { SA_.quiet = true; SA_(-11 * s, 2 * s, -.12, 0, sm((T - 1.5) / 1.2), s, t); } finally { SA_.quiet = false; } ctx.restore(); }
       if (heavy) { for (let i = 0; i < 7; i++) softDab(ax - 40 + hsh(i) * 90, ay + (hsh(i + 3) - .5) * 24, 10 + hsh(i + 5) * 10, '110,106,118', .5 * k); } // the tarnish, at its joints
       else { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { const q = ((T * .45 + i / 5) % 1); ctx.strokeStyle = `rgba(225,232,255,${.3 * (1 - q) * k})`; ctx.lineWidth = 1; ell(ax, ay, 30 + q * 110, 8 + q * 30); ctx.stroke(); } ctx.restore(); }
@@ -341,11 +341,12 @@
       const ih = window.W8 ? W8.hornInHand : false; if (window.W8) W8.hornInHand = !!hp.inHand || !W8.hornPoseAt;
       try { if (!hp.inHand && window.W8 && W8.hornPoseAt) hp.weapon = 'fists'; hero(x, y, 1.15, 1, hp); } finally { if (window.W8) W8.hornInHand = ih; }
       if (!blow) { const k = sm((T - 1) / 1); ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 4; i++) { const q = ((T * .6 + i / 4) % 1); ctx.strokeStyle = `rgba(240,214,140,${.4 * (1 - q) * k})`; ctx.lineWidth = 1; ell(x + 10, y - 70, 14 + q * 40, 10 + q * 26); ctx.stroke(); } ctx.restore(); } // the hum of it, against his ribs
-      else if (T > Bl && T < END_ + .6) { const k = sm((T - Bl) / .4) * (1 - sm((T - END_) / .6)), bx = x + 34, by = y - 92; // the call, going out of the bell
+      else if (T > Bl && T < END_ + .6) { const k = sm((T - Bl) / .4) * (1 - sm((T - END_) / .6)), bx = x + 24, by = y - 92; // the call, going out of the bell
+        glowR(bx, by, 40, heavy ? '150,40,60' : '255,220,150', .45 * k);
         ctx.save(); ctx.globalCompositeOperation = heavy ? 'source-over' : 'lighter';
         for (let i = 0; i < 5; i++) { let q = ((T - Bl) * .45 + i / 5) % 1; if (heavy) q = 1 - q; const r = 10 + q * 220;
-          ctx.strokeStyle = heavy ? `rgba(30,20,30,${.6 * (1 - q * .5) * k})` : `rgba(255,226,150,${.5 * (1 - q) * k})`; ctx.lineWidth = heavy ? 2.4 : 1.6; ctx.beginPath(); ctx.ellipse(bx, by, r, r * .55, 0, -.7, .7); ctx.stroke();
-          if (heavy) { ctx.strokeStyle = `rgba(170,40,50,${.5 * (1 - q * .5) * k})`; ctx.lineWidth = .9; ctx.stroke(); } }
+          ctx.strokeStyle = heavy ? `rgba(24,14,24,${.8 * (1 - q * .5) * k})` : `rgba(255,226,150,${.85 * (1 - q) * k})`; ctx.lineWidth = heavy ? 3 : 2.2; ctx.beginPath(); ctx.ellipse(bx, by, r, r * .55, 0, -.7, .7); ctx.stroke();
+          if (heavy) { ctx.strokeStyle = `rgba(190,40,50,${.7 * (1 - q * .5) * k})`; ctx.lineWidth = 1.1; ctx.stroke(); } }
         ctx.restore();
         if (!E.blown) { E.blown = 1; if (typeof tone === 'function' && sfxOn && actx) { const d = heavy ? .94 : 1; tone(147 * d, 1.4, 'sawtooth', .06, heavy ? 130 : 196); tone(220 * d, 1.1, 'sawtooth', .045, heavy ? 200 : 294, .6); tone(294 * d, 1.5, 'triangle', .05, 0, 1.1); } } }
       if (w === 'moon') motes(30, '255,240,225', T, .5);
