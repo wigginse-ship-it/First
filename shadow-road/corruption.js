@@ -557,7 +557,7 @@
       G.grain = [stip(r, c, 480, (x, y) => r() < 1 - (y - c.y0) / c.h, .25, .7), stip(r, c, 200, (x, y) => r() < 1 - (y - c.y0) / c.h, .2, .5)];
       G.blot = []; for (let i = 0; i < 16; i++) { const [x, y] = onBody(c, r, (x, y) => y < c.cy + c.h * .1); G.blot.push([x, y, 7 + r() * 16, r()]); }
       G.fun = []; for (let i = 0; i < 9; i++) { const [x, y] = onBody(c, r); G.fun.push([x, y, 3 + r() * 4, r(), r() < .5 ? -1 : 1]); }
-      G.thorn = edgePts(c, r, 14, (x, y) => y > c.y0 + c.h * .3 && y < c.y0 + c.h * .7 && Math.abs(x - c.cx) < c.w * .34).map(p => Object.assign(p, { len: 28 + r() * 24, curl: (r() < .5 ? -1 : 1) * (.35 + r() * .45), sw: r() * TAU }));
+      G.thorn = edgePts(c, r, 14, (x, y) => y > c.y0 + c.h * .36 && y < c.y0 + c.h * .72 && Math.abs(x - c.cx) < c.w * .34).map(p => Object.assign(p, { len: 28 + r() * 24, curl: (r() < .5 ? -1 : 1) * (.35 + r() * .45), sw: r() * TAU }));
       G.crack = []; for (let i = 0; i < 7; i++) { const [x, y] = onBody(c, r, (x, y) => y < c.cy), q = [x, y]; let an = r() * TAU; for (let s = 0; s < 8; s++) { an += (r() - .5) * 1.1; q.push(q[q.length - 2] + Math.cos(an) * 5, q[q.length - 1] + Math.sin(an) * 5); } G.crack.push({ q, rk: r() }); }
     },
     mul(g, e, c, G, t, k, gr) { const lg = g.createLinearGradient(0, c.y0, 0, c.y1); lg.addColorStop(0, tow('#4A4038', k)); lg.addColorStop(.3, tow('#7A6E64', k)); lg.addColorStop(.65, tow('#A09890', k)); lg.addColorStop(1, tow('#B8B0B4', k * .9)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop';
@@ -669,13 +669,13 @@
   STY.benedict = {
     halo: '10,8,16', rim: '170,30,40', mote: () => ({ shape: 'puff', col: pick(['rgba(10,8,14,.55)', 'rgba(30,26,36,.5)']), size: rand(2.4, 4.4), vz: rand(20, 50), life: 1 }),
     gen(r, c, G, e) { G.str = []; for (let i = 0; i < 14; i++) { const x = c.x0 + r() * c.w; G.str.push([x, c.y0 + r() * c.h * .5, 3 + r() * 7, c.h * (.3 + r() * .6), r()]); }
-      G.cut = []; for (let i = 0; i < 18; i++) { const [x, y] = onBody(c, r), a = (r() - .5) * 2.6, l = 5 + r() * 10; G.cut.push({ x, y, a, l, rk: r(), ph: r(), drip: r() < .5 ? 6 + r() * 14 : 0 }); } },
+      G.cut = []; for (let i = 0; i < 18; i++) { const [x, y] = onBody(c, r), a = (r() - .5) * 2.6, l = 6 + r() * 9; G.cut.push({ x, y, a, l, rk: r(), ph: r(), drip: r() < .5 ? 6 + r() * 14 : 0 }); } },
     mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#6E6878', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop';
       for (const s of G.str) { if (s[4] > FRAC[e.cB.bt]) continue; const L = s[3] * gr, lg = g.createLinearGradient(0, s[1], 0, s[1] + L); lg.addColorStop(0, `rgba(30,26,40,${.8 * k})`); lg.addColorStop(1, 'rgba(30,26,40,0)'); g.fillStyle = lg; g.fillRect(s[0] - s[2] / 2, s[1], s[2], L); } },
     surf(g, e, c, G, t, k, gr) { const f = FRAC[e.cB.bt] * gr; g.lineCap = 'round';
       for (const q of G.cut) { if (q.rk > f) continue; const ca = Math.cos(q.a) * q.l / 2, sa = Math.sin(q.a) * q.l / 2, nx = -Math.sin(q.a) * 1.6, ny = Math.cos(q.a) * 1.6;
         g.beginPath(); g.moveTo(q.x - ca, q.y - sa); g.quadraticCurveTo(q.x + nx, q.y + ny, q.x + ca, q.y + sa); g.quadraticCurveTo(q.x - nx, q.y - ny, q.x - ca, q.y - sa); g.fillStyle = '#06040A'; g.fill();
-        const fresh = (t * .23 + q.ph) % 1 < .25; g.strokeStyle = e.cB.burn > 0 ? 'rgba(255,220,140,.9)' : fresh ? 'rgba(255,60,60,.95)' : 'rgba(150,30,40,.75)'; g.lineWidth = fresh ? 1 : .6; g.beginPath(); g.moveTo(q.x - ca * .8, q.y - sa * .8); g.lineTo(q.x + ca * .8, q.y + sa * .8); g.stroke();
+        const fresh = (t * .23 + q.ph) % 1 < .4; g.strokeStyle = e.cB.burn > 0 ? 'rgba(255,220,140,.9)' : fresh ? 'rgba(255,70,64,1)' : 'rgba(190,40,50,.85)'; g.lineWidth = fresh ? 1.1 : .75; g.beginPath(); g.moveTo(q.x - ca * .8, q.y - sa * .8); g.lineTo(q.x + ca * .8, q.y + sa * .8); g.stroke();
         g.strokeStyle = 'rgba(220,214,235,.4)'; g.lineWidth = .5; g.beginPath(); g.moveTo(q.x - ca + nx * .9, q.y - sa + ny * .9 - .6); g.lineTo(q.x + ca + nx * .9, q.y + sa + ny * .9 - .6); g.stroke();
         if (q.drip) { const u = (t * .3 + q.ph) % 1, L = q.drip * Math.min(1, u * 1.5); g.strokeStyle = 'rgba(6,4,10,.85)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x, q.y + L); g.stroke(); g.fillStyle = '#06040A'; circle2(g, q.x, q.y + L, 1.3); g.fill(); } } },
     top(e, c, G, t, k, gr) { if (Math.random() < .5 * k * gr) { const [x, y] = onBody(c, Math.random, (x, y) => y < c.cy + c.h * .2), w = locW(e, x, y); cpEmit({ k: 'wisp', x: w[0], y: w[1], vx: -e.facing * rand(14, 34), vy: rand(-34, -16), life: rand(.8, 1.3), max: 1.3, s: rand(3, 5.5) * c.sc, ph: rand(0, TAU) }); } },
@@ -734,7 +734,7 @@
       g.lineCap = 'round'; for (const s of G.sig) { if (s.rk > f) continue; const R = s.s * (.9 + .2 * k), a = fl(s.ph); g.save(); g.translate(s.x, s.y); g.rotate(s.a);
         const ink = () => { g.beginPath(); g.arc(0, 0, R, 0, TAU); g.moveTo(R * .5, 0); g.arc(0, 0, R * .5, 0, TAU); for (let j = 0; j < (s.kind + 3); j++) { const q = j / (s.kind + 3) * TAU; g.moveTo(Math.cos(q) * R, Math.sin(q) * R); g.lineTo(Math.cos(q) * R * 1.45, Math.sin(q) * R * 1.45); } g.moveTo(-R * .5, 0); g.lineTo(R * .5, 0); if (s.kind === 1) { g.moveTo(0, -R * .5); g.lineTo(0, R * .5); } };
         ink(); g.strokeStyle = '#0A0404'; g.lineWidth = 2.4; g.stroke(); ink(); g.strokeStyle = e.cB.burn > 0 ? 'rgba(255,236,170,.95)' : `rgba(255,${60 + 70 * a | 0},${24 + 30 * a | 0},${.65 + .35 * a})`; g.lineWidth = 1; g.stroke(); g.restore(); } },
-    top(e, c, G, t, k, gr) { for (let i = 0; i < 2; i++) if (Math.random() < .42 * k * gr) { const [x, y] = onBody(c, Math.random, (x, y) => y < c.cy), w = locW(e, x, y); cpEmit({ k: 'flame', x: w[0], y: w[1], vx: rand(-6, 6), vy: rand(-46, -26), life: rand(.45, .8), max: .8, s: rand(2.6, 4.6) * c.sc, ph: rand(0, TAU) }); } },
+    top(e, c, G, t, k, gr) { for (let i = 0; i < 3; i++) if (Math.random() < .4 * k * gr) { const [x, y] = onBody(c, Math.random, (x, y) => y < c.cy + c.h * .15), w = locW(e, x, y); cpEmit({ k: 'flame', x: w[0], y: w[1], vx: rand(-6, 6), vy: rand(-40, -22), life: rand(.45, .85), max: .85, s: rand(2.4, 4.4) * c.sc, ph: rand(0, TAU) }); } },
   };
   STY._ = { halo: '14,8,14', rim: '190,40,50', mote: () => ({ shape: 'puff', col: pick(['rgba(30,24,30,.7)', 'rgba(90,84,92,.6)']), size: rand(2, 4), vz: rand(20, 50), life: .7 }),
     gen(r, c, G, e) { const [mx, my] = markL(e), S = []; for (let i = 0; i < 12; i++) { const [x, y] = onBody(c, r); S.push([x, y, r() * TAU, c.w * .3, 4]); } for (let i = 0; i < 5; i++) S.push([mx, my, i / 5 * TAU, c.w * .3, 4]); S.sort(() => r() - .5); S.forEach((s, i) => s.push(i / S.length)); vSet(G, 'v', veins(r, c, S, { wig: .6, depth: 2, br: .12 }), true); },
@@ -759,15 +759,17 @@
   function cpDraw(t) {
     const dt = cpT ? clamp(t - cpT, 0, .05) : 0; cpT = t; if (!CP.length) return; ctx.save();
     for (let i = CP.length - 1; i >= 0; i--) { const p = CP[i]; p.life -= dt; if (p.life <= 0) { CP.splice(i, 1); continue; } p.x += p.vx * dt; p.y += p.vy * dt; const u = 1 - p.life / p.max, a = Math.min(1, p.life / .25) * Math.min(1, u * 6);
-      if (p.k === 'flame') { const s = p.s * (1 - u * .55), sw = Math.sin(t * 9 + p.ph) * 2.2 * u, x = p.x, y = p.y, flame = (q) => { ctx.beginPath(); ctx.moveTo(x - s * q, y); ctx.quadraticCurveTo(x - s * q * .9, y - s * 1.6 * q, x + sw, y - s * 3.2 * q); ctx.quadraticCurveTo(x + s * q * .9, y - s * 1.6 * q, x + s * q, y); ctx.arc(x, y, s * q, 0, Math.PI); ctx.closePath(); ctx.fill(); };
-        ctx.globalAlpha = a * .9; ctx.fillStyle = `rgba(255,${70 + 60 * (1 - u) | 0},24,1)`; flame(1.3); ctx.fillStyle = '#0C0406'; flame(1); }
-      else { ctx.globalAlpha = a * .7 * (1 - u * .6); ctx.fillStyle = '#0A080E'; const s = p.s * (1 + u * 1.6); ctx.beginPath(); ctx.ellipse(p.x, p.y, s * 1.7, s * .8, Math.atan2(p.vy, p.vx), 0, TAU); ctx.fill(); } }
+      if (p.k === 'flame') { const s = p.s * (1 - u * .45), x = p.x, y = p.y, hg = s * 4.8 * (1 - u * .3), w1 = Math.sin(t * 11 + p.ph) * s * .6 * (.3 + u), w2 = Math.sin(t * 7 + p.ph * 2) * s * .45;
+        const flame = (q, dy) => { const yb = y - dy; ctx.beginPath(); ctx.moveTo(x - s * q, yb); ctx.bezierCurveTo(x - s * 1.15 * q, yb - hg * .35 * q, x - s * .25 * q + w2, yb - hg * .62 * q, x + w1, yb - hg * q); ctx.bezierCurveTo(x + s * .35 * q + w2, yb - hg * .5 * q, x + s * 1.15 * q, yb - hg * .3 * q, x + s * q, yb); ctx.quadraticCurveTo(x, yb + s * .7 * q, x - s * q, yb); ctx.closePath(); ctx.fill(); };
+        ctx.globalAlpha = a * .95; const fg2 = ctx.createLinearGradient(0, y + s, 0, y - hg * 1.3); fg2.addColorStop(0, '#FFC060'); fg2.addColorStop(.35, '#FF5A20'); fg2.addColorStop(1, 'rgba(160,20,20,.6)'); ctx.fillStyle = fg2; flame(1.32, -s * .15);
+        ctx.fillStyle = '#0C0406'; flame(1, s * .35); }
+      else { ctx.globalAlpha = a * .55 * (1 - u * .5); const s = p.s * (1 + u * 1.8); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.atan2(p.vy, p.vx) + Math.sin(t * 3 + p.ph) * .3); ctx.scale(1.9, .75); const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, s); rg.addColorStop(0, 'rgba(8,6,12,.9)'); rg.addColorStop(.55, 'rgba(14,10,20,.45)'); rg.addColorStop(1, 'rgba(14,10,20,0)'); ctx.fillStyle = rg; ctx.fillRect(-s, -s, s * 2, s * 2); ctx.restore(); } }
     ctx.restore();
   }
   // behind the body: a dark halo, smoke turning slowly in it, and a rim of the Circle's red
   function curseHalo(e, c, S, t, k) {
     const R = Math.max(c.w, c.h) * .56, cx = c.cx, cy = c.cy; ctx.save();
-    const rg = ctx.createRadialGradient(cx, cy, R * .2, cx, cy, R * (1.05 + .05 * Math.sin(t * 1.7))); rg.addColorStop(0, `rgba(${S.halo},${.4 * k})`); rg.addColorStop(.55, `rgba(${S.halo},${.24 * k})`); rg.addColorStop(1, `rgba(${S.halo},0)`);
+    const rg = ctx.createRadialGradient(cx, cy, R * .2, cx, cy, R * (1.05 + .05 * Math.sin(t * 1.7))); rg.addColorStop(0, `rgba(${S.halo},${.34 * k})`); rg.addColorStop(.5, `rgba(${S.halo},${.18 * k})`); rg.addColorStop(1, `rgba(${S.halo},0)`);
     ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(cx, cy, R * 1.1, R * .9, 0, 0, TAU); ctx.fill();
     for (let i = 0; i < 5; i++) { const a = t * (.25 + i * .05) * (i % 2 ? 1 : -1) + i * 1.3, d = R * (.5 + .12 * Math.sin(t * .9 + i)), x = cx + Math.cos(a) * d * 1.05, y = cy + Math.sin(a) * d * .8, r = R * (.3 + .04 * i), q = ctx.createRadialGradient(x, y, 0, x, y, r);
       q.addColorStop(0, `rgba(${S.halo},${.26 * k})`); q.addColorStop(1, `rgba(${S.halo},0)`); ctx.fillStyle = q; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
@@ -779,7 +781,7 @@
     const B = e.cB, S = styOf(e), vis = ctx.globalAlpha * (e.w4vis ?? 1); if (vis < .03) return;
     const c = calib(e, draw, a), G = geoOf(e, c), k = cvTier(B), gr = grow(e), cheap = lite();
     if (cheap) { ctx.save(); ctx.globalAlpha = vis * .8 * k; const P = G.v ? G.v[B.bt] : null; if (P) { vStroke(ctx, P, [2.6, 1.6, 1], 'rgba(16,10,14,.85)', gr, c.h); if (gr >= 1) vPulse(ctx, P, [1, .7], 'rgba(220,40,50,.85)', t); } ctx.restore(); ctx.save(); ctx.globalAlpha = vis; S.top(e, c, G, t, k, gr); ctx.restore(); return; }
-    const M = ctx.getTransform(), cv = ctx.canvas, pad = 6; let X0 = 1e9, Y0 = 1e9, X1 = -1e9, Y1 = -1e9;
+    const M = ctx.getTransform(), cv = ctx.canvas, pad = 16; let X0 = 1e9, Y0 = 1e9, X1 = -1e9, Y1 = -1e9;
     for (const [px, py] of [[c.x0 - pad, c.y0 - pad], [c.x1 + pad, c.y0 - pad], [c.x0 - pad, c.y1 + pad], [c.x1 + pad, c.y1 + pad]]) { const X = M.a * px + M.c * py + M.e, Y = M.b * px + M.d * py + M.f; X0 = Math.min(X0, X); X1 = Math.max(X1, X); Y0 = Math.min(Y0, Y); Y1 = Math.max(Y1, Y); }
     X0 = Math.max(0, Math.floor(X0)); Y0 = Math.max(0, Math.floor(Y0)); X1 = Math.min(cv.width, Math.ceil(X1)); Y1 = Math.min(cv.height, Math.ceil(Y1));
     const W = X1 - X0, H = Y1 - Y0; if (W < 4 || H < 4) return;
