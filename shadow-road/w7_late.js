@@ -156,13 +156,16 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
   // ======================================================================================================
   let END = null;
   const isMine = () => typeof baseStage !== 'undefined' && baseStage && baseStage.theme === 'rebma' && stageIdx === 6;
-  const SECT = [0, 5, 13.5, 20, 27]; // the live hall; the Pattern walked; Moire; the shore at dawn; the credits
   const LINES = {
     a: 'The King broke like glass, and the Pearl of Judgement lay on the Pattern of Rebma, the reversed Pattern turning in it.',
     b: 'So he walked it again, as once he had walked it to win back his memory: forward, the way it was laid, the Pearl in his hand. And the Pattern of Rebma remembered which way it ran.',
     c: '"Keep it, Corwin," said Moire. "The sea has had enough of kings. Take its tides with you, wherever your road goes."',
     d: 'He came up Faiella-bionin into the morning. Above the water Amber stood on Kolvir, and under it Rebma, each the other\'s reflection, the right way round.',
   };
+  // the live hall; the Pattern walked; Moire; the shore at dawn; the credits. Each panel lasts as long as its words take to
+  // read (2.6s and a twentieth of a second a letter, once faded in), and never less than its pictures need
+  const READ = (k) => 2.6 + .05 * LINES[k].length;
+  const SECT = [0]; SECT[1] = Math.max(5, 1.6 + READ('a')); SECT[2] = SECT[1] + Math.max(8.5, 2.1 + READ('b')); SECT[3] = SECT[2] + 6.5; SECT[4] = SECT[3] + Math.max(7, 2.2 + READ('d'));
   const CREDITS = [['SHADOW ROAD', 22], ['the road beneath the sea', 9], ['', 8], ['REBMA', 12], ['FAIELLA-BIONIN · THE STREETS OF REBMA · THE PATTERN OF REBMA', 8], ['', 10],
     ['after Roger Zelazny\'s The Chronicles of Amber', 10], ['', 8], ['CORWIN', 11], ['Prince of Amber, who remembers', 8], ['', 6], ['MOIRE', 11], ['Queen of Rebma', 8], ['', 6], ['THE KING IN THE GLASS', 11], ['who had no one left to follow', 8], ['', 6], ['THE SEA-BISHOP', 11], ['who wished only to go back to the sea', 8], ['', 10],
     ['painted in lapis, nacre and gold leaf, under the water', 9], ['', 14], ['Thank you for walking the road.', 12]];
@@ -189,7 +192,7 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 14; i++) { const q = (t * 2 + hsh(i)) % 1, ang = hsh(i + 4) * TAU; ctx.fillStyle = `rgba(140,180,255,${.9 * (1 - q)})`; ctx.fillRect(px + Math.cos(ang) * q * 16, py + Math.sin(ang) * q * 16 - q * 6, 1.6, 1.6); } ctx.restore(); // blue sparks round his feet
     ctx.fillStyle = '#0A0A10'; ctx.beginPath(); ctx.arc(px, py, 3.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#C8C8D8'; ctx.beginPath(); ctx.arc(px + 1, py - 1, 1.2, 0, TAU); ctx.fill(); // he, seen from above: a dark cloak, a glint
     if (u >= 1) { const q = cl01((T - SECT[1] - 7) / .8); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(cx, cy, 2, cx, cy, Rr * 1.1); gg.addColorStop(0, `rgba(160,190,255,${.45 * q})`); gg.addColorStop(1, 'rgba(160,190,255,0)'); ctx.fillStyle = gg; ctx.fillRect(cx - Rr * 1.2, cy - Rr * 1.2, Rr * 2.4, Rr * 2.4); ctx.restore(); }
-    textPanel(LINES.b, VW * .66, Y0 + H * .3, VW * .3, cl01((T - SECT[1] - .8) / 1) * (1 - cl01((T - SECT[2] + .7) / .6)));
+    textPanel(LINES.b, VW * .66, Y0 + H * .3, VW * .3, cl01((T - SECT[1] - .8) / .6) * (1 - cl01((T - SECT[2] + .7) / .6)));
   }
   const PAL_GOLD = '#C89A3A';
   // ---------------- C: Moire on her throne of nacre ----------------
@@ -498,7 +501,7 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
     hero(hx, fl + 4, hs, 1, 'idle', 0, 1);
     if (W7.drawPearl) { ctx.save(); W7.drawPearl(hx + 14 * hs, fl - 40 * hs, H / 210, t, true); ctx.restore(); }
     ctx.drawImage(HB.vig, 0, Y0, VW, H);
-    textPanel(LINES.c, VW * .045, Y0 + H * .1, L.textW, cl01((T - SECT[2] - .7) / 1) * (1 - cl01((T - SECT[3] + .7) / .6)), 10, '232,248,240');
+    textPanel(LINES.c, VW * .045, Y0 + H * .1, L.textW, cl01((T - SECT[2] - .7) / .6) * (1 - cl01((T - SECT[3] + .7) / .6)), 10, '232,248,240');
   }
   // ---------------- D: the shore at dawn: Amber above the water, Rebma in it ----------------
   function panelShore(T, t) {
@@ -525,7 +528,7 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
     for (let i = 0; i < 9; i++) { const x = VW * .02 + i * 18, y = VH - 8 - i * 9; ctx.fillStyle = i % 2 ? '#C8C0B0' : '#B0A898'; ctx.fillRect(x, y, 40, 6); ctx.fillStyle = 'rgba(255,240,220,.6)'; ctx.fillRect(x, y, 40, 1); }
     const u = cl01((T - SECT[3]) / 5.5), hx = VW * .02 + 20 + u * 8 * 18, hy = VH - 8 - u * 8 * 9;
     hero(hx, hy, H / 300, 1, 'walk', T * 7, 1);
-    textPanel(LINES.d, VW * .5, Y0 + H * .1, VW * .44, cl01((T - SECT[3] - 1) / 1) * (1 - cl01((T - SECT[4] + .6) / .6)), 10, '255,248,236');
+    textPanel(LINES.d, VW * .5, Y0 + H * .1, VW * .44, cl01((T - SECT[3] - 1) / .6) * (1 - cl01((T - SECT[4] + .6) / .6)), 10, '255,248,236');
   }
   function renderEnding(t) {
     const now = performance.now(), dt = Math.min(.05, (now - END.last) / 1000); END.last = now; END.t += dt;
@@ -544,7 +547,7 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
       updateFx(dt);
       END.orig(t);
       if (END.took && W7.drawPearl) { ctx.save(); ctx.translate(-camX, 0); W7.drawPearl(P.x + P.facing * 10, P.y - 50 - Math.sin(T * 3) * 2, 1, t, true); ctx.restore(); }
-      textPanel(LINES.a, VW * .08, Y_OFF + 30, VW * .55, cl01((T - .6) / 1) * (1 - cl01((T - SECT[1] + .4) / .6)));
+      textPanel(LINES.a, VW * .08, Y_OFF + 30, VW * .55, cl01((T - .6) / .6) * (1 - cl01((T - SECT[1] + .4) / .6)));
       if (T > SECT[1]) { ctx.fillStyle = `rgba(4,8,16,${cl01((T - SECT[1]) / .8)})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF); }
       paperFrame(); return;
     }
@@ -555,17 +558,17 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
     for (const s of [SECT[1] + .8, SECT[2], SECT[3]]) { const a = 1 - fadeIn(s); if (T >= s && a > 0) { ctx.fillStyle = `rgba(4,8,16,${a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF); } }
     for (const s of [SECT[2], SECT[3]]) { const a = fadeOut(s); if (T < s && a > 0) { ctx.fillStyle = `rgba(4,8,16,${a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF); } }
     if (T > SECT[4]) { const k = T - SECT[4], a = cl01(k / 1.2); ctx.fillStyle = `rgba(4,10,18,${.88 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
-      let y = VH + 10 - k * 26; ctx.textAlign = 'center';
+      let y = VH + 10 - k * 15; ctx.textAlign = 'center';
       for (const [s, sz] of CREDITS) { y += sz + 8; if (!s) continue; const fa = cl01((y - Y_OFF) / 40) * cl01((VH - y) / 40); ctx.fillStyle = `rgba(226,244,240,${fa})`; ctx.font = `700 ${sz}px Cinzel, Georgia, serif`; ctx.fillText(s, VW / 2, y); }
       if (y < Y_OFF - 10) { finishEnding(); return; } }
-    if (inMoire()) { if (END.cAge > 1.5 && !END.goC) { const a = cl01((END.cAge - 1.5) / .6) * (.6 + .4 * Math.sin(END.cAge * 4)); ctx.save(); ctx.font = '700 9px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; // the prompt to go on, glowing softly
+    if (inMoire()) { if (END.cAge > MO_ASK && !END.goC) { const a = cl01((END.cAge - MO_ASK) / .6) * (.6 + .4 * Math.sin(END.cAge * 4)); ctx.save(); ctx.font = '700 9px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; // the prompt to go on, glowing softly
         ctx.shadowColor = `rgba(150,230,210,${.8 * a})`; ctx.shadowBlur = 6; ctx.fillStyle = `rgba(232,248,240,${a})`; ctx.fillText((KBD ? 'PRESS ANY KEY' : 'TAP') + ' TO CONTINUE ▸', VW - 14, VH - 10); ctx.restore(); } }
     else if (T > 2) { ctx.fillStyle = 'rgba(200,230,226,.55)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); }
     paperFrame();
   }
   // Moire's panel holds until the player answers: any key, a tap or click, or a gamepad button goes on (it fades out as
   // usual); for its first moments a press is ignored, so the press that skipped the last panel does not skip this one too
-  const MO_HOLD = SECT[3] - .85;
+  const MO_HOLD = SECT[3] - .85, MO_ASK = 1.3 + READ('c'); // (the prompt to go on comes up once her words have been read)
   const inMoire = () => !!END && END.t >= SECT[2] && END.t < SECT[3] && !END.goC;
   function moireGo() { if (!inMoire() || !(END.cAge > .6)) return false; END.goC = true; END.t = Math.max(END.t, MO_HOLD); return true; }
   function moirePad() { let down = false; try { for (const gp of (navigator.getGamepads ? navigator.getGamepads() : [])) if (gp) for (const b of gp.buttons) if (b && b.pressed) down = true; } catch (e) {}

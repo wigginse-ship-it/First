@@ -26,6 +26,9 @@
   const lines = () => ['The Circle closed on nothing, and was gone.', 'Where it had been, the ground was only ground; in a week it was green.',
     (W8.vill && W8.vill.seen ? `${W8.vill.saved} of the ${W8.vill.seen} who ran from it across the snow came home.` : 'The people who had run from it came home across the snow.'),
     'Ganelon did not ask him how he had known what was at its heart. He only asked him to keep the horn.'];
+  // the closing words come up one at a time, L_STEP apart, and stay until the last of them has been up as long as it takes
+  // to read (2.6s and a twentieth of a second a letter); then they fade together, and the credits roll
+  const L_AT = 14.5, L_STEP = 2.4, linesOut = () => Math.max(23, ...lines().map((l, i) => L_AT + i * L_STEP + .6 + 2.6 + .05 * l.length));
   const CREDITS = [['SHADOW ROAD', 22], ['the way through Lorraine', 9], ['', 6], ['THE WINTER FIELDS · THE EDGE OF THE CIRCLE · THE HEART OF THE CIRCLE', 8], ['', 10],
     ['after Roger Zelazny\'s The Chronicles of Amber', 10], ['', 8], ['CORWIN', 11], ['Prince of Amber, who cursed it, and came back', 8], ['', 6], ['GANELON', 11], ['who held its edge', 8], ['', 6],
 ['THE GOAT-LORD OF THE CIRCLE', 11], ['who only listened', 8], ['', 10],
@@ -94,17 +97,18 @@
     if (T < 12.5) { ctx.save(); ctx.translate(VW * .8, Hz + 96); ctx.scale(1.05, 1.05); const hp = W8.hornPoseAt(T, 5.6, 6.2, 8.4, 9.2); hp.Y = .3; hp.live = false; if (!hp.inHand) hp.weapon = 'fists'; // (the same lift, blow and lowering as in the levels: the mouthpiece at his lips)
       const ih = W8.hornInHand; W8.hornInHand = !!hp.inHand; try { drawPlayerAt(0, 0, 0, -1, hp, 1); } finally { W8.hornInHand = ih; } ctx.restore(); }
     else { const u = cl01((T - 12.5) / 2); ctx.save(); ctx.translate(lerp(VW * .8, VW * .7, sm(u)), Hz + 96); ctx.scale(-1.05, 1.05); drawHumanoid(look, { walk: u < 1 ? t * 8 : 0, arm: .5, Y: .3, weapon: 'fists' }); W8.hornDraw(-6, -32, .7, t, 1, .5); ctx.restore(); } // he walks down to meet Ganelon, the horn at his hip
-    if (T > 14) { const a = cl01((T - 14) / 1) * (1 - cl01((T - 23) / 1)); ctx.fillStyle = `rgba(20,14,10,${.5 * a})`; ctx.fillRect(0, Y_OFF, VW, (VH - Y_OFF) * .42);
+    const LO = linesOut(), CR = LO + 1;
+    if (T > 14) { const a = cl01((T - 14) / 1) * (1 - cl01((T - LO) / .6)); ctx.fillStyle = `rgba(20,14,10,${.5 * a})`; ctx.fillRect(0, Y_OFF, VW, (VH - Y_OFF) * .42);
       ctx.textAlign = 'center'; ctx.font = '700 10px Cinzel, Georgia, serif'; let ly = Y_OFF + 22;
-      lines().forEach((l, i) => { const la = cl01((T - 14.5 - i * 1.6) / 1) * (1 - cl01((T - 23) / 1)); if (la > 0) { ctx.fillStyle = `rgba(246,240,226,${la})`; ctx.fillText(l, VW / 2, ly); } ly += 17; }); }
-    if (T > 24) { const kk = T - 24, a = cl01(kk / 1.2); ctx.fillStyle = `rgba(14,10,8,${.86 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
-      let y = VH + 10 - kk * 26; ctx.textAlign = 'center';
+      lines().forEach((l, i) => { const la = cl01((T - L_AT - i * L_STEP) / .6) * (1 - cl01((T - LO) / .6)); if (la > 0) { ctx.fillStyle = `rgba(246,240,226,${la})`; ctx.fillText(l, VW / 2, ly); } ly += 17; }); }
+    if (T > CR) { const kk = T - CR, a = cl01(kk / 1.2); ctx.fillStyle = `rgba(14,10,8,${.86 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
+      let y = VH + 10 - kk * 15; ctx.textAlign = 'center';
       for (const [s, sz] of CREDITS) { y += sz + 8; if (!s) continue; const fa = cl01((y - Y_OFF) / 40) * cl01((VH - y) / 40); ctx.fillStyle = `rgba(242,232,206,${fa})`; ctx.font = `700 ${sz}px Cinzel, Georgia, serif`; ctx.fillText(s, VW / 2, y); }
       if (y < Y_OFF - 10) finishEnding(); }
     if (T > 2) { ctx.fillStyle = 'rgba(240,232,210,.6)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); }
     paperFrame();
   }
-  function skipEnding() { if (!END || END.t < 1.5) return; if (END.t < 14) END.t = 14; else if (END.t < 24) END.t = 24; else finishEnding(); }
+  function skipEnding() { if (!END || END.t < 1.5) return; const CR = linesOut() + 1; if (END.t < 14) END.t = 14; else if (END.t < CR) END.t = CR; else finishEnding(); }
   function finishEnding() {
     if (!END) return; const sc = END.sc; END = null; W8.ending = false; W8.hornInHand = false;
     app.classList.remove('nocontrols');

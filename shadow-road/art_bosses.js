@@ -19,16 +19,16 @@
   const dots = (pts, col) => { ctx.beginPath(); for (let i = 0; i < pts.length; i += 4) { ctx.moveTo(pts[i] + pts[i + 2], pts[i + 1]); ctx.ellipse(pts[i], pts[i + 1], pts[i + 2], pts[i + 3], 0, 0, TAU); } ctx.fillStyle = col; ctx.fill(); };
   // soft round-form shading laid over a filled shape (detail only): a warm highlight toward the light, falling off to a cool dark
   function orbShade(path, x, y, r, hiA, loA, hiCol, loCol) {
-    if (!DET()) return; ctx.save(); path(); ctx.clip();
+    if (!DET()) return; // (the shape is filled again with the gradient: no clip, so it stays cheap)
     const g = ctx.createRadialGradient(x, y, r * .05, x, y, r); g.addColorStop(0, `rgba(${hiCol || '255,248,224'},${hiA})`); g.addColorStop(.38, `rgba(${hiCol || '255,248,224'},0)`); g.addColorStop(.72, `rgba(${loCol || '16,10,8'},${loA * .25})`); g.addColorStop(1, `rgba(${loCol || '16,10,8'},${loA})`);
-    ctx.fillStyle = g; ctx.fillRect(x - r * 2.2, y - r * 2.2, r * 4.4, r * 4.4); ctx.restore();
+    path(); ctx.fillStyle = g; ctx.fill();
   }
   // round-metal shading across a cylinder (a barrel, a stack, a greave): from the lit edge (x0, y0) to the shadowed one (x1, y1)
   function cylShade(path, x0, y0, x1, y1, k) {
-    if (!DET()) return; k = k || 1; ctx.save(); path(); ctx.clip();
+    if (!DET()) return; k = k || 1;
     const g = ctx.createLinearGradient(x0, y0, x1, y1);
     g.addColorStop(0, `rgba(255,246,220,${.06 * k})`); g.addColorStop(.16, `rgba(255,246,220,${.42 * k})`); g.addColorStop(.3, 'rgba(255,246,220,0)'); g.addColorStop(.66, `rgba(18,10,6,${.1 * k})`); g.addColorStop(1, `rgba(18,10,6,${.46 * k})`);
-    ctx.fillStyle = g; const mx = Math.min(x0, x1) - 40, my = Math.min(y0, y1) - 40; ctx.fillRect(mx, my, Math.abs(x1 - x0) + 80, Math.abs(y1 - y0) + 80); ctx.restore();
+    path(); ctx.fillStyle = g; ctx.fill();
   }
 
   // a tapered, curved spike (horn, thorn, claw, spine): built along a quadratic curve, two-toned with the side away
@@ -153,10 +153,10 @@
     tracePath(top, bot); ctx.fillStyle = C(pal.moss); ctx.fill(); outline(1.2);
     if (DET()) {
       for (let i = 0; i < top.length - 2; i += 2) { ctx.fillStyle = shade(pal.moss, .28); ell(top[i] + 1.5, top[i + 1] + 1.6, 3.2, 1.9); ctx.fill(); ctx.fillStyle = shade(pal.moss, .55); ell(top[i] + 2.4, top[i + 1] + .8, 1.4, .8); ctx.fill(); }
-      ctx.save(); tracePath(top, bot); ctx.clip(); // stipple: the cushion's dark hollows low down, a few lit tips
+      { // stipple: the cushion's dark hollows low down, a few lit tips (all of them between its edges, so no clip is needed)
       const dk = [], lt = [];
       for (let i = 0; i < bot.length; i += 2) { const j = Math.min(i, top.length - 2); for (let m = 0; m < 3; m++) { const u = .35 + m * .22, x = lerp2(top[j], bot[i], u) + (hsh(i + m * 13 + k0) - .5) * 4, y = lerp2(top[j + 1], bot[i + 1], u); dk.push(x, y, .9, .7); if (m === 0) lt.push(x + 1.6, y - 2.2, .7, .5); } }
-      dots(dk, shade(pal.moss, -.3)); dots(lt, shade(pal.moss, .5)); ctx.restore();
+      dots(dk, shade(pal.moss, -.3)); dots(lt, shade(pal.moss, .5)); }
       ctx.strokeStyle = shade(pal.moss, -.35); ctx.lineWidth = 1; ctx.beginPath(); // hanging strands
       for (let i = 2; i < bot.length - 2; i += 4) { const sw = Math.sin(t * 1.8 + i) * 1.2, l = 4 + hsh(i + k0) * 4; ctx.moveTo(bot[i], bot[i + 1] - 1); ctx.quadraticCurveTo(bot[i] + sw, bot[i + 1] + l * .5, bot[i] + sw * 1.6, bot[i + 1] + l); }
       ctx.stroke();
@@ -299,8 +299,8 @@
     }
     if (DET()) { ctx.strokeStyle = shade(col, -.42); ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 3; i++) { const yy = ky - 2 + i * 4; ctx.moveTo(kx - 7, yy); ctx.quadraticCurveTo(kx - 3, yy + 2, kx + 1, yy); } ctx.stroke();
       dots([x - 6, -24 + bob, .7, .5, x - 3, -20 + bob, .6, .5, kx - 6, ky + 4, .7, .5, kx - 4, ky + 8, .6, .4, fx - 4, -10 - lift, .6, .4], shade(col, -.36));
-      ctx.save(); poly([x - 9.5, -31 + bob, x + 9.5, -31 + bob, kx + 7, ky, kx - 7, ky]); ctx.clip(); // the shadow of the shell's rim on the top of the leg
-      const g = ctx.createLinearGradient(0, -31 + bob, 0, -18 + bob); g.addColorStop(0, 'rgba(12,8,6,.55)'); g.addColorStop(1, 'rgba(12,8,6,0)'); ctx.fillStyle = g; ctx.fillRect(x - 14, -32 + bob, 30, 15); ctx.restore(); }
+      const g = ctx.createLinearGradient(0, -31 + bob, 0, -18 + bob); g.addColorStop(0, 'rgba(12,8,6,.55)'); g.addColorStop(1, 'rgba(12,8,6,0)'); // the shadow of the shell's rim on the top of the leg
+      poly([x - 9.5, -31 + bob, x + 9.5, -31 + bob, kx + 7, ky, kx - 7, ky]); ctx.fillStyle = g; ctx.fill(); }
     // the broad foot and its blunt ivory nails
     ell(fx + 1, -4 - lift, 11, 4.6); ctx.fillStyle = C(shade(col, -.12)); ctx.fill(); outline(1.2);
     for (let c = 0; c < 3; c++) horn(fx + 2 + c * 4, -5 - lift, fx + 6 + c * 4, -5 - lift, fx + 8 + c * 4, -lift, 4.4, 1.2, pal.rim, 0, 1);
@@ -381,7 +381,7 @@
         const hi = []; for (const [x, y, r] of md) hi.push(x + r * .4, y - r * .5, r * .26, r * .16); dots(hi, shade(pal.moss, .55)); }
     }
     orbShade(dome, cx + 24, cy - 44, 92, .26, .5);
-    clipIn(dome, () => { const g = ctx.createLinearGradient(0, cy - 16, 0, cy); g.addColorStop(0, 'rgba(10,8,4,0)'); g.addColorStop(1, 'rgba(10,8,4,.5)'); ctx.fillStyle = g; ctx.fillRect(cx - rx, cy - 16, rx * 2, 16); }); // the dome darkens down into the rim
+    if (DET()) { const g = ctx.createLinearGradient(0, cy - 16, 0, cy); g.addColorStop(0, 'rgba(10,8,4,0)'); g.addColorStop(1, 'rgba(10,8,4,.5)'); dome(); ctx.fillStyle = g; ctx.fill(); } // the dome darkens down into the rim
     // glowing mushrooms in the moss (more of them, and bigger, as the fungus takes him over)
     for (const [x, y, s] of [[-44, -64, 1], [-38, -66, .7], [46, -60, .8], ...(phase >= 2 ? [[-20, -80, .9], [30, -76, 1.1], [52, -50, .7]] : []), ...(P3 ? [[-52, -48, 1.2], [8, -84, .8], [38, -70, .9]] : [])]) {
       ctx.fillStyle = C('#D8CFB8'); ctx.fillRect(x - .8 * s, y + bob, 1.6 * s, 4 * s);
@@ -642,7 +642,7 @@
     brassPlate(barrel, '#5A4E48', [21, 1, 40, 1, 40, 6, 21, 6], () => { ctx.moveTo(23, -4.2); ctx.lineTo(38, -4.2); }, 1.3);
     cylShade(barrel, 0, -5, 0, 5);
     if (DET()) { ctx.strokeStyle = 'rgba(20,14,12,.5)'; ctx.lineWidth = .5; ctx.beginPath(); for (let x = 28.4; x < 37; x += 1.6) { ctx.moveTo(x, -3.6); ctx.lineTo(x, -1.6); } ctx.stroke(); } // rifling flutes along the barrel
-    for (const x of [25, 31]) { rrect(x, -5.8, 2.6, 11.6, 1); ctx.fillStyle = C(shade(CB.brass, .05)); ctx.fill(); cylShade(() => rrect(x, -5.8, 2.6, 11.6, 1), 0, -5.8, 0, 5.8); rrect(x, -5.8, 2.6, 11.6, 1); outline(.9); }
+    for (const x of [25, 31]) { rrect(x, -5.8, 2.6, 11.6, 1); ctx.fillStyle = C(shade(CB.brass, .05)); ctx.fill(); outline(.9); if (DET()) { ctx.fillStyle = 'rgba(255,246,220,.45)'; ctx.fillRect(x + .4, -4.6, 1.8, 1.6); ctx.fillStyle = 'rgba(18,10,6,.35)'; ctx.fillRect(x + .2, 2, 2.2, 3.4); } }
     const brake = () => rrect(38, -6.8, 8, 13.6, 2);
     brassPlate(brake, CB.brass, [37, 1.5, 47, 1.5, 47, 8, 37, 8], () => { ctx.moveTo(39.6, -6.2); ctx.lineTo(45, -6.2); }, 1.3);
     cylShade(brake, 0, -6.8, 0, 6.8);
@@ -741,7 +741,6 @@
     cog(0, HIP + 2.4, 3.6, 8, -spin * 1.6, shade(CB.cog, -.1), .8); // the hip cog, turning with the phase
     brassPlate(() => poly([-11, HIP - 1, -2, HIP - 1, -3, HIP + 9, -10.4, HIP + 8]), shade(brass, -.25), [-12, HIP - 2, -8, HIP - 2, -8, HIP + 10, -12, HIP + 10], null, 1.1);
     brassPlate(() => poly([1, HIP - 1, 11, HIP - 1, 11.6, HIP + 8.4, 2.4, HIP + 9.6]), brass, [0, HIP - 2, 4, HIP - 2, 4.4, HIP + 11, 0, HIP + 11], () => { ctx.moveTo(10.4, HIP); ctx.lineTo(10.8, HIP + 8); }, 1.1);
-    cylShade(() => poly([1, HIP - 1, 11, HIP - 1, 11.6, HIP + 8.4, 2.4, HIP + 9.6]), 11.6, 0, 1, 0, .7);
     rivet(7.6, HIP + 2, .8, brass); rivet(7.8, HIP + 6.4, .8, brass);
     // the boiler chest: broad shoulders over a narrower waist
     const seams = () => { ctx.beginPath(); ctx.moveTo(-15, SHO + 4); ctx.quadraticCurveTo(0, SHO + 1, 16, SHO + 4); ctx.moveTo(-13, HIP - 9); ctx.quadraticCurveTo(0, HIP - 7, 14, HIP - 9); ctx.moveTo(-12, HIP - 5); ctx.quadraticCurveTo(0, HIP - 3.4, 12, HIP - 5); ctx.moveTo(0, SHO + 4); ctx.lineTo(0, SHO + 6.4); };
@@ -758,11 +757,6 @@
       ctx.strokeStyle = shade(brass, .55); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(15, SHO + 3); ctx.quadraticCurveTo(15.6, SHO + 12, 10.6, HIP - 4.4); ctx.stroke(); // rim light
       for (let i = 0; i < 7; i++) { const x = -11 + i * 3.8; rivet(x, SHO + 3.6 + Math.abs(x) * .04 - (Math.abs(x) < 6 ? .8 : 0), .7, brass); }
       for (const x of [-8, 8]) { rivet(x, HIP - 7.4, .55, brass); rivet(x * .9, HIP - 3.4, .55, brass); } // the lames riveted on
-      if (!P3) { // engraving: a sun in splendour cut round the furnace hatch, a scroll on the breast (dark cut, a lit lip under it)
-        const eng = (dx, dy) => { ctx.beginPath(); for (let i = 0; i < 11; i++) { const an = Math.PI + .2 + i / 10 * (Math.PI - .4), r0 = 8.2, r1 = i % 2 ? 9.8 : 11.2; ctx.moveTo(dx + Math.cos(an) * r0, SHO + 12 + dy + Math.sin(an) * r0 * .9); ctx.lineTo(dx + Math.cos(an) * r1, SHO + 12 + dy + Math.sin(an) * r1 * .9); }
-          ctx.moveTo(12.6 + dx, SHO + 9 + dy); ctx.arc(11.6 + dx, SHO + 9 + dy, 1, 0, Math.PI * 1.6); ctx.quadraticCurveTo(10, SHO + 6 + dy, 12.4 + dx, SHO + 6.4 + dy); ctx.quadraticCurveTo(14.6 + dx, SHO + 7.4 + dy, 13.6 + dx, SHO + 11 + dy); ctx.quadraticCurveTo(12, SHO + 14 + dy, 9 + dx, SHO + 13 + dy); };
-        ctx.lineWidth = .5; ctx.strokeStyle = shade(brass, .4); eng(-.3, .35); ctx.stroke(); ctx.strokeStyle = shade(brass, -.5); eng(0, 0); ctx.stroke();
-      }
       if (!LITE) { // the round of the breastplate: a broad soft shine high on the lit side, shadow tucked under the pauldron and the helm
         const k = phase === 1 ? .32 : phase === 2 ? .16 : .08, g = ctx.createRadialGradient(9, SHO - 1, .5, 9, SHO - 1, 10); g.addColorStop(0, `rgba(255,250,232,${k})`); g.addColorStop(1, 'rgba(255,250,232,0)'); ctx.fillStyle = g; ctx.fillRect(-1, SHO - 11, 20, 20);
         const o = ctx.createRadialGradient(2, SHO + 7.6, 1, 2, SHO + 7.6, 11); o.addColorStop(0, 'rgba(14,8,6,.34)'); o.addColorStop(1, 'rgba(14,8,6,0)'); ctx.fillStyle = o; ctx.fillRect(-9, SHO - 4, 22, 23);
@@ -786,6 +780,11 @@
         ctx.globalAlpha = 1;
       }
     });
+    if (!P3 && DET()) { // engraving: a sun in splendour cut round the furnace hatch, a scroll on the breast (dark cut, a lit lip under it)
+      const eng = (dx, dy) => { ctx.beginPath(); for (let i = 0; i < 11; i++) { const an = Math.PI + .2 + i / 10 * (Math.PI - .4), r0 = 8.2, r1 = i % 2 ? 9.8 : 11.2; ctx.moveTo(dx + Math.cos(an) * r0, SHO + 12 + dy + Math.sin(an) * r0 * .9); ctx.lineTo(dx + Math.cos(an) * r1, SHO + 12 + dy + Math.sin(an) * r1 * .9); }
+        ctx.moveTo(12.6 + dx, SHO + 9 + dy); ctx.arc(11.6 + dx, SHO + 9 + dy, 1, 0, Math.PI * 1.6); ctx.quadraticCurveTo(10, SHO + 6 + dy, 12.4 + dx, SHO + 6.4 + dy); ctx.quadraticCurveTo(14.6 + dx, SHO + 7.4 + dy, 13.6 + dx, SHO + 11 + dy); ctx.quadraticCurveTo(12, SHO + 14 + dy, 9 + dx, SHO + 13 + dy); };
+      ctx.lineWidth = .5; ctx.strokeStyle = shade(brass, .4); eng(-.3, .35); ctx.stroke(); ctx.strokeStyle = shade(brass, -.5); eng(0, 0); ctx.stroke();
+    }
     if (phase >= 2) { // phase two: the breastplate blown open over the clockwork; three: the plating gone to a bare, red-hot frame
       const big = P3;
       const hole = big ? [-15.8, SHO + 3.4, -6, SHO + 2.6, -5.4, SHO + 9, -6.4, HIP - 3, -11.6, HIP - 2.2, -16.2, SHO + 13]
@@ -875,12 +874,12 @@
     for (let k = 2; k >= (P3 ? 2 : phase === 2 ? 1 : 0); k--) { // (its outer plate is blown off in phase two, and the next one in overdrive)
       const col = shade(brass, k === 0 ? .06 : -.12 - k * .08);
       pa(k, 7 - k); ctx.fillStyle = C(col); ctx.fill();
-      clipIn(() => pa(k, 7 - k), () => { ctx.fillStyle = shade(col, -.35); ctx.fillRect(-12, SHO - 8, 7, 20); if (k === 0) { ctx.fillStyle = shade(col, .5); ell(5, SHO - 3.4, 4, 1.4, -.3); ctx.fill(); }
+      clipIn(() => pa(k, 7 - k), () => { ctx.fillStyle = shade(col, -.35); ctx.fillRect(-12, SHO - 8, 7, 20);
+        { const r = 13 - k, y = SHO - 4 + k * 2.6, g = ctx.createRadialGradient(6, y, r * .05, 6, y, r); g.addColorStop(0, 'rgba(255,248,224,.22)'); g.addColorStop(.38, 'rgba(255,248,224,0)'); g.addColorStop(.72, 'rgba(16,10,8,.12)'); g.addColorStop(1, 'rgba(16,10,8,.5)'); ctx.fillStyle = g; ctx.fillRect(-12, SHO - 10, 26, 22); }
+        if (k === 0) { ctx.fillStyle = shade(col, .5); ell(5, SHO - 3.4, 4, 1.4, -.3); ctx.fill(); }
         if (P3) { ctx.lineWidth = 1.8; ctx.globalAlpha = .6; for (const [r, c] of [[4, '#D8B060'], [6, '#8A4AA0'], [8, '#4A6AC8']]) { ctx.strokeStyle = c; circle(1, SHO + 12, r + 4); ctx.stroke(); } ctx.globalAlpha = 1; } });
-      if (DET()) { orbShade(() => pa(k, 7 - k), 6, SHO - 4 + k * 2.6, 13 - k, .22, .5);
-        ctx.save(); pa(k, 7 - k); ctx.clip(); ctx.lineWidth = .5; // an engraved border following the rim of the plate
-        ctx.strokeStyle = shade(col, .42); ctx.beginPath(); ctx.ellipse(1 - .25, SHO + 1 + k * 2.6 + .35, 8.4 - k * .8, 5.6 - k, -.25, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
-        ctx.strokeStyle = shade(col, -.5); ctx.beginPath(); ctx.ellipse(1, SHO + 1 + k * 2.6, 8.4 - k * .8, 5.6 - k, -.25, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke(); ctx.restore();
+      if (DET()) { ctx.lineWidth = .5; ctx.strokeStyle = shade(col, .42); ctx.beginPath(); ctx.ellipse(1 - .25, SHO + 1 + k * 2.6 + .35, 8.4 - k * .8, 5.6 - k, -.25, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke(); // an engraved border following the rim of the plate
+        ctx.strokeStyle = shade(col, -.5); ctx.beginPath(); ctx.ellipse(1, SHO + 1 + k * 2.6, 8.4 - k * .8, 5.6 - k, -.25, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
         if (k === (P3 ? 2 : phase === 2 ? 1 : 0)) for (let i = 0; i < 5; i++) { const an = Math.PI * (1.12 + i * .19); rivet(1 + Math.cos(an - .25) * (8.6 - k * .8), SHO + 1 + k * 2.6 + Math.sin(an - .25) * (5.8 - k) * .98, .5, col); } }
       pa(k, 7 - k); outline(1.2);
     }
@@ -927,7 +926,8 @@
     ctx.save(); ctx.translate(rx, ry); ctx.rotate(ang); ctx.scale(1.12, 1.12); if (far) ctx.scale(.82, .9);
     const W = [-20, -44], T1 = [-60, -74], T2 = [-74, -44], T3 = [-62, -16], T4 = [-34, -2];
     const pane = (pts, ctl, k) => {
-      ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.quadraticCurveTo(ctl[0], ctl[1], pts[4], pts[5]); ctx.closePath();
+      const pp = () => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.quadraticCurveTo(ctl[0], ctl[1], pts[4], pts[5]); ctx.closePath(); };
+      pp();
       const h = (hueBase + t * 40 + k * 46) % 360;
       ctx.fillStyle = C(P3 ? (k % 2 ? 'rgba(58,42,74,.92)' : 'rgba(40,28,54,.92)') : `hsla(${h},${rage ? 80 : 68}%,${far ? 44 : 58}%,.9)`); ctx.fill();
       if (DET()) { // each pane is two facets: one catching the light, one in shadow
@@ -936,14 +936,14 @@
         const ex = (pts[2] + pts[4]) / 2, ey = (pts[3] + pts[5]) / 2, g = ctx.createLinearGradient(pts[0], pts[1], ex, ey);
         if (P3) { g.addColorStop(0, 'rgba(255,220,150,.22)'); g.addColorStop(.6, 'rgba(120,70,160,0)'); g.addColorStop(1, 'rgba(10,4,16,.4)'); }
         else { g.addColorStop(0, `hsla(${h + 40},90%,92%,.5)`); g.addColorStop(.55, `hsla(${h},80%,60%,0)`); g.addColorStop(1, `hsla(${h - 50},80%,28%,.42)`); }
-        ctx.fillStyle = g; ctx.fill();
+        pp(); ctx.fillStyle = g; ctx.fill();
         ctx.strokeStyle = P3 ? 'rgba(255,220,150,.55)' : 'rgba(255,255,255,.6)'; ctx.lineWidth = .55; ctx.beginPath(); // a fracture in the glass, and a refracted streak
         const fx = lerp2(pts[0], ex, .35), fy = lerp2(pts[1], ey, .35); ctx.moveTo(fx, fy); ctx.lineTo(lerp2(fx, pts[2], .45), lerp2(fy, pts[3], .45) + 2); ctx.moveTo(fx, fy); ctx.lineTo(lerp2(fx, ex, .6) - 1, lerp2(fy, ey, .6)); ctx.lineTo(lerp2(fx, pts[4], .7), lerp2(fy, pts[5], .7));
         ctx.stroke();
         ctx.strokeStyle = P3 ? 'rgba(232,192,106,.7)' : `hsla(${h + 150},95%,72%,.85)`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(pts[2], pts[3]); ctx.quadraticCurveTo(ctl[0], ctl[1], pts[4], pts[5]); ctx.stroke(); // the prismatic fringe along the trailing edge
         ctx.restore();
       }
-      outline(1.2);
+      pp(); outline(1.2);
     };
     pane([W[0], W[1], T1[0], T1[1], T2[0], T2[1]], [-52, -54], 0);
     pane([W[0], W[1], T2[0], T2[1], T3[0], T3[1]], [-52, -32], 1);
@@ -1003,17 +1003,19 @@
         ctx.fillStyle = segCol(i, 36); poly([-L * 1.4, r * .42, L * 1.2, r * .3, L * 1.2, r * 1.1, -L * 1.4, r * 1.1]); ctx.fill(); // the shadowed belly facet
         ctx.strokeStyle = P3 ? '#5A4A6E' : `hsl(${hue(i)},${sat}%,84%)`; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-L * .9, -r * .3); ctx.lineTo(L * .4, r * .32); ctx.stroke(); // a facet edge
         ctx.fillStyle = P3 ? '#E8C06A' : `hsl(${hue(i) + 30},40%,86%)`; ctx.fillRect(-L * 1.2, r * .74, L * 2.4, r * .12); // a pale ventral scute
-        if (!LITE) { // light refracted through the crystal: a bright core, hue-shifted, dark at the far wall
+        ctx.fillStyle = 'rgba(255,255,255,.85)'; poly([L * .1, -r * .9, L * .6, -r * .92, L * .4, -r * .66, -L * .1, -r * .66]); ctx.fill(); // a specular glint
+      });
+      if (DET()) { // (unclipped: each of these keeps inside the ring by itself)
+        { // light refracted through the crystal: a bright core, hue-shifted, dark at the far wall
           const g = ctx.createRadialGradient(L * .25, -r * .2, r * .05, 0, 0, r * 1.15);
           if (P3) { g.addColorStop(0, 'rgba(255,214,140,.32)'); g.addColorStop(.45, 'rgba(140,90,180,.06)'); g.addColorStop(1, 'rgba(6,2,12,.45)'); }
           else { g.addColorStop(0, `hsla(${hue(i) + 50},95%,90%,.55)`); g.addColorStop(.45, `hsla(${hue(i) + 20},85%,65%,.08)`); g.addColorStop(1, `hsla(${hue(i) - 40},70%,22%,.45)`); }
-          ctx.fillStyle = g; ctx.fillRect(-L * 1.5, -r * 1.2, L * 3, r * 2.4);
+          ctx.fillStyle = g; poly(ring); ctx.fill();
         }
         ctx.strokeStyle = P3 ? 'rgba(232,192,106,.35)' : 'rgba(255,255,255,.35)'; ctx.lineWidth = .5; ctx.beginPath(); // the star cut: facets meeting at the table
         for (let k = 0; k < ring.length; k += 4) { ctx.moveTo(L * .15, r * .02); ctx.lineTo(ring[k], ring[k + 1]); } ctx.stroke();
-        ctx.fillStyle = 'rgba(255,255,255,.85)'; poly([L * .1, -r * .9, L * .6, -r * .92, L * .4, -r * .66, -L * .1, -r * .66]); ctx.fill(); // a specular glint
         ctx.lineWidth = 1; ctx.strokeStyle = P3 ? 'rgba(255,200,110,.5)' : `hsla(${hue(i) + 120},95%,70%,.7)`; ctx.beginPath(); ctx.moveTo(-L * .95, r * .78); ctx.lineTo(L * .5, r * .94); ctx.lineTo(L * 1.05, r * .46); ctx.stroke(); // dispersion: a coloured fringe along the lower edge
-      });
+      }
       poly(ring); outline(1.6);
       if (P3) { ctx.strokeStyle = C('#E8C06A'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-L, -r * .82); ctx.lineTo(L * .5, -r * .96); ctx.lineTo(L * 1.05, -r * .48); ctx.stroke(); }
       add(() => { ctx.fillStyle = P3 ? 'rgba(255,200,110,.35)' : `hsla(${hue(i)},95%,72%,${.18 + phase * .1 + (rage ? .1 : 0)})`; ell(0, r * .02, L * .7, r * .2); ctx.fill(); }); // the living light inside

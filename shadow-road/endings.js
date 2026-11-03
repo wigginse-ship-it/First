@@ -2,12 +2,14 @@
 // ---------- the end of each world: a short painted vignette after its boss falls ----------
 // Worlds 1-5 each close on a few seconds of their own before the rewards and the forge: the boss room settles (Act I,
 // the live scene with this file's touches laid into it), then a second panel shows the road going on (Act II, painted
-// from the next stretch of that world's own backgrounds). A line of narration comes up in the banner. Tap, click,
-// Enter, Space or any game button skips it; on a new cycle of the road it runs faster and can be skipped at once.
+// from the next stretch of that world's own backgrounds). A line of narration comes up in the banner (held for as long as it
+// takes to read: 2.6s and a twentieth of a second a letter; on a new cycle its words are ng_endings.js's). Tap, click,
+// Enter, Space or any game button skips it; on a new cycle of the road it runs faster until the words come up, and can be skipped at once.
 // The dream (world 5) ends on the Rim of the Abyss with Corwin taking out his deck of Trumps; the choice of road that
 // follows (the shuffle, the three cards, the step through the one he picks) is branch.js, which this hands over to.
 // The three worlds the road can go on to each keep their own, longer ending (Tir-na Nog'th's is in art_w5.js, Rebma's and
-// Lorraine's in their own files), which wrap stageClear outside this one and are left untouched.
+// Lorraine's in their own files), which wrap stageClear outside this one and are left untouched (on a new cycle of the
+// road ng_endings.js plays its own ending for them instead).
 // Everything here hooks in by wrapping: stageClear, drawScene, drawBossRoom, mechBoxes and mechList.
 (() => {
   const cl01 = (k) => clamp(k, 0, 1), sm = (k) => { k = cl01(k); return k * k * (3 - 2 * k); };
@@ -500,8 +502,8 @@
   // ---------------- running it ----------------
   function render(t) {
     const E = END, W = E.W, now = performance.now(), rdt = Math.min(.05, (now - E.last) / 1000); E.last = now; E.real += rdt;
-    const dt = HOLD.at !== null && E.t >= HOLD.at ? 0 : rdt * E.rate; E.t += dt; const T = E.t; // (a test can hold the clock still)
-    if (T >= W.bannerAt && !E.bannered) { E.bannered = 1; banner(W.title, W.sub, (W.dur - W.bannerAt - .9) / E.rate); }
+    const dt = HOLD.at !== null && E.t >= HOLD.at ? 0 : rdt * (E.bannered ? 1 : E.rate); E.t += dt; const T = E.t; // (a test can hold the clock still; once the words are up it runs in real time, so they stay as long as they need)
+    if (T >= W.bannerAt && !E.bannered) { E.bannered = 1; banner(E.title, E.sub, E.read); }
     if (W.update) W.update(E, T, dt);
     const showA1 = T < W.d1, showA2 = T >= W.d0 && W.act2;
     if (showA1) {
@@ -517,16 +519,21 @@
       ctx.save(); if (showA1 && k < 1) cellsClip(k, W.dir || 1);
       try { W.act2(E, T, dt, t); } finally { ctx.restore(); }
     }
-    if (E.bannered) { const bk = sm((T - W.bannerAt) / .8) * (1 - sm((T - (W.dur - 1.4)) / .7)); // a soft shadow behind the narration, so it reads on any sky
+    if (E.bannered) { const bk = sm((T - W.bannerAt) / .8) * (1 - sm((T - (E.dur - 1.4)) / .7)); // a soft shadow behind the narration, so it reads on any sky
       if (bk > 0) { ctx.save(); ctx.translate(VW / 2, Y_OFF + VIEW_H * .335); ctx.scale(1, .2); const g = ctx.createRadialGradient(0, 0, 10, 0, 0, VW * .52); g.addColorStop(0, `rgba(14,8,18,${.5 * bk})`); g.addColorStop(.6, `rgba(14,8,18,${.32 * bk})`); g.addColorStop(1, 'rgba(14,8,18,0)'); ctx.fillStyle = g; ctx.fillRect(-VW, -VW * .6, VW * 2, VW * 1.2); ctx.restore(); } }
-    const fo = W.noFade ? 0 : sm((T - (W.dur - .8)) / .8); if (fo > 0) { ctx.fillStyle = `rgba(8,6,12,${fo})`; view(); }
+    const fo = W.noFade ? 0 : sm((T - (E.dur - .8)) / .8); if (fo > 0) { ctx.fillStyle = `rgba(8,6,12,${fo})`; view(); }
     skipHint(E.real);
     paperFrame();
-    if (T >= W.dur) finish();
+    if (T >= E.dur) finish();
   }
   function start(sc) {
     const W = WORLDS[baseStage.theme]; if (!W) return sc();
     const E = END = { W, t: 0, real: 0, last: performance.now(), sc, orig: E_ORIG, t0: performance.now() / 1000, boss: boss && boss.dead ? boss : null, rate: save.cycle > 0 ? 1.6 : 1, heroA: 1 };
+    // the words: a new cycle of the road has its own (ng_endings.js: by the cycle, and by the curse's weight when he carries it);
+    // they stay up for 2.6s and a twentieth of a second a letter, and the panel holds on until they have gone
+    let words = null; try { if (window.NGEND && NGEND.vignette) words = NGEND.vignette(baseStage.theme); } catch (err) { console.error(err); }
+    E.title = (words && words.title) || W.title; E.sub = (words && words.sub) || W.sub;
+    E.read = 2.6 + .05 * (E.title.length + E.sub.length) + .5; E.dur = Math.max(W.dur, W.bannerAt + E.read + .9);
     try { E.B = buildAlt(W.theme2, W.seed + stageIdx); if (W.tintB) W.tintB(E.B); W.setup(E); }
     catch (err) { console.error(err); dropAlt(E.B); dropAlt(E.B2); END = null; return sc(); }
     mode = 'ending'; clearInput();
@@ -578,7 +585,7 @@
   }, true);
   window.addEventListener('pointerdown', (e) => { if (END) { skip(); e.preventDefault(); } }, true);
   { const st = document.createElement('style'); // while it plays the HUD steps aside, all but the banner
-    st.textContent = '#app.sr-end #hud > :not(#banner){visibility:hidden!important}#app.sr-end #banner{transition:opacity .9s}#app.sr-end #banner .s{max-width:84%;margin:6px auto 0;line-height:1.7}';
+    st.textContent = '#app.sr-end #hud > :not(#banner){visibility:hidden!important}#app.sr-end #banner{transition:opacity .6s}#app.sr-end #banner .s{max-width:84%;margin:6px auto 0;line-height:1.7}';
     document.head.appendChild(st); }
   // the painting kit, for the choice of road after the dream (branch.js) and any world's own ending
   const kit = { buildAlt, dropAlt, withSet, paintWorld, cycleTint, inkHero, poseAs, trumpPose, deckInHand, mask, glowR, sm, cl01, hsh, lids, keyed };

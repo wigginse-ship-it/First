@@ -248,7 +248,7 @@
     if (CH) return;
     const E = o.from, cards = ROADS.map(s => ({ stage: s, c: cardFor(s), open: isOpen(s) }));
     const hx = E ? E.wx : VW * .3, hy = E ? E.hy : FLOOR_TOP + 66;
-    const C = CH = { t: 0, real: 0, last: performance.now(), sc, rate: save.cycle > 0 ? 1.6 : 1, cards, sel: 0, pos: [], wx: hx, hy, side: E ? E.side : 1,
+    const C = CH = { t: 0, real: 0, last: performance.now(), sc, rate: SHUF_RATE, cards, sel: 0, pos: [], wx: hx, hy, side: E ? E.side : 1,
       B: (E && E.B) || null, masks: (E && E.masks) || makeMasks(hx), commitT: null, selT: 0, armAt: Infinity, shake: [0, 0, 0], gp: {}, sounds: {}, nextFlickSfx: 0 };
     C.sel = defaultSel(cards); C.hand = [hx + C.side * 19.5, hy - 70];
     try { if (!C.B) C.B = buildAlt('chaosBoss', 251 + FORK); bakeAll(C); }
@@ -387,11 +387,20 @@
     ctx.fillStyle = `rgba(6,5,14,${d})`; view();
     const vg = ctx.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .5, VIEW_H * .3, VW / 2, Y_OFF + VIEW_H * .5, VW * .7); vg.addColorStop(0, 'rgba(4,3,10,0)'); vg.addColorStop(1, `rgba(4,3,10,${.7 * sm((T - .6) / 1)})`); ctx.fillStyle = vg; view();
   }
+  // the narration's pace: each line up for 2.6s and a twentieth of a second a letter, fading in and out over .6s, one at a
+  // time; the shuffle under it runs at half speed, and the cards, once dealt, wait face up until the last line is read
+  const SHUF_RATE = .5, SAY_AT = .4, readT = (s) => 2.6 + .05 * String(s || '').length;
+  const sayLines = () => [Object.keys(save.endings || {}).some(k => save.endings[k]) ? 'The Rim again, and the deck again; and some of the cards were still warm from the last time.' : 'He woke on the Rim of the Abyss, and the Trumps of Amber were still in his doublet.',
+    'Before it woke, the Sleeper had dreamed of three places, and he had seen them over its shoulder.', 'Three cards came up cold under his thumb: three roads, and he could walk only one.'];
+  const sayEnd = () => sayLines().reduce((s0, str, i, L) => s0 + .6 + readT(str) + (i < L.length - 1 ? .75 : 0), SAY_AT);
+  const goLine = (C) => { const k = C.cards[C.sel].c; return k.go || `He held up the Trump of ${STAGES[C.cards[C.sel].stage] ? STAGES[C.cards[C.sel].stage].name : k.name}, and looked into it until it was cold under his fingers, and the picture on it began to move.`; };
   function render(t) {
     const C = CH, now = performance.now(), rdt = Math.min(.05, (now - C.last) / 1000); C.last = now; C.real += rdt;
     if (C.K !== K) bakeAll(C); // (the window was resized)
     pollPad();
-    const dt = HOLD.at !== null && C.t >= HOLD.at ? 0 : rdt * (C.commitT !== null || C.t < T_BROWSE ? C.rate : 1); C.t += dt; const T = C.t;
+    const dt = HOLD.at !== null && C.t >= HOLD.at ? 0 : rdt * (C.commitT !== null ? 1 : C.t < T_BROWSE ? C.rate : 1); C.t += dt;
+    if (C.commitT === null && C.t >= T_BROWSE && C.t - dt < T_BROWSE && C.real < sayEnd(C)) C.t = T_BROWSE - .001; // (the cards wait, face up, until the last words are read)
+    const T = C.t;
     if (C.t >= T_BROWSE && C.armAt === Infinity) C.armAt = C.real + .6;
     const G = geo(), L = heroLook(), b = C.b * (G.dh / FH), bS = (h) => C.b * (h / FH);
     drawRim(C, Math.min(T, 3), T, t);
@@ -467,12 +476,11 @@
       if (c > 2.6 && !C.sounds.music) { C.sounds.music = 1; const th = STAGES[C.cards[C.sel].stage].theme; if (TRACKS[th]) playMusic(th); }
     }
     // ------- the words -------
-    const ty = Y_OFF + 16, any = Object.keys(save.endings || {}).some(k => save.endings[k]);
-    if (C.commitT === null && T < T_BROWSE) {
-      const a1 = sm((T - .4) / .6) * (1 - sm((T - 3.3) / .4)), a2 = sm((T - 3.6) / .5) * (1 - sm((T - 6.9) / .4)), a3 = sm((T - 7.2) / .5);
-      say(any ? 'The Rim again, and the deck again; and some of the cards were still warm from the last time.' : 'He woke on the Rim of the Abyss, and the Trumps of Amber were still in his doublet.', ty, a1, 9, '240,232,214', VW - 60, 'Spectral');
-      say('Before it woke, the Sleeper had dreamed of three places, and he had seen them over its shoulder.', ty, a2, 9, '240,232,214', VW - 60, 'Spectral');
-      say('Three cards came up cold under his thumb: three roads, and he could walk only one.', ty, a3, 9, '240,232,214', VW - 60, 'Spectral');
+    const ty = Y_OFF + 16;
+    if (C.commitT === null && T < T_BROWSE) { // the words, one after another on their own clock (real seconds), each up for as long as it takes to read
+      const L = sayLines(), r = C.real; let s0 = SAY_AT;
+      L.forEach((str, i) => { const n = readT(str), last = i === L.length - 1, a = sm((r - s0) / .6) * (last ? 1 : 1 - sm((r - (s0 + .6 + n)) / .6));
+        say(str, ty, a, 9, '240,232,214', VW - 60, 'Spectral'); s0 += .6 + n + .6 + .15; });
     }
     if (T >= T_BROWSE && C.commitT === null) {
       const a = sm((T - T_BROWSE) / .5), k = C.cards[C.sel], c = k.c;
@@ -491,10 +499,10 @@
       for (const sd of [-1, 1]) { if ((sd < 0 && C.sel === 0) || (sd > 0 && C.sel === 2)) continue; const x = G.dx + sd * (G.gap * 1.5 + 18), y2 = G.cy; ctx.beginPath(); ctx.moveTo(x - sd * 5, y2 - 9); ctx.lineTo(x + sd * 4, y2); ctx.lineTo(x - sd * 5, y2 + 9); ctx.stroke(); }
       ctx.restore();
     }
-    if (C.commitT !== null) { const c = T - C.commitT, k = C.cards[C.sel].c; say(k.go || `He held up the Trump of ${STAGES[C.cards[C.sel].stage] ? STAGES[C.cards[C.sel].stage].name : k.name}, and looked into it until it was cold under his fingers, and the picture on it began to move.`, ty, sm(c / .5) * (1 - sm((c - 2.6) / .5)), 9, '240,232,214', VW - 60, 'Spectral'); }
+    if (C.commitT !== null) { const c = T - C.commitT, g = goLine(C); say(g, ty, sm(c / .6) * (1 - sm((c - .6 - readT(g)) / .6)), 9, '240,232,214', VW - 60, 'Spectral'); }
     if (C.t < T_BROWSE && C.real > 1 && C.commitT === null) { ctx.save(); ctx.globalAlpha = cl01(C.real - 1) * .8; ctx.fillStyle = 'rgba(232,222,200,.75)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); ctx.restore(); }
     paperFrame();
-    if (C.commitT !== null && T - C.commitT >= 3.9) finish();
+    if (C.commitT !== null && T - C.commitT >= Math.max(3.9, 1.3 + readT(goLine(C)))) finish(); // (he walks on into the picture until the line is read)
   }
   // the card he picked, generalised from the moon's (endings.js had it once): it comes to the middle, the picture on it
   // comes alive (the world's own painted layers, at the card's scale), he walks into it, and it opens out to fill the view

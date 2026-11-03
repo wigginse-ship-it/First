@@ -469,6 +469,7 @@
   // dark halo; round it, its motes. All of it deepens with the curse tier and flares at the surge; while the curse burns
   // back it shrinks and the veins run gold. In the lighter paint there is no mask: its veins and growths only.
   // The body's extent (and a coarse map of where its body is) is read once from a small private drawing, now and then again.
+  const CV_PX = 220000; // (the most pixels the working canvases take for one lord)
   const CV = { m: null, mg: null, f: null, fg: null, c: null, cg: null, cal: new WeakMap(), geo: {}, H: null, o: null };
   function cvCan(k, w, h) { // (the working canvases, grown when needed and never made per frame)
     const c = CV[k]; if (c && c.width >= w && c.height >= h) return CV[k + 'g'];
@@ -507,6 +508,9 @@
   const topAt = (c, x) => { if (!c.top) return c.y0; const i = clamp(Math.round((x - c.gx0) / c.gs - .5), 0, c.top.length - 1); for (let d = 0; d < 6; d++) { if (c.top[i + d] != null) return c.top[i + d]; if (c.top[i - d] != null) return c.top[i - d]; } return c.y0; };
   const topPts = (c, r, n, edge) => { // (points along its top edge, spread out, with the outward lean there)
     const out = []; for (let i = 0; i < n; i++) { const x = c.x0 + c.w * ((i + .5 + (r() - .5) * .7) / n) * (1 - edge * 2) + c.w * edge, y = topAt(c, x), yl = topAt(c, x - 6), yr = topAt(c, x + 6); out.push({ x, y: y + 2, n: Math.atan2(-12, yr - yl), i, rk: r() }); } return out; };
+  const edgePts = (c, r, n, f) => { // (points on its upper edges, where its body has open air just above, with the lean there)
+    const out = []; for (let i = 0; i < n * 12 && out.length < n; i++) { const [x, y] = onBody(c, r, f); if (inBody(c, x, y - c.gs * .9)) continue; const l = inBody(c, x - c.gs, y - c.gs * .5), rr = inBody(c, x + c.gs, y - c.gs * .5);
+      if (out.some(q => Math.hypot(q.x - x, q.y - y) < c.gs * .8)) continue; out.push({ x, y: y - c.gs * .3, n: -Math.PI / 2 + (l && !rr ? .5 : rr && !l ? -.5 : 0) + (r() - .5) * .5, i: out.length, rk: r() }); } return out; };
   const stip = (r, c, n, f, s0, s1) => { const p = new Path2D(); for (let i = 0; i < n; i++) { const [x, y] = onBody(c, r, f), q = s0 + r() * (s1 - s0); p.moveTo(x + q, y); p.arc(x, y, q, 0, TAU); } return p; }; // (a grain of dots over its body)
   // veins: random walks from where they start, branching, pulled the way the style says; they die where the body ends
   function veins(r, c, srcs, o) {
@@ -553,24 +557,30 @@
       G.grain = [stip(r, c, 480, (x, y) => r() < 1 - (y - c.y0) / c.h, .25, .7), stip(r, c, 200, (x, y) => r() < 1 - (y - c.y0) / c.h, .2, .5)];
       G.blot = []; for (let i = 0; i < 16; i++) { const [x, y] = onBody(c, r, (x, y) => y < c.cy + c.h * .1); G.blot.push([x, y, 7 + r() * 16, r()]); }
       G.fun = []; for (let i = 0; i < 9; i++) { const [x, y] = onBody(c, r); G.fun.push([x, y, 3 + r() * 4, r(), r() < .5 ? -1 : 1]); }
-      G.thorn = topPts(c, r, 11, .08).map(p => Object.assign(p, { len: 18 + r() * 18, curl: (r() < .5 ? -1 : 1) * (.35 + r() * .45), sw: r() * TAU }));
-      G.crack = []; for (let i = 0; i < 5; i++) { const [x, y] = onBody(c, r), q = [x, y]; let an = r() * TAU; for (let s = 0; s < 5; s++) { an += (r() - .5) * 1.2; q.push(q[q.length - 2] + Math.cos(an) * 5, q[q.length - 1] + Math.sin(an) * 5); } G.crack.push({ q, rk: r() }); }
+      G.thorn = edgePts(c, r, 14, (x, y) => y > c.y0 + c.h * .3 && y < c.y0 + c.h * .7 && Math.abs(x - c.cx) < c.w * .34).map(p => Object.assign(p, { len: 28 + r() * 24, curl: (r() < .5 ? -1 : 1) * (.35 + r() * .45), sw: r() * TAU }));
+      G.crack = []; for (let i = 0; i < 7; i++) { const [x, y] = onBody(c, r, (x, y) => y < c.cy), q = [x, y]; let an = r() * TAU; for (let s = 0; s < 8; s++) { an += (r() - .5) * 1.1; q.push(q[q.length - 2] + Math.cos(an) * 5, q[q.length - 1] + Math.sin(an) * 5); } G.crack.push({ q, rk: r() }); }
     },
-    mul(g, e, c, G, t, k, gr) { const lg = g.createLinearGradient(0, c.y0, 0, c.y1); lg.addColorStop(0, tow('#4A4038', k)); lg.addColorStop(.3, tow('#7A6E64', k)); lg.addColorStop(.65, tow('#A09890', k)); lg.addColorStop(1, tow('#B8B0B4', k * .9)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40);
+    mul(g, e, c, G, t, k, gr) { const lg = g.createLinearGradient(0, c.y0, 0, c.y1); lg.addColorStop(0, tow('#4A4038', k)); lg.addColorStop(.3, tow('#7A6E64', k)); lg.addColorStop(.65, tow('#A09890', k)); lg.addColorStop(1, tow('#B8B0B4', k * .9)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop';
       for (const b of G.blot) { if (b[3] > FRAC[e.cB.bt]) continue; const rg = g.createRadialGradient(b[0], b[1], 0, b[0], b[1], b[2] * gr); rg.addColorStop(0, `rgba(40,30,26,${.5 * k})`); rg.addColorStop(1, 'rgba(40,30,26,0)'); g.fillStyle = rg; g.fillRect(b[0] - b[2], b[1] - b[2], b[2] * 2, b[2] * 2); }
       vStroke(g, G.v[e.cB.bt], [5, 3, 1.6], '#3A3230', gr, c.h * 1.3); },
     surf(g, e, c, G, t, k, gr) { const P = G.v[e.cB.bt];
       g.globalAlpha = (.4 + .5 * k) * gr; g.fillStyle = '#1E1814'; g.fill(G.grain[0]); g.fillStyle = '#8A7A68'; g.fill(G.grain[1]); g.globalAlpha = 1;
       vStroke(g, P, [3.2, 2, 1.1], '#16100E', gr, c.h * 1.3);
       g.save(); g.translate(-.9, -1); vStroke(g, P, [1, .7, .4], 'rgba(130,114,100,.6)', gr, c.h * 1.3); g.restore();
-      if (gr >= 1) vPulse(g, P, [1.3, .8], e.cB.burn > 0 ? 'rgba(255,214,120,.95)' : `rgba(${200 + 40 * Math.sin(t * 3) | 0},34,26,.9)`, t, 18, [4, 22]);
+      if (gr >= 1) vPulse(g, P, [1.3, .8], e.cB.burn > 0 ? 'rgba(255,214,120,.95)' : `rgba(${200 + 40 * Math.sin(t * 3) | 0},34,26,.72)`, t, 18, [3, 24]);
       for (const f of G.fun) { if (f[3] > FRAC[e.cB.bt]) continue; const s = f[2] * gr; g.save(); g.translate(f[0], f[1]); g.scale(f[4], 1); g.fillStyle = '#120C0C'; g.beginPath(); g.moveTo(-s, 0); g.quadraticCurveTo(-s * .2, -s * 1.1, s * 1.2, -s * .2); g.quadraticCurveTo(s * .3, s * .3, -s, 0); g.fill(); g.strokeStyle = 'rgba(150,130,120,.6)'; g.lineWidth = .7; g.beginPath(); g.moveTo(-s * .8, -.4); g.quadraticCurveTo(-s * .1, -s * .9, s, -s * .25); g.stroke(); g.restore(); }
-      g.lineCap = 'round'; for (const q of G.crack) { if (q.rk > FRAC[e.cB.bt]) continue; g.beginPath(); g.moveTo(q.q[0], q.q[1]); for (let i = 2; i < q.q.length; i += 2) g.lineTo(q.q[i], q.q[i + 1]); g.strokeStyle = '#060406'; g.lineWidth = 3; g.stroke(); g.strokeStyle = `rgba(230,50,40,${.55 + .35 * Math.sin(t * 4 + q.rk * 9)})`; g.lineWidth = .9; g.stroke(); } },
+      for (const q of G.crack) { if (q.rk > FRAC[e.cB.bt]) continue; fissure(g, q.q, 3.4 * gr, e.cB.burn > 0 ? '255,220,140' : '235,50,40', .55 + .35 * Math.sin(t * 4 + q.rk * 9)); } },
     top(e, c, G, t, k, gr) { // black briars out of his back, thorned, arching over; red berries of the Circle on the oldest
       const f = FRAC[e.cB.bt], B = e.cB, off = (e.plan === 'sweep' || e.plan === 'roll' || e.plan === 'submerge') && ['wind', 'strike', 'dash', 'recover'].includes(e.state); B.vTop = lerp(B.vTop ?? 1, off ? 0 : 1, .25); if (B.vTop < .05) return; ctx.globalAlpha *= B.vTop;
       for (const p of G.thorn) { if (p.rk > f) continue; const L = p.len * gr * (.75 + .35 * k) * (.5 + .5 * B.vTop), sw = Math.sin(t * 1.3 + p.sw) * .1;
-        briar(p.x, p.y, p.n + sw, L, p.curl, 3.4, p.rk < f * .45 ? t + p.sw : -1); if (L > 14) briar(p.x + Math.cos(p.n) * L * .3, p.y + Math.sin(p.n) * L * .3, p.n - p.curl * .7 + sw, L * .5, -p.curl * .8, 2.2, -1); } },
+        briar(p.x, p.y, p.n + sw, L, p.curl, 4.8, p.rk < f * .45 ? t + p.sw : -1); if (L > 14) briar(p.x + Math.cos(p.n) * L * .3, p.y + Math.sin(p.n) * L * .3, p.n - p.curl * .7 + sw, L * .5, -p.curl * .8, 2.2, -1); } },
   };
+  function fissure(g, q, w, rgb, a) { // (a crack opened in it: a black wedge widest at its middle, the void's light down in it)
+    const n = q.length / 2; g.beginPath(); for (let i = 0; i < n; i++) { const j = Math.min(n - 2, i), dx = q[j * 2 + 2] - q[j * 2], dy = q[j * 2 + 3] - q[j * 2 + 1], l = Math.hypot(dx, dy) || 1, ww = w * Math.sin(Math.PI * i / (n - 1)); g.lineTo(q[i * 2] - dy / l * ww, q[i * 2 + 1] + dx / l * ww); }
+    for (let i = n - 1; i >= 0; i--) { const j = Math.min(n - 2, i), dx = q[j * 2 + 2] - q[j * 2], dy = q[j * 2 + 3] - q[j * 2 + 1], l = Math.hypot(dx, dy) || 1, ww = w * Math.sin(Math.PI * i / (n - 1)) * .7; g.lineTo(q[i * 2] + dy / l * ww, q[i * 2 + 1] - dx / l * ww); }
+    g.closePath(); g.fillStyle = '#050305'; g.fill(); g.strokeStyle = 'rgba(200,190,200,.35)'; g.lineWidth = .5; g.stroke();
+    g.beginPath(); g.moveTo(q[2], q[3]); for (let i = 2; i < n - 1; i++) g.lineTo(q[i * 2], q[i * 2 + 1]); g.strokeStyle = `rgba(${rgb},${a})`; g.lineWidth = Math.max(.5, w * .32); g.stroke();
+  }
   function briar(x, y, a, L, curl, w0, berry) { // (one cane: a tapered arching stem, thorns hooked back along it)
     const n = 7, P = []; let an = a, px = x, py = y; for (let i = 0; i <= n; i++) { P.push([px, py, an]); px += Math.cos(an) * L / n; py += Math.sin(an) * L / n; an += curl * .32; }
     ctx.beginPath(); for (let i = 0; i <= n; i++) { const q = P[i], w = w0 * (1 - i / n * .88), nx = -Math.sin(q[2]) * w, ny = Math.cos(q[2]) * w; ctx.lineTo(q[0] + nx, q[1] + ny); }
@@ -597,7 +607,7 @@
       G.vent = topPts(c, r, 5, .2);
     },
     mul(g, e, c, G, t, k, gr) { const h = .25 + .55 * k * gr, lg = g.createLinearGradient(0, c.y1, 0, c.y0); lg.addColorStop(0, tow('#3A2014', k)); lg.addColorStop(h * .55, tow('#7A4428', k)); lg.addColorStop(Math.min(1, h), tow('#A88A7A', k * .8)); lg.addColorStop(1, tow('#A8A2A8', k * .7));
-      g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); vStroke(g, G.v[e.cB.bt], [4, 2.4, 1.5], '#3A2216', gr, c.h * 1.2); },
+      g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop'; vStroke(g, G.v[e.cB.bt], [4, 2.4, 1.5], '#3A2216', gr, c.h * 1.2); },
     surf(g, e, c, G, t, k, gr) { const f = FRAC[e.cB.bt], P = G.v[e.cB.bt];
       for (const s of G.stain) { if (s[4] > f) continue; const lg = g.createLinearGradient(0, s[1], 0, s[1] + s[3] * gr); lg.addColorStop(0, 'rgba(120,52,20,.75)'); lg.addColorStop(.3, 'rgba(90,40,18,.5)'); lg.addColorStop(1, 'rgba(90,40,18,0)'); g.fillStyle = lg; g.beginPath(); g.moveTo(s[0] - s[2], s[1]); g.lineTo(s[0] + s[2], s[1]); g.lineTo(s[0] + s[2] * .3, s[1] + s[3] * gr); g.lineTo(s[0] - s[2] * .4, s[1] + s[3] * gr); g.closePath(); g.fill(); }
       g.globalAlpha = .55 + .4 * k; g.fillStyle = '#7A3A1A'; g.fill(G.grain[0]); g.fillStyle = '#2A140C'; g.fill(G.grain[1]); g.fillStyle = '#A8582A'; g.fill(G.grain[2]); g.globalAlpha = 1;
@@ -620,7 +630,7 @@
       vSet(G, 'v', veins(r, c, S, { snap: Math.PI / 4, turn: .3, jit: .12, depth: 2, br: .12, spread: Math.PI / 4, seg: 6 }), false);
       G.fac = []; for (let i = 0; i < 46; i++) { const [x, y] = onBody(c, r), s = 5 + r() * 9, a = r() * TAU, n = 3 + (r() * 2 | 0), q = []; for (let j = 0; j < n; j++) { const aa = a + j / n * TAU + (r() - .5) * .6, rr = s * (.6 + r() * .5); q.push(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr); } G.fac.push({ q, l: r(), e: r() * n | 0, rk: r() }); }
     },
-    mul(g, e, c, G, t, k, gr) { const lg = g.createLinearGradient(c.x0, c.y0, c.x1, c.y1); lg.addColorStop(0, tow('#2E2638', k * gr)); lg.addColorStop(.5, tow('#4A4058', k * gr)); lg.addColorStop(1, tow('#241E2C', k * gr)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); },
+    mul(g, e, c, G, t, k, gr) { const lg = g.createLinearGradient(c.x0, c.y0, c.x1, c.y1); lg.addColorStop(0, tow('#2E2638', k * gr)); lg.addColorStop(.5, tow('#4A4058', k * gr)); lg.addColorStop(1, tow('#241E2C', k * gr)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop'; },
     surf(g, e, c, G, t, k, gr) { const f = FRAC[e.cB.bt] * gr;
       g.lineJoin = 'miter'; for (const F of G.fac) { if (F.rk > f) continue; const q = F.q, n = q.length / 2; g.beginPath(); g.moveTo(q[0], q[1]); for (let j = 1; j < n; j++) g.lineTo(q[j * 2], q[j * 2 + 1]); g.closePath();
         g.fillStyle = F.l < .35 ? 'rgba(4,2,8,.55)' : F.l < .7 ? 'rgba(60,50,80,.28)' : 'rgba(150,140,190,.16)'; g.fill(); g.strokeStyle = 'rgba(8,4,12,.7)'; g.lineWidth = .8; g.stroke();
@@ -641,7 +651,7 @@
       G.ink = []; for (let i = 0; i < 9; i++) { const [x, y] = onBody(c, r); G.ink.push([x, y, 10 + r() * 14, r() * TAU, r()]); }
       G.eye = []; const R = mulberry(31); for (let i = 0; i < 9; i++) { const [x, y] = onBody(c, R, (x, y) => Math.hypot(x - mx, y - my) > 16 && G.eye.every(q => Math.hypot(q.x - x, q.y - y) > 13)); G.eye.push({ x, y, s: 3 + R() * 2.6, ph: R() * 9, sp: .18 + R() * .2, rot: (R() - .5) * .7, rk: i / 9 }); }
     },
-    mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#7A5A7A', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40);
+    mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#7A5A7A', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop';
       for (const b of G.ink) { const x = b[0] + Math.sin(t * .5 + b[3]) * 6, y = b[1] + Math.cos(t * .4 + b[3]) * 4, R = b[2] * gr * (.7 + .3 * Math.sin(t * .8 + b[4] * 6)) * (.6 + .5 * k), rg = g.createRadialGradient(x, y, 0, x, y, R); rg.addColorStop(0, `rgba(30,6,30,${.85 * k})`); rg.addColorStop(.6, `rgba(60,20,60,${.4 * k})`); rg.addColorStop(1, 'rgba(60,20,60,0)'); g.fillStyle = rg; g.fillRect(x - R, y - R, R * 2, R * 2); } },
     surf(g, e, c, G, t, k, gr) { const hb = Math.pow(Math.max(0, Math.sin(t * 6.8)), 6) + .6 * Math.pow(Math.max(0, Math.sin(t * 6.8 - .9)), 6), Q = G.v[e.cB.bt], sw = 1 + .35 * hb;
       vStroke(g, Q, [3.6 * sw, 2.2 * sw, 1.2 * sw], '#1E0618', gr, c.w); g.save(); g.translate(-.7, -.7); vStroke(g, Q, [1, .7, .4], `rgba(190,110,170,${.35 + .3 * hb})`, gr, c.w); g.restore();
@@ -660,7 +670,7 @@
     halo: '10,8,16', rim: '170,30,40', mote: () => ({ shape: 'puff', col: pick(['rgba(10,8,14,.55)', 'rgba(30,26,36,.5)']), size: rand(2.4, 4.4), vz: rand(20, 50), life: 1 }),
     gen(r, c, G, e) { G.str = []; for (let i = 0; i < 14; i++) { const x = c.x0 + r() * c.w; G.str.push([x, c.y0 + r() * c.h * .5, 3 + r() * 7, c.h * (.3 + r() * .6), r()]); }
       G.cut = []; for (let i = 0; i < 18; i++) { const [x, y] = onBody(c, r), a = (r() - .5) * 2.6, l = 5 + r() * 10; G.cut.push({ x, y, a, l, rk: r(), ph: r(), drip: r() < .5 ? 6 + r() * 14 : 0 }); } },
-    mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#6E6878', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40);
+    mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#6E6878', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop';
       for (const s of G.str) { if (s[4] > FRAC[e.cB.bt]) continue; const L = s[3] * gr, lg = g.createLinearGradient(0, s[1], 0, s[1] + L); lg.addColorStop(0, `rgba(30,26,40,${.8 * k})`); lg.addColorStop(1, 'rgba(30,26,40,0)'); g.fillStyle = lg; g.fillRect(s[0] - s[2] / 2, s[1], s[2], L); } },
     surf(g, e, c, G, t, k, gr) { const f = FRAC[e.cB.bt] * gr; g.lineCap = 'round';
       for (const q of G.cut) { if (q.rk > f) continue; const ca = Math.cos(q.a) * q.l / 2, sa = Math.sin(q.a) * q.l / 2, nx = -Math.sin(q.a) * 1.6, ny = Math.cos(q.a) * 1.6;
@@ -678,7 +688,7 @@
       S.forEach((s, i) => s.push(i / S.length)); vSet(G, 'v', veins(r, c, S, { snap: .9, turn: .45, jit: .3, depth: 3, br: .3, spread: 1.1, seg: 5 }), false);
       G.chip = []; for (let i = 0; i < 10; i++) { const [x, y] = onBody(c, r), s = 4 + r() * 8, q = []; for (let j = 0; j < 6; j++) { const a = j / 6 * TAU + (r() - .5) * .7, rr = s * (.55 + r() * .6); q.push(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } G.chip.push({ q, x, y, s, rk: r(), st: [r(), r(), r(), r(), r(), r()] }); }
       G.moth = []; for (let i = 0; i < 9; i++) G.moth.push({ ph: r() * TAU, sp: .5 + r() * .7, rx: c.w * (.45 + r() * .3), ry: c.h * (.3 + r() * .25), s: 4 + r() * 3, rk: i / 9, f: 14 + r() * 8 }); },
-    mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#8C8AA2', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); const R = Math.max(c.w, c.h) * .62, rg = g.createRadialGradient(c.cx, c.cy, R * .35, c.cx, c.cy, R); rg.addColorStop(0, 'rgba(255,255,255,0)'); rg.addColorStop(1, tow('#2E2840', k * gr)); g.fillStyle = rg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); },
+    mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#8C8AA2', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop'; const R = Math.max(c.w, c.h) * .62, rg = g.createRadialGradient(c.cx, c.cy, R * .35, c.cx, c.cy, R); rg.addColorStop(0, 'rgba(255,255,255,0)'); rg.addColorStop(1, tow('#2E2840', k * gr)); g.fillStyle = rg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); },
     surf(g, e, c, G, t, k, gr) { const P = G.v[e.cB.bt], f = FRAC[e.cB.bt] * gr; vStroke(g, P, [1.3, .9, .6], 'rgba(20,14,26,.9)', gr, c.w * .5); g.save(); g.translate(.7, .7); vStroke(g, P, [.6, .4, .3], 'rgba(255,250,255,.45)', gr, c.w * .5); g.restore();
       for (const q of G.chip) { if (q.rk > f) continue; const n = q.q.length / 2; g.beginPath(); g.moveTo(q.q[0], q.q[1]); for (let j = 1; j < n; j++) g.lineTo(q.q[j * 2], q.q[j * 2 + 1]); g.closePath();
         const rg = g.createRadialGradient(q.x, q.y + q.s * .3, 0, q.x, q.y, q.s * 1.2); rg.addColorStop(0, e.cB.burn > 0 ? '#5A4020' : `rgba(${90 + 50 * Math.sin(t * 2 + q.x) | 0},14,30,1)`); rg.addColorStop(.6, '#0A0610'); rg.addColorStop(1, '#040208'); g.fillStyle = rg; g.fill();
@@ -701,7 +711,7 @@
         G.rays.push({ P, Q, rk });
         for (let i = 0; i < n; i++) for (let j = 0; j < 3; j++) { const v = r(); if (v > .55) continue; const b = pt(i, j), cc = pt(i + 1, j), d = j === 0 ? [h[0], h[1]] : pt(i + 1, j - 1);
           G.sh.push({ q: j === 0 ? [h[0], h[1], b[0], b[1], cc[0], cc[1]] : [pt(i, j - 1)[0], pt(i, j - 1)[1], b[0], b[1], cc[0], cc[1], d[0], d[1]], v, j, rk: rk * .6 + r() * .4, dx: (r() - .5) * 1.6, dy: (r() - .5) * 1.6 }); } }); },
-    mul(g, e, c, G, t, k, gr) { const lg = g.createLinearGradient(c.x0, c.y0, c.x1, c.y1); lg.addColorStop(0, tow('#6A7484', k)); lg.addColorStop(.5, tow('#A0A8B6', k * .8)); lg.addColorStop(1, tow('#4A5262', k)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); },
+    mul(g, e, c, G, t, k, gr) { const lg = g.createLinearGradient(c.x0, c.y0, c.x1, c.y1); lg.addColorStop(0, tow('#6A7484', k)); lg.addColorStop(.5, tow('#A0A8B6', k * .8)); lg.addColorStop(1, tow('#4A5262', k)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop'; },
     surf(g, e, c, G, t, k, gr) { const f = FRAC[e.cB.bt] * gr; g.lineJoin = 'miter';
       for (const s of G.sh) { if (s.rk > f) continue; const q = s.q; g.beginPath(); g.moveTo(q[0] + s.dx, q[1] + s.dy); for (let j = 2; j < q.length; j += 2) g.lineTo(q[j] + s.dx, q[j + 1] + s.dy); g.closePath();
         g.fillStyle = s.v < .12 && s.j < 2 ? '#020206' : s.v < .3 ? 'rgba(6,8,16,.5)' : s.v < .45 ? 'rgba(230,240,255,.22)' : 'rgba(40,50,70,.3)'; g.fill(); if (s.v < .12 && s.j < 2) { g.strokeStyle = `rgba(220,40,60,${.5 + .4 * Math.sin(t * 3 + s.v * 50)})`; g.lineWidth = .7; g.stroke(); } }
@@ -718,17 +728,17 @@
       for (let i = 0; i < 5; i++) S.push([mx, my, i / 5 * TAU, c.h * .3, 3.4]);
       S.sort(() => r() - .5); S.forEach((s, i) => s.push(i / S.length)); vSet(G, 'v', veins(r, c, S, { wig: .9, up: .04, depth: 2, br: .16, seg: 5, spread: .9 }), false);
       G.sig = []; for (let i = 0; i < 7; i++) { const [x, y] = onBody(c, r, (x, y) => Math.hypot(x - mx, y - my) > 18 && G.sig.every(q => Math.hypot(q.x - x, q.y - y) > 20)); G.sig.push({ x, y, s: 4.5 + r() * 3, a: r() * TAU, kind: r() * 3 | 0, ph: r() * 9, rk: i / 7 }); } },
-    mul(g, e, c, G, t, k, gr) { const h = .3 + .5 * k * gr, lg = g.createLinearGradient(0, c.y1, 0, c.y0); lg.addColorStop(0, tow('#1E1210', k)); lg.addColorStop(h * .6, tow('#4A2E28', k)); lg.addColorStop(Math.min(1, h + .15), tow('#9A8884', k * .8)); lg.addColorStop(1, tow('#A89C9C', k * .7)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); },
+    mul(g, e, c, G, t, k, gr) { const h = .3 + .5 * k * gr, lg = g.createLinearGradient(0, c.y1, 0, c.y0); lg.addColorStop(0, tow('#1E1210', k)); lg.addColorStop(h * .6, tow('#4A2E28', k)); lg.addColorStop(Math.min(1, h + .15), tow('#9A8884', k * .8)); lg.addColorStop(1, tow('#A89C9C', k * .7)); g.fillStyle = lg; g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop'; },
     surf(g, e, c, G, t, k, gr) { const P = G.v[e.cB.bt], f = FRAC[e.cB.bt] * gr, fl = (i) => .75 + .25 * Math.sin(t * 9 + i * 2.1) * Math.sin(t * 5.3 + i);
       vStroke(g, P, [3.4, 2.2, 1.3], '#0A0404', gr, c.h); if (gr >= 1) { g.strokeStyle = e.cB.burn > 0 ? 'rgba(255,230,150,.95)' : `rgba(255,${90 + 50 * fl(0) | 0},30,.92)`; for (let i = 0; i < 3; i++) { g.lineWidth = [1.3, .9, .5][i]; g.stroke(P[i]); } }
       g.lineCap = 'round'; for (const s of G.sig) { if (s.rk > f) continue; const R = s.s * (.9 + .2 * k), a = fl(s.ph); g.save(); g.translate(s.x, s.y); g.rotate(s.a);
         const ink = () => { g.beginPath(); g.arc(0, 0, R, 0, TAU); g.moveTo(R * .5, 0); g.arc(0, 0, R * .5, 0, TAU); for (let j = 0; j < (s.kind + 3); j++) { const q = j / (s.kind + 3) * TAU; g.moveTo(Math.cos(q) * R, Math.sin(q) * R); g.lineTo(Math.cos(q) * R * 1.45, Math.sin(q) * R * 1.45); } g.moveTo(-R * .5, 0); g.lineTo(R * .5, 0); if (s.kind === 1) { g.moveTo(0, -R * .5); g.lineTo(0, R * .5); } };
-        ink(); g.strokeStyle = '#0A0404'; g.lineWidth = 2.4; g.stroke(); ink(); g.strokeStyle = e.cB.burn > 0 ? 'rgba(255,236,170,.95)' : `rgba(255,${120 + 70 * a | 0},${40 + 40 * a | 0},${.65 + .35 * a})`; g.lineWidth = 1; g.stroke(); g.restore(); } },
+        ink(); g.strokeStyle = '#0A0404'; g.lineWidth = 2.4; g.stroke(); ink(); g.strokeStyle = e.cB.burn > 0 ? 'rgba(255,236,170,.95)' : `rgba(255,${60 + 70 * a | 0},${24 + 30 * a | 0},${.65 + .35 * a})`; g.lineWidth = 1; g.stroke(); g.restore(); } },
     top(e, c, G, t, k, gr) { for (let i = 0; i < 2; i++) if (Math.random() < .42 * k * gr) { const [x, y] = onBody(c, Math.random, (x, y) => y < c.cy), w = locW(e, x, y); cpEmit({ k: 'flame', x: w[0], y: w[1], vx: rand(-6, 6), vy: rand(-46, -26), life: rand(.45, .8), max: .8, s: rand(2.6, 4.6) * c.sc, ph: rand(0, TAU) }); } },
   };
   STY._ = { halo: '14,8,14', rim: '190,40,50', mote: () => ({ shape: 'puff', col: pick(['rgba(30,24,30,.7)', 'rgba(90,84,92,.6)']), size: rand(2, 4), vz: rand(20, 50), life: .7 }),
     gen(r, c, G, e) { const [mx, my] = markL(e), S = []; for (let i = 0; i < 12; i++) { const [x, y] = onBody(c, r); S.push([x, y, r() * TAU, c.w * .3, 4]); } for (let i = 0; i < 5; i++) S.push([mx, my, i / 5 * TAU, c.w * .3, 4]); S.sort(() => r() - .5); S.forEach((s, i) => s.push(i / S.length)); vSet(G, 'v', veins(r, c, S, { wig: .6, depth: 2, br: .12 }), true); },
-    mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#77727C', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); vStroke(g, G.v[e.cB.bt], [5, 3, 2], '#201820', gr, c.w); },
+    mul(g, e, c, G, t, k, gr) { g.fillStyle = tow('#77727C', k); g.fillRect(c.x0 - 20, c.y0 - 20, c.w + 40, c.h + 40); g.globalCompositeOperation = 'source-atop'; vStroke(g, G.v[e.cB.bt], [5, 3, 2], '#201820', gr, c.w); },
     surf(g, e, c, G, t, k, gr) { const P = G.v[e.cB.bt]; vStroke(g, P, [3, 2, 1.2], '#0A0608', gr, c.w); if (gr >= 1) vPulse(g, P, [1.2, .8], 'rgba(220,40,50,.9)', t); },
     top() {} };
   STY.w6sleeper = STY.sleeper; STY.w5benedict = STY.benedict;
@@ -751,16 +761,16 @@
     for (let i = CP.length - 1; i >= 0; i--) { const p = CP[i]; p.life -= dt; if (p.life <= 0) { CP.splice(i, 1); continue; } p.x += p.vx * dt; p.y += p.vy * dt; const u = 1 - p.life / p.max, a = Math.min(1, p.life / .25) * Math.min(1, u * 6);
       if (p.k === 'flame') { const s = p.s * (1 - u * .55), sw = Math.sin(t * 9 + p.ph) * 2.2 * u, x = p.x, y = p.y, flame = (q) => { ctx.beginPath(); ctx.moveTo(x - s * q, y); ctx.quadraticCurveTo(x - s * q * .9, y - s * 1.6 * q, x + sw, y - s * 3.2 * q); ctx.quadraticCurveTo(x + s * q * .9, y - s * 1.6 * q, x + s * q, y); ctx.arc(x, y, s * q, 0, Math.PI); ctx.closePath(); ctx.fill(); };
         ctx.globalAlpha = a * .9; ctx.fillStyle = `rgba(255,${70 + 60 * (1 - u) | 0},24,1)`; flame(1.3); ctx.fillStyle = '#0C0406'; flame(1); }
-      else { ctx.globalAlpha = a * .5 * (1 - u * .6); ctx.fillStyle = '#0A080E'; const s = p.s * (1 + u * 1.6); ctx.beginPath(); ctx.ellipse(p.x, p.y, s * 1.7, s * .8, Math.atan2(p.vy, p.vx), 0, TAU); ctx.fill(); } }
+      else { ctx.globalAlpha = a * .7 * (1 - u * .6); ctx.fillStyle = '#0A080E'; const s = p.s * (1 + u * 1.6); ctx.beginPath(); ctx.ellipse(p.x, p.y, s * 1.7, s * .8, Math.atan2(p.vy, p.vx), 0, TAU); ctx.fill(); } }
     ctx.restore();
   }
   // behind the body: a dark halo, smoke turning slowly in it, and a rim of the Circle's red
   function curseHalo(e, c, S, t, k) {
     const R = Math.max(c.w, c.h) * .56, cx = c.cx, cy = c.cy; ctx.save();
-    const rg = ctx.createRadialGradient(cx, cy, R * .2, cx, cy, R * (1.05 + .05 * Math.sin(t * 1.7))); rg.addColorStop(0, `rgba(${S.halo},${.5 * k})`); rg.addColorStop(.55, `rgba(${S.halo},${.32 * k})`); rg.addColorStop(1, `rgba(${S.halo},0)`);
+    const rg = ctx.createRadialGradient(cx, cy, R * .2, cx, cy, R * (1.05 + .05 * Math.sin(t * 1.7))); rg.addColorStop(0, `rgba(${S.halo},${.4 * k})`); rg.addColorStop(.55, `rgba(${S.halo},${.24 * k})`); rg.addColorStop(1, `rgba(${S.halo},0)`);
     ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(cx, cy, R * 1.1, R * .9, 0, 0, TAU); ctx.fill();
     for (let i = 0; i < 5; i++) { const a = t * (.25 + i * .05) * (i % 2 ? 1 : -1) + i * 1.3, d = R * (.5 + .12 * Math.sin(t * .9 + i)), x = cx + Math.cos(a) * d * 1.05, y = cy + Math.sin(a) * d * .8, r = R * (.3 + .04 * i), q = ctx.createRadialGradient(x, y, 0, x, y, r);
-      q.addColorStop(0, `rgba(${S.halo},${.34 * k})`); q.addColorStop(1, `rgba(${S.halo},0)`); ctx.fillStyle = q; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
+      q.addColorStop(0, `rgba(${S.halo},${.26 * k})`); q.addColorStop(1, `rgba(${S.halo},0)`); ctx.fillStyle = q; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
     ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 1.2; for (let i = 0; i < 3; i++) { const a0 = t * .6 + i * 2.1, len = .7 + .4 * Math.sin(t * 1.3 + i); ctx.strokeStyle = `rgba(${S.rim},${.13 * k})`; ctx.beginPath(); ctx.ellipse(cx, cy, R * .86, R * .7, 0, a0, a0 + len); ctx.stroke(); }
     ctx.restore();
   }
@@ -773,18 +783,19 @@
     for (const [px, py] of [[c.x0 - pad, c.y0 - pad], [c.x1 + pad, c.y0 - pad], [c.x0 - pad, c.y1 + pad], [c.x1 + pad, c.y1 + pad]]) { const X = M.a * px + M.c * py + M.e, Y = M.b * px + M.d * py + M.f; X0 = Math.min(X0, X); X1 = Math.max(X1, X); Y0 = Math.min(Y0, Y); Y1 = Math.max(Y1, Y); }
     X0 = Math.max(0, Math.floor(X0)); Y0 = Math.max(0, Math.floor(Y0)); X1 = Math.min(cv.width, Math.ceil(X1)); Y1 = Math.min(cv.height, Math.ceil(Y1));
     const W = X1 - X0, H = Y1 - Y0; if (W < 4 || H < 4) return;
-    const mg = cvCan('m', W, H), fg = cvCan('f', W, H), loc = (g) => g.setTransform(M.a, M.b, M.c, M.d, M.e - X0, M.f - Y0), id = (g) => g.setTransform(1, 0, 0, 1, 0, 0);
-    // the mask: its own art once more, in white
-    id(mg); mg.globalAlpha = 1; mg.globalCompositeOperation = 'source-over'; mg.clearRect(0, 0, W, H); loc(mg);
+    const q = Math.min(1, Math.sqrt(CV_PX / (W * H))), w = Math.ceil(W * q), h = Math.ceil(H * q); // (a big lord on a dense screen is worked at a little less than full size)
+    const mg = cvCan('m', w, h), fg = cvCan('f', w, h), loc = (g) => g.setTransform(M.a * q, M.b * q, M.c * q, M.d * q, (M.e - X0) * q, (M.f - Y0) * q), id = (g) => g.setTransform(1, 0, 0, 1, 0, 0);
+    const blit = (cn, op, al) => { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = op; ctx.globalAlpha = vis * al; ctx.drawImage(cn, 0, 0, w, h, X0, Y0, W, H); ctx.restore(); };
+    // the mask: its own art once more; then its pigment and veins painted into it (only where it is), to be multiplied in
+    id(mg); mg.globalAlpha = 1; mg.globalCompositeOperation = 'source-over'; mg.clearRect(0, 0, w + 1, h + 1); loc(mg);
     { const oc = ctx, tt = TINT, fl = FLASH; ctx = mg; TINT = '#FFFFFF'; FLASH = false; try { draw(e, a); } finally { ctx = oc; TINT = tt; FLASH = fl; } }
-    id(mg); mg.globalAlpha = 1; mg.globalCompositeOperation = 'source-in'; mg.fillStyle = '#FFFFFF'; mg.fillRect(0, 0, W, H); mg.globalCompositeOperation = 'source-over';
-    const lay = (fn, op, al) => { id(fg); fg.globalAlpha = 1; fg.globalCompositeOperation = 'source-over'; fg.clearRect(0, 0, W, H); loc(fg); fg.save(); try { fn(fg); } finally { fg.restore(); }
-      id(fg); fg.globalCompositeOperation = 'destination-in'; fg.drawImage(CV.m, 0, 0, W, H, 0, 0, W, H); fg.globalCompositeOperation = 'source-over';
-      blit(CV.f, op, al); };
-    const blit = (cn, op, al) => { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = op; ctx.globalAlpha = vis * al; ctx.drawImage(cn, 0, 0, W, H, X0, Y0, W, H); ctx.restore(); };
-    blit(CV.m, 'saturation', Math.min(1, (.5 + .45 * k) * (.4 + .6 * gr)));
-    lay((g) => S.mul(g, e, c, G, t, k, gr), 'multiply', Math.min(1, .55 + .45 * gr));
-    lay((g) => { g.lineCap = 'round'; g.lineJoin = 'round'; S.surf(g, e, c, G, t, k, gr); }, 'source-over', Math.min(1, .3 + .7 * gr));
+    mg.save(); mg.globalAlpha = 1; mg.globalCompositeOperation = 'source-in'; mg.lineCap = 'round'; mg.lineJoin = 'round'; try { S.mul(mg, e, c, G, t, k, gr); } finally { mg.restore(); }
+    blit(CV.m, 'saturation', Math.min(1, (.55 + .45 * k) * (.4 + .6 * gr)));
+    blit(CV.m, 'multiply', Math.min(1, .55 + .45 * gr));
+    // its surface: drawn apart, then cut to the mask
+    id(fg); fg.globalAlpha = 1; fg.globalCompositeOperation = 'source-over'; fg.clearRect(0, 0, w + 1, h + 1); loc(fg); fg.save(); fg.lineCap = 'round'; fg.lineJoin = 'round'; try { S.surf(fg, e, c, G, t, k, gr); } finally { fg.restore(); }
+    id(fg); fg.globalCompositeOperation = 'destination-in'; fg.drawImage(CV.m, 0, 0, w, h, 0, 0, w, h); fg.globalCompositeOperation = 'source-over';
+    blit(CV.f, 'source-over', Math.min(1, .3 + .7 * gr));
     ctx.save(); ctx.globalAlpha = vis; S.top(e, c, G, t, k, gr); ctx.restore();
     if (Math.random() < .3 * k) { const m = S.mote(), [x, y] = onBody(c, Math.random), w = locW(e, x, y); parts.push({ x: w[0], y: e.y + rand(-2, 2), z: Math.max(2, e.y - w[1]), vx: rand(-14, 14), vy: 0, vz: m.vz, life: m.life, max: m.life, col: m.col, size: m.size, shape: m.shape, rot: rand(0, TAU), vr: rand(-4, 4) }); }
   }
@@ -1240,7 +1251,7 @@
   // an attack winds: the ring closes on it on the ground, the sigil flares. Open (strike it): the ring splits like an iris
   // round a white-hot heart, and arrows close on it. Burning back: it goes gold and fades. ----------------
   function bossMark(e, x, y, sc, t) {
-    const B = e.cB, r0 = (9 + Math.min(5, e.hh / 40)) * 1.12, wind = B.wind > 0, burn = B.burn > 0, open = B.open > 0 && !burn, pulse = .6 + .4 * Math.sin(t * 10);
+    const B = e.cB, cal = CV.cal.get(e), r0 = (9 + Math.min(5, e.hh / 40)) * 1.12 * (cal ? clamp(cal.h * (e.size || 1) / 150, .66, 1) : 1), wind = B.wind > 0, burn = B.burn > 0, open = B.open > 0 && !burn, pulse = .6 + .4 * Math.sin(t * 10);
     if (open && !B.vOt) B.vOt = t; if (!open) B.vOt = 0; // (when it opened, for the drawing only)
     const ko = open ? sm((t - B.vOt) / .28) : 0, kw = wind ? sm(1 - B.wind / .8) : 0, k = cvTier(B), r = r0 * (1 + .22 * ko + .1 * kw);
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';

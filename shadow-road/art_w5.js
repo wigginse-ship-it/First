@@ -1751,7 +1751,7 @@
         const words = l.split(' '), rows = []; let row = ''; for (const w of words) { const tr = row ? row + ' ' + w : w; if (ctx.measureText(tr).width > tw && row) { rows.push(row); row = w; } else row = tr; } rows.push(row);
         for (const r of rows) { if (la > 0) { ctx.fillStyle = `rgba(240,244,252,${la})`; ctx.fillText(r, x0, ly); } ly += 15; } ly += 6; }); }
     if (T > 18) { const k = T - 18, a = cl01(k / 1.2); ctx.fillStyle = `rgba(4,6,16,${.85 * a})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF);
-      let y = VH + 10 - k * 26; ctx.textAlign = 'center';
+      let y = VH + 10 - k * 15; ctx.textAlign = 'center';
       for (const [s, sz] of CREDITS) { y += sz + 8; if (!s) continue; const fa = cl01((y - Y_OFF) / 40) * cl01((VH - y) / 40); ctx.fillStyle = `rgba(232,238,250,${fa})`; ctx.font = `700 ${sz}px Cinzel, Georgia, serif`; ctx.fillText(s, VW / 2, y); }
       if (y < Y_OFF - 10) finishEnding(); }
     if (T > 2) { ctx.fillStyle = 'rgba(200,210,230,.55)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); }
