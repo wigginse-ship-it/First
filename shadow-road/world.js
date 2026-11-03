@@ -621,7 +621,10 @@ function updateWorld(dt) {
     const x0 = e.x, y0 = e.y, z0 = e.z; updateEnemy(e, dt);
     e.x = x0 + (e.x - x0) * k; e.y = y0 + (e.y - y0) * k; if (e.z > 0 || z0 > 0) e.z = Math.max(0, z0 + (e.z - z0) * k); }
   enemies = enemies.filter(e => !e.remove);
-  if (stillT <= 0) for (const p of projs) {
+  const DT0 = dt;
+  for (const p of projs) { // (in the Stillness the foes' shots hang where they are, and his own crawl on through it, slowed to an eighth)
+    if (stillT > 0 && p.owner !== 'p') continue;
+    const dt = DT0 * (stillT > 0 ? .12 : 1);
     if (p.orbit) {
       const o = p.orbit;
       if (p.otime > 0 && !o.dead) { p.otime -= dt; p.ang += 4 * dt; p.rad = Math.min(84, p.rad + 90 * dt); p.x = o.x + Math.cos(p.ang) * p.rad; p.y = clamp(o.y + Math.sin(p.ang) * p.rad * .35, FLOOR_TOP + 4, FLOOR_BOT); p.z = o.z + 20; }
