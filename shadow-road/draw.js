@@ -636,15 +636,22 @@ function drawPearlDeath(e, el, dl, a, draw) {
       ctx.fillStyle = `rgba(255,250,235,${.8 * q})`; circle(0, 0, 3); ctx.fill(); ctx.restore(); }
     const la = .95, L = 40 + e.hw * .3; pearlLance(d * Math.cos(la) * 5, Math.sin(la) * 5, -d * Math.cos(la) * L, -Math.sin(la) * L);
     ctx.restore();
-  } else { // plspeck: the bare speck dissolves it into motes of nacre, and a little pearl is left where it stood
+  } else { // plspeck: the bare speck dissolves it into motes of nacre, and a burn is left on the ground where it stood
     const u = Math.min(1, el / 1.1);
     if (u < 1) { const ga = ctx.globalAlpha, fade = Math.pow(1 - u, 2); ctx.save(); ctx.globalAlpha = ga * fade; ctx.translate(0, -u * 6); ctx.scale(1 - .25 * u, 1 + .12 * u);
       FLASH = el < .05; draw(); FLASH = false;
       if (!TINT) { TINT = '#F6EEF8'; ctx.globalAlpha = ga * Math.sqrt(1 - u) * Math.min(1, u * 2.5) * .9; try { CREATURES[e.def.draw](e, a); } finally { TINT = null; } }
       ctx.restore(); }
-    if (el > .85) { const r = 3.4 * Math.min(1, (el - .85) / .2);
-      ctx.fillStyle = C('#F4EEF2'); circle(0, -r, r); ctx.fill(); ctx.strokeStyle = C('#6A5A6A'); ctx.lineWidth = .8; ctx.stroke();
-      if (!FLASH && !TINT) { ctx.fillStyle = 'rgba(246,194,212,.55)'; circle(r * .25, -r * .7, r * .55); ctx.fill(); ctx.fillStyle = '#FFFFFF'; circle(-r * .35, -r * 1.35, r * .3); ctx.fill(); } }
+    if (el > .5 && !FLASH && !TINT) { // where it stood, a burn on the ground that stays: charred black at the heart, scorched brown at the rim, a ragged edge
+      const g0 = Math.min(1, (el - .5) / .5), rx = (e.hw * 1.15 + 8) * (.6 + .4 * g0), ry = rx * .3, sd = e.deadAt || 1;
+      ctx.save(); ctx.globalAlpha *= g0;
+      ctx.fillStyle = 'rgba(70,44,28,.35)'; ctx.beginPath(); for (let i = 0; i < 14; i++) { const an = i * TAU / 14, rr = 1.05 + .22 * (pdHash(sd, i) - .5); ctx.lineTo(Math.cos(an) * rx * rr, Math.sin(an) * ry * rr); } ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(22,14,12,.75)'; ctx.beginPath(); for (let i = 0; i < 12; i++) { const an = i * TAU / 12 + .2, rr = .72 + .26 * (pdHash(i, sd) - .5); ctx.lineTo(Math.cos(an) * rx * rr, Math.sin(an) * ry * rr); } ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(8,4,6,.55)'; ell(rx * .06, 0, rx * .38, ry * .4); ctx.fill();
+      for (let i = 0; i < 5; i++) { const an = pdHash(sd, i + 20) * TAU, rr = .8 + .35 * pdHash(i + 3, sd); ctx.fillStyle = 'rgba(22,14,12,.45)'; ell(Math.cos(an) * rx * rr, Math.sin(an) * ry * rr, 2 + 2.5 * pdHash(sd, i + 40), 1 + pdHash(i, 7)); ctx.fill(); } // the spatters thrown out of it
+      const hot = Math.max(0, 1 - (el - .9) / 2.2); // still hot for a breath: embers glowing in the char, cooling out
+      if (hot > 0 && !LITE) { ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 6; i++) { const an = pdHash(sd, i + 60) * TAU, rr = .55 * pdHash(i + 9, sd); ctx.fillStyle = `rgba(255,${130 + 60 * (i % 2)},70,${.55 * hot * (.6 + .4 * Math.sin(el * 9 + i))})`; ell(Math.cos(an) * rx * rr, Math.sin(an) * ry * rr, 1.6, .9); ctx.fill(); } }
+      ctx.restore(); }
   }
 }
 function drawLoot(k, t) {
