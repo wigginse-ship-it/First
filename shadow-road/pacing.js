@@ -95,6 +95,7 @@ function paceSpawn(type, side, drop, champ) {
   // the view that pulls everyone in, and the rules of the place that throw everything about
   let held = null;
   for (const e of enemies) if (e.parked && !e.dead) (held = held || []).push(e);
+  PACE.heldN = held ? held.length : 0; // (the way on stays shut while these still stand, world.js)
   if (held) enemies = enemies.filter(e => !(e.parked && !e.dead));
   let r;
   try { r = _uw(dt); } finally { if (held && PACE.gen === gen && stage === st0) for (const e of held) if (!e.remove && !enemies.includes(e)) enemies.push(e); }

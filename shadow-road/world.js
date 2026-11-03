@@ -584,7 +584,19 @@ function beginWave() {
 }
 function updateWorld(dt) {
   if (!waveActive && waveIdx < stage.waves.length && waveReady()) beginWave();
-  if (!stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length && P.x > stage.len - (typeof exitX === 'function' && typeof threshKind === 'function' && THRESH[threshKind()] ? stage.len - exitX() + 18 : 90)) startZoneTrans(); // on to the next place: you step into the landmark at the end of the road
+  // the way on stays shut while anything that came out against him in this place still stands (stragglers of a wave, foes
+  // waiting further down the road): he must put them all down first
+  const foesLeft = enemies.some(e => !e.dead && !e.remove) || (typeof PACE !== 'undefined' && PACE && PACE.heldN > 0);
+  if (!stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length && foesLeft) {
+    $('#go').hidden = true;
+    const xEnd = stage.len - (typeof exitX === 'function' && typeof threshKind === 'function' && THRESH[threshKind()] ? stage.len - exitX() + 18 : 90);
+    if (P.x > xEnd - 60) { P.x = Math.min(P.x, xEnd - 40); if (!(updateWorld.toldT > 0)) { updateWorld.toldT = 2.5; floatText(P.x, P.y, 100, 'NOT ALL ARE DOWN', '#EED48A', 13); } }
+  }
+  if (updateWorld.toldT > 0) updateWorld.toldT -= dt;
+  const shut = !stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length && foesLeft;
+  if (updateWorld.shut && !shut && !stage.bossRoom && !waveActive && !zoneTrans && waveIdx >= stage.waves.length) $('#go').hidden = false; // (the last one down: the way on opens)
+  updateWorld.shut = shut;
+  if (!stage.bossRoom && !waveActive && !zoneTrans && !foesLeft && waveIdx >= stage.waves.length && P.x > stage.len - (typeof exitX === 'function' && typeof threshKind === 'function' && THRESH[threshKind()] ? stage.len - exitX() + 18 : 90)) startZoneTrans(); // on to the next place: you step into the landmark at the end of the road
   if (stage.bossRoom && !bossSpawned && P.x > stage.len - VW * .75) {
     setZoom(VIEW_BOSS); // pull the camera back so the whole arena and the boss fit
     bossSpawned = true; waveActive = true; lockX = stage.len - VW; $('#go').hidden = true;
