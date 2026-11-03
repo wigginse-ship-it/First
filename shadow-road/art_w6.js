@@ -89,7 +89,6 @@
     ctx.restore();
   }
   // a crutch of the dream: a forked prop of turned wood, its fork padded with a cushion
-  const occlude6 = (x, y, r, a = .4) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(90,50,40,${a})`); g.addColorStop(1, 'rgba(90,50,40,0)'); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
   function crutchShape(x0, y0, x1, y1, w = 3, fork = 9) {
     const a = Math.atan2(y1 - y0, x1 - x0), nx = -Math.sin(a), ny = Math.cos(a), L = Math.hypot(x1 - x0, y1 - y0), mx = x0 + (x1 - x0) * .62, my = y0 + (y1 - y0) * .62;
     const big = w >= 5 && DET(), P = (u, o = 0) => [x0 + (x1 - x0) * u + nx * o, y0 + (y1 - y0) * u + ny * o]; // (the boss's own crutches get the fine work)
@@ -1056,17 +1055,17 @@
       const rw = Math.min(1, xv('raise') + xv('raiseR') * .5 + xv('panic')); // (raised brows ruck the forehead up)
       for (let i = 0; i < 4; i++) { ctx.strokeStyle = `rgba(150,100,80,${.25 + rw * .35})`; ctx.lineWidth = 1 + rw * .6; ctx.beginPath(); ctx.moveTo(-40 - rw * 8, -132 + i * (4 + rw * 1.5)); ctx.quadraticCurveTo(0, -136 + i * (4 + rw * 1.5) - mood * 2 - rw * 4 + xv('knit') * 3, 40 + rw * 8, -132 + i * (4 + rw * 1.5)); ctx.stroke(); } // the brow's wrinkles
       // a glossy forehead and a soft bounce of cool light from the quilt up under its jowls
-      { const g = ctx.createRadialGradient(-34, -128, 2, -34, -128, 34); g.addColorStop(0, 'rgba(255,252,240,.5)'); g.addColorStop(1, 'rgba(255,252,240,0)'); ctx.fillStyle = g; ctx.fillRect(-70, -164, 72, 72); }
+      ctx.fillStyle = 'rgba(255,252,240,.14)'; ell(-34, -128, 34, 20, -.2); ctx.fill(); ell(-35, -130, 22, 12, -.2); ctx.fill(); ell(-36, -132, 13, 6.5, -.25); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,250,.55)'; ell(-38, -134, 9, 3.2, -.25); ctx.fill();
       { const [, by] = S(0, 16), g = ctx.createLinearGradient(0, by - 22, 0, by); g.addColorStop(0, 'rgba(170,180,236,0)'); g.addColorStop(1, 'rgba(170,180,236,.3)'); ctx.fillStyle = g; ctx.fillRect(-130, by - 22, 260, 24); }
       // where its crutches bear up into it: the soft flesh dimpled round each cushion
-      for (const i of o.props || []) { const [ax, ay] = S(...RAW_ANCH[i]); const g = ctx.createRadialGradient(ax, ay - 2, 1, ax, ay - 2, 20); g.addColorStop(0, 'rgba(110,60,50,.42)'); g.addColorStop(.6, 'rgba(120,70,55,.14)'); g.addColorStop(1, 'rgba(120,70,55,0)'); ctx.fillStyle = g; ctx.fillRect(ax - 20, ay - 22, 40, 40);
+      for (const i of o.props || []) { const [ax, ay] = S(...RAW_ANCH[i]); ctx.fillStyle = 'rgba(120,70,55,.13)'; ell(ax, ay - 2, 19, 12); ctx.fill(); ell(ax, ay - 1, 12, 7); ctx.fill(); ell(ax, ay, 6, 3.5); ctx.fill();
         ctx.strokeStyle = 'rgba(255,240,224,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(ax, ay + 4, 15, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
     } });
     // a few long hairs, lifting in a breeze from nowhere
     if (DET()) { ctx.strokeStyle = 'rgba(70,50,40,.55)'; ctx.lineWidth = .8; for (let i = 0; i < 7; i++) { const x = -40 + i * 13, y = -150 + Math.abs(i - 3) * 1.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6 + Math.sin(t * 1.3 + i) * 4, y - 10, x + 14 + Math.sin(t * 1.1 + i) * 6, y - 8 - i % 3 * 3); ctx.stroke(); } }
     // its ears (the light coming red through them, their roots in shade)
-    for (const s of [-1, 1]) { const [ex, ey] = S(s * 106, -80); ctx.save(); ctx.translate(ex, ey); ctx.scale(s, 1); cel(PB([0, -14, 10, -16, 14, -2, 10, 14, 2, 16, -2, 0]), '#DDB48C', { d: 2, r: 1, w: 1.6, dark: '#A87A5A', tex: () => { const g = ctx.createRadialGradient(8, 0, 1, 8, 0, 13); g.addColorStop(0, 'rgba(236,110,90,.4)'); g.addColorStop(1, 'rgba(236,110,90,0)'); ctx.fillStyle = g; ctx.fillRect(-4, -16, 22, 32); occlude6(0, 0, 7, .3); } }); if (DET()) { ctx.strokeStyle = 'rgba(120,70,50,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5, 0, 6, -1.4, 1.4); ctx.stroke(); } ctx.restore(); }
+    for (const s of [-1, 1]) { const [ex, ey] = S(s * 106, -80); ctx.save(); ctx.translate(ex, ey); ctx.scale(s, 1); cel(PB([0, -14, 10, -16, 14, -2, 10, 14, 2, 16, -2, 0]), '#DDB48C', { d: 2, r: 1, w: 1.6, dark: '#A87A5A', tex: () => { ctx.fillStyle = 'rgba(236,110,90,.22)'; ell(8, 0, 7, 11); ctx.fill(); ell(8, 0, 4, 7); ctx.fill(); ctx.fillStyle = 'rgba(90,50,40,.18)'; ell(0, 0, 4, 9); ctx.fill(); } }); if (DET()) { ctx.strokeStyle = 'rgba(120,70,50,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5, 0, 6, -1.4, 1.4); ctx.stroke(); } ctx.restore(); }
     // its brows, and its eyes
     const knit = xv('knit'), squint = xv('squint'), arc = xv('arc'), rem = xv('rem'), panic = xv('panic');
     // (the knot between its brows when it frowns)
