@@ -456,7 +456,7 @@
     const spec = design(F.seed, F.picks), built = buildTree(spec), B = WEAPONS[spec.base];
     WEAPONS[ID] = { name: spec.name, short: spec.noun, reach: Math.round(B.reach * built.reachK), look: ID, base: spec.base, pearl: spec, sig: built.sig,
       parry: !!spec.sc.shell && !built.pm, pm: !!built.pm, tree: built.tree,
-      desc: `The Pearl of Judgement, reforged: a ${spec.tag}. Light + Heavy fires its ${built.sig.name}; hold Heavy for ${built.tree.HC.name}.` };
+      desc: `The Pearl of Judgement, reforged: a ${spec.tag}. Hold Heavy for ${built.tree.HC.name}.` };
     W_SPEED[ID] = (W_SPEED[spec.base] || 1) * (spec.tmp === 'quick' ? 1.06 : spec.tmp === 'heavy' ? .95 : 1);
     TRAIL[ID] = spec.pal.trail; DEATH_BY[ID] = TYPES[spec.type].death;
     return spec;
@@ -542,7 +542,7 @@
   function moveRows(W) {
     if (window.PEARLM) return PEARLM.rows(W);
     const t = W.tree, fin = t.LLLL ? 'LLLL' : 'LLL';
-    return [['Light combo', `Attack ×${fin.length}`, t[fin].name], ['Heavy', 'Heavy', t.H.name], ['Charged heavy', 'Hold Heavy, let go in the gleam', t.HC.name], ['Jump attack', 'Jump, then Heavy', t.JH ? t.JH.name : 'Air Heavy'], ['Signature', 'Light + Heavy together', W.sig.name + (W.sig.charge ? ' (hold both to gather it)' : '')]];
+    return [['Light combo', `Attack ×${fin.length}`, t[fin].name], ['Heavy', 'Heavy', t.H.name], ['Charged heavy', 'Hold Heavy, let go in the gleam', t.HC.name], ['Jump attack', 'Jump, then Heavy', t.JH ? t.JH.name : 'Air Heavy']];
   }
   function openScene(o = {}) {
     if (scene) return; scenePending = false;

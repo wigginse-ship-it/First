@@ -220,7 +220,7 @@ document.querySelectorAll('.btn').forEach((b) => {
 });
 // the PEARL button shows only while the Pearl can be fired: evolving at his shoulder, or forged and in his hand
 setInterval(() => { const b = document.getElementById('pearlBtn'); if (!b) return; let on = false;
-  try { on = !!(window.PEARLNG && (PEARLNG.evoOn() || PEARLNG.held()) && PEARLNG.curStats()); } catch (_) {}
+  try { on = !!(window.PEARLNG && PEARLNG.evoOn() && !PEARLNG.forged() && PEARLNG.curStats()); } catch (_) {}
   if (b.hidden === on) b.hidden = !on; }, 300);
 const KEYMAP = { KeyJ: 'light', KeyZ: 'light', KeyK: 'heavy', KeyX: 'heavy', Space: 'jump', KeyL: 'dodge', ShiftLeft: 'dodge', KeyQ: 'swap', KeyC: 'swap', KeyE: 'trump', KeyV: 'trump', KeyI: 'shoot', KeyF: 'shoot' };
 const keys = new Set();

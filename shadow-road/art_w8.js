@@ -1863,6 +1863,8 @@
       // the watchfires hold it back
       for (const f of m.fires) { f.lit = Math.max(0, f.lit - dt); f.flash = Math.max(0, f.flash - dt); if (f.lit > 0) m.E = Math.max(m.E, f.x + 46); }
       if (P && (P.state === 'atk' || P.state === 'air') && P.move) for (const f of m.fires) { if (f.lit > 1 || W8.inGrey(f.x, f.y)) continue; const fw = (f.x - P.x) * P.facing; if (fw > -10 && fw < (P.move.x1 || 50) + 20 && Math.abs(f.y - P.y) < 26) { f.lit = 13; f.flash = .3; sfx('hit-metal', .4); tn(520, .3, 'triangle', .05); burst(f.x, f.y, 52, ['#FFD27A', '#FF8A3A', '#FFF0C0'], 16, 'spark', 0, true); floatText(f.x, f.y, 90, 'THE FIRE HOLDS IT BACK', '#FFD890', 12); } }
+      // all the fires burning at once: his blows burn too (W8.allLit, hurtEnemy below)
+      { const all = m.fires.length >= 3 && m.fires.every(f => f.lit > 0); if (all && !m.allLit && P) { floatText(P.x, P.y, 116, 'ALL THE FIRES BURN · YOUR BLOWS BURN WITH THEM', '#FFC870', 14); sfx('charge', 2); tn(392, .5, 'triangle', .05); tn(587, .6, 'triangle', .04, 0, .08); for (const f of m.fires) burst(f.x, f.y, 60, ['#FFD27A', '#FF8A3A'], 10, 'spark', 0, true); } m.allLit = all; }
       // the grey drinks you
       if (P && P.state !== 'dead' && W8.inGrey(P.x, P.y)) { m.drink += dt; if (m.drink > .5) { m.drink = 0; if (P.hp > 1) { P.hp = Math.max(1, P.hp - Math.max(1, Math.round(maxHp() * .012 * (1 + .25 * (save.cycle || 0))))); hurtFlash = Math.max(hurtFlash, .08); if (!(m.msgT > 0)) { m.msgT = 3; floatText(P.x, P.y, 90, 'THE GREY DRINKS YOU', '#C8C2B4', 12); } } } }
       m.msgT = Math.max(0, (m.msgT || 0) - dt);
@@ -1879,6 +1881,10 @@
       dmg = Math.max(1, Math.round(dmg * .34)); const n0 = nums.length, r = _h(e, dmg, dir, m, crit);
       for (let i = n0; i < nums.length; i++) if (/^\d+!?$/.test(String(nums[i].txt))) nums[i].icon = 'shield';
       return r; }; }
+  // the three watchfires all alight: +35% to every blow he lands, and an ember round him while it lasts
+  W8.allLit = () => !!(mech && mech.kind === 'w8edge' && mech.allLit);
+  { const _h = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) { if (W8.allLit() && m && !e.dead) dmg = Math.max(1, Math.round(dmg * 1.35)); return _h(e, dmg, dir, m, crit); }; }
+  { const _u = updatePlayer; updatePlayer = function (dt) { _u(dt); if (P && W8.allLit() && Math.random() < dt * 14 && parts.length < 400) parts.push({ x: P.x + rand(-16, 16), y: P.y, z: P.z + rand(10, 80), vx: rand(-8, 8), vy: 0, vz: rand(30, 60), life: .6, max: .6, col: pick(['#FFD27A', '#FF8A3A', '#FFF0C0']), size: rand(1.2, 2), shape: 'star', rot: 0, vr: 3 }); }; }
   // an iron cresset on a post: cold and black, or burning
   function watchfire(f, t, grey) {
     ctx.save(); ctx.translate(f.x, f.y); ctx.lineCap = 'round';
@@ -2092,7 +2098,7 @@
     hazards.push({ kind: 'w8bleatring', x: e.x, y: e.y, r: 10, t: 1, max: 1, dmg: Math.round(edmg(e) * .9) }); act(e, 'bleat', (h, dt, e) => { e.w8k = h.el; if (h.el > .6) { recover(e, .9); return true; } return false; }); };
   // the ring: a heavy blow, but never more than a third of his health, so it cannot kill from full
   reg('w8bleatring', {
-    update(h, dt) { h.r += 300 * dt; if (!h.hit) { const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2); if (Math.abs(d - h.r) < 14 && P.z < 12) { h.hit = 1; hitP(Math.min(h.dmg, Math.round(maxHp() * .33)), h.x, true); } } if (h.r > 260) h.t = -1; },
+    update(h, dt) { h.r += 300 * dt; if (!h.hit) { const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2); if (Math.abs(d - h.r) < 14 && P.z < 12) { h.hit = 1; hitP(Math.max(h.dmg, Math.round(maxHp() * .55)), h.x, true); } } if (h.r > 260) h.t = -1; },
     draw(h, t) { ctx.save(); ctx.strokeStyle = 'rgba(30,24,20,.7)'; ctx.lineWidth = 4; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke(); ctx.strokeStyle = 'rgba(232,220,196,.6)'; ctx.lineWidth = 1.4; ell(h.x, h.y, h.r - 3, (h.r - 3) / 2.2); ctx.stroke(); ctx.restore(); },
   });
 

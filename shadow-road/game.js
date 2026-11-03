@@ -556,7 +556,8 @@ function playerDamage(dmg, fromX, big) {
   if (tryReflect()) return; // prism scale: the shot goes back the way it came
   const raw = dmg;
   if (pw('ward')) dmg = Math.max(1, Math.round(dmg * .5));
-  dmg = armorDamage(dmg); thornsBack(raw); P.hurtT = 0; // armor turns part of every blow aside (gear.js)
+  dmg = armorDamage(dmg); thornsBack(raw); P.hurtT = 0;
+  if (stageIdx === 7) dmg = Math.min(dmg, Math.max(1, Math.round(maxHp() * (boss && !boss.dead ? .75 : .3)))); // Lorraine hits hard, but nothing there takes him from full in one blow (the Goat-Lord: 75% at most; the rest: 30%) // armor turns part of every blow aside (gear.js)
   P.hp -= dmg; P.inv = .8; shakeMag = Math.max(shakeMag, big ? 7 : 4); hitstop = .07; hurtFlash = .25;
   floatText(P.x, P.y, 70, '-' + dmg, '#D0566A', 16); sfx('hurt');
   burst(P.x, P.y, 34, ['#D0566A', '#FFFFFF'], 10, 'spark');

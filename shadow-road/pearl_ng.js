@@ -454,6 +454,7 @@
   function lhInput(S, dt) {
     const now = CUR.clock;
     O.cd = Math.max(0, O.cd - dt); O.parryCd = Math.max(0, O.parryCd - dt); O.reflCd = Math.max(0, O.reflCd - dt); O.ripCd = Math.max(0, O.ripCd - dt);
+    if (forged()) { O.chg = null; return; } // (once forged the Pearl is the weapon in his hand: Light + Heavy no longer throws it)
     if (O.chg !== null) { // gathering it (patient): both held
       if (['hurt', 'down', 'dead'].includes(P.state)) { O.chg = null; return; }
       if (input.light && input.heavy) { O.chg += dt;
@@ -1588,7 +1589,7 @@
     const S = P && (mode === 'play' || mode === 'pause') ? curStats() : null; hudCv.hidden = !S; if (!S) return;
     const ready = O.chg !== null ? clamp(O.chg / GLEAM, 0, 1) : O.throws.length ? 0 : 1 - clamp(O.cd / Math.max(.01, S.cd), 0, 1), sig = ready.toFixed(2) + S.picks.join() + (O.chg !== null);
     if ((hudN++ % 3) && hudCv.dataset.k === sig) return; hudCv.dataset.k = sig;
-    hudCv.title = `The Pearl of Judgement: ${S.name} (Light + Heavy)${held() ? '' : ` · ${S.n} of ${PICKS} choices`}`;
+    hudCv.title = `The Pearl of Judgement: ${S.name}${held() ? '' : ' (Light + Heavy)'}${held() ? '' : ` · ${S.n} of ${PICKS} choices`}`;
     const g = hudCv.getContext('2d'), pal = S.pal;
     withCtx(g, () => { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 64, 64);
       const bg = g.createRadialGradient(32, 28, 2, 32, 32, 28); bg.addColorStop(0, '#2A6A6C'); bg.addColorStop(1, '#071A20'); g.fillStyle = bg; g.beginPath(); g.arc(32, 32, 27, 0, TAU); g.fill();
@@ -1602,7 +1603,7 @@
   // ---------------- the forge: the relic row's words ----------------
   W7.ngText = () => {
     const s = save.pearlEvo && Array.isArray(save.pearlEvo.picks) ? save.pearlEvo.picks.filter(id => TR[id]) : [];
-    const evo = forged() ? `Light + Heavy: the boomerang throw.`
+    const evo = forged() ? `Forged: the Pearl is a weapon now.`
       : `Light + Heavy: throw the Pearl. Beat a boss to choose a trait.${s.length ? ` (${s.length} of ${PICKS})` : ''}`;
     const cur = 'Hold a direction to glide. Dodge to fling yourself.';
     const on = [SW.evolve || forged() ? evo : '', SW.currents ? cur : ''].filter(Boolean).join(' ');

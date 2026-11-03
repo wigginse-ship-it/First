@@ -160,7 +160,7 @@
   // the forge card's rows: [what it does, how, its name]
   function rows(W) {
     const spec = W.pearl || SPEC(), T = spec && TY[spec.type]; if (!T) return [];
-    return T.rows(W.tree, spec).concat([['the pearl, out and back', 'Light + Heavy (PEARL)', W.sig.name]]);
+    return T.rows(W.tree, spec);
   }
 
   // ======================================================================================================
@@ -206,20 +206,21 @@
     const on = mine(), T = on ? TY[kind()] : null;
     if (on) {
       if (pressed.light || pressed.heavy) S.presses.push(clock()); if (S.presses.length > 6) S.presses.shift();
-      if (P.state === 'air' && P.move && P.move.pm && T.extras) T.extras(P.move, P.t / P.move.dur, dt, true); // (game.js steps air moves without moveExtras)
+      if (P.state === 'air' && P.move && P.move.pm && T && T.extras) T.extras(P.move, P.t / P.move.dur, dt, true); // (game.js steps air moves without moveExtras)
     }
     _up(dt);
     if (!mine()) { if (S.objs.length || S.live) { resetPlace(); S.live = false; } return; }
     S.live = true;
+    const K = TY[kind()]; if (!K) return;
     S.path.push({ x: P.x, y: P.y, t: clock() }); while (S.path.length > 150 || (S.path.length && clock() - S.path[0].t > 2.4)) S.path.shift();
-    if (P.state === 'charge' && T.charge) T.charge(dt);
-    if (T.step) T.step(dt);
-    for (const o of S.objs) { o.t = (o.t || 0) + dt; try { T.obj && T.obj(o, dt); } catch (err) { o.gone = true; console.error(err); } if (o.max && o.t >= o.max) o.gone = true; }
+    if (P.state === 'charge' && K.charge) K.charge(dt);
+    if (K.step) K.step(dt);
+    for (const o of S.objs) { o.t = (o.t || 0) + dt; try { K.obj && K.obj(o, dt); } catch (err) { o.gone = true; console.error(err); } if (o.max && o.t >= o.max) o.gone = true; }
     S.objs = S.objs.filter(o => !o.gone);
   };
   { const _pp = playerPose; playerPose = function () {
     const pose = _pp(); if (!mine()) return pose;
-    const T = TY[kind()]; pose.weapon = ID; pose.tier = Math.min(7, save.wl[ID] || 1);
+    const T = TY[kind()]; if (!T) return pose; pose.weapon = ID; pose.tier = Math.min(7, save.wl[ID] || 1);
     if (P.state === 'charge' && T.chargePose) T.chargePose(pose, P.ct || 0);
     else if (['idle', 'walk', 'run', 'jump'].includes(P.state) && T.carry) T.carry(pose, P.state);
     if (T.posed) T.posed(pose);
