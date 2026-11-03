@@ -14,6 +14,22 @@
   const line = (pts, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.stroke(); };
   const rivet = (x, y, r, col) => { circle(x, y, r); ctx.fillStyle = C(shade(col, -.45)); ctx.fill(); if (DET()) { circle(x + r * .25, y - r * .25, r * .55); ctx.fillStyle = shade(col, .55); ctx.fill(); } };
   const lerp2 = (a, b, k) => a + (b - a) * k;
+  const hsh = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); }; // a fixed pseudo-random number per seed
+  // dots batched into one path and filled once (pitting, speckle, stipple): pts are [x, y, rx, ry] fours
+  const dots = (pts, col) => { ctx.beginPath(); for (let i = 0; i < pts.length; i += 4) { ctx.moveTo(pts[i] + pts[i + 2], pts[i + 1]); ctx.ellipse(pts[i], pts[i + 1], pts[i + 2], pts[i + 3], 0, 0, TAU); } ctx.fillStyle = col; ctx.fill(); };
+  // soft round-form shading laid over a filled shape (detail only): a warm highlight toward the light, falling off to a cool dark
+  function orbShade(path, x, y, r, hiA, loA, hiCol, loCol) {
+    if (!DET()) return; ctx.save(); path(); ctx.clip();
+    const g = ctx.createRadialGradient(x, y, r * .05, x, y, r); g.addColorStop(0, `rgba(${hiCol || '255,248,224'},${hiA})`); g.addColorStop(.38, `rgba(${hiCol || '255,248,224'},0)`); g.addColorStop(.72, `rgba(${loCol || '16,10,8'},${loA * .25})`); g.addColorStop(1, `rgba(${loCol || '16,10,8'},${loA})`);
+    ctx.fillStyle = g; ctx.fillRect(x - r * 2.2, y - r * 2.2, r * 4.4, r * 4.4); ctx.restore();
+  }
+  // round-metal shading across a cylinder (a barrel, a stack, a greave): from the lit edge (x0, y0) to the shadowed one (x1, y1)
+  function cylShade(path, x0, y0, x1, y1, k) {
+    if (!DET()) return; k = k || 1; ctx.save(); path(); ctx.clip();
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, `rgba(255,246,220,${.06 * k})`); g.addColorStop(.16, `rgba(255,246,220,${.42 * k})`); g.addColorStop(.3, 'rgba(255,246,220,0)'); g.addColorStop(.66, `rgba(18,10,6,${.1 * k})`); g.addColorStop(1, `rgba(18,10,6,${.46 * k})`);
+    ctx.fillStyle = g; const mx = Math.min(x0, x1) - 40, my = Math.min(y0, y1) - 40; ctx.fillRect(mx, my, Math.abs(x1 - x0) + 80, Math.abs(y1 - y0) + 80); ctx.restore();
+  }
 
   // a tapered, curved spike (horn, thorn, claw, spine): built along a quadratic curve, two-toned with the side away
   // from the light in shadow, a lit edge on the other side, optional ridges across it, and an outline.
@@ -109,6 +125,14 @@
     plate(inner, .9);
     for (let j = 0; j < 6; j++) { const k = j * 4; centers.push(plate([...P(k, .4), ...P(k + 2, .42), ...P(k + 4, .4), ...P(k + 4, .8), ...P(k + 3, .81), ...P(k + 1, .81), ...P(k, .8)], .92)); }
     for (let j = 0; j < 12; j++) { const k = j * 2; plate([...P(k, .8), ...P(k + 1, .81), ...P(k + 2, .8), ...P(k + 2, 1), ...P(k + 1, 1), ...P(k, 1)], .88); }
+    if (DET()) { // the old horn weathered: pitting, pale flecks where it has worn smooth, and rosettes of lichen
+      const pit = [], fleck = [], lich = [], lichD = [];
+      for (let i = 0; i < 46; i++) { const r = rays[Math.floor(hsh(i) * K)], d = .14 + hsh(i + 50) * .8, q = r[2] * d, x = fx + r[0] * q, y = fy + r[1] * q;
+        if (i % 3 === 2) fleck.push(x + 1, y - .6, .5 + hsh(i + 9) * .6, .4); else pit.push(x, y, .45 + hsh(i + 7) * .55, .35 + hsh(i + 3) * .4); }
+      for (let i = 0; i < 12; i++) { const r = rays[Math.floor(hsh(i + 200) * K)], d = .5 + hsh(i + 250) * .45, q = r[2] * d, x = fx + r[0] * q, y = fy + r[1] * q, s = 1 + hsh(i + 300) * 1.6;
+        lich.push(x, y, s * 1.3, s * .8, x + s, y + .5, s * .8, s * .6); lichD.push(x + .3, y + .3, s * .4, s * .3); }
+      dots(pit, 'rgba(14,10,6,.42)'); dots(fleck, 'rgba(255,248,226,.32)'); dots(lich, pal.lichen); dots(lichD, shade(pal.lichen, -.35));
+    }
     if (runeA > 0 && DET()) glow(runeCol, 8, () => { // old runes carved into the costal plates, softly alight
       ctx.globalAlpha = runeA; ctx.strokeStyle = runeCol; ctx.lineWidth = 1.3; ctx.beginPath();
       for (const [x, y] of centers) { ctx.moveTo(x + 2.6, y); ctx.arc(x, y, 2.6, 0, TAU); ctx.moveTo(x, y - 4.6); ctx.lineTo(x, y + 4.6); ctx.moveTo(x - 1.4, y - 4); ctx.lineTo(x, y - 5.6); ctx.lineTo(x + 1.4, y - 4); }
@@ -122,8 +146,15 @@
     tracePath(top, bot); ctx.fillStyle = C(pal.moss); ctx.fill(); outline(1.2);
     if (DET()) {
       for (let i = 0; i < top.length - 2; i += 2) { ctx.fillStyle = shade(pal.moss, .28); ell(top[i] + 1.5, top[i + 1] + 1.6, 3.2, 1.9); ctx.fill(); ctx.fillStyle = shade(pal.moss, .55); ell(top[i] + 2.4, top[i + 1] + .8, 1.4, .8); ctx.fill(); }
+      ctx.save(); tracePath(top, bot); ctx.clip(); // stipple: the cushion's dark hollows low down, a few lit tips
+      const dk = [], lt = [];
+      for (let i = 0; i < bot.length; i += 2) { const j = Math.min(i, top.length - 2); for (let m = 0; m < 3; m++) { const u = .35 + m * .22, x = lerp2(top[j], bot[i], u) + (hsh(i + m * 13 + k0) - .5) * 4, y = lerp2(top[j + 1], bot[i + 1], u); dk.push(x, y, .9, .7); if (m === 0) lt.push(x + 1.6, y - 2.2, .7, .5); } }
+      dots(dk, shade(pal.moss, -.3)); dots(lt, shade(pal.moss, .5)); ctx.restore();
       ctx.strokeStyle = shade(pal.moss, -.35); ctx.lineWidth = 1; ctx.beginPath(); // hanging strands
-      for (let i = 2; i < bot.length - 2; i += 4) { const sw = Math.sin(t * 1.8 + i) * 1.2; ctx.moveTo(bot[i], bot[i + 1] - 1); ctx.quadraticCurveTo(bot[i] + sw, bot[i + 1] + 4, bot[i] + sw * 1.6, bot[i + 1] + 8); }
+      for (let i = 2; i < bot.length - 2; i += 2) { const sw = Math.sin(t * 1.8 + i) * 1.2, l = 6 + (i % 4) * 2 + hsh(i + k0) * 4; ctx.moveTo(bot[i], bot[i + 1] - 1); ctx.quadraticCurveTo(bot[i] + sw, bot[i + 1] + l * .5, bot[i] + sw * 1.6, bot[i + 1] + l); }
+      ctx.stroke();
+      ctx.strokeStyle = shade(pal.moss, .35); ctx.lineWidth = .8; ctx.beginPath(); // sprigs standing up out of the cushion
+      for (let i = 2; i < top.length - 2; i += 4) { const sw = Math.sin(t * 2.1 + i) * .8; ctx.moveTo(top[i], top[i + 1] + 1); ctx.lineTo(top[i] + sw - 1, top[i + 1] - 3.4); ctx.moveTo(top[i] + 1.4, top[i + 1] + 1); ctx.lineTo(top[i] + sw + 2, top[i + 1] - 2.6); }
       ctx.stroke();
     }
   }
@@ -136,6 +167,13 @@
     ctx.fillStyle = pal.leaf[1]; clumps.forEach(([x, y, r], i) => { clump(x + sway(i) + r * .14, y - r * .16, r * .78, 9, i * 2.1 + 1); ctx.fill(); });
     ctx.fillStyle = pal.leaf[2]; clumps.forEach(([x, y, r], i) => { clump(x + sway(i) + r * .3, y - r * .34, r * .48, 8, i * 1.3 + 2); ctx.fill(); });
     ctx.fillStyle = pal.leaf[3]; clumps.forEach(([x, y, r], i) => { ell(x + sway(i) + r * .42, y - r * .5, r * .2, r * .12, -.5); ctx.fill(); });
+    // single leaves picked out round each clump (dark ones down in the shade, bright ones where the light catches the edge)
+    const dk = [], md = [], lt = [];
+    clumps.forEach(([x, y, r], i) => { const sx = sway(i);
+      for (let m = 0; m < 7; m++) { const an = m * .9 + i * 1.3, d = r * (.55 + hsh(i * 7 + m) * .4), lx = x + sx + Math.cos(an) * d, ly = y + Math.sin(an) * d * .85, up = Math.cos(an) * LX + Math.sin(an) * LY;
+        (up > .3 ? lt : up < -.3 ? dk : md).push(lx, ly, 1.7, 1); } });
+    const leaves = (pts, col) => { ctx.beginPath(); for (let i = 0; i < pts.length; i += 4) { ctx.moveTo(pts[i] + 1.7, pts[i + 1]); ctx.ellipse(pts[i], pts[i + 1], 1.7, 1, (i * .37) % 3 - 1.5, 0, TAU); } ctx.fillStyle = col; ctx.fill(); };
+    leaves(dk, shade(pal.leaf[0], -.2)); leaves(md, pal.leaf[2]); leaves(lt, pal.leaf[3]);
   }
   function grove(e, a, pal, phase, rage, t) {
     const P3 = phase === 3;
