@@ -50,7 +50,7 @@ function enterSecret() { // the room is dealt from a seed (shadowrooms.js): one 
   srStart(stage.room);
 }
 // ---------- the Unicorn's gifts ----------
-const boonW = () => [save.weapon, ...WEAPON_ORDER].find(id => id !== 'fists' && save.owned[id] && save.wl[id] < WMAX());
+const boonW = () => [save.weapon, ...WEAPON_ORDER].find(id => id !== 'fists' && save.owned[id] && save.wl[id] < WMAX(id));
 const BOONS = {
   edge: { name: "The Unicorn's Edge", sub: () => `${WEAPONS[boonW()].name.toUpperCase()} +1 LEVEL`, ok: () => !!boonW(), give() { const id = boonW(); save.wl[id]++; } },
   heart: { name: 'Heart of the Unicorn', sub: () => `AN ENCHANTED PIECE OF ${GEAR_SETS[worldTier()].short.toUpperCase()} ARMOR`, ok: () => true, // armor of this world, always enchanted, always with more health

@@ -80,7 +80,7 @@
 
   { const _pp = playerPose; playerPose = function () {
     const pose = _pp();
-    if (!P || SK.on < .01 || !active() || pose.down) return pose;
+    if (!P || SK.on < .01 || !active() || pose.down || pose.hornCine) return pose;
     const s = speed(), cr = cruise(), sn = clamp(s / cr, 0, 1), fw = CUR.vx * P.facing, on = sm(SK.on);
     const amp = SK.amp * (1 - SK.skid) * (1 - SK.coast * .8), skid = SK.skid, coast = SK.coast * (1 - skid), brake = SK.brake * coast;
     const c = SK.curve * (1 - skid), ac = Math.abs(c);

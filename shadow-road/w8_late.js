@@ -54,12 +54,23 @@
     ctx.save(); ctx.translate(x, y); ctx.scale(s * f, s); const o = { t, walk, gallop: gal, legCol: look.legs, bootCol: look.boots, coat: look.corwin ? 'grey' : 'bay' };
     W8.horse("back", o); ctx.save(); ctx.translate(0, -36 + W8.horseLift(o)); drawHumanoid(look, { arm: lift ? -1.6 : .6, Y: .25, weapon: lift ? 'fists' : 'rapier' }); if (lift) W8.hornDraw(10, -58, .8, t, 1, -1.1); ctx.restore(); W8.horse('front', o); ctx.restore();
   }
+  // stooping for the horn where the Goat-Lord dropped it: down on one knee, the hand to the ground, and up with it in his fist
+  { const _pp = playerPose; playerPose = function () {
+      if (!END || END.pickT === undefined || END.t >= 4.5 || !P) return _pp();
+      const u = END.pickT, down = u < .55 ? sm(u / .55) : 1 - sm((u - .7) / .6), pose = { walk: 0, tier: 1, breath: 0, weapon: END.got ? 'w8horn' : 'fists', hornCine: true };
+      pose.crouch = .75 * down; pose.lean = .5 * down; pose.arm = lerp(1.1, .35, down); pose.elbow = lerp(0, .15, down); pose.backArm = lerp(1.1, 1.5, down); pose.backElbow = .4;
+      pose.hornA = END.got ? lerp(.9, .2, sm(cl01((u - .55) / .9))) : .9; pose.hornGlow = END.got ? .25 * (1 - cl01((u - .6) / .8)) : 0;
+      W8.hornInHand = !!END.got; return pose; }; }
   function renderEnding(t) {
     const now = performance.now(), dt = Math.min(.05, (now - END.last) / 1000); END.last = now; END.t += dt; const T = END.t;
     if (T < 4.5) { // the colour comes back into the Circle from where he fell, and he walks to the horn
-      const h = W8.hornDrop || { x: P.x + 60, y: P.y };
-      P.state = Math.abs(P.x - h.x) > 14 ? 'walk' : 'idle'; P.facing = Math.sign(h.x - P.x) || P.facing; if (P.state === 'walk') { P.walk += dt * 9; P.x += P.facing * 50 * dt; }
-      if (Math.abs(P.x - h.x) < 16 && !END.got) { END.got = 1; W8.hornDrop = null; sfx('pick'); }
+      const h = W8.hornDrop || END.hornAt || { x: P.x + 60, y: P.y }; END.hornAt = { x: h.x, y: h.y };
+      // he walks to the horn (stopping a little short of it, so his hand reaches it), stoops, takes it up and rises with it
+      const reach = 22, dx = h.x - P.x;
+      if (END.pickT === undefined) { P.facing = Math.sign(dx) || P.facing; P.y += (h.y - P.y) * Math.min(1, dt * 3);
+        if (Math.abs(dx) > reach + 2) { P.state = 'walk'; P.walk += dt * 9; P.x += P.facing * Math.min(70, Math.abs(dx) * 2 + 30) * dt; } else { P.state = 'idle'; END.pickT = 0; } }
+      else { P.state = 'idle'; END.pickT += dt; if (END.pickT >= .55 && !END.got) { END.got = 1; W8.hornDrop = null; sfx('pick'); burst(h.x, h.y, 14, ['#FFF2C0', '#F2D24A', '#FFFFFF'], 8, 'spark', 0, true); } }
+      if (T > 4.2 && !(END.pickT >= 1.6)) { END.t = 4.2; } // (the colour waits for him: he takes up the horn before the scene moves on)
       END.orig(t);
       const r = sm(T / 4.2) * VW * 1.3, cx = (W8.fallX ?? h.x) - camX, cy = h.y;
       ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, r, r * .7, 0, 0, Math.PI * 2); ctx.clip();
@@ -69,6 +80,7 @@
       for (let i = 0; i < 70; i++) { const x = hsh(i) * VW, y = FLOOR_TOP + 8 + hsh(i + 1) * (VH - FLOOR_TOP - 10), d = Math.hypot(x - cx, (y - cy) / .7); if (d > r) continue; const k = cl01((r - d) / 60); ctx.fillStyle = ['#F6E8EE', '#F2D24A', '#E8F0F6', '#D86A8A'][i % 4]; ctx.beginPath(); ctx.arc(x, y - k * 3, 1.2 + k, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#5A8A34'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - k * 3); ctx.stroke(); }
       ctx.restore(); paperFrame(); return;
     }
+    if (!END.handOff) { END.handOff = 1; W8.hornInHand = false; }
     const k = cl01((T - 4.5) / 1);
     springPanel(k, t, cl01((T - 5) / 6));
     if (T < 5.5) { ctx.fillStyle = `rgba(250,248,240,${1 - k})`; ctx.fillRect(0, Y_OFF, VW, VH - Y_OFF); }
@@ -79,7 +91,8 @@
     for (let i = 4; i >= 0; i--) { const x = lerp(-120 - i * 50, VW * .52 - i * 46, sm(ridersIn)), y = Hz + 70 + (i % 2) * 14; ctx.save(); ctx.globalAlpha = .5 + .5 * ridersIn; rider(x, y, i ? .62 : .8, i ? Object.assign({}, GANELON, { hair: '#4A3A2A', body: i % 2 ? PAL.or : PAL.gules }) : GANELON, 1, t + i * .41, t * (12 + [0, .9, -.7, .5, -1.1][i]) + [0, 2.3, 4.1, 1.2, 5.3][i], ridersIn < 1 ? 1 : 0); ctx.restore(); // (each horse on its own stride: out of step, as horses are)
       if (i % 2 === 0) { ctx.strokeStyle = '#2A1E14'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x + 6, y - 90); ctx.lineTo(x + 6, y - 40); ctx.stroke(); ctx.fillStyle = PAL.or; ctx.beginPath(); ctx.moveTo(x + 6, y - 90); ctx.quadraticCurveTo(x + 20, y - 88 + Math.sin(t * 4 + i) * 2, x + 30, y - 84); ctx.lineTo(x + 6, y - 78); ctx.fill(); ctx.strokeStyle = PAL.gules; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x + 8, y - 88); ctx.lineTo(x + 24, y - 82); ctx.stroke(); } }
     const mist = 1 - ridersIn; if (mist > 0) { ctx.save(); for (let i = 0; i < 12; i++) softDab(i * 60 - 40, Hz + 60 + (i % 3) * 10, 70, '240,240,236', .5 * mist); ctx.restore(); }
-    if (T < 12.5) { ctx.save(); ctx.translate(VW * .8, Hz + 96); ctx.scale(-1.05, 1.05); drawHumanoid(look, { arm: blowing ? -1.6 : .5, Y: .3, weapon: 'fists' }); if (blowing) W8.hornDraw(10, -60, .8, t, 1, -1.1); else W8.hornDraw(-6, -32, .7, t, 1, .5); ctx.restore(); }
+    if (T < 12.5) { ctx.save(); ctx.translate(VW * .8, Hz + 96); ctx.scale(1.05, 1.05); const hp = W8.hornPoseAt(T, 5.6, 6.2, 8.4, 9.2); hp.Y = .3; hp.live = false; if (!hp.inHand) hp.weapon = 'fists'; // (the same lift, blow and lowering as in the levels: the mouthpiece at his lips)
+      const ih = W8.hornInHand; W8.hornInHand = !!hp.inHand; try { drawPlayerAt(0, 0, 0, -1, hp, 1); } finally { W8.hornInHand = ih; } ctx.restore(); }
     else { const u = cl01((T - 12.5) / 2); ctx.save(); ctx.translate(lerp(VW * .8, VW * .7, sm(u)), Hz + 96); ctx.scale(-1.05, 1.05); drawHumanoid(look, { walk: u < 1 ? t * 8 : 0, arm: .5, Y: .3, weapon: 'fists' }); W8.hornDraw(-6, -32, .7, t, 1, .5); ctx.restore(); } // he walks down to meet Ganelon, the horn at his hip
     if (T > 14) { const a = cl01((T - 14) / 1) * (1 - cl01((T - 23) / 1)); ctx.fillStyle = `rgba(20,14,10,${.5 * a})`; ctx.fillRect(0, Y_OFF, VW, (VH - Y_OFF) * .42);
       ctx.textAlign = 'center'; ctx.font = '700 10px Cinzel, Georgia, serif'; let ly = Y_OFF + 22;
@@ -93,7 +106,7 @@
   }
   function skipEnding() { if (!END || END.t < 1.5) return; if (END.t < 14) END.t = 14; else if (END.t < 24) END.t = 24; else finishEnding(); }
   function finishEnding() {
-    if (!END) return; const sc = END.sc; END = null; W8.ending = false;
+    if (!END) return; const sc = END.sc; END = null; W8.ending = false; W8.hornInHand = false;
     app.classList.remove('nocontrols');
     save.endings = save.endings || {}; save.endings.lorraine = true; save.w8relic = true; persist();
     sc();
@@ -468,8 +481,13 @@
     ctx.restore();
   }
   let PEND = null;
-  if (SB && !SB.w8horn) { const _b = SB.belts; SB.w8horn = 1;
-    SB.belts = function (L, g) { _b.call(this, L, g); PEND = owned() && !W8.hornInHand && L && L.corwin ? { m: ctx.getTransform(), L, g } : null; }; }
+  // whatever he wears at the waist (the sword belt, or any armour set's belt or sash), the horn hangs from it: every
+  // waist piece's belts are wrapped as the figure asks for them
+  if (typeof CORWIN !== 'undefined' && CORWIN.PART && !CORWIN.PART.w8horn) { const _P = CORWIN.PART, wrapped = new WeakMap();
+    CORWIN.PART = function (slot, L) { const p = _P(slot, L); if (slot !== 'waist' || !p || typeof p.belts !== 'function') return p;
+      let w = wrapped.get(p); if (!w) { w = Object.create(p); w.belts = function (L, g) { p.belts.call(this, L, g); PEND = owned() && !W8.hornInHand && L && L.corwin ? { m: ctx.getTransform(), L, g } : null; }; wrapped.set(p, w); }
+      return w; };
+    CORWIN.PART.w8horn = 1; }
   const paintPend = () => { if (!PEND) return; const q = PEND; PEND = null; ctx.save(); try { ctx.setTransform(q.m); beltHorn(q.L, q.g); } catch (e) {} ctx.restore(); };
   { const _h = drawCorwinHead; drawCorwinHead = function (look, hy) { paintPend(); return _h(look, hy); }; }
   { const _h = drawCorwinHeadTurn; drawCorwinHeadTurn = function (look, hy, Y) { paintPend(); return _h(look, hy, Y); }; }
@@ -611,18 +629,20 @@
     }
   }
   // the pose: hand to the horn at his belt, up to his lips, the chest lifted as he blows, and back
-  function cinePose() {
-    const c = CINE, t = c.t, pose = { walk: 0, weapon: 'w8horn', tier: 1, breath: 0 };
-    const K = [[0, 1.1, 0, 0], [c.a, 1.55, .55, .02], [c.b, .55, 2.45, -.1], [c.end, .55, 2.45, -.16], [c.T, 1.25, .3, 0]];
+  function hornPoseAt(t, a, b, end, T, blow = b + .05) {
+    const pose = { walk: 0, weapon: 'w8horn', tier: 1, breath: 0, hornCine: true }; // (hornCine: no weapon's own posing may take his hands from the horn)
+    const K = [[0, 1.1, 0, 0], [a, 1.55, .55, .02], [b, .55, 2.45, -.1], [end, .55, 2.45, -.16], [T, 1.25, .3, 0]];
     let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++;
     const [t0, a0, e0, l0] = K[i], [t1, a1, e1, l1] = K[i + 1], k = W8.kit.sm ? W8.kit.sm(cl01((t - t0) / Math.max(.01, t1 - t0))) : cl01((t - t0) / Math.max(.01, t1 - t0));
     pose.arm = a0 + (a1 - a0) * k; pose.elbow = e0 + (e1 - e0) * k; pose.lean = l0 + (l1 - l0) * k; pose.backArm = 1.3; pose.backElbow = .3;
-    if (!W8.hornInHand) pose.weapon = 'fists';
-    const up = t > c.a ? cl01((t - c.a) / (c.b - c.a)) : 0;
-    pose.hornA = t < c.b ? .9 - 1.5 * up : t < c.end ? -.6 - .06 * Math.sin(t * 9) : -.6 + 1.5 * cl01((t - c.end) / (c.T - c.end));
-    pose.hornGlow = t >= c.blow && t < c.end ? .6 + .4 * Math.sin(t * 20) : 0;
+    pose.inHand = t > a * .75 + (a > 1 ? a * .25 - .3 : 0) && t < T - .06; // (the horn leaves the belt as his hand reaches it)
+    const up = t > a ? cl01((t - a) / (b - a)) : 0;
+    pose.hornA = t < b ? .9 - 1.5 * up : t < end ? -.6 - .06 * Math.sin(t * 9) : -.6 + 1.5 * cl01((t - end) / (T - end));
+    pose.hornGlow = t >= blow && t < end ? .6 + .4 * Math.sin(t * 20) : 0;
     return pose;
   }
+  W8.hornPoseAt = hornPoseAt;
+  function cinePose() { const c = CINE, pose = hornPoseAt(c.t, c.a, c.b, c.end, c.T, c.blow); if (!W8.hornInHand) pose.weapon = 'fists'; return pose; }
   { const _pp = playerPose; playerPose = function () { if (CINE && P) return cinePose(); return _pp(); }; }
   // the fight waits on the call
   { const _up = updatePlayer; updatePlayer = function (dt) {

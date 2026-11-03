@@ -774,7 +774,7 @@
     if (lv) { throwsStep(dt); shotsStep(dt); poolsStep(dt); riseStep(dt); }
   };
   // his stance on the current: no strides, leaning into the way he is carried
-  { const _pp = playerPose; playerPose = function () { const pose = _pp();
+  { const _pp = playerPose; playerPose = function () { const pose = _pp(); if (pose.hornCine) return pose;
     if (curOn() && CUR.glide && LOCO.includes(P.state)) { const s = speedE(), f = CUR.vx * P.facing;
       pose.walk = .55; pose.run = 0; pose.lean = clamp(f / 650, -.3, .5); pose.flow = clamp(f / 45, -10, 14); if (s > 260) pose.crouch = 1; }
     return pose; }; }

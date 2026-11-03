@@ -220,7 +220,7 @@
     S.objs = S.objs.filter(o => !o.gone);
   };
   { const _pp = playerPose; playerPose = function () {
-    const pose = _pp(); if (!mine()) return pose;
+    const pose = _pp(); if (!mine() || pose.hornCine) return pose; // (the horn's call poses him itself: w8_late.js)
     const T = TY[kind()]; if (!T) return pose; pose.weapon = ID; pose.tier = Math.min(7, save.wl[ID] || 1);
     if (P.state === 'charge' && T.chargePose) T.chargePose(pose, P.ct || 0);
     else if (['idle', 'walk', 'run', 'jump'].includes(P.state) && T.carry) T.carry(pose, P.state);

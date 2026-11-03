@@ -189,7 +189,7 @@ function unlockList(id) {
   return list.sort((a, b) => a.lvl - b.lvl);
 }
 const WLEARN = 7; // the last level that teaches a move; NG+ tempering goes past it
-const wMult = (id) => 1 + 0.2 * (Math.min(WLEARN, save.wl[id]) - 1) + .1 * Math.max(0, save.wl[id] - WLEARN); // each level to 7 adds 20% and a new move; tempering past 7 (new cycles) adds 10%
+const wMult = (id) => 1 + 0.2 * (Math.min(WLEARN, save.wl[id]) - 1) + .1 * Math.max(0, Math.min(6, save.wl[id] - WLEARN)) + .15 * Math.max(0, save.wl[id] - WLEARN - 6); // (past six tempers: the Pearl's deep tempers, +15% each) each level to 7 adds 20% and a new move; tempering past 7 (new cycles) adds 10%
 const maxHp = () => gearMaxHp(); // 120, plus what his armor adds (gear.js)
 
 // ---------- enemies ----------
