@@ -19,7 +19,7 @@ function setZoom(h) { if (VIEW_H === h) return; VIEW_H = h; Y_OFF = VH - VIEW_H;
 // asBackdrop(fn) paints in that lifted space, where FLOOR_TOP (and Y_OFF) read as the art was made for.
 // It is chosen as each place is entered (enterZone): on whenever the glide applies (PEARLNG.curOn(), or the forged Pearl
 // in hand), or as the dev panel says (devmode.js: auto / on / off), or forced by ?glideview=on|off in the page's address.
-const GLIDE = { ft: 210, normal: 330, boss: 356, vwMax: 780 };
+const GLIDE = { ft: 200, normal: 372, boss: 396, vwMax: 880 };
 let GLIDE_VIEW = false, GLIDE_DY = 0, ART_DEPTH = 0;
 const GLIDE_FORCE = (() => { try { const m = /[?&]glideview=(on|off|auto)\b/.exec(location.search); return m ? m[1] : ''; } catch (e) { return ''; } })();
 function glideWanted() {
