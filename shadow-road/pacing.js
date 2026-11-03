@@ -361,12 +361,7 @@ function paceOverlay(t) {
       ctx.globalAlpha = Math.sin(k * Math.PI) * .85; ctx.font = `700 ${9 + k * 5}px Cinzel, Georgia, serif`; ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.strokeText('z', x, y); ctx.fillStyle = '#E8E0F0'; ctx.fillText('z', x, y); } }
   ctx.globalAlpha = 1;
   const W = PACE.W;
-  const R = W && W.roll; if (R && R.fade < 1) { const a = (1 - R.fade) * (1 + .6 * Math.max(0, 1 - W.t / 1.5)); // (the ends of a rolling fight's stretch: a gold line, motes rising along it)
-    for (const [x0, s] of [[R.L, -1], [R.R, 1]]) { const x = x0 - s * 28 - camX; if (x < -10 || x > VW + 10) continue;
-      ctx.save(); ctx.strokeStyle = `rgba(238,212,138,${Math.min(.95, .7 * a)})`; ctx.setLineDash([5, 6]); ctx.lineDashOffset = -t * 12; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, FLOOR_TOP - 24); ctx.lineTo(x, FLOOR_BOT + 6); ctx.stroke();
-      ctx.setLineDash([]); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 8; i++) { const k = (t * .35 + i / 8) % 1, y = lerp(FLOOR_BOT, FLOOR_TOP - 30, k); ctx.fillStyle = `rgba(238,212,138,${.7 * a * Math.sin(k * Math.PI)})`; circle(x + Math.sin(t * 2 + i) * 4, y, 1.8); ctx.fill(); }
-      ctx.restore(); } }
+  // (the ends of a rolling fight's stretch carry no gold line: the soft veil alone marks them)
   if (W && !W.done) {
     for (const c of W.cues) { const side = c.edge || (c.wakeE ? 1 : 0); if (!side) continue;
       const x = side < 0 ? 12 : VW - 12, y = clamp(c.y - 34, Y_OFF + 30, FLOOR_BOT - 20), a = .45 + .45 * Math.abs(Math.sin(t * 8));
