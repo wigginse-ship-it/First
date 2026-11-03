@@ -678,7 +678,7 @@ function updateHazards(dt) {
     }
     if (h.kind === 'beam') {
       if (h.t < .35 && !h.fired) { h.fired = true; sfx('shoot'); shakeMag = Math.max(shakeMag, 7); flashT = .05; }
-      if (h.fired && !h.hit && Math.abs(P.y - h.y) < 14 && P.z < 60) { h.hit = true; playerDamage(Math.min(h.dmg, Math.round(maxHp() * .3)), P.x - P.facing, true); } // (a beam never takes more than three tenths of his life, however deep the cycle)
+      if (h.fired && !h.hit && Math.abs(P.y - h.y) < 14 && P.z < 60) { h.hit = true; playerDamage(Math.min(h.dmg, 70), P.x - P.facing, true); } // (a beam takes at most 70, however deep the cycle)
     } else if (h.t <= 0 && !h.done) {
       h.done = true;
       if (Math.hypot(P.x - h.x, (P.y - h.y) * 2.2) < h.r + 8 && P.z < 24) playerDamage(h.dmg, h.x, true);
