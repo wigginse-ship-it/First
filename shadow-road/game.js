@@ -178,7 +178,7 @@ function updatePlayer(dt) {
       break;
     case 'down':
       P.t -= dt; P.x += P.vx * dt; P.vx *= Math.pow(.001, dt);
-      if (P.t <= 0) { P.state = 'idle'; P.inv = Math.max(P.inv, .7); }
+      if (P.t <= 0) { P.state = 'idle'; P.inv = Math.max(P.inv, 1); } // (up again, a full second's grace to get clear)
       break;
     case 'dead':
       P.t -= dt; P.x += P.vx * dt; P.vx *= Math.pow(.01, dt);
@@ -552,6 +552,7 @@ function hitProp(p, m) {
 }
 function playerDamage(dmg, fromX, big) {
   if (P.inv > 0 || P.state === 'dead' || P.state === 'dodge') return;
+  if (P.state === 'down' || (P.state === 'hurt' && P.knocked)) return; // knocked off his feet he cannot be hit again until he is up (and a moment after: see 'down')
   if (P.state === 'parry' && P.t < .28) { riposte(fromX); return; }
   if (tryReflect()) return; // prism scale: the shot goes back the way it came
   const raw = dmg;
