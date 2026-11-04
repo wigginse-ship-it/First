@@ -478,9 +478,9 @@
     if (S.charge && !busy) { O.chg = 0; O.gleamed = false; sfx('charge', 1); return; } // (the patient wind-up only while he is free; mid-blow it goes at once)
     fire(S, S.charge ? { mul: .85 } : undefined);
   }
-  // the free shots: out of a dodge (riptide), and a perfect charged Heavy (slack tide)
-  { const _sd = startDodge; startDodge = function () { _sd(); const S = live() && P.state === 'dodge' ? curStats() : null; if (S && S.f.has('riptide') && O.ripCd <= 0) { O.ripCd = 1.1; fire(S, { mul: .7 }); } }; }
-  { const _pc = perfectCue; perfectCue = function () { _pc(); const S = live() ? curStats() : null; if (S && S.f.has('slack')) fire(S, { mul: .9 }); }; }
+  // the free shots: out of a dodge (riptide), and a perfect charged Heavy (slack tide); only while the Pearl is still evolving (once forged it throws nothing)
+  { const _sd = startDodge; startDodge = function () { _sd(); const S = live() && !forged() && P.state === 'dodge' ? curStats() : null; if (S && S.f.has('riptide') && O.ripCd <= 0) { O.ripCd = 1.1; fire(S, { mul: .7 }); } }; }
+  { const _pc = perfectCue; perfectCue = function () { _pc(); const S = live() && !forged() ? curStats() : null; if (S && S.f.has('slack')) fire(S, { mul: .9 }); }; }
 
   // ---------------- the orb at his shoulder (while it is still evolving) ----------------
   function orbStep(dt) {
