@@ -165,7 +165,6 @@ function updateMech(dt) {
     }
     for (const v of mech.vents) { // a scalding jet roars up out of each grate: it catches anyone standing on it (or jumping low over it)
       if (!(v.blow > 0)) continue; v.blow -= dt;
-      if (Math.random() < .9) parts.push({ x: v.x + rand(-v.w * .4, v.w * .4), y: v.y + rand(-4, 4), z: rand(10, 90), vx: rand(-30, 30), vy: 0, vz: rand(90, 220), life: .6, max: .6, col: 'rgba(240,232,222,.55)', size: rand(6, 12), shape: 'puff', rot: 0, vr: 0 });
       const on = (x, y, z, hw) => Math.abs(x - v.x) < v.w / 2 + hw && Math.abs(y - v.y) < 15 && z < 110;
       if (!v.hit.has(P) && P.state !== 'dead' && on(P.x, P.y, P.z, 6)) { v.hit.add(P); playerDamage(Math.round(maxHp() * .3), v.x, true); if (P.state === 'hurt') P.vz = 300; shakeMag = Math.max(shakeMag, 8); } // a third of your health
       for (const e of enemies) if (!e.dead && !e.boss && !v.hit.has(e) && on(e.x, e.y, e.z, e.hw)) { v.hit.add(e); const d = Math.round(10 + e.maxHp * .1); strike(e, d, Math.sign(e.x - v.x) || 1, { dmg: d, kb: 160, launch: 360, power: 1, trump: 1 }); } // (it tosses foes about, but leaves the killing to you)
@@ -303,7 +302,7 @@ function drawVentGrates(t) { // the grates: dark iron set in the planks, glowing
       ctx.strokeStyle = '#140E10'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(v.x + i * 10 - 4, v.y - 6); ctx.lineTo(v.x + i * 10 + 4, v.y + 6); } ctx.stroke();
       if (warn) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(v.x, v.y, 2, v.x, v.y, v.w * .7); g.addColorStop(0, `rgba(255,120,60,${.75 * on})`); g.addColorStop(1, 'rgba(255,60,30,0)'); ctx.fillStyle = g; ell(v.x, v.y, v.w * .7, 15); ctx.fill();
         ctx.strokeStyle = `rgba(255,140,90,${.9 * on})`; ctx.lineWidth = 2.4; ell(v.x, v.y, v.w / 2 + 4, 12); ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
-        if (Math.random() < .25) parts.push({ x: v.x + rand(-v.w * .3, v.w * .3), y: v.y, z: 4, vx: 0, vy: 0, vz: rand(30, 70) * (.4 + k), life: .4, max: .4, col: 'rgba(240,232,222,.5)', size: rand(3, 6), shape: 'puff', rot: 0, vr: 0 }); }
+        }
     }
     ctx.restore(); });
 }
