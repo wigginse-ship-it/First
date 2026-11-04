@@ -7,7 +7,7 @@
 (() => {
   const BACKUP = 'shadowroad-devbackup', OPTS = 'shadowroad-devopts';
   const DEV = window.DEV = { god: false };
-  let opts = { god: false, elites: false, arsenal: false, relic: '', cycle: 0, card: '', clv: 1, glide: 'auto' };
+  let opts = { god: false, elites: false, arsenal: false, relic: '', cycle: 0, card: '', clv: 1, glide: 'auto', pform: '' };
   try { Object.assign(opts, JSON.parse(localStorage.getItem(OPTS) || '{}')); } catch (e) {}
   if (opts.relics || (opts.arm && opts.pearl && opts.horn)) opts.relic = 'all'; else if (opts.arm || opts.pearl || opts.horn) opts.relic = opts.arm ? 'arm' : opts.pearl ? 'pearl' : 'horn';
   delete opts.relics; delete opts.arm; delete opts.pearl; delete opts.horn; // (the older switches)
@@ -45,6 +45,8 @@
     const R = opts.relic, all = R === 'all';
     save.silverArm = all || R === 'arm'; save.w7relic = all || R === 'pearl'; save.w8relic = all || R === 'horn';
     if (all || R === 'arm') { save.owned.fists = true; save.weapon = 'fists'; } // (the arm is worn bare-handed)
+    // the reforged Pearl, ready forged as the chosen kind, in his hands at its full moveset (a new cycle: it is an NG+ weapon)
+    if (opts.pform && window.PEARLM && PEARLM.TY[opts.pform]) { save.w7relic = true; save.cycle = Math.max(1, save.cycle); try { PEARLM.forge(opts.pform); } catch (e) { console.error(e); } if (WEAPONS.pearlw) { save.owned.pearlw = true; save.wl.pearlw = WLEARN; save.weapon = 'pearlw'; } }
     if (opts.card && TRUMPS[opts.card]) { save.trumps[opts.card] = true; save.trump = opts.card; save.tlv[opts.card] = clamp(opts.clv | 0, 1, 3); }
   }
   function go(i, zone) {
@@ -95,6 +97,7 @@
         <label><input type="checkbox" data-o="elites"> Every foe armored</label>
         <label>Weapons <select data-o="arsenal"><option value="">(as saved)</option><option value="all">All weapons, all moves (Lv 7), best arrows</option>${WEAPON_ORDER.filter(id => id !== 'fists' && id !== 'pearlw' && WEAPONS[id]).map(id => `<option value="${id}">${WEAPONS[id].name}, all moves (Lv 7)</option>`).join('')}</select></label>
         <label>Relic <select data-o="relic"><option value="">None</option><option value="arm">The Silver Arm (equipped)</option><option value="pearl">The Pearl of Judgement</option><option value="horn">The Horn of Lorraine</option><option value="all">All three</option></select></label>
+        <label title="Start with the Pearl already forged into this weapon, in hand at its full moveset (sets NG+1 at least)">Pearl weapon <select data-o="pform"><option value="">None</option>${(window.PEARLW && PEARLW.TYPES ? Object.keys(PEARLW.TYPES) : []).map(k => `<option value="${k}">${PEARLW.TYPES[k].noun}</option>`).join('')}</select></label>
         <label>Card <select data-o="card"><option value="">(as saved)</option>${TRUMP_ORDER.map(k => `<option value="${k}">${TRUMPS[k].name}</option>`).join('')}</select></label>
         <label>Card level <select data-o="clv">${[1, 2, 3].map(l => `<option value="${l}">${['I', 'II', 'III'][l - 1]}</option>`).join('')}</select></label>
         <label title="How the Pearl looks once it has taken a shape. Takes effect straight away">Pearl look <select id="devPearlStyle"><option value="v3">Current (nacre pearls once shaped)</option><option value="v2">2.0 (every pearl the Rebma relic)</option></select></label>
@@ -124,8 +127,8 @@
     });
     { const ps = el.querySelector('#devPearlStyle'); if (ps && window.PEARLNG && PEARLNG.style) { ps.value = PEARLNG.style(); ps.addEventListener('change', () => PEARLNG.style(ps.value)); } } // (the Pearl's look is kept in the browser, apart from the dev options)
     for (const c of el.querySelectorAll('[data-o]')) {
-      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'arsenal' ? (opts[k] === true ? 'all' : String(opts[k] || '')) : k === 'card' || k === 'relic' ? String(opts[k] || '') : k === 'glide' ? String(opts[k] || 'auto') : String(opts[k] | 0);
-      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' || k === 'arsenal' || k === 'glide' ? c.value : +c.value; syncDev(); keepOpts(); });
+      const k = c.dataset.o; if (c.type === 'checkbox') c.checked = !!opts[k]; else c.value = k === 'arsenal' ? (opts[k] === true ? 'all' : String(opts[k] || '')) : k === 'card' || k === 'relic' || k === 'pform' ? String(opts[k] || '') : k === 'glide' ? String(opts[k] || 'auto') : String(opts[k] | 0);
+      c.addEventListener('change', () => { opts[k] = c.type === 'checkbox' ? c.checked : k === 'card' || k === 'relic' || k === 'arsenal' || k === 'glide' || k === 'pform' ? c.value : +c.value; syncDev(); keepOpts(); });
     }
     for (const c of el.querySelectorAll('[data-p]')) { // the Pearl's New Game+ switches (PEARL_NG, w7_late.js): they take effect at once
       const k = c.dataset.p; c.checked = !!(window.pearlNG && pearlNG()[k]); // (as saved for dev games: an ordinary game ignores them)
