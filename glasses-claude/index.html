@@ -754,10 +754,21 @@ async function buildPreview() {
     dstat("Asking Claude to make the change…");
     const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
       headers: { "content-type":"application/json", "x-api-key": apiKey(), "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
-      body: JSON.stringify({ model: settings.model, max_tokens: 8000, system: EDIT_SYS,
+      body: JSON.stringify({ model: settings.model, max_tokens: 8000, stream: true, system: EDIT_SYS,
         messages: [{ role:"user", content: "<file>\n" + cur.text + "\n</file>\n\nRequested change: " + req }] }) });
     if (!r.ok) { let m = r.status; try { m = (await r.json()).error.message; } catch {} throw new Error(m); }
-    const raw = (await r.json()).content.map(c => c.text || "").join("");
+    let raw = ""; const rd = r.body.getReader(), dc = new TextDecoder(); let bf = "";
+    for (;;) {
+      const { done, value } = await rd.read(); if (done) break;
+      bf += dc.decode(value, { stream: true });
+      let k; while ((k = bf.indexOf("\n\n")) >= 0) {
+        const ev = bf.slice(0, k); bf = bf.slice(k + 2);
+        const dl = ev.split("\n").find(l => l.startsWith("data:")); if (!dl) continue;
+        let j; try { j = JSON.parse(dl.slice(5)); } catch { continue; }
+        if (j.type === "content_block_delta" && j.delta.type === "text_delta") { raw += j.delta.text; dstat("Claude is writing… " + raw.length + " characters"); }
+        else if (j.type === "error") throw new Error(j.error.message);
+      }
+    }
     let out; try { out = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)); } catch { throw new Error("Claude's reply wasn't usable — try rewording"); }
     if (!Array.isArray(out.edits) || !out.edits.length) throw new Error("No changes were proposed");
     let t = cur.text;
@@ -773,7 +784,7 @@ async function buildPreview() {
     LS.set("gc.cand", { text: t, baseSha: cur.sha, summary: out.summary || req, request: req, at: Date.now() });
     logAct("update", "Preview built: " + (out.summary || req));
     dstat("Preview ready (GitHub needs about a minute to publish it)."); renderCand();
-  } catch (e) { dstat("⚠ " + e.message); }
+  } catch (e) { dstat("⚠ " + (e.message === "Failed to fetch" ? "Connection dropped (network or the glasses browser). Try again, ideally on Wi-Fi." : e.message)); }
   $("d-build").disabled = false;
 }
 function renderCand() {
