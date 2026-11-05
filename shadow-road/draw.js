@@ -177,7 +177,7 @@ function playerPose() {
   const clk = () => (BL.clock ? BL.clock() : performance.now()); // (a test harness can drive the clock)
   { const now = clk() / 1000, d = Math.min(.05, Math.max(0, now - (P.poseT || now))); P.poseT = now; // how long he has stood still (for weapons that relax at rest)
     P.restT = P.state === 'idle' ? (P.restT || 0) + d : 0; P.restK = clamp((P.restK || 0) + (P.restT > .35 ? d * 2.2 : -d * 7), 0, 1); }
-  const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : Math.min(7, save.wl[P.w]) };
+  const w = WEAPONS[P.w], pose = { walk: P.walk, weapon: w.look, tier: P.w === 'fists' ? 1 : Math.min(P.w === 'rapier' ? 8 : 7, save.wl[P.w]) };
   if (P.state === 'atk' || P.state === 'air') {
     const m = P.move, k = P.t / m.dur;
     atkPose(pose, w, m, k);
@@ -994,7 +994,7 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   const s = canvas.width / 64 * (scale || 1);
   g.setTransform(s, 0, 0, s, 0, 0);
   // the weapon on its own, laid diagonally across the card
-  const tier = id === 'fists' ? 1 : Math.min(7, save.wl[id]);
+  const tier = id === 'fists' ? 1 : Math.min(id === 'rapier' ? 8 : 7, save.wl[id]);
   if (id === 'arrow') { ctx.translate(34, 30); ctx.rotate(-.75); ctx.scale(1.5, 1.5); drawArrowShape(arrowLv(), 24); }
   else if (id === 'fists') { // a gauntleted fist, knuckles forward
     ctx.translate(32, 33); ctx.rotate(-.25);

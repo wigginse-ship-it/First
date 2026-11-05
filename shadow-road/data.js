@@ -131,7 +131,7 @@ const WEAPONS = {
       { lvl: 7, name: 'Judgement of Amber', key: 'HOLD4', how: 'Hold Heavy past the fourth flash', desc: 'Hold on past a fourth, golden flash: turn once on your heel, leap, and split the street with a blow that sends waves of shadow running both ways.' }] },
   // the prince's own blade: quick, a fencer's weapon. Cuts and long thrusts that cover ground, fancy spins, and a parry
   // in place of the backstep: dodge in place or away and a blow that lands on the guard is answered at once
-  rapier: { get name() { return save.wl.rapier >= 6 ? 'Grayswandir' : 'Rapier'; }, // only at its last level does it show itself as Grayswandir
+  rapier: { get name() { return save.wl.rapier >= 8 ? 'Grayswandir' : 'Rapier'; }, // only at its own last level (8, one past the others) does it show itself as Grayswandir
     reach: 44, look: 'grayblade', parry: true, charge2: 1, desc: 'Quick and precise. Dodge in place or away to parry, and answer with a riposte. Hold Heavy to charge twice.',
     tree: {
       L:    { dur: .24, h: [.3, .6], x0: 0, x1: 60, dmg: 6, kb: 45, arc: [-1.3, .9], lunge: 56, depth: 18, noStun: 1 },
@@ -189,7 +189,8 @@ function unlockList(id) {
   return list.sort((a, b) => a.lvl - b.lvl);
 }
 const WLEARN = 7; // the last level that teaches a move; NG+ tempering goes past it
-const wMult = (id) => 1 + 0.2 * (Math.min(WLEARN, save.wl[id]) - 1) + .1 * Math.max(0, Math.min(6, save.wl[id] - WLEARN)) + .15 * Math.max(0, save.wl[id] - WLEARN - 6); // (past six tempers: the Pearl's deep tempers, +15% each) each level to 7 adds 20% and a new move; tempering past 7 (new cycles) adds 10%
+const wLearn = (id) => WLEARN + (id === 'rapier' ? 1 : 0); // the rapier has one level more than the rest: at 8 it shows itself as Grayswandir (a new blade, no new move)
+const wMult = (id) => { const L = wLearn(id), v = save.wl[id]; return 1 + 0.2 * (Math.min(L, v) - 1) + .1 * Math.max(0, Math.min(6, v - L)) + .15 * Math.max(0, v - L - 6); }; // (past six tempers: the Pearl's deep tempers, +15% each) each level to 7 adds 20% and a new move; tempering past 7 (new cycles) adds 10%
 const maxHp = () => gearMaxHp(); // 120, plus what his armor adds (gear.js)
 
 // ---------- enemies ----------

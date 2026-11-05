@@ -151,9 +151,15 @@ function moveListHtml(id) {
 // prices climb steeply, and each new cycle of the road makes everything dearer again
 const cyc = () => 1 + .5 * (save.cycle || 0);
 const PEARL_XT = 4; // the reforged Pearl takes four more tempers past the others' six, dearer each time, and each worth more (+15%)
-const WMAX = (id) => save.cycle > 0 ? WLEARN + 6 + (id === 'pearlw' ? PEARL_XT : 0) : WLEARN; // past level 7 (new cycles only) each level is a plain damage bump
+const WMAX = (id) => save.cycle > 0 ? wLearn(id) + 6 + (id === 'pearlw' ? PEARL_XT : 0) : wLearn(id); // past level 7 (new cycles only) each level is a plain damage bump
 // tuned so a world pays for one or two upgrades, no more
-const wCost = (lvl) => lvl >= WLEARN + 6 ? { s: Math.round((480 + 110 * 6) * (1 + .25 * (save.cycle || 0)) * [2, 2.7, 3.5, 4.5][Math.min(3, lvl - WLEARN - 6)]), g: Math.round((10 + 4 * (lvl - WLEARN - 6)) * (1 + .25 * (save.cycle || 0))) } : lvl < WLEARN ? { s: Math.round([0, 120, 250, 430, 680, 990, 1370][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) } : { s: Math.round((480 + 110 * (lvl - WLEARN)) * (1 + .25 * (save.cycle || 0))), g: Math.round((4 + (lvl - WLEARN)) * (1 + .25 * (save.cycle || 0))) }; // tempering (new cycles): about a world's pickings for each, the cycle making it only a little dearer
+const wCost = (lvl, id) => { const L = wLearn(id), cy = 1 + .25 * (save.cycle || 0);
+  if (lvl >= WLEARN && lvl < L) return { s: Math.round(1850 * cyc()), g: Math.round(12 * cyc()) }; // the rapier's eighth level: Grayswandir revealed
+  if (lvl < WLEARN) return { s: Math.round([0, 120, 250, 430, 680, 990, 1370][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) };
+  const t = lvl - L; // tempering (new cycles): about a world's pickings for each, the cycle making it only a little dearer; past six, the Pearl's deep tempers
+  if (t >= 6) return { s: Math.round((480 + 110 * 6) * cy * [2, 2.7, 3.5, 4.5][Math.min(3, t - 6)]), g: Math.round((10 + 4 * (t - 6)) * cy) };
+  return { s: Math.round((480 + 110 * t) * cy), g: Math.round((4 + t) * cy) };
+};
 const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
 function openForge(kicker) {
@@ -167,21 +173,21 @@ function renderForge(note) {
   const wrap = $('#forgeCards'); wrap.innerHTML = '';
   for (const id of WEAPON_ORDER) {
     if (id === 'fists') continue; // bare hands have nothing to forge
-    const w = WEAPONS[id], owned = save.owned[id], lvl = save.wl[id], max = lvl >= WMAX(id), c = wCost(lvl);
+    const w = WEAPONS[id], owned = save.owned[id], lvl = save.wl[id], max = lvl >= WMAX(id), c = wCost(lvl, id), L = wLearn(id);
     const bare = id === 'fists'; // fists never level up
     const can = owned && !bare && !max && save.shards >= c.s && save.sigils >= c.g;
     const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/${WMAX(id)} · DAMAGE ×${wMult(id).toFixed(2)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
       <p>${bare ? w.desc + ' Fists never level up.' : owned ? w.desc : 'Not found yet. Defeat enemies to find it.'}</p><ul>${moves}</ul>
-      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX(id) > WLEARN ? 'Fully tempered' : 'Every move learned') : lvl >= WLEARN ? `${lvl >= WLEARN + 6 ? 'Deep temper: +15%' : 'Temper: +10%'} damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
+      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX(id) > L ? 'Fully tempered' : id === 'rapier' ? 'Grayswandir revealed' : 'Every move learned') : lvl >= L ? `${lvl >= L + 6 ? 'Deep temper: +15%' : 'Temper: +10%'} damage · ${costTxt(c)}` : lvl >= WLEARN ? `Level 8: reveal Grayswandir + 20% damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
     if (b) b.addEventListener('click', () => {
       if (!can) return;
       save.shards -= c.s; save.sigils -= c.g; save.wl[id]++; persist(); sfx('buy');
       const learned = unlockList(id).find(m => m.lvl === save.wl[id]);
-      renderForge(`${w.name} is now level ${save.wl[id]}: damage ×${wMult(id).toFixed(2)}.${learned ? ` New move: ${learned.name}. ${learned.how}.` : ''}`);
+      renderForge(id === 'rapier' && save.wl[id] === 8 ? `The rapier shows itself for what it always was: Grayswandir. Damage ×${wMult(id).toFixed(2)}.` : `${w.name} is now level ${save.wl[id]}: damage ×${wMult(id).toFixed(2)}.${learned ? ` New move: ${learned.name}. ${learned.how}.` : ''}`);
     });
     wrap.appendChild(d);
   }
