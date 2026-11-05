@@ -2860,8 +2860,13 @@
 
     // ---- the surcoat over a mail shirt, worn as a costume part (CORWIN.parts.mail) so it is drawn in the figure's own order ----
     // the arms: L.sc_field, L.sc_charge, L.sc_kind ('bend' with three alerions argent | 'chevron'); the skirt falls over the thigh
-    const mailRings = (x0, y0, x1, y1, col) => { if (!DETR() || (typeof PAINT_Q !== 'undefined' && PAINT_Q <= 0)) return; ctx.strokeStyle = col; ctx.lineWidth = .32; ctx.beginPath();
-      for (let y = y0, r = 0; y < y1; y += 1.25, r++) for (let x = x0 + (r % 2) * .7; x < x1; x += 1.4) { ctx.moveTo(x + .5, y); ctx.arc(x, y, .5, 0, Math.PI); } ctx.stroke(); };
+    const RINGS = new Map(), RPX = 6; // a tile of mail rings (two staggered rows) painted once per colour, laid on as a pattern
+    const mailRings = (x0, y0, x1, y1, col) => { if (!DETR() || (typeof PAINT_Q !== 'undefined' && PAINT_Q <= 0)) return;
+      let pat = RINGS.get(col);
+      if (!pat) { if (RINGS.size > 24) RINGS.clear(); const c = document.createElement('canvas'); c.width = Math.round(2.8 * RPX); c.height = Math.round(2.5 * RPX); const g = c.getContext('2d');
+        g.scale(RPX, RPX); g.strokeStyle = col; g.lineWidth = .32; g.beginPath(); for (const [x, y] of [[.7, .6], [2.1, .6], [0, 1.85], [1.4, 1.85], [2.8, 1.85]]) { g.moveTo(x + .5, y); g.arc(x, y, .5, 0, Math.PI); } g.stroke();
+        pat = ctx.createPattern(c, 'repeat'); pat.setTransform(new DOMMatrix().scale(1 / RPX)); RINGS.set(col, pat); }
+      ctx.fillStyle = pat; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); };
     function charge(L, x0, y0, w, h, skirt) { // the arms laid over a panel of the surcoat (its field already painted), in its own frame
       if (L.sc_kind === 'chevron') {
         const cx = x0 + w * .5, top = y0 + h * (skirt ? -.2 : .28), bw = w * .2;
@@ -2990,12 +2995,12 @@
         ctx.lineTo(P.waist[0], P.waist[1]); ctx.quadraticCurveTo(P.shBack[0] + 3, P.shBack[1] + 8, P.shoulder[0], P.shoulder[1]); ctx.closePath(); };
       path(); let g = null; if (DETR()) { g = ctx.createLinearGradient(P.shoulder[0], P.shoulder[1], hem[1][0], hem[1][1]); g.addColorStop(0, C(shade(L.cloakCol, .12))); g.addColorStop(.55, C(L.cloakCol)); g.addColorStop(1, C(shade(L.cloakCol, -.38))); }
       ctx.fillStyle = g || C(L.cloakCol); ctx.fill();
-      ctx.save(); path(); ctx.clip();
-      ctx.strokeStyle = C(L.cloakLine); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(hem[1][0], hem[1][1]); ctx.quadraticCurveTo((hem[1][0] + hem[2][0]) / 2, Math.max(hem[1][1], hem[2][1]) + 3, hem[2][0], hem[2][1]); ctx.quadraticCurveTo((hem[2][0] + hem[3][0]) / 2, hem[3][1] + 2, hem[3][0], hem[3][1]); ctx.stroke(); // the lining turned at the hem
+      ctx.save(); path(); outline(1); // (no clip: the lining and the folds are drawn inside its edge)
+      ctx.strokeStyle = C(L.cloakLine); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(hem[1][0], hem[1][1] - .9); ctx.quadraticCurveTo((hem[1][0] + hem[2][0]) / 2, Math.max(hem[1][1], hem[2][1]) + 2.1, hem[2][0], hem[2][1] - .9); ctx.quadraticCurveTo((hem[2][0] + hem[3][0]) / 2, hem[3][1] + 1.1, hem[3][0] + .6, hem[3][1] - .9); ctx.stroke(); // the lining turned at the hem
       if (DETR()) { ctx.lineCap = 'round'; for (let i = 0; i < 4; i++) { const u = (i + .6) / 4.4, x0 = lerp(P.nape[0], P.shoulder[0], .5) - i * 3, y0 = P.nape[1] + 4 + i, hx = lerp(hem[3][0], hem[1][0], u), hy = lerp(hem[3][1], hem[1][1], u) - 1;
         ctx.strokeStyle = 'rgba(14,6,6,.42)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + hx) / 2 - 3 + wv(i + 5, A * .5), (y0 + hy) / 2, hx, hy); ctx.stroke();
         ctx.strokeStyle = 'rgba(255,236,206,.18)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(x0 + 1.2, y0); ctx.quadraticCurveTo((x0 + hx) / 2 - 1.6 + wv(i + 5, A * .5), (y0 + hy) / 2, hx + 1.4, hy - 1); ctx.stroke(); } }
-      ctx.restore(); path(); outline(1);
+      ctx.restore();
     }
     function reins(bit, hand, sag, far) { ctx.lineCap = 'round'; const mx = (bit[0] + hand[0]) / 2, my = Math.max(bit[1], hand[1]) + sag;
       for (const [w, c] of [[far ? 1.5 : 1.8, FLASH ? '#FFFFFF' : '#1E120C'], [far ? .7 : 1, C(far ? '#6A1A12' : '#9A2A1C')]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(bit[0], bit[1]); ctx.quadraticCurveTo(mx, my, hand[0], hand[1]); ctx.stroke(); } }
@@ -3013,9 +3018,8 @@
         const px = root[0] + ux * len * k + uy * fl, py = root[1] + uy * len * k - ux * fl; top.push([px, py]); bot.push([px + uy * wd, py - ux * wd]); }
       const [c1, c2] = L.pennon || [PAL.or, PAL.gules], tip = top[n], tb = bot[n], ta = Math.atan2(tip[1] - top[n - 1][1], tip[0] - top[n - 1][0]);
       const shape = () => { ctx.beginPath(); ctx.moveTo(root[0], root[1]); for (const p of top) ctx.lineTo(p[0], p[1]); ctx.lineTo((tip[0] + tb[0]) / 2 - Math.cos(ta) * 5, (tip[1] + tb[1]) / 2 - Math.sin(ta) * 5); for (let i = n; i >= 0; i--) ctx.lineTo(bot[i][0], bot[i][1]); ctx.closePath(); }; // the swallow's tail
-      shape(); ctx.fillStyle = C(c1); ctx.fill(); ctx.save(); shape(); ctx.clip(); ctx.strokeStyle = C(c2); ctx.lineWidth = 2.6; ctx.beginPath(); top.forEach((p, i) => { const q = bot[i], y = lerp(p[1], q[1], .5); i ? ctx.lineTo(p[0], y) : ctx.moveTo(p[0], y); }); ctx.stroke();
-      if (DETR()) { ctx.fillStyle = 'rgba(30,14,10,.22)'; for (let i = 1; i < n; i += 2) { const p = top[i], q = bot[i]; ctx.fillRect(Math.min(p[0], q[0]) - 1.2, p[1] - 1, 2.4, q[1] - p[1] + 2); } }
-      ctx.restore(); shape(); outline(.8);
+      shape(); ctx.fillStyle = C(c1); ctx.fill(); outline(.8);
+      ctx.strokeStyle = C(c2); ctx.lineWidth = 2.4; ctx.beginPath(); for (let i = 0; i < n; i++) { const p = top[i], q = bot[i], x = lerp(p[0], q[0], .5), y = lerp(p[1], q[1], .5); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); // a stripe of the other colour down its length
     }
     function fist(L, H, a) { ctx.save(); ctx.translate(H[0], H[1]); ctx.rotate(a); rrect(-2.4, -2.1, 4.8, 4.2, 1.4); ctx.fillStyle = C(L.glove || STEEL); ctx.fill(); outline(.8); if (DETR()) { ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(-1.6, -1.5); ctx.lineTo(1.4, -1.6); ctx.stroke(); } ctx.restore(); }
 
