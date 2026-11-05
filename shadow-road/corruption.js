@@ -1995,10 +1995,11 @@
   // ---------------- THE CURSE METER (for testing): a bar under his health in every New Game+ game. Set SHOW_METER to
   // false to hide it again (the curse is meant to be felt, not read)
   const SHOW_METER = true;
+  const TOUCH_ONLY = (() => { try { return matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) { return false; } })();
   const TIER_NAMES = ['UNTOUCHED', 'WHISPERS', 'TAINT', 'BLIGHT', 'CONSUMED'], HORN_NAMES = ['', 'SOUR', 'TURNING', 'TURNED', 'BLACK'];
   let meterEl = null;
   function meter() {
-    const show = SHOW_METER && NG() && !!save.w8relic && (mode === 'play' || mode === 'pause'); // (only once Lorraine is beaten: the Horn in hand)
+    const show = SHOW_METER && !TOUCH_ONLY && NG() && !!save.w8relic && (mode === 'play' || mode === 'pause'); // (never on a phone or tablet: no room for it) // (only once Lorraine is beaten: the Horn in hand)
     if (!show) { if (meterEl) meterEl.hidden = true; return; }
     if (!meterEl) { const bars = document.querySelector('.hud-l .bars'); if (!bars) return;
       meterEl = document.createElement('div'); meterEl.id = 'curseMeter'; meterEl.style.cssText = 'margin:3px 0 1px;pointer-events:none;font:700 8px/1.1 sans-serif;letter-spacing:.08em;color:#D8B8D0;filter:drop-shadow(0 1px 1px #000)';
