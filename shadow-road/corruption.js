@@ -954,11 +954,11 @@
   }
   function corruptItem(which) {
     const c = CS(), opts = [];
-    if (P && P.w && P.w !== 'pearlw' && !c.wc[P.w] && WEAPONS[P.w]) opts.push('w');
+    if (P && P.w && window.CURSEDW && CURSEDW.canOffer(P.w)) opts.push('w'); // (the weapon in hand: the Circle offers its black twin on the street, cursedw.js)
     for (const s of GEAR_SLOTS) if (save.gear.eq[s] && !save.gear.eq[s].curse) opts.push(s);
     if (!opts.length) return false;
     const o = which || pick(opts);
-    if (o === 'w') { const k = pick(Object.keys(WCURSE)); c.wc[P.w] = k; banner(WCURSE[k].name + ' ' + WEAPONS[P.w].name, 'BLACK VEINS RUN THROUGH IT · ' + WCURSE[k].txt.toUpperCase(), 2.4); }
+    if (o === 'w') { if (!CURSEDW.drop(P.w, P.x + P.facing * 70, P.y)) return false; banner('The Circle offers a weapon', 'A BLACK TWIN OF YOUR ' + WEAPONS[P.w].name.toUpperCase() + ' · STAND IN THE BLACK TO TAKE IT', 2.4); }
     else { const it = save.gear.eq[o]; if (!it) return false; it.curse = o; gearChanged(); banner('Black-Veined ' + SLOT_NAME[o], ACURSE[o].txt.toUpperCase(), 2.4); }
     sfx('growl'); flashT = Math.max(flashT, .08); if (P) burst(P.x, P.y, 50, ['#0A0608', '#4A3A44', '#8A2030'], 24, 'spark', 0, true); persist(); refreshHud(true); return o;
   }
@@ -992,7 +992,8 @@
     if (wc === 'hunger') { P.cHungry = (P.cHungry || 0) + dt; if (P.cHungry > 4 && waveActive) { P.cHungry = 2.8; if (P.hp > 1) { P.hp = Math.max(1, P.hp - Math.max(1, Math.round(maxHp() * .02))); burst(P.x, P.y, 50, ['#3A1010', '#8A2020'], 4, 'flesh'); } } }
   }
   { const _k2 = killEnemy; killEnemy = function (e, dir, m) { const was = e.dead, r = _k2(e, dir, m); if (NG() && !was && e.dead && P && CS().wc[P.w] === 'hunger' && mine(m || {})) { P.cHungry = 0; P.hp = Math.min(maxHp(), P.hp + Math.round(maxHp() * .03)); } return r; }; }
-  // the forge can draw the black out too, at a price
+  // the forge can draw the black out too, at a price. (Weapons: the old in-hand weapon curses (c.wc) and their 'keen' cleanse are
+  // folded into the cursed weapons of cursedw.js, which turns any left in a save into one of its own; only armor is cleansed here.)
   // drawing the black out at the forge is dear, one thing at a time, and what comes out of the fire is better than it ever was:
   // armor comes out HALLOWED (well past ordinary armor, with a blessing of its own); a weapon comes out clean and keener (+15%)
   const cleanseCost = (kind) => kind === 'w' ? { s: Math.round(1100 * (1 + .5 * (save.cycle || 0))), g: 8 } : { s: Math.round(1800 * (1 + .5 * (save.cycle || 0))), g: 12 };
