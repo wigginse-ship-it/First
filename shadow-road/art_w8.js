@@ -1097,6 +1097,7 @@
   function goatHead(x, y, s, o = {}) {
     const hs = o.horns || 1, rage = o.rage || 0, open = o.open || 0, t = o.t || 0, det = DET();
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(o.tilt || 0);
+    if (GC) goatHorns(hs, false); // (corrupted: the horns he grows)
     ridgedHorn(-2, -8, -14 * hs, -18 * hs, -22 * hs, -6 * hs, 6, .8, 1.3, '#141210'); // the far horn
     // the ears, flat out to the side, and one flicks now and then
     { const fl = Math.max(0, Math.sin(t * 9) * (Math.sin(t * .7) > .85 ? 1 : 0)) * .25; ctx.save(); ctx.translate(-5, -4); ctx.rotate(-fl); ctx.translate(5, 4);
@@ -1131,6 +1132,7 @@
         if (DET()) { ctx.fillStyle = 'rgba(255,255,240,.9)'; circle(5.2, -6, .45); ctx.fill(); ctx.strokeStyle = 'rgba(10,6,2,.9)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(4, -5, 2.8, 2, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); } } }
     if (rage > 0 && DET()) glowM(4, -5, 6, '255,200,90', .35 * rage);
     ridgedHorn(0, -10, -6 * hs, -30 * hs, -20 * hs, -36 * hs, 7, .9, 1.4, '#141210'); // the near horn, ridged
+    if (GC) goatHorns(hs, true);
     if (o.charge > 0) { gather(-20 * hs, -36 * hs, o.charge, o.t || 0, 4); gather(-22 * hs, -6 * hs, o.charge * .8, (o.t || 0) + .37, 3.4); } // (without his crozier the bleat gathers in his horns)
     ctx.restore();
   }
@@ -1161,6 +1163,7 @@
       ctx.beginPath(); for (let i = 0; i < 14; i++) { const a = i / 14 * TAU; ctx.moveTo(rx + Math.cos(a) * 7.8, ry + Math.sin(a) * 7.8); ctx.lineTo(rx + Math.cos(a + .12) * 10.2, ry + Math.sin(a + .12) * 10.2); } ctx.strokeStyle = 'rgba(16,14,12,.65)'; ctx.lineWidth = .5; ctx.stroke(); }
     ctx.fillStyle = C('#0C0A08'); circle(rx, ry, 7); ctx.fill(); // the ring is a hole: you see nothing through it
     if (det) { ctx.strokeStyle = 'rgba(120,112,100,.22)'; ctx.lineWidth = .8; ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = t * (.8 + i * .3) + i * 2.1; ctx.moveTo(rx + Math.cos(a) * (2 + i * 1.6), ry + Math.sin(a) * (2 + i * 1.6)); ctx.arc(rx, ry, 2 + i * 1.6, a, a + 2.2); } ctx.stroke(); } // (only the Circle turning in it, grey on black)
+    if (GC) goatCircle(rx, ry, t); // (corrupted: the ring grown into the Circle)
     // the knop where the crook meets the staff: an iron boss with a band of gold
     cel(PE(x1, y1, 3.4, 3.4), GL.iron, { d: .9, r: .6, w: 1.1, lite: GL.ironLt, tex: () => { ctx.strokeStyle = '#C9982E'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(x1 - sa * 3.4, y1 + ca * 3.4); ctx.lineTo(x1 + sa * 3.4, y1 - ca * 3.4); ctx.stroke(); } });
     if (glow > 0) glowM(rx, ry, 18, '210,200,180', .25 * glow);
@@ -1185,7 +1188,7 @@
         ctx.beginPath(); for (let i = 0; i < R.length; i += 2) { ctx.moveTo(R[i] + 1.6, R[i + 1]); ctx.arc(R[i], R[i + 1], 1.6, 0, TAU); } ctx.fillStyle = C('#1C1612'); ctx.fill();
         if (DET()) { ctx.beginPath(); for (let i = 0; i < R.length; i += 2) { const x = R[i], y = R[i + 1]; ctx.moveTo(x - .5, y - .2); ctx.quadraticCurveTo(x - 1.4, y - 1.6, x - .2, y - 1.4); ctx.moveTo(x + .5, y - .2); ctx.quadraticCurveTo(x + 1.4, y - 1.6, x + .2, y - 1.4); } ctx.strokeStyle = '#E8C060'; ctx.lineWidth = .4; ctx.stroke(); } }
       goldLine(() => { ctx.moveTo(-26 - wide + sw, hem - 1); ctx.quadraticCurveTo(0, hem + 3, 26 + wide + sw, hem - 1); }, 1.6); // the hem's border
-      if (burn > 0) { ctx.fillStyle = `rgba(150,144,134,${burn})`; ctx.beginPath(); ctx.moveTo(-30, hem + 4); for (let x = -30; x <= 30; x += 3) ctx.lineTo(x + sw, hem - 4 - burn * (10 + hsh(x) * 18)); ctx.lineTo(30, hem + 4); ctx.fill();
+      if (burn > 0) { ctx.fillStyle = GC ? `rgba(14,8,8,${Math.min(1, burn + .15)})` : `rgba(150,144,134,${burn})`; ctx.beginPath(); ctx.moveTo(-30, hem + 4); for (let x = -30; x <= 30; x += 3) ctx.lineTo(x + sw, hem - 4 - burn * (10 + hsh(x) * 18)); ctx.lineTo(30, hem + 4); ctx.fill();
         if (DET()) { // the burning edge: a thread of ember along it, and ash on the grey
           ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,110,40,.55)'; ctx.lineWidth = 1; ctx.beginPath(); for (let x = -30; x <= 30; x += 3) { const y = hem - 4 - burn * (10 + hsh(x) * 18); if (x === -30) ctx.moveTo(x + sw, y); else ctx.lineTo(x + sw, y); } ctx.stroke(); ctx.restore();
           ctx.strokeStyle = 'rgba(30,22,16,.6)'; ctx.lineWidth = .6; ctx.beginPath(); for (let x = -30; x <= 30; x += 3) { const y = hem - 4 - burn * (10 + hsh(x) * 18); if (x === -30) ctx.moveTo(x + sw, y - .8); else ctx.lineTo(x + sw, y - .8); } ctx.stroke();
@@ -1209,9 +1212,51 @@
   function claws(x, y, a, form) { if (!DET()) return; const ca = Math.cos(a + 1.57), sa = Math.sin(a + 1.57);
     ctx.beginPath(); for (let i = -1; i <= 1; i++) { const px = x + Math.cos(a) * i * 1.3 + ca * 1.6, py = y + Math.sin(a) * i * 1.3 + sa * 1.6; ctx.moveTo(px, py); ctx.lineTo(px + ca * (form >= 3 ? 1.8 : .4), py + sa * (form >= 3 ? 1.8 : .4)); }
     ctx.strokeStyle = form >= 3 ? '#8A8070' : 'rgba(40,30,24,.7)'; ctx.lineWidth = form >= 3 ? .8 : .5; ctx.stroke(); }
+  // ---- CORRUPTED (New Game+: window.CURSE_ART, corruption.js; set while he is drawn so). He came in by your curse, and
+  // with it in him he grows into it: more horns with each shape (a small pair, then a longer, then a pair curling forward
+  // and a crown of them), black and split with red; the cope burns black from the hem up, embers in its char; his eyes go
+  // red; the ring of his crozier widens into the Black Circle itself, a hole with the red turning in it, thorned in his
+  // later shapes. His weak point is the black stone in his morse, the clasp at his breast: shut, a stone with an ember in
+  // it; open, it is an eye, a goat's, blazing; struck, it burns gold.
+  const GL_C = { cope: '#2A0C0A', copeDk: '#0C0404', copeLt: '#6A2A1E', robe: '#0E0C0C', hair: '#16100E', hairLt: '#3A2C26', horn: '#120E0E', hornLt: '#5A3A36', eye: '#FF3A2A', skin: '#3A302C', iron: '#1C1A1A', ironLt: '#5A5250' };
+  let GC = null;
+  function goatCursed(e, a, L) {
+    const form = e.w8form || 1, k = Math.min(1, .3 + .18 * form + .3 * L.d) * (.3 + .7 * L.g), keep = Object.assign({}, GL);
+    for (const f in GL_C) GL[f] = CURSE_ART.mix(GL[f], GL_C[f], f === 'cope' || f === 'copeDk' || f === 'copeLt' ? k : Math.min(1, k * 1.2));
+    GC = { L, form, k, m: CURSE_ART.morph(e, form), look: CURSE_ART.toward(e), t: L.T, burn: Math.min(1, .25 + .2 * form + .2 * L.d) };
+    try { CREATURES.w8goat(e, a); } finally { Object.assign(GL, keep); GC = null; }
+  }
+  // the horns that grow on him with each shape, behind and before the old ones (in the head's own space)
+  function goatHorns(hs, front) {
+    const n = Math.min(4, GC.form + (GC.L.bt >= 4 ? 1 : 0)), m = GC.m;
+    const H = [[-4, -11, -12, -26, -4, -34, 4.6], [-6, -9, -22, -24, -32, -20, 5.2], [2, -11, 10, -24, 18, -22, 4.4], [-2, -12, -2, -30, 6, -40, 4]];
+    for (let i = 0; i < n; i++) { if ((i === 2) !== front) continue; const q = H[i], g = (i === n - 1 ? m : 1) * hs;
+      ridgedHorn(q[0], q[1], q[0] + (q[2] - q[0]) * g, q[1] + (q[3] - q[1]) * g, q[0] + (q[4] - q[0]) * g, q[1] + (q[5] - q[1]) * g, q[6], .6, 1.2, '#060404');
+      if (DET()) { ctx.strokeStyle = 'rgba(230,40,40,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(q[0] + (q[2] - q[0]) * g * .4, q[1] + (q[3] - q[1]) * g * .4); ctx.lineTo(q[0] + (q[4] - q[0]) * g * .8, q[1] + (q[5] - q[1]) * g * .8); ctx.stroke(); } }
+  }
+  // the crozier's ring grown into the Circle: a black hole rimmed with the Circle's red, the red turning in it
+  function goatCircle(rx, ry, t) {
+    const R = 9 + 2.2 * GC.form + 2 * GC.L.d, m = GC.m;
+    ctx.strokeStyle = C(OUT); ctx.lineWidth = 7; circle(rx, ry, R); ctx.stroke(); ctx.strokeStyle = C('#0A0606'); ctx.lineWidth = 5; ctx.stroke();
+    ctx.fillStyle = C(CURSE_ART.VOID); circle(rx, ry, R - 2); ctx.fill();
+    if (DET()) { ctx.strokeStyle = `rgba(220,40,44,${.7 + .2 * Math.sin(t * 3)})`; ctx.lineWidth = 1.2; circle(rx, ry, R + 2.6); ctx.stroke();
+      ctx.strokeStyle = 'rgba(200,30,36,.5)'; ctx.lineWidth = .9; ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = -t * (1 + i * .4) + i * 2.1, r = R * (.25 + i * .22); ctx.moveTo(rx + Math.cos(a) * r, ry + Math.sin(a) * r); ctx.arc(rx, ry, r, a, a + 3.6); } ctx.stroke();
+      if (GC.form >= 3) { ctx.fillStyle = '#0A0606'; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + .2, l = (4 + 3 * (i % 2)) * m; ctx.moveTo(rx + Math.cos(a - .12) * R, ry + Math.sin(a - .12) * R); ctx.lineTo(rx + Math.cos(a) * (R + 2 + l), ry + Math.sin(a) * (R + 2 + l)); ctx.lineTo(rx + Math.cos(a + .12) * R, ry + Math.sin(a + .12) * R); } ctx.fill(); } }
+  }
+  // the black stone of his morse, his weak point: an eye (a goat's, its pupil a bar) when it lies open
+  function goatMorse(t) {
+    const L = GC.L, op = Math.max(L.open, L.burn * .5, L.wind * .15);
+    ctx.fillStyle = C('#060404'); ell(1, -62, 4.2, 3.2); ctx.fill();
+    if (op > .03) { const w = 5.6 + 1.6 * op, h = 4.2 * op;
+      ctx.beginPath(); ctx.moveTo(1 - w, -62); ctx.quadraticCurveTo(1, -62 - h * 1.5, 1 + w, -62); ctx.quadraticCurveTo(1, -62 + h * 1.3, 1 - w, -62); ctx.closePath(); ctx.fillStyle = C(L.burn > 0 ? '#FFE08A' : '#E83A20'); ctx.fill();
+      if (!FLASH && !TINT) { ctx.save(); ctx.clip(); const g = ctx.createRadialGradient(1, -62, 0, 1, -62, w); g.addColorStop(0, L.burn > 0 ? '#FFFFFF' : '#FFD080'); g.addColorStop(1, 'rgba(160,20,10,.6)'); ctx.fillStyle = g; ctx.fillRect(1 - w, -66, w * 2, 8); ctx.fillStyle = '#080404'; ctx.fillRect(1 - w * .55 + GC.look * .6, -62.5, w * 1.1, 1.1); ctx.restore(); }
+      ctx.strokeStyle = C('#080404'); ctx.lineWidth = .9; ctx.stroke(); }
+    else if (DET()) { ctx.fillStyle = `rgba(230,40,30,${.55 + .3 * Math.sin(t * 3)})`; ell(1, -62, 1.4, .7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.35)'; circle(-.2, -63, .5); ctx.fill(); }
+    CURSE_ART.core(1, -62, 9, L, { reach: 1.2, coreR: .5 });
+  }
   // the whole figure. o: { form, walk, t, lean, crook (angle), farUp (0..1), head tilt, open, kneel (0..1), book (0..1) }
   function goatLord(o) {
-    const t = o.t || 0, form = o.form || 1, sw = Math.sin(o.walk || 0) * 6, kneel = o.kneel || 0, burn = form >= 3 ? .8 : 0, hs = form >= 3 ? 1.35 : 1;
+    const t = o.t || 0, form = o.form || 1, sw = Math.sin(o.walk || 0) * 6, kneel = o.kneel || 0, burn = Math.max(form >= 3 ? .8 : 0, GC ? GC.burn : 0), hs = form >= 3 ? 1.35 : 1;
     // crouch (0..1): the haunches dropped, gathered for a spring or taking a landing; tuck (0..1): the hooves drawn up in a leap
     const crouch = o.crouch || 0, tuck = o.tuck || 0;
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -1229,6 +1274,7 @@
     // the morse: a gold clasp holding the cope at his breast, set with a black stone
     cel(PE(1, -62, 5, 4), '#C9982E', { d: 1, r: .6, w: 1.2, lite: '#FFE8A0', tex: () => { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; ctx.moveTo(1 + Math.cos(a) * 3.4, -62 + Math.sin(a) * 2.6); ctx.arc(1 + Math.cos(a) * 3.4, -62 + Math.sin(a) * 2.6, .45, 0, TAU); } ctx.fillStyle = 'rgba(110,70,10,.7)'; ctx.fill(); } }); ctx.fillStyle = C('#140E0A'); circle(1, -62, 2.2); ctx.fill();
     if (DET()) { ctx.fillStyle = 'rgba(200,190,210,.7)'; circle(.3, -62.8, .6); ctx.fill(); if (form >= 3) glowM(1, -62, 5, '255,140,60', .25 + .1 * Math.sin(t * 5)); }
+    if (GC) goatMorse(t); // (corrupted: his weak point, the stone of the morse)
     goatHead(4, -76, 1, { horns: hs, rage: form >= 3 ? 1 : 0, open: o.open || 0, tilt: o.tilt || 0, charge: o.book ? o.charge || 0 : 0, t: o.t });
     ctx.restore();
     if (!kneel) goatLeg(3, hip[1], lerp(sw + 5 + crouch * 7, 10, tuck), -tuck * 22, '#3E342C', true);
@@ -1285,6 +1331,7 @@
   }
   CREATURES.w8goat = function (e, a) {
     a = a || {};
+    { const CL = !GC && window.CURSE_ART && CURSE_ART.look(e); if (CL) return goatCursed(e, a, CL); } // (corrupted: see goatCursed)
     if (e.w8form === 2 && e.w8onEngine) { ctx.save(); ctx.translate(0, -(e.w8lift || 0)); goatLord(goatPose(e, a)); ctx.restore(); return; }
     goatLord(goatPose(e, a));
   };

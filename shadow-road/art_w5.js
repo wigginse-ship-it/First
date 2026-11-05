@@ -1001,6 +1001,7 @@
     const silverK = ph >= 2 ? (ph === 2 ? sm(shiftK) : 1) : 0, mist = ph >= 3 ? sm(shiftK) : 0;
     const bob = mist * (Math.sin(t * 1.3) * 2 - 6);
     const HIP = -38 + p.sink + bob, SHO = -60 + p.sink + bob, NECK = -64 + p.sink + bob, HY = -72 + p.sink + bob;
+    const cz = W5.cz; // (corrupted: set by benedict.js while he is drawn so; see its notes)
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     if (!dead) ctx.globalAlpha *= .94; // a ghost: very nearly there
     if (e.w5vis !== undefined) ctx.globalAlpha *= cl01(e.w5vis); // stepping through the air in his feint
@@ -1017,6 +1018,9 @@
         ctx.strokeStyle = 'rgba(200,210,236,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-4, SHO - 1); ctx.quadraticCurveTo(-11, SHO + 2, -12, SHO + 4); ctx.stroke(); // a silver edge to the collar
       } });
       for (let i = 0; i < 4; i++) mistTongue(-22 - p.flow * 1.2 + i * 4, -6 + bob * .3, 7 + i % 2 * 4, 4, -4, t, i);
+      if (cz) { const d = cz.L.d, s3 = cz.sub; CURSE_ART.drips([-12 - fl * .4, -5 + bob * .3, 6 + 10 * d, 1.3, -20 - fl, -10 + bob * .4, 8 + 12 * d, 1.5, -24 - fl * 1.4, -7 + bob * .3, 5 + 9 * d, 1.2, -3, HIP + 6, 4 + 8 * d, 1], t);
+        if (s3 >= 3) { CURSE_ART.strands([-14 - fl * .6, -4 + bob * .3, 14 * cz.m, -19 - fl, -6, 20 * cz.m, -23 - fl * 1.3, -5, 12 * cz.m], t, '#08060A', 1.2);
+          for (const [x, y, i] of [[-9 - fl * .3, SHO + 16, 0], [-14 - fl * .7, -22, 1]]) CURSE_ART.eye(x, y, 2.8, cz.m, { t, seed: i + 3, look: cz.look, lid: BN.cloak }); } }
     });
     // the far arm and the sword
     const swordArm = () => upper(() => {
@@ -1049,9 +1053,10 @@
         ctx.fillStyle = 'rgba(12,18,44,.5)'; ctx.fillRect(-1, ty, 1.6, HIP - ty + 2); // the line of buttons down the front
         ctx.fillStyle = 'rgba(214,222,236,.85)'; for (let y = ty + 4; y < HIP - 2; y += 4.2) { circle(.2, y, .7); ctx.fill(); }
       } });
+      if (cz) { W5.blackRoad([10, ty + 1, -8, HIP], 4.6, t); CURSE_ART.wound(-2.4, ty + 9.5, 12, 2.25, 1, 6, cz.L, { lip: BN.coatDk, seed: 2, ember: true, reach: .8 }); } else { // (corrupted: the baldric is the Black Road; a rent in his breast, his weak point)
       ctx.strokeStyle = C(BN.silver); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(9, ty + 2); ctx.lineTo(-7, HIP - 1); ctx.stroke(); // the baldric
       if (DET()) { ctx.strokeStyle = 'rgba(40,48,80,.7)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(9.4, ty + 3.1); ctx.lineTo(-6.6, HIP); ctx.stroke(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(8.6, ty + 1.3); ctx.lineTo(-7.4, HIP - 1.9); ctx.stroke();
-        ctx.fillStyle = BN.gilt; for (let k = 1; k < 4; k++) { circle(9 - 16 * k / 4, ty + 2 + (HIP - 3 - ty) * k / 4, .7); ctx.fill(); } } // studs along it
+        ctx.fillStyle = BN.gilt; for (let k = 1; k < 4; k++) { circle(9 - 16 * k / 4, ty + 2 + (HIP - 3 - ty) * k / 4, .7); ctx.fill(); } } } // studs along it
       ctx.fillStyle = C('#141A34'); ctx.fillRect(-9, HIP - 2.6, 18, 4); ctx.fillStyle = C(BN.silver); ctx.fillRect(1, HIP - 3, 4, 4.8);
       // the head: long and gaunt, close-cropped hair, a long straight nose, eyes of white light under a heavy brow
       ctx.fillStyle = C(BN.skinDk); ctx.fillRect(-1, NECK - 2, 5, 8);
@@ -1066,7 +1071,8 @@
       ctx.fillStyle = C(BN.hair); ctx.beginPath(); ctx.moveTo(7.6, HY - 7.4); ctx.quadraticCurveTo(4, HY - 11.6, -2, HY - 10.8); ctx.quadraticCurveTo(-7.6, HY - 9, -7.2, HY - 1); ctx.lineTo(-4.6, HY + 1.4); ctx.quadraticCurveTo(-4, HY - 4, -1, HY - 5.6); ctx.quadraticCurveTo(3, HY - 7.4, 7.6, HY - 7.4); ctx.fill(); outline(1); // the cropped hair
       ctx.fillStyle = C(BN.skinDk); ell(-2.6, HY + 1, 1.5, 2.3); ctx.fill(); // the ear
       ctx.fillStyle = C('#141A30'); poly([3.6, HY - 3.2, 9.4, HY - 3.6, 9, HY - 2.2, 4, HY - 1.8]); ctx.fill(); // the brow, drawn down
-      if (!a.hurt) { ctx.fillStyle = C('#FFFFFF'); poly([5, HY - 1.4, 8.4, HY - 1.6, 8, HY - .6, 5.4, HY - .6]); ctx.fill(); glowAt(6.8, HY - 1, 7, '230,238,255', .55 + p.glint * .3); }
+      if (!a.hurt) { ctx.fillStyle = C(cz ? '#FF5A44' : '#FFFFFF'); poly([5, HY - 1.4, 8.4, HY - 1.6, 8, HY - .6, 5.4, HY - .6]); ctx.fill(); glowAt(6.8, HY - 1, 7, cz ? '255,60,44' : '230,238,255', .55 + p.glint * .3); }
+      if (cz && cz.sub >= 2) { CURSE_ART.crack([2.4, HY - 10, 4.6, HY - 5.6, 3.4, HY - 1.6, 6.4, HY + 3, 5.4, HY + 8], 1.1, cz.L); CURSE_ART.drips([6.6, HY - .4, 5 + 8 * cz.m, .7], t); } // (his face cracked, weeping ink)
       else { ctx.strokeStyle = C('#141A30'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(5, HY - 1); ctx.lineTo(8.4, HY - 1.2); ctx.stroke(); }
       ctx.strokeStyle = C('#3A4466'); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(7.4, HY + 5); ctx.lineTo(9.6, HY + 4.8); ctx.stroke(); // a set mouth
       // the near side: the empty sleeve pinned up, or the silver arm

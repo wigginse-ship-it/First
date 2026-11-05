@@ -28,7 +28,7 @@
   });
 
   BOSSES.sleeper = {
-    close: 'w6none', name: 'The Sleeper', title: 'IT IS DREAMING ALL OF THIS', draw: 'w6sleeper', mat: 'dream', move: 'fly', hover: 60,
+    close: 'w6none', name: 'The Sleeper', title: 'IT IS DREAMING ALL OF THIS', draw: 'w6sleeper', ownCurse: true, mat: 'dream', move: 'fly', hover: 60,
     hp: 1250, spd: 60, hw: 60, hh: 104, dmg: 20, wind: .6, cd: [.8, 1.3], weight: 0, poise: 0, ranged: 1, reach: 80,
     // (its whole fight is run by the 'w6sleep' rule: these are only the dreams each phase can send, every one of them bedtime)
     p1: ['w6pillows', 'w6sheep', 'w6snore', 'w6sand'], p2: ['w6rook', 'w6bishop', 'w6knight', 'w6queen'], p3: ['w6rem', 'w6teeth', 'w6snooze', 'w6alarm', 'w6jolt'],

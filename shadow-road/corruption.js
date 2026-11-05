@@ -805,6 +805,7 @@
   drawEnemy = function (e, t) {
     if (!NG() || DBL_DRAW) return _de(e, t);
     const puppet = L.fx && L.fx.k === 'puppet' && fxAmt() > .4;
+    if (e.cB && e.def && e.def.ownCurse) return _de(e, t);
     if (puppet && !TINT) { TINT = '#140C0A'; try { return _de(e, t); } finally { TINT = null; } }
     const lord = e.cB && !TINT && !(e.state === 'dying' && e.death && e.death !== 'pop') && e.def && CREATURES[e.def.draw];
     if (lord) { // (a corrupted lord: the Circle's work is laid on its body as it is drawn, in the drawing's own space; its halo behind)
@@ -827,6 +828,8 @@
       if (!e.cB && Math.random() < .25) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(0, e.hh), vx: rand(-8, 8), vy: 0, vz: rand(20, 50), life: .7, max: .7, col: pick(['rgba(30,24,30,.7)', 'rgba(90,84,92,.6)']), size: rand(2, 4), shape: 'puff', rot: 0, vr: 0 });
     }
   };
+  // (a lord that draws its own curse keeps the ground's telegraph: the Circle's ring closing on it as its attack winds)
+  { const _w = drawEnemy; drawEnemy = function (e, t) { const r = _w(e, t); if (e && e.cB && ownCurse(e) && NG() && !DBL_DRAW && !e.dead) markWind(e); return r; }; }
   { const _dd = drawDeath; drawDeath = function (e, t) { if (NG() && L.fx && L.fx.k === 'puppet' && fxAmt() > .4 && !TINT) { TINT = '#140C0A'; try { return _dd(e, t); } finally { TINT = null; } } return _dd(e, t); }; }
   { const _dp = drawPlayerAt; drawPlayerAt = function (x, y, z, f, pose, a) { if (NG() && L.fx && L.fx.k === 'puppet' && fxAmt() > .4 && !TINT) { TINT = '#140C0A'; try { return _dp(x, y, z, f, pose, a); } finally { TINT = null; } } return _dp(x, y, z, f, pose, a); }; }
 
@@ -1247,18 +1250,166 @@
     { const sx = e.x, sy = e.y, sf = e.facing, fl = e.flash, tt = TINT; e.x = D.x; e.y = D.y; e.facing = Math.sign(P.x - D.x) || -sf; e.flash = 0;
       ctx.save(); ctx.globalAlpha *= a; TINT = '#140A12'; DBL_DRAW = true; try { drawEnemy(e, t); } catch (err) { console.error(err); } finally { DBL_DRAW = false; TINT = tt; ctx.restore(); e.x = sx; e.y = sy; e.facing = sf; e.flash = fl; } }
     if (warn || D.lash > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(D.x, cy, 0, D.x, cy, 40); g.addColorStop(0, `rgba(220,40,50,${.5 * D.a})`); g.addColorStop(1, 'rgba(220,40,50,0)'); ctx.fillStyle = g; ctx.fillRect(D.x - 40, cy - 40, 80, 80); ctx.restore(); }
-    circleMark(D.x, cy, 6, t);
+    if (!ownCurse(e)) circleMark(D.x, cy, 6, t);
   }
+  // ---------------- the curse drawn as a lord's own body (window.CURSE_ART) ----------------
+  // A lord whose def says ownCurse (BOSSES.x.ownCurse = true) draws its corruption itself, inside its own drawing: its parts
+  // transform as its phases pass and as the curse deepens, and its weak point is one of its own parts that opens when the
+  // mark lies open and burns back gold when struck. The generic overlay (curseHalo, curseBody) and the sigil (bossMark)
+  // are skipped for it; only the closing ring on the ground as its attack winds stays (markWind).
+  // look(e) gives what the art needs, null when it is not corrupted:
+  //   bt (tier 1-4), d (depth 0..1, past 1 in the surge), g (spread on its entrance 0..1), wind (0..1 as its attack winds),
+  //   open (0..1, eased in when the mark opens and out as it shuts), burn (0..1: 1 when struck, fading), flare (0..1 the
+  //   first instant of the burn), pts/need (blows landed / wanted), surge, det (fine detail allowed), lite (cheap paint).
+  // morph(e, ph) gives 0..1 since its last phase change (0 just now, 1 settled), for the transformations to grow in.
+  const ownCurse = (e) => !!(e && e.def && e.def.ownCurse);
+  const VEINS = new Map();
+  const VOID = '#070309';
+  const CA = window.CURSE_ART = {
+    look(e) {
+      const B = e && e.cB; if (!B || !e.cursed || !NG()) return null; const T = now(), op = B.open > 0 && !(B.burn > 0);
+      if (op && !B.aOt) B.aOt = T; if (!op) B.aOt = 0;
+      return { bt: B.bt | 0, d: B.surge ? 1.15 : [0, .35, .58, .8, 1][Math.min(4, B.bt | 0)], g: sm(B.age / 2.6), wind: B.wind > 0 ? sm(1 - B.wind / .8) : 0,
+        open: op ? sm((T - B.aOt) / .3) * Math.min(1, B.open / .45) : 0, burn: B.burn > 0 ? B.burn / 4 : 0, flare: B.burn > 3.4 ? (B.burn - 3.4) / .6 : 0,
+        pts: B.pts | 0, need: B.bt >= 4 ? 4 : 3, surge: !!B.surge, T, det: !FLASH && !TINT && !LITE, lite: lite() || !!LITE };
+    },
+    morph(e, ph) { const T = now(); if (e.aPh === undefined || ph < e.aPh) { e.aPh = ph; e.aPt = -99; } if (ph > e.aPh) { e.aPh = ph; e.aPt = T; } return sm((T - e.aPt) / 1.4); },
+    mix: (a, b, k) => awMixSafe(a, b, cl01(k)),
+    sm, hsh, VOID,
+    // the way the player lies, in the lord's own drawing (its x is mirrored by its facing): -1 / 1
+    toward(e) { return !P || !e || e.x === undefined ? 1 : Math.sign((P.x - e.x) * (e.facing || 1)) || 1; },
+    // the weak point's light: an ember while shut, flaring as it winds, white-hot (with the blows still wanted, as sparks
+    // round it) while open, gold as it burns back. r is the size of the part it lives in.
+    core(x, y, r, L, o) {
+      if (!L || FLASH) return; o = o || {}; const t = L.T, p = .5 + .5 * Math.sin(t * 9), op = L.open, bu = L.burn, w = L.wind, det = !TINT;
+      ctx.save();
+      if (TINT) { ctx.restore(); return; }
+      ctx.globalCompositeOperation = 'lighter';
+      const k = Math.max(.25 + .25 * w, op), R = r * (1.4 + 1.9 * op + .6 * w + 1.6 * bu) * (o.reach || 1);
+      { const g = ctx.createRadialGradient(x, y, 0, x, y, R), c = bu > 0 ? '255,196,96' : '255,44,40';
+        g.addColorStop(0, `rgba(${c},${Math.min(1, (bu > 0 ? .5 + .5 * bu : .3 + .5 * k) * (.82 + .18 * p))})`); g.addColorStop(.35, `rgba(${c},${(bu > 0 ? .25 * bu : .14 * k + .1 * op)})`); g.addColorStop(1, `rgba(${c},0)`);
+        ctx.fillStyle = g; ctx.fillRect(x - R, y - R, R * 2, R * 2); }
+      if ((op > .05 || bu > .05) && !L.lite) { // its light breaking out of it in rays, turning slowly
+        const n = 7, a0 = t * .5, s = Math.max(op, bu); ctx.fillStyle = bu > 0 ? `rgba(255,226,150,${.5 * s})` : `rgba(255,170,150,${.38 * s * (.75 + .25 * p)})`; ctx.beginPath();
+        for (let i = 0; i < n; i++) { const a = a0 + i / n * TAU + hsh(i + 4) * .6, l = r * (2 + 1.6 * hsh(i + 9) + .5 * Math.sin(t * 5 + i)) * (o.reach || 1), wd = .07 + .05 * hsh(i);
+          ctx.moveTo(x + Math.cos(a - wd) * r * .4, y + Math.sin(a - wd) * r * .4); ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); ctx.lineTo(x + Math.cos(a + wd) * r * .4, y + Math.sin(a + wd) * r * .4); }
+        ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over';
+      { const hr = r * (.28 + .1 * w + .34 * op + .3 * bu) * (o.coreR || 1), g = ctx.createRadialGradient(x, y, 0, x, y, hr);
+        if (bu > 0) { g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, '#FFE6A0'); g.addColorStop(1, `rgba(230,150,40,${.6 + .4 * bu})`); }
+        else if (op > 0) { g.addColorStop(0, '#FFFFFF'); g.addColorStop(.4, '#FFD2B0'); g.addColorStop(1, 'rgba(232,40,40,.9)'); }
+        else { g.addColorStop(0, `rgb(${200 + 55 * p | 0},${60 + 50 * w | 0},${50 + 30 * w | 0})`); g.addColorStop(1, 'rgba(110,10,20,.0)'); }
+        ctx.fillStyle = g; circle(x, y, hr); ctx.fill(); }
+      if (op > .3 && det) { // the blows it still wants: sparks circling it
+        const left = Math.max(0, L.need - L.pts); for (let i = 0; i < left; i++) { const a = t * 2.2 + i / L.need * TAU, rr = r * 1.7 * (o.reach || 1), sx = x + Math.cos(a) * rr, sy = y + Math.sin(a) * rr * .8, s = 2.2;
+          ctx.fillStyle = '#FFF0D8'; ctx.beginPath(); ctx.moveTo(sx, sy - s * 1.4); ctx.lineTo(sx + s * .7, sy); ctx.lineTo(sx, sy + s * 1.4); ctx.lineTo(sx - s * .7, sy); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(90,10,16,.9)'; ctx.lineWidth = .7; ctx.stroke(); } }
+      ctx.restore();
+    },
+    // a lens-shaped wound in it (a split shell, a crack in a face, a torn robe): shut it is a dark seam, open it parts on
+    // the void with the heart's light in it, struck it pours gold. len along ang; w0 shut, w1 open (half-widths).
+    wound(x, y, len, ang, w0, w1, L, o) {
+      o = o || {}; const op = L ? L.open : 0, bu = L ? L.burn : 0, wd = (w0 + (w1 - w0) * Math.max(op, bu * .6)) * (1 + .25 * (L ? L.wind : 0)), n = 9, t = L ? L.T : 0;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+      const P = []; for (let i = 0; i <= n; i++) { const u = i / n, j = (hsh(i * 3 + (o.seed || 0)) - .5) * len * .07; P.push([(u - .5) * len, j, Math.pow(Math.sin(Math.PI * u), .8)]); }
+      const lens = (k) => { ctx.beginPath(); for (const q of P) ctx.lineTo(q[0], q[1] - wd * q[2] * k); for (let i = P.length - 1; i >= 0; i--) ctx.lineTo(P[i][0], P[i][1] + wd * q2(i) * k); ctx.closePath(); };
+      const q2 = (i) => P[i][2] * (o.under || .8);
+      if (o.lip && wd > .6) { lens(1.35); ctx.fillStyle = C(o.lip); ctx.fill(); if (!FLASH && !TINT) { ctx.strokeStyle = o.lipLt || 'rgba(255,240,220,.35)'; ctx.lineWidth = .8; ctx.stroke(); } }
+      lens(1); ctx.fillStyle = C(VOID); ctx.fill();
+      if (!FLASH && !TINT && wd > .5) {
+        ctx.save(); lens(1); ctx.clip();
+        if (o.heart) o.heart(wd, L); // (the thing inside, in the wound's own space)
+        const c = bu > 0 ? '255,210,120' : '235,40,44', a = bu > 0 ? .5 + .5 * bu : .25 + .35 * (L ? Math.max(L.wind, op) : 0) + .15 * Math.sin(t * 4 + (o.seed || 0));
+        ctx.strokeStyle = `rgba(${c},${a})`; ctx.lineWidth = Math.max(.6, wd * .35); ctx.beginPath(); for (const q of P) ctx.lineTo(q[0], q[1] - wd * q[2] * .78); ctx.stroke(); ctx.beginPath(); for (let i = 0; i < P.length; i++) ctx.lineTo(P[i][0], P[i][1] + wd * q2(i) * .78); ctx.stroke();
+        ctx.restore();
+      }
+      lens(1); ctx.strokeStyle = C(o.ink || '#0A0508'); ctx.lineWidth = o.ow || 1; ctx.stroke();
+      ctx.restore();
+      if (L && (op > .02 || bu > .02 || L.wind > 0 || o.ember)) CA.core(x, y, Math.max(len * .32, 5), L, o);
+    },
+    // a crack opened in it: a black wedge widest at its middle with the void's light down in it (gold as it burns back)
+    crack(q, w, L, o) {
+      o = o || {}; const n = q.length / 2; if (n < 2) return; const bu = L ? L.burn : 0, t = L ? L.T : 0;
+      ctx.beginPath(); for (let i = 0; i < n; i++) { const j = Math.min(n - 2, i), dx = q[j * 2 + 2] - q[j * 2], dy = q[j * 2 + 3] - q[j * 2 + 1], l = Math.hypot(dx, dy) || 1, ww = w * Math.sin(Math.PI * i / (n - 1)); ctx.lineTo(q[i * 2] - dy / l * ww, q[i * 2 + 1] + dx / l * ww); }
+      for (let i = n - 1; i >= 0; i--) { const j = Math.min(n - 2, i), dx = q[j * 2 + 2] - q[j * 2], dy = q[j * 2 + 3] - q[j * 2 + 1], l = Math.hypot(dx, dy) || 1, ww = w * Math.sin(Math.PI * i / (n - 1)) * .7; ctx.lineTo(q[i * 2] + dy / l * ww, q[i * 2 + 1] - dx / l * ww); }
+      ctx.closePath(); ctx.fillStyle = C(VOID); ctx.fill();
+      if (FLASH || TINT || w < .5) return;
+      if (o.edge) { ctx.strokeStyle = o.edge; ctx.lineWidth = .5; ctx.stroke(); }
+      const c = bu > 0 ? '255,214,130' : o.rgb || '235,46,44', a = (bu > 0 ? .9 : (o.a ?? .6)) * (.75 + .25 * Math.sin(t * 4 + (o.seed || q[0])));
+      ctx.beginPath(); ctx.moveTo(q[2], q[3]); for (let i = 2; i < n - 1; i++) ctx.lineTo(q[i * 2], q[i * 2 + 1]); ctx.strokeStyle = `rgba(${c},${a})`; ctx.lineWidth = Math.max(.5, w * .3); ctx.stroke();
+    },
+    // an eye that opens in it: k how open (0..1), r its half-length, look -1..1 (toward the player), lid its skin
+    eye(x, y, r, k, o) {
+      o = o || {}; if (k <= .02) { if (o.lid) { ctx.strokeStyle = C(shade(o.lid, -.5)); ctx.lineWidth = Math.max(.6, r * .14); ctx.beginPath(); ctx.moveTo(x - r, y); ctx.quadraticCurveTo(x, y + r * .25, x + r, y); ctx.stroke(); } return; }
+      const t = o.t || 0, blink = o.blink !== false && ((t + (o.seed || 0) * 3.7) % (4.6 + (o.seed || 0) % 2)) < .14, h = r * .62 * k * (blink ? .1 : 1), rot = o.rot || 0;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+      const al = () => { ctx.beginPath(); ctx.moveTo(-r, 0); ctx.quadraticCurveTo(-r * .1, -h * 1.5, r, 0); ctx.quadraticCurveTo(r * .1, h * 1.3, -r, 0); ctx.closePath(); };
+      if (o.lid) { ctx.beginPath(); ctx.ellipse(0, 0, r * 1.25, Math.max(h * 1.25, r * .3), 0, 0, TAU); ctx.fillStyle = C(o.lid); ctx.fill(); }
+      al(); ctx.fillStyle = C(o.white || '#D8CDB4'); ctx.fill();
+      if (!FLASH && !TINT) {
+        ctx.save(); al(); ctx.clip();
+        const lx = (o.look || 0) * r * .32, ir = r * .5, g = ctx.createRadialGradient(lx, 0, 0, lx, 0, ir); g.addColorStop(0, o.iris2 || '#FF6A40'); g.addColorStop(.6, o.iris || '#B01820'); g.addColorStop(1, '#3A0408'); ctx.fillStyle = g; circle(lx, 0, ir); ctx.fill();
+        ctx.fillStyle = '#050204'; ell(lx, 0, ir * (o.round ? .45 : .16), ir * .78); ctx.fill();
+        ctx.fillStyle = 'rgba(30,6,10,.45)'; ctx.fillRect(-r, -h * 1.5, r * 2, h * .55); // the lid's shadow on it
+        ctx.fillStyle = 'rgba(255,248,236,.9)'; circle(lx + ir * .35, -ir * .35, Math.max(.35, ir * .18)); ctx.fill();
+        ctx.restore();
+      } else { ctx.fillStyle = C('#300'); circle(0, 0, r * .3); ctx.fill(); }
+      al(); ctx.strokeStyle = C(o.ink || '#0A0508'); ctx.lineWidth = Math.max(.6, r * .16); ctx.stroke();
+      ctx.restore();
+    },
+    // a great eye in its body as its weak point: shut, a lid with an ember in its seam; trembling half open as an attack
+    // winds; wide and blazing while the mark lies open; gold and wincing as it burns back. r its half-length.
+    bigEye(x, y, r, L, o) {
+      o = o || {}; if (!L) return; const op = L.open, bu = L.burn, k = Math.max(.12 * L.wind, op, bu * .45), t = L.T;
+      if (k < .03) { // shut: the lid, its lashes, the red in the seam
+        ctx.beginPath(); ctx.moveTo(x - r, y); ctx.quadraticCurveTo(x, y - r * .55, x + r, y); ctx.quadraticCurveTo(x, y + r * .45, x - r, y); ctx.closePath(); ctx.fillStyle = C(o.lid || '#1A1014'); ctx.fill();
+        ctx.strokeStyle = C(o.ink || '#070305'); ctx.lineWidth = Math.max(.8, r * .14); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - r * .92, y + r * .02); ctx.quadraticCurveTo(x, y + r * .22, x + r * .92, y + r * .02); ctx.strokeStyle = C('#050204'); ctx.lineWidth = Math.max(1, r * .16); ctx.stroke();
+        if (!FLASH && !TINT) { ctx.strokeStyle = `rgba(230,40,44,${.45 + .3 * Math.sin(t * 3)})`; ctx.lineWidth = Math.max(.5, r * .07); ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(x - r * .6, y - r * .3); ctx.quadraticCurveTo(x, y - r * .5, x + r * .6, y - r * .3); ctx.stroke(); }
+        ctx.strokeStyle = C('#050204'); ctx.lineWidth = Math.max(.6, r * .07); ctx.beginPath(); for (let i = 1; i < 6; i++) { const u = i / 6 - .5, lx = x + u * r * 1.8, ly = y + r * .2 * (1 - 4 * u * u) * .9 + r * .03; ctx.moveTo(lx, ly); ctx.lineTo(lx + u * r * .3, ly + r * .28); } ctx.stroke();
+        CA.core(x, y, r * .7, L, { coreR: .6 }); return;
+      }
+      CA.eye(x, y, r, Math.min(1, .2 + k), { t, seed: o.seed || 1, look: o.look || 0, lid: o.lid || '#1A1014', white: bu > 0 ? '#FFF2D0' : o.white || '#E6D6B8', iris: bu > 0 ? '#E09A20' : '#C01A1E', iris2: bu > 0 ? '#FFFFFF' : '#FFB080', blink: false, round: op > .5 });
+      CA.core(x, y, r * .8, L, { coreR: .5, reach: 1.2 });
+    },
+    // black strands hanging from a point and swaying, in locks of three (fungal hair, ink, threads)
+    strands(pts, t, col, w) { ctx.strokeStyle = C(col || '#0C0809'); w = w || 1;
+      for (let pass = 0; pass < 2; pass++) { ctx.lineWidth = pass ? w * .55 : w; ctx.beginPath();
+        for (let i = 0; i < pts.length; i += 3) { const x = pts[i], y = pts[i + 1], l0 = pts[i + 2]; if (l0 < 1) continue;
+          for (let k = pass ? 1 : 0; k < (pass ? 3 : 1); k++) { const l = l0 * [1, .72, .5][k], ox = [0, -1.1, 1][k] * w, sw = Math.sin(t * 1.6 + x * .3 + i + k * 1.7) * l * .2, cu = (hsh(i + k) - .5) * l * .3;
+            ctx.moveTo(x + ox, y); ctx.bezierCurveTo(x + ox + sw * .2, y + l * .35, x + ox + sw + cu, y + l * .7, x + ox * 1.6 + sw * 1.3 - cu * .5, y + l); } }
+        ctx.stroke(); } },
+    // black veins spreading from a point (worked out once per key), the Circle's red beating outward along them
+    veins(key, x, y, src, L, o) {
+      o = o || {}; let V = VEINS.get(key);
+      if (!V) { const r = mulberry(key.length * 977 + key.charCodeAt(0) * 31 + (key.charCodeAt(key.length - 1) | 0)), P0 = new Path2D(), P1 = new Path2D();
+        const go = (px, py, an, len, d) => { const P = d ? P1 : P0; P.moveTo(px, py); let l = 0; while (l < len) { an += (r() - .5) * (o.wig || .7); px += Math.cos(an) * 4; py += Math.sin(an) * 4; l += 4; P.lineTo(px, py); if (d < 1 && r() < .13) go(px, py, an + (r() < .5 ? -.8 : .8), (len - l) * .55, d + 1); } };
+        for (const [an, len] of src) go(0, 0, an, len, 0); V = [P0, P1]; VEINS.set(key, V); }
+      const k = o.k ?? 1; if (k <= .01) return; ctx.save(); ctx.translate(x, y); if (o.sx) ctx.scale(o.sx, o.sy || o.sx); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.globalAlpha *= Math.min(1, k * 1.5); ctx.strokeStyle = C(o.col || '#0A0608'); ctx.lineWidth = (o.w || 2) * Math.min(1, k * 1.2); ctx.stroke(V[0]); ctx.lineWidth = (o.w || 2) * .55; ctx.stroke(V[1]);
+      if (L && !FLASH && !TINT && !L.lite) { ctx.strokeStyle = L.burn > 0 ? `rgba(255,214,120,${.5 + .5 * L.burn})` : `rgba(230,40,44,${.55 + .35 * Math.max(L.open, L.wind)})`; ctx.lineWidth = (o.w || 2) * .45; ctx.setLineDash([3, 14]); ctx.lineDashOffset = -L.T * 20; ctx.stroke(V[0]); ctx.setLineDash([]); }
+      ctx.restore(); },
+    // ink running down from an edge in tapering drips, a drop falling from the longest now and then
+    drips(pts, t, col) { ctx.fillStyle = C(col || '#0A0608'); ctx.beginPath();
+      for (let i = 0; i < pts.length; i += 4) { const x = pts[i], y = pts[i + 1], l = pts[i + 2] * (.85 + .15 * Math.sin(t * 1.3 + i)), w = pts[i + 3];
+        ctx.moveTo(x - w, y); ctx.quadraticCurveTo(x - w * .7, y + l * .6, x - w * .3, y + l); ctx.arc(x, y + l, w * .45, Math.PI, 0, true); ctx.quadraticCurveTo(x + w * .7, y + l * .6, x + w, y); ctx.closePath();
+        const f = (t * .7 + hsh(i) * 7) % 1.6; if (f < 1 && l > 5) { const fy = y + l + f * f * 30; ctx.moveTo(x + w * .5, fy); ctx.arc(x, fy, w * .5 * (1 - f * .5), 0, TAU); } }
+      ctx.fill(); },
+  };
   // ---------------- its mark: the Circle's sigil set in it. Shut: a black ring in a crown of thorns round a red ember. As
   // an attack winds: the ring closes on it on the ground, the sigil flares. Open (strike it): the ring splits like an iris
   // round a white-hot heart, and arrows close on it. Burning back: it goes gold and fades. ----------------
+  function markWind(e) { // (as its attack winds: the Circle's ring closes on it on the ground)
+    const B = e.cB; if (!(B.wind > 0)) return; const q = B.wind / .8, R = e.hw * .9 + 30 + 90 * q; ctx.save();
+    ctx.strokeStyle = `rgba(8,4,8,${.85 * (1 - q * .5)})`; ctx.lineWidth = 7; ell(e.x, e.y, R, R * .3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(190,30,44,.8)'; ctx.lineWidth = 1.6; ell(e.x, e.y, R, R * .3); ctx.stroke(); ctx.restore();
+  }
   function bossMark(e, x, y, sc, t) {
     const B = e.cB, cal = CV.cal.get(e), r0 = (9 + Math.min(5, e.hh / 40)) * 1.12 * (cal ? clamp(cal.h * (e.size || 1) / 150, .66, 1) : 1), wind = B.wind > 0, burn = B.burn > 0, open = B.open > 0 && !burn, pulse = .6 + .4 * Math.sin(t * 10);
     if (open && !B.vOt) B.vOt = t; if (!open) B.vOt = 0; // (when it opened, for the drawing only)
     const ko = open ? sm((t - B.vOt) / .28) : 0, kw = wind ? sm(1 - B.wind / .8) : 0, k = cvTier(B), r = r0 * (1 + .22 * ko + .1 * kw);
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    if (wind) { const q = B.wind / .8, R = e.hw * .9 + 30 + 90 * q; ctx.strokeStyle = `rgba(8,4,8,${.85 * (1 - q * .5)})`; ctx.lineWidth = 7; ell(e.x, e.y, R, R * .3); ctx.stroke();
-      ctx.strokeStyle = 'rgba(190,30,44,.8)'; ctx.lineWidth = 1.6; ell(e.x, e.y, R, R * .3); ctx.stroke(); }
+    if (wind) markWind(e);
     if (burn) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.6); g.addColorStop(0, 'rgba(255,240,200,.85)'); g.addColorStop(.4, 'rgba(255,190,90,.4)'); g.addColorStop(1, 'rgba(255,140,40,0)'); ctx.fillStyle = g; ctx.fillRect(x - r * 3.6, y - r * 3.6, r * 7.2, r * 7.2);
       ctx.strokeStyle = 'rgba(255,230,170,.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); for (let i = 0; i < 7; i++) { const a = hsh(i + 3) * TAU + t * .3, l = r * (1.6 + 1.2 * hsh(i + 11)) * (.8 + .2 * Math.sin(t * 12 + i)); ctx.moveTo(x + Math.cos(a) * r * .6, y + Math.sin(a) * r * .6); ctx.lineTo(x + Math.cos(a + .1) * l * .6, y + Math.sin(a + .1) * l * .6); ctx.lineTo(x + Math.cos(a - .05) * l, y + Math.sin(a - .05) * l); } ctx.stroke();
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha *= .5; }
