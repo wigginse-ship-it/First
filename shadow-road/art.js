@@ -749,7 +749,8 @@ function drawHumanoid(look, pose) {
   const legs = look.legs, LW = 1 / LS;
   ctx.save(); if (LS !== 1 || LX !== 1) ctx.scale(LS * LX, LS);
   { const HIP = HIPL, HX = HXL / LX, Y = YL, CS = CSL, PX = PXL; // (the legs turn with the hips)
-  if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX, Y, CS, LS);
+  if (pose.ride) pose.ride(look, HIP, HX, LS); // seated on a horse: the rider draws his own legs (art_w8.js W8.rider)
+  else if (pose.kickK !== undefined) drawKickLegs(look, pose, HIP, HX, Y, CS, LS);
   else if (pose.kick) {
     const kb = pose.kickBend || 0, kx = 17 - kb, ky = HIP - 2 - 5 * kb, fx = 30 - 3 * kb, fy = HIP - 4 + 2 * kb; // kickBend: the knee gives a little
     if (CW) { const r = -Math.PI / 2 + .2 * kb; CW.leg(look, -2, HIP, -5, HIP + 15, -4, -8, -4, 0, 0, LW, true, LW); CW.seat(look, -2, 2, HIP, LW, 4); CW.leg(look, 2, HIP, kx, ky, fx, fy, fx - Math.cos(r) - 9 * Math.sin(r), fy - Math.sin(r) + 9 * Math.cos(r), r, LW, false, LW); }

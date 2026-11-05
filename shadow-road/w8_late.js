@@ -33,7 +33,9 @@
     ['after Roger Zelazny\'s The Chronicles of Amber', 10], ['', 8], ['CORWIN', 11], ['Prince of Amber, who cursed it, and came back', 8], ['', 6], ['GANELON', 11], ['who held its edge', 8], ['', 6],
 ['THE GOAT-LORD OF THE CIRCLE', 11], ['who only listened', 8], ['', 10],
     ['painted after Bruegel, Bosch and the Limbourg brothers', 9], ['in tempera, gold leaf and grisaille', 9], ['', 14], ['Thank you for walking the road.', 12]];
-  const GANELON = { skin: '#D49A72', hair: '#8A3A1A', hairLt: '#C06A3A', hairDk: '#4A1A0A', body: PAL.gules, sleeve: '#7A1E18', trim: PAL.or, legs: '#3A2E26', boots: '#2A1E14', plate: '#8E9296', plateTrim: PAL.or, pauldron: '#7A7E82', cape: '#24365E', eye: '#3A5A2A' };
+  // Ganelon and four knights of Lorraine (art_w8.js W8.rider): their looks, made once
+  const RLOOK = [], riderLook = (i) => RLOOK[i] || (RLOOK[i] = i === 0 ? W8.riderLook('ganelon')
+    : W8.riderLook('knight', [null, { arms: 'lorraine', plume: [PAL.gules, PAL.or] }, { arms: 'counter', skin: '#C8946E', eye: '#5A4A3A' }, { arms: 'counter', plume: [PAL.or, PAL.gules], skin: '#E0B08E' }, { arms: 'lorraine', skin: '#C08A64', eye: '#3A5A4A' }][i]));
   // a spring morning over Lorraine: a Book of Hours' March: a castle on its hill, ploughmen with oxen, blossom, the
   // last of the Circle a grey smear going out on the horizon
   function springPanel(k, t, fadeRing) {
@@ -52,10 +54,9 @@
     for (let i = 0; i < 9; i++) { const x = (i * 97 + 30) % VW, y = hz - 2; ctx.strokeStyle = '#4A3A26'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 26); ctx.stroke(); for (let j = 0; j < 14; j++) { ctx.fillStyle = j % 3 ? 'rgba(250,236,240,.9)' : 'rgba(230,180,190,.9)'; ctx.beginPath(); ctx.arc(x + Math.cos(j * 2.4) * 12 * hsh(i + j), y - 30 + Math.sin(j * 2.4) * 8 * hsh(j), 2.4, 0, Math.PI * 2); ctx.fill(); } }
     ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = texPat(ctx, 'brush'); ctx.scale(.5, .5); ctx.fillRect(0, Y0 * 2, VW * 2, H * 2); ctx.restore();
   }
-  // a rider: a horse in Lorraine's caparison, and on it Corwin, or Ganelon
-  function rider(x, y, s, look, f, t, walk, gal, lift = 0) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(s * f, s); const o = { t, walk, gallop: gal, legCol: look.legs, bootCol: look.boots, coat: look.corwin ? 'grey' : 'bay' };
-    W8.horse("back", o); ctx.save(); ctx.translate(0, -36 + W8.horseLift(o)); drawHumanoid(look, { arm: lift ? -1.6 : .6, Y: .25, weapon: lift ? 'fists' : 'rapier' }); if (lift) W8.hornDraw(10, -58, .8, t, 1, -1.1); ctx.restore(); W8.horse('front', o); ctx.restore();
+  // a rider at (x, y), scale s: his horse at a gallop, a walk or standing (idle 0..1, idleT seconds since it stopped)
+  function rider(x, y, s, look, t, walk, gal, idle, idleT, seed, coat) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); W8.rider({ look, t, walk, gallop: gal, idle, idleT, seed, coat }); ctx.restore();
   }
   // stooping for the horn where the Goat-Lord dropped it: down on one knee, the hand to the ground, and up with it in his fist
   { const _pp = playerPose; playerPose = function () {
@@ -91,8 +92,13 @@
     const Hz = Y_OFF + (VH - Y_OFF) * .62, look = heroLook();
     const blowing = T > 6.2 && T < 8.4; if (blowing && !END.blown) { END.blown = 1; if (typeof tone === 'function' && sfxOn && actx) { tn(147, 1.2, 'sawtooth', .07, 196); tn(220, 1, 'sawtooth', .05, 294, .6); tn(294, 1.4, 'triangle', .06, 0, 1.1); } }
     const ridersIn = cl01((T - 8) / 4.5);
-    for (let i = 4; i >= 0; i--) { const x = lerp(-120 - i * 50, VW * .52 - i * 46, sm(ridersIn)), y = Hz + 70 + (i % 2) * 14; ctx.save(); ctx.globalAlpha = .5 + .5 * ridersIn; rider(x, y, i ? .62 : .8, i ? Object.assign({}, GANELON, { hair: '#4A3A2A', body: i % 2 ? PAL.or : PAL.gules }) : GANELON, 1, t + i * .41, t * (12 + [0, .9, -.7, .5, -1.1][i]) + [0, 2.3, 4.1, 1.2, 5.3][i], ridersIn < 1 ? 1 : 0); ctx.restore(); // (each horse on its own stride: out of step, as horses are)
-      if (i % 2 === 0) { ctx.strokeStyle = '#2A1E14'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x + 6, y - 90); ctx.lineTo(x + 6, y - 40); ctx.stroke(); ctx.fillStyle = PAL.or; ctx.beginPath(); ctx.moveTo(x + 6, y - 90); ctx.quadraticCurveTo(x + 20, y - 88 + Math.sin(t * 4 + i) * 2, x + 30, y - 84); ctx.lineTo(x + 6, y - 78); ctx.fill(); ctx.strokeStyle = PAL.gules; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x + 8, y - 88); ctx.lineTo(x + 24, y - 82); ctx.stroke(); } }
+    // each comes on at his own pace: the stride is worked out from how fast he is going (a gallop, slowing to a walk as they
+    // draw rein), its phase carried on from frame to frame so the legs never slide, and once he has stopped the horse stands
+    if (!END.rid) END.rid = [0, 2.3, 4.1, 1.2, 5.3].map(ph => ({ ph }));
+    for (let i = 4; i >= 0; i--) { const x0 = -120 - i * 50, x1 = VW * .52 - i * 46, x = lerp(x0, x1, sm(ridersIn)), y = Hz + 70 + (i % 2) * 14, s = i ? .62 : .8, Rd = END.rid[i];
+      const v = (x1 - x0) * 6 * ridersIn * (1 - ridersIn) / 4.5 / s, gal = cl01((v - 70) / 130), A = 7 + 9 * gal, stride = 2 * A / (.62 - .26 * gal) * 1.12; // (v: his speed in his own units a second)
+      Rd.ph += v * dt / stride * Math.PI * 2;
+      ctx.save(); ctx.globalAlpha = .5 + .5 * ridersIn; rider(x, y, s, riderLook(i), t + i * .41, Rd.ph, gal, 1 - cl01(v / 14), Math.max(0, T - 12.5 - i * .35), i * 1.7 + .3, i === 2 || i === 4 ? 'grey' : 'bay'); ctx.restore(); }
     const mist = 1 - ridersIn; if (mist > 0) { ctx.save(); for (let i = 0; i < 12; i++) softDab(i * 60 - 40, Hz + 60 + (i % 3) * 10, 70, '240,240,236', .5 * mist); ctx.restore(); }
     if (T < 12.5) { ctx.save(); ctx.translate(VW * .8, Hz + 96); ctx.scale(1.05, 1.05); const hp = W8.hornPoseAt(T, 5.6, 6.2, 8.4, 9.2); hp.Y = .3; hp.live = false; if (!hp.inHand) hp.weapon = 'fists'; // (the same lift, blow and lowering as in the levels: the mouthpiece at his lips)
       const ih = W8.hornInHand; W8.hornInHand = !!hp.inHand; try { drawPlayerAt(0, 0, 0, -1, hp, 1); } finally { W8.hornInHand = ih; } ctx.restore(); }
