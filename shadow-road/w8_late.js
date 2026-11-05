@@ -680,3 +680,376 @@
   }
   function endPanel() { if (!panel) return; const el = panel; panel = null; el.style.opacity = '0'; setTimeout(() => el.remove(), 260); }
 })();
+// ======================================================================================================
+// THE CURSE LET GO. When the Goat-Lord falls, before Lorraine's ending (or a new cycle's, ng_endings.js) begins: what
+// came out of him was not his. It was Corwin's own curse, the one he laid on Amber blind in Eric's dungeon, and with
+// its keeper dead it goes out of Lorraine into all of shadow (the curse of NG+, corruption.js, is what it becomes).
+//   0 THE BREAKING   the ash of him cracks; a column of black smoke and violet-red embers tears up out of it; the
+//                    Circle's ring flares round where he fell; the ground shakes
+//   1 THE RING       a ring of grey (the Circle's grisaille) goes out across Lorraine from where he fell
+//   2 THE ROAD       a strip of painted panels, the shadows of the road (each world's own backgrounds, through the
+//                    endings.js kit): a thread of black runs from one to the next and the colour goes out behind it
+//   3 KOLVIR         Amber on its mountain at dusk, the grey coming over the land toward it, and the Pattern, in its
+//                    medallion, cracking
+//   4 LORRAINE       the smoke thins and the grey goes off the field round Corwin; then whatever stageClear runs next
+// It starts where the fall would have ended the stage (clearT running out, after the Goat-Lord's own death), so it
+// plays first whatever follows: the heart of the curse, the Long March's verse, the first-run ending and its horn,
+// or the NG+ ending. A call of stageClear by itself (the tests) goes straight on as before.
+// Skippable a beat at a time (tap, Enter, Space, J), all at once with Escape. Each world's backgrounds are built once,
+// a little at a time while the first two beats play, painted into a small panel, and let go at once.
+// Console: W8.release.start(), .state(), .skip(all), .hold(T)
+// ======================================================================================================
+(() => {
+  if (!window.W8 || !W8.kit) return;
+  const KIT = window.ENDINGS && ENDINGS.kit; if (!KIT) { console.error('w8_late.js: endings.js kit missing for the curse let go'); return; }
+  const { buildAlt, dropAlt, withSet, paintWorld, glowR } = KIT;
+  const { hsh, sm, cl01 } = W8.kit;
+  const tn = (...a) => { if (sfxOn && actx) { try { tone(...a); } catch (e) {} } };
+  const lite = () => typeof PAINT_LITE !== 'undefined' && (PAINT_LITE || PAINT_Q === 0);
+  const view = () => ctx.fillRect(0, Y_OFF, VW, VIEW_H);
+  const readT = (s) => 2.6 + .05 * s.length, FADE = .6;
+  const isLorraine = () => typeof baseStage !== 'undefined' && baseStage && baseStage.theme === 'lorraine' && STAGES[stageIdx] && STAGES[stageIdx].theme === 'lorraine';
+
+  const BEATS = [['break', 0], ['ring', 3.4], ['road', 6.4], ['kolvir', 11.4], ['lorraine', 15.4]], DUR = 18.6;
+  const LINES = [ // (each up 2.6s and a twentieth of a second a letter once faded in; two at most at once, one above the other)
+    { at: .7, slot: 0, s: 'What came out of the Goat-Lord was not his.' },
+    { at: 3.4, slot: 1, s: 'It was Corwin\'s own curse, laid on Amber blind in Eric\'s dungeon.' },
+    { at: 6.8, slot: 0, s: 'It went out along every road in shadow, and the colour went with it.' },
+    { at: 11.6, slot: 1, s: 'It came to Kolvir last of all, and the Pattern felt it come.' },
+  ];
+  const lineEnd = (l) => l.at + FADE + readT(l.s);
+  const beatAt = (T) => { let i = 0; while (i < BEATS.length - 1 && T >= BEATS[i + 1][1]) i++; return i; };
+  const beatEnd = (i) => i < BEATS.length - 1 ? BEATS[i + 1][1] : DUR;
+
+  let R = null; const HOLD = { at: null };
+  const FALL = { x: 0, y: 0, size: 1, armed: null };
+  { const _k = killEnemy; killEnemy = function (e, dir, m) { _k(e, dir, m); if (W8.isGoat && W8.isGoat(e) && isLorraine()) { FALL.x = e.x; FALL.y = e.y; FALL.size = e.size || 1; FALL.armed = stage; } }; }
+
+  // ---------------- the road's shadows, each painted once into a small panel ----------------
+  const ROAD = () => { const out = [], seen = new Set(); STAGES.forEach((st, i) => { if (st.theme !== 'lorraine' && THEMES[st.theme] && !seen.has(st.theme)) { seen.add(st.theme); out.push({ theme: st.theme, name: st.name, i }); } }); return out; };
+  const panelW = () => Math.min(300, VW * .46), panelH = () => panelW() * VIEW_H / VW;
+  function greyCopy(c) { // the panel in grisaille: drained, warmed to umber, with the underdrawing's hatching
+    const gc = document.createElement('canvas'); gc.width = c.width; gc.height = c.height; const g = gc.getContext('2d'), W = gc.width, H = gc.height;
+    g.drawImage(c, 0, 0);
+    g.globalCompositeOperation = 'saturation'; g.fillStyle = '#808080'; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = 'rgb(206,198,184)'; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'source-over'; g.fillStyle = 'rgba(60,56,50,.16)'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(20,16,12,.16)'; g.lineWidth = Math.max(.6, W / 500); g.beginPath();
+    for (let i = 0; i < 70; i++) { const x = hsh(i + 40) * W, y = hsh(i + 90) * H, L = W * .03; g.moveTo(x, y); g.lineTo(x + L, y - L); } g.stroke();
+    return gc;
+  }
+  function grade(themeId) { // the world's own grade, as gradeFrame lays it (without what a level's mechanism adds to it)
+    const gd = THEMES[themeId] && THEMES[themeId].grade; if (!gd) return; const y = Y_OFF, h = VIEW_H;
+    ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${gd.desat * .35})`; ctx.fillRect(0, y, VW, h);
+    ctx.globalCompositeOperation = 'soft-light'; const lg = ctx.createLinearGradient(0, y, 0, y + h); lg.addColorStop(0, gd.top); lg.addColorStop(1, gd.bot); ctx.fillStyle = lg; ctx.fillRect(0, y, VW, h);
+    ctx.globalCompositeOperation = 'multiply'; const vg = ctx.createRadialGradient(VW / 2, y + h * .55, h * .45, VW / 2, y + h * .55, VW * .72); vg.addColorStop(0, 'rgba(255,255,255,0)'); vg.addColorStop(1, gd.vig); ctx.fillStyle = vg; ctx.fillRect(0, y, VW, h);
+    ctx.restore();
+  }
+  // the painted layers are built with fewer pixels than the screen's (the panel is under half its size), then let go
+  const buildK = () => clamp(K * (lite() ? .45 : .6), .45, 1.25);
+  function withK(k, fn) { const k0 = K; K = k; try { return fn(); } finally { K = k0; } }
+  function jobBuild(p) { if (p.B || p.c) return; p.B = withK(buildK(), () => buildAlt(p.theme, 311 + p.i * 23)); }
+  function jobPaint(p) {
+    if (p.c) return; if (!p.B) jobBuild(p);
+    const pw = panelW(), ph = panelH(), S = Math.min(K, lite() ? 1.2 : 2), c = document.createElement('canvas'); c.width = Math.ceil(pw * S); c.height = Math.ceil(ph * S);
+    const g = c.getContext('2d'), s = c.width / VW, c0 = ctx, fl = FLASH, ti = TINT;
+    g.setTransform(s, 0, 0, c.height / VIEW_H, 0, -Y_OFF * c.height / VIEW_H);
+    try { FLASH = false; TINT = null; withK(p.B.K, () => { ctx = g; withSet(p.B, () => paintWorld(p.theme, { cam: 300 + p.i * 137 }, 12 + p.i)); grade(p.theme); }); }
+    catch (err) { console.error(err); g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#4A4450'; g.fillRect(0, 0, c.width, c.height); }
+    finally { ctx = c0; FLASH = fl; TINT = ti; dropAlt(p.B); p.B = null; }
+    p.c = c; p.g = greyCopy(c);
+  }
+  function dropPanels() { if (!R) return; for (const p of R.road) { if (p.B) dropAlt(p.B); retire(p.c); retire(p.g); p.B = p.c = p.g = null; } retire(R.amber); retire(R.amberG); R.amber = R.amberG = null; }
+  function nextJob() { // one piece of the work a frame, a few frames apart: each world built, then painted into its panel
+    for (const p of R.road) { if (!p.B && !p.c) return () => jobBuild(p); if (!p.c) return () => jobPaint(p); }
+    if (!R.amber) return bakeAmber; return null;
+  }
+  function runJobs(all) { let j; while ((j = nextJob())) { try { j(); } catch (err) { console.error(err); R.road.forEach(p => { if (!p.c) { p.c = document.createElement('canvas'); p.c.width = p.c.height = 2; p.g = p.c; } }); } if (!all) return; } }
+
+  // ---------------- Amber on Kolvir, at dusk: painted once ----------------
+  function bakeAmber() {
+    const S = Math.min(K, lite() ? 1.2 : 2), c = document.createElement('canvas'); c.width = Math.ceil(VW * S); c.height = Math.ceil(VIEW_H * S);
+    const g = c.getContext('2d'), c0 = ctx; g.setTransform(S, 0, 0, S, 0, -Y_OFF * S);
+    try { ctx = g; amberScene(); } catch (err) { console.error(err); } finally { ctx = c0; }
+    R.amber = c; R.amberG = greyCopy(c);
+  }
+  const SEA = () => Y_OFF + VIEW_H * .64, PEAK = () => ({ x: VW * .6, y: Y_OFF + VIEW_H * .34 });
+  function amberScene() {
+    const Y0 = Y_OFF, H = VIEW_H, sea = SEA(), pk = PEAK();
+    let g = ctx.createLinearGradient(0, Y0, 0, sea); g.addColorStop(0, '#22306A'); g.addColorStop(.45, '#6A5288'); g.addColorStop(.8, '#D8907A'); g.addColorStop(1, '#F6C890');
+    ctx.fillStyle = g; ctx.fillRect(0, Y0, VW, sea - Y0);
+    for (let i = 0; i < 40; i++) { ctx.fillStyle = `rgba(255,246,230,${.3 + .5 * hsh(i + 3)})`; ctx.fillRect(hsh(i) * VW, Y0 + hsh(i + 1) * H * .25, 1, 1); }
+    for (let i = 0; i < 6; i++) softDab(VW * (.1 + i * .17), Y0 + H * (.3 + (i % 2) * .06), 46, '240,170,150', .3);
+    // Kolvir: a mountain of three shoulders going up out of the sea, its crags catching the last light, and Amber along its summit
+    const bump = (x, c, w) => Math.exp(-((x - c) / w) * ((x - c) / w)), xL = VW * .27, xR = VW * .95;
+    const hgt = (x) => H * .3 * Math.pow(Math.max(0, 1 - Math.abs(x - pk.x) / (VW * .3)), 1.15) + H * .07 * bump(x, VW * .44, VW * .05) + H * .06 * bump(x, VW * .78, VW * .06) + (hsh(Math.round(x)) - .5) * 3;
+    const ridge = (flip) => { ctx.beginPath(); ctx.moveTo(xL, sea); for (let x = xL; x <= xR; x += 6) ctx.lineTo(x, sea - (flip ? -.55 : 1) * Math.min(H * .3, hgt(x))); ctx.lineTo(xR, sea); ctx.closePath(); };
+    ctx.fillStyle = '#463656'; ridge(false); ctx.fill();
+    ctx.save(); ridge(false); ctx.clip(); ctx.fillStyle = '#5E4A6C'; ctx.beginPath(); ctx.moveTo(pk.x - 2, pk.y); ctx.lineTo(VW * .36, sea); ctx.lineTo(VW * .5, sea); ctx.lineTo(pk.x - 10, pk.y + 60); ctx.closePath(); ctx.fill(); // (the face toward the sunset)
+    ctx.fillStyle = '#382A48'; ctx.beginPath(); ctx.moveTo(pk.x + 4, pk.y); ctx.lineTo(VW * .9, sea); ctx.lineTo(VW * .7, sea); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(26,18,34,.5)'; ctx.lineWidth = 1.2; ctx.beginPath(); for (let i = 0; i < 9; i++) { const x0 = pk.x + (i - 4) * 14, y0 = pk.y + 20 + Math.abs(i - 4) * 10; ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x0 + (i - 4) * 10, y0 + 40, x0 + (i - 4) * 22, sea); } ctx.stroke(); // its gullies
+    for (let i = 0; i < 26; i++) { const fx = VW * (.34 + hsh(i) * .54), fy = sea - Math.min(H * .3, hgt(fx)) * (.2 + hsh(i + 3) * .7), fw = 5 + hsh(i + 5) * 12; ctx.fillStyle = 'rgba(255,186,150,.26)'; ctx.beginPath(); ctx.moveTo(fx - fw, fy); ctx.lineTo(fx - fw * .2, fy - fw * .4); ctx.lineTo(fx + fw, fy); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    // Amber: walls round the summit, towers stepping up to the palace, a light in each
+    const top = pk.y + 14; ctx.fillStyle = '#E2C29C'; ctx.beginPath(); ctx.moveTo(pk.x - 52, top + 14); ctx.lineTo(pk.x - 46, top - 2); ctx.lineTo(pk.x + 46, top - 2); ctx.lineTo(pk.x + 54, top + 14); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#9A7060'; ctx.fillRect(pk.x - 48, top + 2, 96, 2);
+    for (let i = 0; i < 13; i++) { const d = i - 6, x = pk.x + d * 7.2 - 2.5, w = 5 + (i % 3) * 1.2, h = 9 + (6 - Math.abs(d)) * 4.2 + (i % 2) * 3, y0 = top + Math.abs(d) * 1.2;
+      ctx.fillStyle = '#EAC8A0'; ctx.fillRect(x, y0 - h, w, h); ctx.fillStyle = '#9A7060'; ctx.fillRect(x + w * .6, y0 - h, w * .4, h);
+      ctx.fillStyle = d === 0 ? '#3A5A96' : '#5A3A4A'; ctx.beginPath(); ctx.moveTo(x - 1, y0 - h); ctx.lineTo(x + w / 2, y0 - h - w * (d === 0 ? 2.2 : 1.6)); ctx.lineTo(x + w + 1, y0 - h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,230,160,.95)'; ctx.fillRect(x + w * .3, y0 - h * .6, 1.2, 2); if (h > 24) ctx.fillRect(x + w * .3, y0 - h * .35, 1.2, 2); }
+    const ph = 9 + 6 * 4.2, ft = top - ph - 5 * 2.2 - 2; ctx.strokeStyle = '#2A1E14'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(pk.x, ft - 14); ctx.lineTo(pk.x, ft + 2); ctx.stroke(); ctx.fillStyle = '#F2D24A'; ctx.beginPath(); ctx.moveTo(pk.x, ft - 14); ctx.lineTo(pk.x + 9, ft - 11); ctx.lineTo(pk.x, ft - 8); ctx.fill(); // (the unicorn's banner over the palace)
+    const kolvirShade = () => { ctx.save(); ctx.globalAlpha = .28; ctx.fillStyle = '#2E2444'; ridge(true); ctx.fill(); ctx.restore(); };
+    // Arden: green hills along the shore to the left, and the land Amber looks over
+    ctx.fillStyle = '#3A5A3A'; ctx.beginPath(); ctx.moveTo(0, sea); for (let x = 0; x <= VW * .44; x += 20) ctx.lineTo(x, sea - 16 - Math.sin(x * .03) * 8 - hsh(x) * 6); ctx.lineTo(VW * .44, sea); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#2A4430'; for (let i = 0; i < 26; i++) { const x = hsh(i + 60) * VW * .42, y = sea - 12 - hsh(i + 61) * 10; ctx.beginPath(); ctx.ellipse(x, y, 6, 8, 0, 0, TAU); ctx.fill(); }
+    g = ctx.createLinearGradient(0, sea, 0, VH); g.addColorStop(0, '#E8B09A'); g.addColorStop(.25, '#5A6A8A'); g.addColorStop(1, '#1A2A40'); ctx.fillStyle = g; ctx.fillRect(0, sea, VW, VH - sea);
+    kolvirShade(); // (its reflection, dark in the water)
+    for (let i = 0; i < 12; i++) { const y = sea + 4 + i * 7; ctx.strokeStyle = `rgba(255,226,190,${.2 - i * .014})`; ctx.lineWidth = 1; ctx.beginPath(); for (let x = 0; x <= VW; x += 16) ctx.lineTo(x, y + Math.sin(x * .05 + i) * 1.5); ctx.stroke(); }
+    ctx.save(); ctx.globalAlpha = .5; ctx.fillStyle = texPat(ctx, 'brush'); ctx.scale(.5, .5); ctx.fillRect(0, Y0 * 2, VW * 2, H * 2); ctx.restore();
+  }
+  // the Pattern, in a medallion over the sea: its turns blue fire, and the black crack of the curse going into it
+  function patternMedal(x, y, r, crack, t) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(6,6,14,.92)'; circle(x, y, r); ctx.fill();
+    ctx.save(); circle(x, y, r - 2); ctx.clip(); ctx.translate(x, y); ctx.lineCap = 'round';
+    const fl = crack > .2 ? .75 + .25 * Math.sin(t * 23) * Math.sin(t * 7) : 1;
+    for (let i = 0; i < 5; i++) { const rr = r * (.2 + i * .17), a0 = i * 1.3 + .4, span = TAU * .86;
+      for (const [lw, col] of [[4.5, 'rgba(20,40,110,.6)'], [2, `rgba(90,140,255,${.8 * fl})`], [.8, `rgba(236,242,255,${.85 * fl})`]]) { ctx.lineWidth = lw; ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(0, 0, rr, a0, a0 + span); ctx.stroke(); } }
+    if (crack > 0) { const path = () => { ctx.beginPath(); ctx.moveTo(-r, r * .1); for (let i = 1; i <= 20; i++) { const u = i / 20 * crack; ctx.lineTo(-r + u * r * .95, r * .1 + Math.sin(u * 11) * r * .08 + (hsh(i) - .5) * 3); } };
+      ctx.save(); ctx.globalCompositeOperation = lite() ? 'source-over' : 'saturation'; ctx.fillStyle = lite() ? 'rgba(90,86,92,.45)' : 'rgba(128,128,128,.9)'; ctx.beginPath(); ctx.ellipse(-r, r * .1, crack * r * 1.1, crack * r * .55, 0, 0, TAU); ctx.fill(); ctx.restore(); // (the turns go grey where it has come)
+      ctx.lineCap = 'round'; ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(200,40,80,${.5 * (.7 + .3 * Math.sin(t * 6))})`; ctx.lineWidth = 6; path(); ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = 'rgba(4,2,6,.95)'; ctx.lineWidth = 2.6; path(); ctx.stroke(); }
+    ctx.restore();
+    glowR(x, y, r * 1.4, '110,150,255', .16 * fl * (1 - crack * .5));
+    ctx.strokeStyle = '#B88A30'; ctx.lineWidth = 2.4; circle(x, y, r); ctx.stroke(); ctx.strokeStyle = '#F0D090'; ctx.lineWidth = .8; circle(x, y, r - 1.6); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---------------- painted things ----------------
+  function grisaille(a) { // within whatever clip is set: the Circle's grey underpainting
+    if (a <= 0) return;
+    if (lite()) { ctx.fillStyle = `rgba(118,112,106,${.6 * a})`; view(); return; }
+    ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${a})`; view();
+    ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = `rgba(206,198,184,${a})`; view();
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgba(60,56,50,${.12 * a})`; view();
+  }
+  function embers(x, y, top, n, T, spread, a) { // violet and red, going up with the smoke
+    if (a <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const N = lite() ? n >> 1 : n;
+    for (let i = 0; i < N; i++) { const life = (T * (.35 + .3 * hsh(i + 5)) + hsh(i)) % 1, yy = lerp(y, top, life), xx = x + (hsh(i + 1) - .5) * spread * (.4 + life * 1.4) + Math.sin(T * 2 + i) * 6;
+      ctx.fillStyle = i % 3 ? `rgba(200,50,90,${Math.sin(life * Math.PI) * a})` : `rgba(240,90,60,${Math.sin(life * Math.PI) * a})`; circle(xx, yy, .8 + hsh(i + 2) * 1.6); ctx.fill(); }
+    ctx.restore();
+  }
+  function column(x, y, k, T, a) { // the curse going up out of him: a column of ink-black smoke, widening as it climbs
+    if (k <= 0 || a <= 0) return; const top = lerp(y, Y_OFF - 30, k), N = lite() ? 10 : 18;
+    ctx.save(); ctx.globalAlpha = a;
+    const M = lite() ? 8 : 16; for (let i = 0; i < M; i++) { const life = (T * .22 + hsh(i + 50)) % 1, yy = lerp(y, top, life), rr = 16 + life * 60, sw = Math.sin(life * Math.PI); // billows, rolling up its sides
+      softDab(x + (hsh(i + 51) - .5) * 70 * (.4 + life) + Math.sin(T * 1.3 + i) * 8, yy, rr, i % 3 ? '30,26,34' : '78,72,80', .6 * sw); }
+    ctx.fillStyle = 'rgba(12,9,14,.72)'; ctx.beginPath(); // its core
+    for (let j = 0; j <= N; j++) { const u = j / N, yy = lerp(y, top, u), w = 7 + u * 22 + u * u * 44 + Math.sin(T * 3 + j) * 4 * (.4 + u); ctx.lineTo(x - w + Math.sin(u * 5 + T * 1.6) * 7 * u, yy); }
+    for (let j = N; j >= 0; j--) { const u = j / N, yy = lerp(y, top, u), w = 7 + u * 22 + u * u * 44 + Math.sin(T * 3.4 + j * 1.3) * 4 * (.4 + u); ctx.lineTo(x + w + Math.sin(u * 5 + T * 1.6) * 7 * u, yy); }
+    ctx.closePath(); ctx.fill();
+    if (k < 1) softDab(x, top + 6, 60, '18,14,22', .9 * (1 - k * .5)); // (its head, still rising, a roll of smoke)
+    for (let j = 0; j < N; j++) { const u = (j + .5) / N, yy = lerp(y, top, u) + Math.sin(T * 2 + j) * 4, w = 22 + u * 44; softDab(x + Math.sin(u * 5 + T * 1.6 + j) * 12 * u, yy, w, j % 2 ? '18,14,22' : '44,40,48', .62); } // and its smoke, rolling
+    ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(150,40,110,${.35 + .2 * Math.sin(T * 9)})`; ctx.lineWidth = 1.2; ctx.beginPath(); // the light in it, like veins
+    for (let s = 0; s < 3; s++) { for (let j = 0; j <= N; j++) { const u = j / N, yy = lerp(y, top, u); ctx.lineTo(x + Math.sin(u * 9 + T * 3 + s * 2) * (4 + u * 16), yy); } ctx.moveTo(x, y); }
+    ctx.stroke(); ctx.restore();
+  }
+  function canopy(x, k, T) { // where the column meets the top of the sky it spreads, both ways, over everything
+    if (k <= 0) return; const n = lite() ? 8 : 16;
+    for (let i = 0; i < n; i++) { const d = (i / (n - 1) - .5) * 2, xx = x + d * k * VW * 1.1, yy = Y_OFF + 10 + Math.abs(d) * 18 * k + Math.sin(T + i) * 4; softDab(xx, yy, 70 + 34 * hsh(i), i % 2 ? '20,16,24' : '50,46,54', .7 * (1 - Math.abs(d) * .35)); }
+    const cg = ctx.createLinearGradient(0, Y_OFF, 0, FLOOR_TOP); cg.addColorStop(0, `rgba(14,10,16,${.5 * k})`); cg.addColorStop(1, 'rgba(14,10,16,0)'); ctx.fillStyle = cg; ctx.fillRect(0, Y_OFF, VW, FLOOR_TOP - Y_OFF);
+  }
+  function cracks(x, y, s, k, T) { // the ash he went to splits, and the light under it is the curse's
+    if (k <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + hsh(i) * .5, L = (12 + hsh(i + 2) * 30) * k * s; ctx.strokeStyle = `rgba(210,60,110,${.7 * k})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * L * .5 + (hsh(i + 4) - .5) * 6, y + Math.sin(a) * L * .5 * .3); ctx.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L * .3); ctx.stroke(); }
+    glowR(x, y - 4, 40 * s * k, '200,50,110', .5 * k * (.8 + .2 * Math.sin(T * 14)));
+    ctx.restore();
+  }
+  function ringFlare(x, y, k, T) { // the Circle's own ring, round where he fell, burning up for a moment
+    if (k <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const rx = 130 + 30 * sm(k), ry = rx * .26;
+    const rag = () => { ctx.beginPath(); for (let i = 0; i <= 40; i++) { const a = i / 40 * TAU, w = 1 + (hsh(i + 70) - .5) * .06 + Math.sin(T * 6 + i) * .01; ctx.lineTo(x + Math.cos(a) * rx * w, y + Math.sin(a) * ry * w); } ctx.closePath(); };
+    for (const [lw, col] of [[10, `rgba(90,10,44,${.45 * k})`], [3, `rgba(170,36,84,${.6 * k})`], [1, `rgba(240,170,196,${.35 * k})`]]) { ctx.lineWidth = lw; ctx.strokeStyle = col; rag(); ctx.stroke(); }
+    for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + T * .3, px = x + Math.cos(a) * rx, py = y + Math.sin(a) * ry, h = (8 + 14 * hsh(i)) * k * (.7 + .3 * Math.sin(T * 8 + i)); ctx.strokeStyle = `rgba(200,60,110,${.45 * k})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py - h); ctx.stroke(); }
+    ctx.restore();
+  }
+  const SIZE = 9.5, LH = SIZE * 1.4;
+  function wrap(str) { // (the font is set by the caller)
+    const maxW = Math.min(VW - 60, 560), rows = []; let row = '';
+    for (const w of str.split(' ')) { const tr = row ? row + ' ' + w : w; if (ctx.measureText(tr).width > maxW && row) { rows.push(row); row = w; } else row = tr; } if (row) rows.push(row);
+    return rows;
+  }
+  function slotStep() { // the second line sits under the first however many rows the longest of them wraps to on this screen
+    if (R.step && R.step.VW === VW) return R.step.v;
+    ctx.save(); ctx.font = `700 ${SIZE}px Cinzel, Georgia, serif`; const n = Math.max(...LINES.map(l => wrap(l.s).length)); ctx.restore();
+    R.step = { VW, v: n * LH + 14 }; return R.step.v;
+  }
+  function narr(str, a, y) { // the line: wrapped, on a soft plate of shadow, inked so it reads on anything
+    if (a <= 0) return; const size = SIZE;
+    ctx.save(); ctx.font = `700 ${size}px Cinzel, Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    const rows = wrap(str), lh = LH, wMax = Math.max(...rows.map(r => ctx.measureText(r).width));
+    ctx.fillStyle = `rgba(10,7,14,${.46 * a})`; rrect(VW / 2 - wMax / 2 - 12, y - size - 5, wMax + 24, rows.length * lh + 7, 6); ctx.fill();
+    ctx.lineJoin = 'round'; ctx.lineWidth = 2.4; ctx.strokeStyle = `rgba(10,6,14,${.7 * a})`; ctx.fillStyle = `rgba(246,240,228,${a})`;
+    rows.forEach((r, i) => { ctx.strokeText(r, VW / 2, y + i * lh); ctx.fillText(r, VW / 2, y + i * lh); });
+    ctx.restore();
+  }
+  const darken = (a) => { if (a > 0) { ctx.fillStyle = `rgba(8,6,10,${Math.min(1, a)})`; view(); } };
+  const fallAt = () => ({ x: FALL.x - camX, y: FALL.y });
+
+  // ---------------- the beats ----------------
+  function live(t, shake) { // the boss room as it stands, the prince in it
+    shakeMag = shake; try { R.inner(t); } finally { shakeMag = 0; }
+  }
+  const PAINT = {
+    break(T, t) {
+      const f = fallAt(), c = sm((T - .7) / 1.3);
+      if (T > .75 && !R.cracked) { R.cracked = 1; sfx('crunch'); sfx('roar', .7); tn(55, 2.6, 'sawtooth', .07, 34); tn(41, 3.2, 'sine', .12, 30); }
+      if (T > .75 && P) { if (R.recoil == null) { const d = P.x - FALL.x, s = Math.sign(d) || -P.facing; R.recoil = { x0: P.x, to: Math.abs(d) < 110 ? FALL.x + s * 110 : P.x }; }
+        P.x = lerp(R.recoil.x0, R.recoil.to, sm((T - .75) / .5)); P.state = 'idle'; P.facing = Math.sign(FALL.x - P.x) || P.facing; } // (he is thrown back a step from it)
+      live(t, T > .75 ? 7 * (1 - cl01((T - .75) / 2.4)) + 1.2 : 0);
+      ctx.save(); ctx.fillStyle = `rgba(16,10,20,${.22 * sm(T / 1.5)})`; view(); ctx.restore();
+      ringFlare(f.x, f.y, sm((T - .8) / .4) * (1 - .45 * sm((T - 1.6) / 1.2)), T);
+      cracks(f.x, f.y, FALL.size, sm(T / .8) * (1 - .5 * c), T);
+      column(f.x, f.y, c, T, 1);
+      canopy(f.x, sm((T - 1.8) / 1.6), T);
+      embers(f.x, f.y, Y_OFF, 40, T, 40, sm((T - .8) / .5));
+    },
+    ring(T, t) {
+      const f = fallAt(), u = cl01(T / 2.6), Rr = Math.pow(u, 1.15) * VW * 1.45;
+      if (!R.rung) { R.rung = 1; sfx('slam', .8); tn(82, 1.8, 'triangle', .07, 40); tn(124, 1.2, 'sine', .04, 62, .1); }
+      live(t, T < .5 ? 5 * (1 - T / .5) : 0);
+      ctx.save(); ctx.fillStyle = 'rgba(16,10,20,.22)'; view(); ctx.restore();
+      if (Rr > 1) { ctx.save(); ell(f.x, f.y, Rr, Rr * .55); ctx.clip(); grisaille(1); ctx.globalCompositeOperation = lite() ? 'source-over' : 'multiply'; ctx.fillStyle = lite() ? 'rgba(30,26,30,.22)' : 'rgba(168,160,156,1)'; view(); ctx.restore(); } // (and an ink wash over it: darker than the Circle was)
+      if (u < 1) { // its edge: pale light running ahead of a ragged line of ink, and ash going up off it
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const [d, lw, al] of [[10, 10, .18], [5, 4, .5]]) { ctx.strokeStyle = `rgba(232,228,240,${al * (1 - u * .8)})`; ctx.lineWidth = lw; ell(f.x, f.y, Rr + d, (Rr + d) * .55); ctx.stroke(); } ctx.restore();
+        ctx.save(); ctx.strokeStyle = 'rgba(12,9,8,.9)'; ctx.lineWidth = 3.2; ctx.beginPath();
+        for (let i = 0; i <= 48; i++) { const a = i / 48 * TAU, rr = Rr * (1 + (hsh(i + 7) - .5) * .05 + Math.sin(T * 9 + i * 2) * .006); ctx.lineTo(f.x + Math.cos(a) * rr, f.y + Math.sin(a) * rr * .55); } ctx.closePath(); ctx.stroke();
+        for (let i = 0; i < (lite() ? 14 : 28); i++) { const a = hsh(i) * TAU, rr = Rr * (1 + hsh(i + 1) * .06), up = (T * 40 + hsh(i + 2) * 30) % 30; ctx.fillStyle = `rgba(90,84,76,${.6 * (1 - up / 30)})`; ctx.fillRect(f.x + Math.cos(a) * rr, f.y + Math.sin(a) * rr * .55 - up, 2, 1.2); }
+        ctx.restore(); }
+      column(f.x, f.y, 1, T + 3.4, 1); canopy(f.x, 1, T + 3.4);
+      embers(f.x, f.y, Y_OFF, 30, T + 3.4, 40, 1);
+      darken(sm((T - 2.5) / .5));
+    },
+    road(T, t, dur) {
+      if (R.road.some(p => !p.c)) runJobs(true); // (a slow machine: the rest are painted now, behind the black)
+      ctx.fillStyle = '#0C0A0E'; view();
+      for (let i = 0; i < (lite() ? 6 : 12); i++) softDab(((i * 97 - T * 30) % (VW + 200) + VW + 200) % (VW + 200) - 100, Y_OFF + VIEW_H * (.2 + hsh(i) * .7), 70, i % 2 ? '30,26,34' : '22,18,26', .5);
+      const n = R.road.length, pw = panelW(), ph = panelH(), SP = pw + 64, cy = Y_OFF + VIEW_H * .56, u = cl01(T / dur), cam = lerp(-SP * .55, (n - 1) * SP + SP * .2, u * .8 + sm(u) * .2), ox = VW / 2 - cam;
+      const head = cam + pw * .35, roadY = (i) => cy + (i % 2 ? 8 : -8) + ph * .22; // (the thread's head, a little ahead of the middle of the view; it runs along each world's street)
+      if (!R.ticks) R.ticks = new Set();
+      R.road.forEach((p, i) => { const px = ox + i * SP - pw / 2, py = cy + (i % 2 ? 8 : -8) - ph / 2; if (px > VW + 10 || px + pw < -10) return;
+        if (head > i * SP - pw / 2 && !R.ticks.has(i)) { R.ticks.add(i); tn(98 + i * 9, .7, 'sine', .035, 70); }
+        ctx.save(); ctx.translate(px, py); ctx.rotate((hsh(i + 30) - .5) * .03);
+        ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(4, 5, pw, ph);
+        ctx.drawImage(p.c, 0, 0, pw, ph);
+        const hx = head - (i * SP - pw / 2), ry = roadY(i) - py; // the grey behind the thread's head: a wedge opening back from it
+        if (hx > 0) { ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pw, ph); ctx.clip(); ctx.beginPath(); ctx.moveTo(hx, ry);
+          for (let k = 0; k <= 14; k++) { const x = hx - k * (hx + 40) / 14, d = (hx - x) * 1.1 + 4 + (hsh(k + i * 7) - .5) * 10; ctx.lineTo(x, ry - d); }
+          for (let k = 14; k >= 0; k--) { const x = hx - k * (hx + 40) / 14, d = (hx - x) * 1.1 + 4 + (hsh(k + i * 7 + 3) - .5) * 10; ctx.lineTo(x, ry + d); }
+          ctx.closePath(); ctx.save(); ctx.clip(); ctx.drawImage(p.g, 0, 0, pw, ph); ctx.restore(); ctx.strokeStyle = 'rgba(16,12,10,.7)'; ctx.lineWidth = 1.4; ctx.stroke(); ctx.restore(); }
+        ctx.strokeStyle = '#6A5030'; ctx.lineWidth = 3; ctx.strokeRect(0, 0, pw, ph); ctx.strokeStyle = '#C8A050'; ctx.lineWidth = .8; ctx.strokeRect(1.5, 1.5, pw - 3, ph - 3);
+        ctx.restore();
+        const la = cl01(1 - Math.abs(px + pw / 2 - VW / 2) / (VW * .55)); // its name, under it
+        if (la > 0) { ctx.save(); ctx.font = '700 8px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillStyle = `rgba(226,200,140,${la})`; ctx.fillText(p.name.toUpperCase(), px + pw / 2, py + ph + 16); ctx.restore(); } });
+      // the thread: from out of the dark at the left, through every street, to its head
+      ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; const x0 = -SP, pts = [];
+      for (let x = x0; x <= head; x += 12) { const i = Math.max(0, Math.min(n - 1, Math.round(x / SP))), inGap = Math.abs(x - i * SP) > pw / 2; pts.push([ox + x, roadY(i) + (inGap ? 6 : 0) + Math.sin(x * .05 + T * 2) * 2]); }
+      pts.push([ox + head, roadY(Math.max(0, Math.min(n - 1, Math.round(head / SP))))]);
+      for (const [lw, col] of [[5, 'rgba(6,4,8,.55)'], [2.6, 'rgba(10,8,12,.95)']]) { ctx.lineWidth = lw; ctx.strokeStyle = col; ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = .9; ctx.strokeStyle = `rgba(190,40,70,${.45 + .2 * Math.sin(T * 5)})`; ctx.setLineDash([3, 9]); ctx.lineDashOffset = -T * 40; ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.setLineDash([]);
+      const hp = pts[pts.length - 1]; glowR(hp[0], hp[1], 16, '200,50,110', .5);
+      ctx.restore();
+      embers(hp[0], hp[1], Y_OFF, 16, T, 30, .7);
+      darken(Math.max(1 - sm(T / .4), sm((T - (dur - .4)) / .4)));
+    },
+    kolvir(T, t, dur) {
+      if (!R.amber) runJobs(true);
+      if (!R.rang) { R.rang = 1; tn(196, 2.4, 'sine', .04, 147); tn(294, 2, 'sine', .025, 220, .3); }
+      ctx.drawImage(R.amber, 0, Y_OFF, VW, VIEW_H);
+      const sea = SEA(), front = lerp(-30, VW * .37, sm(T / (dur - .4)));
+      ctx.save(); ctx.beginPath(); ctx.moveTo(-10, Y_OFF); for (let y = Y_OFF; y <= VH; y += 8) ctx.lineTo(front - Math.abs(y - sea) * .35 + (hsh(y) - .5) * 10, y); ctx.lineTo(-10, VH); ctx.closePath();
+      ctx.save(); ctx.clip(); ctx.drawImage(R.amberG, 0, Y_OFF, VW, VIEW_H); ctx.restore(); ctx.strokeStyle = 'rgba(16,12,10,.55)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+      for (let y = Y_OFF + 6, i = 0; y < VH; y += 22, i++) softDab(front - Math.abs(y - sea) * .35 + Math.sin(T * 2 + i) * 4, y, 22 + 10 * hsh(i + 9), '52,48,56', .4); // (smoke along its edge)
+      for (let i = 0; i < (lite() ? 6 : 12); i++) { const x = front - 40 - hsh(i) * Math.max(0, front + 40), y = Y_OFF + 14 + hsh(i + 1) * VIEW_H * .3; softDab(x, y, 50 + 30 * hsh(i + 2), i % 2 ? '30,26,34' : '62,56,66', .45); } // the storm over it
+      // the Black Road, over the land toward the mountain's foot
+      const rx0 = -10, ry0 = sea - 4, rx1 = Math.max(rx0, front + 12), ry1 = sea - 10;
+      ctx.save(); ctx.fillStyle = 'rgba(10,8,12,.95)'; ctx.beginPath(); ctx.moveTo(rx0, ry0 + 5); ctx.quadraticCurveTo((rx0 + rx1) / 2, ry0 + 8, rx1, ry1 + 1); ctx.lineTo(rx1, ry1 - 1); ctx.quadraticCurveTo((rx0 + rx1) / 2, ry0 - 2, rx0, ry0 - 4); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(190,40,70,${.4 + .2 * Math.sin(T * 4)})`; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(rx0, ry0); ctx.quadraticCurveTo((rx0 + rx1) / 2, ry0 + 3, rx1, ry1); ctx.stroke(); ctx.restore();
+      glowR(rx1, ry1, 18, '200,50,110', .45);
+      const crack = sm((T - .6) / (dur - 1)); if (crack > .1 && !R.cracked2) { R.cracked2 = 1; tn(70, 1.6, 'sawtooth', .05, 45); }
+      patternMedal(VW * .86, Y_OFF + VIEW_H * .74, Math.min(56, VIEW_H * .17), crack, t);
+      ctx.save(); ctx.font = '700 7.5px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.fillStyle = `rgba(232,212,160,${sm((T - .3) / .6)})`; ctx.fillText('AMBER', PEAK().x, Y_OFF + VIEW_H * .9); ctx.restore();
+      darken(Math.max(1 - sm(T / .4), sm((T - (dur - .4)) / .4)));
+    },
+    lorraine(T, t, dur) {
+      const f = fallAt(), r = sm((T - .2) / (dur - .5)) * VW * 1.4, px = P.x - camX, py = P.y - 30;
+      live(t, 0);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, Y_OFF, VW, VIEW_H); ctx.ellipse(px, py, Math.max(1, r), Math.max(1, r * .6), 0, 0, TAU, true); ctx.clip('evenodd'); grisaille(1 - sm((T - (dur - .8)) / .8)); ctx.restore();
+      const k = 1 - sm(T / (dur * .8)); // the last of the smoke going up and away
+      column(f.x, f.y, 1, T + 7, k * .8); canopy(f.x, k, T + 7);
+      embers(f.x, f.y, Y_OFF, 20, T + 7, 50, k);
+      darken(1 - sm(T / .4));
+    },
+  };
+
+  // ---------------- running it ----------------
+  function render(t) {
+    const now = performance.now(), rdt = Math.min(.05, (now - R.last) / 1000); R.last = now; R.real += rdt;
+    const dt = HOLD.at !== null && R.T >= HOLD.at ? 0 : rdt; R.T += dt;
+    pollPad(); if (!R) return;
+    if (R.T >= DUR) { finish(); if (!R) R_INNER(t); return; }
+    const T = R.T, bi = beatAt(T), [id, b0] = BEATS[bi]; R.bi = bi;
+    if (bi < 2 && T > .15 && now >= R.jobAt) { const j = nextJob(); if (j) { try { j(); } catch (err) { console.error(err); } R.jobAt = performance.now() + (lite() ? 260 : 180); } } // (the panels, one piece every few frames)
+    ctx.fillStyle = '#08060C'; view();
+    try { PAINT[id](T - b0, t, beatEnd(bi) - b0); } catch (err) { if (!R.warned) { R.warned = 1; console.error(err); } }
+    for (const l of LINES) { if (l.at < R.cut) continue; const a = sm((T - l.at) / FADE) * (1 - sm((T - lineEnd(l)) / FADE)); narr(l.s, a, Y_OFF + 22 + l.slot * slotStep()); }
+    if (R.real > 1) { ctx.save(); ctx.globalAlpha = cl01(R.real - 1) * .8; ctx.fillStyle = 'rgba(232,222,200,.75)'; ctx.font = '700 7px Cinzel, Georgia, serif'; ctx.textAlign = 'right'; ctx.fillText(KBD ? 'ENTER TO SKIP' : 'TAP TO SKIP', VW - 14, VH - 10); ctx.restore(); }
+    paperFrame();
+  }
+  let R_INNER = null;
+  function start(then) {
+    if (R) return;
+    R = { T: 0, real: 0, last: performance.now(), bi: 0, cut: -1, jobAt: 0, then: then || (() => stageClear()), inner: R_INNER, road: ROAD().map(p => ({ theme: p.theme, name: p.name, i: p.i, B: null, c: null, g: null })), amber: null, amberG: null,
+      hud: { playing: app.classList.contains('playing') }, music: typeof musicWant !== 'undefined' ? musicWant : null };
+    W8.releasing = true; mode = 'ending'; clearInput();
+    hitstop = 0; slowmo = 0; shakeMag = 0; zoom = 0; flashT = 0; hurtFlash = 0;
+    if (P) { P.inv = 0; P.z = 0; P.vz = 0; P.state = 'idle'; P.move = null; P.walk = 0; P.facing = Math.sign(FALL.x - P.x) || P.facing; }
+    $('#bossbar').hidden = true; $('#banner').classList.remove('on'); bannerT = 0;
+    app.classList.add('nocontrols', 'sr-end'); app.classList.remove('playing');
+    if (typeof stopMusic === 'function') stopMusic();
+  }
+  function cleanup() { if (!R) return null; const r = R; dropPanels(); R = null; W8.releasing = false; shakeMag = 0; app.classList.remove('nocontrols', 'sr-end'); if (r.hud.playing) app.classList.add('playing'); return r; }
+  let swallowT = 0;
+  function finish() { // the field is only a field: on to whatever the fall leads to (stageClear, as the fall would have called it)
+    const r = cleanup(); if (!r) return; swallowT = performance.now() + 400;
+    mode = 'play'; if (P) { P.state = 'idle'; P.walk = 0; }
+    try { r.then(); } finally { if (typeof musicCur !== 'undefined' && !musicCur && r.music && mode === 'play') playMusic(r.music); }
+  }
+  function skip(all) {
+    if (!R || R.real < .5) return false;
+    if (all) { finish(); return true; }
+    const b0 = BEATS[R.bi][1]; if (R.T - b0 < .35) return false; // (the press that ended the last beat does not end this one too)
+    if (R.bi >= BEATS.length - 1) { finish(); return true; }
+    R.T = BEATS[R.bi + 1][1]; R.cut = R.T - .001; R.bi++; return true; // (the words of the beats skipped go with them)
+  }
+  let pad = false;
+  function pollPad() { let down = false; try { for (const gp of (navigator.getGamepads ? navigator.getGamepads() : [])) if (gp) for (const bt of gp.buttons) if (bt && bt.pressed) down = true; } catch (e) {} if (down && !pad) skip(); pad = down; }
+
+  // ---------------- hooks ----------------
+  { const _ds = drawScene; R_INNER = _ds; drawScene = function (t) { if (R && mode !== 'ending') cleanup(); if (R) { render(t); return; } return _ds(t); }; } // (something else took over: let it go quietly)
+  { const _uw = updateWorld; updateWorld = function (dt) { // the fall would end the stage this frame: the curse goes out first
+      if (FALL.armed && clearT > 0 && clearT - dt <= 0 && !R && mode === 'play') { if (FALL.armed === stage && isLorraine()) { FALL.armed = null; clearT = 0; start(); return; } FALL.armed = null; }
+      return _uw(dt); }; }
+  window.addEventListener('keydown', (e) => {
+    if (!R) { if (performance.now() < swallowT && (e.repeat || ['Enter', 'NumpadEnter', 'Space', 'KeyJ', 'Escape'].includes(e.code))) { e.stopImmediatePropagation(); e.preventDefault(); } return; }
+    if (!e.repeat) { if (e.code === 'Escape') skip(true); else if (['Enter', 'NumpadEnter', 'Space', 'KeyJ', 'KeyK', 'KeyL', 'KeyI', 'KeyU', 'KeyO'].includes(e.code)) skip(); }
+    e.stopImmediatePropagation(); e.preventDefault(); // nothing else hears keys while it plays
+  }, true);
+  window.addEventListener('pointerdown', (e) => { if (R) { skip(); e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  W8.release = {
+    start: (then) => { if (!FALL.x && boss) { FALL.x = boss.x; FALL.y = boss.y; FALL.size = boss.size || 1; } start(then); },
+    get active() { return !!R; }, skip: (all) => skip(all), hold: (T) => { HOLD.at = T ?? null; },
+    state: () => R && { T: R.T, beat: BEATS[R.bi][0], bi: R.bi, real: R.real, panels: R.road.map(p => !!p.c), amber: !!R.amber, lines: LINES.filter(l => l.at >= R.cut && R.T >= l.at && R.T < lineEnd(l) + FADE).map(l => l.s) },
+    BEATS, LINES, DUR, readT, lineEnd,
+  };
+})();

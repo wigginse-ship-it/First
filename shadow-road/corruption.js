@@ -835,7 +835,7 @@
   // ---------------- the shifts of the view: each comes and goes in a stretch ----------------
   const FX_BY_TIER = { 2: ['drain', 'tilt', 'tear'], 3: ['drain', 'tilt', 'tear', 'mirror', 'puppet', 'rewind', 'tapestry'], 4: ['drain', 'tilt', 'tear', 'mirror', 'puppet', 'rewind', 'tapestry', 'close'] };
   const FX_DUR = { drain: [5, 8], tilt: [4.5, 7], tear: [1.4, 2.2], mirror: [4, 5.5], puppet: [5, 7], rewind: [1.3, 1.3], tapestry: [5, 7], close: [4, 6] };
-  const busy = () => !!((typeof zoneTrans !== 'undefined' && zoneTrans) || (window.W8 && W8.cine && W8.cine()) || (window.ENDINGS && ENDINGS.active) || L.coda);
+  const busy = () => !!((typeof zoneTrans !== 'undefined' && zoneTrans) || (window.W8 && W8.cine && W8.cine()) || (window.ENDINGS && ENDINGS.active) || (window.W8 && W8.releasing) || L.coda); // (W8.releasing: the curse let go, w8_late.js, paints its own grey)
   function fxSchedule(dt) {
     const t = teff();
     if (L.fx) { L.fx.t += dt; if (L.fx.t >= L.fx.dur) { L.fx = null; L.fxNext = t >= 4 ? rand(12, 24) : t >= 3 ? rand(18, 32) : rand(26, 44); } return; }
