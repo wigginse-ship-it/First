@@ -66,7 +66,8 @@
   // the live state of a world (not saved)
   let L = freshL();
   function freshL() { return { kills: [], waveHit: false, cv: {}, spike: false, pulse: null, road: null, burns: [], mimics: [], cloot: [], fx: null, fxNext: 14, rec: [], recT: 0,
-    heart: null, roadT: 4, itemDone: false, flick: 0, flickT: 2, rate: {}, lastWave: 0, villSaved: 0, cBurn: 0, cBurnT: 0, drumLast: 0, stdT: 0, coda: null, log: [] }; }
+    heart: null, roadT: 4, itemDone: false, flick: 0, flickT: 2, rate: {}, lastWave: 0, villSaved: 0, cBurn: 0, cBurnT: 0, drumLast: 0, stdT: 0, coda: null, log: [],
+    wisps: [], shade: null, ripT: 0, carSaid: false, cStat: { hops: 0, broke: 0, burnt: 0, risen: 0, shades: 0, sank: 0, last: null } }; }
   const LOG = [];
   const note = (why, d) => { LOG.push({ why, d: Math.round(d * 100) / 100, v: Math.round(CS().v * 10) / 10, t: Math.round(now() * 10) / 10 }); if (LOG.length > 80) LOG.shift(); };
   const rl = (k, gap) => { const t = now(); if ((L.rate[k] || 0) > t) return false; L.rate[k] = t + gap; return true; };
@@ -134,7 +135,7 @@
     // thrown into a hazard: the death came from the place, not from him, moments after he sent it flying
     if (!mine(m) && m.trump && !(e.burn > 0) && e.cHitT && t - e.cHitT < 2.5 && !trumpBusy()) feed(WT.hazardKill, 'a kill by a hazard');
     if (e.boss) ease(-WT.boss, 'a lord of a world falls');
-    if (e.cursed && !e.boss) cursedDeath(e);
+    if (e.cursed && !e.boss) cursedDeath(e, m);
     keep();
     return r;
   };
@@ -162,7 +163,7 @@
     return _go();
   };
   // ---------------- discipline ----------------
-  { const _rp = riposte; riposte = function (fromX) { if (NG() && rl('parry', .3)) ease(-WT.parry, 'a perfect parry'); return _rp(fromX); }; }
+  { const _rp = riposte; riposte = function (fromX) { if (NG() && rl('parry', .3)) ease(-WT.parry, 'a perfect parry'); if (NG()) L.ripT = now() + 1; return _rp(fromX); }; }
   { const _pc = perfectCue; perfectCue = function () { if (NG() && rl('perf', .3)) ease(-WT.perfect, 'a perfect charge'); return _pc.apply(this, arguments); }; }
   // ---------------- restraint: a downed foe let up unhit ----------------
   const _ue = updateEnemy;
@@ -188,7 +189,7 @@
   enterZone = function (z, Zs) {
     const r = _ez(z, Zs);
     if (!NG()) return r;
-    L.mimics = []; L.cloot = []; L.burns = []; L.fx = null; L.fxNext = rand(10, 18); L.rec = []; L.itemDone = false; L.kills = []; L.roadT = rand(5, 9);
+    L.mimics = []; L.cloot = []; L.burns = []; L.wisps = []; L.shade = null; L.fx = null; L.fxNext = rand(10, 18); L.rec = []; L.itemDone = false; L.kills = []; L.roadT = rand(5, 9);
     L.road = null;
     if (!(Zs && Zs.cHeart) && !(stage && stage.secret) && teff() >= 3) makeRoad();
     if (teff() >= 3 && !(stage && stage.secret)) maybeCorruptItem(false);
@@ -217,7 +218,7 @@
   function worldStep(dt) {
     const c = CS();
     if (onRoad()) feed(WT.roadPerSec * dt / WT.roadMul, 'standing on the Black Road');
-    corpseHits(); villagers(); mimicStep(dt); clootStep(dt); verseStep(dt); patternStep(dt); roadStep(dt); pearlStep(dt); weaponStep(dt); heartStep(dt); fxSchedule(dt);
+    corpseHits(); villagers(); mimicStep(dt); clootStep(dt); verseStep(dt); patternStep(dt); roadStep(dt); pearlStep(dt); weaponStep(dt); heartStep(dt); fxSchedule(dt); carrierStep(dt);
     if (boss && boss.cB && !boss.dead && enemies.includes(boss)) bossStep(boss, dt);
     if ((L.abT = (L.abT || 0) - dt) <= 0) { L.abT = 1; abyssCheck(); }
     if (P.cBurn > 0) burnHim(dt);
@@ -367,19 +368,21 @@
   spawnEnemy = function (type, side, isBoss) {
     const e = _se(type, side, isBoss);
     if (!NG() || !e || e.boss) { if (e && e.boss && NG()) { try { bossInit(e); } catch (err) { console.error(err); } } return e; }
-    const t = teff(), p = [0, 0, .12, .22, .35][t] * (finalHigh() ? 1.5 : 1);
+    const t = teff(), p = [.08, .12, .18, .26, .36][t] * (finalHigh() ? 1.5 : 1); // (from the first step of a cursed run: more of them as the curse deepens)
     if (!(stage && stage.secret && !L.heart) && !e.cNoCurse && Math.random() < p) curseFoe(e);
     return e;
   };
   function curseFoe(e, trait) {
-    if (e.cursed) { if (trait) e.cTrait = trait; return; }
+    if (e.cursed) { if (trait) { e.cTrait = trait; if (trait === 'carrier') { e.cMask = null; carrierInit(e); } } return; }
     e.cursed = true; e.cid = e.cid || Math.random();
-    e.cTrait = trait || (e.elite ? 'mask' : pick(['mimic', 'split', 'loot', 'mimic', 'split']));
+    e.cTrait = trait || (e.elite ? 'mask' : pick(carrierOK() ? ['mimic', 'split', 'loot', 'carrier', 'mimic', 'split', 'carrier'] : ['mimic', 'split', 'loot', 'mimic', 'split']));
     if (e.cTrait === 'mask') { const own = stage && STAGES[stageIdx] ? STAGES[stageIdx].boss : '', ids = Object.keys(MASKS).filter(k => k !== own && BOSSES[k]); e.cMask = pick(ids); e.cAtkT = rand(3, 5);
       if (playing()) floatText(e.x, e.y, e.hh + 40, 'IT WEARS THE FACE OF ' + BOSSES[e.cMask].name.toUpperCase(), '#C8C2CC', 12); }
     e.hp = e.maxHp = Math.round(e.maxHp * 1.15);
+    if (e.cTrait === 'carrier') carrierInit(e);
   }
-  function cursedDeath(e) {
+  function cursedDeath(e, m) {
+    if (e.cTrait === 'carrier') { try { carrierDeath(e, m); } catch (err) { console.error(err); } return; }
     if (e.cTrait === 'split' && !e.cChild) { for (const s of [-1, 1]) { const c = spawnEnemy(e.type, s, false); if (!c) continue; c.cNoCurse = 1;
         c.x = clamp(e.x + s * 26, camX + 30, camX + VW - 30); c.y = clamp(e.y + rand(-10, 10), FLOOR_TOP + 8, FLOOR_BOT); c.cursed = true; c.cTrait = 'none'; c.cChild = 1; c.cid = Math.random();
         c.hp = c.maxHp = Math.max(1, Math.round(c.maxHp * .35)); c.state = 'idle'; c.cd = rand(.8, 1.4); c.vz = 160; c.z = 1; c.vx = s * 90; c.air = true; c.dropWeapon = null; }
@@ -390,6 +393,7 @@
     if (!e.cursed) return;
     if (e.cRoad && L.road && Math.abs(e.x - P.x) > 110) e.y += (L.road.y - e.y) * Math.min(1, dt * 8); // (a thing of the road keeps to it until it is on him)
     if (e.boss) return; // (a corrupted lord is stepped from worldStep: some fights' own rules never pass it down this far)
+    if (e.cTrait === 'carrier') { try { carrierFoe(e, dt); } catch (err) { console.error(err); } }
     if (e.cTrait === 'mask' && ['idle', 'walk', 'recover'].includes(e.state) && Math.abs(e.x - P.x) < 300) { e.cAtkT -= dt; if (e.cAtkT <= 0) { e.cAtkT = rand(5.5, 8.5); borrowed(e, MASKS[e.cMask].atk); } }
   }
   function borrowed(e, k) { // one of another lord's attacks, borrowed with its face
@@ -1639,6 +1643,301 @@
   function playerPoseSafe() { try { const s = P.state; P.state = 'idle'; const p = playerPose(); P.state = s; return p; } catch (e) { return { walk: 0 }; } }
 
   // ======================================================================================================
+  // THE PASSING CURSE: a curse that will not die with its host (the 'carrier' trait)
+  // ------------------------------------------------------------------------------------------------------
+  // A carrier wears a wisp of the Circle on its back: a knot of ink with eyes in it, a thread of ink trailing. Killed, the
+  // curse does not die. It tears out of the body (and for a moment, rimmed in gold, it can be struck and broken), then flies
+  // in a high arc to the nearest uncursed foe and takes it: the new host is bigger, harder, faster and heals whole, wears a
+  // mark over its head for every hop, and wears pieces of the hosts before it (their heads and shoulders grafted on, grey,
+  // stitched in red). Its blows leave grey puddles that drag at him; from the third hop it lashes and spits ink with what it
+  // has taken. With no foe to go to it raises the nearest corpse ("the dead get up wrong"), and failing that it dives into
+  // Corwin's own shadow, which stands up behind him and follows where he was a moment ago, striking, until he strikes it.
+  // Killed with a finisher, a perfect charge or a riposte, or struck as it leaves, the curse breaks: gold, a heal, shards for
+  // every hop, the curse eased, the puddles gone, the grafts torn off. Each hop it is let make feeds the curse. At the fifth
+  // it is the Chimera of the Curse; brought down any way at all, the curse burns out with the richest reward.
+  // ======================================================================================================
+  const tn = (...a) => { if (typeof sfxOn !== 'undefined' && sfxOn && typeof actx !== 'undefined' && actx) { try { tone(...a); } catch (e) {} } }; // (a note, when there is sound)
+  const CAR = { CAP: 5, OUT: .6, FLY: 1, HP: .3, DMG: .12, SPD: .08, SIZE: .09, SHADE: 5.5, RANGE: 520 };
+  const carrierOK = () => !L.heart && !(stage && stage.secret);
+  const carScale = (e) => (e.cHops | 0) >= CAR.CAP ? 1.5 : 1 + CAR.SIZE * (e.cHops | 0);
+  const HOW = { finisher: 'A FINISHER', perfect: 'A PERFECT CHARGE', riposte: 'A RIPOSTE', wisp: 'STRUCK AS IT LEFT', shadow: 'HIS SHADOW STRUCK FREE', burn: 'EVERY HOST IT WORE' };
+  function carrierInit(e) {
+    e.cHops = e.cHops | 0; e.cChain = e.cChain || []; e.cAtkT = e.cAtkT || rand(2, 3);
+    if (!e.cBase) e.cBase = { hp: e.maxHp, dmg: e.dmg, hw: e.hw, hh: e.hh, spd: e.def.spd || 0 };
+  }
+  function applyHop(o) { // (its stats from its own, for the hops the curse has made)
+    const B = o.cBase, h = o.cHops, ch = h >= CAR.CAP, k = carScale(o);
+    o.maxHp = o.hp = Math.round(B.hp * (1 + CAR.HP * h) * (ch ? 1.6 : 1)); o.dmg = Math.round(B.dmg * (1 + CAR.DMG * h));
+    o.hw = B.hw * k; o.hh = B.hh * k; o.def = Object.assign({}, o.def, { spd: B.spd * (1 + CAR.SPD * h) }); o.cAtkT = rand(1.4, 2.4);
+  }
+  // a host remembered: a still copy of it, to be worn by the next
+  function graftOf(e) {
+    const B = e.cBase || e, s = Object.assign({}, e, { dead: false, state: 'idle', t: 0, flash: 0, jit: 0, elite: false, guard: 0, bare: 1, cursed: false, cTrait: null, cChain: null, cMask: null, cB: null,
+      sqx: 1, sqy: 1, rotA: 0, z: 0, vx: 0, vz: 0, air: false, death: null, wounds: null, shrink: 1, frozen: 0, chill: 0, hw: B.hw, hh: B.hh });
+    return { s, draw: e.def.draw, name: (e.def.name || e.type).toUpperCase(), hw: B.hw, hh: B.hh, seed: Math.random() };
+  }
+  const ripNow = () => now() < (L.ripT || 0);
+  function playerHits(x, y, z, hw, hh) { // (his own blow, in its striking frames, reaching this point)
+    const m = P && P.move; if (!m || (P.state !== 'atk' && P.state !== 'air') || !m.h) return false;
+    const k = P.t / (m.dur || 1); if (k < m.h[0] || k > m.h[1]) return false;
+    return inReach(m, x, y, z, hw, hh);
+  }
+  const sigilAt = (e) => { const b = Math.sin(now() * 3 + (e.cid || 0) * 9) * 2; return [e.x - e.facing * e.hw * .62, e.y - e.z - e.hh * .96 + b]; };
+  // ---------------- the carrier, each frame ----------------
+  function carrierFoe(e, dt) {
+    if (!e.cBase) carrierInit(e);
+    if (e.cRise > 0) { e.cRise -= dt; if (e.state !== 'hurt') { e.state = 'hurt'; e.t = Math.max(e.t, e.cRise); } }
+    e.cTrT = (e.cTrT || 0) - dt; if (e.cTrT <= 0) { e.cTrT = .035; (e.cTr = e.cTr || []).push(sigilAt(e)); if (e.cTr.length > 8) e.cTr.shift(); }
+    if (!CS().carSeen && playing() && !busy() && e.x > camX + 20 && e.x < camX + VW - 20) { CS().carSeen = 1; banner('THE PASSING CURSE', 'IT DOES NOT DIE WITH ITS HOST · BREAK IT WITH A FINISHER, A PERFECT CHARGE OR A RIPOSTE, OR STRIKE THE WISP AS IT LEAVES', 3.4); }
+    if (e.cS0 === 'wind' && e.state !== 'wind' && e.cHops >= 1 && !['hurt', 'down', 'dying'].includes(e.state)) inkPool(e.x + e.facing * (e.hw + 14), e.y, 20 + 3 * e.cHops, 2.4 + .3 * e.cHops); // (its blows leave the Circle's grey on the floor)
+    e.cS0 = e.state;
+    if (e.cHops >= 3 && e.cChain.length && ['idle', 'walk', 'recover'].includes(e.state) && Math.abs(e.x - P.x) < 340 && P.state !== 'dead' && !busy()) {
+      e.cAtkT -= dt; if (e.cAtkT <= 0) { e.cAtkT = e.cHops >= CAR.CAP ? rand(2.6, 3.8) : rand(4.2, 6); graftAttack(e); } }
+  }
+  // ---------------- what it does with what it wore: an ink lash along the floor, or ink spat over him ----------------
+  function graftAttack(e) {
+    const g = e.cChain[e.cChain.length - 1], spit = e.cHops >= 4 && Math.random() < .5, dmg = Math.max(4, Math.round(e.dmg * .8));
+    if (!e.cArmSaid) { e.cArmSaid = 1; floatText(e.x, e.y, e.hh + 48, 'IT STRIKES WITH THE ' + g.name, '#C8C2CC', 12); }
+    if (spit) { for (let i = 0; i < 3; i++) { const t = .9 + i * .18; hazards.push({ kind: 'cblob', src: e, sx: e.x, sy: e.y, sz: e.hh * .9, x: P.x + rand(-46, 46), y: clamp(P.y + rand(-14, 14), FLOOR_TOP + 8, FLOOR_BOT), r: 20, t, max: t, dmg }); } sfx('growl', .5); }
+    else { const d = Math.sign(P.x - e.x) || e.facing; e.facing = d; hazards.push({ kind: 'clash', src: e, x0: e.x + d * e.hw * .5, x1: e.x + d * 250, y: clamp(P.y, FLOOR_TOP + 6, FLOOR_BOT), d, t: 1, max: 1, dmg, seed: Math.random() }); sfx('growl', .4); tn(98, .5, 'sawtooth', .04, 62); }
+    e.sqx = 1.15; e.sqy = .9; e.cd = Math.max(e.cd, 1.1);
+  }
+  function inkPool(x, y, r, dur) {
+    let n = 0; for (let i = hazards.length - 1; i >= 0; i--) if (hazards[i].kind === 'cink' && hazards[i].t > .3 && ++n >= 8) hazards[i].t = .3; // (the oldest dry first)
+    hazards.push({ kind: 'cink', x: clamp(x, leftWall(), rightWall()), y: clamp(y, FLOOR_TOP + 4, FLOOR_BOT), r, t: dur, max: dur, seed: Math.random() });
+    if (Math.random() < .6) sfx('hit-goo', .2);
+  }
+  function clearInk() { for (const h of hazards) { if (h.kind === 'cink') h.t = Math.min(h.t, .25); if (h.kind === 'clash' || h.kind === 'cblob') { h.done = true; h.t = -1; } } }
+  HAZARD_FX.cink = { // a puddle of the Circle's grey: it drags at his feet
+    update() {},
+    draw(h, t) { const a = Math.min(1, h.t / .4, (h.max - h.t) / .2 + .1); if (a <= 0) return; const r = h.r * Math.min(1, .5 + (h.max - h.t) * 3); ctx.save(); ctx.globalAlpha = a;
+      ctx.fillStyle = 'rgba(20,16,24,.72)'; ell(h.x, h.y, r, r * .3); ctx.fill();
+      ctx.fillStyle = 'rgba(70,64,78,.5)'; ell(h.x - r * .2, h.y - r * .06, r * .45, r * .08); ctx.fill();
+      ctx.strokeStyle = 'rgba(150,142,156,.45)'; ctx.lineWidth = 1; ell(h.x, h.y, r, r * .3); ctx.stroke();
+      ctx.fillStyle = 'rgba(20,16,24,.72)'; for (let i = 0; i < 3; i++) { const q = hsh(h.seed * 99 + i), an = q * TAU; circle(h.x + Math.cos(an) * r * 1.2, h.y + Math.sin(an) * r * .36, 1.5 + q * 2); ctx.fill(); }
+      if (!lite()) { const u = (t * .7 + h.seed) % 1; ctx.strokeStyle = `rgba(190,180,196,${.3 * (1 - u)})`; ell(h.x, h.y, r * u, r * .3 * u); ctx.stroke(); }
+      ctx.restore(); } };
+  HAZARD_FX.clash = { // the lash: a dashed red line along the floor first (0.7s), then the ink whips down it
+    update(h) { if (h.done) return; if (h.src && h.src.dead) { h.done = true; h.t = -1; return; }
+      if (h.t <= .3 && !h.struck) { h.struck = true; sfx('swing'); sfx('hit-goo', .4); const lo = Math.min(h.x0, h.x1), hi = Math.max(h.x0, h.x1);
+        if (P.x > lo - 8 && P.x < hi + 8 && Math.abs(P.y - h.y) < 16 && P.z < 28 && P.state !== 'dead') hitPlayer({ kind: 'melee', e: h.src }, h.dmg, h.x0, false);
+        inkPool(h.x1, h.y, 22, 2.6); } },
+    draw(h, t) { if (h.done) return; const lo = Math.min(h.x0, h.x1), len = Math.abs(h.x1 - h.x0); ctx.save();
+      if (h.t > .3) { const k = 1 - (h.t - .3) / .7; ctx.strokeStyle = `rgba(200,40,50,${.35 + .45 * k * (.6 + .4 * Math.sin(t * 30))})`; ctx.lineWidth = 1.5 + 2 * k; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 40 * h.d;
+        ctx.beginPath(); ctx.moveTo(h.x0, h.y); ctx.lineTo(h.x1, h.y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = `rgba(16,10,18,${.2 + .3 * k})`; ctx.fillRect(lo, h.y - 3 * k, len, 6 * k); }
+      else { const k = clamp(1 - h.t / .3, 0, 1), a = h.t < 0 ? Math.max(0, 1 + h.t / .4) : 1, tip = h.x0 + (h.x1 - h.x0) * Math.min(1, k * 1.6); ctx.globalAlpha = a; ctx.strokeStyle = '#0C080E'; ctx.lineCap = 'round';
+        ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(h.x0, h.y - 30); for (let i = 1; i <= 8; i++) { const u = i / 8, x = h.x0 + (tip - h.x0) * u; ctx.lineTo(x, h.y - 30 * (1 - u) * (1 - u) + Math.sin(u * 9 + h.seed * 9 + t * 20) * 3 * (1 - u)); } ctx.stroke();
+        ctx.strokeStyle = 'rgba(200,40,50,.8)'; ctx.lineWidth = 1.4; ctx.stroke(); }
+      ctx.restore(); } };
+  HAZARD_FX.cblob = { // a gobbet of ink lobbed over him: its ring on the floor closes as it comes down
+    update(h) { if (h.done) return; if (h.t <= 0) { h.done = true; if (Math.hypot(P.x - h.x, (P.y - h.y) * 2.2) < h.r + 6 && P.z < 24 && P.state !== 'dead') hitPlayer({ kind: 'ranged', e: h.src }, h.dmg, h.x, false);
+      inkPool(h.x, h.y, 24, 2.8); burst(h.x, h.y, 4, ['#140E16', '#4A424E', '#8A2030'], 8, 'goo'); } },
+    draw(h, t) { if (h.done) return; const k = 1 - Math.max(0, h.t) / h.max; ctx.save();
+      ctx.strokeStyle = `rgba(200,40,50,${.4 + .4 * k})`; ctx.lineWidth = 1.5; ell(h.x, h.y, h.r * (1.6 - .6 * k), h.r * .32 * (1.6 - .6 * k)); ctx.stroke();
+      ctx.fillStyle = `rgba(16,10,18,${.15 + .35 * k})`; ell(h.x, h.y, h.r * k, h.r * .32 * k); ctx.fill();
+      const x = h.sx + (h.x - h.sx) * k, y = h.sy + (h.y - h.sy) * k, z = h.sz * (1 - k) + Math.sin(Math.PI * k) * 120; ctx.fillStyle = '#0C080E'; ctx.beginPath(); ctx.ellipse(x, y - z, 6, 5 + 2 * Math.abs(Math.cos(k * 6)), 0, 0, TAU); ctx.fill();
+      ctx.restore(); } };
+  // ---------------- its death: the curse breaks, burns out, or tears free ----------------
+  function carrierDeath(e, m) {
+    m = m || {}; carrierInit(e);
+    const h = e.cHops | 0, own = mine(m) || !!(m.pearl && !m.trump), chain = e.cChain.concat([graftOf(e)]).slice(-3);
+    const [sx, sy] = sigilAt(e);
+    if (h >= CAR.CAP) { breakCurse(e.x, e.y, e.z + e.hh * .6, h + 2, 'burn', e); return; }
+    const how = own ? (m.finBase ? 'finisher' : m.perfect ? 'perfect' : ripNow() ? 'riposte' : null) : null;
+    if (how) { breakCurse(e.x, e.y, e.z + e.hh * .6, h, how, e); return; }
+    const z0 = clamp(e.y - sy, 28, 64);
+    L.wisps.push({ x: sx, y: e.y, z: z0, z0, ph: 'out', t: 0, hops: h, chain, from: e, tr: [], trT: 0, seed: Math.random() });
+    floatText(e.x, e.y, e.hh + 30, 'THE CURSE TEARS FREE', '#C8C2CC', 12); sfx('growl'); tn(116, .5, 'sawtooth', .05, 72);
+    burst(sx, e.y, z0, ['#0C080E', '#3A3240', '#8A2030'], 12, 'goo', 0, true);
+  }
+  function breakCurse(x, y, z, h, how, e) {
+    const burn = how === 'burn', n = Math.round(18 * (1 + stageIdx * .5) * (1 + .5 * (save.cycle | 0)) * (1 + h) * (burn ? 1.5 : 1)), pcs = Math.min(12, 3 + h * 2);
+    for (let i = 0; i < pcs; i++) { const k = makeLoot('shard', x, y, Math.ceil(n / pcs)); k.vz += 140; k.vx *= 2.4; loot.push(k); }
+    const heal = Math.round(maxHp() * ((burn ? .2 : .05) + .03 * h));
+    if (P && P.hp > 0) { P.hp = Math.min(maxHp(), P.hp + heal); floatText(P.x, P.y, 92, '+' + heal, '#8AE8A0', 13); }
+    ease((burn ? 4 : 1.2) + .6 * h, burn ? 'the passing curse burnt out' : 'the passing curse broken (' + how + ')');
+    clearInk();
+    floatText(x, y, z + 56, burn ? 'THE CURSE BURNS OUT' : 'THE CURSE BREAKS', '#FFE2A0', burn ? 21 : 18); floatText(x, y, z + 36, HOW[how] || '', '#E8D0A0', 11);
+    slowmo = Math.max(slowmo, burn ? 1.1 : .75); flashT = Math.max(flashT, .2); hitstop = Math.max(hitstop, .12); shakeMag = Math.max(shakeMag, burn ? 11 : 8); zoom = Math.max(zoom, .05);
+    fx.push({ kind: 'ring', x, y, z: 2, t: .7, max: .7, r: 150 + 22 * h, col: '#FFD27A', flat: 1 }); fx.push({ kind: 'ring', x, y, z, t: .4, max: .4, r: 60, col: '#FFFFFF' });
+    burst(x, y, z, ['#FFE6A0', '#FFD27A', '#FFFFFF', '#D8AA55'], (lite() ? 16 : 30) + 5 * h, 'spark', 0, true);
+    burst(x, y, z, ['#0C080E', '#3A3240'], 10, 'goo', 0, true);
+    for (let i = 0, N = lite() ? 14 : 30; i < N; i++) parts.push({ x: x + rand(-110, 110), y: y + rand(-14, 14), z: rand(120, 230), vx: rand(-20, 20), vy: 0, vz: rand(-60, 10), life: rand(.9, 1.6), max: 1.6, col: pick(['#FFE6A0', '#FFD27A', '#FFF4D8', '#D8AA55']), size: rand(2, 3.6), shape: 'star', rot: 0, vr: rand(-6, 6) }); // (gold rain)
+    sfx('learned'); sfx('break'); tn(523, .5, 'triangle', .06); tn(659, .5, 'triangle', .05, 0, .07); tn(784, .8, 'triangle', .05, 0, .14); if (burn) tn(1047, 1, 'sine', .05, 0, .24);
+    if (e) graftsFly(e);
+    L.cStat.broke++; if (burn) L.cStat.burnt++; L.cStat.last = how;
+  }
+  function graftsFly(e) { // (torn off it, they tumble away grey and are gone)
+    const ch = e.cChain || []; if (!ch.length) return;
+    ch.forEach((g, i) => { const sl = GSLOT[i % 3], k = carScale(e); hazards.push({ kind: 'armorbit', fn: () => graftPiece(g, e), x: e.x + sl[0] * e.cBase.hw * k * e.facing, y: e.y + rand(-3, 3), z: e.z - sl[1] * e.cBase.hh * k,
+      vx: rand(-240, 240), vz: rand(260, 400), rot: 0, vr: rand(-11, 11), sc: k, facing: e.facing, t: 1.5, max: 1.5, bounced: 0, fading: 1 }); });
+  }
+  // ---------------- the wisp, between hosts ----------------
+  function pickHost(w) {
+    let best = null, bd = CAR.RANGE;
+    for (const o of enemies) { if (o.dead || o.cursed || o.boss || o.cNoCurse || o === w.from || !EDEF[o.type] || o.remove) continue;
+      if (o.x < camX - 40 || o.x > camX + VW + 40) continue; const d = Math.hypot(o.x - w.x, (o.y - w.y) * 1.5); if (d < bd) { bd = d; best = o; } }
+    return best;
+  }
+  function pickCorpse(w) {
+    let best = null, bd = 420;
+    for (const c of corpses) { if (c.boss || !EDEF[c.type] || c.pform || c.cGone) continue; const d = Math.hypot(c.x - w.x, (c.y - w.y) * 1.5); if (d < bd) { bd = d; best = c; } }
+    return best;
+  }
+  const wispGoal = (w) => w.tg ? [w.tg.x - w.tg.facing * w.tg.hw * .6, w.tg.y, w.tg.z + w.tg.hh * .95] : w.co ? [w.co.x, w.co.y, 10] : [P.x, P.y, 0];
+  function wispStep(w, dt) {
+    w.t += dt; w.trT -= dt; if (w.trT <= 0) { w.trT = .03; w.tr.push([w.x, w.y - w.z]); if (w.tr.length > 10) w.tr.shift(); }
+    if (w.ph === 'out') { // (tearing free: rimmed in gold, open to a blow)
+      const k = w.t / CAR.OUT; w.z = w.z0 + 16 * sm(k); w.x += Math.sin(w.t * 40) * .6;
+      if (playerHits(w.x, w.y, w.z - 12, 14, 26)) { w.done = true; breakCurse(w.x, w.y, w.z, w.hops, 'wisp', null); return; }
+      if (w.t >= CAR.OUT) launch(w);
+      return;
+    }
+    if (w.ph === 'fly') {
+      if (w.tg && (w.tg.dead || w.tg.cursed)) { w.tg = null; const o = pickHost(w); if (o) w.tg = o; else { w.co = pickCorpse(w); } }
+      if (w.co && (w.co.cGone || !corpses.includes(w.co))) w.co = null;
+      const k = cl01(w.t / w.dur), u = sm(k), [gx, gy, gz] = wispGoal(w);
+      w.x = w.sx + (gx - w.sx) * u; w.y = w.sy + (gy - w.sy) * u; w.z = w.sz + (gz - w.sz) * u + Math.sin(Math.PI * k) * w.arc;
+      if (playerHits(w.x, w.y, w.z - 12, 14, 26)) { w.done = true; breakCurse(w.x, w.y, w.z, w.hops, 'wisp', null); return; }
+      if (k >= 1) { w.done = true; if (w.tg && !w.tg.dead && !w.tg.cursed) possess(w.tg, w); else if (w.co && corpses.includes(w.co)) raise(w.co, w); else startShade(w); }
+    }
+  }
+  function launch(w) {
+    w.ph = 'fly'; w.t = 0; w.sx = w.x; w.sy = w.y; w.sz = w.z;
+    w.tg = pickHost(w); if (!w.tg) w.co = pickCorpse(w);
+    const [gx, gy] = wispGoal(w), d = Math.hypot(gx - w.x, gy - w.y); w.dur = clamp(.8 + d / 900, .8, 1.2) * CAR.FLY; w.arc = 70 + Math.min(110, d * .25);
+    sfx('whoosh'); tn(196, .7, 'triangle', .035, 98);
+  }
+  function possess(o, w) {
+    const h = Math.min(CAR.CAP, w.hops + 1);
+    curseFoe(o, 'carrier'); o.cHops = h; o.cChain = w.chain; o.cArmSaid = 0; applyHop(o);
+    o.flash = .2; o.jit = .45; o.sqx = 1.35; o.sqy = .72; o.state = 'hurt'; o.t = .4; o.plan = null; o.vx = 0;
+    feed(.6 + .2 * h, 'the curse passes on (' + h + ')'); L.cStat.hops++;
+    burst(o.x, o.y, o.hh * .8, ['#0C080E', '#3A3240', '#8A2030', '#77727C'], 18, 'goo', 0, true); fx.push({ kind: 'ring', x: o.x, y: o.y, z: 2, t: .4, max: .4, r: 50 + 6 * h, col: '#3A3240', flat: 1 });
+    sfx('growl'); tn(82, .6, 'sawtooth', .06, 55); shakeMag = Math.max(shakeMag, 3 + h);
+    if (h >= CAR.CAP) chimera(o);
+    else if (!L.carSaid) { L.carSaid = true; floatText(o.x, o.y, o.hh + 56, 'THE CURSE PASSES ON', '#D8D0DC', 15); }
+    else floatText(o.x, o.y, o.hh + 46, 'IT PASSES ON · ' + h, '#C8C2CC', 12);
+  }
+  function chimera(o) {
+    o.cChim = 1; banner('CHIMERA OF THE CURSE', 'IT WEARS EVERY HOST IT HAS TAKEN · BRING IT DOWN AND THE CURSE BURNS OUT', 2.6);
+    sfx('roar'); shakeMag = Math.max(shakeMag, 9); flashT = Math.max(flashT, .08); o.cAtkT = 1.6;
+  }
+  function raise(co, w) { // (the dead get up wrong)
+    const i = corpses.indexOf(co); if (i < 0) return startShade(w);
+    const c = spawnEnemy(co.type, 1, false); if (!c) return startShade(w);
+    corpses.splice(i, 1); co.cGone = 1;
+    c.x = co.x; c.y = co.y; c.z = 0; c.facing = Math.sign(P.x - co.x) || co.facing; c.dropWeapon = null; c.cRisen = 1; c.cRise = .9; c.state = 'hurt'; c.t = .9; c.cd = 1.6; c.plan = null;
+    if (c.elite) { c.elite = false; c.guard = c.guardMax = 0; } c.cMask = null;
+    curseFoe(c, 'carrier'); c.cBase.hp = Math.round(c.cBase.hp * .7);
+    possess(c, w); c.state = 'hurt'; c.t = .9; L.cStat.risen++;
+    floatText(c.x, c.y, c.hh + 70, 'THE DEAD GET UP WRONG', '#C8C2CC', 13); sfx('crunch');
+    waveActive = true; if (lockX === null) lockX = clamp(camX, 0, stage.len - VW);
+  }
+  // ---------------- his own shadow, taken ----------------
+  function startShade(w) {
+    if (!P || P.state === 'dead') return;
+    const h = Math.min(CAR.CAP, w.hops + 1);
+    if (L.shade) { L.shade.hops = Math.max(L.shade.hops, h); L.shade.dur += 2; return; }
+    L.shade = { t: 0, rise: .9, dur: CAR.SHADE, hops: h, x: P.x, y: P.y, z: 0, f: P.facing, pose: playerPose(), atkT: 1.7, wind: 0, seed: Math.random() };
+    feed(.6 + .2 * h, 'the curse took his shadow'); L.cStat.shades++;
+    floatText(P.x, P.y, 124, 'IT TAKES HIS OWN SHADOW', '#D8D0DC', 14); sfx('growl'); tn(73, 1, 'sawtooth', .06, 49);
+  }
+  function shadeStep(S, dt) {
+    S.t += dt; const q = L.rec[Math.max(0, L.rec.length - 13)];
+    if (q) { S.x += (q.x - S.x) * Math.min(1, dt * 7); S.y += (q.y - S.y) * Math.min(1, dt * 7); S.z = q.z; S.f = q.f; S.pose = q.pose; }
+    if (S.t > .3 && playerHits(S.x, S.y, S.z, 14, 60)) { L.shade = null; breakCurse(S.x, S.y, 40, S.hops, 'shadow', null); return; }
+    if (S.t >= S.dur || P.state === 'dead') { L.shade = null; feed(1.2 + .3 * S.hops, 'his shadow kept the curse'); L.cStat.sank++; floatText(P.x, P.y, 110, 'IT SINKS BACK INTO HIM', '#A898B0', 12);
+      burst(S.x, S.y, 30, ['#0C080E', '#3A3240'], 14, 'goo'); return; }
+    if (S.t < S.rise) return;
+    if (S.wind > 0) { S.wind -= dt; if (S.wind <= 0) { S.atkT = rand(1.1, 1.5); sfx('swing');
+        fx.push({ kind: 'slash', x: S.x + S.f * 20, y: S.y, z: 40, ang: rand(-.4, .4), t: .2, max: .2, size: 44, col: '#3A1A24' });
+        if (Math.abs(P.x - S.x) < 52 && Math.abs(P.y - S.y) < 20 && P.z < 36) playerDamage(Math.max(4, Math.round(maxHp() * (.05 + .01 * S.hops))), S.x, false); } }
+    else { S.atkT -= dt; if (S.atkT <= 0) { S.wind = .5; sfx('growl', .4); } }
+  }
+  function carrierStep(dt) {
+    for (const w of L.wisps) wispStep(w, dt);
+    L.wisps = L.wisps.filter(w => !w.done);
+    if (L.shade) shadeStep(L.shade, dt);
+  }
+  // its puddles drag at his feet (not while he dodges or is off the ground)
+  { const _up = updatePlayer; updatePlayer = function (dt) {
+    const x0 = P ? P.x : 0, y0 = P ? P.y : 0; const r = _up(dt);
+    if (!NG() || !P || P.state === 'dodge' || P.z > 4 || !hazards.length) return r;
+    for (const h of hazards) if (h.kind === 'cink' && h.t > .25 && Math.hypot(P.x - h.x, (P.y - h.y) * 3.2) < h.r) {
+      P.x = x0 + (P.x - x0) * .5; P.y = y0 + (P.y - y0) * .5;
+      if (Math.abs(P.x - x0) > .2 && Math.random() < .25) parts.push({ x: P.x + rand(-6, 6), y: P.y, z: 1, vx: rand(-30, 30), vy: 0, vz: rand(40, 90), life: .35, max: .35, col: pick(['#1A141E', '#4A424E']), size: rand(1.5, 3), shape: 'blob', rot: 0, vr: 0 });
+      break; }
+    return r; }; }
+  // ---------------- what it looks like ----------------
+  function wispArt(x, y, r, t, o) { // a knot of ink with eyes in it, a thread of ink trailing; rimmed in gold while it can be broken
+    const sd = o.seed || 0; ctx.save(); ctx.lineCap = 'round';
+    const tr = o.tr; if (tr && tr.length > 1 && !lite()) { const n = tr.length; for (let i = 1; i < n; i++) { const a = tr[i - 1], b = tr[i], k = i / n; ctx.strokeStyle = `rgba(12,8,14,${.12 + .6 * k})`; ctx.lineWidth = Math.max(.6, r * .6 * k); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+      const a = tr[n - 1]; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(x, y); ctx.lineWidth = r * .6; ctx.strokeStyle = 'rgba(12,8,14,.72)'; ctx.stroke(); }
+    if (o.open) { const g = .5 + .5 * Math.sin(t * 22); ctx.fillStyle = `rgba(255,210,120,${.16 + .14 * g})`; circle(x, y, r * 2.1); ctx.fill(); }
+    ctx.beginPath(); for (let j = 0; j <= 9; j++) { const an = j / 9 * TAU, rr = r * (1 + .2 * Math.sin(t * 5 + j * 2.1 + sd * 7)), px = x + Math.cos(an) * rr, py = y + Math.sin(an) * rr * .86; if (j) ctx.lineTo(px, py); else ctx.moveTo(px, py); } ctx.closePath();
+    ctx.fillStyle = '#0B070D'; ctx.fill(); ctx.lineWidth = Math.max(.8, r * (o.open ? .2 : .12)); ctx.strokeStyle = o.open ? `rgba(255,214,120,${.65 + .35 * Math.sin(t * 22)})` : 'rgba(150,140,152,.62)'; ctx.stroke();
+    if (!lite()) { ctx.strokeStyle = 'rgba(14,10,16,.72)'; ctx.lineWidth = Math.max(.6, r * .22); ctx.beginPath();
+      for (let j = 0; j < 3; j++) { const an = Math.PI * (.3 + j * .2) + Math.sin(t * 3 + j + sd) * .3, x1 = x + Math.cos(an) * r * .85, y1 = y + Math.sin(an) * r * .75; ctx.moveTo(x1, y1); ctx.quadraticCurveTo(x1 + Math.cos(an + 1) * r * .8, y1 + r * .7, x1 + Math.sin(t * 4 + j) * r * .5, y1 + r * 1.5); } ctx.stroke(); }
+    const bl = (t * .31 + sd) % 1 < .04 ? .15 : 1;
+    for (const s of [-1, 1]) { const ex = x + s * r * .36, ey = y - r * .1; ctx.fillStyle = o.open ? '#FFF2D0' : '#D8D0D8'; ctx.beginPath(); ctx.ellipse(ex, ey, r * .21, r * .13 * bl, s * -.3, 0, TAU); ctx.fill();
+      ctx.fillStyle = `rgba(232,40,48,${.85 + .15 * Math.sin(t * 7)})`; circle(ex, ey, r * .085); ctx.fill(); }
+    ctx.restore();
+  }
+  const GSLOT = [[-.55, -.8, -.6], [.48, -.74, .62], [-.04, -1.02, -.08]]; // (where the grafts grow, in its own drawing: the back shoulder, the front one, the crown)
+  function graftDraw(g, t, atk) { // (a host worn: its upper half, its own drawing, greyed; the cut at 0,0)
+    const ga = { walk: 0, t, wind: 0, atk: !!atk, hurt: false }; if (g.draw === 'knight' || g.draw === 'colossus' || g.draw === 'human') ga.pose = humanEnemyPose(g.s);
+    ctx.save(); ctx.translate(0, g.hh * .5); ctx.beginPath(); ctx.rect(-g.hw * 4 - 40, -g.hh * 1.8 - 30, g.hw * 8 + 80, g.hh * 1.3 + 30); ctx.clip();
+    try { CREATURES[g.draw](g.s, ga); if (!LITE && !lite() && !FLASH && !TINT) { const tt = TINT; ctx.globalAlpha *= .6; TINT = '#77727C'; try { CREATURES[g.draw](g.s, ga); } finally { TINT = tt; } } } catch (err) { console.error(err); }
+    ctx.restore();
+  }
+  function graftScale(g, e) { return clamp(e.cBase.hh * .5 / Math.max(10, g.hh), .26, .72) * (e.cHops >= CAR.CAP ? 1.15 : 1); }
+  function graftPiece(g, e) { const s = graftScale(g, e); ctx.save(); ctx.scale(s, s); ctx.translate(0, g.hh * .4); graftDraw(g, now(), false); ctx.restore(); }
+  function seam(r) { // (where a graft is stitched on: a black seam, red stitches across it)
+    ctx.fillStyle = '#0C080C'; ctx.beginPath(); ctx.ellipse(0, 0, r, r * .42, 0, 0, TAU); ctx.fill();
+    if (FLASH || TINT) return; ctx.strokeStyle = 'rgba(200,40,50,.9)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(i * r * .36 - 1.5, -r * .5); ctx.lineTo(i * r * .36 + 1.5, r * .5); } ctx.stroke();
+  }
+  function wearGrafts(e, a, t, front) {
+    const ch = e.cChain; if (!ch || !ch.length) return; const B = e.cBase, n = (LITE || lite()) ? 1 : 3, list = ch.slice(-n);
+    list.forEach((g, j) => { const i = ch.length - list.length + j, sl = GSLOT[i % 3]; if ((i % 3 === 0) === front) return;
+      const sway = Math.sin(t * 2.3 + g.seed * 9) * .14 + (a.atk ? (i % 2 ? .45 : -.45) : 0) + (a.wind || 0) * -.3, s = graftScale(g, e);
+      ctx.save(); ctx.translate(sl[0] * B.hw, sl[1] * B.hh); ctx.rotate(sl[2] + sway);
+      ctx.save(); ctx.scale(s, s); graftDraw(g, t, a.atk); ctx.restore(); seam(Math.max(4, B.hw * .32)); ctx.restore(); });
+  }
+  { const _w = drawEnemy; drawEnemy = function (e, t) {
+    if (!NG() || !e || e.cTrait !== 'carrier' || !e.cBase || DBL_DRAW || (e.state === 'dying' && e.death && e.death !== 'pop')) return _w(e, t);
+    const k = carScale(e), hw = e.hw, hh = e.hh, B = e.cBase, rs = e.cRise > 0 ? sm(1 - e.cRise / .9) : 1, key = e.def.draw, o = CREATURES[key]; let done = false;
+    CREATURES[key] = function (en, a) { if (en !== e || done || TINT) return o(en, a); done = true; if (!e.dead) wearGrafts(e, a, t, false); o(en, a); if (!e.dead) wearGrafts(e, a, t, true); };
+    e.hw = B.hw; e.hh = B.hh; ctx.save();
+    ctx.translate(e.x, e.y); if (e.cRisen && !e.dead) ctx.rotate((1 - rs) * -1.2 * e.facing + Math.sin(t * 2.1) * .05 + (Math.sin(t * 13 + e.cid * 50) > .94 ? .12 * e.facing : 0)); ctx.scale(k, k * (.3 + .7 * rs)); ctx.translate(-e.x, -e.y); // (one of the risen: it gets up wrong and twitches)
+    try { _w(e, t); } finally { CREATURES[key] = o; e.hw = hw; e.hh = hh; ctx.restore(); }
+    if (e.dead || TINT || FLASH) return;
+    const h = e.cHops | 0, [sx, sy] = sigilAt(e);
+    wispArt(sx, sy, (6 + .9 * h) * Math.min(1.2, Math.sqrt(B.hh / 40)), t, { tr: e.cTr, seed: e.cid });
+    const my = e.y - e.z - e.hh - 10 * k - 12;
+    for (let i = 0; i < h; i++) circleMark(e.x + (i - (h - 1) / 2) * 10, my, 3, t + i); // (a mark of the Circle for every hop the curse has made)
+    if (e.cChim) { const w = 120, x = e.x - w / 2, y = my - 16; ctx.save(); ctx.fillStyle = 'rgba(10,6,12,.85)'; rrect(x - 2, y - 2, w + 4, 8, 3); ctx.fill(); ctx.fillStyle = '#A02838'; rrect(x, y, Math.max(0, w * e.hp / e.maxHp), 4, 2); ctx.fill();
+      ctx.textAlign = 'center'; ctx.font = '700 10px Cinzel, Georgia, serif'; ctx.lineWidth = 3; ctx.strokeStyle = '#0A060C'; ctx.strokeText('CHIMERA OF THE CURSE', e.x, y - 5); ctx.fillStyle = '#D8D0DC'; ctx.fillText('CHIMERA OF THE CURSE', e.x, y - 5); ctx.restore(); }
+  }; }
+  { const _ml = mechList; mechList = function (list, t) { _ml(list, t); if (!NG() || !P) return;
+    for (const w of L.wisps) {
+      if (w.ph === 'fly') { const [gx, gy] = wispGoal(w), k = cl01(w.t / w.dur); list.push([gy - .3, () => onMain(() => { ctx.save(); ctx.strokeStyle = `rgba(14,10,16,${.4 + .4 * k})`; ctx.lineWidth = 3; ell(gx, gy, 46 - 28 * k, (46 - 28 * k) * .3); ctx.stroke();
+        ctx.strokeStyle = `rgba(200,40,50,${.4 + .4 * Math.sin(t * 20)})`; ctx.lineWidth = 1.2; ell(gx, gy, 50 - 30 * k, (50 - 30 * k) * .3); ctx.stroke(); ctx.restore(); })]); } // (where it will land: a ring of ink closing)
+      list.push([w.y + .3, () => { ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.25)'; ell(w.x, w.y, 7, 2.2); ctx.fill(); ctx.restore(); wispArt(w.x, w.y - w.z, 8 + .6 * w.hops, t, { tr: w.tr, seed: w.seed, open: w.ph === 'out' || w.t < .25 }); }]); }
+    const S = L.shade; if (S) { const a = S.t < S.rise ? S.t / S.rise : Math.min(1, (S.dur - S.t) / .4);
+      list.push([P.y - .2, () => onMain(() => { ctx.save(); ctx.fillStyle = `rgba(8,4,10,${.55 * (S.t < S.rise ? 1 - a * .4 : .6)})`; ell(P.x - P.facing * 4, P.y + 2, 22 + 18 * (S.t < S.rise ? a : 1), 6); ctx.fill(); ctx.restore(); })]); // (his shadow, gone black under him)
+      if (S.t > .15) list.push([S.y - .04, () => onMain(() => { ctx.save(); const tt = TINT; TINT = S.wind > 0 && Math.floor(t * 20) % 2 ? '#5A1018' : '#0C070E';
+        if (S.t < S.rise) { ctx.beginPath(); ctx.rect(S.x - 80, S.y - S.z - 120 * a, 160, 130 * a + 4); ctx.clip(); }
+        try { drawPlayerAt(S.x, S.y, S.z, S.f, Object.assign({}, S.pose || {}, { noCloak: 1 }), .88 * a); } finally { TINT = tt; }
+        for (const s of [-1, 1]) { ctx.fillStyle = S.wind > 0 ? '#FFD0C0' : 'rgba(232,40,48,.95)'; circle(S.x + S.f * 3 + s * 2.6, S.y - S.z - 60, 1.3); ctx.fill(); }
+        ctx.restore(); })]); }
+  }; }
+  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (!NG()) return;
+    for (const e of enemies) if (e.cTrait === 'carrier' && !e.dead) box(e.x, e.y, e.z, e.hw * 2 + 90, e.hh * 1.5 + 90);
+    for (const w of L.wisps) box(w.x, w.y, w.z, 40, 50); }; }
+  const CARRIER = { CAR, live: () => ({ get wisps() { return L.wisps; }, get shade() { return L.shade; }, get stat() { return L.cStat; } }), possess: (o, hops, from) => possess(o, { hops: (hops | 0) - 1, chain: from ? from.map(graftOf) : [] }), breakCurse, ripNow };
+
+  // ======================================================================================================
   // THE SHRINE ROOMS: behind a card gate, a font that washes the curse out (shadowrooms.js deals it)
   // ======================================================================================================
   if (typeof SR_KINDS !== 'undefined') {
@@ -1719,6 +2018,7 @@
     set: (v, h) => { if (!NG()) return null; const c = CS(); if (v != null) c.v = clamp(+v, 0, 100); if (h != null) c.horn = clamp(+h, 0, 100); return c; },
     boss: { FAM: BFAM, tier: bTier, fire: (k) => boss && boss.cB && bossFire(boss, k || boss.cB.set[0]), burn: () => boss && boss.cB && burnBack(boss), cad: B_CAD },
     feed, ease, tier, teff, hornSt, hornWords, hornNotes, onHornBlow, fxAmt,
+    carrier: CARRIER,
     fx: (k, dur) => NG() ? startFx(k, dur) : null, road: makeRoad, burnAt, curseFoe, corruptItem, cleanseAll, finalHigh, isCursedEnd,
     dev: { heart() { if (!NG()) return; const c = CS(); c.endCyc = save.cycle | 0; c.endHigh = true; c.heartDone = false; if (isFinal(stageIdx)) startHeart(); return 'heart'; },
       endHigh(on) { const c = CS(); c.endCyc = save.cycle | 0; c.endHigh = !!on; c.heartDone = false; persist(); return on; },
