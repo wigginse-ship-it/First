@@ -427,6 +427,8 @@
   // ---------------- cursed loot: black shards that pay well and stain ----------------
   function clootStep(dt) {
     for (const k of L.cloot) { k.t += dt; if (k.z > 0 || k.vz > 0) { k.vz -= GRAV * dt; k.z = Math.max(0, k.z + k.vz * dt); if (k.z === 0) k.vz = 0; }
+      k.x = clamp(k.x, leftWall() + 12, rightWall() - 12); k.y = clamp(k.y, FLOOR_TOP + 6, FLOOR_BOT); // (where he can reach it, and drawn to him when he is near, like any loot)
+      { const dd = Math.hypot(P.x - k.x, (P.y - k.y) * 1.5); if (k.t > .6 && dd < 80) { k.x += (P.x - k.x) * Math.min(1, dt * 9); k.y += (P.y - k.y) * Math.min(1, dt * 9); } }
       if (k.t > .6 && !k.got && Math.hypot(P.x - k.x, (P.y - k.y) * 1.5) < 16 && P.state !== 'dead') { k.got = true; const n = Math.round(30 * (1 + stageIdx * .6) * (1 + .5 * save.cycle)); save.shards += n; runShards += n;
         floatText(P.x, P.y, 86, '+' + n + ' BLACK SHARDS', '#B8A8C0', 13); sfx('pick'); burst(P.x, P.y, 30, ['#1A1018', '#5A4A60', '#8A2030'], 10, 'spark'); feed(WT.cloot, 'cursed loot taken');
         if (teff() >= 3 && Math.random() < .3) maybeCorruptItem(true); refreshHud(); }

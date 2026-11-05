@@ -502,14 +502,14 @@ const BIG_HEART = { heal: .5, foe: .02, elite: .06, champ: .15, phase: .3, boss:
 function updateLoot(dt) {
   for (const k of loot) {
     k.t += dt;
-    k.x = clamp(k.x, leftWall() + 12, rightWall() - 12); // loot never lands outside where you can walk
+    k.x = clamp(k.x, leftWall() + 12, rightWall() - 12); k.y = clamp(k.y, FLOOR_TOP + 6, FLOOR_BOT); // loot never lands outside where you can walk (along the street or across it)
     if (k.z > 0 || k.vz > 0) { k.vz -= GRAV * dt; k.z = Math.max(0, k.z + k.vz * dt); k.x += k.vx * dt; if (k.z === 0) { k.vz = Math.abs(k.vz) > 120 ? -k.vz * .4 : 0; k.vx *= .5; } }
     const d = Math.hypot(P.x - k.x, (P.y - k.y) * 1.5);
     if (P.state === 'dead' || k.t < .5) continue;
     if (k.kind === 'weapon') { if (d < 30) { k.got = true; gainWeapon(k.weapon, k.lvl); } continue; }
     if (k.kind === 'gear') { if (d < 30) k.got = pickGear(k); continue; } // armor: worn at once if the slot is empty, otherwise into the bag
     if (k.kind === 'arrow') { if (d < 36) { k.got = true; if ((save.arrows || 0) < ARROW_MAX) gainArrow(); } continue; }
-    if (k.kind === 'power') { if (k.t > 8) { k.got = true; continue; } if (d < 22) { k.got = true; gainPower(k.power); } continue; } // grab it before it fades
+    if (k.kind === 'power') { if (k.t > 8) { k.got = true; continue; } if (d < 50) { k.x += (P.x - k.x) * Math.min(1, dt * 6); k.y += (P.y - k.y) * Math.min(1, dt * 6); } if (d < 24) { k.got = true; gainPower(k.power); } continue; } // grab it before it fades (it drifts to you once you are close)
     if (d < 80) { k.x += (P.x - k.x) * Math.min(1, dt * 9); k.y += (P.y - k.y) * Math.min(1, dt * 9); }
     if (d < 14) {
       k.got = true; sfx('pick');
