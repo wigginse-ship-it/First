@@ -680,7 +680,7 @@ async function importFromGitHub() {
 }
 $("h-gh").onclick = importFromGitHub;
 $("h-log").onclick = async () => {
-  try { const r = await fetch("transcript.json?v=" + Date.now()); if (!r.ok) throw 0; doImport(await r.text()); }
+  try { const r = await fetch("transcript.json?v=" + Date.now()); if (!r.ok) throw 0; chats = chats.filter(c => c.id !== "i-build-log"); doImport(await r.text()); }
   catch { $("h-msg").textContent = "⚠ Couldn't load the build log"; }
 };
 $("h-import").onclick = () => $("h-file").click();
