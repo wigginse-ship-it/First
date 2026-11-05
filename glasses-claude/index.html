@@ -207,6 +207,8 @@
     <input id="s-lang" placeholder="en-US">
     <label for="s-size">Text size</label>
     <select id="s-size"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select>
+    <label for="s-share">Share history between chats in the same project</label>
+    <select id="s-share"><option value="0">Off</option><option value="3000">Small (about 750 words)</option><option value="6000">Medium (about 1,500 words)</option><option value="12000">Large (about 3,000 words)</option></select>
     <label for="s-sys">Instructions for Claude</label>
     <textarea id="s-sys" rows="4"></textarea>
     <label for="s-pin">Lock PIN (optional — asked each time the app opens or you tap Lock)</label>
@@ -238,7 +240,7 @@ const DEFAULT_SYS = "You are replying on the small heads-up display of smart gla
   "Lead with the answer; only elaborate if asked.";
 
 let settings = Object.assign({ model:"claude-sonnet-5-5", auto:"1", send:"1", rate:"1", voice:"", lang:"en-US",
-  size:"medium", sys:DEFAULT_SYS, pin:"" }, LS.get("gc.settings", {}));
+  size:"medium", sys:DEFAULT_SYS, pin:"", share:"6000" }, LS.get("gc.settings", {}));
 let chats = LS.get("gc.chats", []);            // [{id,title,updated,messages:[{role,content}]}]
 const DEFAULT_SKILLS = [
   { id:"s1", name:"Summarize this chat", prompt:"Summarize our conversation so far in three short bullets." },
@@ -255,6 +257,19 @@ function buildSystem() {
   let sys = settings.sys || DEFAULT_SYS;
   const proj = DB.projects.find(p => p.id === (current && current.projectId));
   if (proj) sys += "\n\nCurrent project: " + proj.name + (proj.instructions ? "\n" + proj.instructions : "");
+  const budget = parseInt(settings.share, 10) || 0;
+  if (proj && budget) {
+    const clip = (t, n) => t.length > n ? t.slice(0, n) + "…" : t;
+    let ctx = "", used = 0;
+    const others = chats.filter(c => c.projectId === proj.id && c !== current).sort((a, b) => b.updated - a.updated);
+    for (const c of others) {
+      let block = "- " + clip(c.title, 60) + "\n";
+      for (const m of c.messages) block += "  " + (m.role === "user" ? "User: " : "Assistant: ") + clip(m.content.replace(/\s+/g, " "), 280) + "\n";
+      if (used + block.length > budget) { if (!ctx) ctx = clip(block, budget); break; }
+      ctx += block; used += block.length;
+    }
+    if (ctx) sys += "\n\nEarlier conversations in this project, newest first (use them as context; you may refer to them):\n" + ctx;
+  }
   if (DB.memory.length) sys += "\n\nThings the user has asked you to remember:\n" + DB.memory.map(m => "- " + m.text).join("\n");
   return sys;
 }
@@ -558,7 +573,7 @@ $("m-back").onclick = () => show("chat");
 const when = t => new Date(t).toLocaleString();
 const LIBS = {
   projects: { title: "Projects", add: ["Project name", "Instructions for Claude in this project"], hint: "Tap a project to make it active for new chats.",
-    items: () => DB.projects, label: x => x.name, sub: x => (DB.active === x.id ? "✔ active · " : "") + (x.instructions || "").slice(0, 60),
+    items: () => DB.projects, label: x => x.name, sub: x => (DB.active === x.id ? "✔ active · " : "") + chats.filter(c => c.projectId === x.id).length + " chats · " + (x.instructions || "").slice(0, 50),
     tap: x => { DB.active = DB.active === x.id ? null : x.id; LS.set("gc.active", DB.active); logAct("project", (DB.active ? "Active: " : "Cleared: ") + x.name); renderLib(); },
     create: (a, b) => { DB.projects.unshift({ id: uid(), name: a, instructions: b }); persist("projects"); logAct("project", "Created " + a); } },
   saved: { title: "Saved answers", add: null, hint: "Tap ★ in a chat to save an answer here.",
@@ -711,7 +726,7 @@ $("h-back").onclick = () => { renderMenu(); show("menu"); };
 $("h-new").onclick = newChat;
 
 /* ---------- settings ---------- */
-const FIELDS = { "s-model":"model","s-auto":"auto","s-send":"send","s-rate":"rate","s-voice":"voice","s-lang":"lang","s-size":"size","s-sys":"sys","s-pin":"pin" };
+const FIELDS = { "s-model":"model","s-auto":"auto","s-send":"send","s-rate":"rate","s-voice":"voice","s-lang":"lang","s-size":"size","s-share":"share","s-sys":"sys","s-pin":"pin" };
 function fillSettings() { loadVoices(); for (const [id, k] of Object.entries(FIELDS)) $(id).value = settings[k] ?? ""; }
 for (const [id, k] of Object.entries(FIELDS)) $(id).addEventListener("change", () => { settings[k] = $(id).value; saveSettings(); applySize(); });
 $("s-back").onclick = () => show("chat");
