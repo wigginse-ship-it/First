@@ -84,7 +84,7 @@
     if (DET()) { ctx.fillStyle = '#1A0808'; ell(x + .5 * s, y, .3 * s, .75 * s); ctx.fill(); ctx.fillStyle = '#FFF4D0'; circle(x + 1.1 * s, y - .4 * s, .35 * s); ctx.fill(); glowAt(x, y, 7 * s, rgb, hot ? .7 : .35); }
   }
   // palettes
-  const EMBER = '255,138,60', SULF = '240,196,90', BRUISE = '150,90,190';
+  let EMBER = '255,138,60', SULF = '240,196,90', BRUISE = '150,90,190'; // (let: the curse turns them, while it is drawn corrupted)
   const OBS = { base: '#140D1A', lit: '#3E2C52', dark: '#050308', sheen: '#E8D0F8', vein: '#FF8A3C' };
 
   // ======================================================================================================
@@ -1012,6 +1012,7 @@
       for (let c = 0; c < 3; c++) horn(p[0] + 6 + c * .4, p[1] - 3 + c * 1.6, p[0] + 10, p[1] - 2 + c * 1.5, p[0] + 12.5 + c * .3, p[1] + 1.3 + c * .2, 2.4, .3, far ? '#9A8C72' : TY.bone, .8);
     };
     leg(false, Math.PI, true); leg(true, 0, true);
+    if (TYC) tyWrongLegs(B, ph, moving, crouch, true);
     // the body: massive forequarters, a back sloping down to lean haunches; a mass of dark fur, the shape inside glowing through
     const body = furPath([28, B - 26, 40, B - 8, 36, B + 6, 24, B + 16, 10, B + 14, -6, B + 8, -20, B + 10, -36, B + 14, -48, B + 8, -52, B - 4, -44, B - 12, -28, B - 16, -10, B - 22, 6, B - 30, 18, B - 34], 6, 7);
     const breath = Math.sin(t * 1.8), heave = (down ? 1.6 : 1) * (howl > .3 ? 1.5 : 1); // its flanks heave with each breath
@@ -1031,7 +1032,9 @@
       cracks([[-6, B - 15, -9, B - 8, -6, B - 1, -8, B + 5], [6, B - 17, 3, B - 9, 6, B - 2], [3, B - 9, -1, B - 5], [16, B - 13, 14, B - 6, 16, B]], cl01(glow) * .5);
     } });
     ctx.restore();
+    if (TYC) tyWolfCurse(B, t, breath);
     leg(false, 0, false); leg(true, Math.PI, false);
+    if (TYC) tyWrongLegs(B, ph, moving, crouch, false);
     // the ruff: a great collar of fur and smoke standing up behind the head
     cel(furPath([16, B - 30, 14, B - 46, 24, B - 54, 36, B - 50, 44, B - 38, 42, B - 22, 30, B - 14, 20, B - 18], 6, 11), '#261C34', { d: 3.4, r: 1.6, w: 1.8, dark: TY.furDk, lite: '#8A6CB4', tex: () => {
       volume(B - 56, B - 12, 10, 48, 'rgba(170,140,230,.3)', 'rgba(0,0,0,.45)');
@@ -1059,7 +1062,7 @@
     ctx.fillStyle = C(TY.bone); for (let x = 10; x <= 34; x += 4.6) { poly([x, 3, x + 1.2, 9.4 + (x > 30 ? 3.4 : 0), x + 2.4, 3]); ctx.fill(); outline(.6); } // the upper fangs
     if (DET()) { ctx.strokeStyle = 'rgba(255,248,230,.85)'; ctx.lineWidth = .5; ctx.beginPath(); for (let x = 10; x <= 34; x += 4.6) { ctx.moveTo(x + 1.6, 3.6); ctx.lineTo(x + 1.3, 7.6 + (x > 30 ? 3 : 0)); } ctx.stroke(); } // a glint down each
     ctx.fillStyle = C('#0A0408'); ell(37.6, -2.6, 1.6, 1.1); ctx.fill(); // the nose
-    eyeRow([[17, -8.6, 1.2], [10, -10.6, 1], [3.6, -12, .82]], wind > .4 || howl > .3 || maw > .3, a.hurt);
+    eyeRow([[17, -8.6, 1.2], [10, -10.6, 1], [3.6, -12, .82], ...(TYC ? TY_EYES.slice(0, 1 + TYC.L.bt * 2) : [])], wind > .4 || howl > .3 || maw > .3, a.hurt);
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(1, -15); ctx.lineTo(21, -11); ctx.stroke(); // the brow, drawn down over the eyes
     horn(4, -14, 2, -26, -6, -34, 9, .6, '#261C34', 1.3, '#0A060E'); // the near ear
     ctx.restore();
@@ -1100,8 +1103,9 @@
       ctx.strokeStyle = 'rgba(110,90,80,.5)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(4, -4); ctx.quadraticCurveTo(10, 0, 16, -3); ctx.moveTo(3, 3); ctx.quadraticCurveTo(10, 4, 17, 2); ctx.stroke(); // the lines of the palm
       if (!far) { ctx.fillStyle = 'rgba(255,255,255,.6)'; ell(11, -6.4, 4.4, 1.2, -.1); ctx.fill(); } occlude(19, 0, 6, .25); // a glint of glaze on its back; the shadow at the knuckles
     } });
-    for (let i = 0; i < 4; i++) { // the fingers, long and jointed, with nails of black lacquer
-      const by = -6 + i * 4.2, L = [14, 16, 15, 12][i], sp = (i - 1.5) * .1, a1 = sp + curl * .9, a2 = sp + curl * 2.1;
+    const nf = TYC ? 4 + (TYC.L.bt >= 2 ? 1 : 0) + (TYC.L.bt >= 4 ? 1 : 0) : 4; // (corrupted: too many fingers)
+    for (let i = 0; i < nf; i++) { // the fingers, long and jointed, with nails of black lacquer
+      const by = -6 + i * 4.2 * 4 / nf, L = [14, 16, 15, 12, 17, 13][i], sp = (i - (nf - 1) / 2) * .1, a1 = sp + curl * .9, a2 = sp + curl * 2.1;
       const mx = 19 + Math.cos(a1) * L * .55, my = by + Math.sin(a1) * L * .55, tx = mx + Math.cos(a2) * L * .5, ty = my + Math.sin(a2) * L * .5;
       horn(19, by, mx, my, tx, ty, 4.4, 2.3, col, 1.1, dk);
       const ca = Math.cos(a2), sa = Math.sin(a2); horn(tx - ca * 1.5, ty - sa * 1.5, tx + ca * 2, ty + sa * 2 + .3, tx + ca * 4.6, ty + sa * 4.6 + .8, 2.3, .3, '#1A1016', .7);
@@ -1167,6 +1171,7 @@
     for (let i = 0; i < 9; i++) { const an = -Math.PI / 2 + (i - 4) * .4, x = hx + Math.cos(an) * 46, y = hy + Math.sin(an) * 46;
       if (hk < .2) { ctx.fillStyle = C(MK.robeDk); ell(x, y, 4, 5, an + Math.PI / 2); ctx.fill(); outline(.9); }
       else miniFace(x, y, 7.6 * hk, i % 2 ? -1 : 1, an + Math.PI / 2); }
+    if (TYC && hk >= .2) tyHaloWeep(hx, hy, t);
     // the mantle of darkness it hangs in, its hem fraying into smoke
     wisps([cx - 34 + sw, -4, 14, 5, cx - 8 + sw, -1, 12, 4, cx + 26 + sw, -2, 13, 5], t);
     const robe = PB([cx - 20, cy + 6, cx - 30, cy + 30, cx - 38 + sw * .4, -18, cx - 34 + sw, -2, cx - 16 + sw, -6, cx + sw, 2, cx + 16 + sw, -5, cx + 30 + sw, 0, cx + 36 + sw * .4, -20, cx + 28, cy + 32, cx + 20, cy + 6]);
@@ -1219,8 +1224,10 @@
     if (DET()) { ctx.strokeStyle = 'rgba(150,40,40,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(mx - mw + 1, cyc - 1); ctx.quadraticCurveTo(mx, top - 2, mx + mw - 1, cyc - 1); ctx.stroke(); } // the painted lip
     if (shut) { ctx.strokeStyle = C(MK.giltDk); ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = -2; i <= 2; i++) { const x = mx + i * mw * .36; ctx.moveTo(x, cyc - 3); ctx.lineTo(x + .6, cyc + 3); } ctx.stroke(); } // stitched shut with gold
     maskWard(fx, mx, cyc, wo, t);
+    if (TYC) tyMaskCurse(fx, t);
     ctx.restore();
     if (!live) maskHand(48, -30 - bob, -1.25, .35, 1, false);
+    if (TYC && TYC.L.bt >= 2) { maskHand(-30, -6 - bob * .5, -2.6, .7 + .2 * Math.sin(t * 1.3), .6, false); if (TYC.L.bt >= 4 || TYC.L.surge) maskHand(34, -4 + bob * .5, -.6, .8 + .2 * Math.sin(t * 1.1 + 2), .55, false, -1); } // (more hands than it should have, clutching at its mantle)
     ctx.restore();
   }
   // ---------------------------------------------------------------- the Drake of the Courts
@@ -1335,6 +1342,7 @@
       ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 9; i++) { const x = -22 + (i * 17) % 34, y = -10 + (i * 5) % 6; ctx.moveTo(x - 2.6, y); ctx.quadraticCurveTo(x, y + 2.2, x + 2.6, y); } ctx.stroke();
     } });
     cracks([[-16, 4, -8, 6, 0, 5], [-22, 1, -18, 4]], .55); // the fire inside, showing through the belly
+    if (TYC) tyDrakeCurse(t, down);
     leg(false);
     // the neck: long and swan-curved, maned with plumes of ember; thrust out straight for a lunge, drawn back to rear
     const H = [54 + lunge * 16 - rear * 10 + (swoop ? 10 : 0), -26 + lunge * 22 - rear * 10 + Math.sin(t * .9) * 1.2 + (down ? 26 : 0) + (swoop ? 18 : 0) - beat * 1.5 * stroke];
@@ -1347,6 +1355,7 @@
       ctx.strokeStyle = 'rgba(216,160,64,.55)'; ctx.lineWidth = .8; ctx.beginPath(); for (let k = 4; k < nk.L.length - 2; k += 4) { ctx.moveTo(nk.L[k], nk.L[k + 1]); ctx.lineTo(nk.M[k] * .5 + nk.L[k] * .5, nk.M[k + 1] * .5 + nk.L[k + 1] * .5 - 1); } ctx.stroke();
     } });
     if (hot) glowAt(nk.L[12], nk.L[13], 14, EMBER, .25 + .35 * Math.max(flameW, flaming ? 1 : 0)); // the throat kindling
+    if (TYC) CURSE_ART.bigEye(nk.M[10], nk.M[11] + 1, 6.5, TYC.L, { lid: DR.hide, look: TYC.look, seed: 4 }); // (corrupted: its weak point, an eye in its throat)
     // the head: crested, with a hooked beak of gilt horn and fangs in the jaw below
     const hr = .12 + lunge * .45 - rear * .35 - howl * .25 + (down ? .5 : 0) + (swoop ? .1 : 0) - pitch * .35, open = Math.max(maw * .9, howl * .8, flaming ? .85 : flameW * .3, a.atk ? .5 : 0, swoop ? .35 : 0, .05 + Math.sin(t * .9) * .03);
     ctx.save(); ctx.translate(H[0], H[1]); ctx.rotate(hr);
@@ -1366,7 +1375,7 @@
     else emberEye(5, -3.6, 1.1, hot || wind > .4 ? '#FFF0A8' : TY.eye, SULF, hot);
     ctx.strokeStyle = C(OUT); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-1, -7.6); ctx.quadraticCurveTo(5, -9.4, 10, -6.4); ctx.stroke(); // the brow, drawn down over the eye
     ctx.restore();
-    ctx.save(); ctx.translate(SH[0], SH[1]); ctx.rotate(sweep + wr); ctx.scale(1, 1 + .2 * bank); drakeWing(false, beat, fold, hot); ctx.restore();
+    ctx.save(); ctx.translate(SH[0], SH[1]); ctx.rotate(sweep + wr); ctx.scale(1, 1 + .2 * bank); drakeWing(false, beat, fold, hot); if (TYC) tyWingEyes(beat, fold, t); ctx.restore();
     if (dazed) { // knocked silly: embers wheeling round its head
       const hx = H[0] + 2, hy = H[1] - 16;
       for (let i = 0; i < 4; i++) { const an = t * 5.5 + i * TAU / 4, x = hx + Math.cos(an) * 15, y = hy + Math.sin(an) * 4.5, s = 2.4 + (Math.sin(an) + 1) * .9;
@@ -1382,10 +1391,88 @@
     add(() => { const g = ctx.createRadialGradient(0, -40, 2, 0, -40, R * 1.4); g.addColorStop(0, `rgba(${BRUISE},.6)`); g.addColorStop(1, `rgba(${BRUISE},0)`); ctx.fillStyle = g; ctx.fillRect(-R * 1.5, -40 - R * 1.5, R * 3, R * 3); });
     eyeRow([[-8, -46, .9], [10, -38, 1], [2, -52, .7], [-12, -32, .6]], true, false);
   }
+  // ---------------------------------------------------------------- CORRUPTED (New Game+: window.CURSE_ART, corruption.js)
+  // Its shapes come back wrong. Its colours go to the Circle's (black, ash and blood: its palettes are turned while it is
+  // drawn corrupted), and each shape keeps something it should not have, more of it as the curse deepens:
+  //   the wolf grows too many legs (thin and jointed high like a spider's, twitching), too many eyes up its skull, bones
+  //   through its back; its weak point is an eye in its flank, shut under a lid of fur until the mark opens;
+  //   the drake keeps the wolf: its jaws jut from the drake's breast and snap, two wolf legs dangle from its belly, eyes
+  //   open in the membranes of its wings; its weak point is an eye in its breast;
+  //   the mask cracks, black, and down its middle a crack that opens: something looks out of it (its weak point); the
+  //   faces round its aureole weep black, and it has more hands than it should, with too many fingers.
+  const TY_C = { fur: '#140C10', furDk: '#050304', furLit: '#5A3440', smoke: '#160A0E', bone: '#C8BCA6', boneDk: '#6E6252', boneLit: '#F0E6D2', eye: '#FF3A2A', maw: '#1A0206' };
+  const DR_C = { hide: '#1A0E16', hideDk: '#070306', hideLit: '#5A2E40', mem: '#200A14', memDk: '#0A0306', memLit: '#6A2236', pin: '#140A12', pinLit: '#4A2A3A', ember: '#E8303A', gold: '#6A4A2A', goldDk: '#2A1A10', goldLit: '#A88A5A', beak: '#5A4632', claw: '#C8BCA6' };
+  const MK_C = { glaze: '#A9A598', glazeDk: '#5E5A50', glazeLit: '#D8D4C6', gilt: '#5A4A2E', giltDk: '#2A2016', gold: '#5E4A28', goldLit: '#9A8456', umber: '#2A1012', robe: '#0E080C', robeDk: '#040204', robeLit: '#3A2430', hole: '#050203' };
+  const TY_EYES = [[23.5, -5.4, .7], [-2.4, -13, .7], [13.4, -13, .6], [27.6, -3.6, .55], [-6.4, -8.6, .62], [7.4, -15.4, .5], [20.4, -10.6, .5], [-1, -7, .5], [31, -1.6, .45]];
+  let TYC = null; // (set while it is drawn corrupted: { L, k, m, look, t })
+  function tyCursed(e, a, L, ph) {
+    const k = Math.min(1, .5 + .5 * L.d) * (.3 + .7 * L.g), keep = [Object.assign({}, TY), Object.assign({}, DR), Object.assign({}, MK), EMBER, SULF, BRUISE];
+    for (const [O, Z] of [[TY, TY_C], [DR, DR_C], [MK, MK_C]]) for (const f in Z) O[f] = CURSE_ART.mix(O[f], Z[f], k);
+    EMBER = '232,52,48'; SULF = '255,96,70'; BRUISE = '120,24,44';
+    TYC = { L, k, m: CURSE_ART.morph(e, ph), look: CURSE_ART.toward(e), t: L.T, ph };
+    try { CREATURES.tyiga(e, a); } finally { Object.assign(TY, keep[0]); Object.assign(DR, keep[1]); Object.assign(MK, keep[2]); EMBER = keep[3]; SULF = keep[4]; BRUISE = keep[5]; TYC = null; }
+  }
+  // the wolf's extra legs: thin, jointed high above its back like a spider's, twitching (the far ones first)
+  function tyWrongLegs(B, ph, moving, crouch, far) {
+    const bt = TYC.L.bt, n = 1 + (bt >= 3 ? 1 : 0) + (bt >= 4 || TYC.L.surge ? 1 : 0), t = TYC.t;
+    for (let i = 0; i < n; i++) { if ((i % 2 === 0) !== far) continue;
+      const hx = [-8, 6, -22][i], hy = B + 6, s = Math.sin(ph * 1.3 + i * 2.1) * moving, tw = Math.sin(t * 9 + i * 3) * .8 * Math.max(0, Math.sin(t * 1.7 + i));
+      const col = far ? '#0A0608' : TY.fur, K = [hx - 6 + s * 4, B - 36 + crouch * 6 + tw], W = [hx + 16 + s * 8, -20], Pp = [hx + 12 + s * 10, -1.5];
+      seg(hx, hy, K[0], K[1], 7.5, 4.4, col, 1); seg(K[0], K[1], W[0], W[1], 4.4, 3, col, .5); seg(W[0], W[1], Pp[0], Pp[1], 3, 2.2, col, 0);
+      fillCirc(K[0], K[1], 2.6, far ? '#3A3028' : TY.boneDk); if (DET()) fillCirc(K[0] + .6, K[1] - .8, 1.1, TY.bone);
+      for (let c = 0; c < 2; c++) horn(Pp[0] + 1, Pp[1] - 2 + c * 1.4, Pp[0] + 5, Pp[1] - 1, Pp[0] + 7, Pp[1] + 1.2, 2, .3, far ? '#8A7E6A' : TY.bone, .7);
+    }
+  }
+  function fillCirc(x, y, r, col) { circle(x, y, r); ctx.fillStyle = C(col); ctx.fill(); outline(.7); }
+  // bones out through its back, and the eye in its flank (its weak point)
+  function tyWolfCurse(B, t, breath) {
+    const bt = TYC.L.bt, n = 2 + bt + (TYC.L.surge ? 2 : 0);
+    for (let i = 0; i < n; i++) { const u = i / Math.max(1, n - 1), x = lerp(-40, 14, u), y = lerp(B - 13, B - 31, u * u) + 3, l = 7 + 6 * hsh(i * 3.3) + bt * 1.5;
+      horn(x, y, x - 3, y - l * .6, x - 7 - hsh(i) * 4, y - l, 4.2, .4, TY.bone, .9, TY.boneDk); }
+    CURSE_ART.bigEye(-4, B - 3 + breath * .4, 9, TYC.L, { lid: TY.fur, look: TYC.look, seed: 3 });
+  }
+  // the drake, keeping the wolf: its jaws out of the drake's breast, two of its legs dangling, an eye in the breast (its weak point)
+  function tyDrakeCurse(t, down) {
+    const m = TYC.m, sn = Math.max(0, Math.sin(t * 3.4)) * .35 + .1;
+    for (const [x, o] of [[-8, 0], [2, 1.9]]) { const sw = Math.sin(t * 2 + o) * 4, k = [x - 2 + sw * .3, 18 + (down ? -6 : 0)], p = [x + 2 + sw, 30 + (down ? -12 : 0)];
+      seg(x, 6, k[0], k[1], 6, 4, TY.fur, 1); seg(k[0], k[1], p[0], p[1], 4, 3, TY.fur, 0);
+      for (let c = 0; c < 3; c++) horn(p[0] - 1 + c * 1.4, p[1], p[0] + c * 1.6, p[1] + 3, p[0] - .5 + c * 2.2, p[1] + 5, 1.8, .3, TY.bone, .6); }
+    ctx.save(); ctx.translate(19, 3); ctx.scale(.5 + .5 * m, .5 + .5 * m);
+    ctx.save(); ctx.rotate(sn); poly([0, 0, 14, 1, 17, 3, 10, 6, 0, 5]); ctx.fillStyle = C(TY.fur); ctx.fill(); outline(1);
+    ctx.fillStyle = C(TY.bone); for (let x = 4; x <= 14; x += 3.2) { poly([x, 1, x + .9, -2.6, x + 1.8, 1]); ctx.fill(); } ctx.restore();
+    ctx.save(); ctx.rotate(-sn * .6); poly([0, 0, 12, -4, 18, -1, 16, 1, 0, 2]); ctx.fillStyle = C(TY.furLit); ctx.fill(); outline(1);
+    ctx.fillStyle = C(TY.bone); for (let x = 4; x <= 14; x += 3.2) { poly([x, .4, x + .9, 3.6, x + 1.8, .4]); ctx.fill(); } ctx.restore();
+    ctx.restore();
+  }
+  // eyes opened in the near wing's membrane (in the wing's own space, as drakeWing sets it)
+  function tyWingEyes(beat, fold, t) {
+    const sy = Math.sign(beat || 1) * Math.max(.16, Math.abs(beat)), n = 1 + TYC.L.bt, P = [[-42, -22], [-58, -8], [-30, -4], [-66, -26], [-46, 2]];
+    ctx.save(); ctx.rotate(-fold * .95 + (1 - beat) * .1); ctx.scale(1 - fold * .2, sy * (1 - fold * .45));
+    for (let i = 0; i < Math.min(n, P.length); i++) CURSE_ART.eye(P[i][0], P[i][1], 3.4 - i * .25, TYC.m * Math.min(1, Math.abs(sy) * 2), { t, seed: i + 2, look: -TYC.look * .5, lid: DR.mem, rot: -.3 });
+    ctx.restore();
+  }
+  // the faces round its aureole weeping black, their eyes gone red
+  function tyHaloWeep(hx, hy, t) {
+    const d = [];
+    for (let i = 0; i < 9; i++) { const an = -Math.PI / 2 + (i - 4) * .4, x = hx + Math.cos(an) * 46, y = hy + Math.sin(an) * 46; d.push(x - 1.6, y + 1, 4 + 8 * hsh(i + 3) * (.4 + TYC.L.d), .9, x + 2, y + 1.4, 3 + 6 * hsh(i + 9) * TYC.L.d, .7);
+      if (DET()) { ctx.fillStyle = '#FF3A2A'; circle(x - 2, y - 1, .7); ctx.fill(); circle(x + 2, y - 1, .7); ctx.fill(); } }
+    CURSE_ART.drips(d, t);
+  }
+  // the mask cracked black, and the crack down its middle that opens on something looking out (its weak point)
+  function tyMaskCurse(fx, t) {
+    const L = TYC.L, CR = [[-22, -26, -15, -21, -18, -13, -12, -7], [21, -31, 16, -23, 22, -16, 19, -11], [-25, 13, -17, 19, -19, 27], [15, 23, 11, 29, 17, 35], [-9, -36, -6, -30, -10, -24]];
+    for (let i = 0; i < Math.min(CR.length, L.bt + 1); i++) CURSE_ART.crack(CR[i], 1.5 + .3 * L.bt, L, { seed: i });
+    const look = TYC.look;
+    CURSE_ART.wound(fx - 1, -9, 52, 1.5, 1.4, 8, L, { lip: MK.glazeDk, seed: 5, ember: true, under: .9, ow: 1.2, reach: .55, coreR: .25, heart: (wd, LL) => {
+      ctx.save(); ctx.rotate(-1.5); const k = Math.min(1, .25 + .75 * Math.max(LL.open, LL.burn * .5, LL.wind * .3));
+      CURSE_ART.eye(0, 0, Math.max(3, wd * 1.6), k, { t, seed: 6, look, white: LL.burn > 0 ? '#FFF0C8' : '#D8C49A', iris: LL.burn > 0 ? '#E09A20' : '#B01418', blink: false, round: true });
+      ctx.restore(); } });
+  }
   const FORMS = { 1: tyWolf, 2: tyDrake, 3: tyMask };
   CREATURES.tyiga = function (e, a) { // (w4vis: it can leave sight, as in the Hunting Leap)
     const v = e.w4vis ?? 1; if (v <= .02) return; if (v < 1) { ctx.save(); ctx.globalAlpha *= v; const sv = e.w4vis; e.w4vis = 1; CREATURES.tyiga(e, a); e.w4vis = sv; ctx.restore(); return; }
     a = a || {}; const t = a.t || 0, ph = Math.min(3, Math.max(1, e.phase || 1));
+    const CL = window.CURSE_ART && CURSE_ART.look(e); if (CL && !TYC) return tyCursed(e, a, CL, ph);
     const sh = e.w4shift || 0; // 1 -> 0 while it changes
     if (sh > 0 && !e.dead) {
       const k = 1 - sh, from = e.w4from || Math.max(1, ph - 1);

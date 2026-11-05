@@ -1271,7 +1271,50 @@
       ctx.fillStyle = C(PAL.goldD); poly([len + (y ? 14 : 20), y + (y < 0 ? -1 : 1), len + (y ? 10 : 15), y + (y < 0 ? -4 : 4), len + (y ? 12 : 17), y]); ctx.fill(); } // barbs
     if (glow > 0) glowM(len + 18, 0, 30, RGB.surf, .4 * glow);
   }
+  // ---------------- CORRUPTED (New Game+: window.CURSE_ART, corruption.js) ----------------
+  // The glass of him goes dark and fractures, and what it reflects is no longer the sea but the Black Circle. Its sea-glass
+  // turns smoked and black (KG is turned while it is drawn corrupted), cracks run through the robe, and its facets give back
+  // a broken ring of black and red in place of the caustics; in his second phase the cracks open, shards of the skirt break
+  // away and hang about him, his beard of foam goes to ink, the coral on his crown to black thorns; in his third the robe
+  // is more hole than glass, every shard of it showing the Circle, and his eyes burn red. His weak point is a fracture in
+  // the glass of his breast: a dark seam with an ember in it that bursts open on the void when it lies open, gold when struck.
+  const KG_C = { glass: '#24262E', glassL: '#7A7E8C', glassD: '#07080C', robe: '#1A1C24', robeL: '#5A5E6E', robeD: '#06070A', foam: '#3A3640', skin: '#7A8A88', skinD: '#3A4442', skinL: '#B8C4C0' };
+  let KGC = null;
+  function kingCursed(e, a, L) {
+    const ph = Math.min(3, Math.max(1, e.phase || 1)), k = Math.min(1, .5 + .5 * L.d) * (.3 + .7 * L.g), keep = Object.assign({}, KG);
+    for (const f in KG_C) KG[f] = CURSE_ART.mix(KG[f], KG_C[f], k * (f === 'skin' || f === 'skinD' || f === 'skinL' ? .7 : 1));
+    if (ph >= 2) KG.foam = CURSE_ART.mix(KG.foam, '#0C080C', .4 + .3 * ph);
+    KGC = { L, ph, k, m: CURSE_ART.morph(e, ph), s: clamp((.15 + (ph - 1) * .32 + L.d * .24) * L.g, 0, 1.1), look: CURSE_ART.toward(e), t: L.T };
+    try { CREATURES.w7king(e, a); } finally { Object.assign(KG, keep); KGC = null; }
+  }
+  // the Circle reflected in the robe's glass, broken across its facets: each shard shows a piece of the ring, displaced
+  function kingReflect(SY, t) {
+    const cz = KGC, n = 7, R = 13 + 2 * cz.ph, cx = 2, cy = SY + 30;
+    for (let i = 0; i < n; i++) { const a0 = i / n * TAU + .2, a1 = a0 + TAU / n - .12, dx = (hsh(i + 2) - .5) * (2 + 4 * cz.s), dy = (hsh(i + 7) - .5) * (2 + 5 * cz.s), sk = 1 + (hsh(i) - .5) * .2;
+      ctx.strokeStyle = 'rgba(4,2,6,.85)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(cx + dx, cy + dy, R * sk, R * .8 * sk, .1, a0, a1); ctx.stroke();
+      ctx.strokeStyle = `rgba(220,40,44,${.55 + .25 * Math.sin(t * 2 + i)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(cx + dx, cy + dy, R * sk + 2.6, R * .8 * sk + 2.6, .1, a0, a1); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - R, cy - R * .9); ctx.lineTo(cx + R * .4, cy + R); ctx.stroke(); // (a glint across the glass over it)
+  }
+  // the fractures through the robe, and its holes (from the second phase), where the glass is gone
+  const KG_FR = [[-18, 6, -10, 14, -14, 26, -6, 34], [16, 4, 10, 16, 18, 28, 12, 40], [-6, 40, 2, 52, -4, 62], [-22, 30, -14, 44, -20, 56], [20, 42, 12, 56, 18, 66], [0, 12, 6, 22, -2, 30]];
+  function kingFractures(SY, t) {
+    const cz = KGC, n = Math.min(KG_FR.length, 1 + cz.L.bt + (cz.ph - 1));
+    for (let i = 0; i < n; i++) { const q = KG_FR[i].map((v, j) => j % 2 ? SY + v : v); ctx.strokeStyle = 'rgba(230,236,255,.5)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(q[0] + 1, q[1]); for (let j = 2; j < q.length; j += 2) ctx.lineTo(q[j] + 1, q[j + 1]); ctx.stroke();
+      CURSE_ART.crack(q, (cz.ph >= 2 ? 2.4 : 1.2) * (.5 + .5 * cz.m), cz.L, { seed: i, a: .5 }); }
+    if (cz.ph >= 2) { const H = cz.ph >= 3 ? [[-12, 50, 7], [12, 36, 6], [-4, 64, 6], [16, 58, 5]] : [[-12, 52, 5], [13, 40, 4]];
+      for (const [x, y, r] of H) { const rr = r * (.4 + .6 * cz.m); ctx.beginPath(); for (let k = 0; k < 7; k++) { const an = k / 7 * TAU, q = rr * (.7 + .5 * hsh(k + x)); ctx.lineTo(x + Math.cos(an) * q, SY + y + Math.sin(an) * q); } ctx.closePath();
+        ctx.fillStyle = C(CURSE_ART.VOID); ctx.fill(); if (DET()) { ctx.strokeStyle = 'rgba(200,220,230,.5)'; ctx.lineWidth = .6; ctx.stroke(); ctx.fillStyle = `rgba(220,40,44,${.3 + .2 * Math.sin(t * 3 + x)})`; circle(x, SY + y, rr * .3); ctx.fill(); } } }
+  }
+  // shards of the glass robe broken away, hanging about him and turning (second phase on), each with a sliver of the Circle in it
+  function kingShards(SY, t) {
+    const cz = KGC, n = cz.ph >= 3 ? 7 : 4;
+    for (let i = 0; i < n; i++) { const an = t * (.35 + .1 * (i % 3)) + i / n * TAU, rx = 34 + 8 * hsh(i), x = Math.cos(an) * rx, y = SY + 40 + Math.sin(an) * 12 - 12 * hsh(i + 3), s = (4 + 3 * hsh(i + 5)) * cz.m, sp = Math.cos(t * 2.2 + i * 1.7);
+      if (s < .5) continue; const hw = s * (.45 + .55 * Math.abs(sp));
+      ctx.beginPath(); ctx.moveTo(x, y - s * 1.5); ctx.lineTo(x + hw, y); ctx.lineTo(x + hw * .2, y + s * 1.3); ctx.lineTo(x - hw * .8, y + s * .2); ctx.closePath(); ctx.fillStyle = C(sp > 0 ? KG.glassL : KG.glass); ctx.fill(); outline(.8);
+      if (DET()) { ctx.strokeStyle = 'rgba(220,40,44,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x - hw * .1, y + s * .1, s * .55, an, an + 2.4); ctx.stroke(); } }
+  }
   CREATURES.w7king = function (e, a) {
+    { const CL = !KGC && window.CURSE_ART && CURSE_ART.look(e); if (CL) return kingCursed(e, a, CL); } // (corrupted: see above)
     a = a || {}; const t = a.t || 0, hurt = a.hurt, P0 = e.w7pose || { k: 'idle', u: 0 }, pk = P0.k, u = P0.u || 0, sub = e.w7sub || 0, mir = e.w7mirror ? 1 : 0;
     const zz = e.z || 0, br = Math.sin(t * 1.3), sway = Math.sin(t * .8) * .04, det = DET();
     // how deep it is sunk: everything below the waterline is cut away and the swirl closes over it
@@ -1279,7 +1322,7 @@
     if (sub > 0) { ctx.beginPath(); ctx.rect(-200, -400, 400, 400 - lerp(0, 120, sub) + zz); ctx.clip(); ctx.translate(0, sub * 70); }
     // the column of turning water it stands on, down to the floor
     if (zz > -1) { const top = -18, bot = zz + 4;
-      for (let k = 0; k < 3; k++) { ctx.fillStyle = FLASH ? '#fff' : TINT || ['rgba(40,120,110,.55)', 'rgba(120,200,190,.4)', 'rgba(220,250,240,.35)'][k];
+      for (let k = 0; k < 3; k++) { ctx.fillStyle = FLASH ? '#fff' : TINT || (KGC ? ['rgba(22,14,22,.6)', 'rgba(80,40,52,.45)', 'rgba(170,120,130,.35)'] : ['rgba(40,120,110,.55)', 'rgba(120,200,190,.4)', 'rgba(220,250,240,.35)'])[k];
         ctx.beginPath(); ctx.moveTo(-16 + k * 4, top); for (let y = top; y <= bot; y += 6) { const q = (y - top) / (bot - top); ctx.lineTo(-16 + k * 4 - q * 14 + Math.sin(y * .2 + t * 6 + k) * 3, y); }
         for (let y = bot; y >= top; y -= 6) { const q = (y - top) / (bot - top); ctx.lineTo(16 - k * 4 + q * 14 + Math.sin(y * .2 - t * 6 + k) * 3, y); } ctx.closePath(); ctx.fill(); }
       if (det) {
@@ -1315,7 +1358,8 @@
     // the chlamys: the emperors' cloak of lapis, pinned at the shoulder, its gold tablion, its hem drifting in the water
     const ch = Math.sin(t * 1.1) * 4;
     const chP = PB([-24, SY - 2, 20, SY - 4, 28, SY + 30, 30 + ch, -8, 10, -2 + ch * .5, -14, -6, -32 - ch * .6, -10, -30, SY + 30]);
-    cel(chP, '#1E3A78', { d: 3.6, dark: '#0E1C40', lite: '#4A6AB8', w: 1.5,
+    const lap = (c) => KGC ? CURSE_ART.mix(c, '#14101A', KGC.k * .8) : c;
+    cel(chP, lap('#1E3A78'), { d: 3.6, dark: lap('#0E1C40'), lite: lap('#4A6AB8'), w: 1.5,
       under: () => { const g = ctx.createLinearGradient(0, SY, 0, -4); g.addColorStop(0, 'rgba(90,130,210,.35)'); g.addColorStop(.6, 'rgba(30,58,120,0)'); g.addColorStop(1, 'rgba(6,14,34,.55)'); ctx.fillStyle = g; ctx.fillRect(-40, SY - 6, 80, 80); },
       tex: () => {
         // the folds of the silk, falling from the pin and swung by the water
@@ -1353,12 +1397,13 @@
         ctx.strokeStyle = 'rgba(230,255,248,.35)'; ctx.lineWidth = 1.2; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(i * 7, SY + 20); ctx.quadraticCurveTo(i * 9, -40, i * 8 + Math.sin(t + i) * 2, -14); } ctx.stroke();
         ctx.strokeStyle = 'rgba(8,40,34,.35)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = -2; i <= 1; i++) { ctx.moveTo(i * 7 + 3.5, SY + 24); ctx.quadraticCurveTo(i * 9 + 4, -40, i * 8 + 4 + Math.sin(t + i + .5) * 2, -14); } ctx.stroke();
         // caustics: the net of light the surface throws, crawling over the glass
-        ctx.strokeStyle = 'rgba(200,255,242,.2)'; ctx.lineWidth = 1; ctx.beginPath();
+        if (KGC) kingReflect(SY, t); else { ctx.strokeStyle = 'rgba(200,255,242,.2)'; ctx.lineWidth = 1; ctx.beginPath();
         for (let i = 0; i < 5; i++) { const y0 = SY + 6 + i * 12 + hsh(i) * 5; for (let x = -26; x <= 26; x += 4) { const y = y0 + Math.sin(x * (.24 + hsh(i + 2) * .14) + t * 2.2 + i * 1.7) * 3.4 + Math.sin(x * .09 - t * 1.3 + i * 2.1) * 3; if (x === -26) ctx.moveTo(x, y); else ctx.lineTo(x, y); } }
-        ctx.stroke();
+        ctx.stroke(); }
         ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(-20, SY + 6, 4, 50); ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillRect(-19, SY + 8, 1, 40);
         // where the glass goes into the water it is the water
         const g = ctx.createLinearGradient(0, -40, 0, -10); g.addColorStop(0, 'rgba(40,120,110,0)'); g.addColorStop(1, 'rgba(150,220,210,.5)'); ctx.fillStyle = g; ctx.fillRect(-30, -40, 60, 34); } });
+    if (KGC) kingFractures(SY, t);
     // the loros: the great jewelled band of the emperors, gold set with pearls and red and blue stones, crossing the breast
     const loP = PP([-21, SY + 3, -10, SY + 3, 14, SY + 38, 10, SY + 50, -2, SY + 50, -6, SY + 40]);
     cel(loP, PAL.gold, { d: 1.8, r: 1, dark: PAL.goldD, lite: PAL.goldL, w: 1.2, tex: () => {
@@ -1371,6 +1416,7 @@
     cel(PB([-20, SY - 2, -8, SY - 6, 8, SY - 6, 20, SY - 2, 16, SY + 6, -16, SY + 6]), PAL.gold, { d: 1.4, dark: PAL.goldD, lite: PAL.goldL, w: 1.1, tex: () => {
       ctx.strokeStyle = 'rgba(80,50,10,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(-18, SY + 3.5); ctx.quadraticCurveTo(0, SY - 1, 18, SY + 3.5); ctx.stroke();
       kgGems([-9.4, SY + 1, '#C8343A', -.2, SY + 1, '#2E8A6A', 9, SY + 1, '#C8343A'], 1.1); kgPearls([-14, SY + 1, -4.8, SY + 1, 4.4, SY + 1, 13.6, SY + 1], 1.25, .35); } });
+    if (KGC) CURSE_ART.wound(11, SY + 19, 28, 1.25, 1.4, 9.5, KGC.L, { lip: KG.glassL, seed: 7, ember: true, reach: 1.25 }); // (its weak point: a fracture in the glass of his breast)
     // the head: Oberon's, stern, long-nosed; the beard a fall of foam that drifts in the water
     const hx = 3, hy = SY - 14;
     // the hair behind, foam too, lifting in the water
@@ -1389,7 +1435,7 @@
       ctx.fillStyle = 'rgba(120,200,190,.35)'; ell(2.4, 2.4, 2.2, 1.4); ctx.fill();
       ctx.strokeStyle = 'rgba(40,96,86,.7)'; ctx.lineWidth = .4; ctx.beginPath(); ctx.arc(-2.6, 0, 1.8, -1.4, 1.6); ctx.moveTo(1.4, -5.2); ctx.quadraticCurveTo(4, -5.8, 6.4, -4.8); ctx.moveTo(5.4, 1.6); ctx.quadraticCurveTo(6.2, 2.8, 6.6, 1.8); ctx.stroke(); } });
     if (DET()) { ctx.fillStyle = KG.skinD; poly([7, -2, 9.4, 2.4, 6.8, 3]); ctx.fill(); ctx.fillStyle = 'rgba(226,246,238,.8)'; poly([7.2, -1.6, 8.6, 1.8, 7.8, 1.9]); ctx.fill();
-      ctx.fillStyle = '#F2FFF8'; ell(3.8, -1.6, 1.7, 1); ctx.fill(); ctx.fillStyle = e.w7eye || '#2A8AAA'; circle(4.4, -1.5, .8); ctx.fill(); ctx.fillStyle = '#06141A'; circle(4.5, -1.5, .38); ctx.fill(); ctx.fillStyle = '#FFFFFF'; circle(4.15, -1.8, .22); ctx.fill();
+      ctx.fillStyle = '#F2FFF8'; ell(3.8, -1.6, 1.7, 1); ctx.fill(); ctx.fillStyle = KGC ? '#E8302A' : e.w7eye || '#2A8AAA'; circle(4.4, -1.5, .8); ctx.fill(); ctx.fillStyle = '#06141A'; circle(4.5, -1.5, .38); ctx.fill(); ctx.fillStyle = '#FFFFFF'; circle(4.15, -1.8, .22); ctx.fill();
       ctx.strokeStyle = 'rgba(20,60,56,.8)'; ctx.lineWidth = .35; ctx.beginPath(); ctx.moveTo(2.1, -2.2); ctx.quadraticCurveTo(3.8, -2.9, 5.6, -2); ctx.stroke();
       ctx.fillStyle = '#E8F4F0'; ctx.fillRect(1.6, -3.8, 5, 1.2); // the brow, white
       ctx.fillStyle = 'rgba(150,190,186,.9)'; ctx.fillRect(1.6, -2.9, 5, .3);
@@ -1404,10 +1450,10 @@
     // grown on it: branches of red coral out of its rim, that move in the current
     const cy = hy - 12;
     if (det) { ctx.lineCap = 'round'; for (const [bx, s, ph] of [[-10, -1, 0], [12, 1, 1.7]]) { const sw = Math.sin(t * 1.3 + ph) * 1.2;
-      for (const [w, c] of [[2.6, '#6A2A2A'], [1.6, '#C86A5A']]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath();
+      for (const [w, c] of KGC && KGC.ph >= 2 ? [[2.6, '#050304'], [1.6, '#2A1A1E']] : [[2.6, '#6A2A2A'], [1.6, '#C86A5A']]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath();
         ctx.moveTo(bx, cy - 4); ctx.quadraticCurveTo(bx + s * 4, cy - 10, bx + s * 5 + sw, cy - 18); ctx.moveTo(bx + s * 3, cy - 9); ctx.quadraticCurveTo(bx + s * 8, cy - 11, bx + s * 10 + sw, cy - 16);
         ctx.moveTo(bx + s * 4.6 + sw * .5, cy - 14); ctx.lineTo(bx + s * 2 + sw, cy - 19); ctx.moveTo(bx + s * 8 + sw * .6, cy - 13.5); ctx.lineTo(bx + s * 12 + sw, cy - 12); ctx.stroke(); }
-      ctx.beginPath(); for (const [dx, dy] of [[5, -18], [10, -16], [2, -19], [12, -12]]) { ctx.moveTo(bx + s * dx + sw + .9, cy + dy); ctx.arc(bx + s * dx + sw, cy + dy, .9, 0, TAU); } ctx.fillStyle = '#F2A890'; ctx.fill(); } }
+      ctx.beginPath(); for (const [dx, dy] of [[5, -18], [10, -16], [2, -19], [12, -12]]) { ctx.moveTo(bx + s * dx + sw + .9, cy + dy); ctx.arc(bx + s * dx + sw, cy + dy, .9, 0, TAU); } ctx.fillStyle = KGC && KGC.ph >= 2 ? '#E8302A' : '#F2A890'; ctx.fill(); } }
     const crP = PB([-11, cy + 2, -12, cy - 8, -6, cy - 16, 3, cy - 18, 11, cy - 14, 13, cy - 6, 12, cy + 2]);
     cel(crP, PAL.gold, { d: 2, dark: PAL.goldD, lite: PAL.goldL, w: 1.3,
       under: () => { const g = ctx.createRadialGradient(-2, cy - 14, 1, 1, cy - 8, 16); g.addColorStop(0, 'rgba(255,240,190,.6)'); g.addColorStop(.5, 'rgba(255,220,140,0)'); g.addColorStop(1, 'rgba(60,30,0,.35)'); ctx.fillStyle = g; ctx.fillRect(-14, cy - 20, 30, 24); },
@@ -1438,6 +1484,7 @@
     if (!e.w7noTrident) { ctx.save(); ctx.translate(ra.ex, ra.ey); ctx.rotate(tridA); kingTrident(70, pk === 'raise' ? u : pk === 'thrust' ? 1 : 0); ctx.restore(); }
     ctx.fillStyle = C(KG.skin); ell(ra.ex, ra.ey, 4.6, 4); ctx.fill(); outline(1);
     if (det) { ctx.fillStyle = KG.skinL; ell(ra.ex - 1.2, ra.ey - 1.4, 1.8, 1.1); ctx.fill(); ctx.strokeStyle = 'rgba(40,96,86,.8)'; ctx.lineWidth = .45; ctx.beginPath(); for (let i = -1; i <= 1; i++) { ctx.moveTo(ra.ex + i * 1.6 - .6, ra.ey - 2.6); ctx.lineTo(ra.ex + i * 1.6 + .4, ra.ey + 2.6); } ctx.stroke(); }
+    if (KGC && KGC.ph >= 2) kingShards(SY, t);
     ctx.restore();
   };
   W7.kingTrident = kingTrident; W7.KG = KG;

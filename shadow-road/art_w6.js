@@ -1007,7 +1007,9 @@
     a = a || {}; const t = a.t || 0, top = e.w6top || [0, -120], hpK = e.hp / e.maxHp, sh = (e.flash > 0 ? Math.sin(t * 80) * 1.5 : 0) + Math.sin(t * 1.3 + (e.slot || 0)) * .6;
     const [dx, dy] = top; W6.skipHatch = true;
     ctx.save(); ctx.translate(sh * .3, 0);
-    crutchShape(0, 0, dx + sh, dy, 7, 16);
+    const BL = typeof boss !== 'undefined' && boss && boss.def === BOSSES.sleeper && window.CURSE_ART && CURSE_ART.look(boss), bk = BL ? .35 + .2 * BL.bt + (BL.surge ? .2 : 0) : 0; // (corrupted: it turns to a black branch)
+    { const tt = TINT; if (BL && bk > .75 && !TINT && !FLASH) TINT = '#1A1012'; try { crutchShape(0, 0, dx + sh, dy, 7, 16); } finally { TINT = tt; } }
+    if (BL) crutchCurse(dx + sh, dy, bk, t, (e.slot || 0) * 3.1);
     if (DET()) { // cracks open as it is battered, and splinters stick out
       ctx.strokeStyle = 'rgba(30,16,10,.85)'; ctx.lineWidth = 1; const n = Math.floor((1 - hpK) * 6);
       for (let i = 0; i < n; i++) { const u = .15 + hsh(i + (e.slot || 0)) * .45, x = dx * u, y = dy * u; ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.lineTo(x + 1, y - 5); ctx.lineTo(x - 1, y - 9); ctx.stroke(); ctx.strokeStyle = 'rgba(255,230,190,.8)'; ctx.beginPath(); ctx.moveTo(x + 2, y - 3); ctx.lineTo(x + 6, y - 5); ctx.stroke(); ctx.strokeStyle = 'rgba(30,16,10,.85)'; }
@@ -1037,7 +1039,7 @@
     const pts = []; for (let i = 0; i < out.length; i += 2) { const [x, y] = S(out[i], out[i + 1]), pf = puff * .08 * Math.max(0, 1 - Math.abs(out[i + 1] + 40) / 50); pts.push(x * (1 + br * .006 + pf), y); }
     const skin = PB(pts);
     // the skin: pale, soft, lit from the upper left; dabbed, mottled, a flush on the cheeks
-    cel(skin, FLESH, { d: 7, r: 3, w: 2.2, dark: '#B88A66', lite: FLESHL, tex: () => {
+    cel(skin, o.cz ? o.cz.flesh : FLESH, { d: 7, r: 3, w: 2.2, dark: o.cz ? o.cz.fleshD : '#B88A66', lite: o.cz ? o.cz.fleshL : FLESHL, tex: () => {
       const g = ctx.createRadialGradient(-30, -110, 10, 0, -70, 150); g.addColorStop(0, 'rgba(255,248,230,.35)'); g.addColorStop(.6, 'rgba(255,240,220,0)'); g.addColorStop(1, 'rgba(120,70,60,.35)'); ctx.fillStyle = g; ctx.fillRect(-120, -170, 240, 200);
       const sh = ctx.createLinearGradient(0, -60, 0, 20); sh.addColorStop(0, 'rgba(120,70,60,0)'); sh.addColorStop(1, 'rgba(110,60,50,.42)'); ctx.fillStyle = sh; ctx.fillRect(-130, -60, 260, 80); // the weight of its lower half, in shade
       const sd = ctx.createLinearGradient(-130, 0, 130, 0); sd.addColorStop(0, 'rgba(255,244,226,.18)'); sd.addColorStop(.6, 'rgba(0,0,0,0)'); sd.addColorStop(1, 'rgba(110,60,60,.3)'); ctx.fillStyle = sd; ctx.fillRect(-130, -160, 260, 180);
@@ -1062,10 +1064,11 @@
       for (const i of o.props || []) { const [ax, ay] = S(...RAW_ANCH[i]); ctx.fillStyle = 'rgba(120,70,55,.13)'; ell(ax, ay - 2, 19, 12); ctx.fill(); ell(ax, ay - 1, 12, 7); ctx.fill(); ell(ax, ay, 6, 3.5); ctx.fill();
         ctx.strokeStyle = 'rgba(255,240,224,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(ax, ay + 4, 15, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
     } });
+    if (o.cz) sleeperCurseFace(o.cz, S, skin); // (corrupted: its veins, cracks, wrong eyes and the crack in its brow)
     // a few long hairs, lifting in a breeze from nowhere
     if (DET()) { ctx.strokeStyle = 'rgba(70,50,40,.55)'; ctx.lineWidth = .8; for (let i = 0; i < 7; i++) { const x = -40 + i * 13, y = -150 + Math.abs(i - 3) * 1.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6 + Math.sin(t * 1.3 + i) * 4, y - 10, x + 14 + Math.sin(t * 1.1 + i) * 6, y - 8 - i % 3 * 3); ctx.stroke(); } }
     // its ears (the light coming red through them, their roots in shade)
-    for (const s of [-1, 1]) { const [ex, ey] = S(s * 106, -80); ctx.save(); ctx.translate(ex, ey); ctx.scale(s, 1); cel(PB([0, -14, 10, -16, 14, -2, 10, 14, 2, 16, -2, 0]), '#DDB48C', { d: 2, r: 1, w: 1.6, dark: '#A87A5A', tex: () => { ctx.fillStyle = 'rgba(236,110,90,.22)'; ell(8, 0, 7, 11); ctx.fill(); ell(8, 0, 4, 7); ctx.fill(); ctx.fillStyle = 'rgba(90,50,40,.18)'; ell(0, 0, 4, 9); ctx.fill(); } }); if (DET()) { ctx.strokeStyle = 'rgba(120,70,50,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5, 0, 6, -1.4, 1.4); ctx.stroke(); } ctx.restore(); }
+    for (const s of [-1, 1]) { const [ex, ey] = S(s * 106, -80); ctx.save(); ctx.translate(ex, ey); ctx.scale(s, 1); cel(PB([0, -14, 10, -16, 14, -2, 10, 14, 2, 16, -2, 0]), o.cz ? CURSE_ART.mix('#DDB48C', '#9A9286', o.cz.k) : '#DDB48C', { d: 2, r: 1, w: 1.6, dark: o.cz ? o.cz.fleshD : '#A87A5A', tex: () => { ctx.fillStyle = 'rgba(236,110,90,.22)'; ell(8, 0, 7, 11); ctx.fill(); ell(8, 0, 4, 7); ctx.fill(); ctx.fillStyle = 'rgba(90,50,40,.18)'; ell(0, 0, 4, 9); ctx.fill(); } }); if (DET()) { ctx.strokeStyle = 'rgba(120,70,50,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(5, 0, 6, -1.4, 1.4); ctx.stroke(); } ctx.restore(); }
     // its brows, and its eyes
     const knit = xv('knit'), squint = xv('squint'), arc = xv('arc'), rem = xv('rem'), panic = xv('panic');
     // (the knot between its brows when it frowns)
@@ -1083,7 +1086,7 @@
         const cyL = ey + 9 + tw - arc * 26 - squint * 3; // (the lash line sags in plain sleep, arches up in content, pinches when it scrunches)
         ctx.fillStyle = C('#D2A47E'); ctx.beginPath(); ctx.moveTo(ex - 25, yl); ctx.bezierCurveTo(ex - 18, ey - 16 + squint * 6, ex + 18, ey - 16 + squint * 6, ex + 25, yr); ctx.quadraticCurveTo(ex, cyL, ex - 25, yl); ctx.fill();
         if (DET()) { const rp = Math.sin(t * (4.3 + rem * 13) + s) * (5 + rem * 4); ctx.fillStyle = `rgba(255,236,214,${.45 + rem * .25})`; ell(ex + rp, ey - 5, 8, 3.4 + rem); ctx.fill(); ctx.fillStyle = 'rgba(120,70,50,.3)'; ell(ex, ey + 4, 22, 3); ctx.fill(); } // the dreaming eye, moving under the lid
-        if (rem > .3 && Math.sin(t * 6.1 + s * 1.7) > .5) { const cy2 = (yl + yr) / 2 + (cyL - y0) * .5; ctx.fillStyle = C('#F8F2E6'); ell(ex, cy2 + 1, 16, 3.8 * rem); ctx.fill(); ctx.fillStyle = C('#3A5A9A'); circle(ex + Math.sin(t * 26 + s) * 8, cy2 + 1, 3.2); ctx.fill(); } // (in its REM the lid flickers up a crack: the eye beneath, darting)
+        if (rem > .3 && Math.sin(t * 6.1 + s * 1.7) > .5) { const cy2 = (yl + yr) / 2 + (cyL - y0) * .5; ctx.fillStyle = C('#F8F2E6'); ell(ex, cy2 + 1, 16, 3.8 * rem); ctx.fill(); ctx.fillStyle = C(o.cz ? '#8A1418' : '#3A5A9A'); circle(ex + Math.sin(t * 26 + s) * 8, cy2 + 1, 3.2); ctx.fill(); } // (in its REM the lid flickers up a crack: the eye beneath, darting)
         ctx.strokeStyle = C('#3A2418'); ctx.lineWidth = 2.2 + squint * .8; ctx.beginPath(); ctx.moveTo(ex - 24, yl); ctx.quadraticCurveTo(ex, cyL, ex + 24, yr); ctx.stroke();
         ctx.lineWidth = 1.3; const ll = 1 - squint * .5; for (let k = 0; k < 8; k++) { const u = (k + .5) / 8, x = ex - 24 + u * 48, y = (1 - u) * (1 - u) * yl + 2 * u * (1 - u) * cyL + u * u * yr; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + (u - .5) * 3 * ll, y + 3 * ll, x + (u - .5) * 7 * ll, y + 5 * ll); ctx.stroke(); }
         if (squint > .15) { ctx.strokeStyle = `rgba(110,60,45,${squint * .7})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(ex - 18, ey - 7); ctx.quadraticCurveTo(ex, ey - 13 + squint * 2, ex + 18, ey - 7); ctx.stroke(); } // (the lid creased, screwed tight)
@@ -1092,8 +1095,8 @@
         ctx.save(); ctx.beginPath(); ctx.moveTo(ex - w, ey); ctx.quadraticCurveTo(ex, ey - h * 1.6, ex + w, ey); ctx.quadraticCurveTo(ex, ey + h * 1.1, ex - w, ey); ctx.closePath();
         ctx.fillStyle = C('#F8F2E6'); ctx.fill(); ctx.save(); ctx.clip();
         const ix2 = ex + look * 7, iy = ey - 1, R = 11 * (1 - panic * .28);
-        ctx.fillStyle = C('#3A5A9A'); circle(ix2, iy, R); ctx.fill();
-        if (DET()) { ctx.strokeStyle = '#A8C8F0'; ctx.lineWidth = 1.4; ctx.beginPath(); for (let a = 0; a < TAU * 3; a += .2) { const r = a / (TAU * 3) * R; const px = ix2 + Math.cos(a - t * 3 * s) * r, py = iy + Math.sin(a - t * 3 * s) * r; a ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); } // the spiral of a dream, turning
+        ctx.fillStyle = C(o.cz ? '#8A1418' : '#3A5A9A'); circle(ix2, iy, R); ctx.fill();
+        if (DET()) { ctx.strokeStyle = o.cz ? '#F07A6A' : '#A8C8F0'; ctx.lineWidth = 1.4; ctx.beginPath(); for (let a = 0; a < TAU * 3; a += .2) { const r = a / (TAU * 3) * R; const px = ix2 + Math.cos(a - t * 3 * s) * r, py = iy + Math.sin(a - t * 3 * s) * r; a ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); } // the spiral of a dream, turning
         ctx.fillStyle = C('#0A0A14'); circle(ix2, iy, (3.4 + (1 - Math.min(1, open)) * 2) * (1 - panic * .45)); ctx.fill(); if (DET()) { ctx.fillStyle = '#FFFFFF'; circle(ix2 - 3, iy - 4, 2.2); ctx.fill(); }
         ctx.fillStyle = 'rgba(120,80,60,.3)'; ctx.fillRect(ex - 22, ey - 20, 44, 8); ctx.restore();
         ctx.lineWidth = 2; ctx.strokeStyle = C('#3A2418'); ctx.stroke(); ctx.restore();
@@ -1105,7 +1108,7 @@
     // the nose: soft, drooping, its tip propped on nothing
     const [nx, ny] = S(4, -60);
     if (DET()) { ctx.fillStyle = 'rgba(120,70,50,.28)'; ell(nx + 4, ny + 14, 22, 6); ctx.fill(); } // the shadow it casts on the lip
-    ctx.fillStyle = C('#DDB08A'); ctx.beginPath(); ctx.moveTo(-6, -98); ctx.quadraticCurveTo(-12, -72, nx - 17, ny + 4); ctx.quadraticCurveTo(nx, ny + 18, nx + 19, ny + 4); ctx.quadraticCurveTo(15, -74, 8, -98); ctx.fill(); outline(1.2);
+    ctx.fillStyle = C(o.cz ? CURSE_ART.mix('#DDB08A', '#9A9286', o.cz.k) : '#DDB08A'); ctx.beginPath(); ctx.moveTo(-6, -98); ctx.quadraticCurveTo(-12, -72, nx - 17, ny + 4); ctx.quadraticCurveTo(nx, ny + 18, nx + 19, ny + 4); ctx.quadraticCurveTo(15, -74, 8, -98); ctx.fill(); outline(1.2);
     if (DET()) { ctx.fillStyle = 'rgba(120,70,50,.55)'; ell(nx - 7, ny + 5, 4, 2.4); ctx.fill(); ell(nx + 9, ny + 5, 4, 2.4); ctx.fill(); ctx.fillStyle = 'rgba(255,240,220,.6)'; ell(nx - 2, ny - 6, 5, 3); ctx.fill(); ctx.strokeStyle = 'rgba(150,100,70,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, -94); ctx.quadraticCurveTo(14, -72, nx + 14, ny); ctx.stroke(); }
     // the mouth: slack in sleep, smiling, smirking, pursed, gritted, round in a snore or a yawn, its lips soft and heavy
     const smile = xv('smile'), smirk = xv('smirk'), Oo = xv('O'), purse = xv('purse'), grit = xv('grit'), yawn = xv('yawn'), frown = xv('frown'), mum = xv('mumble');
@@ -1224,12 +1227,52 @@
       X[k] = cur + (tg - cur) * Math.min(1, dt * r); }
     return X;
   }
+  // ---------------- CORRUPTED (New Game+: window.CURSE_ART, corruption.js) ----------------
+  // Its dream goes bad from the inside. Its skin greys; black veins and cracks spread across its face (more of them each
+  // phase, and with the curse's depth) and the cracks gape on the void; its expressions come out wrong (a grin too wide
+  // under a knotted brow, then a rictus whose corners split up its cheeks); its irises go red, and in its second phase eyes
+  // open in its cheeks, in its third one in its chin; its crutches turn to black branches. Its weak point is a crack down
+  // its forehead: shut, a seam with an ember in it; open, it gapes and an eye looks out of the dark; struck, it burns gold.
+  function sleeperCurse(e, L, X) {
+    const ph = Math.min(3, Math.max(1, e.phase || 1)), m = CURSE_ART.morph(e, ph), k = Math.min(1, .45 + .55 * L.d) * (.3 + .7 * L.g);
+    const s = clamp((.15 + (ph - 1) * .32 + L.d * .24) * L.g, 0, 1.1), w = Object.assign({}, X);
+    if (ph >= 2) { w.smile = Math.max(w.smile || 0, .9 + .4 * s); w.knit = Math.max(w.knit || 0, .8); w.grit = Math.max(w.grit || 0, ph >= 3 ? .6 : .2); } // (the wrong face: a grin too wide under a knotted brow)
+    else w.smile = Math.max(w.smile || 0, .45 * s);
+    return { L, ph, m, k, s, X: w, look: CURSE_ART.toward(e), t: L.T, flesh: CURSE_ART.mix(FLESH, '#A49C90', k), fleshL: CURSE_ART.mix(FLESHL, '#D2CCC0', k), fleshD: CURSE_ART.mix('#B88A66', '#5E5650', k) };
+  }
+  const SL_CR = [[-92, -60, -80, -52, -84, -40, -72, -30, -76, -18], [82, -112, 74, -100, 80, -90, 70, -78], [-60, -140, -52, -128, -58, -118, -48, -108], [96, -40, 84, -32, 88, -20, 78, -10],
+    [-30, -6, -22, -14, -26, -24, -16, -34], [40, -138, 50, -126, 44, -116, 54, -104], [-104, -96, -94, -88, -98, -76], [20, 2, 28, -8, 24, -16]];
+  function sleeperCurseFace(cz, S, skin) {
+    const L = cz.L, t = cz.t, n = Math.min(SL_CR.length, 2 + L.bt + (cz.ph - 1) * 2);
+    ctx.save(); skin(0, 0); ctx.clip();
+    CURSE_ART.veins('sleeper', 0, -128, [[1.2, 120], [1.9, 120], [.5, 110], [2.6, 110], [-.2, 70], [3.3, 70], [1.57, 60]], L, { k: .3 + cz.s, w: 2.6, wig: .55 });
+    ctx.restore();
+    for (let i = 0; i < n; i++) { const q = SL_CR[i].map((v, j) => j % 2 ? S(SL_CR[i][j - 1], v)[1] : v); CURSE_ART.crack(q, (2 + (cz.ph >= 2 && i < 3 ? 3.5 : 0)) * Math.min(1, cz.m + .3), L, { seed: i, a: .7 }); }
+    if (cz.ph >= 3) { const [mx, my] = S(0, -32); for (const s of [-1, 1]) CURSE_ART.crack([mx + s * 22, my - 6, mx + s * 34, my - 14, mx + s * 42, my - 26, mx + s * 56, my - 30], 3.2 * cz.m, L, { seed: s + 3 }); } // (the rictus splitting up its cheeks)
+    if (cz.ph >= 2) { const EY = [[-66, -64, 10], [70, -60, 9], [0, -6, 8]]; for (let i = 0; i < (cz.ph >= 3 ? 3 : 2); i++) { const [x, y] = S(EY[i][0], EY[i][1]); CURSE_ART.eye(x, y, EY[i][2], cz.m, { t, seed: i + 2, look: cz.look, lid: cz.fleshD }); } }
+    CURSE_ART.wound(0, -127, 44, Math.PI / 2 + .06, 2, 15, L, { lip: cz.fleshD, seed: 4, ember: true, under: .9, ow: 1.6, reach: .7, coreR: .4, heart: (wd, LL) => {
+      ctx.save(); ctx.rotate(-Math.PI / 2 - .06); const kk = Math.min(1, .3 + .7 * Math.max(LL.open, LL.burn * .5, LL.wind * .3));
+      CURSE_ART.eye(0, 0, Math.max(4, wd * 1.5), kk, { t, seed: 8, look: cz.look, white: LL.burn > 0 ? '#FFF0C8' : '#D8C8A0', iris: LL.burn > 0 ? '#E09A20' : '#B01418', blink: false, round: true });
+      ctx.restore(); } });
+  }
+  // a crutch turning to a black branch (from its foot up, as the curse is deep): black bark, red sap in its splits, twigs and thorns
+  function crutchCurse(dx, dy, k, t, seed) {
+    const L = Math.hypot(dx, dy), a = Math.atan2(dy, dx), nx = -Math.sin(a), ny = Math.cos(a), P = (u, o) => [dx * u + nx * o, dy * u + ny * o], n = 10, top = Math.min(1, k);
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const [w, col] of [[11, '#040203'], [8, '#140C0E']]) { ctx.strokeStyle = C(col); ctx.lineWidth = w; ctx.beginPath(); for (let i = 0; i <= n * top; i++) { const u = i / n, [x, y] = P(u * .66, Math.sin(u * 13 + seed) * 2.6); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); }
+    if (DET()) { ctx.strokeStyle = 'rgba(230,40,40,.7)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 1; i < n * top; i += 3) { const u = i / n, [x, y] = P(u * .66, Math.sin(u * 13 + seed) * 2.6 - 1); ctx.moveTo(x, y); ctx.lineTo(...P(u * .66 + .04, Math.sin(u * 13 + seed) * 2.6 + 1)); } ctx.stroke(); }
+    for (let i = 1; i < 6; i++) { const u = i / 6 * .66 * top; if (u <= 0) continue; const s = i % 2 ? 1 : -1, [x, y] = P(u, s * 3), l = 8 + 8 * hsh(i + seed), ta = a + s * (1 + hsh(i) * .5);
+      ctx.strokeStyle = C('#0C0809'); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + Math.cos(ta) * l * .6, y + Math.sin(ta) * l * .6 - 2, x + Math.cos(ta - s * .4) * l, y + Math.sin(ta - s * .4) * l); ctx.stroke();
+      ctx.fillStyle = C('#0C0809'); ctx.beginPath(); ctx.moveTo(x + nx * s * 3, y + ny * s * 3); ctx.lineTo(x + nx * s * 8 + Math.cos(a) * 3, y + ny * s * 8 + Math.sin(a) * 3); ctx.lineTo(x + Math.cos(a) * 3, y + Math.sin(a) * 3); ctx.closePath(); ctx.fill(); }
+    if (k > .75) { for (const s of [-1, 1]) { const [x, y] = P(.9, s * 14); ctx.strokeStyle = C('#0C0809'); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(...P(.62, 0)); ctx.quadraticCurveTo(...P(.8, s * 6), x, y); ctx.lineTo(...P(1.04, s * 20)); ctx.stroke(); } } // (the fork gone to black twigs)
+    ctx.restore();
+  }
   CREATURES.w6sleeper = function (e, a) {
     a = a || {}; const t = a.t || 0;
     const S = e.w6S || {}; ctx.scale(HS, HS); if (e.state === 'w6act' && e.flash <= 0) W6.skipHatch = true;
     // (its expression now carries the feeling; the rule's old mood is kept only as a faint tint)
-    const X = sleeperFace(e, a, t);
-    sleeperHead({ t, sag: S.sag || 0, eyes: S.eyes || 0, mouth: (S.mouth || 0) * (1 - Math.min(1, (X.purse || 0) + (X.puff || 0) + (X.grit || 0))), mood: (S.mood || 0) * .3, look: S.look || 0, flush: Math.min(1, (S.flush || 0) + (X.grit || 0) * .4 + (X.vein || 0) * .5), drool: S.drool || 0, X, props: (e.phase || 1) === 1 && W6.B && W6.B.crutches ? W6.B.crutches.filter(c => !c.dead && c.state !== 'enter' && c.w6i !== undefined).map(c => c.w6i) : null });
+    const X0 = sleeperFace(e, a, t), CL = window.CURSE_ART && CURSE_ART.look(e), cz = CL ? sleeperCurse(e, CL, X0) : null, X = cz ? cz.X : X0;
+    sleeperHead({ cz, t, sag: S.sag || 0, eyes: S.eyes || 0, mouth: (S.mouth || 0) * (1 - Math.min(1, (X.purse || 0) + (X.puff || 0) + (X.grit || 0))), mood: (S.mood || 0) * .3, look: S.look || 0, flush: Math.min(1, (S.flush || 0) + (X.grit || 0) * .4 + (X.vein || 0) * .5), drool: S.drool || 0, X, props: (e.phase || 1) === 1 && W6.B && W6.B.crutches ? W6.B.crutches.filter(c => !c.dead && c.state !== 'enter' && c.w6i !== undefined).map(c => c.w6i) : null });
   };
   W6.sleeperHead = sleeperHead; W6.sleeperFace = sleeperFace; W6.HS = HS; W6.snoreZs = snoreZs; W6.ANCH = SLEEP_ANCHORS;
 

@@ -28,7 +28,7 @@
   });
 
   BOSSES.tyiga = {
-    close: 'w4maw', name: "The Ty'iga", title: 'SHIFTER OF SHAPES', draw: 'tyiga', mat: 'flesh',
+    close: 'w4maw', name: "The Ty'iga", title: 'SHIFTER OF SHAPES', draw: 'tyiga', ownCurse: true, mat: 'flesh',
     get move() { return FORM[tyPhase()].move; }, get hover() { return FORM[tyPhase()].hover; },
     get tail() { return FORM[tyPhase()].tail; },
     // the Drake's hit box always reaches the floor, so a blow from the ground still connects with it; while it is high those

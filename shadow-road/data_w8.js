@@ -45,7 +45,7 @@
   const CLOSE = { 1: 'w8bleat', 2: 'w8bleat', 3: 'w8bleat', 4: 'w8bleat' };
   const STANDOFF = { w8crook: 110, w8bind: 220, w8bind2: 200, w8butt: 260, w8gore: 210, w8hands: 200, w8close: 160, w8bleat: 40, w8curse: 60, w8word: 60, w8bales: 60, w8mill: 60 };
   BOSSES.w8goat = {
-    get close() { return CLOSE[form()]; }, name: 'The Goat-Lord', title: 'HE CAME IN BY YOUR CURSE', draw: 'w8goat', mat: 'flesh', move: 'ground',
+    get close() { return CLOSE[form()]; }, name: 'The Goat-Lord', title: 'HE CAME IN BY YOUR CURSE', draw: 'w8goat', ownCurse: true, mat: 'flesh', move: 'ground',
     get reach() { const p = typeof boss !== 'undefined' && boss && boss.def === BOSSES.w8goat ? boss.plan : null; return STANDOFF[p] || 90; },
     hp: 1250, spd: 66, hw: 26, hh: 98, dmg: 22, wind: .6, cd: [.6, 1.1], weight: .3, poise: 10, ranged: 1,
     get p1() { return PLANS[form()]; }, get p2() { return PLANS[form()]; }, get p3() { return PLANS[form()]; },

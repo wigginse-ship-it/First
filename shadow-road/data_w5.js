@@ -39,7 +39,7 @@
   };
   const CLOSE = { 1: 'w5wheel', 2: 'w5shieldwall', 3: 'w5nova', 4: 'w5cage' };
   BOSSES.benedict = {
-    get close() { return CLOSE[benShape()]; }, name: 'The Phantom of Benedict', title: 'MASTER OF ARMS OF AMBER', draw: 'w5benedict', mat: 'ghost', move: 'ground',
+    get close() { return CLOSE[benShape()]; }, name: 'The Phantom of Benedict', title: 'MASTER OF ARMS OF AMBER', draw: 'w5benedict', ownCurse: true, mat: 'ghost', move: 'ground',
     get reach() { return STANDOFF[benPlan()] || 70; },
     hp: 1150, spd: 72, hw: 24, hh: 84, dmg: 21, wind: .6, cd: [.6, 1.1], weight: .3, poise: 10, ranged: 1,
     p1: SHAPES[1], p2: SHAPES[2], get p3() { return SHAPES[Math.max(3, benShape())]; },

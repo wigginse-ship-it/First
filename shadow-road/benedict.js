@@ -150,9 +150,41 @@
   // ======================================================================================================
   // DRAWING
   // ======================================================================================================
+  // ---------------- CORRUPTED (New Game+: window.CURSE_ART, corruption.js) ----------------
+  // The phantom bleeds ink and the Black Road runs through his armour; each shape the city makes of him comes up with more
+  // of the Circle in it (its palettes are turned toward ink while it is drawn corrupted, BN shared with art_w5.js):
+  //   himself: the baldric is the Black Road, ink runs off his cloak and blade, his eyes burn red; as he is beaten down his
+  //     face cracks and weeps ink, then eyes open in his cloak and it trails black strands; his weak point is a rent in
+  //     his breast over a black heart;
+  //   the Host: some of his army has gone over (as many as the curse is deep), ink figures with red eyes in his ranks; his
+  //     banner weeps ink from the eyes of its face, and its weak point is a tear in it;
+  //   the Swordsman in the Stars: stars go black with red rims, ink runs down his lines; his heart is a black star;
+  //   the Panoply: blackened steel, the Black Road down its spine, ink dripping off its cage and keel, and the moon in its
+  //     cage gone black, an eclipse with a red corona: its weak point, that cracks open white-hot.
+  const BN_C = { skin: '#8A8C96', skinDk: '#3E404C', skinLt: '#C2C2CA', hair: '#0C0A10', coat: '#1C1820', coatDk: '#07060A', coatLt: '#4A3C4C', cloak: '#141018', cloakDk: '#050407', cloakLt: '#3A2C3A', silver: '#8A8490', gilt: '#7A5A3A' };
+  const GH_C = { body: '#3A3440', bodyDk: '#16121A', bodyLt: '#8A7E8C', steel: '#6E6872', steelDk: '#2A2630', shield: '#140E14', shieldDk: '#060406', shieldLt: '#3A2A34', crest: '#9A2A30' };
+  const PN_C = { steel: '#4E4A56', steelDk: '#16141C', steelLt: '#9A94A2', far: '#2E2A34', farDk: '#0E0C12', farLt: '#5A5462', ink: '#050307' };
+  let BNC = null;
+  function benCursed(e, a, L) {
+    const k = Math.min(1, .5 + .5 * L.d) * (.3 + .7 * L.g), keep = [Object.assign({}, BN), Object.assign({}, GH), Object.assign({}, PN)];
+    for (const [O, Z] of [[BN, BN_C], [GH, GH_C], [PN, PN_C]]) for (const f in Z) if (O[f]) O[f] = CURSE_ART.mix(O[f], Z[f], k);
+    const ph = e.bph || 1; BNC = W5.cz = { L, k, m: CURSE_ART.morph(e, ph * 10 + Math.min(3, e.phase || 1)), look: CURSE_ART.toward(e), t: L.T, ph, sub: Math.min(3, Math.max(1, e.phase || 1)) };
+    try { CREATURES.w5benedict(e, a); } finally { Object.assign(BN, keep[0]); Object.assign(GH, keep[1]); Object.assign(PN, keep[2]); BNC = W5.cz = null; }
+  }
+  // the Black Road laid along a line: a black way with its pale kerbs and the Circle's red running down its middle
+  function blackRoad(pts, w, t) {
+    const path = () => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); };
+    ctx.save(); ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
+    path(); ctx.strokeStyle = C('#070507'); ctx.lineWidth = w; ctx.stroke();
+    if (DET()) { ctx.strokeStyle = 'rgba(150,140,150,.55)'; ctx.lineWidth = w; ctx.setLineDash([1, 2.4]); path(); ctx.stroke(); ctx.setLineDash([]); path(); ctx.strokeStyle = '#0A070A'; ctx.lineWidth = w * .72; ctx.stroke();
+      ctx.strokeStyle = 'rgba(220,40,44,.85)'; ctx.lineWidth = Math.max(.6, w * .14); ctx.setLineDash([w * .7, w * .7]); ctx.lineDashOffset = -t * 10; path(); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0; }
+    ctx.restore();
+  }
+  W5.blackRoad = blackRoad;
   const prev = CREATURES.w5benedict;
   CREATURES.w5benedict = function (e, a) {
     a = a || {}; const t = a.t || 0;
+    { const CL = !BNC && window.CURSE_ART && CURSE_ART.look(e); if (CL) return benCursed(e, a, CL); }
     if (e.dead && (e.bph || 1) >= 4) { drawPanoplyDeath(e, a, t); return; }
     if (e.state === 'w5morph') { drawMorph(e, a, t); return; }
     const ph = e.bph || 1;
@@ -219,8 +251,11 @@
     const fx = bx + cw * .48, fy = by + ch * .36 + W(.48, 1);
     leafLine(() => { ctx.moveTo(bx + 3, by + 3); ctx.lineTo(bx + cw - 3, by + 3 + W(.9, 0)); }, .9, .8);
     ctx.strokeStyle = C('#B6C2D8'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(fx - 9, fy - 4); ctx.quadraticCurveTo(fx, fy - 7, fx + 9, fy - 4); ctx.moveTo(fx, fy - 5); ctx.lineTo(fx + 1.5, fy + 7); ctx.lineTo(fx - 1.5, fy + 8); ctx.moveTo(fx - 5, fy + 13); ctx.lineTo(fx + 5, fy + 13); ctx.stroke();
-    if (!FLASH) { ctx.fillStyle = '#FFFFFF'; ell(fx - 5, fy - 1.5, 2.6, 1.1); ctx.fill(); ell(fx + 5, fy - 1.5, 2.6, 1.1); ctx.fill(); }
-    glowAt(fx - 5, fy - 1.5, 9, '230,238,255', .5 + (o.glint || 0) * .4); glowAt(fx + 5, fy - 1.5, 9, '230,238,255', .5 + (o.glint || 0) * .4);
+    if (!FLASH) { ctx.fillStyle = BNC ? '#FF4A3A' : '#FFFFFF'; ell(fx - 5, fy - 1.5, 2.6, 1.1); ctx.fill(); ell(fx + 5, fy - 1.5, 2.6, 1.1); ctx.fill(); }
+    glowAt(fx - 5, fy - 1.5, 9, BNC ? '255,60,50' : '230,238,255', .5 + (o.glint || 0) * .4); glowAt(fx + 5, fy - 1.5, 9, BNC ? '255,60,50' : '230,238,255', .5 + (o.glint || 0) * .4);
+    if (BNC) { const L = BNC.L, d = BNC.L.d; // (corrupted: the face weeps ink, ink runs off the hem, and a tear down the cloth is its weak point)
+      CURSE_ART.drips([fx - 5, fy, 6 + 10 * d, 1, fx + 5, fy, 8 + 12 * d, 1.1, bx + cw * .3, by + ch * .86 + W(.3, 2), 6 + 8 * d, 1.3, bx + cw * .78, by + ch * .78 + W(.78, 2), 4 + 10 * d, 1.2, bx + 2, by + ch - 1, 8 + 6 * d, 1.4], t);
+      CURSE_ART.wound(fx + 1, fy + 17 + W(.5, 2) * .5, 24, 1.48, 1.1, 7, L, { lip: BN.coatDk, seed: 3, ember: true, reach: .8 }); }
     ctx.restore();
   }
   // the Host itself: soldiers packed shield to shield round the banner, stepping as one
@@ -241,7 +276,9 @@
     for (let i = 0; i < HOST.length; i++) { const [x, y, era, s] = HOST[i], rise = o.rise !== undefined ? cl01(o.rise * 1.6 - hsh(i) * .6) : 1; if (rise <= 0) continue;
       ctx.save(); ctx.translate(x + (hurt ? Math.sin(i * 7) * 2 : 0), y + (1 - rise) * 46);
       if (rise < 1) { ctx.beginPath(); ctx.rect(-60, -200, 120, 200 - y - (1 - rise) * 46 + 1); ctx.clip(); } // climbing up out of the floor
-      soldier(s, 1, era, t, { step: step + i * 1.7, raise: raise * (i % 2 ? 1 : .6), level: level * (i < 5 ? .5 : 1), look: look * (i % 3 ? 1 : .6) + kneel * 0 });
+      const ink = BNC && [4, 0, 7, 2, 6, 1, 8, 3, 5].indexOf(i) < BNC.L.bt * 2 - 1 + (BNC.L.surge ? 2 : 0), tt = TINT; if (ink) TINT = '#0C080C'; // (corrupted: his ranks gone over to ink)
+      try { soldier(s, 1, era, t, { step: step + i * 1.7, raise: raise * (i % 2 ? 1 : .6), level: level * (i < 5 ? .5 : 1), look: look * (i % 3 ? 1 : .6) + kneel * 0 }); } finally { TINT = tt; }
+      if (ink && !FLASH && !TINT) { ctx.fillStyle = '#FF3A2A'; ell(3.4 * s, -33.5 * s, 1.1 * s, .55 * s); ctx.fill(); glowAt(3.4 * s, -33.5 * s, 4 * s, '255,50,40', .6); CURSE_ART.drips([-3 * s, -14 * s, 5, .9, 3 * s, -10 * s, 7, .8], t); }
       ctx.restore(); }
     if (DET()) add(() => { const g = ctx.createRadialGradient(0, -30, 4, 0, -30, 70); g.addColorStop(0, 'rgba(200,214,245,.18)'); g.addColorStop(1, 'rgba(200,214,245,0)'); ctx.fillStyle = g; ctx.fillRect(-70, -100, 140, 100); });
   }
@@ -281,11 +318,11 @@
       lines = F.l; big = F.big; }
     return { pts: P2, lines, big, k, from };
   }
-  function star4(x, y, r, a = 1) { // a gilded star: a four-pointed burst of silver with a white heart
+  function star4(x, y, r, a = 1, black = false) { // a gilded star: a four-pointed burst of silver with a white heart (corrupted: black, rimmed red)
     ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y);
     ctx.beginPath(); for (let i = 0; i < 8; i++) { const an = i / 8 * TAU - Math.PI / 2, rr = i % 2 ? r * .34 : r; ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } ctx.closePath();
-    ctx.fillStyle = C('#E6ECF6'); ctx.fill(); outline(.7);
-    if (DET()) { ctx.fillStyle = '#FFFFFF'; circle(0, 0, r * .3); ctx.fill(); }
+    ctx.fillStyle = C(black ? '#0A060A' : '#E6ECF6'); ctx.fill(); if (black && DET()) { ctx.strokeStyle = 'rgba(230,50,50,.9)'; ctx.lineWidth = 1.6; ctx.stroke(); } outline(.7);
+    if (DET()) { ctx.fillStyle = black ? '#8A1A20' : '#FFFFFF'; circle(0, 0, r * .3); ctx.fill(); }
     ctx.restore();
   }
   function drawStars(e, a, t, k, o = {}) {
@@ -305,8 +342,13 @@
       for (const [i, j] of F.lines) { if (Math.min(shown(i), shown(j)) < 1) continue; ctx.moveTo(pts[i][0], pts[i][1]); ctx.lineTo(pts[j][0], pts[j][1]); } ctx.stroke(); ctx.restore(); });
     // the stars
     for (let i = 0; i < n; i++) { const s = shown(i); if (s <= 0) continue; const bigS = F.big.includes(i), r = (i === 9 ? 9 : bigS ? 6.6 : 4.4) * (.6 + .4 * s) * (i === 9 ? 1 + .12 * Math.sin(t * 3) : 1);
-      star4(pts[i][0], pts[i][1], r, s);
-      glowAt(pts[i][0], pts[i][1], r * 3.4, '230,238,255', (i === 9 ? .75 : .45) * s); }
+      const blk = BNC && (i === 9 || hsh(i * 7.3) < BNC.L.d * .75 + (BNC.sub - 1) * .12);
+      star4(pts[i][0], pts[i][1], r, s, blk);
+      glowAt(pts[i][0], pts[i][1], r * 3.4, blk ? '255,50,44' : '230,238,255', (i === 9 ? .75 : .45) * s * (blk ? .6 : 1)); }
+    if (BNC) { // (corrupted: ink run down its lines, and its heart, a black star, is its weak point)
+      const dr = []; for (const [i, j] of F.lines) { if (hsh(i * 3 + j) > BNC.L.d * .8 + .1 || Math.min(shown(i), shown(j)) < 1) continue; const mx = (pts[i][0] + pts[j][0]) / 2, my = (pts[i][1] + pts[j][1]) / 2;
+        ctx.strokeStyle = C('#0A060A'); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(pts[i][0], pts[i][1]); ctx.lineTo(pts[j][0], pts[j][1]); ctx.stroke(); dr.push(mx, my, 6 + 10 * hsh(i + j), 1.2); }
+      CURSE_ART.drips(dr, t); CURSE_ART.core(pts[9][0], pts[9][1], 12, BNC.L, { reach: 1.2 }); }
     onMain(() => { const h = pts[9]; glowM(h[0], h[1], 34, '200,215,255', .35 * k * shown(9)); });
     W5B.heart = { x: e.x + pts[9][0] * e.facing * (e.size || 1), y: e.y, z: -pts[9][1] * (e.size || 1) }; // (for the attacks that come out of his heart)
   }
@@ -547,9 +589,10 @@
     // the reliquary: a cage of curved sabres, the moon caught inside it, a spine of plates over it and a keel beneath
     const moonA = .55 + .45 * (M.eye ?? 0);
     cel(PE(TX, TY, 52, 33), PN.ink, { d: 0, r: 0, w: 1.4 });
-    if (!FLASH && !TINT) { const gg = ctx.createRadialGradient(TX - 2, TY + 2, 2, TX - 2, TY + 2, 34); gg.addColorStop(0, `rgba(250,252,255,${moonA})`); gg.addColorStop(.55, `rgba(214,226,255,${.8 * moonA})`); gg.addColorStop(.8, `rgba(${PN.dawn},${.45 * moonA})`); gg.addColorStop(1, `rgba(${PN.dawn},0)`); ctx.fillStyle = gg; ell(TX - 2, TY + 2, 34, 30); ctx.fill(); }
+    if (BNC) panoplyMoon(TX - 2, TY + 2, t);
+    else if (!FLASH && !TINT) { const gg = ctx.createRadialGradient(TX - 2, TY + 2, 2, TX - 2, TY + 2, 34); gg.addColorStop(0, `rgba(250,252,255,${moonA})`); gg.addColorStop(.55, `rgba(214,226,255,${.8 * moonA})`); gg.addColorStop(.8, `rgba(${PN.dawn},${.45 * moonA})`); gg.addColorStop(1, `rgba(${PN.dawn},0)`); ctx.fillStyle = gg; ell(TX - 2, TY + 2, 34, 30); ctx.fill(); }
     else { ctx.fillStyle = solid(''); circle(TX - 2, TY + 2, 20); ctx.fill(); }
-    glowAt(TX - 2, TY + 2, 56, '235,242,255', .3 + .4 * moonA);
+    glowAt(TX - 2, TY + 2, 56, BNC ? '255,50,44' : '235,242,255', (.3 + .4 * moonA) * (BNC ? .5 : 1));
     for (let i = 0; i < 6; i++) { const x = TX - 40 + i * 16, cur = 7 + (M.cage || 0) * 16 * (i % 2 ? 1 : -1), drop = (M.cage || 0) * 30, top = TY - 30 + Math.abs(i - 2.5) * 2.4; // a rib: a sabre from the spine to the keel
       horn(x + 2, top, x + cur + 8, TY + 2 + drop * .4, x - 2 + cur * .4, TY + 26 + drop, 6, 2.6, i % 2 ? '#C8D0DE' : '#DCE4F2', 1, '#6A748E'); }
     const spineS = taper(TX - 58, TY - 18, TX - 4, TY - 50, TX + 46, TY - 24, 15, 10, 8);
@@ -557,6 +600,7 @@
       plateSheen(spineS, { sw: 2.6, flip: true });
       ctx.strokeStyle = 'rgba(30,38,76,.5)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 1; i < 7; i++) { const x = TX - 52 + i * 14; ctx.moveTo(x, TY - 50); ctx.lineTo(x - 3, TY - 14); } ctx.stroke(); } }); // the spine
     cel(stripPath(taper(TX - 50, TY + 18, TX - 4, TY + 42, TX + 42, TY + 16, 9, 7, 8)), PN.steel, { d: 1.6, r: .8, w: 1.4, dark: PN.steelDk, lite: PN.steelLt }); // the keel
+    if (BNC) { blackRoad(spineS.M, 6.5, t); const d = BNC.L.d; CURSE_ART.drips([TX - 40, TY + 24, 8 + 14 * d, 1.6, TX - 16, TY + 34, 12 + 16 * d, 1.8, TX + 10, TY + 33, 7 + 12 * d, 1.5, TX + 30, TY + 24, 10 + 10 * d, 1.4, TX - 30, TY + 20, 6 + 8 * d, 1.2], t); }
     ctx.fillStyle = C(BN.gilt); circle(B[0], B[1], 6); ctx.fill(); outline(1); // the boss the Rose turns on
     if (M.crack) { ctx.strokeStyle = `rgba(255,255,255,${.9 * M.crack})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(TX - 48, TY - 24); ctx.lineTo(TX - 20, TY - 34); ctx.lineTo(TX - 6, TY - 22); ctx.lineTo(TX + 20, TY - 36); ctx.lineTo(TX + 40, TY - 26); ctx.moveTo(TX - 30, TY + 24); ctx.lineTo(TX, TY + 34); ctx.lineTo(TX + 24, TY + 22); ctx.stroke(); }
     // the neck, a stack of gorgets, and the head: an empty great helm, moonlight in the visor, a crescent moon for a crest
@@ -574,8 +618,9 @@
         ctx.fillStyle = 'rgba(20,26,56,.7)'; for (const [x, y] of [[-10, 8], [-5, 11], [5, 11], [10, 8]]) { circle(x, y, 1); ctx.fill(); } // rivets round its rim
       } });
       ctx.fillStyle = C(PN.ink); rrect(1, -4, 15, 3.6, 1.2); ctx.fill(); // the visor slit
-      if (!FLASH) { ctx.fillStyle = `rgba(235,244,255,${.5 + .5 * (M.eye ?? 0)})`; rrect(3, -3.2, 12, 2, 1); ctx.fill(); }
-      glowAt(10, -2, 14 + 10 * (M.eye ?? 0), '220,240,255', .3 + .5 * (M.eye ?? 0));
+      if (!FLASH) { ctx.fillStyle = BNC ? `rgba(255,70,50,${.6 + .4 * (M.eye ?? 0)})` : `rgba(235,244,255,${.5 + .5 * (M.eye ?? 0)})`; rrect(3, -3.2, 12, 2, 1); ctx.fill(); }
+      glowAt(10, -2, 14 + 10 * (M.eye ?? 0), BNC ? '255,50,40' : '220,240,255', .3 + .5 * (M.eye ?? 0));
+      if (BNC) CURSE_ART.drips([5, -1, 8 + 10 * BNC.L.d, 1, 12, -1, 6 + 8 * BNC.L.d, .9], t);
       ctx.strokeStyle = C(PN.steelDk); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(1, 15); ctx.stroke();
       ctx.fillStyle = C(PN.ink); for (let j = 0; j < 3; j++) { circle(8, 4 + j * 3.4, 1); ctx.fill(); } // the breaths
       ctx.restore(); });
@@ -585,6 +630,17 @@
     ctx.restore();
     if (e && stones) { const s = e.size || 1; e.w5eyes = stones.map(([x, y]) => ({ x: e.x + x * e.facing * s, z: (lz - y) * s })); } // (where the moonstones are: the Rose's light comes out of them)
     return { TX, TY, tip };
+  }
+  // the moon in its cage, gone black (corrupted): an eclipse rimmed in the Circle's red; it cracks open white-hot when its
+  // weak point lies open, and burns gold when struck
+  function panoplyMoon(x, y, t) {
+    const L = BNC.L, op = L.open, bu = L.burn;
+    if (!FLASH && !TINT) { const g = ctx.createRadialGradient(x, y, 14, x, y, 34); g.addColorStop(0, `rgba(255,60,40,${.55 + .2 * Math.sin(t * 3)})`); g.addColorStop(.5, 'rgba(160,20,30,.35)'); g.addColorStop(1, 'rgba(120,10,20,0)'); ctx.fillStyle = g; ell(x, y, 34, 30); ctx.fill(); }
+    ctx.fillStyle = C('#060407'); circle(x, y, 17); ctx.fill(); ctx.strokeStyle = C('#2A0A10'); ctx.lineWidth = 1.2; ctx.stroke();
+    if (DET()) { ctx.strokeStyle = 'rgba(255,90,70,.9)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(x, y, 17.6, -2.4, .3); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,.12)'; ell(x - 5, y - 6, 6, 3, -.5); ctx.fill(); }
+    if (op > .02 || bu > .02) { const k = Math.max(op, bu * .8); ctx.strokeStyle = C(bu > 0 ? '#FFE6A0' : '#FFD8C8'); ctx.lineWidth = 1 + 1.6 * k; ctx.beginPath();
+      for (let i = 0; i < 6; i++) { const a0 = i / 6 * TAU + .3, r1 = 17 * k; ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a0) * r1 * .5 + Math.sin(a0) * 2, y + Math.sin(a0) * r1 * .5); ctx.lineTo(x + Math.cos(a0 + .15) * r1, y + Math.sin(a0 + .15) * r1); } ctx.stroke(); }
+    CURSE_ART.core(x, y, 14, L, { reach: 1.1 });
   }
   // ---------------- the changes, drawn ----------------
   const kneeling = (e) => Object.assign({}, e, { state: 'down', plan: null, phase: 1, w5shift: 0, dead: false, bph: 1 });
