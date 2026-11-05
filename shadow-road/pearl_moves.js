@@ -11,7 +11,7 @@
 //   FLAIL         MOON TIDES  blows lift foes adrift in the air; Heavy brings every one of them crashing down
 //   CHAKRAM       SATELLITES  casts become little moons that orbit him; Heavy looses them, held they align
 //   SPEAR+SHIELD  GRIT        held Heavy raises the shell: every blow it catches becomes a layer of a growing pearl
-//   WARSHIELD     THE REEF    Heavy plants the shield in the street; bare-handed, he drives foes into it
+//   WARSHIELD     BULWARK     bash with its face, cut with its rim, throw it ricocheting; armored bashes build Backlash
 //   TRIDENT       FLOODGATE   Heavy floods the street; the water slows them and feeds every move; held, it drains
 //   LANCE         NECKLACE    every foe pierced is strung on a thread of light; Heavy pulls the clasp tight
 // Poses: each move its own keyframes (KF, below), on the shared skeleton, with the forged weapon's own picture.
@@ -879,148 +879,282 @@
   }
 
   // ======================================================================================================
-  // 6. THE WARSHIELD: THE REEF
-  // Heavy drives the great scallop into the street, and it stands there: a reef. Shots break on it, and bare-handed he
-  // fights round it, every palm and kick driving foes into it (REEF!: they come off it hurt and dazed). Heavy by it rings
-  // it like a bell; held Heavy rolls it back to his hand through everyone between; jump off it to come down on them.
+  // 6. THE WARSHIELD: BULWARK
+  // A round war-shield strapped to his forearm, its face to them, and he fights with it. Its face bashes (blunt: they
+  // reel, guards break, they crumple), its rim cuts (edge swipes and chops: they come apart). Heavy throws it: it
+  // ricochets from foe to foe, off the walls, and comes home to his arm (a lucky bounce now and then; Heavy again calls
+  // it straight back through them). The bashes are ARMORED: blows land on him but do not stop him (less of each), a
+  // gold sheen and a clang telling him so. Held Heavy braces behind it: blows from in front are blocked (shots turned
+  // back), and every blow armored or blocked is BACKLASH, spent by his next bash (harder, wider, and it always rings).
   // ======================================================================================================
   {
-    const R = { reef: null, wheel: null };
-    const away = () => !!(R.reef || R.wheel);
-    const nearReef = (d = 90) => R.reef && Math.abs(P.x - R.reef.x) < d && Math.abs(P.y - R.reef.y) < 40;
-    function plant(x, y) { x = clamp(x, leftWall() + 20, rightWall() - 20); R.reef = { x, y, t: 0 }; ev('plant'); R.wheel = null; shakeMag = Math.max(shakeMag, 6); sfx('slam'); dust(x, y, 10); note('REEF', '#F2D68A', 13); fx.push({ kind: 'ring', x, y, z: 2, t: .35, max: .35, r: 60, col: pal().edge, flat: 1 }); }
+    const R = { th: null, bl: 0, blT: 0, sheen: 0, flash: 0, wallN: 0, blockAt: -9, braceAt: -9, inArm: false, metHit: 0, metDone: 0, lastN: 0, catchT: 0, flipT: 0 };
+    const away = () => !!R.th;
+    const BLMAX = 3;
+    const front = (fromX) => Math.sign(fromX - P.x) === P.facing || Math.abs(fromX - P.x) < 10;
+    const wsOn = () => mine() && kind() === 'warshield';
+    // Backlash: a pip for each blow taken on the armor or the shield
+    function gain(n, why) {
+      const was = R.bl; R.bl = Math.min(BLMAX, R.bl + n); R.blT = 0; if (R.bl > was) { R.flash = .4; ev('backlash'); }
+      if (why) note(why + (R.bl > was ? ' +' + (R.bl - was) : ''), R.bl >= BLMAX ? '#FFF2C0' : '#F2D68A', 11, 104);
+    }
+    // the armor a move has right now: the share of each blow that still lands (0: none)
+    function armorK() {
+      if (P.state === 'charge') return .5;
+      const m = P.move; if (!m || m.pm !== 'warshield' || !m.armor || !(P.state === 'atk' || P.state === 'air')) return 0;
+      const k = P.t / m.dur; return k >= m.armor[0] && k <= m.armor[1] ? m.armor[2] : 0;
+    }
+    const blocking = (fromX) => !away() && front(fromX) && (P.state === 'charge' || ((P.state === 'atk') && P.move && P.move.wallUp));
+    function snapBack() { if (!R.th) return; R.th.gone = true; R.th = null; sparkle(P.x + fc() * 16, P.y, P.z + 44, 8); sfx('hit-metal', .4); ev('snap'); }
+    function caught(o) {
+      o.gone = true; R.th = null; R.catchT = .25; ev('catch'); sfx('hit-metal', .7); play(523, .12, .05); fx.push({ kind: 'ring', x: P.x + fc() * 16, y: P.y, z: P.z + 44, t: .2, max: .2, r: 18, col: pal().edge });
+      if (o.n >= 3) gain(1, 'RICOCHET ×' + o.n); R.lastN = o.n;
+    }
+    // ---------------- the throw ----------------
+    const SPD = 760, OUT = 320;
+    function nextFoe(o, from) { let best = null, bd = 300 * RK(); for (const e of foes()) { if (o.hit.has(e) || e === from) continue; const d = Math.hypot(e.x - o.x, (e.y - o.y) * 1.6); if (d < bd) { bd = d; best = e; } } return best; }
+    function toss(m) {
+      const o = addObj({ kind: 'disc', x: P.x + fc() * 24, y: P.y, z: P.z + 44, dir: fc(), mode: 'out', tgt: null, n: 0, max: 3 + (stat().p.rch >= 4 ? 1 : 0), hit: new Set(), back: new Set(), m, spin: 0, d: 0, bw: 60, bh: 60, vy: 0 });
+      o.tgt = nearest(P.x + fc() * 120, P.y, 300 * RK(), null, (e) => (e.x - P.x) * fc() > -10 && Math.abs(e.y - P.y) < 70);
+      R.th = o; ev('throw'); sfx('whoosh'); sfx('swing');
+    }
+    function bounce(o, e) {
+      o.hit.add(e); o.n++; ev('bounce');
+      hitE(e, o.m.dmg * (1 + .15 * (o.n - 1)), Math.sign(e.x - o.x) || o.dir, o.m, { kb: 120 + 40 * o.n });
+      sparkle(o.x, o.y, o.z, 6 + o.n * 2); sfx('hit-metal', .5 + .1 * o.n); play(392 * Math.pow(1.19, o.n), .1, .05, 'square'); hitstop = Math.max(hitstop, .03);
+      if (o.n > 1) floatText(o.x, o.y, o.z + 26, '×' + o.n, '#F2D68A', 11 + o.n);
+      // a lucky bounce: one more than it had (fair: never past seven)
+      if (o.n >= o.max && o.max < 7 && Math.random() < .26) { o.max++; ev('lucky'); floatText(o.x, o.y, o.z + 40, 'LUCKY BOUNCE!', '#FFF2C0', 13); play(1046, .14, .05); }
+      if (o.n >= o.max) { o.mode = 'back'; return; }
+      let nx = nextFoe(o, e);
+      // nobody fresh near: a bank shot back off the street onto one it has struck already (not the one it just left)
+      if (!nx && Math.random() < .45) { const old = [...o.hit].filter(q => q !== e && !q.dead); if (old.length) { nx = old[Math.floor(Math.random() * old.length)]; o.hit.delete(nx); ev('bank'); floatText(o.x, o.y, o.z + 40, 'BANK SHOT', '#C8E8FF', 12); } }
+      o.tgt = nx; if (!nx) o.mode = 'back';
+    }
+    function discStep(o, dt) {
+      o.spin += dt * 22; o.z = Math.max(10, o.z);
+      if (o.t > 3.4) { caught(o); return; }
+      if (o.mode === 'out') {
+        const e = o.tgt && !o.tgt.dead ? o.tgt : null;
+        let tx, ty, tz;
+        if (e) { tx = e.x; ty = e.y; tz = e.z + e.hh * .5; } else { tx = o.x + o.dir * 400; ty = o.y; tz = 44; }
+        const d = Math.hypot(tx - o.x, ty - o.y, tz - o.z) || 1, v = Math.min(d, SPD * dt);
+        o.x += (tx - o.x) / d * v; o.y += (ty - o.y) / d * v; o.z += (tz - o.z) / d * v; o.d += v; if (Math.abs(tx - o.x) > 2) o.dir = Math.sign(tx - o.x);
+        if (e && touch(e, o.x, o.y, o.z, 14)) bounce(o, e);
+        else if (!e) { o.tgt = null; for (const q of foes()) if (!o.hit.has(q) && touch(q, o.x, o.y, o.z, 14)) { bounce(o, q); break; } }
+        // a wall (the edge of the view, or the street's end): a carom, that counts as a bounce
+        const L0 = Math.max(camX + 10, leftWall() + 6), R0 = Math.min(camX + VW - 10, rightWall() - 6);
+        if (o.mode === 'out' && (o.x < L0 || o.x > R0)) { o.x = clamp(o.x, L0, R0); o.n++; ev('carom'); sfx('hit-metal', .6); dust(o.x, o.y, 4); floatText(o.x, o.y, o.z + 24, 'CAROM', '#C8E8FF', 11);
+          o.dir = -o.dir; o.hit.clear(); o.tgt = o.n < o.max ? nextFoe(o, null) : null; if (!o.tgt) o.mode = 'back'; }
+        if (o.mode === 'out' && !o.tgt && o.d > OUT * RK()) o.mode = 'back';
+      } else {
+        const fast = o.fast ? 1250 : 860, tx = P.x + fc() * 14, ty = P.y, tz = P.z + 44, d = Math.hypot(tx - o.x, ty - o.y, tz - o.z) || 1, v = Math.min(d, fast * dt);
+        o.x += (tx - o.x) / d * v; o.y += (ty - o.y) / d * v; o.z += (tz - o.z) / d * v;
+        // coming home face first: whoever is in the way is struck by the face of it (blunt)
+        for (const e of foes()) { if (o.back.has(e) || !touch(e, o.x, o.y, o.z, 14)) continue; o.back.add(e); hitE(e, o.fast ? o.fast.dmg : 7, Math.sign(P.x - o.x) || -o.dir, o.fast || o.m, { cut: 0, kb: o.fast ? 260 : 120, stag: o.fast ? .6 : 0 }); sparkle(o.x, o.y, o.z, 6); }
+        if (d < 22) caught(o);
+      }
+    }
+    // ---------------- the look of it loose: a round shield, rings, the star and its pearl, spinning ----------------
+    function disc(x, y, r, spin, tilt = .42, a = 1) {
+      tilt = Math.max(.04, Math.abs(tilt)); const p = pal(), ry = r * tilt; ctx.save(); ctx.translate(x, y); ctx.globalAlpha *= a;
+      const band = (k, col, dy) => { ctx.beginPath(); ctx.ellipse(0, dy, r * k, ry * k, 0, 0, TWO); ctx.fillStyle = C(col); ctx.fill(); };
+      band(1, shade(p.metal, -.3), 2.4); outline(1.1);
+      band(1, p.metal, 0); outline(1.2); band(.84, p.blade, -.3); band(.64, p.b[3], -.5); band(.46, p.blade, -.7);
+      ctx.beginPath(); for (let i = 0; i <= 10; i++) { const q = spin + i / 10 * TWO, rr = i % 2 ? r * .13 : r * .33; const px = Math.cos(q) * rr, py = Math.sin(q) * rr * tilt - .8; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); ctx.fillStyle = C(p.accent); ctx.fill(); outline(.7);
+      if (!FLASH && !TINT && !LITE) { PN.art.pearlBody(0, -.9, r * .12, clock(), 1, p); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(0, 0, r * .92, ry * .92, 0, spin * .5, spin * .5 + .9); ctx.stroke(); }
+      ctx.restore();
+    }
+    const surfing = () => P.state === 'atk' && P.move && P.move.surf && P.t / P.move.dur < .97;
     TY.warshield = {
-      reset() { R.reef = null; R.wheel = null; },
-      peek: () => ({ reef: !!R.reef, reefX: R.reef ? Math.round(R.reef.x) : null, wheel: !!R.wheel }),
+      reset() { R.th = null; R.bl = 0; R.blT = 0; R.sheen = 0; R.flash = 0; R.wallN = 0; },
+      peek: () => ({ away: away(), bounces: R.th ? R.th.n : R.lastN, backlash: R.bl, armor: armorK() }),
       tree: () => ({
-        L:    { name: 'Clap', dur: .4, h: [.32, .58], x0: 0, x1: 66, dmg: 12, kb: 160, lunge: 40, depth: 26, power: 1, desc: 'Shield bashes.' },
-        LL:   { name: 'Clap', dur: .42, h: [.32, .58], x0: 0, x1: 66, dmg: 13, kb: 180, lunge: 40, depth: 26, power: 1 },
-        LLL:  { name: 'Scallop Gust', dur: .5, h: [.34, .6], x0: 0, x1: 150, dmg: 9, kb: 520, depth: 40, power: 1, wall: 1, desc: 'Fan the shell: a gust throws them back.' },
-        H:    { name: 'Reef Drop', dur: .55, h: [.42, .58], x0: 0, x1: 74, dmg: 20, kb: 200, shock: 90, power: 2, depth: 26, plantAt: .5, desc: 'Drive the shield into the street. It stands.' },
-        HC:   { name: 'Coral Bastion', dur: .6, h: [.42, .58], x0: 0, x1: 74, dmg: 18, kb: 160, power: 2, plantAt: .5, bastion: 1, desc: 'Hold Heavy, gleam: plant it in rings of coral spikes.' },
-        X:    { name: 'Turtle', dur: 2, h: [3, 3], x0: 0, x1: 0, dmg: 0, kb: 0, hold: 1, turtle: 1, desc: 'Hold Attack: crouch behind it; blows from in front stop.' },
-        A:    { dur: .3, h: [.22, .6], x0: 0, x1: 64, dmg: 10, kb: 120 },
-        AA:   { dur: .32, h: [.22, .6], x0: 0, x1: 64, dmg: 11, kb: 120 },
-        AAA:  { name: 'Lid', dur: .42, h: [.25, .62], x0: 0, x1: 70, dmg: 15, kb: 140, spike: 1, power: 2 },
-        JH:   { name: 'Gate Fall', dur: .55, h: [.15, .97], x0: -20, x1: 60, dmg: 20, kb: 180, dive: 1, shock: 100, bounce: 1, power: 2, plantLand: 1, desc: 'Fall shield-first; it stands where it lands.' },
-        D:    { name: 'Wheel', dur: .4, h: [3, 3], x0: 0, x1: 0, dmg: 15, kb: 260, power: 1, wheel: 1, desc: 'Roll it down the street; it stands where it stops.' },
-        DX:   { name: 'Ram', dur: .55, h: [.15, .62], x0: 0, x1: 60, dmg: 18, kb: 380, lunge: 400, power: 2, wall: 1, depth: 28 },
-        R:    { name: 'Shell Flip', dur: .48, h: [.25, .62], x0: 0, x1: 68, dmg: 14, kb: 200, hop: 200, lunge: 120, power: 1, around: 1 },
-        // with the reef standing: bare hands
-        pL:   { name: 'Undertow Palm', seq: ['A'], dur: .26, h: [.3, .6], x0: 0, x1: 46, dmg: 8, kb: 300, lunge: 50, toReef: 1, w: 'fists', desc: 'Reef standing: palms that drive them into it.' },
-        pLL:  { name: 'Undertow Palm', seq: ['A', 'A'], dur: .28, h: [.3, .6], x0: 0, x1: 46, dmg: 9, kb: 320, lunge: 50, toReef: 1 },
-        pLLL: { name: 'Breaker Kick', seq: ['A', 'A', 'A'], dur: .42, h: [.35, .6], x0: 0, x1: 58, dmg: 13, kb: 520, lunge: 80, power: 1, toReef: 1, desc: 'A kick that sends them flying into the reef.' },
-        pH:   { name: 'Ring the Reef', seq: ['H'], dur: .55, h: [3, 3], x0: 0, x1: 0, dmg: 18, kb: 200, power: 2, bell: 1, desc: 'By the reef: strike it, it rings out all round.' },
-        pHC:  { name: 'Recall Roll', seq: ['HOLD'], dur: .5, h: [3, 3], x0: 0, x1: 0, dmg: 22, kb: 300, power: 2, recall: 1, desc: 'Hold Heavy: it rolls back to you through all between.' },
-        pX:   { name: 'Shove', seq: ['HOLDA'], dur: .45, h: [.35, .55], x0: 0, x1: 50, dmg: 10, kb: 700, toReef: 1, power: 2, desc: 'Both palms: hard into the reef.' },
-        pA:   { dur: .28, h: [.2, .6], x0: 0, x1: 50, dmg: 8, kb: 260, toReef: 1 },
-        pAA:  { dur: .3, h: [.2, .6], x0: 0, x1: 52, dmg: 9, kb: 280, toReef: 1 },
+        L:    { name: 'Rim Cut', dur: .3, h: [.3, .56], x0: 0, x1: 72, dmg: 9, kb: 80, depth: 22, cut: 1, desc: 'Edge swipes: the rim cuts.' },
+        LL:   { name: 'Backhand Rim', dur: .32, h: [.3, .56], x0: 0, x1: 72, dmg: 10, kb: 90, depth: 22, cut: 1, arc: [-2.4, .5] },
+        LLL:  { name: 'Boss Bash', dur: .46, h: [.36, .58], x0: 0, x1: 66, dmg: 17, kb: 380, lunge: 280, power: 2, wall: 1, depth: 28, stag: .7, spend: 1, gong: .25, armor: [0, .58, .45], desc: 'Armored: a lunging bash with the face of it. It may ring out.' },
+        H:    { name: 'Ricochet', dur: .46, h: [3, 3], x0: 0, x1: 0, dmg: 13, kb: 160, power: 1, cut: 1, toss: 1, desc: 'Throw it: rim first from foe to foe, off the walls, and home to your arm.' },
+        HH:   { name: 'Guillotine', dur: .5, h: [.38, .58], x0: 0, x1: 86, dmg: 20, kb: 160, lunge: 220, power: 2, cut: 1, arc: [-2.3, 1.25], depth: 24, desc: 'The rim brought straight down, lunging.' },
+        HC:   { name: 'Bulwark Rush', dur: .72, h: [.08, .74], x0: 0, x1: 60, dmg: 20, kb: 440, lunge: 660, power: 2, wall: 1, carry: 1, depth: 30, stag: .8, spend: 1, rush: 1, armor: [0, 1, .35], desc: 'Hold Heavy: brace behind it (blocked blows build Backlash). Let go: an armored charge. Gleam: just after a block.' },
+        X:    { name: 'Shield Wall', dur: 2.6, h: [3, 3], x0: 0, x1: 0, dmg: 0, kb: 0, hold: 1, wallUp: 1, armor: [0, 1, .5], desc: 'Hold Attack: advance behind it; shots turn back off it.' },
+        Xb:   { name: 'Reprisal', seq: ['HOLDA'], dur: .42, h: [.3, .56], x0: 0, x1: 68, dmg: 12, kb: 420, lunge: 180, power: 2, wall: 1, depth: 28, stag: .6, spend: 1, reprisal: 1, armor: [0, .5, .45], desc: 'Let go of the Wall: a bash, harder for each blow it stopped.' },
+        A:    { dur: .28, h: [.22, .6], x0: 0, x1: 66, dmg: 9, kb: 100, cut: 1 },
+        AA:   { dur: .3, h: [.22, .6], x0: 0, x1: 66, dmg: 10, kb: 110, cut: 1, arc: [-2, .8] },
+        AAA:  { name: 'Manhole Cover', dur: .42, h: [.25, .62], x0: 0, x1: 70, dmg: 15, kb: 140, spike: 1, power: 2, splat: 1, desc: 'Third air blow: the shield flat down on them.' },
+        JH:   { name: 'Meteor Shield', dur: .55, h: [.15, .97], x0: -24, x1: 56, dmg: 20, kb: 200, dive: 1, shock: 100, bounce: 1, power: 2, splat: 1, spend: 1, meteor: 1, armor: [0, 1, .5], desc: 'Fall on it, armored. Land on them and it may spring you up for another.' },
+        D:    { name: 'Shield Surf', dur: .8, h: [.1, .85], x0: 0, x1: 54, dmg: 6, kb: 120, launch: 300, lunge: 560, multi: .14, power: 1, depth: 26, surf: 1, armor: [0, .85, .5], desc: 'Ride it down the street; they go up. Now and then a kickflip.' },
+        DX:   { name: 'Freight Train', dur: .62, h: [.12, .72], x0: 0, x1: 58, dmg: 18, kb: 420, lunge: 470, power: 2, carry: 1, wall: 1, depth: 30, stag: .6, spend: 1, armor: [0, .8, .4], desc: 'Shoulder behind it, armored: carry them all.' },
+        R:    { name: 'Rim Wheel', dur: .5, h: [.15, .8], x0: 0, x1: 74, dmg: 7, kb: 180, around: 1, multi: .14, power: 1, cut: 1, desc: 'Out of a dodge: spin with it held out flat; the rim cuts all round.' },
+        // with the shield away (thrown): bare hands, and Heavy calls it home
+        pL:   { name: 'Bare Knuckles', seq: ['A'], dur: .24, h: [.3, .6], x0: 0, x1: 46, dmg: 7, kb: 120, lunge: 40, desc: 'Shield away: fists till it comes home.' },
+        pLL:  { name: 'Bare Knuckles', seq: ['A', 'A'], dur: .26, h: [.3, .6], x0: 0, x1: 46, dmg: 8, kb: 140, lunge: 40 },
+        pLLL: { name: 'Doorstop Kick', seq: ['A', 'A', 'A'], dur: .4, h: [.35, .6], x0: 0, x1: 58, dmg: 12, kb: 460, lunge: 80, power: 1, wall: 1, desc: 'Kick them into its way home.' },
+        pA:   { dur: .28, h: [.2, .6], x0: 0, x1: 50, dmg: 8, kb: 120 },
+        pAA:  { dur: .3, h: [.2, .6], x0: 0, x1: 52, dmg: 9, kb: 130 },
         pAAA: { dur: .4, h: [.25, .62], x0: 0, x1: 56, dmg: 12, kb: 200, spike: 1, power: 2 },
-        pJH:  { name: 'Springboard', seq: ['JUMP', '+H'], dur: .7, h: [.4, .97], x0: -10, x1: 56, dmg: 20, kb: 260, shock: 80, bounce: 1, power: 2, spring: 1, desc: 'Jump by the reef, Heavy: off it, high, and down on them.' },
-        pD:   { name: 'Reef Slide', seq: ['RUN', '+A'], dur: .5, h: [.12, .62], x0: 0, x1: 54, dmg: 13, kb: 340, lunge: 440, power: 1, toReef: 1 },
-        pR:   { name: 'Reef Spring', seq: ['DODGE', '+A'], dur: .5, h: [.25, .62], x0: 0, x1: 58, dmg: 14, kb: 300, hop: 260, lunge: 360, power: 1, airCarry: 1, wallJump: 1, desc: 'Dodge, Attack by it: kick off it at them.' },
+        pH:   { name: 'Return to Sender', seq: ['H'], dur: .42, h: [3, 3], x0: 0, x1: 0, dmg: 14, kb: 300, power: 2, recall: 1, armor: [0, 1, .5], desc: 'Shield away, Heavy: it flies straight home through everyone between.' },
       }),
-      rows: (t) => [['plant the shield: a reef', 'Heavy', t.H.name], ['palms drive foes into it', 'Attack, reef standing', t.pL.name + ' → ' + t.pLLL.name], ['it rings out all round', 'Heavy by the reef', t.pH.name],
-        ['rolls back through them', 'Hold Heavy, reef standing', t.pHC.name], ['off it, high, and down', 'Jump by it, Heavy', t.pJH.name], ['roll it, it stands', 'Run, Attack', t.D.name], ['plant in coral', 'Hold Heavy, gleam', t.HC.name]],
+      rows: (t) => [['edge cuts, then an armored bash', 'Attack ×3', t.L.name + ' → ' + t.LLL.name], ['ricochets foe to foe, comes home', 'Heavy', t.H.name], ['the rim straight down; or it flies home', 'Heavy, Heavy', t.HH.name + ' · ' + t.pH.name],
+        ['brace (blocks build Backlash), then an armored charge', 'Hold Heavy, let go', t.HC.name], ['advance behind it, let go to bash', 'Hold Attack', t.X.name + ' → ' + t.Xb.name], ['ride it; they go up', 'Run, Attack', t.D.name],
+        ['armored, carrying them all', 'Run, Heavy', t.DX.name], ['fall on it; it may spring you up', 'Jump, Heavy', t.JH.name], ['the rim all round', 'Dodge, Attack', t.R.name]],
       pick(m) {
         const k = m.key, tr = WP().tree;
         if (k === 'SIG') return m;
-        if (away()) { if (k[0] !== 'p') { const alt = k === 'HC' ? 'pHC' : k === 'DX' ? 'pD' : 'p' + k; return tr[alt] || tr.pL; } return m; }
+        if (away()) {
+          if (k === 'H' || k === 'HH' || k === 'pH') return tr.pH;
+          const b = k.replace(/^p/, '');
+          if (/^(L{1,3}|A{1,3})$/.test(b)) return tr['p' + b];
+          snapBack(); return k[0] === 'p' ? tr[b] || tr.L : m;
+        }
         if (k[0] === 'p') return tr[k.slice(1)] || tr.L;
+        // (let go just after a block, however short the brace: the charge answers it)
+        if (k === 'H' && P.state === 'charge' && clock() - R.blockAt < .35) return tr.HC;
         return m;
       },
+      timing() { if (P.state !== 'charge') return null; const since = clock() - R.blockAt; if (since < .35) return { open: true, over: 0, mul: 1, since: 0, at: R.blockAt }; return null; },
       began(m) {
-        if (m.wheel) { ev('wheel'); R.wheel = addObj({ kind: 'wheel', x: P.x + fc() * 30, y: P.y, dir: fc(), d: 0, out: 280 * RK(), hit: new Set(), m, spin: 0, bw: 80, bh: 90 }); sfx('whoosh'); }
-        if (m.recall && R.reef) { ev('recallRoll'); addObj({ kind: 'wheel', x: R.reef.x, y: R.reef.y, back: 1, hit: new Set(), m, spin: 0, dir: Math.sign(P.x - R.reef.x) || 1, bw: 80, bh: 90 }); R.wheel = S.objs[S.objs.length - 1]; R.reef = null; sfx('whoosh'); }
-        if (m.bell && R.reef) { if (Math.abs(P.x - R.reef.x) < 170) { P.facing = Math.sign(R.reef.x - P.x) || P.facing; P.vx = (R.reef.x - P.facing * 30 - P.x) * 5; } }
-        if (m.spring && nearReef(100)) { P.vz = 520; const e = nearest(P.x, P.y, 300); P.jvx = e ? clamp((e.x - P.x) / .7, -300, 300) : -fc() * 120; if (e) P.facing = Math.sign(e.x - P.x) || P.facing; sfx('jump'); note('SPRING', pal().edge, 12); }
-        if (m.wallJump && nearReef(110)) { const e = nearest(P.x, P.y, 320); if (e) P.facing = Math.sign(e.x - P.x) || P.facing; P.vx = P.facing * 420; }
+        if (m.recall) { if (R.th) { R.th.mode = 'back'; R.th.fast = m; R.th.back.clear(); note('RETURN TO SENDER', pal().edge, 12); ev('recall'); sfx('whoosh'); } }
+        if (m.wallUp) { R.wallN = 0; sfx('hit-metal', .3); }
+        if (m.reprisal && R.wallN) { const n = Math.min(4, R.wallN); P.move = Object.assign({}, P.move, { dmg: P.move.dmg + 7 * n, kb: P.move.kb + 60 * n }); note('REPRISAL ×' + n, '#FFF2C0', 13); ev('reprisal'); R.wallN = 0; }
+        if (m.rush && m.perfect) { note('JUGGERNAUT', '#FFF2C0', 16); ev('juggernaut'); flashT = Math.max(flashT, .04); }
+        // Backlash: everything taken on it comes back in this bash
+        if (m.spend && R.bl > 0) { const n = R.bl; R.bl = 0; P.move = Object.assign({}, P.move, { dmg: P.move.dmg * (1 + .15 * n), kb: P.move.kb * (1 + .15 * n), blN: n, gong: 1, shock: m.meteor ? (P.move.shock || 0) + 30 * n : P.move.shock }); note('BACKLASH ×' + n, '#FFF2C0', 14 + n); ev('spend'); sfx('charge', n); }
+        if (m.meteor) { R.metHit = 0; }
       },
       extras(m, k, dt, air) {
-        holdEnds(m, k);
-        if (m.plantAt !== undefined) once('plant', k, m.plantAt, () => { plant(P.x + fc() * 56, P.y); if (m.bastion) addObj({ kind: 'coral', x: R.reef.x, y: R.reef.y, waves: m.perfect ? 3 : 2, n: 0, m, bw: 200, bh: 80 }); });
-        if (m.plantLand && P.z <= 0) once('pl', 1, 0, () => plant(P.x + fc() * 30, P.y));
-        if (m.bell && R.reef) once('bell', k, .4, () => { if (Math.abs(P.x - R.reef.x) > 80) { note('TOO FAR', '#C8D4EC', 11); return; } bell(m); });
-        if (m.spring && k > .4 && P.z > 0) P.vz = Math.min(P.vz, -650);
+        if (m.toss) once('toss', k, .36, () => toss(m));
+        if (m.wallUp) {
+          if (k > .06 && (!input.light || k > .96)) { begin(WP().tree.Xb); return true; }
+          const mx = input.mx || 0; P.vx = (Math.sign(mx) === -fc() ? -.4 : 1) * fc() * 72; if (Math.random() < dt * 6) dust(P.x - fc() * 6, P.y, 1);
+        }
+        if (m.carry && k < .74) for (const [e] of P.hits) if (e && !e.dead && !e.boss && e.x !== undefined) { e.x = P.x + fc() * (e.hw + 30); e.y += (P.y - e.y) * .3; e.state = 'hurt'; e.t = Math.max(e.t, .3); }
+        if (m.rush && k < .7 && Math.abs(P.vx) < 260) P.vx = fc() * 260;
+        if (m.rush && m.perfect) once('jug', k, .72, () => { const r = 90 * RK(); shakeMag = Math.max(shakeMag, 8); sfx('slam'); fx.push({ kind: 'ring', x: P.x + fc() * 30, y: P.y, z: 2, t: .35, max: .35, r, col: '#FFF2C0', flat: 1 }); for (const e of foes()) if (Math.hypot(e.x - P.x - fc() * 30, (e.y - P.y) * 2) < r + e.hw && e.z < 80) hitE(e, 12, Math.sign(e.x - P.x) || fc(), m, { kb: 300, launch: 240 }); });
+        if (m.blN && !m.meteor) once('bl', k, m.h[0], () => { const n = m.blN, r = (50 + 24 * n) * RK(), x = P.x + fc() * 40; fx.push({ kind: 'ring', x, y: P.y, z: 30, t: .3, max: .3, r, col: '#FFF2C0' }); fx.push({ kind: 'ring', x, y: P.y, z: 2, t: .4, max: .4, r: r * 1.2, col: '#F2D68A', flat: 1 }); shakeMag = Math.max(shakeMag, 5 + n);
+          for (const e of foes()) if (Math.hypot(e.x - x, (e.y - P.y) * 2) < r + e.hw && e.z < 90) hitE(e, 5 * n, Math.sign(e.x - P.x) || fc(), m, { kb: 240, blN: 0, spend: 0 }); });
+        if (m.surf) {
+          if (k < .85 && Math.random() < dt * 30) parts.push({ x: P.x - fc() * 14, y: P.y + rand(-3, 3), z: 1, vx: -fc() * rand(40, 120), vy: 0, vz: rand(10, 50), life: .3, max: .3, col: pick([pal().metalLt, '#FFFFFF', pal().edge]), size: rand(1, 2), shape: 'star', rot: 0, vr: 6 });
+          once('flip', k, .8, () => { if (Math.random() < .4) { const e = inFront(90, 40); R.flipT = .35; ev('kickflip'); note('KICKFLIP!', '#FFF2C0', 13); sfx('whoosh'); if (e) hitE(e, 12, fc(), m, { kb: 160, launch: 460 }); } });
+        }
         return false;
       },
-      guard(dmg, fromX) { if (P.state === 'atk' && P.move && P.move.turtle && (Math.sign(fromX - P.x) === P.facing || Math.abs(fromX - P.x) < 10)) { sfx('hit-metal', .5); sparkle(P.x + P.facing * 20, P.y, 40, 6); P.inv = Math.max(P.inv, .2); const src = typeof HIT_SRC !== 'undefined' ? HIT_SRC : null; if (src && src.p) src.p.life = 0; floatText(P.x, P.y, 80, 'BLOCKED', '#F2D68A', 11); return true; } return false; },
-      // a driven foe is steered at the reef: it keeps its way on it (whatever else knocks it about) until it gets there
-      onHit(e, m) { if (m.toReef && R.reef && !e.boss && !e.dead) { const F = R.reef, d = Math.sign(F.x - e.x) || P.facing, v = Math.max(260, m.kb) * (e.def.weight || 1);
-        e.vx = d * v; e.wallOK = false; e.pmReefD = d; e.pmReefV = Math.max(220, v * .8); e.pmToReef = clock() + clamp(Math.abs(F.x - e.x) / e.pmReefV + .35, .8, 1.6); } },
-      enemy(e, dt) {
-        const F = R.reef; if (!F || e.dead || e.boss || !(e.pmToReef > clock()) || (e.pmSplat || 0) > clock()) return;
-        const d = e.pmReefD || Math.sign(F.x - e.x) || 1;
-        // it reaches the reef: touching it (a generous reach), or knocked on past it, a little off the lane or not
-        if ((Math.abs(e.x - F.x) < e.hw + 26 || (e.x - F.x) * d > 0) && Math.abs(e.y - F.y) < 46 && e.z < 90) {
-          e.x = F.x - d * (e.hw + 12); e.vx = -d * 120; e.pmSplat = clock() + .5; e.pmToReef = 0;
-          hitE(e, 12, -d, { pm: 'warshield', key: 'SPLAT', kb: 120, power: 2, pe: .5 }); if (!e.dead) { e.state = 'hurt'; e.t = .9; e.plan = null; }
-          floatText(e.x, e.y, e.z + e.hh + 18, 'REEF!', '#F2D68A', 14); ev('splat'); sfx('hit-metal'); shakeMag = Math.max(shakeMag, 5); sparkle(F.x, F.y, 40, 10); F.ring = .3;
-          return;
-        }
-        // not there yet: still sliding at it, drawn into its lane
-        if (Math.sign(e.vx) !== d || Math.abs(e.vx) < e.pmReefV) e.vx = d * e.pmReefV;
-        e.y += (F.y - e.y) * Math.min(1, dt * 6);
-        if (!e.air) { e.state = 'hurt'; e.t = Math.max(e.t, .12); e.plan = null; }
+      // a full block: braced (held Heavy) or behind the Wall, from in front. Shots go back the way they came
+      guard(dmg, fromX) {
+        if (R.inArm || !blocking(fromX)) return false;
+        const src = typeof HIT_SRC !== 'undefined' ? HIT_SRC : null, just = P.state === 'charge' && (P.ct || 0) < .22 + .03 * stat().p.grd;
+        R.blockAt = clock(); if (P.state === 'atk' && P.move && P.move.wallUp) R.wallN++;
+        gain(just ? 2 : 1, just ? 'PERFECT BLOCK' : 'BLOCKED'); ev(just ? 'just' : 'block');
+        P.inv = Math.max(P.inv, .3); hitstop = Math.max(hitstop, just ? .1 : .06); sfx('hit-metal', .8); play(just ? 784 : 587, .16, .05); R.sheen = .3;
+        sparkle(P.x + P.facing * 20, P.y, P.z + 44, just ? 14 : 8);
+        if (src && src.kind === 'proj' && src.p && !src.p.ground) { const p = src.p; if (p.big) p.life = 0; else { p.owner = 'p'; p.vx = P.facing * Math.max(300, Math.abs(p.vx || 0) * 1.3); p.vy = 0; p.vz = 0; p.hit = new Set(); p.dmg = Math.round((p.dmg || 10) * 1.6); p.life = 1.4; p.reflected = true; ev('turned'); } }
+        if (src && src.e && just && !src.e.boss) { src.e.state = 'hurt'; src.e.t = .7; src.e.plan = null; src.e.vx = P.facing * 140; }
+        P.x -= P.facing * 5; return true;
+      },
+      onHit(e, m) {
+        if (e.dead || e.boss) return;
+        if (m.stag) { e.state = 'hurt'; e.t = Math.max(e.t, m.stag); e.plan = null; }
+        if (m.meteor) R.metHit = P.moveId;
+        // a bash may ring the shield like a gong: everyone near reels (always, when it spends Backlash)
+        if (m.gong && P._pmGong !== P.moveId && (m.gong >= 1 || Math.random() < m.gong)) { P._pmGong = P.moveId; gong(); }
       },
       step(dt) {
-        const F = R.reef; if (!F) return; F.t += dt; F.ring = Math.max(0, (F.ring || 0) - dt);
-        if (Math.abs(P.x - F.x) > VW * .9 || F.x < camX - 60 || F.x > camX + VW + 60) { R.reef = null; note('THE SHIELD COMES BACK', '#C8D4EC', 11); return; }
-        for (const p of projs) if (p.owner === 'e' && !p.ground && Math.abs(p.x - F.x) < 14 && Math.abs(p.y - F.y) < 30 && (p.z || 30) < 70) { p.life = 0; sparkle(F.x, F.y, 40, 6); sfx('hit-metal', .4); F.ring = .2; }
+        R.sheen = Math.max(0, R.sheen - dt); R.flash = Math.max(0, R.flash - dt); R.catchT = Math.max(0, R.catchT - dt); R.flipT = Math.max(0, R.flipT - dt);
+        if (R.bl > 0 && (R.blT += dt) > 7) { R.bl--; R.blT = 0; }
+        // the meteor's landing on someone: now and then it springs him back up for another
+        if (R.metHit && R.metHit === P.moveId && R.metDone !== P.moveId && P.z <= 0 && P.state !== 'air') { R.metDone = P.moveId;
+          if (Math.random() < .4 && P.state !== 'dead' && P.state !== 'hurt' && P.state !== 'down') { P.state = 'jump'; P.vz = 520; P.jvx = fc() * 40; P.jvy = 0; P.jhUsed = false; P.airN = 0; ev('rebound'); note('REBOUND!', '#FFF2C0', 13); sfx('jump'); sfx('hit-metal', .5); } }
+        // the Wall turns shots aside before they reach him
+        if (P.state === 'atk' && P.move && P.move.wallUp && !away()) for (const p of projs) if (p.owner === 'e' && !p.ground && Math.abs(p.x - (P.x + fc() * 20)) < 14 && Math.abs(p.y - P.y) < 26 && (p.z || 30) < 80) {
+          if (p.big) { p.life = 0; } else { p.owner = 'p'; p.vx = fc() * Math.max(300, Math.abs(p.vx || 0) * 1.3); p.vy = 0; p.vz = 0; p.hit = new Set(); p.dmg = Math.round((p.dmg || 10) * 1.6); p.life = 1.4; p.reflected = true; }
+          R.wallN++; gain(1); ev('turned'); sfx('hit-metal', .6); sparkle(p.x, p.y, p.z || 30, 6); }
       },
-      obj(o, dt) {
-        if (o.kind === 'wheel') { o.spin += dt * 14 * o.dir;
-          if (o.back) { const tx = P.x, d = tx - o.x; o.dir = Math.sign(d) || o.dir; o.x += o.dir * Math.min(Math.abs(d), 520 * dt); o.y += (P.y - o.y) * Math.min(1, dt * 8); if (Math.abs(d) < 16) { o.gone = true; R.wheel = null; sfx('hit-metal', .4); } }
-          else { o.x += o.dir * 440 * dt; o.d += 440 * dt; if (o.d >= o.out || o.x < leftWall() + 20 || o.x > rightWall() - 20) { o.gone = true; plant(o.x, o.y); } }
-          for (const e of foes()) { if (o.hit.has(e) || !touch(e, o.x, o.y, 20, 18)) continue; o.hit.add(e); hitE(e, o.m.dmg, o.dir, o.m, { kb: 300 }); }
-          if (o.t > 3) { o.gone = true; R.wheel = null; } }
-        if (o.kind === 'coral') { const at = o.n * .25; if (o.t >= at && o.n < o.waves) { o.n++; ev('coral'); const r = (40 + 50 * o.n) * RK(); sfx('hit-crystal'); fx.push({ kind: 'nova', x: o.x, y: o.y, z: 0, t: .4, max: .4, r, col: '#F08A7A', style: 'crystal', seed: Math.random() * 6 });
-            for (const e of foes()) { const d = Math.hypot(e.x - o.x, (e.y - o.y) * 2); if (d < r + e.hw && d > r - 60 && e.z < 60) hitE(e, 12, Math.sign(e.x - o.x) || 1, o.m, { kb: 100, launch: 320 }); } }
-          if (o.n >= o.waves && o.t > at + .3) o.gone = true; }
-      },
+      charge(dt) { if (R.th && P.ct > .3) snapBack(); if (P.ct < dt * 1.5) R.braceAt = clock(); },
+      obj(o, dt) { if (o.kind === 'disc') discStep(o, dt); },
       draw(list, t) {
-        const F = R.reef;
-        if (F) list.push([F.y, () => { const rise = sst(F.t / .15), wob = F.ring > 0 ? Math.sin(t * 60) * .04 : 0;
-          onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(F.x, F.y - 40, 34, .25 + .2 * (F.ring > 0 ? 1 : 0)); ring(F.x, F.y, 0, 22, .4); ctx.restore(); });
-          drawPic(F.x, F.y + 10 * (1 - rise) + 4, -PI / 2 + wob, 1.05, 1, 6); }]);
-        for (const o of S.objs) if (o.kind === 'wheel') list.push([o.y, () => drawPic(o.x, o.y - 26, o.spin, .9, 1, 30)]);
+        // (the thrown shield itself flies over the figures: over)
+        for (const o of S.objs) if (o.kind === 'disc') list.push([o.y - .3, () => onMain(() => { ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.22)'; ell(o.x, o.y, 14, 4); ctx.fill(); ctx.restore(); })]);
+        if (surfing() || R.flipT > 0) list.push([P.y - .05, () => onMain(() => { const f = R.flipT > 0 ? 1 - R.flipT / .35 : 0; disc(P.x, P.y - P.z - 2 - Math.sin(f * PI) * 26, 17, t * 3, f ? Math.max(.05, Math.abs(Math.cos(f * TWO)) * .45) : .32); })]);
+        list.push([P.y + .25, () => onMain(() => {
+          const z = P.z; ctx.save();
+          // the armor: a gold sheen on him while a move has it, a flash when a blow lands on it
+          const a = armorK(); if ((a && P.state !== 'charge') || R.sheen > 0) { ctx.globalCompositeOperation = 'lighter'; const q = R.sheen > 0 ? R.sheen / .3 : 0, pu = .5 + .5 * Math.sin(t * 18);
+            glow(P.x + fc() * 12, P.y - z - 44, 30 + 16 * q, .14 + .06 * pu + .5 * q, '255,226,150');
+            ctx.strokeStyle = `rgba(255,238,180,${(.25 + .2 * pu + .6 * q).toFixed(2)})`; ctx.lineWidth = 1.5 + 2 * q; ctx.beginPath(); ctx.ellipse(P.x + fc() * 22, P.y - z - 44, 7 + 4 * q, 22 + 6 * q, 0, 0, TWO); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+          // Backlash: little shields over his head
+          for (let i = 0; i < R.bl; i++) { const x = P.x + (i - (R.bl - 1) / 2) * 11, y = P.y - z - 104 + Math.sin(t * 4 + i) * 1.5; if (R.bl >= BLMAX || R.flash > 0) { ctx.globalCompositeOperation = 'lighter'; glow(x, y, 10, .5); ctx.globalCompositeOperation = 'source-over'; } disc(x, y, 4.6, t * 2 + i, .9); }
+          ctx.restore(); })]);
       },
-      posed(pose) { if (away() && (P.state !== 'atk' && P.state !== 'air' || (P.move && P.move.key && P.move.key[0] === 'p') || (P.move && P.move.wheel))) { pose.weapon = 'fists'; pose.twoHand = 0; } },
-      carry(pose, st) { if (away()) { pose.arm = st === 'jump' ? .9 : 1.1; pose.elbow = 1.4; pose.backArm = 1.2; pose.backElbow = 1.6; pose.openHand = 1; return; }
-        if (st === 'jump') { pose.arm = .2; pose.elbow = 1.2; pose.grip = -1.4; return; } pose.arm = st === 'run' ? 1.5 : .6; pose.elbow = 1.3; pose.grip = st === 'run' ? -1.2 : -1.5; pose.backArm = 1.45; },
-      chargePose(pose, ct) { if (away()) { pose.crouch = 0; pose.arm = .3; pose.elbow = 1.6; pose.backArm = -.4; pose.backElbow = 1.4; pose.openHand = 1; pose.lean = -.1; pose.sink = 6; pose.legs = { f: 12, b: -12, fk: 7, bk: 4 }; return; }
-        const q = Math.min(1, ct / .45); pose.crouch = 0; pose.arm = lerp(.5, -2.3, q); pose.elbow = .3; pose.grip = lerp(-1.4, -.3, q); pose.lean = -.25 * q; pose.sink = 4; pose.legs = { f: 10, b: -12, fk: 4, bk: 6 }; pose.backArm = -1.8; pose.backElbow = .3; pose.twoHand = 1; pose.gripGap = 8; },
+      over() { for (const o of S.objs) if (o.kind === 'disc') { ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(o.x, o.y - o.z, 26, .4); ctx.restore(); disc(o.x, o.y - o.z, 17, o.spin, .5); } },
+      posed(pose) {
+        const p = P.move && (P.state === 'atk' || P.state === 'air') ? P.move : null;
+        if (away() || surfing() || (p && p.key && p.key[0] === 'p')) { pose.weapon = 'fists'; pose.twoHand = 0; pose.noHand = 0; }
+        else if (pose.weapon === ID) { pose.noHand = 1; pose.twoHand = 0; }
+      },
+      carry(pose, st) {
+        if (away()) { pose.arm = st === 'jump' ? .9 : 1; pose.elbow = 1.75; pose.backArm = 1.2; pose.backElbow = 1.9; pose.openHand = R.catchT > 0 ? 1 : 0; if (st === 'idle') { pose.arm = -.2; pose.elbow = .2; pose.openHand = 1; } return; }
+        pose.grip = 0; pose.twoHand = 0;
+        if (st === 'jump') { pose.arm = .25; pose.elbow = 1.7; return; }
+        if (st === 'run') { pose.arm = .25; pose.elbow = 1.75; pose.backArm = 1.9; return; }
+        pose.arm = R.catchT > 0 ? .1 : .55; pose.elbow = R.catchT > 0 ? 1.5 : 1.55; pose.backArm = 1.3; pose.backElbow = .5;
+      },
+      chargePose(pose, ct) {
+        const q = Math.min(1, ct / .12), j = R.sheen > 0 ? Math.sin(clock() * 70) * 1.2 : 0;
+        pose.crouch = 0; pose.arm = lerp(.5, .25, q); pose.elbow = lerp(1.5, 1.85, q); pose.grip = 0; pose.lean = .22; pose.sink = 7; pose.shift = -1 + j; pose.legs = { f: 14, b: -14, fk: 8, bk: 4 };
+        pose.backArm = .95; pose.backElbow = 1.9; pose.yaw = -.12; pose.twoHand = 0; pose.glow = perfectGlow() || null;
+      },
     };
-    function bell(m) { const F = R.reef, r = 125 * RK(); F.ring = .5; sfx('hit-metal'); play(220, .7, .09, 'sine'); play(331, .6, .05, 'sine'); shakeMag = Math.max(shakeMag, 6); note('DONG', '#F2D68A', 16); ev('bell');
-      for (let i = 0; i < 3; i++) fx.push({ kind: 'ring', x: F.x, y: F.y, z: 2 + i * 20, t: .3 + i * .1, max: .3 + i * .1, r: r * (.6 + i * .25), col: '#F2D68A', flat: 1 });
-      for (const e of foes()) if (Math.hypot(e.x - F.x, (e.y - F.y) * 2) < r + e.hw && e.z < 90) hitE(e, m.dmg, Math.sign(e.x - F.x) || 1, m, { kb: 260, launch: 220 }); }
-    const FI = { w: 'fists' };
+    function gong() {
+      const r = 130 * RK(); ev('gong'); note('GONG!', '#FFF2C0', 16, 110); sfx('hit-metal'); play(196, .9, .08, 'sine'); play(294, .7, .05, 'sine'); play(392, .5, .03, 'sine'); shakeMag = Math.max(shakeMag, 6);
+      for (let i = 0; i < 3; i++) fx.push({ kind: 'ring', x: P.x + fc() * 20, y: P.y, z: 44, t: .25 + i * .1, max: .25 + i * .1, r: r * (.5 + i * .25), col: '#F2D68A' });
+      for (const e of foes()) if (!e.boss && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < r + e.hw && e.z < 90) { e.state = 'hurt'; e.t = Math.max(e.t, .8); e.plan = null; sparkle(e.x, e.y, e.z + e.hh + 6, 4, ['#FFF2C0', '#F2D68A']); }
+    }
+    // the armor itself: a blow on an armored move lands (less of it) but does not stop him. His fall, the knockdown
+    // rules and the grace after getting up are all the game's own, untouched (a knocked-down man has no armor)
+    { const _pd = playerDamage; playerDamage = function (dmg, fromX, big) {
+      const a = wsOn() && !R.inArm ? armorK() : 0;
+      if (!a || P.inv > 0 || P.state === 'dead' || P.state === 'dodge' || P.state === 'down' || (P.state === 'hurt' && P.knocked) || blocking(fromX)) return _pd(dmg, fromX, big);
+      const s = { state: P.state, move: P.move, t: P.t, vx: P.vx, vz: P.vz, jvx: P.jvx, facing: P.facing, seq: P.seq, knocked: P.knocked, q: P.q, ct: P.ct, clvl: P.clvl, clAt: P.clAt, combo: comboN }, hp0 = P.hp;
+      R.inArm = true; try { _pd(Math.max(1, Math.round(dmg * a)), fromX, false); } finally { R.inArm = false; }
+      if (P.state === 'dead' || P.hp <= 0) return;
+      if (P.hp >= hp0 && P.state === s.state) return; // (turned aside on the way: a parry, a reflection, Shadow)
+      P.state = s.state; P.move = s.move; P.t = s.t; P.vx = s.vx; P.vz = s.vz; P.jvx = s.jvx; P.facing = s.facing; P.seq = s.seq; P.knocked = s.knocked; P.q = s.q; P.ct = s.ct; P.clvl = s.clvl; P.clAt = s.clAt;
+      comboN = s.combo; P.inv = Math.min(P.inv, .4); R.sheen = .3; ev('armor'); gain(1, 'ARMOR');
+      sfx('hit-metal', .9); play(880, .1, .05, 'square'); play(1320, .14, .03); sparkle(P.x, P.y, P.z + 50, 10, ['#FFF2C0', '#FFFFFF', '#F2D68A']);
+    }; }
+    // its deaths, blow by blow: the rim cuts them in two, a slam flattens them, the face of it caves them in
+    { const _k = killEnemy; killEnemy = function (e, dir, m) {
+      if (!m || m.pm !== 'warshield' || !wsOn() || m.pearl) return _k(e, dir, m);
+      const was = DEATH_BY[ID]; DEATH_BY[ID] = m.cut ? 'slice' : m.splat ? 'splat' : 'crumple';
+      try { return _k(e, dir, m); } finally { DEATH_BY[ID] = was; } }; }
+    const FI = { w: 'fists' }, GU = { a: .35, e: 1.85, g: 0, ba: 1, be: 1.9, l: .1 };
     POSE('warshield', {
-      L: KF([[0, { a: .5, e: 1.3, g: -1.5, l: 0 }], [.32, { a: .9, e: 1.5, g: -1.5, l: -.15, y: -.5 }], [.58, { a: -.3, e: .4, g: -1.6, l: .4, y: .4, s: 6, lg: [15, -12, 9, 1] }], [1, { a: .5, e: 1.2, g: -1.5, l: .1, s: 2, y: 0 }]]),
-      LL: KF([[0, { a: -.2, e: .5, g: -1.6, l: .2 }], [.32, { a: -1, e: .8, g: -1.3, l: -.1, y: .4 }], [.58, { a: .6, e: .3, g: -1.4, l: .35, y: -.3, s: 6 }], [1, { a: .6, e: 1.2, g: -1.5, l: .1, s: 2, y: 0 }]]),
-      LLL: KF([[0, { a: .9, e: .4, g: -.3, l: .1 }], [.34, { a: 2.2, e: .2, g: 0, l: -.2, y: -.4, lg: [7, -11, 3, 6] }], [.6, { a: -.6, e: .1, g: -.9, l: .4, y: .5, s: 7, lg: [16, -12, 9, 1] }], [1, { a: -.3, g: -.6, l: .15, y: .1, s: 3 }]], { tr: [[.34, .6]], trW: 10 }),
-      H: KF([[0, { a: .5, e: .2, g: -.5, th: 1, gg: 8 }], [.42, { a: -2.4, g: -.5, l: -.3, s: 0, lg: [6, -9, 2, 6] }], [.58, { a: 1.35, g: .2, l: .7, s: 12, lg: [17, -15, 12, 0] }], [1, { a: 1.3, l: .45, s: 9 }]], { tr: [[.42, .58]], trW: 10 }),
-      HC: KF([[0, { a: -2.3, e: .3, g: -.3, th: 1, gg: 8, l: -.25 }], [.42, { a: -2.5, l: -.35 }], [.58, { a: 1.35, g: .2, l: .7, s: 12, lg: [17, -15, 12, 0] }], [1, { a: 1.3, l: .45, s: 9 }]], { tr: [[.42, .58]], trW: 10 }),
-      X: KF([[0, { a: .2, e: 1.6, g: -1.5, l: .3, s: 12, cr: 1, lg: [12, -12, 14, 12] }], [1, { a: .2 }]]),
-      A: KF([[0, { a: -1, e: .3, g: -.8, lg: [7, -9, 10, 8] }], [.22, { a: -1.3 }], [.6, { a: .9, g: -.3, l: .3 }], [1, { a: .8 }]], { tr: [[.22, .6]] }),
-      AA: KF([[0, { a: 1, e: .3, g: -.3, l: .2, lg: [8, -8, 12, 6] }], [.22, { a: 1.2 }], [.6, { a: -1.1, g: -.8, l: -.1 }], [1, { a: -.9 }]], { tr: [[.22, .6]] }),
-      AAA: KF([[0, { a: -2.4, e: .2, g: -.4, r: 0, lg: [6, -8, 12, 10], th: 1, gg: 8 }], [.25, { a: -2.8, r: -.2 }], [.62, { a: 1.5, g: .2, l: .5, r: .4 }], [1, { a: 1.3, r: .25 }]], { tr: [[.25, .62]], trW: 10 }),
-      JH: KF([[0, { a: -1.4, e: .3, g: -1, lg: [6, -8, 12, 10], th: 1, gg: 8 }], [.15, { a: 1.5, e: .2, g: -.2, l: .3, lg: [4, -6, 16, 16] }], [1, { a: 1.5 }]]),
-      D: KF([[0, { a: 1.6, e: .2, g: -.3, l: .3, s: 8, lg: [15, -14, 10, 2] }], [.3, { a: .3, g: -.3, l: .45, x: 1, ba: 2.4, y: .2 }], [1, { a: 1.1, e: 1.2, g: 0, l: .1, x: 0, s: 3, ba: 1.4, y: 0, w: 'fists', lg: [10, -10, 4, 3] }]]),
-      DX: KF([[0, { a: .3, e: 1.5, g: -1.5, l: .5, s: 7, lg: [17, -16, 10, 0], st: 1.1, fl: 16, y: -.3 }], [.62, { a: .1, l: .6 }], [1, { a: .5, e: 1.2, l: .15, s: 3, st: 1, fl: 4, lg: [10, -10, 4, 3], y: 0 }]]),
-      R: KF([[0, { a: .4, e: 1.3, g: -1.4, l: .2, s: 6 }], [.25, { r: 0, a: -.4 }], [.62, { r: -TWO, a: -.2 }], [1, { r: -TWO, a: .5, s: 3 }]]),
-      pL: KF([[0, { ...FI, a: 1, e: 1.7, ba: 1.3, be: 1.9, l: .05, oh: 1 }], [.3, { a: 1.1, e: 1.9, y: -.3 }], [.6, { a: -.05, e: 0, l: .3, y: .35, s: 4, lg: [14, -11, 7, 1], sh: 2 }], [1, { a: .9, e: 1.6, l: .1, y: 0, s: 2, sh: 0, lg: [10, -9, 4, 3] }]]),
-      pLL: KF([[0, { ...FI, a: 1, e: 1.7, ba: 1.3, be: 1.9, oh: 1 }], [.3, { ba: 1.5, be: 2, y: .2 }], [.6, { ba: -.05, be: 0, y: .6, l: .3, s: 4, lg: [13, -12, 7, 1] }], [1, { ba: 1.3, be: 1.9, y: 0, l: .1, s: 2 }]]),
-      pLLL: KF([[0, { ...FI, a: .9, e: 1.7, ba: 1.2, be: 1.9, l: .1, oh: 0, kk: 0 }], [.3, { kk: 1, l: -.2, y: -.3 }], [.6, { kk: 1, l: -.45, y: -.5, ks: 'lunge' }], [1, { kk: 0, l: .1, y: 0 }]], { fn: (pose, m, k) => { if (k > .25 && k < .8) { pose.kickK = clamp((k - .2) * 1.4, 0, 1); pose.kickH = [.35, .7]; pose.kickStyle = 'lunge'; } } }),
-      pH: KF([[0, { ...FI, a: .9, e: 1.6, oh: 0, ba: 1.3, be: 1.8 }], [.4, { a: 1.2, e: 1.9, l: -.2, y: -.5, s: 4 }], [.55, { a: -.05, e: 0, l: .45, y: .4, s: 7, lg: [16, -13, 9, 0] }], [1, { a: .9, e: 1.5, l: .1, s: 2, y: 0 }]]),
-      pHC: KF([[0, { ...FI, a: -.1, e: 0, oh: 1, x: 1, l: -.15, s: 6, lg: [10, -13, 5, 6], ba: 1.6 }], [.6, { a: -.3, e: .8, x: .3 }], [1, { a: .9, e: 1.4, x: 0, l: .05, s: 2, lg: [9, -9, 3, 3] }]]),
-      pX: KF([[0, { ...FI, a: 1, e: 1.8, ba: 1, be: 1.9, oh: 1, l: -.1, s: 5 }], [.35, { a: 1.2, e: 2, ba: 1.2, be: 2.1, l: -.2 }], [.55, { a: 0, e: 0, ba: 0, be: 0, l: .45, s: 7, lg: [16, -13, 9, 0], y: .3 }], [1, { a: .9, e: 1.6, ba: 1.3, be: 1.8, l: .1, s: 2, y: 0 }]]),
-      pA: KF([[0, { ...FI, a: .9, e: 1.7, oh: 1, lg: [7, -9, 10, 8] }], [.2, { e: 1.9 }], [.6, { a: .1, e: 0, l: .25 }], [1, { a: .8, e: 1.5 }]]),
-      pAA: KF([[0, { ...FI, a: .9, e: 1.7, oh: 1, lg: [8, -8, 12, 6] }], [.6, { ba: 0, be: 0, y: .5 }], [1, { ba: 1.3, be: 1.8, y: 0 }]]),
+      // the rim swept out from across his chest; then back down across them
+      L: KF([[0, { ...GU, a: .25, e: 2.3, y: .35, l: 0 }], [.3, { a: .1, e: 2.4, y: .45, l: -.1, s: 3 }], [.56, { a: -.05, e: .15, y: -.3, l: .35, s: 6, lg: [15, -12, 9, 1], sh: 2 }], [1, { ...GU, s: 2, y: 0, sh: 0, lg: [10, -9, 4, 3] }]], { tr: [[.3, .56]] }),
+      LL: KF([[0, { ...GU, a: -.6 }], [.3, { a: -1.3, e: 1.1, y: .3, l: -.15, s: 3 }], [.56, { a: .75, e: .2, y: -.25, l: .4, s: 7, lg: [16, -13, 9, 1], sh: 2 }], [1, { ...GU, s: 2, y: 0, sh: 0, lg: [10, -9, 4, 3] }]], { tr: [[.3, .56]] }),
+      // the face of it driven into them, the whole body behind it
+      LLL: KF([[0, { ...GU }], [.36, { a: .95, e: 2.15, l: -.2, y: -.35, s: 5, lg: [9, -14, 4, 6] }], [.5, { a: -.3, e: 1.3, l: .6, y: .15, s: 10, lg: [19, -17, 12, 0], sh: 4, st: 1.08, fl: 14 }], [.7, { a: -.25 }], [1, { ...GU, s: 3, y: 0, sh: 0, st: 1, fl: 4, lg: [11, -10, 5, 3] }]]),
+      // the throw: wound across him, flung flat (from .36 his hand is empty: posed)
+      H: KF([[0, { ...GU }], [.3, { a: .2, e: 2.5, y: .55, l: -.25, s: 4, ba: 2.4, be: .3, lg: [8, -13, 4, 6] }], [.42, { a: -.15, e: 0, y: -.35, l: .35, s: 6, ba: 1.6, oh: 1, lg: [16, -12, 9, 1] }], [1, { a: .2, e: .5, y: 0, l: .15, s: 3, ba: 1.3, be: .5, oh: 1, lg: [11, -10, 5, 3] }]], { tr: [[.3, .42]] }),
+      HH: KF([[0, { ...GU }], [.38, { a: -2.3, e: .3, l: -.25, y: .2, s: 2, lg: [8, -10, 3, 5] }], [.58, { a: 1.25, e: .1, l: .65, y: -.1, s: 11, lg: [18, -15, 12, 0], sh: 3 }], [1, { a: 1.1, e: .3, l: .4, s: 8, sh: 2 }]], { tr: [[.38, .58]], trW: 8 }),
+      HC: KF([[0, { ...GU, a: .15, e: 1.75, l: .45, s: 8, lg: [16, -16, 9, 2] }], [.08, { l: .62, s: 9, lg: [20, -17, 11, 0], st: 1.12, fl: 18, sh: 3 }], [.74, { l: .6 }], [1, { ...GU, s: 3, st: 1, fl: 4, sh: 0, lg: [10, -10, 4, 3] }]], { fn: (pose, m, k) => { if (k > .08 && k < .74) pose.streak = { len: 70, a: .6, col: pal().trail }; } }),
+      X: KF([[0, { ...GU, a: .2, e: 1.8, l: .2, s: 8, ba: .9, be: 1.9, lg: [13, -13, 7, 4] }], [1, { a: .2 }]], { fn: (pose, m, k) => { const w = Math.sin(P.t * 11); pose.legs = { f: 12 + 4 * w, b: -12 + 4 * w, fk: 7 + 2 * Math.max(0, w), bk: 4 + 2 * Math.max(0, -w) }; } }),
+      Xb: KF([[0, { ...GU, a: .2, e: 1.8, l: .2, s: 8 }], [.3, { a: .9, e: 2.15, l: -.15, y: -.3, s: 6, lg: [9, -14, 4, 6] }], [.46, { a: -.35, e: 1.3, l: .65, y: .15, s: 10, lg: [20, -17, 12, 0], sh: 4, st: 1.1, fl: 14 }], [1, { ...GU, s: 3, y: 0, sh: 0, st: 1, fl: 4, lg: [11, -10, 5, 3] }]]),
+      A: KF([[0, { ...GU, a: .25, e: 2.3, y: .3, lg: [7, -9, 10, 8] }], [.22, { e: 2.4 }], [.6, { a: -.05, e: .15, y: -.2, l: .3 }], [1, { a: .2, e: 1.2, y: 0 }]], { tr: [[.22, .6]] }),
+      AA: KF([[0, { ...GU, a: -1.2, e: 1.1, lg: [8, -8, 12, 6] }], [.22, { a: -1.4 }], [.6, { a: .8, e: .2, l: .35 }], [1, { a: .6, e: .8 }]], { tr: [[.22, .6]] }),
+      AAA: KF([[0, { ...GU, a: -1.6, e: .4, r: 0, lg: [6, -8, 12, 10] }], [.25, { a: -1.9, r: -.2 }], [.62, { a: 1.2, e: 1.2, l: .5, r: .35 }], [1, { a: 1.15, r: .25 }]]),
+      JH: KF([[0, { ...GU, a: -.6, e: 1.4, lg: [6, -8, 12, 10] }], [.15, { a: 1.3, e: 1.3, l: .3, r: .2, lg: [4, -6, 16, 16], ba: -1.4, be: .3, oh: 1 }], [1, { a: 1.3 }]], { fn: (pose, m, k) => { if (k > .15) pose.streak = { len: 30, a: .5, col: pal().trail }; } }),
+      // surfing it: weight low, arms out for balance, turned side-on (the shield is drawn under his feet: draw)
+      D: KF([[0, { ...FI, a: -.5, e: .3, ba: 2.7, be: .3, oh: 1, l: .2, s: 9, y: .5, oy: -4, lg: [11, -11, 10, 10], fl: 16 }], [.85, { a: -.3, ba: 2.9, l: .25 }], [1, { a: .9, e: 1.6, ba: 1.3, be: 1.8, oh: 0, l: .1, s: 3, y: 0, oy: 0, lg: [10, -10, 4, 3], fl: 4 }]], { fn: (pose, m, k) => { pose.lean += .06 * Math.sin(k * 26); } }),
+      DX: KF([[0, { ...GU, a: .15, e: 1.7, l: .6, s: 8, y: -.2, lg: [18, -17, 10, 0], st: 1.12, fl: 18, sh: 3 }], [.72, { l: .66 }], [1, { ...GU, s: 3, y: 0, st: 1, fl: 4, sh: 0, lg: [10, -10, 4, 3] }]]),
+      R: KF([[0, { ...GU, a: .1, e: .15, l: .3, s: 7, lg: [14, -14, 9, 2] }], [.15, { sp: 0 }], [.8, { sp: -TWO }], [1, { sp: -TWO, ...GU, s: 3, lg: [10, -10, 4, 3] }]], { fn: (pose, m, k) => { if (k > .15 && k < .84) pose.flat = { r: (WP().reach || 60) + 14, k: spn(k, .15, .8), rev: false, col: pal().trail, w: 5 }; } }),
+      // bare hands, while it flies
+      pL: KF([[0, { ...FI, a: 1, e: 1.75, ba: 1.2, be: 1.9, l: .05 }], [.3, { a: 1.05, e: 1.9, y: -.2 }], [.6, { a: -.05, e: 0, l: .3, y: .3, s: 4, lg: [14, -11, 7, 1], sh: 2 }], [1, { a: 1, e: 1.75, l: .1, y: 0, s: 2, sh: 0, lg: [10, -9, 4, 3] }]]),
+      pLL: KF([[0, { ...FI, a: 1, e: 1.75, ba: 1.2, be: 1.9 }], [.3, { ba: 1.5, be: 2, y: .2 }], [.6, { ba: -.05, be: 0, y: .6, l: .3, s: 4, lg: [13, -12, 7, 1] }], [1, { ba: 1.2, be: 1.9, y: 0, l: .1, s: 2 }]]),
+      pLLL: KF([[0, { ...FI, a: .9, e: 1.7, ba: 1.2, be: 1.9, l: .1, kk: 0 }], [.3, { kk: 1, l: -.2, y: -.3 }], [.6, { kk: 1, l: -.45, y: -.5, ks: 'lunge' }], [1, { kk: 0, l: .1, y: 0 }]], { fn: (pose, m, k) => { if (k > .25 && k < .8) { pose.kickK = clamp((k - .2) * 1.4, 0, 1); pose.kickH = [.35, .7]; pose.kickStyle = 'lunge'; } } }),
+      pA: KF([[0, { ...FI, a: .9, e: 1.7, lg: [7, -9, 10, 8] }], [.2, { e: 1.9 }], [.6, { a: .1, e: 0, l: .25 }], [1, { a: .8, e: 1.5 }]]),
+      pAA: KF([[0, { ...FI, a: .9, e: 1.7, lg: [8, -8, 12, 6] }], [.6, { ba: 0, be: 0, y: .5 }], [1, { ba: 1.3, be: 1.8, y: 0 }]]),
       pAAA: KF([[0, { ...FI, a: -2.2, e: .4, r: 0, lg: [6, -8, 12, 10] }], [.25, { a: -2.6, r: -.2 }], [.62, { a: 1.2, e: 0, l: .5, r: .4 }], [1, { a: 1, r: .25 }]]),
-      pJH: KF([[0, { ...FI, a: -.6, e: 1.4, ba: -.8, be: 1.4, l: -.2, lg: [6, -8, 12, 10] }], [.4, { a: .2, e: 1.6, l: .2, r: .3 }], [1, { a: .6, e: 1.5, l: .3, r: .3 }]], { fn: (pose, m, k) => { if (k > .4) { pose.kickK = .6; pose.kickH = [.3, .7]; pose.kickStyle = 'drop'; pose.kickAir = true; } } }),
-      pD: KF([[0, { ...FI, a: 1.1, e: .9, oh: 1, l: .2, s: 6, oy: 12, r: -.5, lg: [26, 18, 0, 12], st: 1.12, fl: 18 }], [.75, { oy: 12 }], [1, { oy: 0, r: 0, lg: [10, -10, 4, 3], st: 1, s: 2, l: .1, fl: 4 }]]),
-      pR: KF([[0, { ...FI, a: .9, e: 1.6, l: -.2, lg: [6, -8, 12, 10] }], [.25, { r: 0 }], [.62, { r: .4, l: .2 }], [1, { r: 0, l: .1 }]], { fn: (pose, m, k) => { if (k > .2 && k < .75) { pose.kickK = .6; pose.kickH = [.3, .7]; pose.kickStyle = 'drop'; pose.kickAir = P.z > 2; } } }),
+      pH: KF([[0, { ...FI, a: -.1, e: 0, oh: 1, l: -.15, s: 6, lg: [10, -13, 5, 6], ba: 1.6 }], [.6, { a: -.2, e: .3 }], [1, { a: .4, e: 1.4, oh: 0, l: .05, s: 3, lg: [10, -9, 4, 3] }]]),
     });
   }
 
