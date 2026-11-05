@@ -110,6 +110,19 @@
   <div class="scroll menu" id="m-list"></div>
 </section>
 
+<!-- ASK CLAUDE CODE (GitHub issue -> Claude Code action) -->
+<section id="v-req" class="view">
+  <div class="top"><button class="small" id="r-back">← Menu</button><div class="title">Ask Claude Code</div><button class="small" id="r-refresh">↻</button></div>
+  <div class="scroll" id="r-scroll">
+    <label for="r-text">What should Claude Code build or change?</label>
+    <textarea id="r-text" rows="3" placeholder="e.g. add a dark-red theme to the glasses app"></textarea>
+    <div class="row" style="margin-top:6px"><button id="r-mic" style="flex:0 0 70px">🎤</button><button class="primary" id="r-send">Send request</button></div>
+    <div class="hint" id="r-status" style="margin-top:6px">Uses the GitHub token and repo from “Update this app” (needs Issues: read &amp; write).</div>
+    <div id="r-list" style="margin-top:8px"></div>
+    <div id="r-detail" class="q" style="margin-top:8px"></div>
+  </div>
+</section>
+
 <!-- UPDATE APP -->
 <section id="v-dev" class="view">
   <div class="top"><button class="small" id="d-back">← Menu</button><div class="title">Update this app</div></div>
@@ -261,7 +274,7 @@ const saveChats = () => {
 const apiKey = () => LS.get("gc.key", "");
 
 /* ---------- views ---------- */
-const NAV_VIEWS = ["menu", "history", "lib", "settings", "dev"];
+const NAV_VIEWS = ["menu", "history", "lib", "settings", "dev", "req"];
 const navView = () => { const v = document.querySelector(".view.on"); return v && NAV_VIEWS.includes(v.id.slice(2)) ? v : null; };
 function focusables(v) { return [...v.querySelectorAll("button, a[href], input:not([type=hidden]), select, textarea")].filter(el => !el.disabled && el.offsetParent !== null); }
 function stepFocus(d) {
@@ -527,6 +540,7 @@ const MENU = [
   ["⚡", "Skills", () => openLib("skills")],
   ["🧠", "Memory", () => openLib("memory")],
   ["📜", "Activity", () => openLib("activity")],
+  ["📨", "Ask Claude Code", () => { show("req"); loadReqs(); }],
   ["🛠", "Update this app", () => { fillDev(); show("dev"); }],
   ["⚙", "Settings", () => { fillSettings(); show("settings"); }],
 ];
@@ -799,6 +813,59 @@ $("d-mic").onclick = () => {
   r.onresult = e => { $("d-req").value = (($("d-req").value + " ") + e.results[0][0].transcript).trim(); };
   r.onerror = e => dstat("Mic: " + e.error); r.onend = () => { $("d-mic").textContent = "🎤"; };
   try { r.start(); $("d-mic").textContent = "…"; } catch (e) { dstat("Mic: " + e.message); }
+};
+
+/* ---------- ask Claude Code (opens a GitHub issue that mentions @claude) ---------- */
+const rstat = t => { $("r-status").textContent = t; };
+async function gh2(path, method, body) {
+  if (!dev.token) throw new Error("Add your GitHub token under Menu → Update this app first");
+  const r = await fetch("https://api.github.com/repos/" + dev.repo + path, { method: method || "GET",
+    headers: { Authorization: "Bearer " + dev.token, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+    body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) { let m = r.status; try { m = (await r.json()).message; } catch {} throw new Error("GitHub: " + m); }
+  return r.json();
+}
+async function sendReq() {
+  const t = $("r-text").value.trim(); if (!t) return rstat("Say what you want first");
+  $("r-send").disabled = true;
+  try {
+    rstat("Sending…");
+    const i = await gh2("/issues", "POST", { title: "Glasses request: " + t.slice(0, 60), body: "@claude " + t + "\n\n_Sent from the glasses app._" });
+    $("r-text").value = ""; logAct("request", t);
+    rstat("Sent as #" + i.number + ". Claude Code usually starts within a minute — tap ↻ to check.");
+    loadReqs();
+  } catch (e) { rstat("⚠ " + e.message); }
+  $("r-send").disabled = false;
+}
+async function loadReqs() {
+  const box = $("r-list"); box.innerHTML = ""; $("r-detail").innerHTML = "";
+  if (!dev.token) return;
+  try {
+    const list = (await gh2("/issues?state=all&per_page=15")).filter(x => !x.pull_request && /^Glasses request/.test(x.title)).slice(0, 8);
+    if (!list.length) box.innerHTML = '<div class="hint">No requests yet.</div>';
+    list.forEach(x => {
+      const b = document.createElement("button"); b.className = "open"; b.style.cssText = "width:100%;text-align:left;margin-bottom:8px";
+      b.innerHTML = "<span>" + esc(x.title.replace("Glasses request: ", "")) + "</span><small style='display:block;color:var(--dim);font-size:.7em'>#" + x.number + " · " + x.state + " · " + x.comments + " replies</small>";
+      b.onclick = () => showReq(x); box.append(b);
+    });
+  } catch (e) { rstat("⚠ " + e.message); }
+}
+async function showReq(x) {
+  const d = $("r-detail"); d.textContent = "Loading…";
+  try {
+    const cs = await gh2("/issues/" + x.number + "/comments?per_page=100");
+    const last = cs[cs.length - 1];
+    d.innerHTML = "<b>#" + x.number + "</b> " + (last ? md(last.body.slice(0, 2500)) : "No reply yet — Claude Code may still be starting.") +
+      '<div class="hint" style="margin-top:6px">Open ' + esc(x.html_url) + " to review and merge the pull request it makes.</div>";
+  } catch (e) { d.textContent = "⚠ " + e.message; }
+}
+$("r-send").onclick = sendReq; $("r-refresh").onclick = loadReqs; $("r-back").onclick = () => { renderMenu(); show("menu"); };
+$("r-mic").onclick = () => {
+  if (!SR) return rstat("Voice isn't available here — tap the box and use the keyboard's mic");
+  const r = new SR(); r.lang = settings.lang || "en-US"; r.interimResults = false;
+  r.onresult = e => { $("r-text").value = (($("r-text").value + " ") + e.results[0][0].transcript).trim(); };
+  r.onerror = e => rstat("Mic: " + e.error); r.onend = () => { $("r-mic").textContent = "🎤"; };
+  try { r.start(); $("r-mic").textContent = "…"; } catch (e) { rstat("Mic: " + e.message); }
 };
 
 /* ---------- boot ---------- */
