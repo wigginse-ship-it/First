@@ -872,8 +872,10 @@ $("r-mic").onclick = () => {
 applySize();
 // Optional prefill: open  .../glasses-claude/#key=sk-ant-...  once; the key is saved here and removed from the address bar.
 try {
-  const m = location.hash.match(/[#&]key=(sk-ant-[^&\s]+)/);
-  if (m) { LS.set("gc.key", decodeURIComponent(m[1])); history.replaceState(null, "", location.pathname + location.search); }
+  const m = location.hash.match(/[#&]key=(sk-ant-[^&\s]+)/), g = location.hash.match(/[#&]ghtoken=((?:github_pat_|ghp_)[A-Za-z0-9_]+)/);
+  if (m) LS.set("gc.key", decodeURIComponent(m[1]));
+  if (g) { dev.token = g[1]; LS.set("gc.dev", dev); }
+  if (m || g) history.replaceState(null, "", location.pathname + location.search);
 } catch {}
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopSpeaking(); });
 if (!apiKey()) showLogin();
