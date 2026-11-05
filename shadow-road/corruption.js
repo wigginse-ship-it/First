@@ -808,6 +808,7 @@
     if (!NG() || DBL_DRAW) return _de(e, t);
     const puppet = L.fx && L.fx.k === 'puppet' && fxAmt() > .4;
     if (puppet && !TINT) { TINT = '#140C0A'; try { return _de(e, t); } finally { TINT = null; } }
+    if (e.cB && e.def && e.def.ownCurse) return _de(e, t); // (a lord that wears the curse in its own drawing, its weak point built into it: no overlay, no halo, no mark)
     const lord = e.cB && !TINT && !(e.state === 'dying' && e.death && e.death !== 'pop') && e.def && CREATURES[e.def.draw];
     if (lord) { // (a corrupted lord: the Circle's work is laid on its body as it is drawn, in the drawing's own space; its halo behind)
       const key = e.def.draw, o = CREATURES[key]; let done = false;
