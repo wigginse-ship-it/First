@@ -467,93 +467,43 @@
     // the weapon itself, standing in the black (in the ink layer, outlined like all things)
     const bob = Math.sin(t * 2.2 + x) * 2, sink = k.landed ? 6 * land : 0, z = k.z;
     ctx.save(); ctx.translate(x, y - z + sink + bob - 6);
-    const art = { id: k.weapon, lvl: LV0, pure: false };
+    const art = { id: k.weapon, lvl: LV0, pure: false, drop: 1 };
     if (k.weapon === 'fists') { ctx.translate(0, -26); ctx.rotate(-P_ / 2 + .2); ctx.scale(1.6, 1.6); drawWeapon('fists', { cwArt: art, glove: '#2A2030' }); }
     else { ctx.rotate(P_ / 2 - .12); const len = DROP_LEN[k.weapon] || 60; ctx.translate(-len, 0); drawWeapon(k.weapon === 'rapier' ? 'grayblade' : k.weapon, { noHand: 1, tier: k.weapon === 'rapier' ? 8 : 7, cwArt: art }); }
     ctx.restore();
   }
 
   // ======================================================================================================
-  // THE ART: the black veins on the weapon, and the white fire once purified
+  // THE ART: each cursed weapon its own dark form, and purified, its radiant one (art_cursedw.js)
   // ======================================================================================================
+  // (the art itself is art_cursedw.js: CWART draws each cursed or purified weapon as its own form, and its trails)
   let ICON = null; // (drawIcon: the weapon on its card)
   { const _di = drawIcon; drawIcon = function (canvas, id, scale) {
     if (canvas && canvas.dataset) canvas.dataset.wid = id;
     const c = cw(id); ICON = c ? { id, lvl: lvOf(c), pure: c.pure } : null;
+    if (c && id === 'fists' && typeof CWART !== 'undefined') { const A = ICON; ICON = null; try { CWART.fistIcon(canvas, A, scale); return; } catch (e) { console.error(e); } }
     try { _di(canvas, id, scale); } finally { ICON = null; }
-    if (c && id === 'fists') { const g = canvas.getContext('2d'), old = ctx; ctx = g; try { const s = canvas.width / 64 * (scale || 1); g.setTransform(s, 0, 0, s, 0, 0); g.translate(32, 33); g.rotate(-.25); g.translate(-14, -2); g.scale(1.5, 1.5); overlay('fists', { id, lvl: lvOf(c), pure: c.pure }, 1); } finally { g.setTransform(1, 0, 0, 1, 0, 0); ctx = old; } }
   }; }
   { const _pp = playerPose; playerPose = function () {
     const pose = _pp(); const c = P && cw(P.w); if (!c) return pose;
-    pose.cwArt = { id: P.w, lvl: lvOf(c), pure: c.pure };
-    const tc = c.pure ? 'rgba(255,236,170,.95)' : 'rgba(150,60,200,.95)', gold = 'rgba(216,170,85,.95)', base = TRAIL[P.w];
+    const art = pose.cwArt = { id: P.w, lvl: lvOf(c), pure: c.pure };
+    const tc = c.pure ? 'rgba(255,226,150,.95)' : 'rgba(190,40,90,.95)', gold = 'rgba(216,170,85,.95)', base = TRAIL[P.w];
     if (pose.trailCol === base || pose.trailCol === gold) pose.trailCol = tc;
-    if (pose.flat && (pose.flat.col === base || pose.flat.col === gold)) pose.flat.col = tc;
+    if (pose.flat) { pose.flat = Object.assign({}, pose.flat, { cwArt: art }); if (pose.flat.col === base || pose.flat.col === gold) pose.flat.col = tc; }
     if (pose.streak && (pose.streak.col === base || pose.streak.col === gold)) pose.streak.col = tc;
     return pose; }; }
   { const _dw = drawWeapon; drawWeapon = function (kind, pose) {
-    _dw(kind, pose);
     const A = (pose && pose.cwArt) || (ICON && (kind === ICON.id || (ICON.id === 'rapier' && kind === 'grayblade')) ? ICON : null);
-    if (!A || FLASH) return;
-    const k2 = kind === 'grayblade' ? 'rapier' : kind; if (k2 !== A.id && !(A.id === 'fists' && (kind === 'fists' || !kind))) return;
-    try { overlay(A.id, A, 0); } catch (e) { console.error(e); }
+    const k2 = kind === 'grayblade' ? 'rapier' : kind || 'fists';
+    if (!A || k2 !== A.id || typeof CWART === 'undefined') return _dw(kind, pose);
+    let ok = false; try { ok = CWART.draw(A.id, A, pose || {}, A === ICON); } catch (e) { console.error(e); }
+    if (!ok) _dw(kind, pose);
   }; }
-  // in the weapon's own frame (along +x from the grip): the veins, the glow and each weapon's own touch of the Circle
-  function overlay(id, A, icon) {
-    const g = ctx, pure = !!A.pure, k = pure ? 1 : .35 + .65 * (clamp(A.lvl, LV0, LVMAX) - LV0) / (LVMAX - LV0), t = now(), det = !TINT && !(typeof LITE !== 'undefined' && LITE);
-    const ink = pure ? '#F4EAD0' : INKC, vein = pure ? 'rgba(255,214,120,' : 'rgba(225,40,60,', bone = pure ? '#FFF6DC' : '#140A16', boneEdge = pure ? '#C8A050' : '#5A2A4A';
-    g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
-    const veinPath = (pts) => { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); };
-    const veins = (x0, x1, h, n, seed) => { // branching black veins over a span, red light beating along them
-      const r = mulberry(seed); const P0 = [];
-      for (let i = 0; i < n; i++) { const pts = []; let x = x0 + (x1 - x0) * r() * .3, y = (r() - .5) * h * .6; pts.push(x, y); const len = (x1 - x0) * (.4 + .6 * r()) * k;
-        for (let s = 0; s < 6; s++) { x += len / 6; y = clamp(y + (r() - .5) * h * .32, -h * .45, h * .45); pts.push(x, y); } P0.push(pts); }
-      g.strokeStyle = C(ink); g.lineWidth = 1.5; for (const p of P0) { veinPath(p); g.stroke(); }
-      if (det) { g.strokeStyle = vein + (.45 + .35 * Math.sin(t * 4 + seed)) + ')'; g.lineWidth = .7; g.setLineDash([2.5, 5]); g.lineDashOffset = -t * 14; for (const p of P0) { veinPath(p); g.stroke(); } g.setLineDash([]); } };
-    const veinsR = (cx, cy, rx, ry, n, seed) => { // veins spreading out from a point (a gem, a heart), branching once
-      const r = mulberry(seed), P0 = [];
-      for (let i = 0; i < n; i++) { const a0 = i / n * TAU + r() * .6, len = (.55 + .45 * r()) * k, pts = [cx, cy]; let x = cx, y = cy, a = a0;
-        for (let s2 = 1; s2 <= 5; s2++) { a += (r() - .5) * .7; x = cx + Math.cos(a) * rx * len * s2 / 5; y = cy + Math.sin(a) * ry * len * s2 / 5; pts.push(x, y); if (s2 === 3 && r() < .6) { const b2 = a + (r() < .5 ? -.7 : .7); P0.push([x, y, x + Math.cos(b2) * rx * .3 * k, y + Math.sin(b2) * ry * .3 * k]); } }
-        P0.push(pts); }
-      g.strokeStyle = C(ink); g.lineWidth = 1.4; for (const p of P0) { veinPath(p); g.stroke(); }
-      if (det) { g.strokeStyle = vein + (.45 + .35 * Math.sin(t * 4 + seed)) + ')'; g.lineWidth = .7; g.setLineDash([2.5, 5]); g.lineDashOffset = -t * 14; for (const p of P0) { veinPath(p); g.stroke(); } g.setLineDash([]); } };
-    const thorn = (x, y, ang, len, w) => { g.save(); g.translate(x, y); g.rotate(ang); g.beginPath(); g.moveTo(0, -w); g.quadraticCurveTo(len * .55, -w * .4, len, 0); g.quadraticCurveTo(len * .55, w * .2, 0, w); g.closePath(); g.fillStyle = C(bone); g.fill(); g.strokeStyle = C(boneEdge); g.lineWidth = .7; g.stroke(); g.restore(); };
-    const glow = (x, y, r) => { if (!det) return; g.save(); g.globalCompositeOperation = 'lighter'; const q = g.createRadialGradient(x, y, 0, x, y, r); const c0 = pure ? '255,226,150' : '170,40,120'; q.addColorStop(0, `rgba(${c0},${.38 + .14 * Math.sin(t * 3)})`); q.addColorStop(1, `rgba(${c0},0)`); g.fillStyle = q; g.fillRect(x - r, y - r, r * 2, r * 2); g.restore(); };
-    const nThorn = Math.round(2 + 4 * k);
-    if (id === 'hammer') { // grave-iron: thorns off the head's crown and foot, a hooked spike out of its back, veins over its face
-      glow(34, 0, 30);
-      veinsR(34, 0, 13, 21, 4 + Math.round(4 * k), 11);
-      for (let i = 0; i < nThorn; i++) { const x = 24 + i * (22 / Math.max(1, nThorn - 1)); thorn(x, -21, -P_ / 2 - .35 + .7 * hsh(i), 7 + 4 * hsh(i + 3), 2); thorn(x + 2, 21, P_ / 2 + .35 - .7 * hsh(i + 5), 6 + 4 * hsh(i + 7), 1.8); }
-      g.beginPath(); g.moveTo(46, -6); g.quadraticCurveTo(60, -10, 64, -2); g.quadraticCurveTo(58, -4, 52, 2); g.closePath(); g.fillStyle = C(bone); g.fill(); g.strokeStyle = C(boneEdge); g.lineWidth = .8; g.stroke();
-      if (det) { g.fillStyle = pure ? '#FFFFFF' : `rgba(255,60,60,${.7 + .3 * Math.sin(t * 5)})`; circle(34, 0, 2.2); g.fill(); }
-    } else if (id === 'staff') { // a black briar wound round the haft, a barbed hook at its head
-      glow(70, 0, 22); glow(-46, 0, 16);
-      g.strokeStyle = C(ink); g.lineWidth = 1.4; g.beginPath(); for (let x = -44; x <= 66; x += 2) { const y = Math.sin(x * .32) * 3.4; x === -44 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke();
-      for (let i = 0; i < nThorn + 2; i++) { const x = -40 + i * (104 / (nThorn + 1)), up = i % 2 ? 1 : -1; thorn(x, up * 3, up * (P_ / 2 + .5), 4 + 2 * hsh(i), 1.2); }
-      if (det) { g.strokeStyle = vein + (.5 + .3 * Math.sin(t * 4)) + ')'; g.lineWidth = .6; g.setLineDash([2, 6]); g.lineDashOffset = -t * 12; g.beginPath(); for (let x = -44; x <= 66; x += 2) { const y = Math.sin(x * .32) * 3.4; x === -44 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke(); g.setLineDash([]); }
-      g.beginPath(); g.moveTo(68, -3); g.quadraticCurveTo(82, -16 - 4 * k, 92, -8); g.quadraticCurveTo(84, -10, 76, 0); g.quadraticCurveTo(84, 8, 88, 14); g.quadraticCurveTo(78, 12, 68, 3); g.closePath();
-      g.fillStyle = C(bone); g.fill(); g.strokeStyle = C(boneEdge); g.lineWidth = .9; g.stroke();
-    } else if (id === 'sword') { // the black spreading down the blade from the guard, teeth along its back, a notch torn at the point
-      glow(64, 0, 34);
-      const reach = 22 + 48 * k; if (det) { g.save(); g.globalAlpha = pure ? .35 : .55; const q = g.createLinearGradient(28, 0, 28 + reach, 0); q.addColorStop(0, pure ? 'rgba(255,240,200,.9)' : 'rgba(10,4,14,.95)'); q.addColorStop(1, pure ? 'rgba(255,240,200,0)' : 'rgba(10,4,14,0)'); g.fillStyle = q; g.fillRect(28, -6.5, reach, 13); g.restore(); }
-      veins(28, 96, 12, 3 + Math.round(2 * k), 23);
-      for (let i = 0; i < nThorn + 1; i++) { const x = 52 + i * (40 / Math.max(1, nThorn)); g.beginPath(); g.moveTo(x - 3, -6); g.lineTo(x + 1, -11 - 3 * hsh(i)); g.lineTo(x + 3, -5.5); g.closePath(); g.fillStyle = C(bone); g.fill(); g.strokeStyle = C(boneEdge); g.lineWidth = .6; g.stroke(); }
-      if (det && !pure) { g.fillStyle = VOID; g.beginPath(); g.moveTo(88, 2.5); g.lineTo(93, -.5); g.lineTo(95, 3); g.closePath(); g.fill(); }
-    } else if (id === 'rapier') { // a briar coiled up the blade's first half, a black rose at the guard
-      glow(26, 0, 22);
-      g.strokeStyle = C(ink); g.lineWidth = 1.1; g.beginPath(); const xe = 30 + 40 * k; for (let x = 26; x <= xe; x += 1.5) { const y = Math.sin(x * .55) * 2.6; x === 26 ? g.moveTo(x, y) : g.lineTo(x, y); } g.stroke();
-      for (let i = 0; i < nThorn; i++) { const x = 30 + i * ((xe - 30) / Math.max(1, nThorn)), up = i % 2 ? 1 : -1; thorn(x, up * 2.4, up * (P_ / 2 + .6), 3.6, .9); }
-      const rx = 20, ry = 0; for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + t * .3; g.fillStyle = C(pure ? '#FFE8E0' : '#2A0A16'); ell(rx + Math.cos(a) * 2.2, ry + Math.sin(a) * 2.2, 2.8, 1.8, a); g.fill(); }
-      g.fillStyle = C(pure ? '#FFC0C8' : '#8A1028'); circle(rx, ry, 1.7); g.fill();
-      if (det) { g.strokeStyle = vein + (.5 + .3 * Math.sin(t * 5)) + ')'; g.lineWidth = .6; g.beginPath(); g.moveTo(30, 0); g.lineTo(xe + 8, 0); g.stroke(); }
-    } else if (id === 'fists') { // three black claws out over the knuckles, veins over the back of the hand
-      glow(22, 0, 14);
-      for (let i = 0; i < 3; i++) { const y = -3.2 + i * 3.2; g.beginPath(); g.moveTo(20, y - 1.1); g.quadraticCurveTo(25 + 2 * k, y - 1.8, 28 + 4 * k, y + .5); g.quadraticCurveTo(24, y + .4, 20, y + 1.1); g.closePath(); g.fillStyle = C(bone); g.fill(); g.strokeStyle = C(boneEdge); g.lineWidth = .5; g.stroke(); }
-      if (det) { g.strokeStyle = C(ink); g.lineWidth = .8; g.beginPath(); g.moveTo(14, -3); g.lineTo(16.5, -1); g.lineTo(15, 1.5); g.moveTo(16.5, -1); g.lineTo(19, .5); g.stroke();
-        g.strokeStyle = vein + (.5 + .3 * Math.sin(t * 5)) + ')'; g.lineWidth = .4; g.stroke(); }
-    }
-    g.restore();
-  }
+  // the swing trails: ink and embers while cursed, gold light and petals once purified
+  { const _dt = drawTrail; drawTrail = function (cx, cy, pose) { const A = pose && pose.cwArt;
+    if (!A || typeof CWART === 'undefined') return _dt(cx, cy, pose); try { CWART.trail(cx, cy, pose, A, () => _dt(cx, cy, pose)); } catch (e) { console.error(e); } }; }
+  { const _ft = drawFlatTrail; drawFlatTrail = function (cx, cy, f) { const A = f && f.cwArt;
+    if (!A || typeof CWART === 'undefined') return _ft(cx, cy, f); try { CWART.flat(cx, cy, f, A, () => _ft(cx, cy, f)); } catch (e) { console.error(e); } }; }
 
   // ---------------- the effects drawn: on the street (under everyone) and in front ----------------
   { const _ml = mechList; mechList = function (list, t) { _ml(list, t); if (!P) return;
