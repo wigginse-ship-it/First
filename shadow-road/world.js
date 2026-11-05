@@ -197,7 +197,7 @@ let hazards = [], carriers = [], corpses = [];
 function toCorpse(e, kind) {
   e.remove = true; e.corpse = true; e.z = 0; e.vx = e.vz = 0;
   if (kind) e.death = kind;
-  corpses.push(e); if (corpses.length > 30) corpses.shift();
+  corpses.push(e); if (corpses.length > 30) { const o = corpses.shift(); if (o && o.bake) { o.bake.cv.width = o.bake.cv.height = 1; o.bake = null; } }
 } // telegraphed boss attacks: ground marks that erupt, falling strikes, lane beams
 function attackers() { let n = 0; for (const e of enemies) if (!e.dead && ['wind', 'strike', 'dash', 'pounce', 'leap'].includes(e.state)) n++; return n; }
 function leftWall() { return (lockX !== null ? lockX : camX) + 14; }

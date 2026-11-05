@@ -1762,7 +1762,7 @@
     fx.push({ kind: 'ring', x, y, z: 2, t: .7, max: .7, r: 150 + 22 * h, col: '#FFD27A', flat: 1 }); fx.push({ kind: 'ring', x, y, z, t: .4, max: .4, r: 60, col: '#FFFFFF' });
     burst(x, y, z, ['#FFE6A0', '#FFD27A', '#FFFFFF', '#D8AA55'], (lite() ? 16 : 30) + 5 * h, 'spark', 0, true);
     burst(x, y, z, ['#0C080E', '#3A3240'], 10, 'goo', 0, true);
-    for (let i = 0, N = lite() ? 14 : 30; i < N; i++) parts.push({ x: x + rand(-110, 110), y: y + rand(-14, 14), z: rand(120, 230), vx: rand(-20, 20), vy: 0, vz: rand(-60, 10), life: rand(.9, 1.6), max: 1.6, col: pick(['#FFE6A0', '#FFD27A', '#FFF4D8', '#D8AA55']), size: rand(2, 3.6), shape: 'star', rot: 0, vr: rand(-6, 6) }); // (gold rain)
+    for (let i = 0, N = lite() ? 14 : 30; i < N; i++) parts.push({ x: x + rand(-110, 110), y: y + rand(-14, 14), z: rand(120, 230), vx: rand(-20, 20), vy: 0, vz: rand(-60, 10), life: rand(.9, 1.6), max: 1.6, col: pick(['#FFE6A0', '#FFD27A', '#FFF4D8', '#D8AA55']), size: rand(2.6, 4.6), shape: 'star', rot: 0, vr: rand(-6, 6) }); // (gold rain)
     sfx('learned'); sfx('break'); tn(523, .5, 'triangle', .06); tn(659, .5, 'triangle', .05, 0, .07); tn(784, .8, 'triangle', .05, 0, .14); if (burn) tn(1047, 1, 'sine', .05, 0, .24);
     if (e) graftsFly(e);
     L.cStat.broke++; if (burn) L.cStat.burnt++; L.cStat.last = how;
@@ -1779,9 +1779,9 @@
       if (o.x < camX - 40 || o.x > camX + VW + 40) continue; const d = Math.hypot(o.x - w.x, (o.y - w.y) * 1.5); if (d < bd) { bd = d; best = o; } }
     return best;
   }
-  function pickCorpse(w) {
+  function pickCorpse(w) { // (never its own host, just fallen)
     let best = null, bd = 420;
-    for (const c of corpses) { if (c.boss || !EDEF[c.type] || c.pform || c.cGone) continue; const d = Math.hypot(c.x - w.x, (c.y - w.y) * 1.5); if (d < bd) { bd = d; best = c; } }
+    for (const c of corpses) { if (c === w.from || c.boss || !EDEF[c.type] || c.pform || c.cGone) continue; const d = Math.hypot(c.x - w.x, (c.y - w.y) * 1.5); if (d < bd) { bd = d; best = c; } }
     return best;
   }
   const wispGoal = (w) => w.tg ? [w.tg.x - w.tg.facing * w.tg.hw * .6, w.tg.y, w.tg.z + w.tg.hh * .95] : w.co ? [w.co.x, w.co.y, 10] : [P.x, P.y, 0];
@@ -1863,7 +1863,7 @@
   // its puddles drag at his feet (not while he dodges or is off the ground)
   { const _up = updatePlayer; updatePlayer = function (dt) {
     const x0 = P ? P.x : 0, y0 = P ? P.y : 0; const r = _up(dt);
-    if (!NG() || !P || P.state === 'dodge' || P.z > 4 || !hazards.length) return r;
+    if (!NG() || !P || P.state === 'dodge' || P.z > 4 || !hazards.length || Math.abs(P.x - x0) > 24) return r; // (not a blink or a jump of place)
     for (const h of hazards) if (h.kind === 'cink' && h.t > .25 && Math.hypot(P.x - h.x, (P.y - h.y) * 3.2) < h.r) {
       P.x = x0 + (P.x - x0) * .5; P.y = y0 + (P.y - y0) * .5;
       if (Math.abs(P.x - x0) > .2 && Math.random() < .25) parts.push({ x: P.x + rand(-6, 6), y: P.y, z: 1, vx: rand(-30, 30), vy: 0, vz: rand(40, 90), life: .35, max: .35, col: pick(['#1A141E', '#4A424E']), size: rand(1.5, 3), shape: 'blob', rot: 0, vr: 0 });
@@ -1884,22 +1884,22 @@
       ctx.fillStyle = `rgba(232,40,48,${.85 + .15 * Math.sin(t * 7)})`; circle(ex, ey, r * .085); ctx.fill(); }
     ctx.restore();
   }
-  const GSLOT = [[-.55, -.8, -.6], [.48, -.74, .62], [-.04, -1.02, -.08]]; // (where the grafts grow, in its own drawing: the back shoulder, the front one, the crown)
+  const GSLOT = [[-.5, -.9, -.55], [.4, -.92, .5], [-.05, -1.04, -.08]]; // (where the grafts grow, in its own drawing: the back shoulder, the front one, the crown)
   function graftDraw(g, t, atk) { // (a host worn: its upper half, its own drawing, greyed; the cut at 0,0)
     const ga = { walk: 0, t, wind: 0, atk: !!atk, hurt: false }; if (g.draw === 'knight' || g.draw === 'colossus' || g.draw === 'human') ga.pose = humanEnemyPose(g.s);
-    ctx.save(); ctx.translate(0, g.hh * .5); ctx.beginPath(); ctx.rect(-g.hw * 4 - 40, -g.hh * 1.8 - 30, g.hw * 8 + 80, g.hh * 1.3 + 30); ctx.clip();
+    ctx.save(); ctx.translate(0, g.hh * .35); ctx.beginPath(); ctx.rect(-g.hw * 4 - 40, -g.hh * 1.8 - 30, g.hw * 8 + 80, g.hh * 1.45 + 30); ctx.clip();
     try { CREATURES[g.draw](g.s, ga); if (!LITE && !lite() && !FLASH && !TINT) { const tt = TINT; ctx.globalAlpha *= .6; TINT = '#77727C'; try { CREATURES[g.draw](g.s, ga); } finally { TINT = tt; } } } catch (err) { console.error(err); }
     ctx.restore();
   }
-  function graftScale(g, e) { return clamp(e.cBase.hh * .5 / Math.max(10, g.hh), .26, .72) * (e.cHops >= CAR.CAP ? 1.15 : 1); }
+  function graftScale(g, e) { return clamp(e.cBase.hh * .8 / Math.max(10, g.hh), .42, .8) * (e.cHops >= CAR.CAP ? 1.15 : 1); }
   function graftPiece(g, e) { const s = graftScale(g, e); ctx.save(); ctx.scale(s, s); ctx.translate(0, g.hh * .4); graftDraw(g, now(), false); ctx.restore(); }
   function seam(r) { // (where a graft is stitched on: a black seam, red stitches across it)
     ctx.fillStyle = '#0C080C'; ctx.beginPath(); ctx.ellipse(0, 0, r, r * .42, 0, 0, TAU); ctx.fill();
     if (FLASH || TINT) return; ctx.strokeStyle = 'rgba(200,40,50,.9)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(i * r * .36 - 1.5, -r * .5); ctx.lineTo(i * r * .36 + 1.5, r * .5); } ctx.stroke();
   }
-  function wearGrafts(e, a, t, front) {
+  function wearGrafts(e, a, t) {
     const ch = e.cChain; if (!ch || !ch.length) return; const B = e.cBase, n = (LITE || lite()) ? 1 : 3, list = ch.slice(-n);
-    list.forEach((g, j) => { const i = ch.length - list.length + j, sl = GSLOT[i % 3]; if ((i % 3 === 0) === front) return;
+    list.forEach((g, j) => { const i = ch.length - list.length + j, sl = GSLOT[i % 3];
       const sway = Math.sin(t * 2.3 + g.seed * 9) * .14 + (a.atk ? (i % 2 ? .45 : -.45) : 0) + (a.wind || 0) * -.3, s = graftScale(g, e);
       ctx.save(); ctx.translate(sl[0] * B.hw, sl[1] * B.hh); ctx.rotate(sl[2] + sway);
       ctx.save(); ctx.scale(s, s); graftDraw(g, t, a.atk); ctx.restore(); seam(Math.max(4, B.hw * .32)); ctx.restore(); });
@@ -1907,7 +1907,7 @@
   { const _w = drawEnemy; drawEnemy = function (e, t) {
     if (!NG() || !e || e.cTrait !== 'carrier' || !e.cBase || DBL_DRAW || (e.state === 'dying' && e.death && e.death !== 'pop')) return _w(e, t);
     const k = carScale(e), hw = e.hw, hh = e.hh, B = e.cBase, rs = e.cRise > 0 ? sm(1 - e.cRise / .9) : 1, key = e.def.draw, o = CREATURES[key]; let done = false;
-    CREATURES[key] = function (en, a) { if (en !== e || done || TINT) return o(en, a); done = true; if (!e.dead) wearGrafts(e, a, t, false); o(en, a); if (!e.dead) wearGrafts(e, a, t, true); };
+    CREATURES[key] = function (en, a) { if (en !== e || done || TINT) return o(en, a); done = true; o(en, a); if (!e.dead) wearGrafts(e, a, t); };
     e.hw = B.hw; e.hh = B.hh; ctx.save();
     ctx.translate(e.x, e.y); if (e.cRisen && !e.dead) ctx.rotate((1 - rs) * -1.2 * e.facing + Math.sin(t * 2.1) * .05 + (Math.sin(t * 13 + e.cid * 50) > .94 ? .12 * e.facing : 0)); ctx.scale(k, k * (.3 + .7 * rs)); ctx.translate(-e.x, -e.y); // (one of the risen: it gets up wrong and twitches)
     try { _w(e, t); } finally { CREATURES[key] = o; e.hw = hw; e.hh = hh; ctx.restore(); }

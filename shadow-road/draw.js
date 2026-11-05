@@ -413,6 +413,26 @@ function drawEnemy(e, t) {
   }
 }
 // ---------- weapon-specific deaths ----------
+// A body at rest does not change: once it has lain still a few seconds it is painted once into a picture of its own and that
+// picture is laid down each frame (painting a dozen bodies afresh every frame cost as much as all the rest of the scene).
+// The picture is redone if the view's scale changes (zoom, the glide view, a resize); it goes when the body does.
+const CORPSE_SETTLE = 3.5;
+function drawCorpse(c, t, lite) {
+  const now = performance.now() / 1000; if (c.cAt === undefined) c.cAt = now;
+  const m = ctx.getTransform(), sc = Math.hypot(m.a, m.b);
+  if (now - c.cAt < CORPSE_SETTLE || FLASH || TINT || !(sc > 0)) { LITE = lite; try { drawDeath(c, t); } finally { LITE = false; } return; }
+  const R = Math.max(110, (Math.max(c.hw || 0, c.hh || 0) * 1.7 + 80 + (c.def.tail || 0)) * (c.champ ? 1.3 : 1)), x0 = c.x - R, y0 = c.y - R * 1.15, w = R * 2, h = R * 1.15 + R * .5 + 14;
+  let K2 = c.bake;
+  if (!K2 || Math.abs(K2.sc - sc) > sc * .04 || K2.lite !== lite) {
+    if (!K2) K2 = c.bake = { cv: document.createElement('canvas') };
+    const W = Math.max(1, Math.ceil(w * sc)), H = Math.max(1, Math.ceil(h * sc)); if (K2.cv.width !== W || K2.cv.height !== H) { K2.cv.width = W; K2.cv.height = H; }
+    const g = K2.cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(sc, 0, 0, sc, -x0 * sc, -y0 * sc);
+    const c0 = ctx, mc = typeof mainCtx !== 'undefined' ? mainCtx : null, fade = c.fade; ctx = g; if (mc) mainCtx = g; c.fade = 1;
+    LITE = lite; try { drawDeath(c, c.deadAt || t); } catch (e) { console.error(e); } finally { LITE = false; ctx = c0; if (mc) mainCtx = mc; c.fade = fade; }
+    K2.sc = sc; K2.lite = lite;
+  }
+  ctx.save(); if (c.fade < 1) ctx.globalAlpha *= c.fade; ctx.drawImage(K2.cv, x0, y0, w, h); ctx.restore();
+}
 function drawDeath(e, t) {
   const el = e.corpse ? (e.dmax || 1) : e.dmax - e.t, dl = (e.dir || 1) * e.facing; // dl: knock direction in the enemy's own facing space
   const a = { walk: 0, t: e.deadAt || t, wind: 0, atk: false, hurt: true }; // the clock stops: no whirring rotors or flapping wings
@@ -724,14 +744,15 @@ function drawScene(t) {
   // past a fixed box, and was cut off at its edge wherever the prince's own box did not happen to reach
   const fallen = (c) => { const R = Math.max(110, (Math.max(c.hw || 0, c.hh || 0) * 1.7 + 80 + (c.def.tail || 0)) * (c.champ ? 1.3 : 1)); box(c.x, c.y - (c.z || 0) + R * .5, 0, R, R * 1.5); }; // (a boss's hw and hh already carry its size)
   for (const e of enemies) { const s = e.boss ? e.size : 1; box(e.x, e.y, e.z, (e.hw + 110 + (e.def.tail || 0)) * s, (e.hh + (e.boss ? 140 : 90)) * s); if (e.dead) fallen(e); } // (a boss gets headroom: Old Mossback's grove stood above the box and had its crown cut flat)
-  for (const c of corpses) fallen(c);
+  const onView = (c) => { const R = Math.max(110, Math.max(c.hw || 0, c.hh || 0) * 1.7 + 80 + (c.def.tail || 0)); return c.x + R > camX && c.x - R < camX + VW; }; // (the fallen left behind off the edge of the view are neither boxed nor painted)
+  for (const c of corpses) if (onView(c)) fallen(c);
   for (const p of props) box(p.x, p.y, 0, 60, 100);
   for (const k of loot) box(k.x, k.y, k.z || 0, 40, 50);
   for (const p of projs) box(p.x, p.y, p.z || 0, 50, 50);
   for (const s of stags) box(s.x, s.y, 0, 90, 130);
   mechBoxes(box); secretBoxes(box);
   inkBegin(boxes);
-  corpses.forEach((c, i) => { c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; LITE = CROWD && !c.boss; try { drawDeath(c, t); } finally { LITE = false; } });
+  corpses.forEach((c, i) => { if (!onView(c)) return; c.fade = corpses.length >= 30 && i < 3 ? .5 : 1; drawCorpse(c, t, CROWD && !c.boss); });
   const list = [];
   for (const p of props) list.push([p.y, () => { FLASH = p.flash > 0; drawPod(p, t); FLASH = false; }]);
   for (const k of loot) list.push([k.y, () => drawLoot(k, t)]);
