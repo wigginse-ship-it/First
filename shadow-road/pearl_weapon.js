@@ -302,23 +302,28 @@
       const tip = leaf(63, pl, 5.4, p, { thunder, spiral }); band(62.5, 3.6, 5.6, p);
       scallopShield(sx, rx, ry, p);
       S = { pommel: [0, 0], haft: [40, 48, 54, 34], collar: [58, 0], head: [63 + pl * .4, 0], w: 2.8, tip, x0: -20, x1: tip[0] + 6, y0: -ry * 1.2 - 12, y1: ry * 1.2 + 12 };
-    } else if (spec.type === 'warshield') { // a great scallop, its hinge on a short haft, swung like a hammer to bash
-      const Rf = 25 * Math.sqrt(M), hx = 29, A = 1.12, n = 18;
-      hybPiece(2); haft(2, hx + 2, 4.2, p, [8, 24]); pommel(2, 3.2, p);
-      const rim = (i) => { const a = -A + 2 * A * i / n, rr = Rf * (i % 2 ? .93 : 1.02); return [hx + 3 + Math.cos(a) * rr, Math.sin(a) * rr * .92]; };
-      const fan = (ox, oy, cont) => { if (!cont) ctx.beginPath(); ctx.moveTo(hx + ox, -3.5 + oy); for (let i = 0; i <= n; i++) { const q = rim(i); ctx.lineTo(q[0] + ox, q[1] + oy); } ctx.lineTo(hx + ox, 3.5 + oy); ctx.closePath(); };
-      cel(fan, p.blade, { d: 2.4, r: 1.4, dark: p.bladeDk, lite: '#FFFFFF', w: 1.4, tex: () => {
-        for (let i = 0; i < n; i += 2) { const a0 = rim(i), a1 = rim(i + 1), a2 = rim(Math.min(n, i + 2)); ctx.beginPath(); ctx.moveTo(hx + 2, 0); ctx.lineTo(a0[0], a0[1]); ctx.lineTo(a1[0], a1[1]); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fill();
-          ctx.beginPath(); ctx.moveTo(hx + 2, 0); ctx.lineTo(a2[0], a2[1]); ctx.strokeStyle = C(shade(p.bladeDk, -.15)); ctx.globalAlpha = .55; ctx.lineWidth = .7; ctx.stroke(); ctx.globalAlpha = 1; }
-        for (const k of [.45, .72]) { ctx.beginPath(); ctx.ellipse(hx + 3, 0, Rf * k, Rf * k * .92, 0, -A, A); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = .6; ctx.stroke(); }
-        if (thunder) { ctx.beginPath(); for (let i = 0; i <= 8; i++) { const a = -A + 2 * A * i / 8, rr = Rf * .6 + (i % 2 ? 2 : -2); ctx.lineTo(hx + 3 + Math.cos(a) * rr, Math.sin(a) * rr * .92); } ctx.strokeStyle = '#FFF2A0'; ctx.lineWidth = .9; ctx.stroke(); } } });
-      ctx.beginPath(); for (let i = 0; i <= n; i++) { const q = rim(i); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); } ctx.strokeStyle = C(p.metal); ctx.lineWidth = 1.6; ctx.stroke();
-      if (serr) { ctx.fillStyle = C(p.metalLt); for (let i = 0; i <= n; i += 2) { const q = rim(i), a = -A + 2 * A * i / n; ctx.beginPath(); ctx.moveTo(q[0] + Math.cos(a - .1) * 1, q[1] + Math.sin(a - .1)); ctx.lineTo(q[0] + Math.cos(a) * 3.4, q[1] + Math.sin(a) * 3.2); ctx.lineTo(q[0] + Math.cos(a + .1) * 1, q[1] + Math.sin(a + .1)); ctx.closePath(); ctx.fill(); outline(.5); } }
-      cel(PL([hx - 1, -3.5, hx + 6, -7.5, hx + 7.5, -3, hx + 7.5, 3, hx + 6, 7.5, hx - 1, 3.5]), p.metal, { d: 1, r: .7, lite: p.metalLt, w: 1 });
-      const ux = hx + 3 + Rf * .5; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; cel(PL([ux + Math.cos(a - .35) * 4, Math.sin(a - .35) * 4, ux + Math.cos(a) * 7.4, Math.sin(a) * 7.4, ux + Math.cos(a + .35) * 4, Math.sin(a + .35) * 4]), p.metal, { d: .5, r: .4, lite: p.metalLt, w: .7 }); }
-      pearl(ux, 0, 4.4, p);
-      if (spec.hyb === 'spire') cel(PL([hx + Rf - 1, -2.4, hx + Rf + 15, 0, hx + Rf - 1, 2.4]), q.blade, { d: 1, r: .6, dark: q.bladeDk, lite: q.edge, w: 1 });
-      S = { pommel: [0, 0], haft: [26, 5, 9], collar: [hx - 2, 0], cstep: -4.5, head: [hx + Rf * .62, -Rf * .52], w: 4.2, tip: [hx + Rf + 3, 0], x0: -24, x1: hx + Rf + 22, y0: -Rf - 14, y1: Rf + 14 };
+    } else if (spec.type === 'warshield') { // a round war-shield strapped along the forearm (the arm runs x 3..15, the hand at 15), its face toward +y, seen three-quarters
+      const R = 16.5 * Math.sqrt(M), cx = 10, cy = 3.4, K = .5, ry = R * K;
+      // the far edge of the dish (its thickness, toward the arm), then the face: rim, bands in to the boss, a sea star on it
+      cel(PE(cx, cy - 2, R * .99, ry), shade(p.metal, -.28), { d: 0, r: .6, w: 1.2 });
+      const sh = (r, dy) => PE(cx, cy + dy, R * r, ry * r);
+      cel(sh(1, 0), p.metal, { d: 1.1, r: .8, lite: p.metalLt, w: 1.3 });
+      if (serr) { ctx.fillStyle = C(p.metalLt); for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * ry, ox = Math.cos(a) * 3, oy = Math.sin(a) * 3 * K;
+        ctx.beginPath(); ctx.moveTo(x - Math.sin(a) * 1.4, y + Math.cos(a) * 1.4 * K); ctx.lineTo(x + ox, y + oy); ctx.lineTo(x + Math.sin(a) * 1.4, y - Math.cos(a) * 1.4 * K); ctx.closePath(); ctx.fill(); outline(.5); } }
+      cel(sh(.84, .5), p.blade, { d: .9, r: .7, dark: p.bladeDk, lite: '#FFFFFF', w: .9, tex: () => {
+        if (det()) { ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(cx - R * .1, cy - ry * .25, R * .7, ry * .55, 0, Math.PI * 1.05, Math.PI * 1.6); ctx.stroke(); } } });
+      cel(sh(.64, .9), p.b[3], { d: .7, r: .6, dark: p.b[4], lite: p.b[2], w: .8 });
+      cel(sh(.46, 1.2), p.blade, { d: .6, r: .5, dark: p.bladeDk, lite: '#FFFFFF', w: .8 });
+      if (thunder && det()) { ctx.beginPath(); for (let i = 0; i <= 20; i++) { const a = i / 20 * TAU, rr = .74 + (i % 2 ? .05 : -.05); ctx.lineTo(cx + Math.cos(a) * R * rr, cy + .7 + Math.sin(a) * ry * rr); } ctx.strokeStyle = '#FFF2A0'; ctx.lineWidth = .8; ctx.stroke(); }
+      const bx = cx, by = cy + 1.5, star = PF((ox, oy) => { for (let i = 0; i <= 10; i++) { const a = -Math.PI / 2 + i / 10 * TAU, rr = i % 2 ? R * .13 : R * .33; const x = bx + ox + Math.cos(a) * rr, y = by + oy + Math.sin(a) * rr * K * 1.2; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } });
+      cel(star, p.accent, { d: .5, r: .4, lite: '#FFFFFF', w: .8 });
+      pearl(bx, by, R * .12, p);
+      // a hybrid's second Form on the rim: a blade out of the leading edge, a spike out of the boss, a pearl on a chain
+      if (spec.hyb === 'edge') curvedBlade(cx + R * .9, 13, 4.4, .32, q, { serrate: serr });
+      else if (spec.hyb === 'spire') cel(PL([cx + R - 1, cy - 2.2, cx + R + 15, cy, cx + R - 1, cy + 2.2]), q.blade, { d: 1, r: .6, dark: q.bladeDk, lite: q.edge, w: 1 });
+      else if (spec.hyb) hybPiece(cx - R + 3);
+      S = { pommel: [cx - R - 1, cy], haft: [[cx - R * .55, cy + ry * .55, 0], [cx + R * .55, cy + ry * .55, 0]], collar: [cx - R * .62, cy - ry * .2], cstep: 5, head: [bx, by], w: 3, tip: [cx + R, cy],
+        x0: cx - R - 18, x1: cx + R + (spec.hyb === 'spire' || spec.hyb === 'edge' ? 20 : 8), y0: cy - ry - 14, y1: cy + ry + 14 };
     } else if (spec.type === 'trident') {
       const tl = 24 * L;
       haft(-26, 52, 3.4, p, [10, 24]); pommel(-26, 3, p);
