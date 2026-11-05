@@ -989,7 +989,26 @@
   }
   { const _k2 = killEnemy; killEnemy = function (e, dir, m) { const was = e.dead, r = _k2(e, dir, m); if (NG() && !was && e.dead && P && CS().wc[P.w] === 'hunger' && mine(m || {})) { P.cHungry = 0; P.hp = Math.min(maxHp(), P.hp + Math.round(maxHp() * .03)); } return r; }; }
   // the forge can draw the black out too, at a price
-  const cleanseCost = () => ({ s: Math.round(260 * (1 + .5 * (save.cycle || 0))), g: 2 });
+  // drawing the black out at the forge is dear, one thing at a time, and what comes out of the fire is better than it ever was:
+  // armor comes out HALLOWED (well past ordinary armor, with a blessing of its own); a weapon comes out clean and keener (+15%)
+  const cleanseCost = (kind) => kind === 'w' ? { s: Math.round(1100 * (1 + .5 * (save.cycle || 0))), g: 8 } : { s: Math.round(1800 * (1 + .5 * (save.cycle || 0))), g: 12 };
+  const HALLOW = { mail: { name: 'Hallowed', txt: 'turns aside more than twice what it did, and slowly mends you' }, gauntlets: { name: 'Hallowed', txt: 'blows land true: far more criticals, and they burn the curse' },
+    pants: { name: 'Hallowed', txt: 'swifter, and every dodge is a long breath of grace' }, waist: { name: 'Hallowed', txt: 'far more health, and blows that reach you are lessened' } };
+  function cleanseOne(kind, key) {
+    const c = CS();
+    if (kind === 'w') { if (!c.wc[key]) return false; delete c.wc[key]; save.keen = save.keen || {}; save.keen[key] = 1; } // (data.js wMult: +15% for good)
+    else { const it = save.gear.eq[key]; if (!it || !it.curse) return false; delete it.curse; it.hallow = key; }
+    gearChanged(); persist(); return true;
+  }
+  // a hallowed piece keeps its blessing in every run after, cursed or not
+  { const _sf2 = statsFor; statsFor = function (eq) { const st = _sf2(eq);
+    for (const s of GEAR_SLOTS) { const it = eq[s]; if (!it || !it.hallow || it.curse) continue;
+      if (s === 'mail') { st.def = (st.def || 0) + itemDef(it) * 1.2 + 10; st.regen = (st.regen || 0) + 1.6; }
+      if (s === 'gauntlets') { st.crit = (st.crit || 0) + .12; st.thorns = (st.thorns || 0) + .25; }
+      if (s === 'pants') { st.speed = (st.speed || 0) + .16; st.iframes = (st.iframes || 0) + .12; }
+      if (s === 'waist') { st.hp = (st.hp || 0) + 70; st.resist = Math.min(.5, (st.resist || 0) + .2); } }
+    return st; }; }
+  { const _in2 = itemName; itemName = function (it) { const n = _in2(it); return it && it.hallow && !it.curse ? 'Hallowed ' + n : n; }; }
   { const _rf = renderForge; renderForge = function (note) { _rf(note); try { forgeRow(); } catch (e) { console.error(e); } }; }
   function forgeRow() {
     let el = document.getElementById('cForge'); const c = NG() ? CS() : null;
@@ -997,9 +1016,13 @@
     if (!items.length) { if (el) el.remove(); return; }
     const anchor = document.getElementById('walkBtn'); if (!anchor) return;
     if (!el) { el = document.createElement('div'); el.id = 'cForge'; el.style.cssText = 'margin:8px auto;max-width:520px;padding:8px 10px;border:1px solid #5A4A5A;border-radius:6px;background:rgba(20,12,18,.6);color:#E8DCE4;font:13px/1.35 Georgia,serif;text-align:left'; anchor.parentElement.insertBefore(el, anchor); }
-    const k = cleanseCost(), ok = save.shards >= k.s && save.sigils >= k.g;
-    el.innerHTML = `<b style="font-family:Cinzel,Georgia,serif;color:#C8A0B0">BLACK VEINS</b> · ${items.join(' · ')}<br><span style="opacity:.8">The smith can draw the black out of them in the forge-fire.</span> <button type="button" class="buy" id="cCleanse" ${ok ? '' : 'disabled'}>Cleanse · ${costTxt(k)}</button>`;
-    const b = el.querySelector('#cCleanse'); if (b) b.addEventListener('click', () => { const kk = cleanseCost(); if (save.shards < kk.s || save.sigils < kk.g) return; save.shards -= kk.s; save.sigils -= kk.g; const n = cleanseAll(); sfx('buy'); renderForge(n ? 'THE BLACK IS DRAWN OUT IN THE FIRE' : ''); });
+    const rows = [...Object.keys(c.wc).filter(w => WEAPONS[w]).map(w => ({ kind: 'w', key: w, name: `${WCURSE[c.wc[w]].name} ${WEAPONS[w].name}`, gain: 'comes out clean and keener: +15% damage, for good' })),
+      ...GEAR_SLOTS.filter(s => save.gear.eq[s] && save.gear.eq[s].curse).map(s => ({ kind: 'a', key: s, name: itemName(save.gear.eq[s]), gain: 'comes out HALLOWED: ' + HALLOW[s].txt }))];
+    el.innerHTML = `<b style="font-family:Cinzel,Georgia,serif;color:#C8A0B0">BLACK VEINS</b><br><span style="opacity:.8">The smith can draw the black out in the forge-fire, one piece at a time, at a great price; what comes out is better than it ever was.</span>` +
+      rows.map((r, i) => { const k = cleanseCost(r.kind), ok = save.shards >= k.s && save.sigils >= k.g; return `<div style="margin-top:6px"><b>${r.name}</b> <span style="opacity:.75">· ${r.gain}</span><br><button type="button" class="buy" data-ci="${i}" ${ok ? '' : 'disabled'}>Cleanse · ${costTxt(k)}</button></div>`; }).join('');
+    for (const b of el.querySelectorAll('button[data-ci]')) b.addEventListener('click', () => { const r = rows[+b.dataset.ci], kk = cleanseCost(r.kind); if (save.shards < kk.s || save.sigils < kk.g) return;
+      save.shards -= kk.s; save.sigils -= kk.g; if (!cleanseOne(r.kind, r.key)) return; sfx('learned'); flashT = Math.max(flashT, .08);
+      renderForge(r.kind === 'w' ? `THE BLACK IS DRAWN OUT OF ${WEAPONS[r.key].name.toUpperCase()}: IT COMES OUT OF THE FIRE KEENER THAN IT WENT IN` : `${itemName(save.gear.eq[r.key]).toUpperCase()}: ${HALLOW[r.key].txt.toUpperCase()}`); });
   }
   // ---------------- the corrupted Pearl: black, wild, and it comes back at him ----------------
   const pearlBlack = () => NG() && teff() >= 4 && !!window.PEARLNG;
