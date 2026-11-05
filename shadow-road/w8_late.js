@@ -311,9 +311,9 @@
     if (c.done) for (let i = 0; i < 8; i++) { const x = c.x + c.f * c.len * (i + .5) / 8, h = (22 + r(i + 20) * 16) * (1 - cl01((c.t - .2) / .5)); if (h <= 0) continue; ctx.fillStyle = `rgba(150,136,118,${a})`; ctx.beginPath(); ctx.moveTo(x - 7, c.y); ctx.lineTo(x - 1, c.y - h); ctx.lineTo(x + 6, c.y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = `rgba(30,20,12,${a})`; ctx.lineWidth = .8; ctx.stroke(); }
     ctx.restore(); }
   function drawRider(r, t) { // a rider of Lorraine's dead: horse and man the grey-blue of the Circle's mist, see-through, trailing it
-    onMain(() => { const o = { t, walk: t * 14, gallop: 1, legCol: '#6A7A96', bootCol: '#4A566E' }, look = Object.assign({}, heroLook(), { cloak: '#5A6A86', body: '#7A8AA6', legs: '#6A7A96', boots: '#4A566E' });
+    onMain(() => { const look = W8.deadLook(), walk = r.t * 33.5; // (a gallop's stride carries him about 105 of his units: the legs keep pace with the ground)
       for (let i = 2; i >= 0; i--) { ctx.save(); ctx.translate(r.x - r.f * i * 24, r.y); ctx.scale(r.f * 1.05, 1.05); ctx.globalAlpha = i ? .12 : .55; TINT = i ? '#C8D4EA' : null;
-        W8.horse('back', o); ctx.save(); ctx.translate(0, -36 + W8.horseLift(o)); drawHumanoid(look, { arm: -.6, Y: .3, weapon: 'sword' }); ctx.restore(); W8.horse('front', o); TINT = null; ctx.restore(); }
+        try { W8.rider({ look, t, walk: walk - i * .5, gallop: 1, seed: 3.3, coat: 'grey', charge: 1 }); } finally { TINT = null; } ctx.restore(); }
       ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = 'rgba(150,170,210,.25)'; ctx.beginPath(); ctx.ellipse(r.x, r.y - 50, 60, 50, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); }
 
   // ---------------- the HUD: an illuminated scroll with the verses held ----------------
@@ -632,9 +632,9 @@
         ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(32,22,14,.75)'; ctx.strokeText(m.txt, x, y);
         ctx.fillStyle = '#F2DFA6'; ctx.fillText(m.txt, x, y); ctx.globalAlpha = aw * .45; ctx.fillStyle = '#FFF8E2'; ctx.fillText(m.txt, x - .6, y - .6); }
       else if (m.k === 'arms') { ctx.translate(m.x, m.y); ctx.globalAlpha = .7 * a; ctx.scale(.9 + u * .3, .9 + u * .3); W8.arms(0, 0, 22, 26, { ow: .6 }); }
-      else if (m.k === 'rider' && W8.horse) { const o = { t, walk: t * 14, gallop: 1, legCol: '#6A7A96', bootCol: '#4A566E' }, look = Object.assign({}, heroLook(), { cloak: '#5A6A86', body: '#7A8AA6', legs: '#6A7A96', boots: '#4A566E' });
+      else if (m.k === 'rider' && W8.rider) { const look = W8.deadLook();
         for (let i = 1; i >= 0; i--) { ctx.save(); ctx.translate(m.x - m.f * i * 18, m.y); ctx.scale(m.f * .72, .72); ctx.globalAlpha = (i ? .1 : .42) * a; TINT = '#C8D4EA';
-          try { W8.horse('back', o); ctx.save(); ctx.translate(0, -36 + W8.horseLift(o)); drawHumanoid(look, { arm: -.6, Y: .3, weapon: 'sword', noCloak: 1 }); ctx.restore(); W8.horse('front', o); } finally { TINT = null; } ctx.restore(); } }
+          try { W8.rider({ look, t, walk: t * 30, gallop: 1, seed: 1.1, coat: 'grey', charge: 1 }); } finally { TINT = null; } ctx.restore(); } }
       ctx.restore();
     }
   }
