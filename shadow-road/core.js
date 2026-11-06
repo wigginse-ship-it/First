@@ -246,6 +246,6 @@ function readMove() {
   if (input.run && (Math.sign(input.mx) !== runDir || Math.abs(input.mx) < 0.3)) input.run = false;
 }
 // stop iOS page bounce and zoom while playing, but let menus scroll
-document.addEventListener('touchmove', (e) => { if (!e.target.closest('.ov')) e.preventDefault(); }, { passive: false });
+document.addEventListener('touchmove', (e) => { if (!e.target.closest('.ov, #devPanel')) e.preventDefault(); }, { passive: false }); // (the dev panel scrolls too)
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('dblclick', (e) => e.preventDefault());

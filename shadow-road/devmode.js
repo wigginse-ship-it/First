@@ -82,7 +82,7 @@
     el = document.createElement('div'); el.id = 'devPanel';
     el.innerHTML = `<style>
       #devPanel { position: fixed; inset: 0; z-index: 9999; background: rgba(8,6,14,.86); display: flex; align-items: center; justify-content: center; font: 13px/1.4 system-ui, sans-serif; color: #F2E8D4; }
-      #devPanel .box { background: #1E1A2A; border: 1px solid #8E7A52; border-radius: 10px; padding: 14px 16px; width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; }
+      #devPanel .box { background: #1E1A2A; border: 1px solid #8E7A52; border-radius: 10px; padding: 14px 16px; width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; box-sizing: border-box; }
       #devPanel h3 { margin: 0 0 8px; font-size: 15px; letter-spacing: .08em; color: #EED48A; }
       #devPanel .w { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid rgba(238,212,138,.15); }
       #devPanel .w b { min-width: 170px; }
