@@ -559,6 +559,16 @@
   </div>
 </div>
 
+<script>
+/* a crash shows itself: a small box at the top of the screen with what broke and where (tap it to close) */
+(function () { var shown = 0; function show(msg) { try { if (shown >= 3) return; shown++; var d = document.getElementById('errBox');
+  if (!d) { d = document.createElement('div'); d.id = 'errBox'; d.style.cssText = 'position:fixed;left:6px;right:6px;top:6px;z-index:99999;background:rgba(60,8,16,.94);color:#FFE8E8;font:12px/1.35 monospace;padding:8px 10px;border:1px solid #F06;border-radius:6px;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    d.addEventListener('click', function () { d.remove(); shown = 0; }); (document.body || document.documentElement).appendChild(d); }
+  d.textContent += (d.textContent ? '\n' : 'Something broke (tap to close). Please send this text:\n') + msg; } catch (e) {} }
+  window.addEventListener('error', function (e) { var f = (e.filename || '').split('/').pop(); show((e.message || 'error') + (f ? ' @ ' + f + ':' + e.lineno + ':' + e.colno : '') + (e.error && e.error.stack ? '\n' + String(e.error.stack).split('\n').slice(0, 3).join('\n') : '')); });
+  window.addEventListener('unhandledrejection', function (e) { show('promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
+})();
+</script>
 <script src="core.js"></script>
 <script src="music.js"></script>
 <script src="data.js"></script>
