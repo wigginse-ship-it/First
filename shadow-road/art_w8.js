@@ -2930,6 +2930,7 @@
           helm: counter ? 'kettle' : 'bascinet', cloakCol: counter ? '#C08A2E' : '#8A221E', cloakLine: counter ? PAL.gules : PAL.or, lance: 1, pennon: counter ? [PAL.gules, PAL.or] : [PAL.or, PAL.gules], hand: 'lance' }); }
       return Object.assign(L, over);
     };
+    W8.headGear = headGear; // (the head drawn over a figure at HEAD_MASK: Ganelon's coif, circlet and beard on foot, forgehall.js)
     let DEAD = null; W8.deadLook = () => DEAD || (DEAD = W8.ghostLook(W8.riderLook('knight', { arms: 'lorraine' }))); // a knight who fell at the Circle
     W8.ghostLook = (L, to = '#7A8AA6', k = .72) => { const G = Object.assign({}, L); for (const key in G) { const v = G[key]; if (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) G[key] = mixH(v, to, k); else if (Array.isArray(v)) G[key] = v.map(c => typeof c === 'string' && c[0] === '#' ? mixH(c, to, k) : c); } return G; };
 

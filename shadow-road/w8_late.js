@@ -417,7 +417,7 @@
   { const _rf = renderForge; renderForge = function (note) { _rf(note); let sec = document.getElementById('w8marchForge');
     const v = owned() ? M().v : [];
     if (!owned()) { if (sec) sec.remove(); return; }
-    if (!sec) { const foot = document.querySelector('#forgeOv .forge-foot'); if (!foot) return; sec = document.createElement('div'); sec.id = 'w8marchForge'; foot.parentNode.insertBefore(sec, foot); }
+    if (!sec) { const foot = document.querySelector('#forgeOv .forge-foot'); if (!foot) return; sec = document.createElement('div'); sec.id = 'w8marchForge'; sec.dataset.sec = 'march'; foot.parentNode.insertBefore(sec, foot); }
     sec.innerHTML = `<h3 class="h3">The Long March</h3><p class="small">The Horn of Lorraine: ${v.length} of ${cap()} verses. Clear a world without falling to add one; falling loses the newest.</p>`;
     const list = document.createElement('div'); list.className = 'cards';
     for (const id of v) { const d = document.createElement('div'); d.className = 'card'; d.style.cssText = 'display:flex;gap:8px;align-items:flex-start';

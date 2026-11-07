@@ -143,7 +143,7 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
   { const _of = openForge; openForge = function (kicker) { _of(kicker);
     let row = document.getElementById('w7relicRow');
     if (!has()) { if (row) row.remove(); return; }
-    if (!row) { row = document.createElement('div'); row.id = 'w7relicRow'; row.style.cssText = 'display:flex;gap:10px;align-items:center;margin:10px 0 4px;padding:8px 10px;border:1px solid rgba(200,170,90,.5);border-radius:8px;background:rgba(10,30,40,.55)';
+    if (!row) { row = document.createElement('div'); row.id = 'w7relicRow'; row.dataset.sec = 'pearl'; row.style.cssText = 'display:flex;gap:10px;align-items:center;margin:10px 0 4px;padding:8px 10px;border:1px solid rgba(200,170,90,.5);border-radius:8px;background:rgba(10,30,40,.55)';
       const cv2 = document.createElement('canvas'); cv2.width = 40; cv2.height = 40; cv2.style.cssText = 'width:34px;height:34px;flex:none'; row.appendChild(cv2);
       const tx = document.createElement('div'); tx.style.cssText = 'font-size:12px;line-height:1.35'; row.appendChild(tx);
       const foot = document.querySelector('#forgeOv .forge-foot'); if (foot && foot.parentNode) foot.parentNode.insertBefore(row, foot); else return; }

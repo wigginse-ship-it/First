@@ -169,7 +169,7 @@ const sigilPrice = (n = sigilBuys) => Math.round(260 * (1 + .4 * (save.cycle || 
 function tradeRow() {
   let el = document.getElementById('sigilTrade'); const bar = document.querySelector('#forgeOv .matbar'); if (!bar) return;
   if (!((save.cycle || 0) >= 1)) { if (el) el.remove(); return; } // (New Game+ only)
-  if (!el) { el = document.createElement('div'); el.id = 'sigilTrade'; el.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;margin:4px auto 6px;font:12px/1.3 Georgia,serif;color:#E8DCC4'; bar.after(el); }
+  if (!el) { el = document.createElement('div'); el.id = 'sigilTrade'; el.dataset.sec = 'trade'; el.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;margin:4px auto 6px;font:12px/1.3 Georgia,serif;color:#E8DCC4'; bar.after(el); }
   const BS = 'width:auto;flex:0 0 auto;margin:0;padding:5px 12px;min-height:0;font-size:12px;line-height:1.2';
   const p1 = sigilPrice(), p5 = [0, 1, 2, 3, 4].reduce((a, k) => a + sigilPrice(sigilBuys + k), 0);
   el.innerHTML = `<span style="opacity:.8">The smith will trade:</span> <button type="button" class="buy" style="${BS}" data-n="1" ${save.shards >= p1 ? '' : 'disabled'}>1 &#10022; for ${p1} &#9670;</button> <button type="button" class="buy" style="${BS}" data-n="5" ${save.shards >= p5 ? '' : 'disabled'}>5 &#10022; for ${p5} &#9670;</button>`;
@@ -183,16 +183,30 @@ function openForge(kicker) {
   renderForge();
   $('#forgeOv').scrollTop = 0;
 }
+// The forge is laid out in sections, each rendered by its own function into its place in the menu, and every piece it
+// makes is tagged with its section (data-sec): weapons, pearl (the reforged Pearl's card), arrows, cards, trade. The
+// files that add to the forge tag theirs the same way (or forgehall.js tags them by id: cursed, cleanse, pearl, march,
+// gear). The full menu shows every section; the walkable hall (forgehall.js) shows each vendor only his own, from the
+// same buttons, so every price and rule lives here once.
+const FORGE_SECTIONS = ['weapons', 'cursed', 'pearl', 'arrows', 'cards', 'gear', 'march', 'cleanse', 'trade'];
 function renderForge(note) {
   $('#fShards').textContent = save.shards; $('#fSigils').textContent = save.sigils;
   try { tradeRow(); } catch (e) { console.error(e); }
   const wrap = $('#forgeCards'); wrap.innerHTML = '';
+  forgeWeapons(wrap); forgeArrows(wrap);
+  const tw = $('#trumpCards'); tw.innerHTML = '';
+  forgeTrumps(tw);
+  $('#forgeNote').textContent = note || '';
+  $('#walkBtn').textContent = `Walk on: ${STAGES[roadStage()].name}`;
+}
+// the weapons: a card each, to level up (and past the moves, in a new cycle, to temper)
+function forgeWeapons(wrap) {
   for (const id of WEAPON_ORDER) {
     if (id === 'fists') continue; // bare hands have nothing to forge
     const w = WEAPONS[id], owned = save.owned[id], lvl = save.wl[id], max = lvl >= WMAX(id), c = wCost(lvl, id), L = wLearn(id);
     const bare = id === 'fists'; // fists never level up
     const can = owned && !bare && !max && save.shards >= c.s && save.sigils >= c.g;
-    const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked');
+    const d = document.createElement('div'); d.className = 'card' + (owned ? '' : ' locked'); d.dataset.sec = id === 'pearlw' ? 'pearl' : 'weapons';
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/${WMAX(id)} · DAMAGE ×${wMult(id).toFixed(2)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
       <p>${bare ? w.desc + ' Fists never level up.' : owned ? w.desc : 'Not found yet. Defeat enemies to find it.'}</p><ul>${moves}</ul>
@@ -207,9 +221,11 @@ function renderForge(note) {
     });
     wrap.appendChild(d);
   }
-  // the arrows: seven levels, each a better arrow with a trick of its own
+}
+// the arrows: seven levels, each a better arrow with a trick of its own
+function forgeArrows(wrap) {
   const al = Math.min(ARROW_TIERS.length, save.alv || 1), ac2 = arrowCost(al), almax = al >= ARROW_TIERS.length, alcan = !almax && save.shards >= ac2.s && save.sigils >= ac2.g;
-  const da = document.createElement('div'); da.className = 'card';
+  const da = document.createElement('div'); da.className = 'card'; da.dataset.sec = 'arrows';
   da.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">LV ${al}/${ARROW_TIERS.length} · ${save.arrows || 0}/${ARROW_MAX} IN THE QUIVER</div><div class="nm">${aTier().name}</div>
     <p>Rare arrows from fallen shooters, loosed with any weapon, for picking off the crowd: a full draw strikes the first foe in its path for ${aTier().dmg}+ damage, though bosses and champions shrug most of it off. Each level keeps the tricks of the last.</p>
     <ul>${ARROW_TIERS.map((tt, i) => `<li class="${al >= i + 1 ? 'got' : al === i ? 'next' : ''}"><b>LV${i + 1} · ${tt.name}</b> · ${tt.skill}<br><em>${tt.desc}</em></li>`).join('')}</ul>
@@ -221,11 +237,12 @@ function renderForge(note) {
     renderForge(`Your arrows are now ${aTier().name}.`);
   });
   wrap.appendChild(da);
-
-  const tw = $('#trumpCards'); tw.innerHTML = '';
+}
+// the cards: inscribed with sigils, taken into battle, inscribed again to level II and III
+function forgeTrumps(tw) {
   for (const id of TRUMP_ORDER) {
     const tc = TRUMPS[id], has = save.trumps[id], on = save.trump === id;
-    const d2 = document.createElement('div'); d2.className = 'card' + (on ? ' on' : '');
+    const d2 = document.createElement('div'); d2.className = 'card' + (on ? ' on' : ''); d2.dataset.sec = 'cards';
     const lv = TL(id), uc = tCost(lv), ucan = has && lv < 3 && save.shards >= uc.s && save.sigils >= uc.g, roman = ['', 'I', 'II', 'III'];
     const ups = TRUMP_UP[id].map((u, i) => `<li class="${lv >= i + 2 ? 'got' : lv === i + 1 ? 'next' : ''}"><b>${roman[i + 2]}</b> ${u}</li>`).join('');
     d2.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${has ? (on ? 'IN YOUR HAND' : 'INSCRIBED') + ' · ' + roman[lv] : `COSTS ${Math.round(tc.cost * cyc())} ✦`}</div><div class="nm">${tc.name}</div><p>${tc.desc}</p><ul>${ups}</ul>
@@ -240,8 +257,6 @@ function renderForge(note) {
     if (ub) ub.addEventListener('click', () => { if (!ucan) return; save.shards -= uc.s; save.sigils -= uc.g; save.tlv[id] = lv + 1; persist(); sfx('trump'); renderForge(`${tc.name} inscribed again: level ${roman[lv + 1]}.`); });
     tw.appendChild(d2);
   }
-  $('#forgeNote').textContent = note || '';
-  $('#walkBtn').textContent = `Walk on: ${STAGES[roadStage()].name}`;
 }
 function drawTrumpArt(canvas, id) {
   const g = canvas.getContext('2d'), old = ctx; ctx = g;

@@ -623,7 +623,7 @@
     const wrap = document.getElementById('forgeCards'); if (!wrap || !save.cw) return;
     for (const id of IDS) { const c = cw(id); if (!c) continue;
       let card = null; const cv = wrap.querySelector(`canvas[data-wid="${id}"]`); if (cv) card = cv.closest('.card');
-      const d = document.createElement('div'); d.className = 'card cwcard'; d.dataset.cw = id;
+      const d = document.createElement('div'); d.className = 'card cwcard'; d.dataset.cw = id; d.dataset.sec = 'cursed';
       d.style.cssText = c.pure ? 'box-shadow:0 0 0 1px #E8C878,0 0 18px rgba(255,214,120,.35)' : 'box-shadow:0 0 0 1px #7A2A4A,0 0 18px rgba(150,30,70,.45)';
       const lv = lvOf(c), max = c.pure, top = !c.pure && c.lvl >= LVMAX, cost = c.pure ? null : top ? pureCost() : lvlCost(c.lvl), can = !!cost && save.shards >= cost.s && save.sigils >= cost.g;
       const next = !c.pure && !top ? cmList(id).find(m => m.cl === c.lvl + 1) : null;
