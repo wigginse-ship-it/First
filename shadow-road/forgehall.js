@@ -26,7 +26,7 @@
 // (data-sec: ui.js and the files that add to it), and a vendor's panel shows only his sections, so every button is the
 // menu's own button, with its own prices and rules (nothing is copied), and every wrapper's rows reach their vendor.
 // The full menu stays as it was; "Menu view" in the hall and "Walk the forge" in the menu switch between the two, and
-// the choice is remembered (localStorage 'shadowroad-forgeview'). The road's arch is "Walk on" (#walkBtn).
+// each visit opens as the hall (the menu view is for that visit only). The road's arch is "Walk on" (#walkBtn).
 //
 // The hall's stone, stalls and floor are painted once into one layer (only the fires, the glass, the Pattern's shimmer and
 // the figures move); the figures are drawn in the game's figure layer (inkBegin/inkEnd), the prince by drawPlayerAt.
@@ -36,8 +36,9 @@
 (() => {
   const PREF_KEY = 'shadowroad-forgeview';
   let pref = 'hall';
-  try { const v = localStorage.getItem(PREF_KEY); if (v === 'menu' || v === 'hall') pref = v; } catch (e) {}
-  const setPref = (v) => { pref = v; try { localStorage.setItem(PREF_KEY, v); } catch (e) {} };
+  // (every visit opens as the walked hall; "Menu view" holds only for the visit it is chosen in)
+  try { localStorage.removeItem(PREF_KEY); } catch (e) {}
+  const setPref = (v) => { pref = v; };
   const cl01 = (k) => clamp(k, 0, 1), sm = (k) => { k = cl01(k); return k * k * (3 - 2 * k); };
   const hsh = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
   const fine = () => !FLASH && !TINT && !LITE;
@@ -301,6 +302,7 @@
     else if (was) { if (id === null && save.fhUni && save.fhUni.on && !save.fhUni.done) { save.fhUni.done = true; persist(); } leaveHall(id === 'invOv'); } // (walked on without going to the Unicorn: her gift is lost)
   }; }
   { const _of = openForge; openForge = function (k) {
+    pref = 'hall';
     H.cast = []; H.panel = null; H.resume = null; H.fx.length = 0;
     const r = _of(k);
     try { computeCast(); placeHero(); applyLens(); if (H.on) refreshUi(); staticKey = ''; uniDecide(); U.on = false; H.uniLook = 0; if (H.on) uniSpawn(); } catch (e) { console.error(e); }
