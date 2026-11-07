@@ -348,14 +348,14 @@
         case 'eclipse': { for (const e of foesIn(f.x, f.y, f.R)) e.cwSlow = Math.max(e.cwSlow || 0, .3); f.tk = (f.tk || 0) - dt; if (f.tk <= 0 && f.t < f.life - .3) { f.tk = f.tick; for (const e of foesIn(f.x, f.y, f.R)) hit(e, f.d, Math.sign(e.x - f.x) || 1, { power: 0, kb: 0, noStun: 1 }); } break; }
         case 'circle': { f.tk = (f.tk || 0) - dt; if (f.tk <= 0 && f.t < f.life - .2) { f.tk = f.tick; let n = 0; for (const e of foesIn(f.x, f.y, f.R)) { hit(e, f.d, Math.sign(e.x - f.x) || 1, { power: 0, kb: 0, noStun: 1 }); n++; }
           if (n && P.hp > 0) { const h = Math.min(n, 2) * Math.max(1, Math.round(maxHp() * .004)); P.hp = Math.min(maxHp(), P.hp + h); } } break; }
-        case 'flame': if (Math.random() < dt * 24) parts.push({ x: f.x + rand(-f.r, f.r) * .6, y: f.y + rand(-3, 3), z: rand(4, 26), vx: rand(-10, 10), vy: 0, vz: rand(50, 110), life: .55, max: .55, col: pick(f.pure ? ['#FFF4D8', '#FFE08A'] : ['#0A0608', '#3A1A4A', '#7A2A9A', '#C02040']), size: rand(2, 4), shape: 'star', rot: 0, vr: 4 }); break;
+        case 'flame': if (Math.random() < dt * 24) parts.push({ x: f.x + rand(-f.r, f.r) * .6, y: f.y + rand(-3, 3), z: rand(4, 26), vx: rand(-10, 10), vy: 0, vz: rand(50, 110), life: .55, max: .55, col: pick(f.pure ? ['#FFF4D8', '#FFE08A'] : ['#0A0608', '#3A1A4A', '#7A2A9A', '#C02040']), size: rand(2, 4), shape: 'ember', pal: f.pure ? 'white' : 'black', lift: .9, rot: rand(0, 6), vr: 0 }); break;
       }
     }
     LS.fx = LS.fx.filter(f => f.t < f.life);
     // the burning: black flame on those the pyre leapt to
     for (const e of enemies) { const b = e.cwBurn; if (!b) continue; if (e.dead) { e.cwBurn = null; continue; } b.t -= dt; b.tick -= dt;
       if (b.tick <= 0) { b.tick = .5; hit(e, b.d, Math.sign(e.x - P.x) || 1, { power: 0, kb: 0, noStun: 1, pyre: 1 }); }
-      if (Math.random() < dt * 16 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(4, e.hh * .8), vx: rand(-10, 10), vy: 0, vz: rand(40, 90), life: .5, max: .5, col: pick(['#0A0608', '#5A2A7A', '#C02040']), size: rand(2, 3.6), shape: 'star', rot: 0, vr: 4 });
+      if (Math.random() < dt * 16 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(4, e.hh * .8), vx: rand(-10, 10), vy: 0, vz: rand(40, 90), life: .5, max: .5, col: pick(['#0A0608', '#5A2A7A', '#C02040']), size: rand(2, 3.6), shape: 'ember', pal: 'black', lift: .9, rot: rand(0, 6), vr: 0 });
       if (b.t <= 0) e.cwBurn = null; }
     // the shadow of him that strikes again
     const S = LS.dbl;

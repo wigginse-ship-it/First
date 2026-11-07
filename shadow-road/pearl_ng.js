@@ -370,7 +370,7 @@
     blacktide(s, e) {
       if (s.pulled) return; s.pulled = 1;
       for (const o of near(e.x, e.y, 120, e)) if (!o.boss) { o.x += (e.x - o.x) * .45; o.y += (e.y - o.y) * .45; }
-      for (let i = 0; i < 8 && parts.length < 420; i++) { const a = rand(0, TAU); parts.push({ x: e.x + Math.cos(a) * 40, y: e.y + Math.sin(a) * 12, z: rand(4, 40), vx: -Math.cos(a) * 120, vy: -Math.sin(a) * 30, vz: 0, life: .35, max: .35, col: pick(['rgba(40,28,80,.85)', 'rgba(110,224,192,.8)']), size: rand(2, 4), shape: 'puff', rot: 0, vr: 0 }); }
+      for (let i = 0; i < 8 && parts.length < 420; i++) { const a = rand(0, TAU); parts.push({ x: e.x + Math.cos(a) * 40, y: e.y + Math.sin(a) * 12, z: rand(4, 40), vx: -Math.cos(a) * 120, vy: -Math.sin(a) * 30, vz: 0, life: .35, max: .35, col: '#2A1C50', size: rand(3.5, 6), shape: 'wisp', rot: rand(0, 6), vr: 0 }); }
     },
     drowning(s, e, d) { if (P.hp > 0) P.hp = Math.min(maxHp(), P.hp + Math.min(6, 1 + d * .04)); },
   };
@@ -556,9 +556,9 @@
       e.vx = dir * 300 * sk;
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: cy, ang: 0, t: .25, max: .25, size: (30 + e.hw) * sk, col: '#FFF4D0' }); sfx('slice'); sfx('whoosh', .5);
     } else { sfx('hit-crystal', .6); sparkle(e.x, e.y, cy, 8, NACRE); }
-    if (e.pcur === 'tide') { for (let i = 0; i < 12 && parts.length < 420; i++) parts.push({ x: e.x + rand(-8, 8) * sk, y: e.y + rand(-3, 3), z: 2, vx: rand(-110, 110) * sk, vy: rand(-10, 10), vz: rand(90, 230) * sk, life: rand(.4, .7), max: .7, col: pick(['#BFF0FF', '#7FD0E8', '#FFFFFF']), size: rand(1.4, 2.6) * sk, shape: 'blob' }); sfx('hit-goo', .6); bub(e.x, e.y, 6, 6, 40); }
+    if (e.pcur === 'tide') { for (let i = 0; i < 12 && parts.length < 420; i++) parts.push({ x: e.x + rand(-8, 8) * sk, y: e.y + rand(-3, 3), z: 2, vx: rand(-110, 110) * sk, vy: rand(-10, 10), vz: rand(90, 230) * sk, life: rand(.4, .7), max: .7, col: pick(['#BFF0FF', '#7FD0E8', '#FFFFFF']), size: rand(1.6, 2.8) * sk, shape: 'drop', pal: 'water', rest: false }); sfx('hit-goo', .6); bub(e.x, e.y, 6, 6, 40); }
     else if (e.pcur === 'nacre') { e.pspk = []; for (let i = 0; i < 3; i++) e.pspk.push({ x: rand(-.55, .55), y: rand(.3, .8), a: -Math.PI / 2 + rand(-1.1, 1.1), l: rand(7, 12) }); sparkle(e.x, e.y, cy, 6, ['#FFFFFF', '#F6C2D4', '#E86A5A']); }
-    else if (e.pcur === 'storm') { fx.push({ kind: 'bolt', x: e.x + rand(-10, 10), y: e.y, z: e.z + 240, x2: e.x, y2: e.y, z2: cy, t: .22, max: .22, col: '#E8ECFF', seed: Math.random() * 99 }); burst(e.x, e.y, cy, ['#FFFFFF', '#BFD8FF', '#FFE08A'], 10, 'spark', 0, true); sfx('shoot', .6); }
+    else if (e.pcur === 'storm') { fx.push({ kind: 'bolt', x: e.x + rand(-10, 10), y: e.y, z: e.z + 240, x2: e.x, y2: e.y, z2: cy, t: .22, max: .22, col: '#E8ECFF', seed: Math.random() * 99 }); burst(e.x, e.y, cy, ['#FFFFFF', '#BFD8FF', '#FFE08A'], 10, 'storm', 0, true); sfx('shoot', .6); }
   }
   // the timed beats of those deaths (the shell bursting, the spire biting into the floor, motes rising), stepped with him
   function pearlDeathStep(dt) {
@@ -569,10 +569,10 @@
       else if (e.death === 'plpin' && !(e.pfx & 1) && el >= .4) { e.pfx |= 1; sfx('slam', .5); dust(e.x, e.y, 6); shakeMag = Math.max(shakeMag, 4); }
       else if (e.death === 'plcrush' && Math.abs(e.vx) > 120 && Math.random() < .5) dust(e.x, e.y, 1);
       else if (e.death === 'plspeck' && el < 1.15 && Math.random() < dt * 28 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * sk, y: e.y, z: e.z + rand(0, e.hh) * sk, vx: rand(-12, 12), vy: 0, vz: rand(40, 90), life: .6, max: .6, col: pick(NACRE), size: rand(1.2, 2.2) * sk, shape: 'star', rot: 0, vr: 4 });
-      if (e.pcur === 'storm' && el < .9 && Math.random() < dt * 12 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * sk, y: e.y, z: e.z + rand(4, e.hh) * sk, vx: rand(-60, 60), vy: 0, vz: rand(30, 110), life: .3, max: .3, col: pick(['#FFFFFF', '#BFD8FF', '#FFE08A']), size: rand(1, 2), shape: 'star', rot: 0, vr: 8 });
+      if (e.pcur === 'storm' && el < .9 && Math.random() < dt * 12 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * sk, y: e.y, z: e.z + rand(4, e.hh) * sk, vx: rand(-60, 60), vy: 0, vz: rand(30, 110), life: .3, max: .3, col: pick(['#FFFFFF', '#BFD8FF', '#FFE08A']), size: rand(1.6, 2.6), shape: 'spark', rot: rand(0, 6), vr: 0 });
       if (e.pcur === 'abyss' && el >= e.dmax - ABYSS_T) {
         if (!(e.pfx & 2)) { e.pfx |= 2; sfx('whoosh', .6); sfx('hit-goo', .3); }
-        if (Math.random() < dt * 20 && parts.length < 400) { const a = rand(0, TAU), r = (30 + e.hw) * sk; parts.push({ x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * .3, z: 3, vx: -Math.cos(a) * r * 2.2, vy: -Math.sin(a) * r * .6, vz: 0, life: .4, max: .4, col: pick(['rgba(40,28,80,.85)', 'rgba(110,224,192,.8)']), size: rand(1.6, 3), shape: 'puff', rot: 0, vr: 0 }); }
+        if (Math.random() < dt * 20 && parts.length < 400) { const a = rand(0, TAU), r = (30 + e.hw) * sk; parts.push({ x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r * .3, z: 3, vx: -Math.cos(a) * r * 2.2, vy: -Math.sin(a) * r * .6, vz: 0, life: .4, max: .4, col: '#2A1C50', size: rand(3, 5) * sk, shape: 'wisp', rot: rand(0, 6), vr: 0 }); }
       }
     }
   }

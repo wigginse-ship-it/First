@@ -292,12 +292,12 @@ function thornsBack(raw) { // chaos plate: the striker takes part of the blow ba
   const src = HIT_SRC; if (!src || src.kind !== 'melee' || !src.e || src.e.dead) return;
   const e = src.e, th = gearStat('thorns');
   if (th > 0) { const d = Math.max(1, Math.round(raw * th)); strike(e, d, Math.sign(e.x - P.x) || 1, { dmg: d, kb: 60, power: 0, trump: 1, noStun: 1, thorns: 1 }, true); }
-  if (gearStat('burn') && !e.dead) { e.burn = 3; e.burnBase = Math.max(3, raw * .12); burst(e.x, e.y, e.z + e.hh * .5, ['#FF7A3A', '#FFD27A'], 8, 'spark'); }
+  if (gearStat('burn') && !e.dead) { e.burn = 3; e.burnBase = Math.max(3, raw * .12); burst(e.x, e.y, e.z + e.hh * .5, ['#FF7A3A', '#FFD27A'], 8, 'fire'); }
 }
 function deathSave() { // moon-silver: once in each place (or the Firebird, once in each place too)
   if (gearStat('phoenix') && !P.phoenixUsed && P.moonSaved !== 'phoenix') { P.phoenixUsed = true; P.hp = Math.round(maxHp() * gearStat('phoenix')); P.inv = 1.4;
     banner('THE FIREBIRD', 'YOU RISE AGAIN · ONCE IN EACH PLACE', 1.6); flashT = .2; slowmo = .5; sfx('trump'); shakeMag = 10;
-    burst(P.x, P.y, 40, ['#FFD27A', '#FF8A3A', '#E84A2A', '#FFFFFF'], 44, 'spark', 0, true); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 10, t: .6, max: .6, r: 140, col: '#FF8A3A', flat: 1 });
+    burst(P.x, P.y, 40, ['#FFD27A', '#FF8A3A', '#E84A2A', '#FFFFFF'], 44, 'fire', 0, true); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 10, t: .6, max: .6, r: 140, col: '#FF8A3A', flat: 1 });
     for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 140) { e.burn = 4; e.burnBase = 8; strike(e, 30, Math.sign(e.x - P.x) || 1, { dmg: 30, kb: 380, launch: 280, power: 2, trump: 1 }); } // the fire you rise in scatters them
     return true; }
   if (!gearStat('deathSave') || P.moonSaved) return false;
@@ -331,7 +331,7 @@ window.addEventListener('load', () => {
     const r = _kill(e, dir, m, ...rest); const v = gearStat('stormcall');
     if (v && !(m && m.storm)) { let n = 0; // the Jewel: lightning comes down on the ones beside it
       for (const o of enemies) { if (o === e || o.dead || n >= 3 || Math.hypot(o.x - e.x, (o.y - e.y) * 2) > 130) continue; n++;
-        fx.push({ kind: 'bolt', x: e.x, y: e.y, z: e.z + e.hh * .6, x2: o.x, y2: o.y, z2: o.z + o.hh * .5, t: .3, max: .3, col: '#DDEBFF', seed: Math.random() * 99 }); burst(o.x, o.y, o.z + o.hh * .6, ['#FFFFFF', '#BFD8FF', '#FFE08A'], 12, 'spark', 0, true);
+        fx.push({ kind: 'bolt', x: e.x, y: e.y, z: e.z + e.hh * .6, x2: o.x, y2: o.y, z2: o.z + o.hh * .5, t: .3, max: .3, col: '#DDEBFF', seed: Math.random() * 99 }); burst(o.x, o.y, o.z + o.hh * .6, ['#FFFFFF', '#BFD8FF', '#FFE08A'], 12, 'storm', 0, true);
         _strike(o, v * (typeof wMult === 'function' ? wMult(P.w) : 1), Math.sign(o.x - e.x) || 1, { dmg: v, kb: 160, launch: 180, power: 1, gx: 1, storm: 1 }); }
       if (n) { sfx('shoot'); shakeMag = Math.max(shakeMag, 4); } }
     return r;

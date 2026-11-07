@@ -584,12 +584,12 @@ function playTrump() {
     for (let i = 0; i < lv; i++) stags.push({ x: camX - 60 - i * 70, y: lanes[i], hit: new Set(), t: 0, back: lv >= 3 && i === 2, dir: 1 });
   }
   else if (save.trump === 'mirror') mirrorT = lv >= 2 ? 14 : 10;
-  else if (save.trump === 'brand') { brandEl = ['fire', 'frost', 'storm'][brandN++ % 3]; brandT = lv >= 2 ? 20 : 15; banner(ELEMENTS[brandEl].name, 'YOUR WEAPON IS BRANDED FOR 15 SECONDS', 1.6); burst(P.x, P.y, 50, [ELEMENTS[brandEl].col, '#FFFFFF'], 30, 'spark', 0, true); }
+  else if (save.trump === 'brand') { brandEl = ['fire', 'frost', 'storm'][brandN++ % 3]; brandT = lv >= 2 ? 20 : 15; banner(ELEMENTS[brandEl].name, 'YOUR WEAPON IS BRANDED FOR 15 SECONDS', 1.6); burst(P.x, P.y, 50, [ELEMENTS[brandEl].col, '#FFFFFF'], 30, brandEl, 0, true); }
   else if (save.trump === 'stillness') stillT = [5, 7, 9][lv - 1];
   else if (save.trump === 'phoenix') {
     P.hp = Math.min(maxHp(), P.hp + maxHp() * [.5, .7, 1][lv - 1]); if (lv >= 3) phoenixT = 6;
     const R = [150, 200, 240][lv - 1], D = [30, 50, 70][lv - 1];
-    burst(P.x, P.y, 30, ['#EED48A', '#D8834A', '#D04A62', '#FFFFFF'], 50, 'spark', 0, true);
+    burst(P.x, P.y, 30, ['#EED48A', '#D8834A', '#D04A62', '#FFFFFF'], 50, 'fire', 0, true);
     fx.push({ kind: 'ring', x: P.x, y: P.y, z: 20, t: .5, max: .5, r: R, col: '#D8834A', flat: 1 });
     for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < R) strike(e, D, Math.sign(e.x - P.x) || 1, { dmg: D, kb: 420, launch: 300, power: 2, trump: 1 }, true);
   }
@@ -599,12 +599,11 @@ function updateTrumps(dt) {
   mirrorT = Math.max(0, mirrorT - dt); stillT = Math.max(0, stillT - dt); brandT = Math.max(0, brandT - dt);
   if (phoenixT > 0) { // the phoenix's flame clings to him and scorches whoever comes close
     phoenixT -= dt; P.burnTick = (P.burnTick || 0) - dt;
-    if (Math.random() < .8) parts.push({ x: P.x + rand(-14, 14), y: P.y, z: rand(5, 60), vx: rand(-20, 20), vy: 0, vz: rand(50, 110), life: .5, max: .5, col: pick(['#FF9A5A', '#FFD27A', '#D04A62']), size: rand(2, 4), shape: 'star', rot: 0, vr: 5 });
+    if (Math.random() < .8) FXEL.shed('fire', P.x + rand(-14, 14), P.y, rand(5, 60));
     if (P.burnTick <= 0) { P.burnTick = .5; for (const e of enemies) if (!e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 70) strike(e, 8, Math.sign(e.x - P.x) || 1, { dmg: 8, kb: 60, power: 0, trump: 1, noStun: 1 }, true); }
   }
   if (brandT > 0 && Math.random() < .7) { // the branded weapon sheds its element
-    const el = ELEMENTS[brandEl];
-    parts.push({ x: P.x + P.facing * rand(10, 40), y: P.y, z: rand(30, 60), vx: rand(-20, 20), vy: 0, vz: brandEl === 'frost' ? -10 : rand(40, 90), life: .5, max: .5, col: pick([el.col, '#FFFFFF']), size: rand(2, 3.5), shape: 'star', rot: 0, vr: 5 });
+    FXEL.shed(brandEl, P.x + P.facing * rand(10, 40), P.y, rand(30, 60));
   }
   for (const ec of echoes) { ec.t -= dt; if (ec.t <= 0 && !ec.e.dead) strike(ec.e, ec.dmg, ec.dir, ec.m, true); }
   echoes = echoes.filter(ec => ec.t > 0);
@@ -624,7 +623,7 @@ function applyElement(e, base, dir) {
   if (brandEl === 'fire') { e.burn = 3.2; e.burnBase = Math.max(3, base * (TL('brand') >= 2 ? .25 : .18)); }
   else if (brandEl === 'frost') {
     e.chill = 3; e.frost = (e.frost || 0) + 1;
-    if (e.frost >= (TL('brand') >= 2 ? 3 : 4)) { e.frost = 0; e.frozen = 1.8; e.state = e.state === 'dying' ? e.state : 'hurt'; e.t = 1.8; burst(e.x, e.y, cy, ['#9FE0FF', '#FFFFFF', '#6EA8D8'], 16, 'crystal', 0, true); floatText(e.x, e.y, e.z + e.hh + 18, 'FROZEN', el.col, 15); sfx('hit-crystal'); }
+    if (e.frost >= (TL('brand') >= 2 ? 3 : 4)) { e.frost = 0; e.frozen = 1.8; e.state = e.state === 'dying' ? e.state : 'hurt'; e.t = 1.8; burst(e.x, e.y, cy, ['#9FE0FF', '#FFFFFF', '#6EA8D8'], 16, 'frost', 0, true); floatText(e.x, e.y, e.z + e.hh + 18, 'FROZEN', el.col, 15); sfx('hit-crystal'); }
   } else {
     const near = enemies.filter(o => o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < 140).sort((p, q) => Math.abs(p.x - e.x) - Math.abs(q.x - e.x)).slice(0, TL('brand') >= 2 ? 3 : 2);
     for (const o of near) {
@@ -633,13 +632,13 @@ function applyElement(e, base, dir) {
     }
     sfx('shoot');
   }
-  burst(e.x, e.y, cy, [el.col, '#FFFFFF'], 6, 'spark', dir);
+  burst(e.x, e.y, cy, [el.col, '#FFFFFF'], 6, brandEl, dir);
 }
 function updateElements(e, dt) { // burning, chill and freeze on one enemy; returns true while frozen solid
   if (e.bleed > 0 && !e.dead) updateBleed(e, dt); // (a barbed arrow's wound: arrows.js)
   if (e.burn > 0 && !e.dead) {
     e.burn -= dt; e.burnTick = (e.burnTick || 0) - dt;
-    if (Math.random() < .6) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(0, e.hh), vx: rand(-10, 10), vy: 0, vz: rand(80, 140), life: .5, max: .5, col: pick(['#FF8A4A', '#FFD27A', '#E85A3A']), size: rand(2.5, 4), shape: 'puff', rot: 0, vr: 0 });
+    if (Math.random() < .6) FXEL.burning(e); // embers and smoke off it (its flames are drawn on it: elemfx.js)
     if (e.burnTick <= 0) {
       e.burnTick = .5; const d = Math.round(e.burnBase); e.hp -= d;
       floatText(e.x, e.y, e.z + e.hh + 6, String(d), '#FF8A4A', 11);

@@ -400,10 +400,7 @@ function drawEnemy(e, t) {
   FLASH = false;
   ctx.restore();
   if (!e.dead) hatchActor(e.x, e.y - e.z, e.hw * scale, e.hh * scale);
-  if ((e.chill > 0 || e.frozen > 0) && !e.dead) { // frost: a pale blue sheen, or a block of ice
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = e.frozen > 0 ? 'rgba(170,220,255,.5)' : 'rgba(140,200,255,.22)'; ell(e.x, e.y - e.z - e.hh / 2, e.hw + 6, e.hh / 2 + 6); ctx.fill(); ctx.restore();
-    if (e.frozen > 0) { ctx.strokeStyle = 'rgba(230,248,255,.9)'; ctx.lineWidth = 1.5; rrect(e.x - e.hw - 6, e.y - e.z - e.hh - 6, e.hw * 2 + 12, e.hh + 8, 4); ctx.stroke(); }
-  }
+  FXEL.status(e, t, scale); // burning, chilled, frozen in ice, shocked (elemfx.js)
   if (stillT > 0 && !e.dead) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(111,211,255,.3)'; ell(e.x, e.y - e.z - e.hh / 2, e.hw + 6, e.hh / 2 + 6); ctx.fill(); ctx.restore(); }
   // (no badge over a foe winding up: its own wind-up, and the flash just before the blow, say it is coming)
   if (!e.boss && !e.dead && e.hp < e.maxHp) {

@@ -144,7 +144,7 @@ function arrowBleed(e, per) {
 }
 function updateBleed(e, dt) {
   e.bleed -= dt; e.bleedTick -= dt;
-  if (Math.random() < dt * 9) parts.push({ x: e.x + rand(-e.hw, e.hw) * .4, y: e.y, z: e.z + e.hh * rand(.35, .7), vx: rand(-12, 12), vy: 0, vz: rand(-20, 30), life: .45, max: .45, col: pick(['#B01E2E', '#E0404A']), size: rand(1.6, 2.4), shape: 'blob' });
+  if (Math.random() < dt * 9) parts.push({ x: e.x + rand(-e.hw, e.hw) * .4, y: e.y, z: e.z + e.hh * rand(.35, .7), vx: rand(-12, 12), vy: 0, vz: rand(-20, 30), life: .45, max: .45, col: pick(['#B01E2E', '#E0404A']), size: rand(1.6, 2.4), shape: 'drop', pal: 'blood', rest: false });
   if (e.bleedTick <= 0) {
     e.bleedTick = .4; const d = Math.max(1, Math.round(e.bleedPer)); e.hp -= d;
     floatText(e.x, e.y, e.z + e.hh + 6, String(d), '#E0505A', 10);
