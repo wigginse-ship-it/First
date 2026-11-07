@@ -454,7 +454,7 @@
   function lhInput(S, dt) {
     const now = CUR.clock;
     O.cd = Math.max(0, O.cd - dt); O.parryCd = Math.max(0, O.parryCd - dt); O.reflCd = Math.max(0, O.reflCd - dt); O.ripCd = Math.max(0, O.ripCd - dt);
-    if (forged()) { O.chg = null; return; } // (once forged the Pearl is the weapon in his hand: Light + Heavy no longer throws it)
+    if (forged()) { O.chg = null; if (window.__pearlChord) window.__pearlChord(now); return; } // (once forged the Pearl is the weapon in his hand: Light + Heavy no longer throws it, it is the kind's own chord: pearl_lh.js)
     if (O.chg !== null) { // gathering it (patient): both held
       if (['hurt', 'down', 'dead'].includes(P.state)) { O.chg = null; return; }
       if (input.light && input.heavy) { O.chg += dt;

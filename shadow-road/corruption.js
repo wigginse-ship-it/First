@@ -106,7 +106,7 @@
     if (m.pearl && !m.trump && pearlBlack()) { base *= WT.blackPearlDmg; if (!m.crit && Math.random() < WT.blackPearlCrit) m = Object.assign({}, m, { crit: 1 }); } // (the Pearl gone black bites harder too: more Pearl kills, and each of those eases the curse)
     const own = mine(m), c = CS();
     if (own) {
-      if (e.state === 'down' && !e.boss) { e.cDownHit = true; if (rl('down' + (e.cid || (e.cid = Math.random())), .5)) feed(WT.downHit, 'cruelty: a downed foe'); }
+      if (e.state === 'down' && !e.boss && !m.px) { e.cDownHit = true; if (rl('down' + (e.cid || (e.cid = Math.random())), .5)) feed(WT.downHit, 'cruelty: a downed foe'); }
       if (onRoad()) base *= 1.3;
       const wc = c.wc[P.w];
       if (wc === 'drain' && body(m)) base *= 1.45;
@@ -125,7 +125,7 @@
   // ---------------- great overkill ----------------
   const _he = hurtEnemy;
   hurtEnemy = function (e, dmg, dir, m, crit) {
-    if (NG() && CTX && CTX.own && !pureHand() && !(m && m.perfect) && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill'); // (a purified blade is never cruel)
+    if (NG() && CTX && CTX.own && !pureHand() && !(m && (m.perfect || m.px)) && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill'); // (a purified blade is never cruel)
     const hp0 = e.hp, r = _he(e, dmg, dir, m, crit);
     if (NG() && e.hp < hp0) chargeHit(m, e);
     if (NG() && m && m.perfect && !m.trump && e.hp < hp0 && ((CTX && CTX.own) || m.pearl || m.arrow)) perfectPurge(m.arrow ? 'a perfect draw lands' : m.pearl ? 'a perfect throw lands' : 'a perfect charge lands');
