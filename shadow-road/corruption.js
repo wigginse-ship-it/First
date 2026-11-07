@@ -72,6 +72,8 @@
   const note = (why, d) => { LOG.push({ why, d: Math.round(d * 100) / 100, v: Math.round(CS().v * 10) / 10, t: Math.round(now() * 10) / 10 }); if (LOG.length > 80) LOG.shift(); tick(why, d); };
   // the live ticker under the curse meter: like reasons within 2s are summed into one line
   const TICK = [];
+  function tickNote(base, why) { const t = performance.now() / 1000, last = TICK.find(x => x.note && x.base === base && t - x.t < 7);
+    if (last) { last.n++; last.t = t; last.why = why; } else { TICK.unshift({ base, why, d: 0, n: 1, t, t0: t, sgn: 0, note: 1 }); if (TICK.length > 12) TICK.pop(); } }
   function tick(why, d) { const t = performance.now() / 1000, base = String(why || '?').replace(/ \(\d+ this cycle\)$/, ''), last = TICK.find(x => x.base === base && x.sgn === Math.sign(d) && t - x.t < 2);
     if (last) { last.d += d; last.n++; last.t = t; last.why = why; } else { TICK.unshift({ base, why, d, n: 1, t, t0: t, sgn: Math.sign(d) }); if (TICK.length > 12) TICK.pop(); } }
   const rl = (k, gap) => { const t = now(); if ((L.rate[k] || 0) > t) return false; L.rate[k] = t + gap; return true; };
@@ -268,7 +270,10 @@
       if (!inReach(m, co.x, co.y, 0, co.hw || 14, 24)) continue;
       co.cHitMove = P.moveId; co.cHits = (co.cHits || 0) + 1;
       { const cw = save.cw && save.cw[P.w], cap = cw && !cw.pure ? WT.corpseCapCursed : WT.corpseCap; // (a purified blade is never cruel; the rest are capped per world, a cursed one higher)
-        if (!(cw && cw.pure) && (L.corpseFed || 0) < cap) L.corpseFed = (L.corpseFed || 0) + feed(Math.min(WT.corpse, cap - (L.corpseFed || 0)), 'cruelty: a corpse struck'); }
+        L.corpseCap = cap;
+        if (cw && cw.pure) tickNote('corpse', 'corpse struck · purified: no penalty');
+        else if ((L.corpseFed || 0) < cap - 1e-6) { L.corpseFed = (L.corpseFed || 0) + feed(Math.min(WT.corpse, cap - (L.corpseFed || 0)), 'cruelty: a corpse struck'); if (L.corpseFed >= cap - 1e-6) tickNote('corpse', `corpse cap reached (${cap}) · no more penalty`); }
+        else tickNote('corpse', `corpse struck · capped (${cap}): no penalty`); }
       burst(co.x, co.y, 8, ['#2A2028', '#5A4A50', '#8A2A30'], 7, 'flesh', P.facing); sfx('hit-flesh', .2); co.sqx = 1.15; co.sqy = .9;
     }
   }
@@ -2031,7 +2036,7 @@
     'a world walked without falling': 'cleared a world without dying', 'the Horn of Lorraine blown': 'the Horn', 'the Pattern of his own walked': 'the Pattern',
     'the Abyss taken into the Pearl': 'the Pearl drinks the Abyss',
   };
-  const gloss = (b) => GLOSS[b] || GLOSS[b.replace(/ \(.*\)$/, '')] || '';
+  const gloss = (b) => b === 'cruelty: a corpse struck' && L.corpseCap ? `hit a body · ${(L.corpseFed || 0).toFixed(1)} of ${L.corpseCap} cap this stage` : GLOSS[b] || GLOSS[b.replace(/ \(.*\)$/, '')] || '';
   let meterEl = null, hist = [];
   function meter() {
     const show = SHOW_METER && NG() && !!save.w8relic && (mode === 'play' || mode === 'pause'); // (only once Lorraine is beaten: the Horn in hand)
@@ -2052,6 +2057,7 @@
       `<br><span style="color:#9A8A9A;font-weight:600">${next != null ? 'next tier at ' + next : 'max tier'} · horn ${c.horn.toFixed(0)}${hs ? ' ' + HORN_NAMES[hs] : ''}</span>`;
     const max = SMALL ? 3 : 5, rows = TICK.filter(x => tn - x.t < 7).slice(0, max);
     meterEl.querySelector('#cmTick').innerHTML = rows.map(x => { const a = Math.max(.25, 1 - Math.max(0, tn - x.t - 4) / 3), up = x.d > 0, g = gloss(x.base);
+      if (x.note) return `<div style="opacity:${a.toFixed(2)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9FD8C0">✓ ${x.why}${x.n > 1 ? ' ×' + x.n : ''}</div>`;
       return `<div style="opacity:${a.toFixed(2)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="color:${up ? '#FF7A8A' : '#FFE08A'}">${up ? '+' : '−'}${Math.abs(x.d).toFixed(2)}</span> ${x.why.replace(/ \(\d+ this cycle\)$/, '')}${x.n > 1 ? ' ×' + x.n : ''}${g && !SMALL ? `<span style="color:#9A8A9A"> · ${g}</span>` : ''}</div>`; }).join('');
   }
   setInterval(() => { try { meter(); } catch (e) {} }, 250);
@@ -2059,7 +2065,7 @@
   window.CURSE = {
     TIERS, TIER_NAME, HORN_ST, HIGH_END, RESIDUE, HORN_KEEP, WT, CURSED_VERSE, MASKS, WCURSE, ACURSE,
     state: () => NG() ? Object.assign({ tier: tier(), teff: teff(), hornSt: hornSt(), finalHigh: finalHigh() }, JSON.parse(JSON.stringify(CS()))) : null,
-    live: () => L, log: () => LOG.slice(),
+    live: () => L, log: () => LOG.slice(), ticker: () => TICK,
     set: (v, h) => { if (!NG()) return null; const c = CS(); if (v != null) c.v = clamp(+v, 0, 100); if (h != null) c.horn = clamp(+h, 0, 100); return c; },
     boss: { FAM: BFAM, tier: bTier, fire: (k) => boss && boss.cB && bossFire(boss, k || boss.cB.set[0]), burn: () => boss && boss.cB && burnBack(boss), cad: B_CAD },
     feed, ease, tier, teff, hornSt, hornWords, hornNotes, onHornBlow, fxAmt,
