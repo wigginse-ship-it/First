@@ -375,6 +375,18 @@ function approach(e, tx, ty, dt, k) {
   }
   e.y = clamp(e.y, FLOOR_TOP + 8, FLOOR_BOT);
 }
+// a foe back on its feet and acting stands upright on the street: whatever ended its flight (a pull, a freeze, a riddle,
+// a possession, a rule that set it going again) may have left it tilted from its tumble, hanging in the air, or pushed off
+// the street's strip; set it right quickly, so nothing walks and strikes at an angle, afloat, or out of its lane
+const UPRIGHT_SKIP = { down: 1, dying: 1, dead: 1, enter: 1 }, UPRIGHT_PLAIN = { idle: 1, walk: 1, wind: 1, recover: 1, hurt: 1, evade: 1 };
+function upright(e, dt) {
+  if (e.dead || e.remove || e.air || e.boss || UPRIGHT_SKIP[e.state] || e.plan === 'roll' || e.cRisen && (e.cRise || 0) > 0) return;
+  if (e.rotA) { e.rotA *= Math.pow(.0005, dt); if (Math.abs(e.rotA) < .03) e.rotA = 0; } // (a tilt left from its tumble)
+  if (e.spin) e.spin = 0;
+  const flies = e.def && (e.def.move === 'fly' || e.def.hover), plain = UPRIGHT_PLAIN[e.state] && !e.act; // (height and lane only in its plain states: a scripted move keeps its own)
+  if (plain && !flies && e.z > 0 && !(e.vz > 0)) { e.z = Math.max(0, e.z - 520 * dt); e.vz = 0; } // (left hanging in the air)
+  if (plain && !flies) e.y = clamp(e.y, FLOOR_TOP + 8, FLOOR_BOT);
+}
 // bosses take longer to wind up, so every big attack can be read and dodged
 const BOSS_WIND = { submerge: .7, bramble: 1.1, vent: 1.15, coil: 1.05, quake: .9, mines: .7, magnet: .8, dive: .95, orbit: .7, prismwall: .6, bite: .85, swing: .85, sweep: 1.0, roll: 1.1, charge: 1.0, slam: .85, erupt: .8, rain: .7, beam: .6, groundwave: .8, breath: .8, volley: .7, summon: .8 };
 // in the third world, enemies cover for each other: when one winds up, a nearby ally may attack with it
@@ -623,6 +635,7 @@ function updateWorld(dt) {
     // stretch of ground in the same time, so it looks as fast as it did at full size, only smaller
     const x0 = e.x, y0 = e.y, z0 = e.z; updateEnemy(e, dt);
     e.x = x0 + (e.x - x0) * k; e.y = y0 + (e.y - y0) * k; if (e.z > 0 || z0 > 0) e.z = Math.max(0, z0 + (e.z - z0) * k); }
+  for (const e of enemies) upright(e, dt);
   enemies = enemies.filter(e => !e.remove);
   const DT0 = dt;
   for (const p of projs) { // (in the Stillness the foes' shots hang where they are, and his own crawl on through it, slowed to an eighth)

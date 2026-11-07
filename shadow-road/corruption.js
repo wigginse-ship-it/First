@@ -912,9 +912,14 @@
     PEND_NUMS = held;
     try { postFx(t, f, k); } catch (err) { console.error(err); } finally { PEND_NUMS = null; }
   };
+  const CVS = { v: 0 }; // (the curse as the picture shows it, eased)
   function postFx(t, f, k) {
     if (busy() && !(window.W8 && W8.cine && W8.cine())) return;
     const T = teff(), g = ctx;
+    // how cursed the picture looks: the curse itself (0..1), not its tier, eased so the world visibly clears (or darkens)
+    // as it moves; a spike or the Circle's last hour push it to the worst
+    let cv = clamp(CS().v / 100, 0, 1); if (L.spike) cv = Math.max(cv, .95); if (finalHigh()) cv = Math.max(cv, .75);
+    CVS.v += (cv - CVS.v) * Math.min(1, (1 / 60) * 1.6); if (Math.abs(cv - CVS.v) < .002) CVS.v = cv; const cvs = CVS.v;
     // the transforms of the whole picture (copied, then laid back turned, mirrored or nearer)
     if (f && k > 0 && ['tilt', 'mirror', 'close', 'tear', 'rewind'].includes(f.k)) {
       const W = cv.width, H = cv.height, half = lite(), bw = half ? Math.ceil(W / 2) : W, bh = half ? Math.ceil(H / 2) : H, b = buf(bw, bh);
@@ -937,13 +942,13 @@
     }
     g.save();
     // the omens that stay: grey at the edges, the light guttering
-    if (T >= 1) { const fa = [0, .34, .46, .56, .68][T] * (1 + .08 * Math.sin(t * .7)); g.globalAlpha = Math.min(1, fa); g.drawImage(fogCanvas(), -VW * .06 + VW * .03 * Math.sin(t * .3), Y_OFF - VIEW_H * .02, VW * 1.12, VIEW_H * 1.04); g.globalAlpha = 1;
-      L.flickT -= 1 / 60; if (L.flickT <= 0) { L.flickT = rand(1.5, 5) / T; L.flick = rand(.12, .3); } if (L.flick > 0) { L.flick -= 1 / 60; g.fillStyle = `rgba(8,4,10,${Math.min(.32, L.flick) * (.4 + .2 * T)})`; view(); } }
+    if (cvs >= .06) { const fa = (.1 + .74 * sm((cvs - .06) / .94)) * (1 + .08 * Math.sin(t * .7)); g.globalAlpha = Math.min(1, fa); g.drawImage(fogCanvas(), -VW * .06 + VW * .03 * Math.sin(t * .3), Y_OFF - VIEW_H * .02, VW * 1.12, VIEW_H * 1.04); g.globalAlpha = 1;
+      L.flickT -= 1 / 60; if (L.flickT <= 0) { L.flickT = rand(1.5, 5) / Math.max(1, cvs * 4); L.flick = rand(.12, .3); } if (L.flick > 0) { L.flick -= 1 / 60; g.fillStyle = `rgba(8,4,10,${Math.min(.32, L.flick) * (.3 + .9 * cvs)})`; view(); } }
     // the Circle's greys and reds: drained colour, a red in the corners
-    const drain = (T >= 2 ? .2 + .14 * (T - 2) : 0) + (f && f.k === 'drain' ? .65 * k : 0) + (finalHigh() ? .4 : 0) + (L.pulse ? .5 * Math.max(0, 1 - L.pulse.t / 2.5) : 0);
+    const drain = .95 * Math.pow(clamp((cvs - .1) / .9, 0, 1), 1.15) + (f && f.k === 'drain' ? .65 * k : 0) + (finalHigh() ? .4 : 0) + (L.pulse ? .5 * Math.max(0, 1 - L.pulse.t / 2.5) : 0);
     if (drain > 0) { if (lite()) { g.fillStyle = `rgba(110,106,114,${Math.min(.55, drain * .5)})`; view(); }
       else { g.globalCompositeOperation = 'saturation'; g.fillStyle = `rgba(128,128,128,${Math.min(1, drain)})`; view(); g.globalCompositeOperation = 'source-over'; }
-      const rg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .55, VIEW_H * .3, VW / 2, Y_OFF + VIEW_H * .55, VW * .72); rg.addColorStop(0, 'rgba(150,20,30,0)'); rg.addColorStop(1, `rgba(150,20,30,${Math.min(.4, drain * .32)})`);
+      const rg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .55, VIEW_H * .3, VW / 2, Y_OFF + VIEW_H * .55, VW * .72); rg.addColorStop(0, 'rgba(150,20,30,0)'); rg.addColorStop(1, `rgba(150,20,30,${Math.min(.5, drain * .4)})`);
       g.globalCompositeOperation = lite() ? 'source-over' : 'multiply'; g.fillStyle = lite() ? `rgba(120,20,30,${Math.min(.18, drain * .14)})` : rg; view(); g.globalCompositeOperation = 'source-over'; }
     if (f && k > 0) {
       if (f.k === 'puppet') { const vg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .45, VIEW_H * .2, VW / 2, Y_OFF + VIEW_H * .5, VW * .62); vg.addColorStop(0, 'rgba(40,16,4,0)'); vg.addColorStop(1, `rgba(30,12,4,${.75 * k})`); g.fillStyle = vg; view();
