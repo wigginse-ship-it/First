@@ -65,7 +65,7 @@
     // is the hardest of all; held on past that, it goes round the ordinary three again)
     rock:     { name: 'Rock!', dmg: 19, kb: 200, launch: 300, x1: 90, depth: 40, shock: 140, bounce: 1, h: [.42, .6] },
     paper:    { name: 'Paper!', dmg: 43, kb: 720, x1: 150, depth: 44, wall: 1, multi: 0, h: [.38, .62] },
-    scissors: { name: 'Scissors!', dmg: 30, kb: 160, x1: 130, depth: 30, multi: .14, h: [.36, .7] },
+    scissors: { name: 'Scissors!', dmg: 30, kb: 160, x1: 210, depth: 40, multi: .14, h: [.36, .7] },
     rock2:    { name: 'Rock!!', dmg: 63, kb: 260, launch: 420, x1: 104, depth: 46, shock: 190, bounce: 1, crit: 1, h: [.42, .6] },
   };
   const JK = ['rock', 'paper', 'scissors'], jkIdx = (ct) => Math.max(0, Math.floor((ct - .45) / .42)), jkOf = (ct) => JK[jkIdx(ct) % 3];
@@ -146,7 +146,7 @@
       for (let i = 0; i < (big ? 6 : 3); i++) fx.push({ kind: 'bolt', x: fx0 + rand(-70, 70), y: y + rand(-10, 10), z: 200 + rand(0, 80), x2: fx0 + rand(-50, 50), y2: y, z2: 2, t: .26, max: .26, col: i % 2 ? '#FF5A7A' : '#B01030', seed: Math.random() * 99 });
       burst(fx0, y, 8, red, big ? 34 : 20, 'spark', 0, true); }
     if (m.jk === 'paper') SA.objs.push({ kind: 'gale', x: P.x + dir * 40, y, dir, t: 0, max: .7, seed: Math.random() * 99 });
-    if (m.jk === 'scissors') SA.objs.push({ kind: 'rend', x: P.x + dir * 70, y, dir, t: 0, max: .55 });
+    if (m.jk === 'scissors') SA.objs.push({ kind: 'rend', x: P.x + dir * 110, y, dir, t: 0, max: .55, w: 1.6 });
     if (big) { SA.objs.push({ kind: 'eclipse', x: fx0, y, t: 0, max: 1.3 }); flashT = Math.max(flashT, .08); shakeMag = Math.max(shakeMag, 12); sfx('roar', .5); }
   }
   // the charged hand's kills die as its shape says: a rock flattens them as the hammer does, scissors cut them in two as the
@@ -165,7 +165,7 @@
     if (m.jk) { once('j', m.h[0], () => { sfx('slam'); shakeMag = Math.max(shakeMag, 9); zoom = Math.max(zoom, .05);
       if (m.jk === 'rock') { silverBurst(P.x + f() * 60, P.y, 6, 24); fx.push({ kind: 'ring', x: P.x + f() * 60, y: P.y, z: 2, t: .45, max: .45, r: 150, col: '#EEF2FA', flat: 1 }); }
       if (m.jk === 'paper') SA.objs.push({ kind: 'gust', x: P.x + f() * 40, y: P.y, dir: f(), t: 0, max: .45 });
-      if (m.jk === 'scissors') SA.objs.push({ kind: 'snip', x: P.x + f() * 70, y: P.y, dir: f(), t: 0, max: .3 });
+      if (m.jk === 'scissors') SA.objs.push({ kind: 'snip', x: P.x + f() * 112, y: P.y, dir: f(), t: 0, max: .3 });
       if (SA.black()) jkCurse(m, m.name === 'Rock!!'); }); }
     if (m.rocket) once('r', m.h[0], () => { SA.objs.push({ kind: 'rocket', x: P.x + f() * 24, y: P.y, z: P.z + 44, dir: f(), d: 0, out: m.grab ? 300 : 340, back: false, hit: new Set(), m, grab: m.grab, born: P.moveId }); sfx('whoosh'); sfx('shoot'); });
     if (m.titan) once('t', m.h[0], () => { const e = nearestAhead(110 + (P.z > 0 ? 0 : 0), 34); sfx('charge', 2);
@@ -376,7 +376,7 @@
         const g = ctx.createLinearGradient(0, 0, 160, 0); g.addColorStop(0, `rgba(20,6,18,${(.55 * a).toFixed(3)})`); g.addColorStop(1, 'rgba(20,6,18,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(70 + o.t * 120, -40, 110, 48, 0, 0, Math.PI * 2); ctx.fill();
         for (let i = 0; i < 14; i++) { const x = r() * 180 + o.t * 260, yy = -10 - r() * 80; ctx.fillStyle = i % 3 ? `rgba(255,50,80,${(.7 * a).toFixed(3)})` : `rgba(12,4,10,${(.8 * a).toFixed(3)})`; ctx.save(); ctx.translate(x, yy); ctx.rotate(r() * 6 + o.t * 12); ctx.fillRect(-4, -1.2, 8 + r() * 6, 2.4); ctx.restore(); }
         ctx.restore(); })]);
-    else if (o.kind === 'rend') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max, snap = o.t > o.max * .7 ? (o.t - o.max * .7) / (o.max * .3) : 0, w = 1 - snap; ctx.save(); ctx.translate(o.x, o.y - 40); ctx.scale(o.dir, 1);
+    else if (o.kind === 'rend') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max, snap = o.t > o.max * .7 ? (o.t - o.max * .7) / (o.max * .3) : 0, w = 1 - snap; ctx.save(); ctx.translate(o.x, o.y - 40); ctx.scale(o.dir * (o.w || 1), 1);
         for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-34 * w, -34 * s * w); ctx.lineTo(34 * w, 34 * s * w); ctx.strokeStyle = `rgba(14,4,12,${(.9 * a).toFixed(3)})`; ctx.lineWidth = 7 * (1 - snap * .6); ctx.stroke();
           ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,60,90,${(.85 * a).toFixed(3)})`; ctx.lineWidth = 2.2; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
         ctx.restore(); })]);
@@ -405,7 +405,7 @@
     else if (o.kind === 'crescent') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(o.x, o.y - 30); ctx.scale(o.dir, 1);
       for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(${i ? LT('200,215,255') : LT('255,255,255')},${a * (.9 - i * .25)})`; ctx.lineWidth = 5 - i * 1.4; ctx.beginPath(); ctx.ellipse(-i * 10, 0, 14, 34, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke(); } ctx.restore(); })]);
     else if (o.kind === 'gust') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('225,235,255')},${a * .8})`; ctx.lineWidth = 2; for (let i = 0; i < 7; i++) { const y = o.y - 10 - i * 9, x = o.x + o.dir * o.t * 500; ctx.beginPath(); ctx.moveTo(x - o.dir * 60, y); ctx.lineTo(x + o.dir * (20 + i % 2 * 20), y); ctx.stroke(); } ctx.restore(); })]);
-    else if (o.kind === 'snip') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('245,248,255')},${a})`; ctx.lineWidth = 4; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(o.x - o.dir * 60, o.y - 40 + s * 30); ctx.lineTo(o.x + o.dir * 60, o.y - 40 - s * 30); ctx.stroke(); } ctx.restore(); })]);
+    else if (o.kind === 'snip') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('245,248,255')},${a})`; ctx.lineWidth = 4; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(o.x - o.dir * 100, o.y - 40 + s * 32); ctx.lineTo(o.x + o.dir * 100, o.y - 40 - s * 32); ctx.stroke(); } ctx.restore(); })]);
     else if (o.kind === 'sky') list.push([o.y + .1, () => { const z = o.landed ? 0 : Math.max(0, P.z + 60), q = o.landed ? Math.max(0, 1 - o.t / .55) : 1; ctx.save(); ctx.globalAlpha *= o.landed ? q : Math.min(1, o.t * 4); ctx.translate(o.x, o.y - z - 96 - (o.landed ? 0 : 30)); ctx.scale(o.dir, 1); RIG('paper', { s: .9, rot: Math.PI / 2, t, stump: 1 }); ctx.restore(); }]);
   }
 
