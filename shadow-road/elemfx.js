@@ -226,8 +226,8 @@ const FXEL = (() => {
       case 'ember': { const sp = Math.hypot(p.vx, p.vz), a = Math.atan2(p.vz, -p.vx);
         ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fade * (.75 + .25 * Math.sin(now() * 30 + p.rot * 9));
         put(emberSpr(p.pal || 'fire'), x, y, p.size * .55, a, clamp(.4 + sp * .006, .4, 1.6), 1); ctx.globalCompositeOperation = 'source-over'; break; }
-      case 'smoke': ctx.globalAlpha = fade * .7 * (1 - age * .5); put(smokeSpr(FIRE[p.pal || 'fire'].smoke, (p.rot * 3 | 0) % 3), x, y, p.size * (.5 + age * 1.1) / 8, p.rot); break;
-      case 'flake': ctx.globalAlpha = fade; put(flakeSpr((p.rot * 7 | 0) % 3 < 0 ? 0 : (p.rot * 7 | 0) % 3), x, y, p.size / 6, p.rot, 1, .55 + .45 * Math.abs(Math.cos(p.rot * 1.3))); break;
+      case 'smoke': ctx.globalAlpha = fade * .7 * (1 - age * .5); put(smokeSpr(p.rgb || FIRE[p.pal || 'fire'].smoke, Math.abs(p.rot * 3 | 0) % 3), x, y, p.size * (.5 + age * 1.1) / 8, p.rot); break;
+      case 'flake': ctx.globalAlpha = fade; put(flakeSpr(Math.abs(p.rot * 7 | 0) % 3), x, y, p.size / 6, p.rot, 1, .55 + .45 * Math.abs(Math.cos(p.rot * 1.3))); break;
       case 'ice': ctx.globalAlpha = fade; put(shardSpr(Math.abs(p.v | 0) % 3, p.tint), x, p.rest ? p.y - 1 : y, p.size / 6, p.rest ? (p.rot > 0 ? 1.45 : -1.45) : p.rot, 1, p.rest ? .6 : .5 + .5 * Math.abs(Math.cos(p.rot * .8))); break;
       case 'spark': { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fade;
         const [r, g, b] = hexRgb(p.col || '#E8E0FF'); ctx.strokeStyle = `rgb(${r},${g},${b})`; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - p.vx * .035, y + p.vz * .035); ctx.stroke();
@@ -236,7 +236,7 @@ const FXEL = (() => {
         if (p.rest) put(splatSpr(p.pal || 'blood', (p.rot * 5 | 0) & 1), x, p.y, p.size * .45 * (1 + Math.min(.4, (p.max - p.life) * 2)));
         else put(dropSpr(p.pal || 'blood'), x, y, p.size * .4, Math.atan2(p.vx, p.vz) + Math.PI, 1, 1 + Math.min(.6, Math.hypot(p.vx, p.vz) * .002));
         break;
-      case 'wisp': ctx.globalAlpha = fade * .9; put(wispSpr((p.rot * 3 | 0) % 3 < 0 ? 0 : (p.rot * 3 | 0) % 3), x, y, p.size / 5 * (.7 + age * .6), p.rot + age * 2); break;
+      case 'wisp': ctx.globalAlpha = Math.min(1, fade * 1.6); put(wispSpr(Math.abs(p.rot * 3 | 0) % 3), x, y, p.size / 3.4 * (.75 + age * .5), p.rot + age * 2); break;
     }
     ctx.globalAlpha = 1;
   }
@@ -250,6 +250,7 @@ const FXEL = (() => {
   function iceP(x, y, z, sp = 1, dir = 0, tint) { const a = rand(0, TAU), s = rand(80, 230) * sp; return P_({ x, y, z, vx: Math.cos(a) * s + dir * rand(30, 120), vy: Math.sin(a) * s * .2, vz: rand(90, 300) * sp, life: rand(1.1, 1.9), col: '#9FE0FF', size: rand(2.6, 5), shape: 'ice', v: rand(0, 3) | 0, tint, rot: rand(0, 6), vr: rand(-14, 14), rest: false }); }
   function sparkP(x, y, z, col, sp = 1, dir = 0) { const a = rand(0, TAU), s = rand(120, 320) * sp; return P_({ x, y, z, vx: Math.cos(a) * s + dir * 60, vy: rand(-20, 20), vz: Math.sin(a) * s * .7 + 60, life: rand(.14, .3), col, size: rand(2.4, 4), shape: 'spark', rot: rand(0, 6), vr: 0, lift: .7 }); }
   function dropP(x, y, z, pal, sp = 1, dir = 0) { const a = rand(0, TAU); return P_({ x, y, z, vx: Math.cos(a) * rand(30, 110) * sp + dir * rand(20, 80), vy: rand(-12, 12), vz: rand(40, 190) * sp, life: rand(1, 1.6), col: '#B01E2E', size: rand(1.8, 3), shape: 'drop', pal, rot: rand(0, 6), vr: 0, rest: false }); }
+  function mistP(x, y, z, size) { return P_({ x, y, z, vx: rand(-25, 25), vy: 0, vz: rand(5, 25), life: rand(.5, .7), col: '#E0F4FF', size, shape: 'smoke', rgb: '225,245,255', rot: rand(0, 6), vr: rand(-1, 1), lift: .9 }); }
   function wispP(x, y, z, vx = 0, vy = 0) { return P_({ x, y, z, vx: vx + rand(-20, 20), vy, vz: rand(10, 40), life: rand(.45, .8), col: '#2A1C50', size: rand(4, 7), shape: 'wisp', rot: rand(0, 6), vr: 0, lift: 1 }); }
 
   // ---------------- bursts ----------------
@@ -266,7 +267,7 @@ const FXEL = (() => {
     } else if (mat === 'frost') {
       if (n >= 6) bloom('frost', x, y, z, big ? 28 : 18);
       for (let i = 0; i < n; i++) { if (i % 3 === 1) flakeP(x, y, z, sp); else iceP(x, y, z, sp * .8, dir); }
-      for (let i = 0; i < 2; i++) P_({ x: x + rand(-8, 8), y, z: z + rand(-6, 6), vx: rand(-30, 30), vy: 0, vz: rand(10, 30), life: .5, col: 'rgba(225,245,255,.55)', size: rand(6, 9), shape: 'puff', rot: 0, vr: 0 });
+      for (let i = 0; i < 2; i++) mistP(x + rand(-8, 8), y, z + rand(-6, 6), rand(6, 9));
     } else if (mat === 'storm') {
       const col = cols.find(c => c !== '#FFFFFF') || '#E8E0FF';
       bloom('storm', x, y, z, big ? 30 : 20, col);
@@ -398,8 +399,8 @@ const FXEL = (() => {
       if (e._zap > 0) { e._zap -= dt; if (!crowd && Math.random() < dt * 10) sparkP(e.x + rand(-e.hw, e.hw), e.y, e.z + rand(0, e.hh), e._zc || '#E8E0FF', .4); }
       const fz = e.frozen > 0 && !e.dead;
       if (e._fz && !fz) { // the ice breaks: it bursts off in shards, a puff of cold
-        const cy = e.z + e.hh * .5; for (let i = 0, n = crowd ? 8 : 14; i < n; i++) iceP(e.x + rand(-e.hw, e.hw), e.y + rand(-3, 3), cy + rand(-e.hh * .4, e.hh * .4), .9);
-        for (let i = 0; i < 3; i++) P_({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: cy + rand(-10, 10), vx: rand(-30, 30), vy: 0, vz: rand(10, 30), life: .55, col: 'rgba(225,245,255,.5)', size: rand(7, 11), shape: 'puff', rot: 0, vr: 0 }); }
+        const cy = e.z + e.hh * .5; for (let i = 0, n = crowd ? 8 : 14; i < n; i++) { const q = iceP(e.x + rand(-e.hw, e.hw), e.y + rand(-3, 3), cy + rand(-e.hh * .4, e.hh * .4), .9); q.size *= 1.35; }
+        for (let i = 0; i < 3; i++) mistP(e.x + rand(-e.hw, e.hw), e.y, cy + rand(-10, 10), rand(8, 12)); }
       e._fz = fz;
       if (!crowd && !e.dead && e.chill > 0 && !(e.frozen > 0) && Math.random() < dt * 3) flakeP(e.x + rand(-e.hw, e.hw), e.y, e.z + e.hh * rand(.3, .9), .2);
     }
