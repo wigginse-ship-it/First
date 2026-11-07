@@ -42,7 +42,7 @@
   const WT = { // what feeds it (+) and what eases it (-)
     death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
-    pearlKill: -.5, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -.6, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
+    pearlKill: -.5, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
   const tierOf = (v) => v >= TIERS[3] ? 4 : v >= TIERS[2] ? 3 : v >= TIERS[1] ? 2 : v >= TIERS[0] ? 1 : 0;
   const hornStOf = (h) => h >= HORN_ST[3] ? 4 : h >= HORN_ST[2] ? 3 : h >= HORN_ST[1] ? 2 : h >= HORN_ST[0] ? 1 : 0;
@@ -170,7 +170,9 @@
   };
   // ---------------- discipline ----------------
   { const _rp = riposte; riposte = function (fromX) { if (NG() && rl('parry', .3)) ease(-WT.parry, 'a perfect parry'); if (NG()) L.ripT = now() + 1; return _rp(fromX); }; }
-  { const _pc = perfectCue; perfectCue = function () { if (NG() && rl('perf', .3)) ease(-WT.perfect, 'a perfect charge'); return _pc.apply(this, arguments); }; }
+  function perfectPurge(why) { if (!NG() || !rl('perf', .3)) return; const d = ease(-WT.perfect, why); if (d > 0 && P && playing()) { fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .45, max: .45, r: 70, col: '#FFE9A8', flat: 1 }); if (rl('perfTxt', 4)) floatText(P.x, P.y, 120, 'THE CURSE EASES', '#FFE9A8', 11); } } // (the perfect release itself draws a little of the curse out, whatever it then hits)
+  window.__perfectPurge = perfectPurge;
+  { const _pc = perfectCue; perfectCue = function () { perfectPurge('a perfect charge'); return _pc.apply(this, arguments); }; }
   // ---------------- restraint: a downed foe let up unhit ----------------
   const _ue = updateEnemy;
   updateEnemy = function (e, dt) {

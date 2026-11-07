@@ -73,6 +73,7 @@ function loose() {
   P.drawing = false; P.t = 0; save.arrows--; persist(); refreshArrows();
   const T = aTier(), lvl = arrowLv(), k = P.charge, sp = 520 + 320 * k, full = k >= 1;
   const perfect = P.full && P.sinceFull < .12; // let go the instant the draw is full: a perfect release always crits
+  if (perfect && window.__perfectPurge) window.__perfectPurge('a perfect draw');
   if (perfect) { floatText(P.x, P.y, 96, 'PERFECT', '#FFE08A', 15); flashT = .06; burst(P.x + P.facing * 28, P.y, P.z + 40, ['#FFE08A', '#FFFFFF'], 14, 'spark', P.facing, true); }
   projs.push({ owner: 'p', arrow: lvl, x: P.x + P.facing * 22, y: P.y, z: Math.max(30, P.z + 40), vx: P.facing * sp * Math.cos(P.aim), vz: sp * Math.sin(P.aim),
     dmg: Math.round(T.dmg * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1) * (1 + gearStat('arrow'))), perfect, life: 1.3, hit: new Set(), splash: new Set(), tgt: arrowTarget(Math.max(30, P.z + 40)),
