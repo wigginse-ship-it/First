@@ -201,26 +201,38 @@
 
   // ---------------- the look ----------------
   // his weapon arm, silver from the shoulder, plated and jointed like the Phantom's, gilt at the elbow and shoulder
-  const _look = heroLook; heroLook = function () { const L = _look(); if (SA.on()) { L.armSilver = 1; L.glove = '#C8D0DE'; L.gauntPlate = 1; } return L; };
+  const _look = heroLook; heroLook = function () { const L = _look(); if (SA.on()) { L.armSilver = 1; L.glove = SA.black() ? '#2A2030' : '#C8D0DE'; L.gauntPlate = 1; } return L; };
+  // the arm's metal: the Phantom's silver, or with the Black Knuckles on it the knuckles' own blackened violet iron
+  const AP = () => SA.black() ? { base: '#3A3046', dark: '#120C16', lite: '#7A6A8A', line: 'rgba(10,4,12,.6)' } : { base: BN.silver, dark: BN.silverDk, lite: BN.silverLt, line: 'rgba(60,70,100,.55)' };
   function plate(x0, y0, x1, y1, w0, w1, far) {
-    const st = K.taper(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2, x1, y1, w0, w1, 4), col = far ? shade(BN.silver, -.22) : BN.silver;
-    K.cel(K.stripPath(st), col, { d: 1.4, r: .7, w: 1.1, dark: BN.silverDk, lite: BN.silverLt, tex: () => {
-      ctx.strokeStyle = 'rgba(60,70,100,.55)'; ctx.lineWidth = .5; ctx.beginPath(); for (let i = 1; i < 4; i++) { const q = i / 4, n = st.L.length; ctx.moveTo(st.L[0] + (st.L[n - 2] - st.L[0]) * q, st.L[1] + (st.L[n - 1] - st.L[1]) * q); ctx.lineTo(st.R[0] + (st.R[n - 2] - st.R[0]) * q, st.R[1] + (st.R[n - 1] - st.R[1]) * q); } ctx.stroke(); } });
+    const A = AP(), st = K.taper(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2, x1, y1, w0, w1, 4), col = far ? shade(A.base, -.22) : A.base;
+    K.cel(K.stripPath(st), col, { d: 1.4, r: .7, w: 1.1, dark: A.dark, lite: A.lite, tex: () => {
+      ctx.strokeStyle = A.line; ctx.lineWidth = .5; ctx.beginPath(); for (let i = 1; i < 4; i++) { const q = i / 4, n = st.L.length; ctx.moveTo(st.L[0] + (st.L[n - 2] - st.L[0]) * q, st.L[1] + (st.L[n - 1] - st.L[1]) * q); ctx.lineTo(st.R[0] + (st.R[n - 2] - st.R[0]) * q, st.R[1] + (st.R[n - 1] - st.R[1]) * q); } ctx.stroke(); } });
   }
   const _arm = CORWIN.arm;
   CORWIN.arm = function (L, ax, ay, bx, by, cx, cy, far) {
     if (!L.armSilver || ax !== 0 || ay !== 0) return _arm.apply(this, arguments); // (the weapon arm is the one drawn from its own shoulder)
     plate(ax, ay, bx, by, 8.2, 6.2, far); plate(bx, by, cx, cy, 6.4, 4.8, far);
+    if (SA.black()) { // cursed: crimson veins down the iron, spurs at the elbow, black stones ringed in red where the gilt was
+      const t = performance.now() / 1000, b = .5 + .5 * Math.sin(t * 2.2);
+      if (!FLASH && !TINT) K.add(() => { ctx.strokeStyle = `rgba(230,40,70,${(.35 + .3 * b).toFixed(3)})`; ctx.lineWidth = .7; ctx.lineCap = 'round';
+        for (const [x0, y0, x1, y1, o] of [[ax, ay, bx, by, 1.4], [bx, by, cx, cy, -1.1]]) { const nx = -(y1 - y0), ny = x1 - x0, nl = Math.hypot(nx, ny) || 1; ctx.beginPath(); ctx.moveTo(x0 + nx / nl * o, y0 + ny / nl * o);
+          ctx.quadraticCurveTo((x0 + x1) / 2 - nx / nl * o * 1.4, (y0 + y1) / 2 - ny / nl * o * 1.4, x1 + nx / nl * o * .3, y1 + ny / nl * o * .3); ctx.stroke(); } });
+      { const dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l; ctx.fillStyle = C('#1A1420');
+        for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(bx - uy * k * 2.2, by + ux * k * 2.2); ctx.lineTo(bx - uy * k * 5.6 - ux * 1.2, by + ux * k * 5.6 - uy * 1.2); ctx.lineTo(bx - uy * k * 1.2 - ux * 2.4, by + ux * k * 1.2 - uy * 2.4); ctx.closePath(); ctx.fill(); outline(.5); } }
+      for (const [x, y, r] of [[bx, by, 2.5], [ax, ay, 3]]) { ctx.fillStyle = C('#050206'); circle(x, y, r); ctx.fill(); outline(.8); if (!FLASH && !TINT) K.add(() => { ctx.strokeStyle = `rgba(255,60,80,${(.5 + .4 * b).toFixed(3)})`; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(x, y, r * .62, t * 2, t * 2 + 4); ctx.stroke(); }); }
+      K.glowAt((bx + cx) / 2, (by + cy) / 2, 14, '170,20,60', .2 + .1 * b);
+    } else {
     ctx.fillStyle = C(BN.gilt); circle(bx, by, 2.5); ctx.fill(); outline(.8); if (K.DET()) { ctx.fillStyle = '#FFFFFF'; circle(bx - .5, by - .7, .7); ctx.fill(); }
     ctx.fillStyle = C(BN.gilt); circle(ax, ay, 3); ctx.fill(); outline(.9);
-    K.glowAt((bx + cx) / 2, (by + cy) / 2, 14, LT('225,235,255'), .22);
+    K.glowAt((bx + cx) / 2, (by + cy) / 2, 14, LT('225,235,255'), .22); }
   };
   // the hand: flung out on its chain, grown huge, or shaped (drawn in the weapon's place)
   function chainTo(x0, x1, links = true) {
     if (x1 - x0 < 2) return;
     K.add(() => { ctx.strokeStyle = `rgba(${LT('210,225,255')},.55)`; ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x1, 0); ctx.stroke(); });
-    ctx.strokeStyle = C(BN.silverDk); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x1, 0); ctx.stroke();
-    if (links) for (let x = x0 + 3; x < x1 - 2; x += 4.2) { ctx.fillStyle = C(BN.silver); ell(x, 0, 1.9, 1.2); ctx.fill(); ctx.strokeStyle = C(BN.silverDk); ctx.lineWidth = .4; ctx.stroke(); }
+    const A = AP(); ctx.strokeStyle = C(A.dark); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x1, 0); ctx.stroke();
+    if (links) for (let x = x0 + 3; x < x1 - 2; x += 4.2) { ctx.fillStyle = C(A.base); ell(x, 0, 1.9, 1.2); ctx.fill(); ctx.strokeStyle = C(A.dark); ctx.lineWidth = .4; ctx.stroke(); }
   }
   const _dw = drawWeapon;
   drawWeapon = function (kind, pose) {
