@@ -143,6 +143,7 @@ function updatePlayer(dt) {
       if (!input.heavy) {
         const pc = chargeTiming(w);
         P.pcRel = pc.open ? { perfect: 1, pmul: PC_MUL } : pc.over > 0 ? { pmul: pc.mul } : null;
+        if (!pc.open && P.ct >= .45 && window.__missedPerfect) window.__missedPerfect(); // (a real charge let go outside the window: corruption.js)
         if (w.charge) { const m = Object.assign({ key: 'H' }, WEAPONS.sword.charged[P.clvl]); begin(m); }
         else if (w.charge2) rapierRelease(P.clvl);
         else begin(P.ct >= .45 ? w.tree.HC : w.tree.H); // a quick tap is the normal Heavy, a held one the charged special

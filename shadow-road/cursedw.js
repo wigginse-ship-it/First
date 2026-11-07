@@ -238,6 +238,7 @@
       if (m && m !== 'charge' && P && (P.state === 'atk' || P.state === 'air') && held()) {
         const c = held();
         if (m.cw) { P.cwFired = -1; P.cwCast = P.moveId; castCue(m, c); }
+        if (m.cw && !c.pure && !(P.move && P.move.perfect) && NG() && window.CURSE) CURSE.feed(.3, 'a cursed skill used'); // (the curse grows a little each time its own moves are called on: not when it is a perfect charged release)
         if (m.cw && m.cx === 'rend') P.inv = Math.max(P.inv, m.dur * .9);
         if (!c.pure && c.bf === 'double' && isFin(P.move) && !LS.dbl) { // the shadow rises on the far side of whoever he strikes at, and swings back at them as they are thrown into it
           const f0 = P.facing, foe = enemies.filter(e => !e.dead && (e.x - P.x) * f0 > -10 && (e.x - P.x) * f0 < 220 && Math.abs(e.y - P.y) < 40).sort((a, b2) => Math.abs(a.x - P.x) - Math.abs(b2.x - P.x))[0];

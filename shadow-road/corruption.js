@@ -40,7 +40,7 @@
   const HIGH_END = 50; // reaching the last world at or past this, the Circle has taken it
   const RESIDUE = .25, HORN_KEEP = .6;
   const WT = { // what feeds it (+) and what eases it (-)
-    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
+    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, perfectMiss: .5, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
     pearlKill: -.5, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
@@ -178,6 +178,9 @@
   { const _rp = riposte; riposte = function (fromX) { if (NG() && rl('parry', .3)) ease(-WT.parry, 'a perfect parry'); if (NG()) L.ripT = now() + 1; return _rp(fromX); }; }
   function perfectPurge(why) { if (!NG() || !rl('perf', .3)) return; const d = ease(-WT.perfect, why); if (d > 0 && P && playing()) { fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .45, max: .45, r: 70, col: '#FFE9A8', flat: 1 }); if (rl('perfTxt', 4)) floatText(P.x, P.y, 120, 'THE CURSE EASES', '#FFE9A8', 11); } } // (a perfect release that lands draws a little of the curse out; a whiff does nothing)
   window.__perfectPurge = perfectPurge;
+  // a cursed weapon's charge let go outside the perfect window feeds it (not a purified one, and not when its Graceless price
+  // has taken the perfect window away altogether)
+  window.__missedPerfect = () => { const c = P && save && save.cw && save.cw[P.w]; if (!NG() || !c || c.pure || c.db === 'graceless' || !rl('pmiss', .3)) return; feed(WT.perfectMiss, 'a cursed charge, the perfect missed'); };
   // a perfect release purifies only when it lands: see the hurtEnemy wrapper
   { const _pc = perfectCue; perfectCue = function () { return _pc.apply(this, arguments); }; }
   // ---------------- restraint: a downed foe let up unhit ----------------
@@ -248,7 +251,8 @@
       if (co.boss || co.cHitMove === P.moveId || (co.cHits || 0) >= 3) continue;
       if (!inReach(m, co.x, co.y, 0, co.hw || 14, 24)) continue;
       co.cHitMove = P.moveId; co.cHits = (co.cHits || 0) + 1;
-      // (striking a corpse no longer feeds the curse: the body still flinches)
+      { const cw = save.cw && save.cw[P.w], cap = cw && !cw.pure ? WT.corpseCapCursed : WT.corpseCap; // (a purified blade is never cruel; the rest are capped per world, a cursed one higher)
+        if (!(cw && cw.pure) && (L.corpseFed || 0) < cap) L.corpseFed = (L.corpseFed || 0) + feed(Math.min(WT.corpse, cap - (L.corpseFed || 0)), 'cruelty: a corpse struck'); }
       burst(co.x, co.y, 8, ['#2A2028', '#5A4A50', '#8A2A30'], 7, 'flesh', P.facing); sfx('hit-flesh', .2); co.sqx = 1.15; co.sqy = .9;
     }
   }
@@ -1998,7 +2002,7 @@
   // a few words on what each reason is (shown after it in the ticker)
   const GLOSS = {
     'cruelty: overkill': 'a blow far past what it needed', 'massacre': '5 kills in quick succession', 'a kill from behind': 'a foe slain from its back',
-    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body',
+    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a cursed charge, the perfect missed': 'released outside the window',
     'a kill by a hazard': 'a foe killed by the world, not you', 'standing on the Black Road': 'step off it', 'cursed loot taken': 'black shards picked up',
     'a death': 'more each death this cycle', 'a death to a corrupted lord': 'fell to a cursed boss', 'the cursed weapon feeds': 'its hunger drawback',
     'the curse took his shadow': 'a cursed foe caught you', 'his shadow kept the curse': 'the shade was not broken in time',
