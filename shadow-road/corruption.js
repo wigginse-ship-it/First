@@ -42,7 +42,7 @@
   const WT = { // what feeds it (+) and what eases it (-)
     death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
-    pearlKill: -.5, blackPearlDmg: 1.35, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
+    pearlKill: -.5, blackPearlDmg: 1.35, cwCursedKill: .4, cwCursedBoss: 1.5, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
   const tierOf = (v) => v >= TIERS[3] ? 4 : v >= TIERS[2] ? 3 : v >= TIERS[1] ? 2 : v >= TIERS[0] ? 1 : 0;
   const hornStOf = (h) => h >= HORN_ST[3] ? 4 : h >= HORN_ST[2] ? 3 : h >= HORN_ST[1] ? 2 : h >= HORN_ST[0] ? 1 : 0;
@@ -144,6 +144,9 @@
         for (let i = 0; i < 6 && parts.length < 420; i++) parts.push({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: rand(6, (e.hh || 60) * .9), vx: rand(-20, 20), vy: 0, vz: rand(50, 120), life: .7, max: .7, col: pick(['#FFF4C8', '#FFE08A', '#FFFFFF']), size: rand(1.4, 2.4), shape: 'star', rot: 0, vr: 4 });
         if (e.cursed || e.boss || rl('pureTxt', 6)) floatText(e.x, e.y, (e.hh || 60) + 34, e.cursed || e.boss ? 'THE CURSE IS DRAWN OUT' : 'THE CURSE EASES', '#FFE9A8', 12); } }
     if (m.pearl && !m.trump) ease(-WT.pearlKill, 'a Pearl kill');
+    // like takes like: a cursed blade that cuts down a cursed foe (or a cursed lord) draws a little of the curse back out
+    if (body(m) && (e.cursed || (e.boss && e.cB)) && cursedHand()) { const d = ease(e.boss ? WT.cwCursedBoss : WT.cwCursedKill, 'a cursed blade takes a cursed foe');
+      if (d > 0 && playing()) { fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 54, col: '#C8A0E8', flat: 1 }); if (rl('cwcTxt', 5)) floatText(e.x, e.y, (e.hh || 60) + 30, 'LIKE TAKES LIKE', '#D8C0F0', 11); } }
     const ctx0 = CTX && CTX.e === e ? CTX : null;
     if (ctx0 && ctx0.behind && !pureHand() && !pureBlow) feed(WT.backKill, e.w7turn > 0 ? 'a kill from behind (the glass turned it)' : 'a kill from behind');
     // thrown into a hazard: the death came from the place, not from him, moments after he sent it flying
@@ -2015,7 +2018,7 @@
   // a few words on what each reason is (shown after it in the ticker)
   const GLOSS = {
     'cruelty: overkill': 'a blow far past what it needed', 'massacre': '5 kills in quick succession', 'a kill from behind': 'a foe slain from its back',
-    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a full draw that hit nothing': 'the arrow found no one',
+    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a full draw that hit nothing': 'the arrow found no one', 'a cursed blade takes a cursed foe': 'like takes like',
     'a kill by a hazard': 'a foe killed by the world, not you', 'standing on the Black Road': 'step off it', 'cursed loot taken': 'black shards picked up',
     'a death': 'more each death this cycle', 'a death to a corrupted lord': 'fell to a cursed boss', 'the cursed weapon feeds': 'its hunger drawback',
     'the curse took his shadow': 'a cursed foe caught you', 'his shadow kept the curse': 'the shade was not broken in time',
