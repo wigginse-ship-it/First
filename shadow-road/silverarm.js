@@ -103,7 +103,7 @@
 
   // the arm with the Black Knuckles on it hits far harder than the clean silver arm: every blow of its moveset and all it
   // throws out (the rocket fist, the giant hands, the lightning); the cursed weapon's own level multiplier comes on top
-  SA.BLACK_K = 1.75;
+  SA.BLACK_K = 2.1;
   { const _st = strike; strike = function (e, base, dir, m, echo) { if (m && m.arm && !m.trump && SA.black()) base *= SA.BLACK_K; return _st(e, base, dir, m, echo); }; }
   // ---------------- the mechanics ----------------
   { const _mpk = movePoseKey; movePoseKey = function (m) { return m && m.arm ? 'arm:' + m.key : _mpk(m); }; }
