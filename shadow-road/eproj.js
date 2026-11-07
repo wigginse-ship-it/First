@@ -185,7 +185,7 @@ const EPROJ = (() => {
   function tag(p, e) {
     const look = lookOf(e, p); if (!look) return;
     p.look = look; p.l0 = p.life; p.va = 0; p.vs = 0; p.seed = Math.random() * 99; live.push(p);
-    if (look === 'arrow') { const ahead = (P.x - p.x) * Math.sign(p.vx || 1); p.arc = 1; p.a0 = 0; p.T = Math.min(2.5, Math.max(.2, ahead / Math.abs(p.vx || 200))); p.H = Math.min(26, Math.max(6, ahead * .08)); }
+    if (look === 'arrow') { const ahead = (P.x - p.x) * Math.sign(p.vx || 1); p.arc = 1; p.a0 = 0; p.T = Math.min(2.5, Math.max(.2, ahead / Math.abs(p.vx || 200))); p.H = Math.min(36, Math.max(6, ahead * .09)); }
   }
   { const _bolt = bolt; bolt = function (e, y) { const n = projs.length; const r = _bolt(e, y); for (let i = n; i < projs.length; i++) if (projs[i].owner === 'e' && !projs[i].look) tag(projs[i], e); return r; }; }
   { const _ex = execute; execute = function (e) { const n = projs.length; const r = _ex(e); for (let i = n; i < projs.length; i++) if (projs[i].owner === 'e' && !projs[i].look && projs[i].l0 === undefined) tag(projs[i], e); return r; }; }
@@ -232,7 +232,7 @@ const EPROJ = (() => {
   };
   function stick(p) {
     const old = hazards.filter(h => h.kind === 'estuck'); if (old.length >= KEEP) old[0].t = Math.min(old[0].t, .5);
-    const ang = Math.min(1.1, Math.max(.35, Math.atan2(-p.vs, Math.abs(p.vx || 1))));
+    const ang = Math.min(1.1, Math.max(.5, Math.atan2(-p.vs, Math.abs(p.vx || 1))));
     hazards.push({ kind: 'estuck', x: p.x, y: p.y, d: Math.sign(p.vx || 1), ang, sink: rand(0, 4), t: 6, max: 6 });
     if (typeof dust === 'function') dust(p.x, p.y, 2);
     p.gone = 1; p.life = 0; p.x = -1e6; // (taken out of the fight where it can touch nothing, and dropped with the rest next frame)
@@ -252,7 +252,7 @@ const EPROJ = (() => {
         let u = (age - p.a0) / p.T;
         if (u >= 1 && !p.falling) {
           const ahead = (P.x - p.x) * Math.sign(p.vx || 1);
-          if (ahead > 24) { p.a0 = age; p.T = Math.min(2.5, Math.max(.25, ahead / Math.abs(p.vx || 200))); p.H = Math.min(26, Math.max(4, ahead * .08)); u = 0; } // (he backed off: it arcs on toward him)
+          if (ahead > 24) { p.a0 = age; p.T = Math.min(2.5, Math.max(.25, ahead / Math.abs(p.vx || 200))); p.H = Math.min(36, Math.max(4, ahead * .09)); u = 0; } // (he backed off: it arcs on toward him)
           else p.falling = 1;
         }
         const tf = Math.max(0, age - p.a0 - p.T);
