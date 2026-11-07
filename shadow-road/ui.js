@@ -162,7 +162,22 @@ const wCost = (lvl, id) => { const L = wLearn(id), cy = 1 + .25 * (save.cycle ||
 };
 const tCost = (lv) => ({ s: Math.round([0, 320, 760][lv] * cyc()), g: Math.round([0, 9, 18][lv] * cyc()) }); // inscribing a card again, to level II or III
 const costTxt = (c) => `${c.s} ◆${c.g ? ` + ${c.g} ✦` : ''}`;
+// the smith's trade: shards for sigils, so a full purse never sits idle waiting on sigil drops. Each sigil bought at one
+// visit to the forge costs a little more than the last (the price resets at the next visit); dearer in later cycles
+let sigilBuys = 0;
+const sigilPrice = (n = sigilBuys) => Math.round(260 * (1 + .4 * (save.cycle || 0)) * Math.pow(1.1, n) / 10) * 10;
+function tradeRow() {
+  let el = document.getElementById('sigilTrade'); const bar = document.querySelector('#forgeOv .matbar'); if (!bar) return;
+  if (!((save.cycle || 0) >= 1)) { if (el) el.remove(); return; } // (New Game+ only)
+  if (!el) { el = document.createElement('div'); el.id = 'sigilTrade'; el.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;margin:4px auto 6px;font:12px/1.3 Georgia,serif;color:#E8DCC4'; bar.after(el); }
+  const BS = 'width:auto;flex:0 0 auto;margin:0;padding:5px 12px;min-height:0;font-size:12px;line-height:1.2';
+  const p1 = sigilPrice(), p5 = [0, 1, 2, 3, 4].reduce((a, k) => a + sigilPrice(sigilBuys + k), 0);
+  el.innerHTML = `<span style="opacity:.8">The smith will trade:</span> <button type="button" class="buy" style="${BS}" data-n="1" ${save.shards >= p1 ? '' : 'disabled'}>1 &#10022; for ${p1} &#9670;</button> <button type="button" class="buy" style="${BS}" data-n="5" ${save.shards >= p5 ? '' : 'disabled'}>5 &#10022; for ${p5} &#9670;</button>`;
+  for (const b of el.querySelectorAll('button')) b.addEventListener('click', () => { const n = +b.dataset.n; let cost = 0; for (let k = 0; k < n; k++) cost += sigilPrice(sigilBuys + k); if (save.shards < cost) return;
+    save.shards -= cost; save.sigils += n; sigilBuys += n; persist(); sfx('buy'); renderForge(`The smith takes ${cost} shards and sets ${n} sigil${n > 1 ? 's' : ''} in your hand.`); });
+}
 function openForge(kicker) {
+  sigilBuys = 0;
   mode = 'forge'; showOnly('forgeOv'); playMusic('forge');
   $('#forgeKicker').textContent = kicker || 'BETWEEN WORLDS';
   renderForge();
@@ -170,6 +185,7 @@ function openForge(kicker) {
 }
 function renderForge(note) {
   $('#fShards').textContent = save.shards; $('#fSigils').textContent = save.sigils;
+  try { tradeRow(); } catch (e) { console.error(e); }
   const wrap = $('#forgeCards'); wrap.innerHTML = '';
   for (const id of WEAPON_ORDER) {
     if (id === 'fists') continue; // bare hands have nothing to forge
