@@ -38,13 +38,15 @@
   // ======================================================================================================
   // THE CAST
   // ======================================================================================================
-  const base = (o) => Object.assign({}, HERO, { noRose: 1 }, o);
+  // a belt with no sword at it, for those who carry none (the sword belt's own belts, its scabbard left off)
+  try { const W = CORWIN.parts.waist; if (W.swordbelt && !W.fhGirdle) W.fhGirdle = Object.assign(Object.create(W.swordbelt), { scabbard() {} }); } catch (e) {}
+  const base = (o) => Object.assign({}, HERO, o);
   const LOOKS = {
-    gerard: () => base({ skin: '#D4A882', glove: '#C4986E', hair: '#6A4428', hairLt: '#9A6A44', hairDk: '#2E1A0E', eye: '#5A7AA0', body: '#3E5A86', lattice: '#5A78A6', button: '#B8B8C0', trim: '#8A6A3A', shirt: '#D8D0C0', sleeve: '#D8D0C0', legs: '#3A3028', boots: '#3A2A1E', coat: '#6A4228', coat2: '#5A3820' }),
+    gerard: () => base({ skin: '#D4A882', glove: '#C4986E', hair: '#6A4428', hairLt: '#9A6A44', hairDk: '#2E1A0E', eye: '#5A7AA0', waist: 'fhGirdle', body: '#3E5A86', lattice: '#5A78A6', button: '#B8B8C0', trim: '#8A6A3A', shirt: '#D8D0C0', sleeve: '#D8D0C0', legs: '#3A3028', boots: '#3A2A1E', coat: '#6A4228', coat2: '#5A3820' }),
     julian: () => base({ skin: '#E4CCB4', glove: '#D8BCA0', hair: '#141018', hairLt: '#3A3440', hairDk: '#060408', eye: '#6A8A5A', body: '#DCDAD2', lattice: '#B8B6AE', button: '#3A6A4A', trim: '#3A6A4A', shirt: '#E4E2DA', sleeve: '#CFCDC4', steel: '#D8D8D0', pauldron: '#E4E2DA', legs: '#34443A', boots: '#2A2A22', cuff: '#3A5A42' }),
-    dworkin: () => base({ skin: '#D8B898', glove: '#CCA888', hair: '#E6E0D4', hairLt: '#FFFFFF', hairDk: '#A8A094', eye: '#8A7AB8', body: '#4A3A5E', lattice: '#5E4C76', button: '#C8A858', trim: '#C8A858', shirt: '#6A5A80', sleeve: '#4A3A5E', legs: '#3A2E48', boots: '#2A2030', coat: '#3E2E52', coat2: '#342646', longHair: 1, steel: '#8A7A9A', pauldron: '#5E4C76' }),
-    fiona: () => base({ skin: '#F0D8C6', glove: '#E8CCB8', hair: '#C2442A', hairLt: '#E8784A', hairDk: '#6A1A0E', eye: '#3A9A6A', body: '#3E7A4A', lattice: '#5A9A62', button: '#D8C080', trim: '#D8C080', shirt: '#E8E0C8', sleeve: '#3E7A4A', legs: '#2E5A3A', boots: '#2A3020', coat: '#2E5A3A', coat2: '#264A30', longHair: 1, steel: '#C8C0A0', pauldron: '#3E7A4A' }),
-    llewella: () => base({ skin: '#D6E0CE', glove: '#C8D4C0', hair: '#3A8A6A', hairLt: '#6ABA96', hairDk: '#14402E', eye: '#3ABAB0', body: '#2A6A7A', lattice: '#4A8A9A', button: '#E8F0E8', trim: '#B0E0D8', shirt: '#D8ECE6', sleeve: '#2A6A7A', legs: '#1F5260', boots: '#18343C', coat: '#1F5260', coat2: '#184450', longHair: 1, steel: '#C8E8E0', pauldron: '#2A6A7A' }),
+    dworkin: () => base({ skin: '#D8B898', glove: '#CCA888', hair: '#E6E0D4', hairLt: '#FFFFFF', hairDk: '#A8A094', eye: '#8A7AB8', waist: 'fhGirdle', body: '#4A3A5E', lattice: '#5E4C76', button: '#C8A858', trim: '#C8A858', shirt: '#6A5A80', sleeve: '#4A3A5E', legs: '#3A2E48', boots: '#2A2030', coat: '#3E2E52', coat2: '#342646', longHair: 1, steel: '#5E4C76', pauldron: '#5E4C76', glove: '#CCA888' }),
+    fiona: () => base({ skin: '#F0D8C6', glove: '#E8CCB8', hair: '#C2442A', hairLt: '#E8784A', hairDk: '#6A1A0E', eye: '#3A9A6A', waist: 'fhGirdle', body: '#3E7A4A', lattice: '#5A9A62', button: '#D8C080', trim: '#D8C080', shirt: '#E8E0C8', sleeve: '#3E7A4A', legs: '#2E5A3A', boots: '#2A3020', coat: '#2E5A3A', coat2: '#264A30', longHair: 1, steel: '#2E5A3A', pauldron: '#3E7A4A', hairLong: 1 }),
+    llewella: () => base({ skin: '#D6E0CE', glove: '#C8D4C0', hair: '#3A8A6A', hairLt: '#6ABA96', hairDk: '#14402E', eye: '#3ABAB0', waist: 'fhGirdle', body: '#2A6A7A', lattice: '#4A8A9A', button: '#E8F0E8', trim: '#B0E0D8', shirt: '#D8ECE6', sleeve: '#2A6A7A', legs: '#1F5260', boots: '#18343C', coat: '#1F5260', coat2: '#184450', longHair: 1, steel: '#1F5260', pauldron: '#2A6A7A', hairLong: 1 }),
     random: () => base({ skin: '#D8B090', glove: '#C8A080', hair: '#B08A48', hairLt: '#D8B070', hairDk: '#5A4020', eye: '#6A8AB0', body: '#8A4A2A', lattice: '#A8643A', button: '#D8AA55', trim: '#D8AA55', shirt: '#E8DCC4', sleeve: '#E8DCC4', legs: '#3A2E2A', boots: '#3A2418' }),
     ganelon: () => (window.W8 && W8.riderLook) ? W8.riderLook('ganelon', { hand: null }) : base({ skin: '#D09A74', hair: '#8A4426', hairLt: '#B8704A', hairDk: '#3E1A0C', eye: '#4A6A3A', body: '#24365E', lattice: '#34466E', trim: '#D8AA55' }),
   };
@@ -128,6 +130,7 @@
       show(el, !V || secs.includes(s)); }
     for (const box of ov.querySelectorAll('[data-sec="box"]')) show(box, !V || [...box.children].some(c => !c.classList.contains('vhide') && !c.hidden));
     if (V) { fillHead(); fillGear(); }
+    { const lab = document.querySelector('#sigilTrade > span'); if (lab) lab.textContent = V && H.panel === 'random' ? 'Random will deal:' : 'The smith will trade:'; }
   }
   // the "Walk the forge" button in the menu's foot
   function ensureMenuBtn() {
@@ -384,7 +387,7 @@
     for (const v of H.cast) if (v.x + 160 > x0 && v.x - 160 < x1) { const [r, gg, b] = POOL[v.id] || [255, 170, 90];
       ctx.save(); ctx.translate(v.x, ft + 30); ctx.scale(1, .3); const pg = ctx.createRadialGradient(0, 0, 0, 0, 0, 150); pg.addColorStop(0, `rgba(${r},${gg},${b},.18)`); pg.addColorStop(1, `rgba(${r},${gg},${b},0)`); ctx.fillStyle = pg; ctx.fillRect(-150, -150, 300, 300); ctx.restore(); }
     // painted: the brush grain over the lot, anchored to the hall so it runs on across the tiles
-    ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.globalAlpha = .8; ctx.scale(.5, .5); ctx.fillStyle = texPat(ctx, 'brush'); ctx.fillRect(x0 * 2, 0, (x1 - x0) * 2, VH * 2); ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.globalAlpha = .45; ctx.scale(.5, .5); ctx.fillStyle = texPat(ctx, 'brush'); ctx.fillRect(x0 * 2, 0, (x1 - x0) * 2, VH * 2); ctx.restore();
     ctx.save(); ctx.globalAlpha = .1; ctx.scale(.5, .5); ctx.fillStyle = texPat(ctx, 'hatch'); ctx.fillRect(x0 * 2, (ft + 60) * 2, (x1 - x0) * 2, (VH - ft - 60) * 2); ctx.restore();
   }
   const POOL = { gerard: [255, 150, 70], julian: [220, 230, 190], ganelon: [200, 200, 230], dworkin: [190, 170, 255], fiona: [200, 120, 255], llewella: [120, 230, 220], random: [255, 200, 120] };
@@ -472,7 +475,7 @@
       ctx.fillStyle = '#5A3A22'; ell(x, ft - 128, 6, 5); ctx.fill(); outline(.6);
     },
     ganelon(x, ft) { // the armory: two stands with mail on them, his shield and Lorraine's on the wall, a banner
-      for (const [sx, col] of [[x - 74, '#8A8E96'], [x + 70, '#A6AAB2']]) { ctx.fillStyle = '#3A2A1E'; ctx.fillRect(sx - 1.5, ft - 70, 3, 70); ctx.fillRect(sx - 12, ft - 3, 24, 3);
+      for (const [sx, col] of [[x - 74, '#5E626A'], [x + 70, '#70747C']]) { ctx.fillStyle = '#3A2A1E'; ctx.fillRect(sx - 1.5, ft - 70, 3, 70); ctx.fillRect(sx - 12, ft - 3, 24, 3);
         ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(sx - 14, ft - 74); ctx.quadraticCurveTo(sx, ft - 80, sx + 14, ft - 74); ctx.lineTo(sx + 11, ft - 40); ctx.quadraticCurveTo(sx, ft - 36, sx - 11, ft - 40); ctx.closePath(); ctx.fill(); outline(.9);
         ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(sx + 3, ft - 72, 3, 28); ctx.fillStyle = col; ell(sx, ft - 86, 7, 8); ctx.fill(); outline(.8); }
       const shield = (sx, sy, field, charge, chev) => { ctx.fillStyle = field; ctx.beginPath(); ctx.moveTo(sx - 13, sy - 16); ctx.lineTo(sx + 13, sy - 16); ctx.lineTo(sx + 13, sy); ctx.quadraticCurveTo(sx + 12, sy + 12, sx, sy + 18); ctx.quadraticCurveTo(sx - 12, sy + 12, sx - 13, sy); ctx.closePath(); ctx.fill();
@@ -514,10 +517,13 @@
     },
   };
   const FLOOR = { // the pieces of each stall standing out on the floor
-    gerard(x, ft) { const ax = x - 36, ay = ft + 18; // the anvil on its stump, and the quench barrel
-      ctx.fillStyle = '#4A3222'; ctx.fillRect(ax - 9, ay - 16, 18, 16); ctx.fillStyle = '#5E4430'; ell(ax, ay - 16, 9, 2.4); ctx.fill();
-      ctx.fillStyle = iron; ctx.beginPath(); ctx.moveTo(ax - 16, ay - 28); ctx.lineTo(ax + 12, ay - 28); ctx.quadraticCurveTo(ax + 24, ay - 27, ax + 26, ay - 24); ctx.quadraticCurveTo(ax + 18, ay - 23, ax + 12, ay - 22); ctx.lineTo(ax + 6, ay - 22); ctx.lineTo(ax + 8, ay - 16); ctx.lineTo(ax - 10, ay - 16); ctx.lineTo(ax - 8, ay - 22); ctx.lineTo(ax - 16, ay - 24); ctx.closePath(); ctx.fill(); outline(1);
-      ctx.fillStyle = ironL; ctx.fillRect(ax - 15, ay - 28, 27, 1.4);
+    gerard(x, ft) { const ax = x - 40, ay = ft + 22; // the anvil on its stump, and the quench barrel
+      ctx.fillStyle = '#5A3C26'; ctx.fillRect(ax - 10, ay - 16, 20, 16); outline(.8); ctx.fillStyle = '#6E4E34'; ell(ax, ay - 16, 10, 2.6); ctx.fill();
+      ctx.strokeStyle = 'rgba(30,16,8,.6)'; ctx.lineWidth = .6; for (const dx of [-5, 1, 6]) { ctx.beginPath(); ctx.moveTo(ax + dx, ay - 14); ctx.lineTo(ax + dx + 1, ay - 1); ctx.stroke(); }
+      const an = () => { ctx.beginPath(); ctx.moveTo(ax - 18, ay - 30); ctx.lineTo(ax + 13, ay - 30); ctx.quadraticCurveTo(ax + 27, ay - 29, ax + 30, ay - 25); ctx.quadraticCurveTo(ax + 20, ay - 24, ax + 13, ay - 23); ctx.lineTo(ax + 7, ay - 23); ctx.lineTo(ax + 9, ay - 16); ctx.lineTo(ax - 11, ay - 16); ctx.lineTo(ax - 9, ay - 23); ctx.lineTo(ax - 18, ay - 26); ctx.closePath(); };
+      const ag = ctx.createLinearGradient(ax - 18, 0, ax + 30, 0); ag.addColorStop(0, '#2A2624'); ag.addColorStop(.6, '#4A4440'); ag.addColorStop(1, '#8A6A50');
+      an(); ctx.fillStyle = ag; ctx.fill(); outline(1.1);
+      ctx.fillStyle = '#B8A894'; ctx.fillRect(ax - 17, ay - 30, 30, 1.4); ctx.fillStyle = 'rgba(255,170,90,.55)'; ctx.fillRect(ax + 2, ay - 30, 14, 1.2);
       const bx = x + 92; ctx.fillStyle = '#5A3A22'; rrect(bx - 13, ft - 6, 26, 26, 4); ctx.fill(); outline(.9); ctx.strokeStyle = iron; ctx.lineWidth = 1.6; for (const yy of [ft - 1, ft + 13]) { ctx.beginPath(); ctx.moveTo(bx - 13, yy); ctx.lineTo(bx + 13, yy); ctx.stroke(); }
       ctx.fillStyle = '#1A2A30'; ell(bx, ft - 6, 12, 2.6); ctx.fill(); },
     julian(x, ft) { const tx = x + 66, ty = ft + 2; // the straw butt
@@ -608,24 +614,24 @@
   function vendorPose(v, t, near) {
     const id = v.id, br = Math.sin(t * 1.6 + v.ph), p = { walk: 0, Y: .22, headTurn: false, noCloak: 1, weapon: 'fists', breath: br, arm: 1.15, backArm: 1.2 };
     if (id === 'gerard') {
-      p.weapon = 'hammer'; p.tier = 3;
-      if (near) { p.arm = .7; p.grip = -.6; p.Y = .3; return p; }
+      p.weapon = 'hammer'; p.tier = 1;
+      if (near) { p.arm = 1.2; p.grip = .6; p.Y = .3; return p; }
       const q = ((t + v.ph) % 1.3) / 1.3; let a;
-      if (q < .62) a = lerp(1.0, -2.3, sm(q / .62)); else if (q < .74) a = lerp(-2.3, 1.05, ((q - .62) / .12) ** 2); else a = 1.05;
+      if (q < .62) a = lerp(.6, -2.3, sm(q / .62)); else if (q < .74) a = lerp(-2.3, .6, ((q - .62) / .12) ** 2); else a = .6;
       p.arm = a; p.lean = q > .62 && q < .8 ? .18 : .06; p.backArm = .9; p.backElbow = 1.2; p.sink = q > .7 && q < .85 ? 2 : 0;
       const k = Math.floor((t + v.ph) / 1.3); if (q >= .74 && H.struck.gerard !== k) { H.struck.gerard = k; strikeSparks(v); }
       return p;
     }
     if (id === 'julian') { p.weapon = 'shortbow'; p.arm = .55 + .05 * br; p.grip = -.2; p.backArm = 1.0; return p; }
     if (id === 'dworkin') { p.lean = .32; p.arm = near ? .8 : .55 + .22 * Math.sin(t * 2.2 + v.ph); p.elbow = near ? 0 : .9; p.backArm = 1.4; p.backElbow = 1.2; return p; }
-    if (id === 'ganelon') { p.arm = .95; p.elbow = 1.7; p.backArm = .9; p.backElbow = 1.5; p.Y = .3; return p; }
+    if (id === 'ganelon') { p.arm = 1.0; p.elbow = .9; p.backArm = 1.3; p.backElbow = .3; p.Y = .3; return p; }
     if (id === 'fiona') { p.arm = near ? 1.0 : .1 + .15 * Math.sin(t * 1.3 + v.ph); p.elbow = near ? 0 : .5; p.backArm = near ? 1.2 : .3 + .12 * Math.sin(t * 1.1); p.backElbow = near ? 0 : .5; return p; }
     if (id === 'llewella') { p.arm = near ? 1.0 : .25 + .08 * Math.sin(t * .9 + v.ph); p.backArm = 1.15; p.lean = -.04; return p; }
     if (id === 'random') { const sh = Math.sin(t * 7 + v.ph); p.arm = .9; p.elbow = 1.5 + (near ? 0 : .12 * sh); p.backArm = .95; p.backElbow = 1.5 - (near ? 0 : .12 * sh); return p; }
     return p;
   }
   function strikeSparks(v) {
-    const ax = v.x - 36, ay = FT() + 18 - 28;
+    const ax = v.x - 40, ay = FT() + 22 - 28;
     for (let k = 0; k < 9; k++) H.sparks.push({ x: ax + rand(-4, 6), y: ay, vx: rand(-70, 70), vy: rand(-150, -40), t: 0, life: rand(.25, .55) });
     if (!H.panel && Math.abs(H.x - v.x) < 280 && sfxOn && actx && actx.state === 'running') { try { tone(2400, .09, 'triangle', .025); tone(3600, .05, 'sine', .012); } catch (e) {} }
   }
@@ -640,20 +646,35 @@
     if (fine()) { ctx.save(); bd(); ctx.clip(); ctx.lineCap = 'round'; ctx.lineWidth = .45; for (let i = 0; i < 9; i++) { const x = 2.6 + i * .95, y = hy + 3 + (i % 3); ctx.strokeStyle = i % 3 === 1 ? 'rgba(255,248,236,.45)' : 'rgba(30,14,6,.4)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + .8, y + 6, x + 1.4 + i * .2, y + 10.5); ctx.stroke(); } ctx.restore(); }
     ctx.restore();
   }
+  // long hair falling from the crown down the back to the shoulders (Fiona's red, Llewella's sea-green), in the head's frame
+  function longHair(L, hy, t) {
+    const sw = Math.sin(t * 1.3) * .8, p = () => { ctx.beginPath(); ctx.moveTo(4, hy - 10.6); ctx.quadraticCurveTo(-8, hy - 12, -10.4, hy - 2); ctx.quadraticCurveTo(-12.4 + sw, hy + 14, -10.6 + sw, hy + 30);
+      ctx.quadraticCurveTo(-6 + sw, hy + 33, -1.6 + sw * .6, hy + 29); ctx.quadraticCurveTo(-3.6, hy + 16, -2.4, hy + 4); ctx.quadraticCurveTo(-1, hy - 4, 6, hy - 6.4); ctx.closePath(); };
+    p(); let fill = C(L.hair);
+    if (fine()) { const g = ctx.createLinearGradient(-12, 0, 4, 0); g.addColorStop(0, L.hairDk); g.addColorStop(.6, L.hair); g.addColorStop(1, L.hairLt); fill = g; }
+    ctx.fillStyle = fill; ctx.fill(); outline(.9);
+    if (fine()) { ctx.strokeStyle = C(L.hairLt); ctx.globalAlpha = .5; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(-6, hy - 6); ctx.quadraticCurveTo(-9 + sw, hy + 10, -7.6 + sw, hy + 26); ctx.stroke(); ctx.globalAlpha = 1; }
+  }
+  function dressHead(id, L, head, t) {
+    ctx.save(); ctx.setTransform(head.m);
+    try {
+      if (id === 'ganelon' && window.W8 && W8.headGear) W8.headGear(L, head.hy, t);
+      else if (id === 'gerard') beard(head.hy, '#6A4428', '#8A6040', 1);
+      else if (id === 'dworkin') { longHair(L, head.hy, t); beard(head.hy, '#E6E0D4', '#FFFFFF', 1.7); }
+      else if (L.hairLong) longHair(L, head.hy, t);
+    } finally { ctx.restore(); }
+  }
   function drawVendor(v, t) {
     const V = CAST[v.id], L = lookOf(v.id), near = H.target === v.id || H.panel === v.id, y = vendorY();
     const f = near || Math.abs(H.x - v.x) < 150 ? (Math.sign(H.x - v.x) || V.f) : V.f;
     const pose = vendorPose(v, t, near);
     ctx.save(); ctx.translate(v.x, y); ctx.scale(f * V.s, V.s);
     shadow(0, 0, 13);
-    const hm = HEAD_MASK; HEAD_MASK = null;
-    drawHumanoid(L, pose);
+    const hm = HEAD_MASK, W8o = window.W8, hih = W8o ? W8o.hornInHand : undefined; HEAD_MASK = null;
+    if (W8o && v.id !== 'ganelon') W8o.hornInHand = true; // (the Horn of Lorraine rides at the prince's belt once won: only Ganelon's own hangs at his, w8_late.js)
+    try { drawHumanoid(L, pose); } finally { if (W8o) W8o.hornInHand = hih; }
     const head = HEAD_MASK; HEAD_MASK = hm;
-    if (head) { ctx.save(); ctx.setTransform(head.m);
-      if (v.id === 'ganelon' && window.W8 && W8.headGear) W8.headGear(L, head.hy, t);
-      else if (v.id === 'gerard') beard(head.hy, '#6A4428', '#8A6040', 1);
-      else if (v.id === 'dworkin') beard(head.hy, '#E6E0D4', '#FFFFFF', 1.7);
-      ctx.restore(); }
+    if (head) dressHead(v.id, L, head, t);
     ctx.restore();
     hatchActor(v.x, y, 13 * V.s, 50 * V.s);
   }
@@ -688,14 +709,10 @@
     const lg = g.createRadialGradient(W * .55, Hh * .32, 2, W * .55, Hh * .32, W * .6); lg.addColorStop(0, 'rgba(255,244,220,.35)'); lg.addColorStop(1, 'rgba(255,244,220,0)'); g.fillStyle = lg; g.fillRect(0, 0, W, Hh);
     ctx = g; FLASH = false; TINT = null;
     try {
-      const s = Hh / 52; g.setTransform(s, 0, 0, s, W * .46, Hh + 46 * s);
+      const s = Hh / 38; g.setTransform(s, 0, 0, s, W * .44, Hh + 56 * s);
       const pose = vendorPose({ id, ph: 0, x: 0 }, 0, true); pose.Y = .2; pose.breath = 0;
       HEAD_MASK = null; drawHumanoid(L, pose); const head = HEAD_MASK;
-      if (head) { g.save(); g.setTransform(head.m);
-        if (id === 'ganelon' && window.W8 && W8.headGear) W8.headGear(L, head.hy, 0);
-        else if (id === 'gerard') beard(head.hy, '#6A4428', '#8A6040', 1);
-        else if (id === 'dworkin') beard(head.hy, '#E6E0D4', '#FFFFFF', 1.7);
-        g.restore(); }
+      if (head) dressHead(id, L, head, 0);
     } finally { ctx = old; FLASH = fl; TINT = ti; HEAD_MASK = hm; }
     g.setTransform(1, 0, 0, 1, 0, 0);
     try { paintCard(cv, W / 96); } catch (e) {}
@@ -715,7 +732,7 @@
   #fhUi .fh-mats .s { color: var(--mint); } #fhUi .fh-mats .g { color: var(--petal); }
   #fhUi .fh-btns { pointer-events: auto; display: flex; gap: 8px; }
   #fhUi .fh-btns .cta { min-height: 36px; padding: 6px 14px; font-size: 12.5px; }
-  #fhUi .fh-hint { position: absolute; left: 50%; top: 76px; translate: -50% 0; font: 600 12px var(--label); letter-spacing: .06em; color: rgba(244,234,219,.85); text-shadow: 0 1px 2px #000; white-space: nowrap; transition: opacity .3s; }
+  #fhUi .fh-hint { position: absolute; left: 50%; bottom: 84px; translate: -50% 0; font: 600 12px var(--label); letter-spacing: .06em; color: rgba(244,234,219,.85); text-shadow: 0 1px 2px #000; white-space: nowrap; transition: opacity .3s; }
   #fhUi .fh-talk { pointer-events: auto; position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom, 0px)); translate: -50% 0; display: grid; gap: 2px; justify-items: center; cursor: pointer;
     padding: 8px 22px 9px; border-radius: 10px; border: 1.5px solid transparent; color: var(--text); font-family: var(--label);
     background: var(--engrave) padding-box, var(--lacq) padding-box, var(--foil) border-box; box-shadow: inset 0 0 0 2px rgba(0,0,0,.6), inset 0 0 0 3px rgba(214,174,88,.38), 0 8px 18px -6px rgba(0,0,0,.85), 0 0 18px rgba(216,170,85,.25); animation: fhIn .18s ease-out; }
@@ -755,5 +772,9 @@
     talk: () => interact(), close: () => closePanel(),
     view(v) { setPref(v === 'menu' ? 'menu' : 'hall'); if (mode === 'forge') showOnly('forgeOv'); return pref; },
     tiles: () => tiles.size,
+    // (a test can paint any of them in any pose: FORGEHALL.dbg.draw(id, pose, x, y, s) on the current context)
+    dbg: { lookOf, vendorPose, draw(id, pose, x, y, s = 1) { const L = lookOf(id), hm = HEAD_MASK; ctx.save(); ctx.translate(x, y); ctx.scale(s, s); HEAD_MASK = null; drawHumanoid(L, pose); const head = HEAD_MASK; HEAD_MASK = hm;
+      if (head) dressHead(id, L, head, 0);
+      ctx.restore(); } },
   };
 })();
