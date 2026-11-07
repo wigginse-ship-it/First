@@ -91,11 +91,11 @@
     rigDG.globalCompositeOperation = 'destination-in'; rigDG.drawImage(rigC, 0, 0); rigDG.globalCompositeOperation = 'source-over';
     // a soft crimson rim round it, so the dark iron reads against any ground: its silhouette in light, laid a hair out all round
     rigHG.setTransform(1, 0, 0, 1, 0, 0); rigHG.globalCompositeOperation = 'source-over'; rigHG.clearRect(0, 0, N + 2, N + 2); rigHG.drawImage(rigC, 0, 0);
-    rigHG.globalCompositeOperation = 'source-in'; rigHG.fillStyle = 'rgb(255,96,128)'; rigHG.fillRect(0, 0, N, N); rigHG.globalCompositeOperation = 'source-over';
+    rigHG.globalCompositeOperation = 'source-in'; rigHG.fillStyle = 'rgb(170,60,90)'; rigHG.fillRect(0, 0, N, N); rigHG.globalCompositeOperation = 'source-over';
     ctx.save(); if (o.a !== undefined) ctx.globalAlpha *= o.a;
     { const ga = ctx.globalAlpha, d = 1.6 / Math.max(.5, sc) * Math.max(1, sc * .9); 
-      for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; ctx.globalAlpha = ga * .5; ctx.drawImage(rigH, 0, 0, N, N, -R + Math.cos(an) * d, -R + Math.sin(an) * d, 2 * R, 2 * R); }
-      ctx.globalAlpha = ga * .22; for (let i = 0; i < 8; i++) { const an = (i + .5) / 8 * Math.PI * 2; ctx.drawImage(rigH, 0, 0, N, N, -R + Math.cos(an) * d * 2.2, -R + Math.sin(an) * d * 2.2, 2 * R, 2 * R); }
+      for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; ctx.globalAlpha = ga * .3; ctx.drawImage(rigH, 0, 0, N, N, -R + Math.cos(an) * d, -R + Math.sin(an) * d, 2 * R, 2 * R); }
+      ctx.globalAlpha = ga * .1; for (let i = 0; i < 8; i++) { const an = (i + .5) / 8 * Math.PI * 2; ctx.drawImage(rigH, 0, 0, N, N, -R + Math.cos(an) * d * 2.2, -R + Math.sin(an) * d * 2.2, 2 * R, 2 * R); }
       ctx.globalAlpha = ga; }
     ctx.drawImage(rigD, 0, 0, N, N, -R, -R, 2 * R, 2 * R);
     ctx.drawImage(rigD, 0, 0, N, N, -R, -R, 2 * R, 2 * R); ctx.restore();
