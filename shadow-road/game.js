@@ -224,6 +224,7 @@ function runMove(dt) {
   if (m.wave && !P.waved && k >= m.h[0]) {
     P.waved = true;
     const quake = m.waveKind === 'quake'; // the hammer's crack runs along the ground; the sword's wave is a crescent of light
+    if (m.waveKind === 'drill') { projs.push({ owner: 'p', x: P.x + P.facing * 70, y: P.y, z: 40, vx: P.facing * 600, dmg: Math.round(m.wave * wMult(P.w) * (m.pmul || 1)), life: .5, max: .5, hit: new Set(), drill: 1 }); sfx('whoosh'); } else
     for (const d of m.wave2 ? [1, -1] : [1]) projs.push({ owner: 'p', x: P.x + d * P.facing * 40, y: P.y, z: 0, vx: d * P.facing * (quake ? 300 : 340), dmg: Math.round((m.wave === 1 ? 40 : m.wave) * wMult(P.w) * (m.pmul || 1)), life: quake ? .9 : 1, hit: new Set(), wave: 1, quake }); // wave2: it runs both ways
   }
   if (k > .3) { if (pressed.light) P.q = 'L'; if (pressed.heavy) P.q = 'H'; }

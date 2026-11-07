@@ -460,18 +460,31 @@ const MOVE_POSE = {
     }
   },
   // ---- bowstaff ----
-  'staff:D'(pose, m, k) { // Sliding Pole: down into a slide off the sprint, the staff low and level, then flicked up under them
-    pose.streak = null; pose.trail = 0;
-    const d = ease(span(k, 0, .12)), u = ease(span(k, .62, .76)), r = span(k, .8, 1);
-    pose.sink = 14 * d * (1 - u) + (3 + 4 * (1 - r)) * u * (1 - r);
-    pose.lean = lerp(.3, -.28, d) * (1 - u) + .12 * u * (1 - r);
-    pose.legs = { f: lerp(9, 20, d) * (1 - u) + 9 * u, b: lerp(-9, -3, d) * (1 - u) - 8 * u, fk: lerp(4, 0, d) * (1 - u) + 4 * u, bk: lerp(4, 17, d) * (1 - u) + 4 * u };
-    pose.arm = lerp(.38 + .28, -1.25, u); pose.grip = lerp(-.3, -.1, u); pose.ext = .6 * (1 - u); pose.elbow = 0;
-    pose.backArm = lerp(.6, -.9, u); pose.backElbow = .4; pose.backReach = .25; pose.openHand = 0; pose.flow = 14 * (1 - u) + 6;
-    if (k > .6 && k < .82) { pose.trail = 70; pose.trailFrom = .66; pose.trailCol = tcolOf(m); pose.trailW = 6; }
-    if (k > .8) { const g = ease(span(k, .8, 1)); pose.arm = lerp(-1.25, .5, g); pose.grip = lerp(-.1, -.02, g); pose.backArm = lerp(-.9, 1.4, g); pose.backElbow = lerp(.4, .35, g); }
+  'staff:D'(pose, m, k) { // Comet Sweep: down into the slide with the staff whirled flat round him along the street, then planted, sprung up off, and swept up through them in a rising turn
+    pose.streak = null; pose.trail = 0; delete pose.sweep;
+    const F = .56;
+    if (k < F) { // the slide: low and laid back, the staff turning flat round him at the street, a ring of wood about his ankles
+      const d = ease(span(k, 0, .12));
+      pose.sink = 14 * d; pose.lean = lerp(.3, -.25, d); pose.oy = 6 * d;
+      pose.legs = { f: lerp(9, 22, d), b: lerp(-9, -2, d), fk: lerp(4, 0, d), bk: lerp(4, 17, d) };
+      pose.arm = .9 + .35 * Math.sin(k * 48); pose.grip = -.45; pose.ext = .5; pose.elbow = 0;
+      pose.backArm = lerp(.6, 2.4, d); pose.backElbow = .4; pose.openHand = 1; pose.flow = 18;
+      pose.flat = k > .06 ? { r: 88, k: .96, rev: false, col: tcolOf(m), w: 7 } : null;
+    } else { // planted and sprung: up off the staff, turned once in the air, the staff swept from the street up over his head
+      pose.flat = null; const u = ease(span(k, F, F + .16)), r = span(k, .86, 1);
+      pose.spin = -TAU * sstep(span(k, F, F + .22));
+      pose.arm = lerp(1.3, -2.5, u); pose.grip = lerp(-.2, 0, u); pose.ext = .35; pose.elbow = 0; pose.backArm = lerp(2.4, -2.2, u); pose.backElbow = .3;
+      pose.lean = lerp(.2, -.3, u) * (1 - r); pose.sink = lerp(10, -4, u) * (1 - r);
+      pose.legs = { f: lerp(12, 7, u), b: lerp(-6, -10, u), fk: lerp(8, 14, u), bk: lerp(10, 12, u), fl: 8 * u * (1 - r) }; pose.flow = 18;
+      if (k < .86) { pose.trail = 84; pose.trailFrom = 1.3; pose.trailCol = tcolOf(m); pose.trailW = 9; }
+      if (k > .86) { const g = ease(r); pose.arm = lerp(-2.5, .5, g); pose.backArm = lerp(-2.2, 1.4, g); pose.backElbow = .35; }
+    }
   },
-  'staff:M'(pose, m, k) { // Lunging Thrust: two hands on the staff, the rear one driving it through like a cue
+  'staff:M'(pose, m, k) { // Piercing Gale: the staff twirled once at his side, then two hands on it, the rear one driving it through like a cue
+    if (k < m.h[0] * .8) { const q = sstep(k / (m.h[0] * .8)); pose.arm = .06 + TAU * q; if (pose.arm > Math.PI) pose.arm -= TAU; pose.grip = -.4; pose.ext = .1; pose.elbow = .3;
+      pose.backArm = 1.4; pose.backElbow = 1.0; pose.lean = -.1; pose.legs = { f: 7, b: -10, fk: 3, bk: 8 }; pose.sink = 4; pose.flow = 10;
+      if (q > .15) { pose.trail = 72; pose.trailFrom = pose.arm - Math.min(3, q * 4); pose.trailCol = tcolOf(m); pose.trailW = 6; } return; }
+    pose.trail = 0;
     const h0 = m.h[0], h1 = m.h[1], e = k < h0 ? -.4 * ease(k / h0) : k < h1 ? lerp(-.4, 1, ease(span(k, h0, h0 + (h1 - h0) * .45))) : 1 - .8 * ease(span(k, h1, 1));
     const p = Math.max(0, e);
     pose.legs = { f: lerp(6, 17, p), b: lerp(-10, -17, p), fk: lerp(3, 11, p), bk: lerp(8, 0, p) }; pose.sink = lerp(4, 8, p); pose.lean = lerp(-.12, .48, p) + (e < 0 ? .1 * e : 0);

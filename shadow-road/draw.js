@@ -969,6 +969,16 @@ function drawProj(p, t) {
     for (let i = 0; i < 4; i++) { const sx = x - Math.sign(p.vx) * i * 12, h = (22 - i * 5) * (1 + .2 * Math.sin(t * 30 + i)); ctx.fillStyle = i % 2 ? '#8A7458' : '#B89A6E'; ctx.beginPath(); ctx.moveTo(sx - 7, p.y); ctx.lineTo(sx - 1, p.y - h); ctx.lineTo(sx + 2, p.y - h * .7); ctx.lineTo(sx + 7, p.y); ctx.closePath(); ctx.fill(); outline(1.2); }
     return;
   }
+  if (p.drill) { // the Piercing Gale: a spinning cone of wind driven on down the street at chest height, its point leading
+    const d = Math.sign(p.vx) || 1, a = Math.min(1, p.life / ((p.max || .5) * .4)), tt = performance.now() / 1000;
+    ctx.save(); ctx.translate(x, y); ctx.scale(d, 1); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(10, 0, 2, 0, 0, 44); g.addColorStop(0, `rgba(240,246,255,${.55 * a})`); g.addColorStop(1, 'rgba(200,220,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(-6, 0, 46, 18, 0, 0, Math.PI * 2); ctx.fill();
+    for (let i = 0; i < 6; i++) { const ph = tt * 26 + i * Math.PI / 3; ctx.strokeStyle = `rgba(${i % 2 ? '255,255,255' : '190,215,255'},${(.75 * a).toFixed(3)})`; ctx.lineWidth = 1.6; ctx.beginPath();
+      for (let j = 0; j <= 12; j++) { const q = j / 12, X = 22 - q * 70, R = 2 + q * 15, Y = Math.sin(ph + q * 7) * R; j ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); } ctx.stroke(); }
+    ctx.strokeStyle = `rgba(255,255,255,${(.9 * a).toFixed(3)})`; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(26, 0); ctx.lineTo(-30, 0); ctx.stroke();
+    for (let i = 0; i < 3; i++) { const k = (tt * 3 + i / 3) % 1; ctx.strokeStyle = `rgba(220,232,255,${(a * (1 - k) * .8).toFixed(3)})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(10 - k * 60, 0, 3 + k * 4, 6 + k * 14, 0, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore(); return;
+  }
   if (p.ground) { // a shockwave tearing along the floor: jump it
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < 3; i++) { const g = ctx.createRadialGradient(x - Math.sign(p.vx) * i * 10, p.y, 2, x - Math.sign(p.vx) * i * 10, p.y, 26 - i * 5); g.addColorStop(0, 'rgba(255,230,170,.8)'); g.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = g; ell(x - Math.sign(p.vx) * i * 10, p.y - 8, 26 - i * 5, 16 - i * 3); ctx.fill(); }
