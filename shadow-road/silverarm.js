@@ -91,7 +91,7 @@
     rigDG.globalCompositeOperation = 'destination-in'; rigDG.drawImage(rigC, 0, 0); rigDG.globalCompositeOperation = 'source-over';
     // a soft crimson rim round it, so the dark iron reads against any ground: its silhouette in light, laid a hair out all round
     rigHG.setTransform(1, 0, 0, 1, 0, 0); rigHG.globalCompositeOperation = 'source-over'; rigHG.clearRect(0, 0, N + 2, N + 2); rigHG.drawImage(rigC, 0, 0);
-    rigHG.globalCompositeOperation = 'source-in'; rigHG.fillStyle = 'rgb(150,62,96)'; rigHG.fillRect(0, 0, N, N); rigHG.globalCompositeOperation = 'source-over';
+    rigHG.globalCompositeOperation = 'source-in'; rigHG.fillStyle = 'rgb(150,96,190)'; rigHG.fillRect(0, 0, N, N); rigHG.globalCompositeOperation = 'source-over';
     ctx.save(); if (o.a !== undefined) ctx.globalAlpha *= o.a;
     { const ga = ctx.globalAlpha, d = Math.max(1, sc * .9) / Math.max(.5, sc); // (a soft falloff, not a line: rings of its silhouette, each wider and fainter)
       for (const [rr, al, n] of [[1, .1, 8], [2, .075, 10], [3.2, .05, 12], [4.6, .03, 12]]) { ctx.globalAlpha = ga * al;
