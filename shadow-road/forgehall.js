@@ -52,7 +52,7 @@
   // a belt with no sword at it, for those who carry none (the sword belt's own belts, its scabbard left off)
   try { const W = CORWIN.parts.waist; if (W.swordbelt && !W.fhGirdle) W.fhGirdle = Object.assign(Object.create(W.swordbelt), { scabbard() {} }); } catch (e) {}
   const base = (o) => Object.assign({}, HERO, o);
-  const cloakOf = (c, lining) => ({ cloak: c, cloakSlate: shade(c, .12), cloakGrey: shade(c, .06), cloakLt: shade(c, .2), cloakLining: lining });
+  const cloakOf = (c, lining) => ({ cape: c, capeLining: lining }); // (a mantle hung from the shoulders, clasped at the throat: drawHumanoid's own cape)
   const LOOKS = {
     gerard: () => base(Object.assign({ hairStyle: 'shaggy', skin: '#D4A882', glove: '#C4986E', hair: '#6A4428', hairLt: '#9A6A44', hairDk: '#2E1A0E', eye: '#5A7AA0', waist: 'fhGirdle', body: '#3E5A86', lattice: '#5A78A6', button: '#C8CCD8', trim: '#B8BCC6', shirt: '#C8CCD4', sleeve: '#5A6270', steel: '#9AA2B0', pauldron: '#5A6270', legs: '#3E4450', boots: '#2A2A30', cuff: '#4A5262',
       circlet: '#C8CCD8', chain: '#C8CCD8', clasp: '#C8CCD8', fullBeard: ['#6A4428', '#8A6040', 1] }, cloakOf('#4A505C', '#2E4670'))),
@@ -115,12 +115,12 @@
   function geo() {
     const key = [VW, Y_OFF, VIEW_H].join('|'); if (GEO && GEO.key === key) return GEO;
     const cx = VW / 2, yb = Y_OFF + VIEW_H * .43, bx = VW * .2, drop = VIEW_H * .19, bot = VH, k = drop / bx;
-    const sAt = (y) => lerp(.46, .74, cl01((y - yb) / (bot - yb)));
+    const sAt = (y) => lerp(.56, .82, cl01((y - yb) / (bot - yb)));
     const footY = (x) => x < bx ? yb + (bx - x) * k : x > VW - bx ? yb + (x - (VW - bx)) * k : yb;
     const slots = {};
     for (const [id, f] of [['BL2', .235], ['BL1', .365], ['BR1', .635], ['BR2', .765]]) { const x = VW * f, s = sAt(yb);
       slots[id] = { id, kind: 'back', dir: 0, wx: x, wy: yb, s, sg: 1, m: new DOMMatrix([s, 0, 0, s, x, yb]), cell: VW * .13 }; }
-    for (const [id, t, dir] of [['SL1', .34, 1], ['SL2', .78, 1], ['SR1', .34, -1], ['SR2', .78, -1]]) {
+    for (const [id, t, dir] of [['SL1', .28, 1], ['SL2', .64, 1], ['SR1', .28, -1], ['SR2', .64, -1]]) {
       const x = dir > 0 ? bx * (1 - t) : VW - bx * (1 - t), y = yb + t * drop, s = sAt(y) * .96, a = s * .62;
       slots[id] = { id, kind: dir > 0 ? 'left' : 'right', dir, wx: x, wy: y, s, sg: dir, m: new DOMMatrix([dir * a, -k * a, 0, s, x, y]) }; }
     for (const sl of Object.values(slots)) { const p = sl.m.transformPoint(new DOMPoint(0, 22)); sl.vx = p.x; sl.vy = p.y;
@@ -223,11 +223,12 @@
     const st = document.createElement('style'); st.id = 'fhStyle'; st.textContent = CSS; document.head.appendChild(st);
     ui = document.createElement('div'); ui.id = 'fhUi'; ui.hidden = true;
     ui.innerHTML = `<div class="fh-top"><div class="fh-plate"><div class="fh-kick" id="fhKick"></div><div class="fh-title">The Crossroads Forge</div><div class="fh-mats"><span class="s">&#9670; <b id="fhShards">0</b></span><span class="g">&#10022; <b id="fhSigils">0</b></span></div></div>
-      <div class="fh-btns"><button class="cta alt" type="button" id="fhMenuBtn">Menu view</button></div></div>
+      <div class="fh-btns"><button class="cta alt" type="button" id="fhMenuBtn">Menu view</button><button class="cta" type="button" id="fhWalkBtn">Walk on &#9656;</button></div></div>
       <div class="fh-hint" id="fhHint"></div>
       <button type="button" class="fh-talk" id="fhTalk" hidden><span class="fh-tw"></span><span class="fh-tk"></span></button>`;
     (document.getElementById('app') || document.body).appendChild(ui);
     ui.querySelector('#fhMenuBtn').addEventListener('click', () => { audioInit(); setPref('menu'); H.panel = null; showOnly('forgeOv'); const ov = ovEl(); if (ov) ov.scrollTop = 0; });
+    ui.querySelector('#fhWalkBtn').addEventListener('click', () => { audioInit(); quickWalk(); });
     const talk = ui.querySelector('#fhTalk');
     talk.addEventListener('pointerdown', (e) => { e.preventDefault(); audioInit(); interact(); });
     talk.addEventListener('click', (e) => { if (e.detail === 0) interact(); }); // (a keyboard's Enter on the focused button)
@@ -270,10 +271,13 @@
     if (T === 'door') { leave(); return; }
     openPanel(T);
   }
+  // the quick way out: straight on to the next world, as the menu's Walk on and the road's arch do (no walking to it)
+  function quickWalk() { if (!H.on || mode !== 'forge') return; if (H.panel) closePanel(); const w = document.getElementById('walkBtn'); if (w) w.click(); }
   function blocked() { return mode !== 'forge' || !!document.getElementById('w8verseOv') || !!(window.BRANCH && BRANCH.active) || app.classList.contains('port'); }
   function refreshUi() {
     if (!ui) return; const k = document.getElementById('forgeKicker');
     ui.querySelector('#fhKick').textContent = k ? k.textContent : 'BETWEEN WORLDS';
+    const wb = ui.querySelector('#fhWalkBtn'); wb.innerHTML = `Walk on &#9656;${KBD ? ' <kbd>N</kbd>' : ''}`; wb.title = `Walk on to ${STAGES[roadStage()].name}`;
     ui.querySelector('#fhShards').textContent = save.shards; ui.querySelector('#fhSigils').textContent = save.sigils;
   }
   let promptKey = '';
@@ -317,6 +321,7 @@
       if (blocked()) return true;
       if (c === 'Enter' || c === 'NumpadEnter' || c === 'KeyJ' || c === 'KeyZ' || c === 'KeyE' || c === 'Space') { if (document.activeElement && document.activeElement.tagName === 'BUTTON' && (c === 'Enter' || c === 'Space')) return true; e.preventDefault();
         if (!e.repeat) { if (H.target || c === 'Enter' || c === 'NumpadEnter' || c === 'KeyE') interact(); else if (c === 'KeyJ' || c === 'KeyZ') swing(false); } return true; }
+      if (c === 'KeyN') { e.preventDefault(); if (!e.repeat) quickWalk(); return true; }
       if (c === 'KeyK' || c === 'KeyX') { e.preventDefault(); if (!e.repeat) swing(true); return true; }
       if (c === 'Escape' || c === 'KeyP') return true;
       return false; // (the walking keys reach the game's key set: readMove)
@@ -337,12 +342,12 @@
     const b = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed), ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
     let mx = Math.abs(ax) > .25 ? ax : 0, my = Math.abs(ay) > .25 ? ay : 0;
     if (b(14)) mx = -1; if (b(15)) mx = 1; if (b(12)) my = -1; if (b(13)) my = 1;
-    return { mx, my, a: b(0), b: b(1), x: b(2) };
+    return { mx, my, a: b(0), b: b(1), x: b(2), go: b(9) || b(3) };
   }
   const near = (v) => { const sl = SL(v); return Math.hypot(H.x - sl.tx, (H.y - sl.ty) * 1.4); };
   function update(dt) {
     const G = geo(), pad = readPad();
-    if (pad) { if (pad.b && !H.padB && H.panel) closePanel(); if (pad.a && !H.padA && !H.panel) { if (H.target) interact(); else swing(false); } if (pad.x && !H.padX && !H.panel) swing(true); H.padA = pad.a; H.padB = pad.b; H.padX = pad.x; }
+    if (pad) { if (pad.b && !H.padB && H.panel) closePanel(); if (pad.a && !H.padA && !H.panel) { if (H.target) interact(); else swing(false); } if (pad.x && !H.padX && !H.panel) swing(true); if (pad.go && !H.padGo) { H.padGo = true; quickWalk(); return; } H.padGo = pad.go; H.padA = pad.a; H.padB = pad.b; H.padX = pad.x; }
     let mx = 0, my = 0;
     if (!H.panel && !blocked() && !H.leaving) {
       readMove(); mx = input.mx; my = input.my; if (pad && (pad.mx || pad.my)) { mx = pad.mx; my = pad.my; }
@@ -536,7 +541,7 @@
     return e ? [sx + 13 * Math.cos(a) + 12 * Math.cos(a - e), sy + 13 * Math.sin(a) + 12 * Math.sin(a - e)] : [sx + 25 * Math.cos(a), sy + 25 * Math.sin(a)]; };
   function basePose(v, t) {
     const id = v.id, br = Math.sin(t * 1.6 + v.ph), p = { walk: 0, Y: .22, headTurn: false, weapon: 'fists', breath: br, arm: 1.15, backArm: 1.2, lean: -.03 };
-    if (!LOOKS[id] || !lookOf(id).cloak) p.noCloak = 1;
+    p.noCloak = 1;
     if (id === 'gerard') { p.weapon = 'hammer'; p.tier = 1;
       const q = ((t + v.ph) % 1.3) / 1.3; let a;
       if (q < .62) a = lerp(.6, -2.3, sm(q / .62)); else if (q < .74) a = lerp(-2.3, .6, ((q - .62) / .12) ** 2); else a = .6;
@@ -544,8 +549,8 @@
       const k = Math.floor((t + v.ph) / 1.3); if (q >= .74 && v.struck !== k) { v.struck = k; strikeSparks(v, 1); } }
     else if (id === 'julian') { p.weapon = 'shortbow'; p.arm = .9; p.grip = .2; p.backArm = 1.25; }
     else if (id === 'ganelon') { p.arm = 1.0; p.elbow = .9; p.backArm = 1.3; p.backElbow = .3; p.Y = .3; }
-    else if (id === 'fiona') { p.arm = .25 + .08 * Math.sin(t * 1.3 + v.ph); p.elbow = .5; p.backArm = .9; p.backElbow = .9; p.work = -1; }
-    else if (id === 'llewella') { p.arm = 1.0; p.elbow = .8; p.backArm = 1.05; p.backElbow = .8; }
+    else if (id === 'fiona') { p.arm = .25 + .08 * Math.sin(t * 1.3 + v.ph); p.elbow = .5; p.backArm = 1.15; p.backElbow = .9; p.work = -1; }
+    else if (id === 'llewella') { p.arm = 1.15; p.elbow = 1.0; p.backArm = 1.15; p.backElbow = 1.0; }
     else if (id === 'random') { const sh = Math.sin(t * 7 + v.ph); p.arm = .9; p.elbow = 1.5 + .1 * sh; p.backArm = .95; p.backElbow = 1.5 - .1 * sh; }
     return p;
   }
@@ -684,13 +689,15 @@
   function vendorHead(L, hy) {
     const sk = L.skin, st = L.hairStyle, hair = L.hair, hl = L.hairLt || shade(hair, .35), hd = L.hairDk || shade(hair, -.45), t = performance.now() / 1000, sw = Math.sin(t * 1.2 + (L.seed || 0)) * .7;
     const fillH = (path, col) => { path(); let f = C(col); if (fine()) { const g = ctx.createLinearGradient(-12, hy - 12, 8, hy + 20); g.addColorStop(0, hd); g.addColorStop(.55, col); g.addColorStop(1, hl); f = g; } ctx.fillStyle = f; ctx.fill(); outline(.9); };
-    // hair behind the head: the long falls
+    // hair behind the head: the long falls (the princesses' let down past the shoulders)
+    ctx.save(); if (st === 'redFlow' || st === 'greenWave') { ctx.translate(-2, hy); ctx.scale(1.2, 1.55); ctx.translate(2, -hy); }
     if (st === 'longStraight') fillH(() => { ctx.beginPath(); ctx.moveTo(2, hy - 10); ctx.quadraticCurveTo(-9, hy - 11, -10, hy - 2); ctx.lineTo(-10.6, hy + 24); ctx.lineTo(-2.4, hy + 24); ctx.lineTo(-2.4, hy + 4); ctx.closePath(); }, hair);
     if (st === 'redFlow') { fillH(() => { ctx.beginPath(); ctx.moveTo(3, hy - 11); ctx.quadraticCurveTo(-10, hy - 13, -12, hy - 1); ctx.quadraticCurveTo(-15 + sw, hy + 12, -12 + sw, hy + 30); ctx.quadraticCurveTo(-8 + sw, hy + 34, -4 + sw, hy + 28); ctx.quadraticCurveTo(-1, hy + 16, -2.4, hy + 5); ctx.closePath(); }, hair);
       if (fine()) { ctx.strokeStyle = hd; ctx.lineWidth = .7; ctx.beginPath(); for (let i = 0; i < 5; i++) { const y = hy + 4 + i * 4.6; ctx.moveTo(-8.6 + sw * .5, y); ctx.lineTo(-6.6 + sw * .5, y + 2.6); ctx.moveTo(-6.6 + sw * .5, y); ctx.lineTo(-8.6 + sw * .5, y + 2.6); } ctx.stroke(); } } // (a braid down the fall)
     if (st === 'greenWave') fillH(() => { ctx.beginPath(); ctx.moveTo(3, hy - 11); ctx.quadraticCurveTo(-10, hy - 13, -12.5, hy - 1);
       for (let i = 0; i < 4; i++) ctx.quadraticCurveTo(-16 + (i % 2) * 4 + sw, hy + 4 + i * 7, -13 + (i % 2 ? -1 : 2) + sw, hy + 8 + i * 7);
       ctx.quadraticCurveTo(-6 + sw, hy + 36, -2 + sw, hy + 30); ctx.quadraticCurveTo(-4, hy + 16, -2.4, hy + 5); ctx.closePath(); }, hair);
+    ctx.restore();
     // the head: neck, skull and jaw, ear, eye, brow, nose, mouth
     ctx.fillStyle = C(shade(sk, -.22)); ctx.fillRect(-1.5, hy + 5, 5, 6);
     const sg = fine() ? ctx.createRadialGradient(4, hy - 3, 1, 1, hy, 10) : null; if (sg) { sg.addColorStop(0, shade(sk, .12)); sg.addColorStop(1, shade(sk, -.18)); }
@@ -751,7 +758,7 @@
       ctx.fillStyle = C(L.chain); circle(5, -51.4, 1.5); ctx.fill(); outline(.5); }
     if (L.sash) { ctx.strokeStyle = C(L.sash); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(-6, -62); ctx.lineTo(7, -46); ctx.stroke(); }
     if (L.necklace) { ctx.strokeStyle = C(L.necklace); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(-1, -64); ctx.quadraticCurveTo(3, -58.6, 7, -62.6); ctx.stroke(); ctx.fillStyle = C(L.gem || L.necklace); circle(3.6, -59.2, 1); ctx.fill(); }
-    if (L.clasp && !p.noCloak) { ctx.fillStyle = C(L.clasp); circle(2.6, -61.6, 1.3); ctx.fill(); outline(.4); }
+    if (L.clasp && L.cape) { ctx.fillStyle = C(L.clasp); circle(2.6, -61.6, 1.3); ctx.fill(); outline(.4); }
   }
   // ---------------- Dworkin, drawn as himself: small, wide and hunched, a hump on his back, long arms, a great white beard ----------------
   function drawDwarf(L, p, t) {
@@ -1054,7 +1061,9 @@
   #fhUi .fh-mats { display: flex; gap: 12px; justify-content: center; font: 700 12.5px var(--label); margin-top: 2px; font-variant-numeric: tabular-nums; }
   #fhUi .fh-mats .s { color: var(--mint); } #fhUi .fh-mats .g { color: var(--petal); }
   #fhUi .fh-btns { pointer-events: auto; display: flex; gap: 8px; }
-  #fhUi .fh-btns .cta { min-height: 36px; padding: 6px 14px; font-size: 12.5px; }
+  #fhUi .fh-btns .cta { min-height: 44px; padding: 6px 14px; font-size: 12.5px; }
+  #fhUi #fhWalkBtn { min-width: 112px; font-size: 13.5px; }
+  #fhUi #fhWalkBtn kbd { margin-left: 4px; color: #2A1606; border-color: rgba(70,40,8,.6); background: rgba(255,255,255,.25); }
   #fhUi .fh-hint { position: absolute; left: 50%; bottom: 84px; translate: -50% 0; font: 600 12px var(--label); letter-spacing: .06em; color: rgba(244,234,219,.85); text-shadow: 0 1px 2px #000; white-space: nowrap; transition: opacity .3s; }
   #fhUi .fh-talk { pointer-events: auto; position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom, 0px)); translate: -50% 0; display: grid; gap: 2px; justify-items: center; cursor: pointer;
     padding: 8px 22px 9px; border-radius: 10px; border: 1.5px solid transparent; color: var(--text); font-family: var(--label);
