@@ -671,7 +671,7 @@
   // CURRENTS, NOT FOOTSTEPS
   // ======================================================================================================
   // tuning (world units a second; the street's depth is drawn at about .6 of its width, so depth speeds are scaled by YK)
-  const T = { cruise: 290, acc: 820, turn: .16, coast: .2, over: .3, overFling: .78, fling: 375, flingDur: .34,
+  const T = { cruise: 290, acc: 820, turn: .16, coast: .2, over: .3, overFling: .78, fling: 375, flingK: 1.85, flingOver: 1.5, flingDur: .34,
     hitMin: 300, bounce: .78, bounceMin: 90, YK: .62 };
   const LOCO = ['idle', 'walk', 'run'];
   const speedE = () => Math.hypot(CUR.vx, CUR.vy / T.YK); // speed, depth counted as the screen draws it
@@ -680,8 +680,8 @@
   function fling(dx, dy) {
     let d = Math.hypot(dx, dy);
     if (d < .2) { const s = speedE(); if (s > 80) { dx = CUR.vx; dy = CUR.vy / T.YK; } else { dx = -P.facing; dy = 0; } d = Math.hypot(dx, dy) || 1; }
-    const k = Math.sqrt(P.shrink || 1) * (1 + gearStat('speed') * .5);
-    CUR.vx = dx / d * T.fling * k; CUR.vy = dy / d * T.fling * k * T.YK; CUR.flingT = T.flingDur;
+    const k = Math.sqrt(P.shrink || 1) * (1 + gearStat('speed') * .5), burst = Math.max(T.fling * k, T.cruise * spd() * T.flingK, speedE() * T.flingOver); // (a burst: well past cruising, and past whatever speed he already has)
+    CUR.vx = dx / d * burst; CUR.vy = dy / d * burst * T.YK; CUR.flingT = T.flingDur;
     sfx('whoosh'); sfx('hit-goo', .5); bub(P.x, P.y, 8, 8, 60);
     for (let i = 0; i < 10 && parts.length < 420; i++) parts.push({ x: P.x - dx / d * rand(0, 12), y: P.y + rand(-3, 3), z: 2, vx: -dx / d * rand(60, 200) + rand(-30, 30), vy: rand(-12, 12), vz: rand(60, 200), life: .5, max: .5, col: pick(['rgba(220,250,245,.95)', 'rgba(150,215,210,.9)', '#FFFFFF']), size: rand(2, 3.4), shape: 'puff', rot: 0, vr: 0 });
   }

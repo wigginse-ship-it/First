@@ -220,7 +220,7 @@
     S.objs = S.objs.filter(o => !o.gone);
   };
   { const _pp = playerPose; playerPose = function () {
-    const pose = _pp(); if (!mine() || pose.hornCine) return pose; // (the horn's call poses him itself: w8_late.js)
+    const pose = _pp(); if (!mine() || pose.hornCine || pose.weapon === 'shortbow') return pose; // (the horn's call poses him itself: w8_late.js; the bow in his hands is the bow alone)
     const T = TY[kind()]; if (!T) return pose; pose.weapon = ID; pose.tier = Math.min(7, save.wl[ID] || 1);
     if (P.state === 'charge' && T.chargePose) T.chargePose(pose, P.ct || 0);
     else if (['idle', 'walk', 'run', 'jump'].includes(P.state) && T.carry) T.carry(pose, P.state);
@@ -933,23 +933,24 @@
       reset() { G.layers = 0; },
       peek: () => ({ layers: G.layers, guarding: P.state === 'charge' }),
       tree: () => ({
-        L:    { name: 'Prick', dur: .24, h: [.3, .6], x0: 0, x1: 86, dmg: 7, kb: 50, lunge: 40, depth: 20, desc: 'Quick spear jabs.' },
-        LL:   { name: 'Prick', dur: .26, h: [.3, .6], x0: 0, x1: 88, dmg: 8, kb: 60, lunge: 40, depth: 20 },
+        L:    { name: 'Prick', dur: .24, h: [.3, .6], x0: 0, x1: 122, dmg: 7, kb: 50, lunge: 60, depth: 20, desc: 'Quick spear jabs, at a spear\'s length.' },
+        LL:   { name: 'Prick', dur: .26, h: [.3, .6], x0: 0, x1: 128, dmg: 8, kb: 60, lunge: 60, depth: 20 },
         LLL:  { name: 'Oyster Snap', dur: .44, h: [.32, .56], x0: 0, x1: 56, dmg: 14, kb: 120, power: 1, snap: 1, depth: 26, desc: 'The shell snaps shut on them: held fast.' },
         H:    { name: 'Nacre Javelin', dur: .5, h: [3, 3], x0: 0, x1: 0, dmg: 13, kb: 0, power: 2, jav: 1, desc: 'Hurl a spear of nacre down the street: it skewers up to three, pins them where it stops (+1 layer each, two at most), then flies home through everyone between.' },
-        HH:   { name: 'Pearl Lance', dur: .55, h: [.3, .62], x0: 0, x1: 90, dmg: 16, kb: 260, lunge: 400, power: 2, lance: 1, depth: 22, desc: 'A lunging thrust; spends every layer, each one longer and harder. The javelin, if out, comes home at once.' },
+        HH:   { name: 'Pearl Lance', dur: .55, h: [.3, .62], x0: 0, x1: 160, dmg: 16, kb: 260, lunge: 480, power: 2, lance: 1, depth: 22, desc: 'A lunging thrust; spends every layer, each one longer and harder. The javelin, if out, comes home at once.' },
         HC:   { name: 'Nacre Breaker', dur: .62, h: [.08, .5], x0: 0, x1: 60, dmg: 12, kb: 220, lunge: 440, power: 2, burst: 1, carry: 1, wall: 1, depth: 28, desc: 'Hold Heavy: guard (blows from in front become layers; caught with the pearl full, they are spat back). Let go: charge shield-first, and the pearl bursts where you stop, its shards ricocheting foe to foe. Gleam: just after a catch.' },
         X:    { name: 'Spit Pearl', dur: .4, h: [.3, .5], x0: 0, x1: 70, dmg: 10, kb: 40, launch: 420, spit: 1, power: 1, desc: 'Hold Attack: fire one layer as a shot (none: a flick upward).' },
-        A:    { dur: .26, h: [.22, .6], x0: 0, x1: 84, dmg: 8, kb: 60 },
-        AA:   { dur: .28, h: [.22, .6], x0: 0, x1: 84, dmg: 8, kb: 60 },
+        A:    { dur: .26, h: [.22, .6], x0: 0, x1: 112, dmg: 8, kb: 60 },
+        AA:   { dur: .28, h: [.22, .6], x0: 0, x1: 112, dmg: 8, kb: 60 },
         AAA:  { name: 'Clam Drop', dur: .42, h: [.25, .62], x0: 0, x1: 70, dmg: 14, kb: 140, spike: 1, power: 2, desc: 'Third air blow: shield down on them.' },
         JH:   { name: 'Shell Comet', dur: .55, h: [.15, .97], x0: -24, x1: 50, dmg: 20, kb: 180, dive: 1, shock: 90, bounce: 1, power: 2, ram: 1, desc: 'Fall on the shell: +1 layer if it lands.' },
         D:    { name: 'Shell Surf', dur: .8, h: [.1, .85], x0: 0, x1: 54, dmg: 5, kb: 200, lunge: 460, multi: .12, power: 1, depth: 26, desc: 'Ride the shell down the street.' },
         DX:   { name: 'Breakwater', dur: .62, h: [.12, .72], x0: 0, x1: 54, dmg: 18, kb: 380, lunge: 380, power: 2, carry: 1, wall: 1, depth: 28, desc: 'Shield first: shove them all ahead of you.' },
         R:    { name: 'Hermit Spin', dur: .5, h: [.12, .82], x0: 0, x1: 64, dmg: 5, kb: 160, around: 1, multi: .12, power: 1, desc: 'Out of a dodge: tucked in the shell, spinning.' },
+        RH:   { name: 'Turnabout Thrust', dur: .5, h: [.18, .58], x0: 0, x1: 230, dmg: 20, kb: 300, lunge: 600, power: 2, depth: 24, poseFrom: 'HH', desc: 'Out of a dodge, Heavy: the spear thrust out at its full length as you come up out of the roll, and you drive on behind it.' },
       }),
       rows: (t) => [['guard: blows become layers; full, they are spat back', 'Hold Heavy', 'Clamshell'], ['charge, the pearl bursts, shards ricochet', 'let go of the guard', t.HC.name], ['spend every layer', 'Heavy, Heavy', t.HH.name],
-        ['skewer, pin, and home again', 'Heavy', t.H.name], ['one layer as a shot', 'Hold Attack', t.X.name], ['held fast', 'Attack ×3', t.LLL.name], ['ride it', 'Run, Attack', t.D.name]],
+        ['skewer, pin, and home again', 'Heavy', t.H.name], ['one layer as a shot', 'Hold Attack', t.X.name], ['held fast', 'Attack ×3', t.LLL.name], ['ride it', 'Run, Attack', t.D.name], ['the spear at full length', 'Dodge, Heavy', t.RH.name]],
       pick(m) { if (m.key === 'H' && P.state === 'charge' && clock() - G.lastCatch < .35) return WP().tree.HC; return m; },
       guard(dmg, fromX) {
         const front = Math.sign(fromX - P.x) === P.facing || Math.abs(fromX - P.x) < 12;
@@ -1530,10 +1531,11 @@
         D:    { name: 'Tilt', dur: .66, h: [.06, .6], x0: 0, x1: 110, dmg: 12, kb: 0, power: 1, depth: 24, tilt: 1, skewer: 1, flingD: 9, beam: [.06, .6], desc: 'Run, Attack: on at full tilt; every foe met rides the point, then all fly off it.' },
         DX:   { name: 'Javelin', dur: .7, h: [3, 3], x0: 0, x1: 0, dmg: 16, kb: 0, hop: 250, lunge: 160, airCarry: 1, power: 2, jav: 1, desc: 'Run, Heavy: leap and hurl it high onto a foe far ahead; it lands in a burst and stands there, and lightning likes a standing lance.' },
         R:    { name: 'Long Wheel', dur: .5, h: [.14, .72], x0: 0, x1: 150, dmg: 10, kb: 220, around: 1, power: 1, lunge: 320, depth: 30, desc: 'Out of a dodge: the lance wheels round at its full length as you slide on through.' },
+        RH:   { name: 'Lunging Reprise', dur: .52, h: [.16, .6], x0: 0, x1: 300, dmg: 18, kb: 220, lunge: 640, power: 2, depth: 24, thrust: 1, beam: [.14, .62], poseFrom: 'LLL', desc: 'Out of a dodge, Heavy: the longest thrust there is, straight out of the roll, stringing all it passes through.' },
       }),
       rows: (t) => [['out-reach everything; pierced foes are strung', 'Attack ×3', t.L.name + ' → ' + t.LLL.name], ['hurled; next blow yanks it back', 'Attack ×4', t.LLLL.name], ['a lunge that carries them', 'Heavy', t.H.name], ['two strung: they crack on the point', 'Heavy, 2+ strung', t.Hc.name],
         ['over their heads', 'Heavy ×2', t.HH.name], ['swing round the pole', 'Heavy ×3', t.HHH.name], ['the length of the street', 'Hold Heavy, gleam', t.HC.name], ['reeled in to them', 'Hold Attack', t.X.name],
-        ['bounce off their heads', 'Jump, Attack ×3', t.AAA.name], ['lightning likes it', 'Run, Heavy', t.DX.name], ['all ride the point', 'Run, Attack', t.D.name]],
+        ['bounce off their heads', 'Jump, Attack ×3', t.AAA.name], ['lightning likes it', 'Run, Heavy', t.DX.name], ['all ride the point', 'Run, Attack', t.D.name], ['the longest thrust, out of a roll', 'Dodge, Heavy', t.RH.name]],
       pick(m) {
         const a = away(); if (a) yank(a);
         const n = live().length; if (m.key === 'H' && n >= 2) return WP().tree.Hc; if (m.key === 'Hc' && n < 2) return WP().tree.H; return m;

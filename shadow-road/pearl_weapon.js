@@ -494,6 +494,7 @@
     const base = WEAPONS[ID].base; let pose;
     P.w = base; P.pwProxy = true;
     try { pose = _pp(); } finally { P.w = ID; P.pwProxy = false; }
+    if (pose.weapon === 'shortbow') return pose; // (the bow in his hands is the bow alone)
     pose.weapon = ID; pose.tier = Math.min(7, save.wl[ID] || 1);
     const tc = TRAIL[base], mine = TRAIL[ID]; if (pose.trailCol === tc) pose.trailCol = mine; if (pose.flat && pose.flat.col === tc) pose.flat.col = mine; if (pose.streak && pose.streak.col === tc) pose.streak.col = mine;
     return pose;

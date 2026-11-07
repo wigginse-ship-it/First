@@ -51,6 +51,7 @@
     built.tree.PX = pxMove(spec.type);
     const pk = 'pm:' + spec.type + ':', from = MOVE_POSE[pk + PX_POSE[spec.type]] || MOVE_POSE[pk + 'HC'] || MOVE_POSE[pk + 'H'];
     if (from) MOVE_POSE[pk + 'PX'] = from;
+    for (const k in built.tree) { const m = built.tree[k]; if (m && m.poseFrom && !MOVE_POSE[pk + k] && MOVE_POSE[pk + m.poseFrom]) MOVE_POSE[pk + k] = MOVE_POSE[pk + m.poseFrom]; } // (a move that borrows another's pose: pearl_moves.js poseFrom)
     return built;
   }
   { const _b = PM.build; PM.build = function (spec) { return addPX(_b(spec), spec); }; }

@@ -433,10 +433,20 @@
     },
   };
   // A TRUMP held up before him, at arm's length (T runs from 2.1, when he reaches for it); keep: and kept there
+  // taking out the Trumps: first the weapon is put away (the weapon hand swings it back and down to his hip, and it is
+  // gone), then the other hand goes into his doublet and comes out with the deck, and holds it up at arm's length
+  const TP = { stow0: 1.55, stow1: 2.05, reach0: 2.0, reach1: 2.3, out0: 2.35, out1: 2.8 }; // (after the Pearl, if it rises: endings W6E holds at 7.05)
   function trumpPose(T, pose, keep) {
-    const q = sm((T - 2.1) / .45) * (keep ? 1 : 1 - sm((T - 3.6) / .5));
-    if (q > 0) { pose.backArm = lerp(pose.backArm ?? 1.5, -.12, q); pose.backElbow = lerp(pose.backElbow ?? .3, .55, q); pose.openHand = 0; }
+    const back = keep ? 1 : 1 - sm((T - 3.6) / .5);
+    const sw = sm((T - TP.stow0) / (TP.stow1 - TP.stow0 - .2)) * (1 - sm((T - (TP.stow1 - .15)) / .3)); // the weapon swung down and back to his hip
+    if (sw > 0) { pose.arm = lerp(pose.arm ?? .2, 1.45, sw); pose.elbow = lerp(pose.elbow ?? .3, .15, sw); pose.grip = lerp(pose.grip ?? 0, 1.2, sw); }
+    if (T >= TP.stow1 - .12 && back > .5) { pose.weapon = 'fists'; pose.cwArt = null; pose.openHand = 0; pose.trail = 0; pose.glow = ''; } // (put away)
+    const rc = sm((T - TP.reach0) / (TP.reach1 - TP.reach0)) * (1 - sm((T - TP.out0) / (TP.out1 - TP.out0))), q = sm((T - TP.out0) / (TP.out1 - TP.out0)) * back;
+    if (rc > 0) { pose.backArm = lerp(pose.backArm ?? 1.5, .55, rc); pose.backElbow = lerp(pose.backElbow ?? .3, 2.3, rc); pose.openHand = 0; } // into the doublet
+    if (q > 0) { pose.backArm = lerp(pose.backArm ?? 1.5, -.12, q); pose.backElbow = lerp(pose.backElbow ?? .3, .55, q); pose.openHand = 0; } // and out with the deck
   }
+  // where the deck is as it comes out: from his breast to arm's length (x, y of the held deck; a: how much of it shows)
+  function deckAt(T, wx, hy, side) { const q = sm((T - TP.out0) / (TP.out1 - TP.out0)); return [lerp(wx + side * 5, wx + side * 19.5, q), lerp(hy - 74, hy - 70, q), sm((T - TP.out0 + .05) / .12)]; }
   // the deck of Trumps in his hand, small, at arm's length: a little stack of black-and-silver cards
   function deckInHand(x, y, a) {
     if (a <= 0) return; ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.rotate(-.12);
@@ -472,7 +482,8 @@
         if (E.pearlRise > 1.9) { E.pearlAsked = 1; PEARLNG.pickThen(() => { E.pearlHold = 0; E.pearlRise = null; E.last = performance.now(); }); } }
       if (T > 5 && !E.rim) { E.rim = 1; if (TRACKS.chaos) playMusic('chaos'); }
       const Tc = T - CARD_AT; E.moving = 0;
-      if (Tc > 2.3 && !E.drew) { E.drew = 1; sfx('swing', .3); } // the deck comes out
+      if (Tc > TP.stow1 - .15 && !E.stowed) { E.stowed = 1; sfx('pick', .4); } // the weapon put up
+      if (Tc > TP.out0 && !E.drew) { E.drew = 1; sfx('swing', .3); } // the deck comes out
     },
     then(sc, E) { const on = () => { if (window.BRANCH && BRANCH.choose) BRANCH.choose(sc, { from: E }); else { dropAlt(E.B); sc(); } }; // on into the choice of road
       if (window.PEARLNG && PEARLNG.pickOwed && PEARLNG.pickOwed()) PEARLNG.pickThen(on); else on(); }, // (skipped before the Pearl came: it is owed here, before the deck)
@@ -497,7 +508,7 @@
       const mk = (m) => { shadow(m.x, m.y, 7 * m.s); mask(m.x, m.y - 3, m.s, m.rot, 0); };
       for (const m of E.masks) if (m.y <= E.hy) mk(m);
       if (E.heroA > 0) { ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.wx, E.hy, 1, E.side, pose, E.heroA, true); ctx.restore(); }
-      deckInHand(E.wx + E.side * 19.5, E.hy - 70, sm((Tc - 2.3) / .3));
+      { const [dx, dy, da] = deckAt(Tc, E.wx, E.hy, E.side); deckInHand(dx, dy, da); }
       if (E.pearlRise != null && window.PEARLNG && PEARLNG.art) { const k = sm(E.pearlRise / 1.6), px = E.wx + E.side * 64, pz = lerp(-10, 92, k), py = E.hy - pz, s = PEARLNG.state(), pk = s.picks, rt = performance.now() / 1000; // (the Pearl rising before him)
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(px, py, 2, px, py, 60); g.addColorStop(0, `rgba(200,250,240,${.5 * k})`); g.addColorStop(1, 'rgba(200,250,240,0)'); ctx.fillStyle = g; ctx.fillRect(px - 60, py - 60, 120, 120); ctx.restore();
         ctx.save(); ctx.globalAlpha *= k; ctx.translate(px, py + Math.sin(rt * 2.4) * 2); try { PEARLNG.art.drawOrb(pk, 13, PEARLNG.art.palOf(pk), rt, rt * 3); } catch (err) {} ctx.restore();
