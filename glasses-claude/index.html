@@ -169,7 +169,7 @@
   <div id="l-form" style="display:none">
     <input id="l-a" autocomplete="off">
     <textarea id="l-b" rows="3" style="margin-top:6px"></textarea>
-    <div class="row" style="margin-top:6px"><button class="primary small" id="l-save">Save</button><button class="small" id="l-cancel">Cancel</button></div>
+    <div class="row" style="margin-top:6px"><button class="primary small" id="l-save">Save</button><button class="small" id="l-ai" style="display:none">✨ Draft</button><button class="small" id="l-cancel">Cancel</button></div>
   </div>
   <div class="hint" id="l-hint"></div>
   <div class="scroll" id="l-list"></div>
@@ -634,9 +634,32 @@ $("l-back").onclick = () => { renderMenu(); show("menu"); };
 $("l-add").onclick = () => {
   const c = LIBS[libKey]; $("l-form").style.display = "block";
   $("l-a").placeholder = c.add[0]; $("l-a").value = ""; $("l-b").value = "";
-  $("l-b").style.display = c.add[1] ? "" : "none"; $("l-b").placeholder = c.add[1] || ""; $("l-a").focus();
+  $("l-b").style.display = c.add[1] ? "" : "none"; $("l-b").placeholder = c.add[1] || "";
+  $("l-ai").style.display = libKey === "skills" ? "" : "none";
+  if (libKey === "skills") $("l-a").placeholder = "Skill name, or describe it and tap Draft";
+  $("l-a").focus();
 };
 $("l-cancel").onclick = () => { $("l-form").style.display = "none"; };
+$("l-ai").onclick = async () => {
+  const d = $("l-a").value.trim(), hint = $("l-hint");
+  if (!d) { hint.textContent = "Describe the skill first, then tap Draft"; return; }
+  if (!apiKey()) { hint.textContent = "Sign in first"; return; }
+  $("l-ai").disabled = true; hint.textContent = "Claude is drafting…";
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
+      headers: { "content-type":"application/json", "x-api-key": apiKey(), "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+      body: JSON.stringify({ model: settings.model, max_tokens: 500,
+        system: "You turn a short description into a reusable skill for a voice chat assistant on smart glasses. Reply with ONLY JSON: {\"name\":\"2-4 word title\",\"prompt\":\"a clear instruction to the assistant, written so it works in any chat, asking for brief answers suited to a small display\"}",
+        messages: [{ role:"user", content: d }] }) });
+    if (!r.ok) { let m = r.status; try { m = (await r.json()).error.message; } catch {} throw new Error(m); }
+    const j = await r.json(), raw = (j.content || []).map(x => x.text || "").join("");
+    let o; try { o = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)); } catch { throw new Error("Couldn't draft that — try rewording"); }
+    if (!o.name || !o.prompt) throw new Error("Couldn't draft that — try rewording");
+    $("l-a").value = String(o.name).slice(0, 60); $("l-b").value = String(o.prompt);
+    hint.textContent = "Drafted — review, then tap Save.";
+  } catch (e) { hint.textContent = "⚠ " + (e.message === "Failed to fetch" ? "Connection dropped. Try again." : e.message); }
+  $("l-ai").disabled = false;
+};
 $("l-save").onclick = () => {
   const c = LIBS[libKey], a = $("l-a").value.trim(), b = $("l-b").value.trim();
   if (!a) return; c.create(a, b); $("l-form").style.display = "none"; renderLib();
@@ -915,7 +938,7 @@ $("r-mic").onclick = () => {
 
 /* ---------- artifacts ---------- */
 const ART_SYS = "You create small self-contained web artifacts: a single HTML file with inline CSS and JS, no external scripts, no network requests, no external images. " +
-  "Design for smart-glasses displays: pure black background, large high-contrast text, big touch targets. " +
+  "Design for smart-glasses displays: pure black background (#000), bright high-contrast text at least 24px, buttons at least 56px tall with generous spacing, no hover-only interactions, no tiny controls, minimal scrolling, and include a viewport meta tag so it fits a small screen. " +
   "Reply with ONLY the complete HTML document starting with <!doctype html>, no markdown fences, no commentary.";
 const astat = t => { $("a-status").textContent = t; };
 let artCur = null;
