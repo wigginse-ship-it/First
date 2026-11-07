@@ -118,20 +118,21 @@
   // ---------------- great overkill ----------------
   const _he = hurtEnemy;
   hurtEnemy = function (e, dmg, dir, m, crit) {
-    if (NG() && CTX && CTX.own && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill');
+    if (NG() && CTX && CTX.own && !pureHand() && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill'); // (a purified blade is never cruel)
     return _he(e, dmg, dir, m, crit);
   };
   // ---------------- every kill ----------------
+  const pureHand = () => !!(P && save && save.cw && save.cw[P.w] && save.cw[P.w].pure); // (a purified weapon in hand: cursedw.js)
   const _kill = killEnemy;
   killEnemy = function (e, dir, m) {
     const was = e.dead; const r = _kill(e, dir, m);
     if (!NG() || was || !e.dead) return r;
     m = m || {};
     const t = now(); L.kills.push(t); L.kills = L.kills.filter(k => t - k < 2);
-    if (L.kills.length >= 5) { L.kills = []; feed(WT.massacre, 'massacre'); }
+    if (L.kills.length >= 5) { L.kills = []; if (!pureHand()) feed(WT.massacre, 'massacre'); }
     if (m.pearl && !m.trump) ease(-WT.pearlKill, 'a Pearl kill');
     const ctx0 = CTX && CTX.e === e ? CTX : null;
-    if (ctx0 && ctx0.behind) feed(WT.backKill, e.w7turn > 0 ? 'a kill from behind (the glass turned it)' : 'a kill from behind');
+    if (ctx0 && ctx0.behind && !pureHand()) feed(WT.backKill, e.w7turn > 0 ? 'a kill from behind (the glass turned it)' : 'a kill from behind');
     // thrown into a hazard: the death came from the place, not from him, moments after he sent it flying
     if (!mine(m) && m.trump && !(e.burn > 0) && e.cHitT && t - e.cHitT < 2.5 && !trumpBusy()) feed(WT.hazardKill, 'a kill by a hazard');
     if (e.boss) ease(-WT.boss, 'a lord of a world falls');

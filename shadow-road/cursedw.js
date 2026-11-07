@@ -204,7 +204,7 @@
       if (mine && !c.pure && c.bf === 'pyre') pyre(e);
       if (mine && !c.pure && c.db === 'hunger') { LS.starve = 0; if (NG() && window.CURSE) CURSE.feed(.3, 'the cursed weapon feeds'); }
       if (mine && c.pure && NG() && window.CURSE) { // a purified weapon's kill draws a little of the curse out of the world: a ring of dawn-light off the body
-        const k = e.boss ? 2.5 : e.cursed ? .7 : (e.elite || e.champ) ? .5 : .22, d = CURSE.ease(k, 'a purified blade cleanses');
+        const k = e.boss ? 3 : e.cursed ? 1 : (e.elite || e.champ) ? .8 : .35, d = CURSE.ease(k, 'a purified blade cleanses');
         if (d > 0) { const sz = Math.min(1.6, (e.hh || 60) / 60); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .55, max: .55, r: 60 + 50 * sz + (e.cursed ? 40 : 0), col: '#FFE9A8', flat: 1 });
           for (let i = 0; i < (e.cursed || e.boss ? 14 : 7) && parts.length < 420; i++) parts.push({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: rand(6, (e.hh || 60) * .9), vx: rand(-20, 20), vy: 0, vz: rand(50, 120), life: .8, max: .8, col: pick(['#FFF4C8', '#FFE08A', '#FFFFFF']), size: rand(1.4, 2.6), shape: 'star', rot: 0, vr: 4 });
           LS.pureN = (LS.pureN || 0) + 1; if (e.cursed || e.boss || LS.pureN % 6 === 1) floatText(e.x, e.y, (e.hh || 60) + 34, e.cursed || e.boss ? 'THE CURSE IS DRAWN OUT' : 'THE CURSE EASES', '#FFE9A8', 12); } }
