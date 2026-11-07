@@ -295,10 +295,14 @@
         D:    { name: 'Wake Rush', dur: .5, h: [.2, .62], x0: 0, x1: 82, dmg: 15, kb: 300, lunge: 430, power: 1, depth: 24, echoAt: 0, echoDx: -10, desc: 'A running cut. Leaves an echo where you set off.' },
         DX:   { name: 'Breaking Wave', dur: .64, h: [.5, .72], x0: 0, x1: 90, dmg: 22, kb: 200, hop: 300, lunge: 220, airCarry: 1, bounce: 1, shock: 90, power: 2, desc: 'A leaping cleave off the run.' },
         R:    { name: 'Slip Tide', dur: .42, h: [.3, .62], x0: -30, x1: 82, dmg: 14, kb: 240, lunge: 250, power: 1, echoAt: 0, echoDx: -30, desc: 'Out of a dodge. Leaves an echo behind you.' },
+        LH:   { name: 'Crescent Reap', dur: .44, h: [.3, .58], x0: -6, x1: 86, dmg: 13, kb: 60, launch: 420, depth: 24, lunge: 40, power: 1, echoAt: .5, echoDx: 20, desc: 'Attack, Heavy: a rising crescent that reaps them up into the air. Leaves an echo.' },
+        LLH:  { name: 'Undertow Sweep', dur: .56, h: [.24, .7], x0: 0, x1: 96, dmg: 7, kb: 50, around: 1, multi: .16, depth: 32, lunge: 120, power: 1, desc: 'Attack ×2, Heavy: crouched low, the blade wheels twice round at their ankles; your echoes sweep with you.' },
+        HL:   { name: 'Moonback Cut', dur: .38, h: [.24, .6], x0: -44, x1: 90, dmg: 14, kb: 240, lunge: 80, power: 1, depth: 26, echoAt: 0, echoDx: -12, poseFrom: 'LL', desc: 'Heavy, Attack: down from the vault, a turning backhand through both sides of where you land. Leaves an echo.' },
       }),
       rows: (t) => [['echoes copy your blows; a kill they make leaves another', 'Attack ×3', t.LLL.name], ['vault over them, land behind', 'Heavy', t.H.name], ['echoes rush home', 'Heavy, echoes standing', t.Hr.name],
         ['roll on through them', 'Heavy, Heavy', t.HH.name], ['run back along your path', 'Hold Heavy, let go in the gleam', t.HC.name], ['set an echo down · trade places with one', 'Hold Attack', t.X.name + ' · ' + t.Xs.name],
-        ['a plunge', 'Jump, Heavy', t.JH.name], ['leaves an echo', 'Dodge, Attack · Run, Attack', t.R.name + ' · ' + t.D.name]],
+        ['a plunge', 'Jump, Heavy', t.JH.name], ['leaves an echo', 'Dodge, Attack · Run, Attack', t.R.name + ' · ' + t.D.name],
+        ['reap them up; leaves an echo', 'Attack, Heavy', t.LH.name], ['a low double wheel', 'Attack ×2, Heavy', t.LLH.name], ['both sides of the landing', 'Heavy, Attack', t.HL.name]],
       pick(m) { if (m.key === 'H' && E.list.length) return WP().tree.Hr; if (m.key === 'Hr' && !E.list.length) return WP().tree.H; if (m.key === 'X' && E.list.length) return WP().tree.Xs; if (m.key === 'Xs' && !E.list.length) return WP().tree.X; return m; },
       began(m) {
         if (m.rewind) startRewind(m);
@@ -448,6 +452,11 @@
       D: KF([[0, { ...T2, a: 1.9, g: .4, l: .45, s: 7, lg: [16, -16, 9, 0], st: 1.1, fl: 16 }], [.2, { a: 2.1 }], [.62, { a: -.5, g: -.3, l: .4, y: .3 }], [1, { a: -.2, g: -.2, l: .15, s: 3, st: 1, fl: 4, lg: [10, -10, 4, 3] }]], { tr: [[.2, .62]] }),
       DX: KF([[0, { ...T2, a: 1.4, g: .2, l: .3, s: 6, lg: [12, -12, 8, 4] }], [.4, { a: -2.6, g: -1, l: -.3, s: 0, r: -.15, lg: [6, -10, 14, 8] }], [.72, { a: 1.3, g: .3, l: .6, r: .3, s: 8, lg: [16, -14, 10, 1] }], [1, { a: 1.1, l: .35, r: 0, s: 6 }]], { tr: [[.5, .72]], trW: 8 }),
       R: KF([[0, { ...T2, a: .3, g: 0, l: .3, s: 7, lg: [14, -14, 9, 2] }], [.3, { a: -.2, sp: -1.4 }], [.62, { a: .2, sp: -TWO, l: .35, y: .2 }], [1, { a: .6, sp: -TWO, l: .1, s: 3, lg: [10, -10, 4, 3] }]], { tr: [[.3, .62]], fn: (pose, m, k) => { if (k > .3 && k < .66) pose.flat = { r: (WP().reach || 60) + 16, k: spn(k, .3, .62), rev: true, col: pal().trail, w: 5 }; } }),
+      // low behind him, then up through them in a crescent, rising onto his toes
+      LH: KF([[0, { ...T2, a: -1.2, g: -.4, l: .2, s: 7, cr: 1, lg: [14, -12, 11, 8] }], [.3, { a: -1.5, g: -.6, s: 9 }], [.58, { a: 2.2, g: .6, l: -.2, s: 1, cr: 0, lg: [8, -12, 3, 7], oy: -6 }], [1, { a: 1.6, g: .3, l: 0, s: 3, oy: 0, lg: [10, -10, 4, 3] }]], { tr: [[.3, .58]], trW: 8 }),
+      // crouched, two wheels of the blade at ankle height
+      LLH: KF([[0, { ...T2, a: .2, g: 0, l: .3, s: 10, cr: 1, lg: [16, -14, 12, 10] }], [.24, { a: .1, sp: 0 }], [.7, { a: .1, sp: -2 * TWO }], [1, { a: .5, sp: -2 * TWO, cr: 0, s: 4, l: .1, lg: [10, -10, 4, 3] }]],
+        { fn: (pose, m, k) => { if (k > .22 && k < .72) pose.flat = { r: (WP().reach || 60) + 22, k: (k * 2.2) % 1, rev: false, col: pal().trail, w: 6 }; } }),
     });
   }
 
@@ -497,9 +506,13 @@
         D:    { name: 'Glissando', dur: .6, h: [.08, .75], x0: 0, x1: 80, dmg: 3, kb: 90, lunge: 400, multi: .06, depth: 24, power: 1, desc: 'A sliding run of rising notes.' },
         DX:   { name: 'Rimshot', dur: .62, h: [.42, .66], x0: 0, x1: 76, dmg: 20, kb: 320, hop: 300, lunge: 260, airCarry: 1, bounce: 1, power: 2, wall: 1, desc: 'Vault on the staff, both feet in.' },
         R:    { name: 'Upbeat', dur: .45, h: [.22, .5], x0: 0, x1: 78, dmg: 12, kb: 40, launch: 540, launcher: 1, power: 1, desc: 'Out of a dodge: flick them up. Jump to follow.' },
+        LH:   { name: 'Sforzando', dur: .5, h: [.3, .52], x0: 0, x1: 84, dmg: 15, kb: 300, ends: 1, depth: 26, lunge: 80, power: 2, wall: 1, desc: 'Attack, Heavy: an accented overhead, both blades, front and back: it throws them.' },
+        LLLH: { name: 'Da Capo', dur: .74, h: [.14, .8], x0: 0, x1: 84, dmg: 5, kb: 80, around: 1, multi: .1, depth: 30, power: 1, fin: { at: .82, h: [.82, .95], dmg: 16, kb: 300, launch: 260, power: 2, multi: 0 }, poseFrom: 'LLLL', desc: 'Attack ×3, Heavy: back to the top: the staff spins round you, and ends on a ringing chord.' },
+        HHL:  { name: 'Cadenza', dur: .46, h: [.2, .6], x0: 0, x1: 96, dmg: 12, kb: 200, lunge: 300, ends: 1, depth: 26, power: 1, poseFrom: 'HC', desc: 'Heavy ×2, Attack: off the Drumroll, a flourish that slides through them, both blades out.' },
       }),
       rows: (t) => [['on the beat: harder, tempo up; each flings a note at another foe', 'Attack, in time with the ring', t.L.name + ' → ' + t.LLLL.name], ['fly in on the rotor; at 3+ notes the street pulses', 'Heavy', t.H.name],
-        ['dash through; ON a beat, time holds', 'Hold Heavy', t.HC.name], ['drill down the street', 'Heavy, Heavy', t.HH.name], ['full tempo: the music plays itself', 'four notes', 'Encore'], ['ticks once a beat', 'Hold Attack', t.X.name], ['a sliding run', 'Run, Attack', t.D.name], ['launch', 'Dodge, Attack', t.R.name]],
+        ['dash through; ON a beat, time holds', 'Hold Heavy', t.HC.name], ['drill down the street', 'Heavy, Heavy', t.HH.name], ['full tempo: the music plays itself', 'four notes', 'Encore'], ['ticks once a beat', 'Hold Attack', t.X.name], ['a sliding run', 'Run, Attack', t.D.name], ['launch', 'Dodge, Attack', t.R.name],
+        ['an accent: both blades, it throws them', 'Attack, Heavy', t.LH.name], ['spin round you, end on a chord', 'Attack ×3, Heavy', t.LLLH.name], ['slide on through after the roll', 'Heavy ×2, Attack', t.HHL.name]],
       began(m) {
         if (m.key === 'SIG') return;
         const now = clock(), pr = S.presses.length ? S.presses[S.presses.length - 1] : now, t = now - pr < .3 ? pr : now;
@@ -595,6 +608,8 @@
       D: KF([[0, { ...T2, a: 1.2, g: .3, l: .5, s: 8, lg: [18, -16, 10, 0], st: 1.12, fl: 18, oy: 6 }], [.75, { a: 1, g: .3 }], [1, { a: .5, g: 0, l: .15, s: 3, st: 1, fl: 4, oy: 0, lg: [10, -10, 4, 3] }]], { fn: (pose, m, k) => { pose.grip = .3 + Math.sin(k * 40) * .5; if (k < .78) pose.flat = { r: (WP().reach || 60), k: (k * 6) % 1, rev: false, col: pal().trail, w: 4 }; } }),
       DX: KF([[0, { ...T2, a: 1.4, g: -.2, l: .3, s: 6 }], [.35, { a: 1.6, g: -1.6, l: -.3, r: -.5, lg: [18, 12, 4, 6], s: 0 }], [.66, { a: 1.2, g: -1.4, l: -.6, r: -.9, lg: [24, 20, 0, 2] }], [1, { a: .8, g: -.6, l: .1, r: 0, s: 4, lg: [10, -10, 4, 3] }]]),
       R: KF([[0, { ...T2, a: 1.4, g: .2, l: .35, s: 8, lg: [14, -14, 9, 2] }], [.22, { a: 1.6 }], [.5, { a: -1.6, g: -.6, l: -.2, s: 2, lg: [8, -10, 3, 5], y: .3 }], [1, { a: -1, g: -.4, l: 0 }]], { tr: [[.22, .5]] }),
+      // up over his head and down hard, the whole staff, the far blade swinging up behind
+      LH: KF([[0, { ...T2, a: .5, g: 0, l: .05 }], [.3, { a: -2.5, g: -.3, l: -.2, s: 2, lg: [7, -11, 3, 6] }], [.52, { a: 1.1, g: .3, l: .55, s: 10, lg: [17, -15, 11, 0], sh: 3 }], [1, { a: .9, g: .1, l: .25, s: 6, sh: 1 }]], { tr: [[.3, .52]], trW: 8 }),
     });
   }
 
@@ -651,9 +666,13 @@
         D:    { name: 'Tidal Bore', dur: .6, h: [.1, .7], x0: 0, x1: 74, dmg: 5, kb: 120, lunge: 380, multi: .12, depth: 24, lift: 1, desc: 'The moon dragged through them on the run.' },
         DX:   { name: 'Eclipse', dur: .66, h: [.5, .72], x0: 0, x1: 80, dmg: 22, kb: 200, hop: 300, lunge: 220, airCarry: 1, bounce: 1, shock: 100, power: 2, eclipse: 1, desc: 'Leaping slam; the adrift near it crash.' },
         R:    { name: 'Ebb Hook', dur: .5, h: [.3, .5], x0: 0, x1: 72, dmg: 12, kb: 90, lift: 2, power: 1, hook: 1, desc: 'Out of a dodge: the chain hooks one adrift and hauls you up to it.' },
+        LH:   { name: 'Neap Swing', dur: .48, h: [.3, .5], x0: 0, x1: 80, dmg: 12, kb: 30, launch: 160, lunge: 40, depth: 26, lift: 2, power: 1, poseFrom: 'X', desc: 'Attack, Heavy: the moon swung low and up under them: +2 pull.' },
+        LLH:  { name: 'Moonset', dur: .56, h: [.4, .6], x0: -10, x1: 88, dmg: 18, kb: 160, around: 1, depth: 30, power: 2, meteor: 1, shock: 70, poseFrom: 'HC', desc: 'Attack ×2, Heavy: the moon brought down overhead, all round: anyone adrift it strikes comes crashing down.' },
+        HL:   { name: 'Perigee', dur: .5, h: [.3, .62], x0: 0, x1: 84, dmg: 11, kb: 40, around: 1, gather: 1, lift: 1, tether: 1, depth: 30, power: 1, poseFrom: 'LLL', desc: 'Heavy, Attack: the chain drawn in close: the foes near are pulled into a circle of it (+1 pull).' },
       }),
       rows: (t) => [['3 pulls float them adrift', 'Attack ×3', t.LLL.name], ['the adrift crash down', 'Heavy, foes adrift', t.Hs.name], ['grab one far off, drag it back', 'Heavy, none adrift', t.H.name],
-        ['sling the adrift like stones', 'Heavy, Heavy', t.HH.name], ['an adrift foe struck flies off, caroming into the rest', 'Run, Attack · Run, Heavy · Jump, Heavy', 'Billiards'], ['everything near falls up', 'Hold Heavy, gleam', t.HC.name], ['adrift at once', 'Hold Attack', t.X.name], ['up to the adrift', 'Dodge, Attack', t.R.name], ['they fall with you', 'Jump, Heavy', t.JH.name]],
+        ['sling the adrift like stones', 'Heavy, Heavy', t.HH.name], ['an adrift foe struck flies off, caroming into the rest', 'Run, Attack · Run, Heavy · Jump, Heavy', 'Billiards'], ['everything near falls up', 'Hold Heavy, gleam', t.HC.name], ['adrift at once', 'Hold Attack', t.X.name], ['up to the adrift', 'Dodge, Attack', t.R.name], ['they fall with you', 'Jump, Heavy', t.JH.name],
+        ['+2 pull, up under them', 'Attack, Heavy', t.LH.name], ['the adrift it strikes crash', 'Attack ×2, Heavy', t.LLH.name], ['draw them in close', 'Heavy, Attack', t.HL.name]],
       pick(m) { if (m.key === 'H' && adrift().length) return WP().tree.Hs; if (m.key === 'Hs' && !adrift().length) return WP().tree.H; return m; },
       began(m) {
         if (m.spring) { spring(m); P.seq = 'H'; }
@@ -814,9 +833,12 @@
         D:    { name: 'Comet Train', dur: .6, h: [.15, .62], x0: 0, x1: 66, dmg: 14, kb: 260, lunge: 420, power: 1, train: 1, desc: 'Moons stream behind you, cutting.' },
         DX:   { name: 'Wheel Rush', dur: .6, h: [.15, .85], x0: 0, x1: 60, dmg: 6, kb: 160, lunge: 380, multi: .12, around: 1, power: 1, desc: 'Roll through them like a wheel.' },
         R:    { name: 'Ring Guard', dur: .4, h: [.2, .5], x0: 0, x1: 60, dmg: 10, kb: 200, around: 1, power: 1, guard: 1, desc: 'Out of a dodge: moons close in, shots break on them.' },
+        LH:   { name: 'Gibbous Cut', dur: .42, h: [.36, .56], x0: 0, x1: 78, dmg: 15, kb: 200, power: 1, depth: 24, cast: 1, poseFrom: 'H', desc: 'Attack, Heavy: a heavy backhand slice, and the ring flies on off the end of it to join your orbit.' },
+        LLLH: { name: 'New Moon', dur: .55, h: [.25, .6], x0: 0, x1: 74, dmg: 14, kb: 240, around: 1, power: 2, newmoon: 1, poseFrom: 'LLLL', desc: 'Attack ×3, Heavy: every moon bursts out from you in a ring and back, cutting all round.' },
       }),
       rows: (t) => [['casts join your orbit', 'Attack ×3', t.L.name + ' · ' + t.LLL.name], ['each at a different foe', 'Heavy, moons out', t.Hl.name], ['grind the nearest', 'Heavy, Heavy', t.HH.name],
-        ['line up, fire the line', 'Hold Heavy, gleam', t.HC.name], ['orbit swings wide', 'Hold Attack', t.X.name], ['shots break on them', 'Dodge, Attack', t.R.name], ['moons trail you', 'Run, Attack', t.D.name]],
+        ['line up, fire the line', 'Hold Heavy, gleam', t.HC.name], ['orbit swings wide', 'Hold Attack', t.X.name], ['shots break on them', 'Dodge, Attack', t.R.name], ['moons trail you', 'Run, Attack', t.D.name],
+        ['slice, and the ring flies on', 'Attack, Heavy', t.LH.name], ['every moon bursts out and back', 'Attack ×3, Heavy', t.LLLH.name]],
       pick(m) { const n = C.moons.filter(o => o.mode === 'orbit').length; if (m.key === 'H' && n) return WP().tree.Hl; if (m.key === 'Hl' && !n) return WP().tree.H; return m; },
       began(m) {
         // (loosed, the next Heavy is the second of a pair: Heavy, Heavy sends them grinding)
@@ -825,6 +847,7 @@
         if (m.guard) { C.guard = 1.4; sfx('hit-metal', .4); }
         if (m.eclipse) { const e = nearest(P.x, P.y, 280); if (e && C.moons.length) { C.eclipse = { e, t: 0 }; for (const o of C.moons) o.mode = 'grind'; note('ECLIPSE', pal().edge, 13); ev('eclipse'); } }
         if (m.syzygy) syzygy(m);
+        if (m.newmoon && C.moons.length) { for (const o of C.moons) { o.mode = 'burst'; o.k = 0; } note('NEW MOON', pal().edge, 13); ev('newmoon'); }
         if (m.shower) for (const o of C.moons) { const e = nearest(o.x, o.y, 240, null, (q) => q.z < 60); if (e) { o.mode = 'fall'; o.tgt = e; o.k = 0; o.fx = o.x; o.fy = o.y; o.fz = o.z; } }
       },
       extras(m, k) {
@@ -948,12 +971,23 @@
         DX:   { name: 'Breakwater', dur: .62, h: [.12, .72], x0: 0, x1: 54, dmg: 18, kb: 380, lunge: 380, power: 2, carry: 1, wall: 1, depth: 28, desc: 'Shield first: shove them all ahead of you.' },
         R:    { name: 'Hermit Spin', dur: .5, h: [.12, .82], x0: 0, x1: 64, dmg: 5, kb: 160, around: 1, multi: .12, power: 1, desc: 'Out of a dodge: tucked in the shell, spinning.' },
         RH:   { name: 'Turnabout Thrust', dur: .5, h: [.18, .58], x0: 0, x1: 230, dmg: 20, kb: 300, lunge: 600, power: 2, depth: 24, poseFrom: 'HH', desc: 'Out of a dodge, Heavy: the spear thrust out at its full length as you come up out of the roll, and you drive on behind it.' },
+        // the branches: a light string broken by a Heavy, and the Heavies followed by Attack
+        LH:   { name: 'Shell Bash', dur: .36, h: [.3, .5], x0: 0, x1: 60, dmg: 11, kb: 280, lunge: 170, power: 1, depth: 26, bash: 1, desc: 'Attack, Heavy: the shell\'s face driven into them: they reel.' },
+        LHH:  { name: 'Shell Catapult', dur: .5, h: [.36, .56], x0: 0, x1: 64, dmg: 14, kb: 60, launch: 560, launcher: 1, power: 2, depth: 28, catapult: 1, desc: 'Attack, Heavy, Heavy: the shell scooped under them and heaved: they fly up off it (+1 layer). Jump to follow.' },
+        LLH:  { name: 'Tidewheel', dur: .56, h: [.26, .64], x0: -34, x1: 152, dmg: 14, kb: 230, power: 1, depth: 46, lunge: 40, desc: 'Attack ×2, Heavy: the spear swept round flat at its full length, a long arc across the street.' },
+        LLLH: { name: 'Pearl Volley', dur: .72, h: [.14, .6], x0: 0, x1: 150, dmg: 5, kb: 40, multi: .09, power: 1, depth: 22, lunge: 60, volley: 1, fin: { at: .64, h: [.64, .78], dmg: 14, kb: 300, power: 2, multi: 0 }, desc: 'Attack ×3, Heavy: a flurry of long thrusts and a driving last one; every layer of the pearl is spent as one more thrust of nacre down the line.' },
+        HL:   { name: 'Limpet Riposte', dur: .62, h: [.5, .7], x0: 0, x1: 150, dmg: 14, kb: 220, power: 1, depth: 22, parry: .48, desc: 'Heavy, Attack: the shell raised a beat, then the spear. A blow caught on it in that beat (from in front) is a RIPOSTE: +1 layer, and the thrust lands far harder.' },
+        HLL:  { name: 'Pole Leap', dur: .66, h: [.5, .74], x0: -10, x1: 70, dmg: 18, kb: 260, hop: 340, lunge: 270, airCarry: 1, bounce: 1, shock: 100, power: 2, depth: 28, ram: 1, desc: 'Heavy, Attack, Attack: vault on the spear\'s butt over the street and come down on them shield-first (+1 layer if it lands).' },
+        HHL:  { name: 'Skewer and Toss', dur: .74, h: [.12, .36], x0: 0, x1: 140, dmg: 12, kb: 0, lunge: 220, power: 2, depth: 22, hurl: 1, desc: 'Heavy, Heavy, Attack: a thrust that skewers them, lifts them overhead on the point and pitches them over your shoulder.' },
       }),
       rows: (t) => [['guard: blows become layers; full, they are spat back', 'Hold Heavy', 'Clamshell'], ['charge, the pearl bursts, shards ricochet', 'let go of the guard', t.HC.name], ['spend every layer', 'Heavy, Heavy', t.HH.name],
-        ['skewer, pin, and home again', 'Heavy', t.H.name], ['one layer as a shot', 'Hold Attack', t.X.name], ['held fast', 'Attack ×3', t.LLL.name], ['ride it', 'Run, Attack', t.D.name], ['the spear at full length', 'Dodge, Heavy', t.RH.name]],
+        ['skewer, pin, and home again', 'Heavy', t.H.name], ['one layer as a shot', 'Hold Attack', t.X.name], ['held fast', 'Attack ×3', t.LLL.name], ['ride it', 'Run, Attack', t.D.name], ['the spear at full length', 'Dodge, Heavy', t.RH.name],
+        ['they reel · they fly up off it (+1 layer)', 'Attack, Heavy · then Heavy', t.LH.name + ' → ' + t.LHH.name], ['a long flat arc', 'Attack ×2, Heavy', t.LLH.name], ['spend every layer as another thrust', 'Attack ×3, Heavy', t.LLLH.name],
+        ['catch a blow in the beat: the counter', 'Heavy, Attack', t.HL.name], ['vault, land shield-first', 'Heavy, Attack, Attack', t.HLL.name], ['skewer, lift, pitch them behind', 'Heavy, Heavy, Attack', t.HHL.name]],
       pick(m) { if (m.key === 'H' && P.state === 'charge' && clock() - G.lastCatch < .35) return WP().tree.HC; return m; },
       guard(dmg, fromX) {
         const front = Math.sign(fromX - P.x) === P.facing || Math.abs(fromX - P.x) < 12;
+        if (front && riposte()) return true;
         if (P.state !== 'charge' || !front) return false;
         const just = (P.ct || 0) < .22 + .03 * stat().p.grd, src = typeof HIT_SRC !== 'undefined' ? HIT_SRC : null;
         // OVERFLOW: the pearl already full, what is caught is spat straight back at whoever sent it
@@ -971,9 +1005,16 @@
         if (m.lance) { const L = G.layers; G.layers = 0; P.move = Object.assign({}, P.move, { x1: P.move.x1 + Math.round(40 * L * RK()), dmg: P.move.dmg + 8 * L, layersUsed: L }); if (L) { note('PEARL LANCE ×' + L, '#FFF2C0', 13); ev('lance'); } }
         if (m.burst) P._ssL = G.layers;
         if (m.spit && G.layers > 0) { G.layers--; ev('spit'); addObj({ kind: 'spit', x: P.x + fc() * 30, y: P.y, z: P.z + 42, dir: fc(), d: 0, hit: new Set(), n: 2, m, bw: 40, bh: 40 }); sfx('shoot'); }
+        // Pearl Volley: every layer becomes one more thrust after the last
+        if (m.volley) { const L = G.layers; G.layers = 0; P.move = Object.assign({}, P.move, { volleyN: L }); if (L) { note('PEARL VOLLEY ×' + L, '#FFF2C0', 13); ev('volley'); } }
+        if (m.hurl) P._ssToss = { id: P.moveId, list: [] };
       },
       extras(m, k) {
         if (m.burst) once('burst', k, .52, () => nacreBurst(m));
+        if (m.volleyN) for (let i = 0; i < m.volleyN; i++) once('vol' + i, k, .8 + i * .035, () => volleyThrust(m, i));
+        if (m.parry && k < m.parry && Math.random() < .25) sparkle(P.x + fc() * 22, P.y, P.z + 44, 1);
+        if (m.parry) once('rip', k, m.parry, () => { P.vx = fc() * (m.riposted ? 520 : 380); if (m.riposted) addGhost(false); });
+        if (m.hurl) skewerToss(m, k);
         if (m.carry && k < .72) for (const [e] of P.hits) if (e && !e.dead && !e.boss && e.x !== undefined) { e.x = P.x + fc() * (e.hw + 30); e.y += (P.y - e.y) * .3; e.state = 'hurt'; e.t = Math.max(e.t, .3); }
         return false;
       },
@@ -981,6 +1022,8 @@
         // (one layer a ram, however many it lands on)
         if (m.ram && P._pmRamGot !== P.moveId) { P._pmRamGot = P.moveId; add(1); ev('ram'); }
         if (m.snap && !e.boss && !e.dead) { e.state = 'hurt'; e.t = .9; e.plan = null; e.vx = 0; }
+        if (m.bash && !e.boss && !e.dead) { e.state = 'hurt'; e.t = Math.max(e.t || 0, .6); e.plan = null; }
+        if (m.catapult && P._pmCatGot !== P.moveId && !e.boss) { P._pmCatGot = P.moveId; add(1); ev('catapult'); }
       },
       obj(o, dt) { if (o.kind === 'jav') return stepJav(o, dt); if (o.kind === 'shard') return stepShard(o, dt); if (o.kind !== 'spit') return;
         if (o.tgt && !o.tgt.dead) { o.dir = Math.sign(o.tgt.x - o.x) || o.dir; o.y += (o.tgt.y - o.y) * Math.min(1, dt * 6); }
@@ -1000,6 +1043,8 @@
             const pd = o.ph === 2 ? -o.dir : o.dir; drawPic(o.x - pd * 40, o.y - o.z, pd > 0 ? 0 : PI, 1, .85, 0); ctx.restore();
             if (o.ph === 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ring(o.x, o.y, 0, 20 + 4 * Math.sin(t * 20), .6, 2); ctx.restore(); } })]);
           if (o.kind === 'shard') list.push([o.y + .3, () => onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(o.x, o.y - o.z, 10, .6); ctx.restore(); PN.art.pearlBody(o.x, o.y - o.z, 3, t, 1, pal()); })]);
+          if (o.kind === 'vthrust') list.push([o.y + .3, () => onMain(() => { const a = Math.max(0, 1 - o.t / o.max), x1 = o.x + o.dir * o.len * Math.min(1, o.t / .06); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+            ctx.strokeStyle = `rgba(255,242,192,${(.8 * a).toFixed(2)})`; ctx.lineWidth = 7 * a + 1; ctx.beginPath(); ctx.moveTo(o.x, o.y - o.z); ctx.lineTo(x1, o.y - o.z); ctx.stroke(); ctx.strokeStyle = `rgba(255,255,255,${a.toFixed(2)})`; ctx.lineWidth = 1.6; ctx.stroke(); glow(x1, o.y - o.z, 12, .6 * a); ctx.restore(); })]);
           if (o.kind === 'burst') list.push([o.y + .3, () => onMain(() => { const k = o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 10; i++) { const a = i / 10 * TWO + k, r = o.r * k; glow(o.x + Math.cos(a) * r, o.y + Math.sin(a) * r * .32 - 20, 8, .6 * (1 - k)); } ctx.restore(); })]);
         }
       },
@@ -1022,6 +1067,33 @@
         for (const e of foes()) { if (o.hit.has(e) || segD(e, px, py, o.x, o.y) > e.hw + 8 || e.z > 80) continue; o.hit.add(e); hitE(e, 8, -o.dir, o.m, { kb: 160, launch: 120 }); }
         if (d < 14) { o.gone = true; sparkle(P.x + fc() * 20, P.y, P.z + 44, 6); sfx('hit-metal', .4); } }
       if (o.t > 2.6) o.gone = true;
+    }
+    // the Limpet Riposte: a blow caught on the raised shell in its beat (from in front) turns the thrust into a counter
+    function riposte() {
+      const m = P.move; if (P.state !== 'atk' || !m || m.pm !== 'shieldspear' || !m.parry || P.t / m.dur >= m.parry || m.riposted) return false;
+      const src = typeof HIT_SRC !== 'undefined' ? HIT_SRC : null;
+      add(1); G.lastCatch = clock(); ev('riposte'); P.inv = Math.max(P.inv, .35); hitstop = Math.max(hitstop, .1); sfx('hit-metal', .8); sfx('hit-crystal');
+      floatText(P.x, P.y, P.z + 86, 'RIPOSTE!', '#FFF2C0', 16); sparkle(P.x + P.facing * 18, P.y, P.z + 40, 12);
+      if (src && src.kind === 'proj' && src.p) src.p.life = 0;
+      if (src && src.e && !src.e.boss) { src.e.state = 'hurt'; src.e.t = .7; src.e.plan = null; src.e.vx = 0; }
+      P.move = Object.assign({}, m, { riposted: 1, perfect: 1, dmg: Math.round(m.dmg * 1.8), kb: m.kb + 160, x1: m.x1 + 30 });
+      return true;
+    }
+    // one layer of the pearl thrown down the line as a thrust of nacre (Pearl Volley)
+    function volleyThrust(m, i) {
+      const len = (m.x1 || 150) + 40, y = P.y + (i % 2 ? 6 : -6);
+      for (const e of foes()) { const dx = (e.x - P.x) * fc(); if (dx < -6 || dx > len + e.hw || Math.abs(e.y - y) > 24 + e.hw * .3 || e.z > 90) continue;
+        hitE(e, 9, fc(), m, { kb: 90 + 30 * i, launch: 0 }); sparkle(e.x, e.y, e.z + e.hh * .55, 5, ['#FFFFFF', '#FFF2C0']); }
+      addObj({ kind: 'vthrust', x: P.x + fc() * 30, y, z: P.z + 44, dir: fc(), len: len - 30, max: .16, bw: len + 30, bh: 60 }); sfx('hit-crystal', .35); ev('volleyThrust');
+    }
+    // Skewer and Toss: whoever the point caught is lifted overhead on it, then pitched over his shoulder behind him
+    function skewerToss(m, k) {
+      const T = P._ssToss; if (!T || T.id !== P.moveId) return;
+      for (const [e] of P.hits) if (e && enemies.includes(e) && !e.dead && !e.boss && e.hw !== undefined && !T.list.includes(e) && T.list.length < 2) T.list.push(e);
+      const L = T.list.filter(e => !e.dead && enemies.includes(e));
+      if (k < .58) { const u = sst(spn(k, .3, .58)); L.forEach((e, i) => { e.x = P.x + fc() * (lerp(m.x1 * .6, 18, u) + i * 14); e.y += (P.y - e.y) * .3; e.z = lerp(4, 84, u) + i * 6; e.state = 'hurt'; e.t = Math.max(e.t || 0, .4); e.vx = 0; e.vz = 0; e.plan = null; }); }
+      once('toss', k, .58, () => { if (!L.length) return; shakeMag = Math.max(shakeMag, 7); sfx('slam'); sfx('whoosh'); ev('toss'); note(L.length > 1 ? 'TOSSED ×' + L.length : 'TOSSED', '#FFF2C0', 14);
+        L.forEach((e, i) => { e.x = clamp(P.x - fc() * (e.hw + 34 + i * 20), leftWall() + 10, rightWall() - 10); e.z = 50; hitE(e, 14, -fc(), m, { kb: 300, launch: 340, wall: 1 }); dust(e.x, e.y, 6); }); });
     }
     // the guard let go: where the charge stops, the pearl bursts, and its shards hop on from foe to foe
     function nacreBurst(m) {
@@ -1055,6 +1127,24 @@
       D: KF([[0, { a: 1.2, e: .6, g: -1.6, l: .2, s: 10, cr: 1, lg: [14, -12, 12, 10], fl: 18, st: 1.05 }], [1, { a: 1.2, s: 10 }]], { fn: (pose, m, k) => { pose.yaw = .4 + .1 * Math.sin(k * 20); } }),
       DX: KF([[0, { a: .2, e: 1.5, g: -1.5, l: .5, s: 7, lg: [17, -16, 10, 0], st: 1.1, fl: 16, y: -.2 }], [.72, { a: .1, l: .6 }], [1, { a: .4, e: .9, g: -.8, l: .15, s: 3, st: 1, fl: 4, lg: [10, -10, 4, 3], y: 0 }]]),
       R: KF([[0, { a: .9, e: 1.6, g: -1.5, l: .4, s: 10, cr: 1, lg: [12, -12, 12, 10] }], [.12, { sp: 0 }], [.82, { sp: -3 * TWO }], [1, { sp: -3 * TWO, cr: 0, s: 3, l: .1, lg: [10, -10, 4, 3] }]]),
+      // the branches. The shell's face punched out, the whole weight behind it
+      LH: KF([[0, { a: .4, e: .9, g: -.6, l: .05 }], [.3, { a: .4, e: 1.6, g: -1.5, l: -.15, y: -.4, s: 4, lg: [9, -14, 4, 6] }], [.5, { a: .05, e: 1.2, g: -1.6, l: .55, y: .2, s: 9, lg: [18, -16, 11, 0], sh: 4, st: 1.08, fl: 12 }], [1, { a: .4, e: .8, g: -.6, l: .1, s: 3, sh: 0, y: 0, st: 1, fl: 2, lg: [10, -10, 4, 3] }]]),
+      // crouched under them behind the shell, then heaved up off the knees
+      LHH: KF([[0, { a: .2, e: 1.5, g: -1.5, l: .4, s: 10, cr: 1, lg: [14, -12, 12, 10] }], [.34, { a: -.2, e: 1.4, l: .5, s: 12 }], [.52, { a: 1.6, e: .9, g: -1.6, l: -.2, s: 0, cr: 0, lg: [8, -12, 3, 6], oy: -6 }], [1, { a: .9, e: .9, g: -.8, l: .05, s: 3, oy: 0, lg: [10, -10, 4, 3] }]]),
+      // the spear at its length, carried round flat across the street
+      LLH: KF([[0, { a: .3, e: .4, g: 0, l: .1, s: 5, y: .35, lg: [14, -14, 9, 2] }], [.26, { a: .15, e: 0, x: 1, y: .55, l: -.05, s: 6 }], [.64, { a: -.1, x: 1, y: -.6, l: .35, s: 8, lg: [17, -15, 10, 1] }], [1, { a: .3, e: .5, x: 0, y: 0, l: .1, s: 3, lg: [10, -10, 4, 3] }]],
+        { fn: (pose, m, k) => { if (k > .24 && k < .68) pose.flat = { r: Math.min(150, (m.x1 || 120) * .7), k: spn(k, .26, .64), rev: true, col: pal().trail, w: 6 }; } }),
+      // jab after jab at a spear's length, then the long one; the layers fly on after it
+      LLLH: KF([[0, { a: .1, e: .2, g: 0, l: .2, s: 5, lg: [15, -13, 8, 1] }], [.62, { a: .05, l: .3 }], [.72, { a: 0, e: 0, x: 1, l: .6, s: 10, lg: [20, -17, 12, 0], sh: 5, st: 1.1, fl: 14 }], [1, { a: .3, e: .5, x: 0, l: .1, s: 3, sh: 0, st: 1, fl: 2, lg: [10, -10, 4, 3] }]],
+        { fn: (pose, m, k) => { if (k > .12 && k < .62) { pose.ext = .35 + .65 * Math.abs(Math.sin(k * 30)); pose.arm = .08 * Math.sin(k * 19); pose.streak = { len: 70, a: .5 + .3 * pose.ext, col: pal().trail }; } else if (k >= .66 && k < .97) pose.streak = { len: Math.min(240, (m.x1 || 120) - 20), a: .9, col: m.volleyN ? 'rgba(255,242,192,.98)' : pal().trail }; } }),
+      // the shell raised as in the guard, a beat; then the spear out from behind it
+      HL: KF([[0, { a: -.25, e: 1.5, g: -1.45, l: .1, s: 6, y: -.25, lg: [12, -13, 6, 5] }], [.46, { a: -.25, e: 1.5, g: -1.45, s: 7 }], [.56, { a: 0, e: 0, g: 0, x: 1, l: .55, s: 9, y: .1, lg: [19, -17, 11, 0], sh: 4 }], [1, { a: .3, e: .5, x: 0, l: .1, s: 3, sh: 0, y: 0, lg: [10, -10, 4, 3] }]],
+        { fn: (pose, m, k) => { if (k < .56 && m.riposted) pose.glow = 'rgba(255,242,192,.8)'; if (k > .5 && k < .74) pose.streak = { len: Math.min(220, (m.x1 || 120) - 20), a: .9, col: m.riposted ? 'rgba(255,242,192,.98)' : pal().trail }; } }),
+      // the butt planted, up and over on it, and down on the shell
+      HLL: KF([[0, { a: -.6, e: .3, g: 0, x: .6, l: .3, s: 8, lg: [14, -12, 9, 3] }], [.3, { a: -1.2, x: .3, l: -.2, s: 0, cr: 1, lg: [6, -4, 16, 14] }], [.55, { a: .4, e: 1.4, g: -1.5, x: 0, l: .3, cr: 0, lg: [8, -6, 14, 14] }], [1, { a: .4, e: 1.2, g: -1.4, l: .2, s: 8, lg: [14, -12, 10, 2] }]]),
+      // the thrust, the point lifted overhead with them on it, and pitched back over the shoulder
+      HHL: KF([[0, { a: .1, e: .2, g: 0, x: 0, l: .2, s: 6, th: 1, gg: 14, lg: [14, -14, 8, 2] }], [.14, { a: 0, e: 0, x: 1, l: .5, s: 9, lg: [19, -16, 11, 0], sh: 3 }], [.32, { x: 1 }], [.52, { a: 1.5, x: .6, l: -.1, s: 4, sh: 0, lg: [10, -12, 5, 5] }], [.62, { a: 2.7, x: .4, l: -.35, s: 2, y: .3 }], [1, { a: 1.1, x: 0, l: .05, s: 3, y: 0, lg: [10, -10, 4, 3] }]],
+        { tr: [[.52, .64]], trW: 7, fn: (pose, m, k) => { if (k > .12 && k < .36) pose.streak = { len: Math.min(200, (m.x1 || 120) - 30), a: .85, col: pal().trail }; } }),
     });
   }
 
@@ -1165,6 +1255,9 @@
         D:    { name: 'Shield Surf', dur: .8, h: [.1, .85], x0: 0, x1: 54, dmg: 6, kb: 120, launch: 300, lunge: 560, multi: .14, power: 1, depth: 26, surf: 1, armor: [0, .85, .5], desc: 'Ride it down the street; they go up. Now and then a kickflip.' },
         DX:   { name: 'Freight Train', dur: .62, h: [.12, .72], x0: 0, x1: 58, dmg: 18, kb: 420, lunge: 470, power: 2, carry: 1, wall: 1, depth: 30, stag: .6, spend: 1, armor: [0, .8, .4], desc: 'Shoulder behind it, armored: carry them all.' },
         R:    { name: 'Rim Wheel', dur: .5, h: [.15, .8], x0: 0, x1: 74, dmg: 7, kb: 180, around: 1, multi: .14, power: 1, cut: 1, desc: 'Out of a dodge: spin with it held out flat; the rim cuts all round.' },
+        LH:   { name: 'Shield Uppercut', dur: .46, h: [.32, .52], x0: 0, x1: 64, dmg: 14, kb: 60, launch: 500, launcher: 1, lunge: 120, power: 2, depth: 26, stag: .4, spend: 1, armor: [0, .52, .5], desc: 'Attack, Heavy: armored, the face of it driven up under their chin: they go up. Jump to follow.' },
+        LLH:  { name: 'Rim Saw', dur: .6, h: [.2, .74], x0: 0, x1: 70, dmg: 4, kb: 30, multi: .09, cut: 1, depth: 24, power: 1, lunge: 60, fin: { at: .76, h: [.76, .9], dmg: 12, kb: 260, power: 2, multi: 0 }, desc: 'Attack ×2, Heavy: the rim ground into them, cut after cut, then torn out.' },
+        LLLH: { name: 'Doorbreaker', dur: .52, h: [.36, .58], x0: 0, x1: 70, dmg: 18, kb: 420, lunge: 320, power: 2, wall: 1, depth: 28, stag: .7, spend: 1, gong: .3, armor: [0, .58, .45], poseFrom: 'LLL', desc: 'Attack ×3, Heavy: off the Boss Bash, armored, the shield set again and the face of it shoved through them like a door off its hinges.' },
         // with the shield away (thrown): bare hands, and Heavy calls it home
         pL:   { name: 'Bare Knuckles', seq: ['A'], dur: .24, h: [.3, .6], x0: 0, x1: 46, dmg: 7, kb: 120, lunge: 40, desc: 'Shield away: fists till it comes home.' },
         pLL:  { name: 'Bare Knuckles', seq: ['A', 'A'], dur: .26, h: [.3, .6], x0: 0, x1: 46, dmg: 8, kb: 140, lunge: 40 },
@@ -1176,7 +1269,8 @@
       }),
       rows: (t) => [['edge cuts, then an armored bash', 'Attack ×3', t.L.name + ' → ' + t.LLL.name], ['ricochets foe to foe, comes home', 'Heavy', t.H.name], ['the rim straight down; or it flies home', 'Heavy, Heavy', t.HH.name + ' · ' + t.pH.name],
         ['brace (blocks build Backlash), then an armored charge', 'Hold Heavy, let go', t.HC.name], ['advance behind it, let go to bash', 'Hold Attack', t.X.name + ' → ' + t.Xb.name], ['ride it; they go up', 'Run, Attack', t.D.name],
-        ['armored, carrying them all', 'Run, Heavy', t.DX.name], ['fall on it; it may spring you up', 'Jump, Heavy', t.JH.name], ['the rim all round', 'Dodge, Attack', t.R.name]],
+        ['armored, carrying them all', 'Run, Heavy', t.DX.name], ['fall on it; it may spring you up', 'Jump, Heavy', t.JH.name], ['the rim all round', 'Dodge, Attack', t.R.name],
+        ['armored, up under the chin', 'Attack, Heavy', t.LH.name], ['the rim ground in, torn out', 'Attack ×2, Heavy', t.LLH.name], ['armored, through them', 'Attack ×3, Heavy', t.LLLH.name]],
       pick(m) {
         const k = m.key, tr = WP().tree;
         if (k === 'SIG') return m;
@@ -1335,6 +1429,11 @@
       pAA: KF([[0, { ...FI, a: .9, e: 1.7, lg: [8, -8, 12, 6] }], [.6, { ba: 0, be: 0, y: .5 }], [1, { ba: 1.3, be: 1.8, y: 0 }]]),
       pAAA: KF([[0, { ...FI, a: -2.2, e: .4, r: 0, lg: [6, -8, 12, 10] }], [.25, { a: -2.6, r: -.2 }], [.62, { a: 1.2, e: 0, l: .5, r: .4 }], [1, { a: 1, r: .25 }]]),
       pH: KF([[0, { ...FI, a: -.1, e: 0, oh: 1, l: -.15, s: 6, lg: [10, -13, 5, 6], ba: 1.6 }], [.6, { a: -.2, e: .3 }], [1, { a: .4, e: 1.4, oh: 0, l: .05, s: 3, lg: [10, -9, 4, 3] }]]),
+      // down behind it, then the face driven up off the knees
+      LH: KF([[0, { ...GU, s: 6, l: .3, lg: [13, -12, 9, 4] }], [.32, { a: -.2, e: 1.9, l: .35, s: 10, cr: 1, lg: [14, -12, 12, 10] }], [.5, { a: 1.5, e: 1.5, l: -.2, s: 0, cr: 0, lg: [8, -12, 3, 7], oy: -6 }], [1, { ...GU, s: 3, oy: 0, lg: [10, -10, 4, 3] }]]),
+      // the rim held out into them and worked like a saw, then wrenched back across
+      LLH: KF([[0, { ...GU, a: .1, e: .4, l: .3, s: 6, y: -.2, lg: [14, -12, 8, 2] }], [.74, { a: .1, e: .4 }], [.82, { a: -1.2, e: 1.1, l: -.1, y: .3, s: 3 }], [1, { ...GU, s: 2, y: 0, lg: [10, -9, 4, 3] }]],
+        { tr: [[.76, .86]], fn: (pose, m, k) => { if (k > .18 && k < .74) { pose.arm = .1 + .14 * Math.sin(k * 62); pose.shift = 2 * Math.sin(k * 47); } } }),
     });
   }
 
@@ -1366,9 +1465,13 @@
         D:    { name: 'Wave Rider', dur: .7, h: [.1, .8], x0: 0, x1: 80, dmg: 6, kb: 220, lunge: 420, multi: .12, power: 1, ride: 1, depth: 26, desc: 'Run, Attack: in the flood, surf a wave, carrying them.' },
         DX:   { name: 'Breach', dur: .64, h: [.5, .74], x0: 0, x1: 90, dmg: 22, kb: 200, hop: 340, lunge: 260, airCarry: 1, bounce: 1, shock: 80, power: 2, desc: 'Leap like a dolphin and drive down.' },
         R:    { name: 'Whirl', dur: .5, h: [.15, .8], x0: 0, x1: 80, dmg: 5, kb: 120, around: 1, multi: .12, power: 1, whirl: 1, desc: 'Out of a dodge: spin, leaving an eddy.' },
+        LH:   { name: 'Breaching Thrust', dur: .44, h: [.3, .56], x0: 0, x1: 100, dmg: 12, kb: 40, launch: 440, power: 1, depth: 24, breach: 1, desc: 'Attack, Heavy: in low under them, then up: they leap like a fish (higher in the flood).' },
+        LLH:  { name: 'Tine Volley', dur: .5, h: [.16, .74], x0: 0, x1: 104, dmg: 5, kb: 40, multi: .1, depth: 26, lunge: 40, power: 1, desc: 'Attack ×2, Heavy: a flurry of thrusts, all three tines.' },
+        HL:   { name: 'Riptide Rush', dur: .5, h: [.12, .6], x0: 0, x1: 96, dmg: 13, kb: 240, lunge: 380, power: 1, depth: 26, surge: 1, poseFrom: 'D', desc: 'Heavy, Attack: ride the flood you raised forward, point first; the deeper the water, the further.' },
       }),
       rows: (t) => [['the street floods; they wade', 'Heavy', t.H.name], ['drain it all at once', 'Hold Heavy, gleam', t.HC.name], ['spouts in three lanes', 'Attack ×3', t.LLL.name],
-        ['a geyser under one', 'Hold Attack', t.X.name], ['pull them in', 'Heavy, Heavy', t.HH.name], ['surf the flood', 'Run, Attack', t.D.name], ['splash grows with the water', 'Jump, Heavy', t.JH.name]],
+        ['a geyser under one', 'Hold Attack', t.X.name], ['pull them in', 'Heavy, Heavy', t.HH.name], ['surf the flood', 'Run, Attack', t.D.name], ['splash grows with the water', 'Jump, Heavy', t.JH.name],
+        ['they leap like a fish', 'Attack, Heavy', t.LH.name], ['a flurry of thrusts', 'Attack ×2, Heavy', t.LLH.name], ['ride the flood forward', 'Heavy, Attack', t.HL.name]],
       began(m) {
         if (m.flood) { raise(); ev('flood'); note(['', 'THE TIDE RISES', 'DEEPER', 'FLOODED'][F.lvl], '#9FE2D3', 14); sfx('hit-goo'); play(130 + 30 * F.lvl, .4, .07, 'sine');
           for (const d of [1, -1]) addObj({ kind: 'wave', x: P.x + d * 30, y: P.y, dir: d, d: 0, hit: new Set(), m, bw: 60, bh: 60 });
@@ -1379,6 +1482,8 @@
         if (m.splash) P.move = Object.assign({}, P.move, { shock: (70 + 30 * F.lvl) * RK() });
         if (m.ride) P.move = Object.assign({}, P.move, F.lvl ? { lunge: 560, name: 'Wave Rider' } : { multi: 0, dur: P.move.dur * .75, h: [.15, .6], dmg: P.move.dmg * 2.4 });
         if (m.whirl && S0()) PN.addPool(P.x, P.y, 14 * wm(), S0());
+        if (m.breach && F.lvl) P.move = Object.assign({}, P.move, { launch: P.move.launch + 70 * F.lvl });
+        if (m.surge && F.lvl) { P.vx = fc() * (m.lunge + 110 * F.lvl); bubbles(P.x, P.y, 6, 6, 90); }
       },
       extras(m, k) {
         if (m.spouts) once('sp', k, m.h[0], () => { for (const dy of [-26, 0, 26]) addObj({ kind: 'spout', x: P.x + fc() * 100 * RK(), y: clamp(P.y + dy, FLOOR_TOP + 6, FLOOR_BOT), m, max: .5, done: false, big: F.lvl, bw: 50, bh: 150 }); });
@@ -1445,6 +1550,10 @@
       D: KF([[0, { ...T2, a: .2, g: 0, x: .8, l: .35, s: 10, cr: 1, lg: [14, -12, 12, 10], fl: 18, st: 1.08, oy: -2 }], [1, { a: .2 }]], { fn: (p, m, k) => { p.yaw = .3 + .08 * Math.sin(k * 25); thr(p, m, k, .1, .8); } }),
       DX: KF([[0, { ...T2, a: .3, g: 0, l: .3, s: 6 }], [.4, { a: -.8, x: -.3, l: -.3, s: 0, r: -.3, lg: [6, -12, 14, 6] }], [.74, { a: .9, x: 1, l: .6, r: .5, s: 8, lg: [16, -14, 10, 1] }], [1, { a: .8, x: 0, l: .3, r: 0, s: 5 }]], { fn: (p, m, k) => thr(p, m, k, .5, .78) }),
       R: KF([[0, { ...T2, a: .1, g: 0, l: .3, s: 7, lg: [14, -14, 9, 2] }], [.15, { sp: 0 }], [.8, { sp: -2 * TWO }], [1, { sp: -2 * TWO, a: .4, s: 3, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => { if (k > .15 && k < .82) p.flat = { r: (WP().reach || 60) + 18, k: (k * 2) % 1, rev: false, col: pal().trail, w: 5 }; } }),
+      // the tines in low, then up and through
+      LH: KF([[0, { ...T2, a: -.4, g: 0, x: 0, l: .2, s: 7, lg: [14, -12, 10, 4] }], [.3, { a: -.5, x: -.4, s: 9, cr: 1 }], [.56, { a: .9, x: 1, l: -.05, s: 2, cr: 0, lg: [10, -12, 4, 6], oy: -4 }], [1, { a: .6, x: 0, l: .05, s: 3, oy: 0, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => thr(p, m, k, .3, .62) }),
+      // jab after jab
+      LLH: KF([[0, { ...T2, a: .1, g: 0, l: .25, s: 5, lg: [15, -13, 8, 1] }], [.78, { a: .1, l: .3 }], [1, { a: .2, x: 0, l: .1, s: 2, lg: [10, -9, 4, 3] }]], { fn: (p, m, k) => { if (k > .14 && k < .78) { p.ext = .3 + .7 * Math.abs(Math.sin(k * 30)); p.arm = .1 + .12 * Math.sin(k * 17); } thr(p, m, k, .14, .78); } }),
     });
   }
 
@@ -1532,10 +1641,14 @@
         DX:   { name: 'Javelin', dur: .7, h: [3, 3], x0: 0, x1: 0, dmg: 16, kb: 0, hop: 250, lunge: 160, airCarry: 1, power: 2, jav: 1, desc: 'Run, Heavy: leap and hurl it high onto a foe far ahead; it lands in a burst and stands there, and lightning likes a standing lance.' },
         R:    { name: 'Long Wheel', dur: .5, h: [.14, .72], x0: 0, x1: 150, dmg: 10, kb: 220, around: 1, power: 1, lunge: 320, depth: 30, desc: 'Out of a dodge: the lance wheels round at its full length as you slide on through.' },
         RH:   { name: 'Lunging Reprise', dur: .52, h: [.16, .6], x0: 0, x1: 300, dmg: 18, kb: 220, lunge: 640, power: 2, depth: 24, thrust: 1, beam: [.14, .62], poseFrom: 'LLL', desc: 'Out of a dodge, Heavy: the longest thrust there is, straight out of the roll, stringing all it passes through.' },
+        LH:   { name: 'Pinning Thrust', dur: .44, h: [.32, .58], x0: 0, x1: 190, dmg: 14, kb: 20, lunge: 150, power: 1, depth: 20, thrust: 1, pin: 1, beam: [.28, .64], poseFrom: 'LLL', desc: 'Attack, Heavy: a long, heavy thrust that pins whoever it pierces where they stand.' },
+        LLH:  { name: 'Long Sweep', dur: .56, h: [.22, .66], x0: -40, x1: 180, dmg: 13, kb: 240, power: 2, depth: 42, lunge: 40, desc: 'Attack ×2, Heavy: the lance swept flat across the street at its full length.' },
+        HL:   { name: 'Thread the Needle', dur: .5, h: [.14, .72], x0: 0, x1: 170, dmg: 5, kb: 30, multi: .1, depth: 20, thrust: 1, beam: [.12, .74], desc: 'Heavy, Attack: off the Flèche, a flurry of quick thrusts at full reach, stringing all of them.' },
       }),
       rows: (t) => [['out-reach everything; pierced foes are strung', 'Attack ×3', t.L.name + ' → ' + t.LLL.name], ['hurled; next blow yanks it back', 'Attack ×4', t.LLLL.name], ['a lunge that carries them', 'Heavy', t.H.name], ['two strung: they crack on the point', 'Heavy, 2+ strung', t.Hc.name],
         ['over their heads', 'Heavy ×2', t.HH.name], ['swing round the pole', 'Heavy ×3', t.HHH.name], ['the length of the street', 'Hold Heavy, gleam', t.HC.name], ['reeled in to them', 'Hold Attack', t.X.name],
-        ['bounce off their heads', 'Jump, Attack ×3', t.AAA.name], ['lightning likes it', 'Run, Heavy', t.DX.name], ['all ride the point', 'Run, Attack', t.D.name], ['the longest thrust, out of a roll', 'Dodge, Heavy', t.RH.name]],
+        ['bounce off their heads', 'Jump, Attack ×3', t.AAA.name], ['lightning likes it', 'Run, Heavy', t.DX.name], ['all ride the point', 'Run, Attack', t.D.name], ['the longest thrust, out of a roll', 'Dodge, Heavy', t.RH.name],
+        ['pins them where they stand', 'Attack, Heavy', t.LH.name], ['flat across the street', 'Attack ×2, Heavy', t.LLH.name], ['a flurry at full reach', 'Heavy, Attack', t.HL.name]],
       pick(m) {
         const a = away(); if (a) yank(a);
         const n = live().length; if (m.key === 'H' && n >= 2) return WP().tree.Hc; if (m.key === 'Hc' && n < 2) return WP().tree.H; return m;
@@ -1765,6 +1878,11 @@
       D: KF([[0, { ...T2, a: .05, g: 0, x: 1, l: .55, s: 9, lg: [20, -18, 11, 0], st: 1.12, fl: 18 }], [.6, { x: 1 }], [1, { x: 0, l: .15, s: 3, st: 1, fl: 4, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => { thr(p, m, k, .06, .62, 110); if (k < .58) p.legs = { f: 18 * Math.sin(k * 50), b: -18 * Math.sin(k * 50), fk: 8, bk: 8 }; } }),
       DX: KF([[0, { ...T2, a: .1, g: 0, l: .3, s: 6 }], [.22, { th: 0, a: -.7, e: .3, x: -.8, l: -.35, s: 2, y: -.4, ba: -.6, lg: [6, -12, 14, 8] }], [.36, { a: -.3, x: 1, l: .6, y: .3, ba: 2.2, lg: [16, -14, 10, 4] }], [1, { a: .6, x: .1, l: .2, y: 0, ba: 1.5, s: 4, lg: [10, -10, 4, 3] }]]),
       R: KF([[0, { ...T2, a: .1, g: 0, x: .8, l: .3, s: 7, lg: [14, -14, 9, 2] }], [.14, { sp: 0 }], [.72, { sp: -TWO }], [1, { sp: -TWO, x: 0, a: .4, s: 3, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => { if (k > .14 && k < .76) p.flat = { r: m.x1 * .8, k: spn(k, .14, .72), rev: false, col: pal().trail, w: 6 }; } }),
+      // the lance carried flat round across the street at its length
+      LLH: KF([[0, { ...T2, a: .1, g: 0, x: .6, l: .15, s: 5, y: .35, lg: [14, -14, 9, 2] }], [.22, { x: 1, y: .55, l: -.05 }], [.66, { x: 1, y: -.55, l: .3, s: 7, lg: [17, -15, 10, 1] }], [1, { x: .2, y: 0, l: .1, s: 3, lg: [10, -10, 4, 3] }]],
+        { fn: (p, m, k) => { if (k > .2 && k < .7) p.flat = { r: Math.min(160, m.x1 * .7), k: spn(k, .22, .66), rev: true, col: pal().trail, w: 6 }; } }),
+      // jab after jab at full reach
+      HL: KF([[0, { ...T2, a: .05, g: 0, l: .35, s: 7, lg: [18, -15, 10, 0] }], [.74, { l: .4 }], [1, { x: 0, l: .1, s: 3, lg: [10, -10, 4, 3] }]], { fn: (p, m, k) => { if (k > .1 && k < .74) { p.ext = .3 + .7 * Math.abs(Math.sin(k * 28)); p.arm = .05 + .08 * Math.sin(k * 15); } thr(p, m, k, .1, .74, 90); } }),
     });
   }
 
