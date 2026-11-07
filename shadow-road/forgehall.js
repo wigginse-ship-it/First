@@ -124,7 +124,7 @@
       const x = dir > 0 ? bx * (1 - t) : VW - bx * (1 - t), y = yb + t * drop, s = sAt(y) * .96, a = s * .62;
       slots[id] = { id, kind: dir > 0 ? 'left' : 'right', dir, wx: x, wy: y, s, sg: dir, m: new DOMMatrix([dir * a, -k * a, 0, s, x, y]) }; }
     for (const sl of Object.values(slots)) { const p = sl.m.transformPoint(new DOMPoint(0, 22)); sl.vx = p.x; sl.vy = p.y;
-      sl.tx = sl.vx + (sl.dir ? sl.dir * 16 * sl.s : 0); sl.ty = sl.vy + (sl.dir ? 12 : 20) * sl.s; }
+      sl.tx = sl.vx + (sl.dir ? sl.dir * 16 * sl.s : 0); sl.ty = sl.vy + (sl.dir ? 14 : 30) * sl.s; }
     const door = { x: cx, y: yb, s: sAt(yb), tx: cx, ty: yb + 18 };
     door.m = new DOMMatrix([door.s * 1.05, 0, 0, door.s * 1.05, cx, yb]);
     return (GEO = { key, cx, yb, bx, drop, k, bot, sAt, footY, slots, door, pat: { x: cx, y: yb + (bot - yb) * .58 } });
@@ -386,10 +386,11 @@
     ctx.save();
     try {
       ctx.fillStyle = '#0E0908'; ctx.fillRect(0, Y_OFF - 2, VW, VIEW_H + 4);
-      drawStatic();
-      liveBack(T);
-      figures(T);
-      liveFront(T);
+      const PR = window.__fhProf, tm = () => performance.now(); let q = PR && tm();
+      drawStatic(); if (PR) { PR.st = (PR.st || 0) + tm() - q; q = tm(); }
+      liveBack(T); if (PR) { PR.back = (PR.back || 0) + tm() - q; q = tm(); }
+      figures(T); if (PR) { PR.fig = (PR.fig || 0) + tm() - q; q = tm(); }
+      liveFront(T); if (PR) { PR.front = (PR.front || 0) + tm() - q; q = tm(); }
     } finally { ctx.restore(); }
     vignette();
   }
@@ -657,7 +658,7 @@
       else if (p.k === 'die') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.vx * p.t * .05); ctx.fillStyle = '#F0E6D0'; ctx.fillRect(-3, -3, 6, 6); ctx.strokeStyle = '#1A1418'; ctx.lineWidth = .6; ctx.strokeRect(-3, -3, 6, 6); ctx.fillStyle = '#1A1418'; ctx.fillRect(-.8, -.8, 1.6, 1.6); ctx.restore(); }
       else if (p.k === 'spark2') glowR(p.x, p.y, 10, '150,190,255', a * .9); }); }
     // the names over the stalls, in CSS pixels, so they read on a phone
-    const f1 = 12.5 * u, f2 = 11 * u;
+    const f1 = 12.5 * u, f2 = 11 * u; BUB.length = 0;
     for (const v of H.cast) { const V = CAST[v.id], sl = SL(v), isT = v.id === H.target, h = (v.id === 'dworkin' ? 62 : 96 * V.s) * sl.s, x = vxOf(v), y = sl.vy - h - 3 * u;
       ctx.save(); ctx.globalAlpha = isT ? 1 : .88; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(20,10,14,.92)'; ctx.lineJoin = 'round';
       ctx.font = `700 ${f1.toFixed(2)}px Cinzel, Georgia, serif`; ctx.lineWidth = 3.2 * u; ctx.fillStyle = isT ? '#FFE8A8' : '#EBCB7C'; ctx.strokeText(V.name.toUpperCase(), x, y - f2 - 1 * u); ctx.fillText(V.name.toUpperCase(), x, y - f2 - 1 * u);
@@ -667,12 +668,15 @@
     { ctx.save(); ctx.font = `700 ${(11 * u).toFixed(2)}px Cinzel, Georgia, serif`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,236,196,.95)'; ctx.strokeStyle = 'rgba(20,10,10,.85)'; ctx.lineWidth = 2.8 * u; ctx.lineJoin = 'round';
       const s = `THE ROAD · ${String(STAGES[roadStage()].name).toUpperCase()}`, y = G.yb - 86 * G.door.s - 4 * u; ctx.strokeText(s, G.door.x, y); ctx.fillText(s, G.door.x, y); ctx.restore(); }
   }
+  const BUB = [];
   function bubble(x, y, S, u) { // a word, in a small parchment bubble over the speaker
     const a = cl01(Math.min(S.t / .15, (S.dur - S.t) / .3)); if (a <= 0) return;
     ctx.save(); ctx.globalAlpha = a; ctx.font = `italic 600 ${(11.5 * u).toFixed(2)}px Spectral, Georgia, serif`; const w = ctx.measureText(S.txt).width + 10 * u, h = 16 * u;
-    const bx = clamp(x - w / 2, 2, VW - w - 2), by = y - h;
+    const bx = clamp(x - w / 2, 2, VW - w - 2); let by = y - h;
+    for (let k = 0; k < 4; k++) { const hit = BUB.find(r => bx < r[0] + r[2] && r[0] < bx + w && by < r[1] + r[3] && r[1] < by + h); if (!hit) break; by = hit[1] - h - 2 * u; } // (one bubble never covers another: it rises over it)
+    BUB.push([bx, by, w, h]);
     ctx.fillStyle = 'rgba(244,234,214,.95)'; rrect(bx, by, w, h, 5 * u); ctx.fill(); ctx.strokeStyle = 'rgba(60,40,30,.8)'; ctx.lineWidth = .8 * u; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x - 3 * u, by + h - .5); ctx.lineTo(x, by + h + 4 * u); ctx.lineTo(x + 3 * u, by + h - .5); ctx.closePath(); ctx.fillStyle = 'rgba(244,234,214,.95)'; ctx.fill();
+    const tx = clamp(x, bx + 4 * u, bx + w - 4 * u); ctx.beginPath(); ctx.moveTo(tx - 3 * u, by + h - .5); ctx.lineTo(tx, by + h + 4 * u); ctx.lineTo(tx + 3 * u, by + h - .5); ctx.closePath(); ctx.fillStyle = 'rgba(244,234,214,.95)'; ctx.fill();
     ctx.fillStyle = '#2A1A14'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(S.txt, bx + w / 2, by + h / 2 + .5 * u); ctx.restore();
   }
   function vignette() {
@@ -869,14 +873,15 @@
       ctx.restore();
     } finally { mode = m; }
   }
+  // The stall-keepers stand at the walls, always behind him (his floor starts in front of their feet), so they are drawn
+  // first, straight onto the page with their own ink lines (the figure layer's contour and hatching cost far more than they
+  // show at this size, seven times over, on a phone); then he is drawn in the figure layer as everywhere else.
   function figures(t) {
-    const list = [], boxes = [], s = geo().sAt(H.y);
-    for (const v of H.cast) { const sl = SL(v), ss = sl.s * 1.3; list.push([sl.vy, () => drawVendor(v, t)]); boxes.push([sl.vx - 80 * ss, sl.vy - 120 * ss, sl.vx + 80 * ss, sl.vy + 14 * ss]); }
-    list.push([H.y, () => drawHero(t)]); boxes.push([H.x - 110 * s, H.y - 150 * s, H.x + 110 * s, H.y + 16 * s]);
-    list.sort((a, b) => a[0] - b[0]);
-    const hm = HEAD_MASK;
-    inkBegin(boxes);
-    try { for (const [, fn] of list) { try { fn(); } catch (e) { console.error(e); } } }
+    const list = H.cast.map(v => [SL(v).vy, v]).sort((a, b) => a[0] - b[0]);
+    for (const [, v] of list) { try { drawVendor(v, t); } catch (e) { console.error(e); } }
+    const s = geo().sAt(H.y), hm = HEAD_MASK;
+    inkBegin([[H.x - 70 * s, H.y - 120 * s, H.x + 70 * s, H.y + 10 * s]]);
+    try { drawHero(t); } catch (e) { console.error(e); }
     finally { inkEnd(); HEAD_MASK = hm; }
   }
 
@@ -1075,6 +1080,7 @@
   html:not(.kbd) #fhUi .fh-talk:active { translate: 0 2px; }
   @keyframes fhIn { from { opacity: 0; } to { opacity: 1; } }
   #app.fhall #controls .btn:not(.b-light), #app.fhall #runTip { display: none !important; }
+  #app.fhall #controls .b-light { right: calc(var(--pr) + 64px); bottom: 132px; } /* (above the Talk button) */
   #forgeOv .vhide { display: none !important; }
   #forgeOv.vendor { background: rgba(10,6,8,.62) !important; background-image: none !important; }
   #forgeOv.vendor > .wrap { max-width: 780px; gap: 10px; }
