@@ -40,7 +40,7 @@
   const HIGH_END = 50; // reaching the last world at or past this, the Circle has taken it
   const RESIDUE = .25, HORN_KEEP = .6;
   const WT = { // what feeds it (+) and what eases it (-)
-    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
+    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, groupPer: .6, groupMax: 4, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
     pearlKill: -.5, blackPearlDmg: 1.35, cwCursedKill: .4, cwCursedBoss: 1.5, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
@@ -127,7 +127,7 @@
   hurtEnemy = function (e, dmg, dir, m, crit) {
     if (NG() && CTX && CTX.own && !pureHand() && !(m && m.perfect) && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill'); // (a purified blade is never cruel)
     const hp0 = e.hp, r = _he(e, dmg, dir, m, crit);
-    if (NG() && e.hp < hp0) chargeHit(m);
+    if (NG() && e.hp < hp0) chargeHit(m, e);
     if (NG() && m && m.perfect && !m.trump && e.hp < hp0 && ((CTX && CTX.own) || m.pearl || m.arrow)) perfectPurge(m.arrow ? 'a perfect draw lands' : m.pearl ? 'a perfect throw lands' : 'a perfect charge lands');
     return r;
   };
@@ -141,7 +141,7 @@
     const t = now(); L.kills.push(t); L.kills = L.kills.filter(k => t - k < 2);
     const pureBlow = !!m.perfect && !m.trump; // a perfect charged blow (any weapon, a perfect bow release too) is never cruel, and it cleanses as a purified blade does
     if (L.kills.length >= 5) { L.kills = []; if (!pureHand() && !pureBlow) feed(WT.massacre, 'massacre'); }
-    if (pureBlow && !pureHand()) { const k = e.boss ? 3 : e.cursed ? 1 : (e.elite || e.champ) ? .8 : .35, d = ease(k, 'a perfect blow cleanses');
+    if (pureBlow) { const k = e.boss ? 4.5 : e.cursed ? 1.6 : (e.elite || e.champ) ? 1.2 : .6, d = ease(k, 'a perfect blow cleanses');
       if (d > 0 && playing()) { fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .5, max: .5, r: 60 + Math.min(1.6, (e.hh || 60) / 60) * 50, col: '#FFE9A8', flat: 1 });
         for (let i = 0; i < 6 && parts.length < 420; i++) parts.push({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: rand(6, (e.hh || 60) * .9), vx: rand(-20, 20), vy: 0, vz: rand(50, 120), life: .7, max: .7, col: pick(['#FFF4C8', '#FFE08A', '#FFFFFF']), size: rand(1.4, 2.4), shape: 'star', rot: 0, vr: 4 });
         if (e.cursed || e.boss || rl('pureTxt', 6)) floatText(e.x, e.y, (e.hh || 60) + 34, e.cursed || e.boss ? 'THE CURSE IS DRAWN OUT' : 'THE CURSE EASES', '#FFE9A8', 12); } }
@@ -194,10 +194,16 @@
   window.__chargeRelease = (perfect, o = {}) => {
     if (!NG() || !P) return; const c = save.cw && save.cw[P.w], cursed = !o.arrow && cursedHand();
     if (!perfect && !(c && !c.pure && c.db === 'graceless' && !o.arrow)) feed(cursed ? WT.chgMissC : WT.chgMiss, o.arrow ? 'a full draw, the perfect missed' : 'a charge, the perfect missed');
-    CHG.push({ arrow: !!o.arrow, left: o.arrow ? 1.5 : (P.move && P.move.dur || .6) + .6, hit: false, cursed }); // (game time: it waits through hitstop and pauses)
+    CHG.push({ arrow: !!o.arrow, left: o.arrow ? 1.5 : (P.move && P.move.dur || .6) + .6, hit: false, cursed, perfect: !!perfect, foes: new Set() }); // (game time: it waits through hitstop and pauses)
   };
-  function chargeHit(m) { if (!CHG.length || !m || m.trump) return; for (const c of CHG) if (!c.hit && c.left > 0 && (c.arrow ? !!m.arrow : !m.arrow && !m.pearl && CTX && CTX.own)) c.hit = true; }
-  function chargeStep(dt) { for (let i = CHG.length - 1; i >= 0; i--) { const c = CHG[i]; if (c.hit) { CHG.splice(i, 1); continue; } c.left -= dt; if (c.left <= 0) { CHG.splice(i, 1); feed(c.cursed ? WT.chgWhiffC : WT.chgWhiff, c.arrow ? 'a full draw that hit nothing' : 'a charged blow that hit nothing'); } } }
+  function chargeHit(m, e) { if (!CHG.length || !m || m.trump) return; for (const c of CHG) if (c.left > 0 && (c.arrow ? !!m.arrow : !m.arrow && !m.pearl && CTX && CTX.own)) { c.hit = true; if (c.perfect && e) c.foes.add(e); } }
+  // a release is settled when its time is up: one that found no one is paid for; a perfect one that caught several at once
+  // is rewarded for each foe past the first (more of the curse drawn out, a little life back, and it says so)
+  function chargeStep(dt) { for (let i = CHG.length - 1; i >= 0; i--) { const c = CHG[i]; c.left -= dt; if (c.left > 0) continue; CHG.splice(i, 1);
+      if (!c.hit) { feed(c.cursed ? WT.chgWhiffC : WT.chgWhiff, c.arrow ? 'a full draw that hit nothing' : 'a charged blow that hit nothing'); continue; }
+      const n = c.foes.size; if (c.perfect && n >= 2) { const d = ease(Math.min(WT.groupMax, WT.groupPer * (n - 1)), 'a perfect blow through ' + n + ' at once');
+        if (P && P.hp > 0) P.hp = Math.min(maxHp(), P.hp + Math.round(maxHp() * .02 * (n - 1)));
+        if (d > 0 && playing() && P) { floatText(P.x, P.y, 132, 'PERFECT ×' + n, '#FFE9A8', 15); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .55, max: .55, r: 90 + 14 * n, col: '#FFE9A8', flat: 1 }); sfx('learned', .5); } } } }
   // a perfect release purifies only when it lands: see the hurtEnemy wrapper
   { const _pc = perfectCue; perfectCue = function () { return _pc.apply(this, arguments); }; }
   // ---------------- restraint: a downed foe let up unhit ----------------
@@ -2023,7 +2029,7 @@
   // a few words on what each reason is (shown after it in the ticker)
   const GLOSS = {
     'cruelty: overkill': 'a blow far past what it needed', 'massacre': '5 kills in quick succession', 'a kill from behind': 'a foe slain from its back',
-    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a full draw that hit nothing': 'the arrow found no one', 'a cursed blade takes a cursed foe': 'like takes like',
+    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a perfect blow through': 'more for each foe past the first', 'a full draw that hit nothing': 'the arrow found no one', 'a cursed blade takes a cursed foe': 'like takes like',
     'a kill by a hazard': 'a foe killed by the world, not you', 'standing on the Black Road': 'step off it', 'cursed loot taken': 'black shards picked up',
     'a death': 'more each death this cycle', 'a death to a corrupted lord': 'fell to a cursed boss', 'the cursed weapon feeds': 'its hunger drawback',
     'the curse took his shadow': 'a cursed foe caught you', 'his shadow kept the curse': 'the shade was not broken in time',
@@ -2036,7 +2042,7 @@
     'a world walked without falling': 'cleared a world without dying', 'the Horn of Lorraine blown': 'the Horn', 'the Pattern of his own walked': 'the Pattern',
     'the Abyss taken into the Pearl': 'the Pearl drinks the Abyss',
   };
-  const gloss = (b) => b === 'cruelty: a corpse struck' && L.corpseCap ? `hit a body · ${(L.corpseFed || 0).toFixed(1)} of ${L.corpseCap} cap this stage` : GLOSS[b] || GLOSS[b.replace(/ \(.*\)$/, '')] || '';
+  const gloss = (b) => b === 'cruelty: a corpse struck' && L.corpseCap ? `hit a body · ${(L.corpseFed || 0).toFixed(1)} of ${L.corpseCap} cap this stage` : GLOSS[b] || GLOSS[b.replace(/ \(.*\)$/, '')] || (b.startsWith('a perfect blow through') ? GLOSS['a perfect blow through'] : '');
   let meterEl = null, hist = [];
   function meter() {
     const show = SHOW_METER && NG() && !!save.w8relic && (mode === 'play' || mode === 'pause'); // (only once Lorraine is beaten: the Horn in hand)
