@@ -42,7 +42,7 @@
   const WT = { // what feeds it (+) and what eases it (-)
     death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
-    pearlKill: -.5, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
+    pearlKill: -.5, blackPearlDmg: 1.35, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
   const tierOf = (v) => v >= TIERS[3] ? 4 : v >= TIERS[2] ? 3 : v >= TIERS[1] ? 2 : v >= TIERS[0] ? 1 : 0;
   const hornStOf = (h) => h >= HORN_ST[3] ? 4 : h >= HORN_ST[2] ? 3 : h >= HORN_ST[1] ? 2 : h >= HORN_ST[0] ? 1 : 0;
@@ -101,6 +101,7 @@
   const _strike = strike;
   strike = function (e, base, dir, m, echo) {
     if (!NG() || !e || e.dead || !m) return _strike(e, base, dir, m, echo);
+    if (m.pearl && !m.trump && pearlBlack()) { base *= WT.blackPearlDmg; if (!m.crit && Math.random() < WT.blackPearlCrit) m = Object.assign({}, m, { crit: 1 }); } // (the Pearl gone black bites harder too: more Pearl kills, and each of those eases the curse)
     const own = mine(m), c = CS();
     if (own) {
       if (e.state === 'down' && !e.boss) { e.cDownHit = true; if (rl('down' + (e.cid || (e.cid = Math.random())), .5)) feed(WT.downHit, 'cruelty: a downed foe'); }

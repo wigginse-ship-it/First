@@ -642,8 +642,8 @@
     return true;
   }
   function choose(id) {
-    if (!card) return; const after = card.after; closeCard();
-    take(id); if (mode === 'pearlpick') mode = 'play'; clearInput(); for (const q in pressed) pressed[q] = false;
+    if (!card) return; const after = card.after, prev = card.prev; closeCard();
+    take(id); if (mode === 'pearlpick') mode = prev === 'ending' ? 'ending' : 'play'; clearInput(); for (const q in pressed) pressed[q] = false; // (a card shown inside a cutscene hands back to it)
     if (after) after();
   }
   { const _ok = onKeyMenu; onKeyMenu = (e) => {
@@ -655,7 +655,16 @@
     return true;
   }; }
   // a boss of the first five worlds falls: the card comes up before the world is cleared (its ending, the forge, the Rim)
-  { const _sc = stageClear; stageClear = function () { if (live() && pickPending()) { O.rise = null; if (openPick(() => _sc())) return; } return _sc(); }; }
+  // The fifth choice is followed straight away by the reforging (pearl_weapon.js), so the order is always: the boss falls,
+  // the choice, the Pearl turns. The Sleeper's world is different: its card comes up inside its ending, once he has woken
+  // on the Rim and before he takes out his Trumps (endings.js, pearlThen)
+  const dreamEnd = () => typeof baseStage !== 'undefined' && baseStage && baseStage.theme === 'dream' && window.ENDINGS;
+  function pickThen(after) { // the card (if one is owed), then the reforging (if that was the fifth), then after
+    const go = () => (window.PEARLW && PEARLW.reforgeThen) ? PEARLW.reforgeThen(after) : after();
+    if (P && stage && pickPending()) { O.rise = null; if (openPick(go)) return true; } // (not only in play: the Sleeper's ending asks too)
+    return go() || false;
+  }
+  { const _sc = stageClear; stageClear = function () { if (live() && pickPending()) { if (dreamEnd()) { O.rise = null; return _sc(); } if (pickThen(() => _sc())) return; } return _sc(); }; }
   { const _play = play; play = function (i, zone) { closeCard(); return _play(i, zone); }; }
 
   // ======================================================================================================
@@ -1668,7 +1677,7 @@
   window.PEARLNG = {
     state: () => ({ owned: owned(), evolve: evoOn(), forged: forged(), held: held(), currents: curOn(), picks: picksNow().slice(), seed: save.pearlEvo ? save.pearlEvo.seed : null, cd: O.cd, chg: O.chg, shots: O.shots.length, throws: O.throws.length, pools: O.pools.length,
       vx: CUR.vx, vy: CUR.vy, speed: speedE(), orb: { on: O.on, x: O.x, y: O.y, z: O.z, r: O.r }, pending: !!(typeof stage !== 'undefined' && stage && pickPending()), card: !!card }),
-    TRAITS, TR, AX, AXNAME, TAGNAME, PAL, PICKS, prof, offers, stats, curStats, ES, take, autoPick, pick: openPick, choose, card: () => card && card.opts.map(t => t.id),
+    TRAITS, TR, AX, AXNAME, TAGNAME, PAL, PICKS, prof, offers, stats, curStats, ES, take, autoPick, pick: openPick, choose, pickThen, pickOwed: () => !!(P && stage && pickPending()), card: () => card && card.opts.map(t => t.id),
     fire: (o) => { const S = curStats(); return S ? fire(S, o) : false; }, legDmg: (S) => legDmg(S || curStats()), wBest,
     procs, hitFoe, addPool, owned, forged, held, evoOn, curOn, O, CUR, T, GLEAM,
     art: { pearlBody, drawOrb, drawOrbParts, drawSpinner, blitOrb, crescentBlade, PART, glow, withCtx, sparkle, palOf, HANG, swNew, swStep, swView },

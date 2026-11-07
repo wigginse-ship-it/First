@@ -464,11 +464,18 @@
     },
     update(E, T, dt) {
       if (T > .3 && !E.chime) { E.chime = 1; sfx('learned'); }
+      // the Pearl: once he is on his feet and before he reaches for the deck, it rises out of the Abyss in front of him;
+      // the clock holds while its card is up and while it is reforged (if that was its fifth choice), then runs on
+      if (!E.pearlDone && T >= 7.05 && window.PEARLNG && PEARLNG.pickOwed && PEARLNG.pickOwed()) { E.pearlDone = 1; E.pearlHold = 1; E.pearlRise = 0; }
+      else if (!E.pearlDone && T >= 7.05) E.pearlDone = 1;
+      if (E.pearlHold && E.pearlRise != null && !E.pearlAsked) { E.pearlRise += Math.min(.05, (performance.now() - (E.prLast || performance.now())) / 1000); E.prLast = performance.now();
+        if (E.pearlRise > 1.9) { E.pearlAsked = 1; PEARLNG.pickThen(() => { E.pearlHold = 0; E.pearlRise = null; E.last = performance.now(); }); } }
       if (T > 5 && !E.rim) { E.rim = 1; if (TRACKS.chaos) playMusic('chaos'); }
       const Tc = T - CARD_AT; E.moving = 0;
       if (Tc > 2.3 && !E.drew) { E.drew = 1; sfx('swing', .3); } // the deck comes out
     },
-    then(sc, E) { if (window.BRANCH && BRANCH.choose) BRANCH.choose(sc, { from: E }); else { dropAlt(E.B); sc(); } }, // on into the choice of road
+    then(sc, E) { const on = () => { if (window.BRANCH && BRANCH.choose) BRANCH.choose(sc, { from: E }); else { dropAlt(E.B); sc(); } }; // on into the choice of road
+      if (window.PEARLNG && PEARLNG.pickOwed && PEARLNG.pickOwed()) PEARLNG.pickThen(on); else on(); }, // (skipped before the Pearl came: it is owed here, before the deck)
     over(E, T, t) { // the dream unpaints itself from the edges in, the colour draining first; he is left on bare paper
       const k = sm((T - 1) / 2.6), dr = sm((T - .6) / 1.6);
       if (dr > 0) { ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${.85 * dr})`; view(); ctx.restore(); }
@@ -491,6 +498,10 @@
       for (const m of E.masks) if (m.y <= E.hy) mk(m);
       if (E.heroA > 0) { ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.wx, E.hy, 1, E.side, pose, E.heroA, true); ctx.restore(); }
       deckInHand(E.wx + E.side * 19.5, E.hy - 70, sm((Tc - 2.3) / .3));
+      if (E.pearlRise != null && window.PEARLNG && PEARLNG.art) { const k = sm(E.pearlRise / 1.6), px = E.wx + E.side * 64, pz = lerp(-10, 92, k), py = E.hy - pz, s = PEARLNG.state(), pk = s.picks, rt = performance.now() / 1000; // (the Pearl rising before him)
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(px, py, 2, px, py, 60); g.addColorStop(0, `rgba(200,250,240,${.5 * k})`); g.addColorStop(1, 'rgba(200,250,240,0)'); ctx.fillStyle = g; ctx.fillRect(px - 60, py - 60, 120, 120); ctx.restore();
+        ctx.save(); ctx.globalAlpha *= k; ctx.translate(px, py + Math.sin(rt * 2.4) * 2); try { PEARLNG.art.drawOrb(pk, 13, PEARLNG.art.palOf(pk), rt, rt * 3); } catch (err) {} ctx.restore();
+        for (let i = 0; i < 5; i++) { const a = rt * 1.7 + i * 1.26, r = 16 + 4 * Math.sin(rt * 3 + i); ctx.fillStyle = `rgba(240,255,250,${.6 * k})`; ctx.fillRect(px + Math.cos(a) * r - .8, py + Math.sin(a) * r * .5 - .8, 1.6, 1.6); } }
       for (const m of E.masks) if (m.y > E.hy) mk(m);
       gradeFrame('chaosBoss');
       const wk = sm((T - 5) / 1.6); if (wk < 1) { ctx.fillStyle = `rgba(255,250,240,${.25 * (1 - wk)})`; view(); } // the light too bright at first
@@ -502,7 +513,7 @@
   // ---------------- running it ----------------
   function render(t) {
     const E = END, W = E.W, now = performance.now(), rdt = Math.min(.05, (now - E.last) / 1000); E.last = now; E.real += rdt;
-    const dt = HOLD.at !== null && E.t >= HOLD.at ? 0 : rdt * (E.bannered ? 1 : E.rate); E.t += dt; const T = E.t; // (a test can hold the clock still; once the words are up it runs in real time, so they stay as long as they need)
+    const dt = (HOLD.at !== null && E.t >= HOLD.at) || E.pearlHold ? 0 : rdt * (E.bannered ? 1 : E.rate); E.t += dt; const T = E.t; // (a test can hold the clock still; once the words are up it runs in real time, so they stay as long as they need)
     if (T >= W.bannerAt && !E.bannered) { E.bannered = 1; banner(E.title, E.sub, E.read); }
     if (W.update) W.update(E, T, dt);
     const showA1 = T < W.d1, showA2 = T >= W.d0 && W.act2;
@@ -552,7 +563,7 @@
   }
   function finish() { const keep = END && END.W.then && END.W.keepB, E = cleanup(keep); if (!E) return; app.classList.remove('nocontrols'); if (E.W.then) E.W.then(E.sc, E); else E.sc(); }
   let swallowT = 0;
-  function skip() { if (!END || END.real < (END.rate > 1 ? .2 : .9)) return false; swallowT = performance.now() + 450; finish(); return true; }
+  function skip() { if (!END || END.pearlHold || END.real < (END.rate > 1 ? .2 : .9)) return false; swallowT = performance.now() + 450; finish(); return true; }
 
   // ---------------- hooks ----------------
   let E_ORIG = null; const HOLD = { at: null };
@@ -563,6 +574,7 @@
   };
   const _ds = drawScene; E_ORIG = _ds;
   drawScene = function (t) {
+    if (END && END.pearlHold && (mode === 'pearlpick' || mode === 'pearlforge')) { render(t); return; } // (the Pearl's card and its reforging play over the held scene)
     if (END && mode !== 'ending') { const m = mode, E = cleanup(); if (m === 'forge' && E) E.sc(); } // something else took over (a menu, or a test): wrap up quietly
     if (END) { render(t); return; }
     return _ds(t);

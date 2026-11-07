@@ -534,7 +534,7 @@
   // THE REFORGING: as the road's last world begins, the parts fly together into the weapon
   // ======================================================================================================
   let scene = null, scenePending = false;
-  const ready = () => PN.evoOn() && PN.ES().picks.length >= PN.PICKS && typeof isFinal === 'function' && isFinal(stageIdx);
+  const ready = () => PN.evoOn() && PN.ES().picks.length >= PN.PICKS; // (normally the fifth choice reforges it at once: reforgeThen; this catches a save left between the two)
   { const _ht = hudTick; hudTick = function () { _ht();
     if (!scene && mode === 'play' && !zoneTrans && P && P.state !== 'dead' && !(window.ENDINGS && ENDINGS.active) && ready()) { if (!scenePending) { scenePending = performance.now(); } else if (performance.now() - scenePending > 700) openScene(); } }; }
   function forgeNow(seed, picks, equip = true) {
@@ -572,9 +572,10 @@
     tx.querySelector('h2').textContent = spec.name; tx.querySelector('.sub').textContent = `A ${spec.tag}. It is yours for good: it stays on your weapon wheel through every cycle of the road, and you glide on the Currents while it is in your hands.`;
     tx.querySelector('ul').innerHTML = moveRows(W0).map(([a, b, c]) => `<li><b>${c}</b><br><em>${a} · ${b}</em></li>`).join('');
     if (window.PEARLM) tx.querySelector('ul').insertAdjacentHTML('beforebegin', PEARLM.statsHtml(spec)); // (what the five choices made of it: pearl_moves.js)
-    scene = { el, t0: performance.now() - (o.skip ? 3000 : 0), spec, picks, seed, prev, shown: false };
+    scene = { el, t0: performance.now() - (o.skip ? 3000 : 0), spec, picks, seed, prev, shown: false, after: o.after || null };
     const take = () => { if (!scene) return; const S2 = scene; scene = null; el.remove(); app.classList.remove('nocontrols'); window.removeEventListener('keydown', key, true);
-      const W = forgeNow(S2.seed, S2.picks); mode = 'play'; clearInput(); for (const q in pressed) pressed[q] = false;
+      const W = forgeNow(S2.seed, S2.picks); mode = S2.after && S2.prev === 'ending' ? 'ending' : 'play'; clearInput(); for (const q in pressed) pressed[q] = false;
+      if (S2.after) { try { S2.after(); } catch (err) { console.error(err); } }
       if (P) { floatText(P.x, P.y, P.z + 100, W.name.toUpperCase(), '#F2D68A', 14); ART.sparkle(P.x + P.facing * 30, P.y, P.z + 40, 24); sfx('weapon'); } };
     const skip = () => { if (!scene) return; const t = (performance.now() - scene.t0) / 1000; if (t < 3) scene.t0 = performance.now() - 3000; else if (scene.shown) take(); };
     const key = (e) => { if (!scene) return; if (['Enter', 'NumpadEnter', 'Space', 'KeyJ', 'KeyZ', 'Escape'].includes(e.code) && !e.repeat) { e.preventDefault(); e.stopImmediatePropagation(); skip(); } else { e.stopImmediatePropagation(); } };
@@ -619,7 +620,10 @@
   // ---------------- for the dev panel and tests ----------------
   const devOK = () => !!(window.DEV && DEV.active);
   function randomPicks(seed) { const r = mulberry((seed ^ 0x13579BDF) >>> 0), pk = []; for (let i = 0; i < PN.PICKS; i++) { const o = PN.offers(pk, seed); if (!o.length) break; pk.push(o[Math.floor(r() * o.length)].id); } return pk; }
+  // right after the fifth choice: the reforging, then after (true if the scene opened; after runs when it is taken up)
+  function reforgeThen(after) { if (scene || !ready()) { if (after) after(); return false; } scenePending = false; return openScene({ after }); }
   window.PEARLW = {
+    reforgeThen,
     ID, TYPES, design, buildTree, randomPicks, reregister: () => { const F = forgedRec(); if (F) { register(F); sync(); } }, forgeNow, openScene, drawBig, picture, spec: () => WEAPONS[ID] && WEAPONS[ID].pearl, scene: () => scene, sync, moveRows,
     dev: {
       card() { if (!devOK()) return 'dev games only'; if (!PN.evoOn()) return 'the Pearl is not evolving (NG+, the Pearl, the switch, and not yet reforged)'; return PN.pick(null); },
