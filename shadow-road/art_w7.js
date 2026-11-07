@@ -1815,7 +1815,7 @@
   // REBMA'S RULE: Amber's reflection, where it matters which way a thing is turned. On the stair the torches flare, and
   // whatever is facing the fire is dazzled; in the streets the glass turns, and whatever stands in it is turned about.
   // Both open a foe's back to you, and both are things you can set up.
-  const W7R = W7.RULE = { DAZE_T: 2.2, DAZE_DMG: 1.3, P_DAZE: .6, TURN_T: 1.6, BACK_DMG: 1.5 };
+  const W7R = W7.RULE = { DAZE_T: 2.2, DAZE_DMG: 1.3, P_DAZE: 1.05, TURN_T: 1.6, BACK_DMG: 1.5 };
   // who the rules can take hold of: not the King, not what is still coming on or dying
   const holdable = (e) => !e.dead && !e.boss && !['enter', 'dying'].includes(e.state);
   const facingTo = (x, f, tx) => Math.abs(tx - x) < 16 || Math.sign(tx - x) === f;
@@ -1849,7 +1849,7 @@
       hold(e, 'w7daze', e.type === 'w7bishop' ? W7R.DAZE_T * .5 : W7R.DAZE_T); n++; }
     if (n) floatText(T.x, T.y, 130, n > 1 ? n + ' DAZZLED' : 'DAZZLED', '#F6FFD8', 15);
     if (P.state !== 'dead' && P.state !== 'dodge' && !zoneTrans && W7.inTorchGlare(T, P.x, P.y, P.facing)) {
-      P.state = 'hurt'; P.t = Math.max(P.t || 0, W7R.P_DAZE); P.vx = 0; W7.glareP = 1;
+      P.state = 'hurt'; P.t = Math.max(P.t || 0, W7R.P_DAZE); P.vx = 0; W7.glareP = 1; W7.pDaze = W7R.P_DAZE + .15;
       floatText(clamp(P.x, camX + 110, camX + VW - 110), P.y, 96, 'YOU LOOKED INTO IT', '#F6FFD8', 13); }
     if (n >= 2) sfx('crit');
     m.flares = (m.flares || 0) + 1;
@@ -1860,7 +1860,7 @@
   MECH_FX.w7torch = {
     start(m) { m.torches = TORCH_X.map((x, i) => ({ x, y: Math.round(FLOOR_TOP + (FLOOR_BOT - FLOOR_TOP) * (i % 2 ? .66 : .2)), st: 'burn', t: 0, dur: 1, flash: 0, hit: 0 })); m.next = 5; m.flashK = 0; m.told = 0; m.flares = 0; W7.glareP = 0; W7.torchK = 0; },
     update(m, dt) {
-      W7.glareP = Math.max(0, (W7.glareP || 0) - dt * 2); m.flashK = Math.max(0, m.flashK - dt * 2.4);
+      W7.glareP = Math.max(0, (W7.glareP || 0) - dt * 2); W7.pDaze = Math.max(0, (W7.pDaze || 0) - dt); m.flashK = Math.max(0, m.flashK - dt * 2.4);
       if (stillT > 0) return;
       let swell = 0;
       for (const T of m.torches) { T.flash = Math.max(0, T.flash - dt); T.hit = Math.max(0, T.hit - dt);
@@ -1885,6 +1885,7 @@
       list.push([FLOOR_TOP - 1.2, () => onMain(() => drawTorchFloor(m, live, t))]);
       for (const T of live) { if (T.x < camX - 60 || T.x > camX + VW + 60) continue; list.push([T.y, () => drawTorch(T, t)]); list.push([T.y + .05, () => onMain(() => drawTorchFlame(T, t))]); }
       for (const e of enemies) if (e.w7daze > 0 && !e.dead) list.push([e.y + .2, () => onMain(() => drawDazed(e, t))]);
+      if (W7.pDaze > 0 && P && P.state !== 'dead') list.push([P.y + .3, () => onMain(() => starRing(P.x, P.y - P.z - 78 * (P.shrink || 1), Math.min(1, W7.pDaze / .3), t, 18, true))]); // (seeing stars: the prince too, when he looked into the fire)
       if (W7.bub.length) list.push([FLOOR_BOT + 10, () => onMain(drawBubbles)]);
       list.push([FLOOR_BOT + 20, () => onMain(() => drawTorchGlare(m, live, t))]);
     },
@@ -1938,6 +1939,17 @@
       ctx.fillStyle = g; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40);
       ctx.strokeStyle = `rgba(250,255,230,${.5 * k})`; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + .2, r0 = 30, r1 = 120 + 240 * (1 - k); ctx.moveTo(m.flashX + Math.cos(a) * r0, cy + Math.sin(a) * r0 * .6); ctx.lineTo(m.flashX + Math.cos(a) * r1, cy + Math.sin(a) * r1 * .6); } ctx.stroke(); ctx.restore(); }
     if (W7.glareP > 0) { ctx.save(); ctx.globalAlpha = Math.min(1, W7.glareP) * .32; ctx.fillStyle = '#F2FFE8'; ctx.fillRect(camX - 20, Y_OFF - 20, VW + 40, VH - Y_OFF + 40); ctx.restore(); }
+  }
+  // little stars of light going round a head (a dazzled foe; the prince, when he looked into the fire)
+  function starRing(cx, hy, k, t, R = 15, inked = false) {
+    if (FLASH || TINT || k <= 0) return;
+    ctx.save(); if (!inked) ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < (inked ? 4 : 3); i++) { const a = t * 5 + i / (inked ? 4 : 3) * TAU, x = cx + Math.cos(a) * R, y = hy + Math.sin(a) * R / 3, r = inked ? 5.5 + .8 * Math.sin(t * 9 + i) : 5;
+      ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * .3, y - r * .3); ctx.lineTo(x + r, y); ctx.lineTo(x + r * .3, y + r * .3); ctx.lineTo(x, y + r); ctx.lineTo(x - r * .3, y + r * .3); ctx.lineTo(x - r, y); ctx.lineTo(x - r * .3, y - r * .3); ctx.closePath();
+      if (inked) { ctx.globalAlpha = k; ctx.lineWidth = 2.2; ctx.strokeStyle = '#2A2010'; ctx.stroke(); ctx.fillStyle = '#FFE680'; ctx.fill(); ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(x - r * .15, y - r * .15, r * .22, 0, TAU); ctx.fill(); }
+      else { ctx.fillStyle = `rgba(246,255,214,${.9 * k})`; ctx.fill(); } }
+    glowM(cx, hy + 10, 22, '246,255,214', .25 * k);
+    ctx.restore();
   }
   // a dazzled foe: little stars of light going round its head, its hands up
   function drawDazed(e, t) {
