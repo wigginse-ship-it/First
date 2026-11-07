@@ -61,11 +61,15 @@
   };
   for (const k in ARM) { ARM[k].key = k; ARM[k].arm = 1; }
   const JANKEN = { // what Rock, Paper, Scissors turns into when you let go
-    rock:     { name: 'Rock!', dmg: 42, kb: 200, launch: 300, x1: 90, depth: 40, shock: 140, bounce: 1, h: [.42, .6] },
-    paper:    { name: 'Paper!', dmg: 24, kb: 720, x1: 150, depth: 44, wall: 1, multi: 0, h: [.38, .62] },
-    scissors: { name: 'Scissors!', dmg: 16, kb: 160, x1: 130, depth: 30, multi: .14, crit: 1, h: [.36, .7] },
+    // (the longer it is held, the harder it lands: rock, then paper, then scissors; the first rock it comes back round to
+    // is the hardest of all; held on past that, it goes round the ordinary three again)
+    rock:     { name: 'Rock!', dmg: 19, kb: 200, launch: 300, x1: 90, depth: 40, shock: 140, bounce: 1, h: [.42, .6] },
+    paper:    { name: 'Paper!', dmg: 43, kb: 720, x1: 150, depth: 44, wall: 1, multi: 0, h: [.38, .62] },
+    scissors: { name: 'Scissors!', dmg: 30, kb: 160, x1: 130, depth: 30, multi: .14, h: [.36, .7] },
+    rock2:    { name: 'Rock!!', dmg: 63, kb: 260, launch: 420, x1: 104, depth: 46, shock: 190, bounce: 1, crit: 1, h: [.42, .6] },
   };
-  const JK = ['rock', 'paper', 'scissors'], jkOf = (ct) => JK[Math.max(0, Math.floor((ct - .45) / .42)) % 3];
+  const JK = ['rock', 'paper', 'scissors'], jkIdx = (ct) => Math.max(0, Math.floor((ct - .45) / .42)), jkOf = (ct) => JK[jkIdx(ct) % 3];
+  const jkDef = (ct) => jkIdx(ct) === 3 ? 'rock2' : jkOf(ct); // (the one that is let go)
   const base = WEAPONS.fists.tree, baseName = WEAPONS.fists.name, baseDesc = WEAPONS.fists.desc;
   Object.defineProperty(WEAPONS.fists, 'tree', { get() { return SA.on() ? ARM : base; }, configurable: true });
   Object.defineProperty(WEAPONS.fists, 'name', { get() { return SA.on() ? 'The Silver Arm' : baseName; }, configurable: true });
@@ -112,17 +116,30 @@
   // throws out (the rocket fist, the giant hands, the lightning); the cursed weapon's own level multiplier comes on top
   SA.BLACK_K = 2.1;
   { const _st = strike; strike = function (e, base, dir, m, echo) { if (m && m.arm && !m.trump && SA.black()) base *= SA.BLACK_K; return _st(e, base, dir, m, echo); }; }
+  // the Black Knuckles' rock, paper and scissors, let go: rock cracks the street open in crimson and calls lightning down
+  // into the cracks; paper is a black gale full of torn crimson shreds; scissors leave a hanging X of red rents that close
+  // with a snap; the great Rock!! sets an eclipse over the street that implodes, then a pillar of crimson lightning
+  function jkCurse(m, big) {
+    const fx0 = P.x + f() * 60, y = P.y, dir = f(), red = ['#FF3A5A', '#B01030', '#1A0A14', '#FF9AAA'];
+    if (m.jk === 'rock') { SA.objs.push({ kind: 'crack', x: fx0, y, t: 0, max: big ? 1.6 : 1.1, n: big ? 9 : 6, R: big ? 130 : 90, seed: Math.random() * 99 });
+      for (let i = 0; i < (big ? 6 : 3); i++) fx.push({ kind: 'bolt', x: fx0 + rand(-70, 70), y: y + rand(-10, 10), z: 200 + rand(0, 80), x2: fx0 + rand(-50, 50), y2: y, z2: 2, t: .26, max: .26, col: i % 2 ? '#FF5A7A' : '#B01030', seed: Math.random() * 99 });
+      burst(fx0, y, 8, red, big ? 34 : 20, 'spark', 0, true); }
+    if (m.jk === 'paper') SA.objs.push({ kind: 'gale', x: P.x + dir * 40, y, dir, t: 0, max: .7, seed: Math.random() * 99 });
+    if (m.jk === 'scissors') SA.objs.push({ kind: 'rend', x: P.x + dir * 70, y, dir, t: 0, max: .55 });
+    if (big) { SA.objs.push({ kind: 'eclipse', x: fx0, y, t: 0, max: 1.3 }); flashT = Math.max(flashT, .08); shakeMag = Math.max(shakeMag, 12); sfx('roar', .5); }
+  }
   // ---------------- the mechanics ----------------
   { const _mpk = movePoseKey; movePoseKey = function (m) { return m && m.arm ? 'arm:' + m.key : _mpk(m); }; }
   const _me = moveExtras;
   moveExtras = function (m, k, dt, air) { if (_me(m, k, dt, air)) return true; return m.arm ? armExtras(m, k, dt, air) : false; };
   function armExtras(m, k, dt, air) {
     const once = (key, at, fn) => { if (k >= at && P.armDone !== P.moveId + key) { P.armDone = P.moveId + key; fn(); } };
-    if (m.janken && !m.jk) { const s = jkOf(P.ct || 0); P.move = Object.assign({}, m, JANKEN[s], { jk: s }); floatText(P.x, P.y, 96, JANKEN[s].name.toUpperCase(), '#EEF2FA', 18); sfx('learned'); return false; }
+    if (m.janken && !m.jk) { const d = jkDef(P.ct || 0), s = d === 'rock2' ? 'rock' : d; P.move = Object.assign({}, m, JANKEN[d], { jk: s }); floatText(P.x, P.y, 96, JANKEN[d].name.toUpperCase(), d === 'rock2' ? '#FFE08A' : '#EEF2FA', d === 'rock2' ? 22 : 18); sfx('learned'); if (d === 'rock2') { sfx('crit'); shakeMag = Math.max(shakeMag, 6); } return false; }
     if (m.jk) { once('j', m.h[0], () => { sfx('slam'); shakeMag = Math.max(shakeMag, 9); zoom = Math.max(zoom, .05);
       if (m.jk === 'rock') { silverBurst(P.x + f() * 60, P.y, 6, 24); fx.push({ kind: 'ring', x: P.x + f() * 60, y: P.y, z: 2, t: .45, max: .45, r: 150, col: '#EEF2FA', flat: 1 }); }
       if (m.jk === 'paper') SA.objs.push({ kind: 'gust', x: P.x + f() * 40, y: P.y, dir: f(), t: 0, max: .45 });
-      if (m.jk === 'scissors') SA.objs.push({ kind: 'snip', x: P.x + f() * 70, y: P.y, dir: f(), t: 0, max: .3 }); }); }
+      if (m.jk === 'scissors') SA.objs.push({ kind: 'snip', x: P.x + f() * 70, y: P.y, dir: f(), t: 0, max: .3 });
+      if (SA.black()) jkCurse(m, m.name === 'Rock!!'); }); }
     if (m.rocket) once('r', m.h[0], () => { SA.objs.push({ kind: 'rocket', x: P.x + f() * 24, y: P.y, z: P.z + 44, dir: f(), d: 0, out: m.grab ? 300 : 340, back: false, hit: new Set(), m, grab: m.grab, born: P.moveId }); sfx('whoosh'); sfx('shoot'); });
     if (m.titan) once('t', m.h[0], () => { const e = nearestAhead(110 + (P.z > 0 ? 0 : 0), 34); sfx('charge', 2);
       SA.objs.push({ kind: 'titan', e: e || null, t: 0, dir: f(), m, done: {} }); if (!e) floatText(P.x, P.y, 90, 'NOTHING TO GRAB', '#C8D4EC', 11); });
@@ -198,6 +215,10 @@
       if (o.black && Math.random() < dt * 26) { const z = rand(10, 60); parts.push({ x: o.x - o.dir * rand(0, 30), y: o.y + rand(-4, 4), z, vx: -o.dir * rand(20, 80), vy: 0, vz: rand(20, 70), life: .45, max: .45, col: pick(['#FF3A5A', '#7A1030', '#1A0A14']), size: rand(1.4, 2.6), shape: 'spark', rot: 0, vr: 0 }); }
       if (o.black && Math.random() < dt * 14) fx.push({ kind: 'bolt', x: o.x + rand(-10, 10), y: o.y, z: rand(50, 80), x2: o.x - o.dir * rand(10, 40), y2: o.y, z2: rand(4, 30), t: .1, max: .1, col: '#FF5A7A', seed: Math.random() * 99 });
       if (o.t > o.max || o.x < leftWall() - 30 || o.x > rightWall() + 30) o.gone = true;
+    } else if (o.kind === 'eclipse') { if (!o.done && o.t >= o.max * .55) { o.done = true; sfx('shoot'); sfx('slam'); shakeMag = Math.max(shakeMag, 10);
+        for (let i = 0; i < 5; i++) fx.push({ kind: 'bolt', x: o.x + rand(-20, 20), y: o.y, z: 320, x2: o.x + rand(-10, 10), y2: o.y, z2: 2, t: .3, max: .3, col: i % 2 ? '#FF4A6A' : '#FFD0D8', seed: Math.random() * 99 });
+        for (const e of foes()) if (Math.hypot(e.x - o.x, (e.y - o.y) * 2) < 120 + e.hw) hitE(e, 22, Math.sign(e.x - o.x) || 1, { arm: 1, kb: 180, launch: 380, power: 2 }); }
+      if (o.t > o.max) o.gone = true;
     } else if (o.kind === 'brand') { // Rending Talons: the mark the black crescent left, and the crimson lightning that finds it
       const e = o.e; if (e && !e.dead) { o.x = e.x; o.y = e.y; }
       if (!o.done && o.t >= o.at) { o.done = true; const z = e ? e.z + e.hh * .5 : 30;
@@ -264,7 +285,8 @@
     const pose = _pp(); if (!SA.on()) return pose;
     pose.armOn = 1; if (SA.fistOut) { pose.armGone = 1; pose.arm = 0; pose.elbow = 0; pose.ext = .6; }
     if (P.state === 'charge') { const s = jkOf(P.ct || 0), q = Math.min(1, (P.ct || 0) / .45); pose.armShape = P.ct >= .45 ? s : 'rock'; pose.armBig = 1 + 1.4 * q + .1 * Math.sin(performance.now() / 70) * q; pose.arm = -1.6; pose.elbow = 1.2; pose.glow = perfectGlow() || `rgba(${LT('225,235,255')},.6)`;
-      if (P.ct >= .45 && SA.jkShown !== s) { SA.jkShown = s; floatText(P.x, P.y, 92, s.toUpperCase() + '…', '#EEF2FA', 14); sfx('hit-metal', .3); } }
+      const d = jkDef(P.ct || 0); if (P.ct >= .45 && SA.jkShown !== d) { SA.jkShown = d; floatText(P.x, P.y, 92, d === 'rock2' ? 'ROCK!!…' : s.toUpperCase() + '…', d === 'rock2' ? '#FFE08A' : '#EEF2FA', d === 'rock2' ? 17 : 14); sfx(d === 'rock2' ? 'charge' : 'hit-metal', d === 'rock2' ? 2 : .3); }
+      if (d === 'rock2') { pose.armBig += .5; pose.glow = 'rgba(255,224,138,.9)'; } }
     else SA.jkShown = null;
     return pose;
   };
@@ -283,6 +305,24 @@
           for (let k = 1; k <= 7; k++) { const q = k / 7, x = x0 - 18 + 30 * Math.sin(q * Math.PI) + (r() - .5) * 6, y = dy - 22 + 44 * q + (r() - .5) * 4; ctx.lineTo(x, y); }
           ctx.strokeStyle = `rgba(20,6,16,${(.85 * a).toFixed(3)})`; ctx.lineWidth = 5 - i; ctx.lineJoin = 'miter'; ctx.stroke();
           ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,50,80,${(.75 * a).toFixed(3)})`; ctx.lineWidth = 1.6; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+        ctx.restore(); })]);
+    else if (o.kind === 'crack') list.push([o.y - 30, () => onMain(() => { const a = Math.min(1, o.t / .08) * (1 - Math.max(0, (o.t - o.max * .6) / (o.max * .4))), r = mulberry(o.seed | 0); ctx.save(); ctx.lineCap = 'round';
+        for (let i = 0; i < o.n; i++) { const an = r() * Math.PI * 2, L = o.R * (.5 + .5 * r()) * Math.min(1, o.t / .12); let x = o.x, yy = o.y; ctx.beginPath(); ctx.moveTo(x, yy);
+          for (let k = 1; k <= 4; k++) { x = o.x + Math.cos(an + (r() - .5) * .5) * L * k / 4; yy = o.y + Math.sin(an + (r() - .5) * .5) * L * k / 4 * .32; ctx.lineTo(x, yy); }
+          ctx.strokeStyle = `rgba(10,4,10,${(.85 * a).toFixed(3)})`; ctx.lineWidth = 3.2; ctx.stroke(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,50,80,${((.5 + .4 * Math.sin(o.t * 20 + i)) * a).toFixed(3)})`; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+        ctx.restore(); })]);
+    else if (o.kind === 'gale') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max, r = mulberry((o.seed | 0) + Math.floor(o.t * 30)); ctx.save(); ctx.translate(o.x, o.y); ctx.scale(o.dir, 1);
+        const g = ctx.createLinearGradient(0, 0, 160, 0); g.addColorStop(0, `rgba(20,6,18,${(.55 * a).toFixed(3)})`); g.addColorStop(1, 'rgba(20,6,18,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(70 + o.t * 120, -40, 110, 48, 0, 0, Math.PI * 2); ctx.fill();
+        for (let i = 0; i < 14; i++) { const x = r() * 180 + o.t * 260, yy = -10 - r() * 80; ctx.fillStyle = i % 3 ? `rgba(255,50,80,${(.7 * a).toFixed(3)})` : `rgba(12,4,10,${(.8 * a).toFixed(3)})`; ctx.save(); ctx.translate(x, yy); ctx.rotate(r() * 6 + o.t * 12); ctx.fillRect(-4, -1.2, 8 + r() * 6, 2.4); ctx.restore(); }
+        ctx.restore(); })]);
+    else if (o.kind === 'rend') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max, snap = o.t > o.max * .7 ? (o.t - o.max * .7) / (o.max * .3) : 0, w = 1 - snap; ctx.save(); ctx.translate(o.x, o.y - 40); ctx.scale(o.dir, 1);
+        for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-34 * w, -34 * s * w); ctx.lineTo(34 * w, 34 * s * w); ctx.strokeStyle = `rgba(14,4,12,${(.9 * a).toFixed(3)})`; ctx.lineWidth = 7 * (1 - snap * .6); ctx.stroke();
+          ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,60,90,${(.85 * a).toFixed(3)})`; ctx.lineWidth = 2.2; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+        ctx.restore(); })]);
+    else if (o.kind === 'eclipse') list.push([o.y + 1, () => onMain(() => { const k = o.t / o.max, inR = k < .55 ? 80 * (1 - k / .55 * .85) : 12, a = k < .55 ? Math.min(1, k * 6) : Math.max(0, 1 - (k - .55) / .45); ctx.save();
+        ctx.fillStyle = `rgba(6,2,8,${(.85 * a).toFixed(3)})`; ctx.beginPath(); ctx.arc(o.x, o.y - 90, inR, 0, Math.PI * 2); ctx.fill(); ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = `rgba(255,50,80,${(.8 * a).toFixed(3)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(o.x, o.y - 90, inR + 3, 0, Math.PI * 2); ctx.stroke();
+        if (k >= .55) { const q = (k - .55) / .45, w = 26 * (1 - q); const lg = ctx.createLinearGradient(o.x - w, 0, o.x + w, 0); lg.addColorStop(0, 'rgba(255,40,70,0)'); lg.addColorStop(.5, `rgba(255,190,200,${(.9 * (1 - q)).toFixed(3)})`); lg.addColorStop(1, 'rgba(255,40,70,0)'); ctx.fillStyle = lg; ctx.fillRect(o.x - w, o.y - 320, w * 2, 320); }
         ctx.restore(); })]);
     else if (o.kind === 'brand') list.push([o.y, () => onMain(() => { if (o.done) return; const k = o.t / o.at, z = o.e ? o.e.z + o.e.hh * .5 : 30; ctx.save(); ctx.globalCompositeOperation = 'lighter';
         ctx.strokeStyle = `rgba(255,50,80,${(.4 + .5 * k).toFixed(3)})`; ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = 0; i < 3; i++) { const yy = o.y - z - 6 + i * 6; ctx.moveTo(o.x - 8, yy - 3); ctx.lineTo(o.x + 8, yy + 3); } ctx.stroke();
