@@ -185,8 +185,11 @@ function drawTornado(p, t) {
 function learnedCue(m) {
   P.specialT = P.specialMax = .5; P.specialHit = true; P.goldT = 0;
   sfx('learned');
-  fx.push({ kind: 'gild', x: P.x + P.facing * 6, y: P.y, z: P.z + 60, t: .5, max: .5, dir: P.facing });
+  fx.push({ kind: 'gild', x: P.x + P.facing * 6, y: P.y, z: P.z + 60, t: .5, max: .5, dir: P.facing, tone: gildTone() });
 }
+// the flourish's colour: gold for his own weapons, violet and blood for a cursed one, white fire for one purified (cursedw.js)
+function gildTone() { const c = typeof save !== 'undefined' && save && save.cw && P && save.cw[P.w]; return c ? (c.pure ? 'pure' : 'cursed') : ''; }
+const GILD_TONE = { '': ['#FFE2A0', '#FFF4D0', '#FFFFFF', null], cursed: ['#B070E0', '#E83A5A', '#F0C8FF', '120,30,90'], pure: ['#FFFFFF', '#FFF8E0', '#FFFFFF', '255,244,200'] };
 function learnedTrail(dt) {
   P.goldT = (P.goldT || 0) - dt;
   if (P.goldT <= 0 && P.specialT > .1 && ghosts.length < 18) { P.goldT = .04; ghosts.push({ x: P.x, y: P.y, z: P.z, facing: P.facing, pose: playerPose(), a: .5 * P.specialT / (P.specialMax || .5), gold: 1 }); }
@@ -209,15 +212,16 @@ function drawLearnedRim(pose) { // a gold rim of light just outside his silhouet
   });
 }
 function drawGild(f) { // a gilded flourish: two scrolls curling out from a lozenge, opening and fading
-  const k = f.t / f.max, o = 1 - k, s = .7 + o * .5;
+  const k = f.t / f.max, o = 1 - k, s = .7 + o * .5, T = GILD_TONE[f.tone || ''] || GILD_TONE[''];
   ctx.translate(f.x, f.y - f.z); ctx.scale(s, s); ctx.globalAlpha = Math.min(1, k * 2.2);
-  ctx.lineCap = 'round'; ctx.strokeStyle = C('#FFE2A0'); ctx.lineWidth = 2;
+  if (T[3] && !FLASH && !TINT) { const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 30); g.addColorStop(0, `rgba(${T[3]},.55)`); g.addColorStop(1, `rgba(${T[3]},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); } // (a cursed one smoulders, a purified one shines)
+  ctx.lineCap = 'round'; ctx.strokeStyle = C(T[0]); ctx.lineWidth = 2;
   for (const d of [-1, 1]) {
     ctx.beginPath(); ctx.moveTo(d * 5, 0); ctx.bezierCurveTo(d * 14, -9, d * 24, -2, d * 20, 4); ctx.bezierCurveTo(d * 17, 8, d * 12, 4, d * 15, 1); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(d * 5, 1); ctx.quadraticCurveTo(d * 16, 9, d * 28, 3); ctx.stroke();
   }
-  ctx.fillStyle = C('#FFF4D0'); ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(4, 0); ctx.lineTo(0, 6); ctx.lineTo(-4, 0); ctx.closePath(); ctx.fill();
-  ctx.rotate(o * 2); ctx.fillStyle = C('#FFFFFF'); for (let i = 0; i < 4; i++) { ctx.rotate(TAU / 4); ctx.fillRect(9 + o * 14, -.8, 3, 1.6); }
+  ctx.fillStyle = C(T[1]); ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(4, 0); ctx.lineTo(0, 6); ctx.lineTo(-4, 0); ctx.closePath(); ctx.fill();
+  ctx.rotate(o * 2); ctx.fillStyle = C(T[2]); for (let i = 0; i < 4; i++) { ctx.rotate(TAU / 4); ctx.fillRect(9 + o * 14, -.8, 3, 1.6); }
 }
 
 // ---------- poses ----------

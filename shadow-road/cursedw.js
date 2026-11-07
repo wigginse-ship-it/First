@@ -253,6 +253,7 @@
     const pure = c.pure; sfx(pure ? 'learned' : 'growl', .6); shakeMag = Math.max(shakeMag, 3);
     burst(P.x + P.facing * 14, P.y, 46, pure ? ['#FFF4D8', '#FFE08A', '#FFFFFF'] : ['#0A0608', '#4A2A5A', '#9A2038'], 14, 'spark', P.facing, true);
     floatText(P.x, P.y, 104, m.name.toUpperCase(), pure ? '#FFE8B0' : '#C8A0E8', 12);
+    if (!(m.lvl)) fx.push({ kind: 'gild', x: P.x + P.facing * 6, y: P.y, z: P.z + 60, t: .5, max: .5, dir: P.facing, tone: pure ? 'pure' : 'cursed' }); // (its own skill shows the flourish too, in its colours: moves.js drawGild)
   }
   { const _mx = moveExtras; moveExtras = function (m, k, dt, airborne) {
     if (m && m.cw && held() && P.cwCast === P.moveId) { try { castStep(m, k, dt, airborne); } catch (err) { console.error(err); } }
