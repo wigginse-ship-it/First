@@ -197,7 +197,7 @@
     if (SA.stage !== ST()) { SA.stage = ST(); SA.objs = []; }
     if (P.shocked && P.move && P.move.sky) for (const o of SA.objs) if (o.kind === 'sky' && !o.landed) { o.landed = true; o.t = 0; o.x = P.x + P.facing * 40; o.y = P.y; silverBurst(o.x, o.y, 4, 30); shakeMag = Math.max(shakeMag, 12); }
     for (const o of SA.objs) step(o, dt);
-    if (SA.pure() && SA.wrist && Math.random() < dt * 7 && parts.length < 400) parts.push({ x: SA.wrist.x + rand(-6, 6), y: P.y + rand(-2, 2), z: Math.max(4, P.y - SA.wrist.y) + rand(-4, 4), vx: rand(-10, 10), vy: 0, vz: rand(30, 70), life: .6, max: .6, col: pick(['#FFFFFF', '#FFF4D0', '#FFE08A']), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 3 }); // (white fire shed off the Dawn Knuckles)
+    if (SA.pure() && SA.wrist && Math.random() < dt * 7 && parts.length < 400) parts.push({ x: SA.wrist.x + rand(-6, 6), y: P.y + rand(-2, 2), z: Math.max(4, P.y - SA.wrist.y) + rand(-4, 4), vx: rand(-10, 10), vy: 0, vz: rand(30, 70), life: .6, max: .6, col: pick(['#FFFFFF', '#FFF4D0', '#FFE08A']), size: rand(1.2, 2.2), shape: 'ember', rot: 0, vr: 3 }); // (white fire shed off the Dawn Knuckles)
     // what the arm sends out strikes the fallen too (the curse counts it: corruption.js), each body once per thing
     if (window.__corpsesNear && corpses.length) for (const o of SA.objs) { if (o.gone) continue;
       const r = { rocket: (o.z || 0) < 70 ? 18 : 0, ghost: (o.z || 0) < 60 ? 16 : 0, burst: o.struck ? 44 : 0, crescent: 20, crack: o.t > .08 ? (o.R || 90) * .6 : 0, gale: 60, rend: 30, eclipse: o.done ? 110 : 0 }[o.kind];
@@ -328,7 +328,12 @@
     if (pose.armGone) { ctx.fillStyle = C(BN.gilt); rrect(10, -3.4, 3.4, 6.8, 1.2); ctx.fill(); outline(.7); return; } // the cuff, the hand away on its chain
     ctx.save(); ctx.translate(chain, 0);
     if (big > 1.2 || shape) { ctx.save(); ctx.translate(12, 0); RIG(shape || 'rock', { s: .19 * big, rot: pose.armRot || 0, t }); ctx.restore(); K.glowAt(12 + 10 * big, 0, 10 + 8 * big, LT('225,235,255'), .3); }
-    else { let done = false; if ((SA.black() || SA.pure()) && pose.cwArt && typeof CWART !== 'undefined') { try { done = CWART.draw('fists', pose.cwArt, pose, false); } catch (e) { done = false; } } if (!done) _dw(kind, pose); K.glowAt(17, 0, 9, LT('225,235,255'), .28); } // (the Black Knuckles' own fist when it is the plain fist)
+    else { let done = false; if (SA.black() && pose.cwArt && typeof CWART !== 'undefined') { try { done = CWART.draw('fists', pose.cwArt, pose, false); } catch (e) { done = false; } } if (!done) _dw(kind, pose); K.glowAt(17, 0, 9, LT('225,235,255'), .28);
+      if (SA.pure()) { const T = typeof t === 'number' ? t : performance.now() / 1000; ctx.save(); ctx.globalCompositeOperation = 'lighter'; // (the Dawn Knuckles: the silver fist itself, white fire licking round the knuckles)
+        K.glowAt(17, 0, 13 + 2 * Math.sin(T * 9), '255,236,180', .32 + .08 * Math.sin(T * 13));
+        for (let i = 0; i < 4; i++) { const ph = T * 7 + i * 1.7, fl = .5 + .5 * Math.sin(ph), y0 = -4 + i * 2.6, L = 5 + 4 * fl;
+          ctx.fillStyle = `rgba(255,${226 + i * 7},${150 + i * 25},${(.35 + .3 * fl).toFixed(3)})`; ctx.beginPath(); ctx.moveTo(15, y0 - 1.6); ctx.quadraticCurveTo(19 + L * .5, y0 - 2.5 - fl * 1.5, 19 + L, y0 + Math.sin(ph * 1.3) * 1.2); ctx.quadraticCurveTo(19 + L * .4, y0 + 1.8, 15, y0 + 1.6); ctx.fill(); }
+        ctx.restore(); } } // (the Black Knuckles' own fist when it is the plain fist)
     ctx.restore();
   };
   const _pp = playerPose;
