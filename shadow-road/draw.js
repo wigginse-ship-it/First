@@ -488,10 +488,6 @@ function drawDeath(e, t) {
       ctx.strokeStyle = 'rgba(30,20,35,.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, d.r, .3, Math.PI - .3); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y - 1.5, d.r, Math.PI + .5, TAU - .5); ctx.stroke();
     }
-    if (el < 1.2) for (let i = 0; i < 3; i++) { // the stars of a good hard knock
-      const an = el * 6 + i * TAU / 3, sx = Math.cos(an) * 16, sy = -e.hh - 6 + Math.sin(an) * 4;
-      ctx.fillStyle = '#EED48A'; ctx.beginPath(); for (let k = 0; k < 5; k++) { const q = -Math.PI / 2 + k * TAU / 5; ctx.lineTo(sx + Math.cos(q) * 4, sy + Math.sin(q) * 4); ctx.lineTo(sx + Math.cos(q + TAU / 10) * 1.6, sy + Math.sin(q + TAU / 10) * 1.6); } ctx.fill();
-    }
   } else if (e.death === 'pierce') { // run through by Grayswandir
     FLASH = false;
     const fold = el < .5 ? 0 : Math.min(1, (el - .5) / .55), tremble = el < .45 ? Math.sin(el * 70) * .03 : 0;
