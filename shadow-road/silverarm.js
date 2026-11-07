@@ -14,7 +14,7 @@
 //   A AA AAA JH DA  air jabs on the chain · Meteor Fist (spike) · Moon Hook (it hooks the nearest foe and reels you in)
 //                   · Comet (the arm out ahead of a flying leap)
 //   D DX R RH       Rocket Ride (it fires and drags you along behind it) · Silver Haymaker (Heavy on the run) · Silver Crescent (out of a dodge: a palm and a
-//                   crescent of moonlight down the street) · The Snap (a ring of force)
+//                   crescent of moonlight down the street) · Thunder Rise (a crouching dash, then a lightning uppercut)
 //   HC              Rock, Paper, Scissors: hold Heavy; the hand cycles ROCK, PAPER, SCISSORS; let go on the one you want
 //   AH              The Hand of the Moon: in the air, Heavy twice (or hold it): you drop, and a hand out of the sky with you
 // Test: in the console, silverArm() puts it on (fists, the arm owned); silverArm(false) takes it off.
@@ -55,7 +55,7 @@
     D:    { name: 'Rocket Ride', dur: .66, h: [.1, .82], x0: 0, x1: 54, depth: 26, dmg: 7, kb: 260, multi: .09, lunge: 640, power: 1, wall: 1, ride: 1 },
     DX:   { name: 'Silver Haymaker', dur: .55, h: [.4, .62], prep: 1, x0: 0, x1: 80, depth: 28, dmg: 26, kb: 480, lunge: 380, power: 2, wall: 1 }, // Heavy off the run: the bare-handed haymaker, with a fist the size of a barrel
     R:    { name: 'Silver Crescent', dur: .42, h: [.28, .62], x0: 0, x1: 50, dmg: 17, kb: 300, lunge: 330, power: 1, crescent: 1 },
-    RH:   { name: 'The Snap', dur: .5, h: [.3, .4], x0: 0, x1: 70, dmg: 18, kb: 300, around: 1, power: 2, snap: 1 },
+    RH:   { name: 'Thunder Rise', dur: .6, h: [.36, .52], x0: -6, x1: 64, depth: 28, dmg: 24, kb: 70, launch: 600, lunge: 330, power: 2, electric: 1 }, // out of the dodge: a low crouching dash forward, and up out of it an uppercut that crackles with lightning
     HC:   { name: 'Rock, Paper, Scissors', dur: .7, h: [.42, .6], x0: 0, x1: 120, depth: 34, dmg: 30, kb: 300, power: 2, janken: 1 },
     AH:   { name: 'The Hand of the Moon', dur: .55, h: [.15, .97], x0: 0, x1: 70, dmg: 30, kb: 160, arc: [-2, 1.5], dive: 1, shock: 150, bounce: 1, power: 2, smash: 1, sky: 1 },
   };
@@ -72,6 +72,30 @@
   Object.defineProperty(WEAPONS.fists, 'desc', { get() { return SA.on() ? 'Benedict\'s arm, out of Tir-na Nog\'th. It flies, it grows, it grabs.' : baseDesc; }, configurable: true });
   SA.tree = ARM;
 
+  // ---------------- the Black Knuckles: when the fists in hand are cursed (cursedw.js), all the arm throws out is theirs ----------------
+  // the hand itself drawn through RIG (tinted to blackened iron with a crimson heart), and its light, chain and trails in
+  // violet and blood instead of moonlight
+  SA.black = () => !!(typeof save !== 'undefined' && save && save.cw && save.cw.fists && !save.cw.fists.pure && SA.on());
+  const LT = (rgb) => SA.black() ? ({ '230,238,255': '150,20,45', '225,235,255': '110,20,50', '210,225,255': '120,40,110', '200,215,255': '150,40,110', '255,255,255': '255,120,150', '245,248,255': '255,90,120' }[rgb] || '170,50,120') : rgb;
+  let rigC = null, rigG = null, rigD = null, rigDG = null;
+  function RIG(shape, o = {}) {
+    if (!SA.black() || FLASH || TINT) return W5.ben.rig(shape, o);
+    const m = ctx.getTransform(), sc = Math.max(.5, Math.min(4, Math.hypot(m.a, m.b))), s = o.s || 1, R = 150 * s, N = Math.max(8, Math.ceil(2 * R * sc));
+    if (!rigC || rigC.width < N) { rigC = document.createElement('canvas'); rigC.width = rigC.height = Math.max(N, 64); rigG = rigC.getContext('2d'); rigD = document.createElement('canvas'); rigD.width = rigD.height = rigC.width; rigDG = rigD.getContext('2d'); }
+    rigG.setTransform(1, 0, 0, 1, 0, 0); rigG.globalCompositeOperation = 'source-over'; rigG.globalAlpha = 1; rigG.clearRect(0, 0, N + 2, N + 2);
+    rigG.setTransform(sc, 0, 0, sc, N / 2, N / 2); const old = ctx; ctx = rigG; try { W5.ben.rig(shape, Object.assign({}, o, { a: undefined })); } finally { ctx = old; }
+    // the same hand, its silver multiplied down to blackened iron with a violet cast, cut back to the hand's own shape
+    rigDG.setTransform(1, 0, 0, 1, 0, 0); rigDG.globalCompositeOperation = 'source-over'; rigDG.clearRect(0, 0, N + 2, N + 2); rigDG.drawImage(rigC, 0, 0);
+    rigDG.globalCompositeOperation = 'multiply'; rigDG.fillStyle = '#2C1830'; rigDG.fillRect(0, 0, N, N);
+    rigDG.globalCompositeOperation = 'lighter'; const g = rigDG.createRadialGradient(N / 2, N / 2, 2, N / 2, N / 2, N * .38); g.addColorStop(0, 'rgba(140,16,36,.32)'); g.addColorStop(1, 'rgba(60,0,30,0)'); rigDG.fillStyle = g; rigDG.fillRect(0, 0, N, N); // (the crimson at its heart)
+    rigDG.globalCompositeOperation = 'destination-in'; rigDG.drawImage(rigC, 0, 0); rigDG.globalCompositeOperation = 'source-over';
+    ctx.save(); if (o.a !== undefined) ctx.globalAlpha *= o.a; ctx.drawImage(rigD, 0, 0, N, N, -R, -R, 2 * R, 2 * R); ctx.restore();
+  }
+
+  // the arm with the Black Knuckles on it hits far harder than the clean silver arm: every blow of its moveset and all it
+  // throws out (the rocket fist, the giant hands, the lightning); the cursed weapon's own level multiplier comes on top
+  SA.BLACK_K = 1.75;
+  { const _st = strike; strike = function (e, base, dir, m, echo) { if (m && m.arm && !m.trump && SA.black()) base *= SA.BLACK_K; return _st(e, base, dir, m, echo); }; }
   // ---------------- the mechanics ----------------
   { const _mpk = movePoseKey; movePoseKey = function (m) { return m && m.arm ? 'arm:' + m.key : _mpk(m); }; }
   const _me = moveExtras;
@@ -88,6 +112,15 @@
       SA.objs.push({ kind: 'titan', e: e || null, t: 0, dir: f(), m, done: {} }); if (!e) floatText(P.x, P.y, 90, 'NOTHING TO GRAB', '#C8D4EC', 11); });
     if (m.below) once('b', m.h[0], () => { const e = nearestAhead(200, 44), x = e ? e.x : P.x + f() * 120, y = e ? e.y : P.y; SA.objs.push({ kind: 'burst', x: clamp(x, leftWall() + 10, rightWall() - 10), y, t: 0, max: .7, m, hit: new Set(), dir: f() }); sfx('slam'); shakeMag = Math.max(shakeMag, 5); dust(P.x + f() * 20, P.y, 6); });
     if (m.hundred && k < m.h[1]) { SA.ghostT = (SA.ghostT || 0) - dt; if (SA.ghostT <= 0) { SA.ghostT = .03; SA.objs.push({ kind: 'ghost', x: P.x + f() * rand(26, 86), y: P.y + rand(-14, 14), z: P.z + rand(26, 72), dir: f(), t: 0, max: .16, s: rand(.17, .25), a: rand(-.25, .25) }); if (Math.random() < .4) sfx('swing', .3); } }
+    if (m.electric) { // the dash low along the street, its afterimage trailing; then the fist comes up out of it in a crack of lightning
+      const col = SA.black() ? ['#FF3A5A', '#FF9AAA', '#B01030'] : ['#C8A0FF', '#F2E8FF', '#8A5AFF'];
+      if (k < m.h[0]) { P.vx = f() * 330 * (1 - k / m.h[0] * .6); if (Math.random() < dt * 40) dust(P.x - f() * 10, P.y, 1); if (Math.random() < dt * 22 && ghosts.length < 18) ghosts.push({ x: P.x, y: P.y, z: P.z, facing: f(), pose: playerPose(), a: .45, dark: SA.black() ? 1 : 0 }); }
+      else if (k < m.h[1]) P.vx = f() * 60;
+      once('e', m.h[0], () => { sfx('crit'); sfx('shoot', .7); flashT = Math.max(flashT, .05); shakeMag = Math.max(shakeMag, 7); if (P.z <= 2) P.vz = 220;
+        const fx0 = P.x + f() * 34, z0 = P.z + 40;
+        for (let i = 0; i < 4; i++) fx.push({ kind: 'bolt', x: fx0 + rand(-14, 14), y: P.y, z: z0 + 120 + rand(0, 60), x2: fx0 + rand(-6, 6), y2: P.y, z2: z0 + rand(-6, 10), t: .22, max: .22, col: col[i % 2], seed: Math.random() * 99 });
+        burst(fx0, P.y, z0 + 20, col, 18, 'spark', f(), true); fx.push({ kind: 'ring', x: fx0, y: P.y, z: z0 + 10, t: .2, max: .2, r: 46, col: col[1] }); });
+      if (k > m.h[0] && k < m.h[1] + .1 && Math.random() < dt * 30) { const fx0 = P.x + f() * 30; fx.push({ kind: 'bolt', x: fx0 + rand(-20, 20), y: P.y, z: P.z + 50 + rand(0, 50), x2: fx0 + rand(-20, 20), y2: P.y, z2: P.z + 50 + rand(0, 50), t: .1, max: .1, col: col[2], seed: Math.random() * 99 }); } }
     if (m.snap) once('s', m.h[0], () => { sfx('crit'); sfx('slam'); flashT = Math.max(flashT, .05); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .4, max: .4, r: 120, col: '#EEF2FA', flat: 1 }); shockwave(P.x, P.y, 100, m); });
     if (m.crescent) once('c', m.h[0], () => { SA.objs.push({ kind: 'crescent', x: P.x + f() * 30, y: P.y, dir: f(), t: 0, max: .8, hit: new Set(), m }); sfx('whoosh'); });
     if (m.hook) { once('h0', 0, () => { const e = foes().filter(o => Math.abs(o.x - P.x) < 280 && Math.abs(o.y - P.y) < 60).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0]; P.hookE = e || null; if (e) { P.facing = Math.sign(e.x - P.x) || P.facing; sfx('whoosh'); } });
@@ -164,12 +197,12 @@
     plate(ax, ay, bx, by, 8.2, 6.2, far); plate(bx, by, cx, cy, 6.4, 4.8, far);
     ctx.fillStyle = C(BN.gilt); circle(bx, by, 2.5); ctx.fill(); outline(.8); if (K.DET()) { ctx.fillStyle = '#FFFFFF'; circle(bx - .5, by - .7, .7); ctx.fill(); }
     ctx.fillStyle = C(BN.gilt); circle(ax, ay, 3); ctx.fill(); outline(.9);
-    K.glowAt((bx + cx) / 2, (by + cy) / 2, 14, '225,235,255', .22);
+    K.glowAt((bx + cx) / 2, (by + cy) / 2, 14, LT('225,235,255'), .22);
   };
   // the hand: flung out on its chain, grown huge, or shaped (drawn in the weapon's place)
   function chainTo(x0, x1, links = true) {
     if (x1 - x0 < 2) return;
-    K.add(() => { ctx.strokeStyle = 'rgba(210,225,255,.55)'; ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x1, 0); ctx.stroke(); });
+    K.add(() => { ctx.strokeStyle = `rgba(${LT('210,225,255')},.55)`; ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x1, 0); ctx.stroke(); });
     ctx.strokeStyle = C(BN.silverDk); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x1, 0); ctx.stroke();
     if (links) for (let x = x0 + 3; x < x1 - 2; x += 4.2) { ctx.fillStyle = C(BN.silver); ell(x, 0, 1.9, 1.2); ctx.fill(); ctx.strokeStyle = C(BN.silverDk); ctx.lineWidth = .4; ctx.stroke(); }
   }
@@ -183,15 +216,15 @@
     chainTo(13, 13 + chain);
     if (pose.armGone) { ctx.fillStyle = C(BN.gilt); rrect(10, -3.4, 3.4, 6.8, 1.2); ctx.fill(); outline(.7); return; } // the cuff, the hand away on its chain
     ctx.save(); ctx.translate(chain, 0);
-    if (big > 1.2 || shape) { ctx.save(); ctx.translate(12, 0); W5.ben.rig(shape || 'rock', { s: .19 * big, rot: pose.armRot || 0, t }); ctx.restore(); K.glowAt(12 + 10 * big, 0, 10 + 8 * big, '225,235,255', .3); }
-    else { _dw(kind, pose); K.glowAt(17, 0, 9, '225,235,255', .28); }
+    if (big > 1.2 || shape) { ctx.save(); ctx.translate(12, 0); RIG(shape || 'rock', { s: .19 * big, rot: pose.armRot || 0, t }); ctx.restore(); K.glowAt(12 + 10 * big, 0, 10 + 8 * big, LT('225,235,255'), .3); }
+    else { let done = false; if (SA.black() && pose.cwArt && typeof CWART !== 'undefined') { try { done = CWART.draw('fists', pose.cwArt, pose, false); } catch (e) { done = false; } } if (!done) _dw(kind, pose); K.glowAt(17, 0, 9, LT('225,235,255'), .28); } // (the Black Knuckles' own fist when it is the plain fist)
     ctx.restore();
   };
   const _pp = playerPose;
   playerPose = function () {
     const pose = _pp(); if (!SA.on()) return pose;
     pose.armOn = 1; if (SA.fistOut) { pose.armGone = 1; pose.arm = 0; pose.elbow = 0; pose.ext = .6; }
-    if (P.state === 'charge') { const s = jkOf(P.ct || 0), q = Math.min(1, (P.ct || 0) / .45); pose.armShape = P.ct >= .45 ? s : 'rock'; pose.armBig = 1 + 1.4 * q + .1 * Math.sin(performance.now() / 70) * q; pose.arm = -1.6; pose.elbow = 1.2; pose.glow = perfectGlow() || 'rgba(225,235,255,.6)';
+    if (P.state === 'charge') { const s = jkOf(P.ct || 0), q = Math.min(1, (P.ct || 0) / .45); pose.armShape = P.ct >= .45 ? s : 'rock'; pose.armBig = 1 + 1.4 * q + .1 * Math.sin(performance.now() / 70) * q; pose.arm = -1.6; pose.elbow = 1.2; pose.glow = perfectGlow() || `rgba(${LT('225,235,255')},.6)`;
       if (P.ct >= .45 && SA.jkShown !== s) { SA.jkShown = s; floatText(P.x, P.y, 92, s.toUpperCase() + '…', '#EEF2FA', 14); sfx('hit-metal', .3); } }
     else SA.jkShown = null;
     return pose;
@@ -201,16 +234,16 @@
   function drawObj(o, list, t) {
     if (o.kind === 'rocket') list.push([o.y + .2, () => { // the fist in flight, and the chain back to his wrist
       const w = SA.wrist; if (w) K.leafLine(() => { ctx.moveTo(w.x, w.y); ctx.lineTo(o.x - o.dir * 6, o.y - o.z); }, 1.3, .9);
-      if (w) onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(210,225,255,.45)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(w.x, w.y); ctx.lineTo(o.x, o.y - o.z); ctx.stroke(); ctx.restore(); });
-      ctx.save(); ctx.translate(o.x - o.dir * 8, o.y - o.z); ctx.scale(o.dir, 1); W5.ben.rig(o.held || o.zip ? 'rock' : o.grab && !o.back ? 'claw' : 'rock', { s: .46, t }); ctx.restore(); K.glowAt(o.x, o.y - o.z, 22, '230,238,255', .5); }]);
-    else if (o.kind === 'titan' && o.e && !o.e.dead && !o.done.th && !o.e.boss) list.push([o.e.y + .3, () => { ctx.save(); ctx.translate(o.e.x - o.dir * (o.e.hw + 8), o.e.y - o.e.z - o.e.hh * .45); ctx.scale(o.dir, 1); W5.ben.rig(o.t < .1 ? 'claw' : 'rock', { s: .5, t, a: .92 }); ctx.restore(); }]); // the huge hand closed round them
-    else if (o.kind === 'burst') list.push([o.y, () => { const k = Math.min(1, o.t / .12), d = o.t > .45 ? (o.t - .45) / .25 : 0; ctx.save(); ctx.beginPath(); ctx.rect(o.x - 80, o.y - 200, 160, 202); ctx.clip(); ctx.translate(o.x, o.y + (1 - k) * 60 + d * 70); ctx.scale(o.dir, 1); W5.ben.rig(o.t < .18 ? 'paper' : 'rock', { s: .5, rot: -Math.PI / 2, t, stump: 1 }); ctx.restore(); K.glowAt(o.x, o.y - 30, 50, '230,238,255', .4 * (1 - d)); }]);
-    else if (o.kind === 'ghost') list.push([o.y, () => { ctx.save(); ctx.globalAlpha *= .85 * Math.min(1, (1 - o.t / o.max) * 2); ctx.translate(o.x, o.y - o.z); ctx.scale(o.dir, 1); ctx.rotate(o.a); W5.ben.rig('rock', { s: o.s * 1.3, t }); ctx.restore(); K.glowAt(o.x, o.y - o.z, 16, '225,235,255', .35); }]);
+      if (w) onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('210,225,255')},.45)`; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(w.x, w.y); ctx.lineTo(o.x, o.y - o.z); ctx.stroke(); ctx.restore(); });
+      ctx.save(); ctx.translate(o.x - o.dir * 8, o.y - o.z); ctx.scale(o.dir, 1); RIG(o.held || o.zip ? 'rock' : o.grab && !o.back ? 'claw' : 'rock', { s: .46, t }); ctx.restore(); K.glowAt(o.x, o.y - o.z, 22, LT('230,238,255'), .5); }]);
+    else if (o.kind === 'titan' && o.e && !o.e.dead && !o.done.th && !o.e.boss) list.push([o.e.y + .3, () => { ctx.save(); ctx.translate(o.e.x - o.dir * (o.e.hw + 8), o.e.y - o.e.z - o.e.hh * .45); ctx.scale(o.dir, 1); RIG(o.t < .1 ? 'claw' : 'rock', { s: .5, t, a: .92 }); ctx.restore(); }]); // the huge hand closed round them
+    else if (o.kind === 'burst') list.push([o.y, () => { const k = Math.min(1, o.t / .12), d = o.t > .45 ? (o.t - .45) / .25 : 0; ctx.save(); ctx.beginPath(); ctx.rect(o.x - 80, o.y - 200, 160, 202); ctx.clip(); ctx.translate(o.x, o.y + (1 - k) * 60 + d * 70); ctx.scale(o.dir, 1); RIG(o.t < .18 ? 'paper' : 'rock', { s: .5, rot: -Math.PI / 2, t, stump: 1 }); ctx.restore(); K.glowAt(o.x, o.y - 30, 50, LT('230,238,255'), .4 * (1 - d)); }]);
+    else if (o.kind === 'ghost') list.push([o.y, () => { ctx.save(); ctx.globalAlpha *= .85 * Math.min(1, (1 - o.t / o.max) * 2); ctx.translate(o.x, o.y - o.z); ctx.scale(o.dir, 1); ctx.rotate(o.a); RIG('rock', { s: o.s * 1.3, t }); ctx.restore(); K.glowAt(o.x, o.y - o.z, 16, LT('225,235,255'), .35); }]);
     else if (o.kind === 'crescent') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(o.x, o.y - 30); ctx.scale(o.dir, 1);
-      for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(${i ? '200,215,255' : '255,255,255'},${a * (.9 - i * .25)})`; ctx.lineWidth = 5 - i * 1.4; ctx.beginPath(); ctx.ellipse(-i * 10, 0, 14, 34, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke(); } ctx.restore(); })]);
-    else if (o.kind === 'gust') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(225,235,255,${a * .8})`; ctx.lineWidth = 2; for (let i = 0; i < 7; i++) { const y = o.y - 10 - i * 9, x = o.x + o.dir * o.t * 500; ctx.beginPath(); ctx.moveTo(x - o.dir * 60, y); ctx.lineTo(x + o.dir * (20 + i % 2 * 20), y); ctx.stroke(); } ctx.restore(); })]);
-    else if (o.kind === 'snip') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(245,248,255,${a})`; ctx.lineWidth = 4; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(o.x - o.dir * 60, o.y - 40 + s * 30); ctx.lineTo(o.x + o.dir * 60, o.y - 40 - s * 30); ctx.stroke(); } ctx.restore(); })]);
-    else if (o.kind === 'sky') list.push([o.y + .1, () => { const z = o.landed ? 0 : Math.max(0, P.z + 60), q = o.landed ? Math.max(0, 1 - o.t / .55) : 1; ctx.save(); ctx.globalAlpha *= o.landed ? q : Math.min(1, o.t * 4); ctx.translate(o.x, o.y - z - 96 - (o.landed ? 0 : 30)); ctx.scale(o.dir, 1); W5.ben.rig('paper', { s: .9, rot: Math.PI / 2, t, stump: 1 }); ctx.restore(); }]);
+      for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(${i ? LT('200,215,255') : LT('255,255,255')},${a * (.9 - i * .25)})`; ctx.lineWidth = 5 - i * 1.4; ctx.beginPath(); ctx.ellipse(-i * 10, 0, 14, 34, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke(); } ctx.restore(); })]);
+    else if (o.kind === 'gust') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('225,235,255')},${a * .8})`; ctx.lineWidth = 2; for (let i = 0; i < 7; i++) { const y = o.y - 10 - i * 9, x = o.x + o.dir * o.t * 500; ctx.beginPath(); ctx.moveTo(x - o.dir * 60, y); ctx.lineTo(x + o.dir * (20 + i % 2 * 20), y); ctx.stroke(); } ctx.restore(); })]);
+    else if (o.kind === 'snip') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('245,248,255')},${a})`; ctx.lineWidth = 4; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(o.x - o.dir * 60, o.y - 40 + s * 30); ctx.lineTo(o.x + o.dir * 60, o.y - 40 - s * 30); ctx.stroke(); } ctx.restore(); })]);
+    else if (o.kind === 'sky') list.push([o.y + .1, () => { const z = o.landed ? 0 : Math.max(0, P.z + 60), q = o.landed ? Math.max(0, 1 - o.t / .55) : 1; ctx.save(); ctx.globalAlpha *= o.landed ? q : Math.min(1, o.t * 4); ctx.translate(o.x, o.y - z - 96 - (o.landed ? 0 : 30)); ctx.scale(o.dir, 1); RIG('paper', { s: .9, rot: Math.PI / 2, t, stump: 1 }); ctx.restore(); }]);
   }
 
   // ---------------- the poses ----------------
@@ -229,7 +262,7 @@
     'arm:HH'(pose, m, k) { MOVE_POSE['arm:H'](pose, m, k); if (k < m.h[0]) pose.armShape = 'claw'; },
     'arm:HHH'(pose, m, k) { const g = ease(span(k, 0, .18)), r = span(k, .62, .72); pose.arm = lerp(1, -.2, g) + 1.6 * sst(r) * (k < .8 ? 1 : 1 - span(k, .8, 1)); pose.elbow = .2; pose.ext = .5 * g; pose.armBig = 1 + 2.6 * g * (1 - .5 * span(k, .85, 1)); pose.armShape = k < .18 ? 'claw' : 'rock'; pose.lean = lerp(.1, -.2, g) + .4 * r; pose.legs = { f: 13, b: -12, fk: 6, bk: 4 }; pose.sink = 6; pose.trail = 0; pose.streak = null; delete pose.sweep; pose.yaw = .3 * r; },
     'arm:LH'(pose, m, k) { const g = ease(span(k, 0, m.h[0])); pose.arm = lerp(.4, 1.45, g); pose.elbow = lerp(1.6, 0, g); pose.ext = .4 * g; pose.crouch = 1; pose.lean = .5 * g; pose.armShape = 'rock'; pose.armBig = 1.3; pose.trail = 0; pose.streak = null; delete pose.sweep; pose.armChain = 10 * g; },
-    'arm:LLH'(pose, m, k) { pose.arm = -.05; pose.elbow = 0; pose.ext = .3; pose.armChain = 64 * sst(span(k, 0, .15)) * (1 - span(k, .88, 1)); pose.armBig = 1.6; pose.armShape = 'rock'; pose.backArm = 2.6; pose.lean = -.2; pose.trail = 0; pose.flat = k > .12 && k < .86 ? { r: 110, k: .96, rev: false, col: 'rgba(225,235,255,.95)', w: 5 } : null; },
+    'arm:LLH'(pose, m, k) { pose.arm = -.05; pose.elbow = 0; pose.ext = .3; pose.armChain = 64 * sst(span(k, 0, .15)) * (1 - span(k, .88, 1)); pose.armBig = 1.6; pose.armShape = 'rock'; pose.backArm = 2.6; pose.lean = -.2; pose.trail = 0; pose.flat = k > .12 && k < .86 ? { r: 110, k: .96, rev: false, col: `rgba(${LT('225,235,255')},.95)`, w: 5 } : null; },
     'arm:HL'(pose, m, k) { const g = sst(span(k, .1, .5)); pose.armBig = 1 + 2 * g; pose.armShape = 'rock'; },
     'arm:X'(pose, m, k) { MOVE_POSE['fists:X'](pose, m, k); const g = sst(span(k, .1, m.h[0])); pose.armBig = 1 + 1.6 * g * (1 - span(k, .8, 1)); pose.armShape = 'paper'; pose.armRot = -.6 * g; pose.trail = 0; }, // the Rising Fist's body, the open silver hand scooping up
     'arm:AAA'(pose, m, k) { pose.armBig = 1 + 1.2 * out(m, k); pose.armShape = 'rock'; pose.armChain = 20 * out(m, k); },
@@ -238,7 +271,12 @@
     'arm:D'(pose, m, k) { const e = sst(span(k, 0, .12)) * (1 - span(k, .84, 1)); pose.arm = -.08 - .35 * e; pose.elbow = 0; pose.ext = .9; pose.armChain = 46 * e; pose.armBig = 1 + .9 * e; pose.armShape = 'rock'; pose.lean = .55 * e; pose.rot = .25 * e; pose.legs = { f: lerp(8, -2, e), b: lerp(-8, -22, e), fk: 3, bk: 2 }; pose.flow = 20; pose.backArm = 2.7; pose.trail = 0; pose.streak = null; delete pose.sweep; },
     'arm:DX'(pose, m, k) { MOVE_POSE['fists:D'](pose, m, k); const g = sst(span(k, .1, m.h[0])) * (1 - span(k, .8, 1)); pose.armBig = 1 + 1.4 * g; pose.armShape = 'rock'; },
     'arm:R'(pose, m, k) { pose.armShape = k > m.h[0] - .05 && k < m.h[1] + .1 ? 'paper' : undefined; pose.armBig = pose.armShape ? 1.6 : 1; },
-    'arm:RH'(pose, m, k) { const g = sst(span(k, 0, .25)); pose.arm = lerp(1.1, -1.2, g); pose.elbow = lerp(1.6, 1.5, g); pose.armShape = 'snap'; pose.armBig = 1 + 1.2 * g; pose.armRot = -1.2; pose.lean = -.1; pose.trail = 0; pose.streak = null; pose.flat = null; },
+    'arm:RH'(pose, m, k) { // Thunder Rise: crouched low and leaning in through the dash, the fist cocked down by the knee; then he comes up out of it, the arm swung straight up, and hangs a moment at the top
+      const dash = 1 - sst(span(k, .26, m.h[0])), up = sst(span(k, m.h[0] - .06, m.h[0] + .08)), out = span(k, .82, 1);
+      pose.sink = 12 * dash; pose.crouch = dash > .3 ? 1 : 0; pose.lean = lerp(-.25, .5, dash) * (1 - out);
+      pose.arm = lerp(1.7, -1.5, up) * (1 - out) + .2 * out; pose.elbow = lerp(1.7, .15, up); pose.ext = .5 * up; pose.backArm = lerp(2.2, 1.4, up); pose.backElbow = 1.6;
+      pose.legs = dash > .2 ? { f: 18, b: -16, fk: 12, bk: 6, bh: .6 } : { f: 8, b: -10, fk: 2, bk: 4 }; pose.yaw = .25 * up;
+      pose.armShape = 'rock'; pose.armBig = 1 + .9 * up * (1 - out); pose.armRot = -1.4 * up; pose.trail = 0; pose.streak = null; pose.flat = null; },
     'arm:HC'(pose, m, k) { const s = m.jk || 'rock', g = sst(span(k, 0, m.h[0])), r = 1 - span(k, .8, 1); pose.armShape = s; pose.armBig = (2.2 + .8 * g) * (.4 + .6 * r) + .0; pose.trail = 0; pose.streak = null; delete pose.sweep; pose.flat = null;
       if (s === 'rock') { pose.arm = lerp(-2.4, 1.3, g); pose.elbow = .2; pose.lean = lerp(-.2, .6, g); pose.sink = 8 * g; pose.legs = { f: 13, b: -12, fk: 9, bk: 3 }; }
       else if (s === 'paper') { pose.arm = -.05; pose.elbow = lerp(1.4, 0, g); pose.ext = g; pose.lean = .45 * g; pose.legs = { f: 15, b: -15, fk: 7, bk: 1, bh: .7 }; pose.sink = 6; pose.armRot = -1.4; }

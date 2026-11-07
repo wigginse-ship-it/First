@@ -680,8 +680,8 @@
   function fling(dx, dy) {
     let d = Math.hypot(dx, dy);
     if (d < .2) { const s = speedE(); if (s > 80) { dx = CUR.vx; dy = CUR.vy / T.YK; } else { dx = -P.facing; dy = 0; } d = Math.hypot(dx, dy) || 1; }
-    const k = Math.sqrt(P.shrink || 1) * (1 + gearStat('speed') * .5);
-    CUR.vx = dx / d * T.fling * k; CUR.vy = dy / d * T.fling * k * T.YK; CUR.flingT = T.flingDur;
+    const k = Math.sqrt(P.shrink || 1) * (1 + gearStat('speed') * .5), fl = Math.max(T.fling * k, T.cruise * spd() * 1.25); // (a little past his own gliding speed, as 375 was to 290, however fast his weapon and his gear make him)
+    CUR.vx = dx / d * fl; CUR.vy = dy / d * fl * T.YK; CUR.flingT = T.flingDur;
     sfx('whoosh'); sfx('hit-goo', .5); bub(P.x, P.y, 8, 8, 60);
     for (let i = 0; i < 10 && parts.length < 420; i++) parts.push({ x: P.x - dx / d * rand(0, 12), y: P.y + rand(-3, 3), z: 2, vx: -dx / d * rand(60, 200) + rand(-30, 30), vy: rand(-12, 12), vz: rand(60, 200), life: .5, max: .5, col: pick(['rgba(220,250,245,.95)', 'rgba(150,215,210,.9)', '#FFFFFF']), size: rand(2, 3.4), shape: 'puff', rot: 0, vr: 0 });
   }

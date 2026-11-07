@@ -538,6 +538,7 @@
   { const _dw = drawWeapon; drawWeapon = function (kind, pose) {
     const A = (pose && pose.cwArt) || (ICON && (kind === ICON.id || (ICON.id === 'rapier' && kind === 'grayblade')) ? ICON : null);
     const k2 = kind === 'grayblade' ? 'rapier' : kind || 'fists';
+    if (pose && pose.armOn && k2 === 'fists') return _dw(kind, pose); // (the silver arm draws its own hand, in the knuckles' colours: silverarm.js)
     if (!A || k2 !== A.id || typeof CWART === 'undefined') return _dw(kind, pose);
     let ok = false; try { ok = CWART.draw(A.id, A, pose || {}, A === ICON); } catch (e) { console.error(e); }
     if (!ok) _dw(kind, pose);

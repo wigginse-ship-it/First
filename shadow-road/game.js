@@ -283,7 +283,7 @@ function startDodge() {
   if (WEAPONS[P.w].parry && P.z <= 0 && Math.abs(dy) <= Math.abs(dx) * 1.2 && Math.sign(dx) !== P.facing) { startParry(); return; } // a fencer parries instead
   const d = Math.hypot(dx, dy) || 1;
   const quick = 1 - gearStat('dodgeFast'); // the wayfarer's set: the same dodge, over sooner
-  P.state = 'dodge'; P.dodgeDur = P.t = .34 * quick; P.dq = false; const tiny = Math.sqrt(P.shrink || 1); P.dvx = dx / d * 300 / quick * tiny; P.dvy = dy / d * 150 / quick * tiny; P.inv = Math.max(P.inv, .36 + gearStat('iframes')); P.seq = ''; // (shrunk, his dodge carries him a shorter way)
+  P.state = 'dodge'; P.dodgeDur = P.t = .34 * quick; P.dq = false; const tiny = Math.sqrt(P.shrink || 1); const dv = Math.max(300, RUN * (W_SPEED[P.w] || 1) * (pw('haste') ? 1.3 : 1) * (1 + gearStat('speed')) * 1.3) * (typeof roomSlow !== 'undefined' ? roomSlow : 1); P.dvx = dx / d * dv / quick * tiny; P.dvy = dy / d * dv * .5 / quick * tiny; P.inv = Math.max(P.inv, .36 + gearStat('iframes')); P.seq = ''; // (shrunk, his dodge carries him a shorter way)
   // the dash depends on its direction: a low lunge forward, a hopping backstep that keeps you facing the enemy,
   // or a quick sidestep up or down the street
   P.dk = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'side' : Math.sign(dx) === P.facing ? 'fwd' : 'back';
