@@ -510,11 +510,32 @@ const MOVE_POSE = {
     pose.lean = (pose.lean || 0) + .28 * up; pose.flow = 14 * up;
     if (P.z > 2 || k > .1) pose.legs = { f: 9, b: -6, fk: lerp(4, 13, up), bk: lerp(4, 10, up), fl: 9 * up };
   },
-  'staff:JH'(pose, m, k) { // Halo Sweep: one turn in the air, the staff level at the waist
+  'staff:JH'(pose, m, k) { // Halo Sweep: two fast turns in the air, the staff level at the waist and run out to its full length, a wide ring of wood round him
     delete pose.sweep; pose.trail = 0;
-    pose.arm = lerp(.5, .45, k); pose.grip = -.1; pose.backArm = 1.2; pose.backElbow = 1.2; pose.lean = .05;
-    pose.legs = { f: 10, b: -9, fk: 10, bk: 6 }; pose.flow = 10;
-    pose.flat = k > .14 && k < .82 ? { r: 66, k: .96, rev: false, col: tcolOf(m), w: 5 } : null;
+    pose.spin = -2 * TAU * sstep(span(k, .06, .86)); pose.arm = lerp(.5, .3, ease(span(k, 0, .12))); pose.grip = -.35; pose.ext = .5; pose.backArm = 1.2; pose.backElbow = 1.2; pose.lean = .05;
+    pose.legs = { f: 11, b: -10, fk: 12, bk: 8, fl: 6 }; pose.flow = 16;
+    pose.flat = k > .1 && k < .86 ? { r: 92, k: .96, rev: false, col: tcolOf(m), w: 9 } : null;
+  },
+  'staff:A'(pose, m, k) { // Wheel Cut: the staff wheeled once end over end in front of him, the knees drawn up behind it
+    delete pose.sweep; pose.streak = null; pose.flat = null;
+    const q = Math.pow(sstep(span(k, .04, .8)), .85); pose.arm = lerp(-2.6, -2.6 + TAU * .78, q); if (pose.arm > Math.PI) pose.arm -= TAU;
+    pose.grip = -.3; pose.ext = .25; pose.elbow = 0; pose.backArm = 2.6; pose.backElbow = .3; pose.lean = .15 + .2 * Math.sin(Math.PI * q);
+    pose.legs = { f: 8, b: -7, fk: 14, bk: 12, fl: 8 }; pose.flow = 14;
+    if (k > .06 && k < .86) { pose.trail = 80; pose.trailFrom = pose.arm - Math.min(3.4, (k - .04) * 9); pose.trailCol = tcolOf(m); pose.trailW = 8; }
+  },
+  'staff:AA'(pose, m, k) { // Somersault Wheel: over in a front flip, the staff turned the whole way round with him, held out at its length
+    delete pose.sweep; pose.streak = null; pose.flat = null;
+    const q = sstep(span(k, .04, .82)); pose.rot = TAU * q;
+    pose.arm = lerp(1.4, .2, q); pose.grip = -.4; pose.ext = .45; pose.elbow = 0; pose.backArm = 2.4; pose.backElbow = .3; pose.lean = .1;
+    const t = Math.sin(Math.PI * q); pose.legs = { f: lerp(9, 6, t), b: lerp(-8, -2, t), fk: lerp(6, 16, t), bk: lerp(6, 16, t) }; pose.flow = 18;
+    if (k > .08 && k < .86) { pose.trail = 84; pose.trailFrom = pose.arm - 2.6; pose.trailCol = tcolOf(m); pose.trailW = 8; }
+  },
+  'staff:AAA'(pose, m, k) { // Falling Star: up over his head in both hands and down out of the sky point-first, his body stretched behind the blow
+    delete pose.sweep; pose.flat = null; pose.trail = 0;
+    const q = ease(span(k, 0, .22)); pose.arm = lerp(-2.6, 1.15, q); pose.backArm = pose.arm + .1; pose.backElbow = .2; pose.grip = 0; pose.ext = .35 * q; pose.elbow = 0;
+    pose.lean = lerp(-.3, .55, q); pose.rot = .25 * q; pose.legs = { f: 4, b: -12, fk: lerp(12, 4, q), bk: lerp(10, 2, q) }; pose.flow = 20;
+    if (k < .3) { pose.trail = 80; pose.trailFrom = -2.6; pose.trailCol = tcolOf(m); pose.trailW = 10; }
+    else { pose.streak = { len: WEAPONS.staff.reach + 40, a: .85, col: tcolOf(m) }; }
   },
   'staff:DA'(pose, m, k) { // Flying Lance: laid out behind the staff like a thrown spear
     const h0 = m.h[0], e = k < h0 ? -.3 * ease(k / h0) : k < m.h[1] ? Math.min(1, (k - h0) / ((m.h[1] - h0) * .4)) : 1 - span(k, m.h[1], 1) * .7;

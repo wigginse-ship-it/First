@@ -78,10 +78,10 @@ const WEAPONS = {
       HH:   { name: 'Sweeping Tide', dur: .6, h: [.2, .62], x0: 0, x1: 80, depth: 34, dmg: 20, kb: 90, launch: 280, arc: [-P_, 3 * P_], around: 1, crouch: 1, lunge: 90, bounce: 1, power: 2 }, // a low full-circle sweep that knocks everyone around you off their feet
       HHH:  { name: 'Twin Lance', dur: .6, h: [.28, .7], x0: 8, x1: 104, dmg: 12, kb: 380, arc: [.05, .05], multi: .14, ends: 1, lunge: 150, power: 2, wall: 1 }, // drive the staff straight through the whole front of the crowd, twice
       X:    { name: 'Rising Pole', dur: .5, h: [.33, .62], prep: 1, x0: 0, x1: 68, dmg: 10, kb: 40, launch: 580, arc: [1.4, -1.8], launcher: 1, power: 1 },
-      A:    { dur: .3,  h: [.15, .7], x0: 0, x1: 66, dmg: 6, kb: 80, arc: [-1.6, 1.6], around: 1, multi: .12 },
-      AA:   { dur: .3,  h: [.15, .7], x0: 0, x1: 66, dmg: 6, kb: 80, arc: [1.6, -1.6], around: 1, multi: .12 },
-      AAA:  { dur: .42, h: [.2, .65], x0: 0, x1: 68, dmg: 12, kb: 140, arc: [-2.2, 1.4], spike: 1, power: 1 },
-      JH:   { name: 'Halo Sweep', dur: .5, h: [.18, .78], x0: 0, x1: 72, dmg: 4, kb: 120, arc: [.35, .35], around: 1, ends: 1, multi: .1, spin: 1, power: 1 }, // Heavy in the air: he turns once with the staff level at the waist, a ring of wood all round him
+      A:    { name: 'Wheel Cut', dur: .36, h: [.1, .78], x0: 0, x1: 86, dmg: 10, kb: 60, launch: 110, arc: [-2.4, 1.6], around: 1, ends: 1, multi: .1, hover: 1, power: 1 }, // the staff wheeled once end over end in front of him, both ends biting; it holds him up and keeps them up
+      AA:   { name: 'Somersault Wheel', dur: .4, h: [.1, .8], x0: 0, x1: 86, dmg: 11, kb: 60, launch: 120, arc: [1.6, -2.4], around: 1, ends: 1, multi: .1, hover: 1, power: 1 }, // he goes over in a front flip with the staff turning with him
+      AAA:  { name: 'Falling Star', dur: .5, h: [.08, .97], x0: 0, x1: 84, dmg: 24, kb: 200, arc: [-2.6, 1.3], spike: 1, dive: 1, shock: 85, bounce: 1, power: 2 }, // and down out of the sky point-first, the street bursting round the landing
+      JH:   { name: 'Halo Sweep', dur: .56, h: [.12, .82], x0: 0, x1: 98, dmg: 8, kb: 150, launch: 130, arc: [.35, .35], around: 1, ends: 1, multi: .09, spin: 1, hover: 1, power: 1 }, // Heavy in the air: he turns once with the staff level at the waist, a ring of wood all round him
       DA:   { name: 'Flying Lance', dur: .46, h: [.22, .62], x0: 8, x1: 96, dmg: 13, kb: 320, arc: [.25, .25], fly: 1, power: 1, wall: 1 }, // Attack in a running jump: laid out behind the staff like a thrown spear
       DX:   { name: 'Spear Rush', style: 'thrust', dur: .5, h: [.24, .6], x0: 8, x1: 104, dmg: 16, kb: 400, arc: [.15, .15], lunge: 520, power: 2, wall: 1 }, // Heavy off the run (until Vaulting Dragon is learned): both hands on the staff and the run driven down it like a spear
       D:    { name: 'Sliding Pole', dur: .62, h: [.12, .82], x0: 8, x1: 80, dmg: 4, kb: 260, multi: .18, lunge: 470, slide: 1, power: 1, depth: 22,
