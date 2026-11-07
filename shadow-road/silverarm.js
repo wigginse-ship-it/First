@@ -286,7 +286,9 @@
     pose.armOn = 1; if (SA.fistOut) { pose.armGone = 1; pose.arm = 0; pose.elbow = 0; pose.ext = .6; }
     if (P.state === 'charge') { const s = jkOf(P.ct || 0), q = Math.min(1, (P.ct || 0) / .45); pose.armShape = P.ct >= .45 ? s : 'rock'; pose.armBig = 1 + 1.4 * q + .1 * Math.sin(performance.now() / 70) * q; pose.arm = -1.6; pose.elbow = 1.2; pose.glow = perfectGlow() || `rgba(${LT('225,235,255')},.6)`;
       const d = jkDef(P.ct || 0); if (P.ct >= .45 && SA.jkShown !== d) { SA.jkShown = d; floatText(P.x, P.y, 92, d === 'rock2' ? 'ROCK!!…' : s.toUpperCase() + '…', d === 'rock2' ? '#FFE08A' : '#EEF2FA', d === 'rock2' ? 17 : 14); sfx(d === 'rock2' ? 'charge' : 'hit-metal', d === 'rock2' ? 2 : .3); }
-      if (d === 'rock2') { pose.armBig += .5; pose.glow = 'rgba(255,224,138,.9)'; } }
+      if (d === 'rock2') { pose.armBig += .5; pose.glow = 'rgba(255,224,138,.9)'; }
+      { const pc = chargeTiming(WEAPONS.fists); if (pc.open && P.ct >= .45) { const q = 1 - Math.min(1, (pc.since || 0) / .14); pose.armBig += .35 * q; pose.glow = 'rgba(255,250,228,.98)'; // (the perfect window: the hand flares white-gold and swells for the moment it is open)
+          if (SA.pcAt !== pc.at) { SA.pcAt = pc.at; sfx('charge', 3); const w = SA.wrist; if (w) fx.push({ kind: 'ring', x: w.x, y: P.y, z: Math.max(0, P.y - w.y), t: .16, max: .16, r: 30, col: '#FFF4D0' }); } } } }
     else SA.jkShown = null;
     return pose;
   };
