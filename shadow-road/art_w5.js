@@ -1468,6 +1468,11 @@
       return;
     }
     const S = m.sph, e = S.e; S.t += dt;
+    // while she is out there is no one else in the street: whatever comes (a wave's last straggler, something the curse
+    // raises, anything a rule sends) goes up as moon-mist before it can stand
+    for (const o of enemies) if (o !== e && !o.dead && !o.remove) { o.remove = true; o.hp = 0; o.dropWeapon = null;
+      for (let i = 0; i < 8; i++) parts.push({ x: o.x + rand(-16, 16), y: o.y + rand(-4, 4), z: rand(2, 40), vx: rand(-20, 20), vy: 0, vz: rand(20, 60), life: .9, max: .9, col: 'rgba(210,222,245,.55)', size: rand(5, 10), shape: 'puff', rot: 0, vr: 0 }); }
+    if (typeof spawnQ !== 'undefined') spawnQ.length = 0;
     if (!enemies.includes(e) && S.phase !== 'leave') { m.sph = null; if (S.phase === 'fight') m.sphDone = true; return; } // she is gone (a room change, a reset): ask again later
     if (S.phase === 'arrive' && e.state === 'idle') {
       const q = pick(RIDDLES), opts = [q[1], q[2], q[3]].sort(() => Math.random() - .5), ys = [FLOOR_TOP + 24, (FLOOR_TOP + FLOOR_BOT) / 2 + 2, FLOOR_BOT - 12];
