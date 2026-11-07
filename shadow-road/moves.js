@@ -401,24 +401,28 @@ const MOVE_POSE = {
   },
   'hammer:RHH'(pose, m, k) { MOVE_POSE['hammer:DX'](pose, m, k); }, // Thunderfall: the Leaping Slam's heave up over the head and drive down, thrown from the top of the Uplift
   'hammer:R'(pose, m, k) { // Overhead Drive, the dodge counter's heavy form (the light Lunging Drive keeps draw.js's plain dodge lunge and is left alone):
-    // the hammer whipped back behind him, up over his head and down into the same forward drive, held there, then eased out of it
+    // planted out of the dodge, the hammer wheeled the whole way round: up from behind him, over his head, down through
+    // them in front and on past his feet, finishing low behind him with the body bowed over the follow-through
     if (!m.overhead) return;
-    const end = .82, a0 = 2.7, fwd = m.arc[0] - .6 * .9; // a0: the forward dodge's flung-back arms; fwd: the drive's forward position (draw.js's thrust at full lean, .6)
-    const body = (e, lean) => { // draw.js's dodge lunge, at extension e
-      pose.lean = lean; pose.sink = 6 - 2 * e; pose.legs = { f: 12 + 5 * e, b: -14 - 5 * e, fk: 8, bk: 0, bh: .6 * e }; pose.shift = 2.6 * e; pose.yaw = .2 * e; pose.backArm = lerp(1.4, 2.6, e); pose.flow = 14 * e; pose.ext = e;
-    };
-    pose.elbow = 0; pose.grip = 0; pose.trail = 0;
-    if (k < .31) { // back, up and over: one quick wheel, slow behind him and fast over the top
-      const q = span(k, 0, .31), w = q < .3 ? .22 * sstep(q / .3) : .22 + .78 * Math.pow((q - .3) / .7, 1.4);
-      const a = lerp(a0, TAU + fwd, w); pose.arm = a > Math.PI ? a - TAU : a;
-      const up = Math.sin(Math.PI * Math.min(1, w * 1.35)); // most upright with the hammer over his head
-      body(.3 * w + .7 * Math.pow(w, 3), lerp(.42, .6, w) - .5 * up); pose.ext = Math.max(0, w * 1.2 - .2); pose.streak = null;
-      if (w > .3) { pose.trail = 66; pose.trailFrom = pose.arm - Math.min(2.3, (w - .2) * 4.5); pose.trailCol = tcolOf(m); pose.trailW = 9; }
-    } else if (k < end) { // driven in and held there, the whole body stretched out behind the head
-      body(1, .6); pose.arm = fwd;
-      if (k < .4) { pose.trail = 66; pose.trailFrom = fwd - 2.3 * (1 - span(k, .31, .4)); pose.trailCol = tcolOf(m); pose.trailW = 9; }
-      if (k > m.h[1] + .1) pose.streak = null;
-    } else { const e = 1 - sstep(span(k, end, 1)); body(e, .3 + .3 * e); pose.arm = m.arc[0] - pose.lean * .9; pose.streak = null; }
+    // the arm's angle (0 out in front, PI/2 straight down, PI behind, -PI/2 straight up) unwound: behind and low, up, over, down, through to down-back
+    // the weight does the rest: it falls faster and faster over the top, and what it has gathered carries it on past his feet
+    // and round behind him, pulling him after it (bowed over, hips turned, the back heel lifting) until it spends itself,
+    // swings a little back on its own weight, and he gathers it up
+    const A0 = 2.7, UP = TAU - Math.PI / 2, DN = TAU + Math.PI / 2, END = TAU + 2.45, OVER = .3, w1 = .2, w2 = .38, w3 = .66;
+    let a, pull = 0;
+    if (k < w1) a = lerp(A0, UP, sstep(k / w1));
+    else if (k < w2) a = lerp(UP, DN, Math.pow(span(k, w1, w2), 1.7));
+    else if (k < w3) { const q = span(k, w2, w3), c = 1 - Math.pow(1 - q, 3); a = lerp(DN, END + OVER, c) - OVER * Math.max(0, (q - .7) / .3) * Math.sin(Math.max(0, (q - .7) / .3) * Math.PI / 2); pull = Math.sin(Math.min(1, q * 1.6) * Math.PI / 2) * (1 - .4 * Math.max(0, (q - .6) / .4)); }
+    else { a = END; pull = .6; }
+    const rec = sstep(span(k, .82, 1));
+    if (k >= w3) { a = lerp(END, TAU + 1.75, rec); pull = .6 * (1 - rec); }
+    a = ((a + Math.PI) % TAU + TAU) % TAU - Math.PI; pose.arm = a; pose.backArm = a - .08; pose.backElbow = .15; pose.elbow = 0; pose.grip = 0;
+    delete pose.sweep; pose.streak = null; pose.trail = 0; pose.flat = null; pose.spin = 0; pose.ext = 0;
+    const up = k < w1 ? sstep(k / w1) : 1 - sstep(span(k, w1, w2)), bow = k < w1 ? 0 : sstep(span(k, w1 + .08, w2 + .12)) * (1 - .75 * rec);
+    pose.lean = lerp(.2, -.45, up) * (1 - bow) + (.7 + .25 * pull) * bow; pose.sink = -3 * up + (10 + 5 * pull) * bow; pose.yaw = .45 * pull;
+    pose.shift = 3 * pull;
+    pose.legs = { f: lerp(9, 14, bow), b: lerp(-8, -15, bow) - 3 * pull, fk: lerp(3, 13, bow), bk: lerp(2, 6, bow) + 6 * pull, bh: .8 * pull }; pose.flow = 6 + 12 * bow + 6 * pull;
+    if (k > w1 * .55 && k < w3 + .02) { pose.trail = 72; pose.trailFrom = pose.arm - Math.min(2.8, (k - w1 * .55) * 10); pose.trailCol = tcolOf(m); pose.trailW = k > w2 ? 11 : 9; }
   },
   'hammer:D'(pose, m, k) { // Battering Run: off the run the hammer trails behind him at the waist; the hips and chest turn and it is swept round
     // flat in front of him, level, at full stretch, and carried on across his body before he gathers it back
