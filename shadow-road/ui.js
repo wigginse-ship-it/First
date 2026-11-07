@@ -85,13 +85,25 @@ function stageClear() {
   loot = [];
   const from = stageIdx;
   if (isFinal(from)) { // the end of the road: each of the worlds past the fork is the last
-    save.stage = from; save.branch = from; save.done = true; save.endings = save.endings || {}; save.endings[endingId(from)] = true; persist();
+    save.stage = from; save.branch = from; save.done = true; save.endings = save.endings || {}; save.endings[endingId(from)] = true; delete save.endPending; persist();
     mode = 'win'; winCard(from); showOnly('winOv'); playMusic('title');
   } else {
     save.stage = from === FORK ? branchStage() : from + 1; persist();
     openForge(`WORLD CLEARED: +${runShards} SHARDS, +${runSigils} SIGILS`);
   }
 }
+// the road's end is kept the moment the last world's lord falls, before its ending plays: an ending (and its credits)
+// runs long, and a reload during it (a closed tab, a new version of the page) must not send him back into that world.
+// Only the end itself is kept now; which ending he has seen (save.endings, which some endings word themselves by) is
+// written as before when the ending finishes, or, if it never does, the next time the game is loaded (endPending)
+window.addEventListener('load', () => {
+  try { if (save && save.endPending) { save.endings = save.endings || {}; save.endings[save.endPending] = true; delete save.endPending; persist(); } } catch (e) {}
+  const _sc = stageClear; // (wrapped last, so it runs first: before any world's ending takes over)
+  stageClear = function () {
+    try { if (isFinal(stageIdx) && !(stage && stage.secret)) { save.stage = stageIdx; save.branch = stageIdx; save.done = true; save.endPending = endingId(stageIdx); persist(); } } catch (e) {}
+    return _sc();
+  };
+});
 // the win card, for whichever road was walked (a world's own ending may write over it after: art_w5.js does)
 let winAt = 0;
 function winCard(i) {
