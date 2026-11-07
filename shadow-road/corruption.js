@@ -360,7 +360,8 @@
   { const _hl = heroLook; heroLook = function () { const Lk = _hl(); const t = NG() ? teff() : 0; if (t >= 1) { const k = [0, .3, .45, .58, .7][t];
     for (const key of ['cloak', 'cloakSlate', 'cloakGrey', 'cloakLt']) if (Lk[key]) Lk[key] = awMixSafe(Lk[key], key === 'cloak' ? '#5A5660' : '#8A8690', k); } return Lk; }; }
   function awMixSafe(a, b, k) { try { const p = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); } catch (e) { return a; } }
-  // ---------------- corrupted foes ----------------
+  // ---------------- corrupted foes (how they look: cursed_foes.js; an elite is marked by another world's lord, MASKS:
+  // its colours and the blow it borrows) ----------------
   const MASKS = { mossback: { col: '#5E7A3A', dk: '#2A3A18', atk: 'spike' }, colossus: { col: '#B88A48', dk: '#5A3A18', atk: 'ring' }, wyrm: { col: '#9FD8E0', dk: '#3A4A8A', atk: 'beam' },
     tyiga: { col: '#B880C0', dk: '#4A2050', atk: 'fall' }, sleeper: { col: '#E8E0D0', dk: '#6A6058', atk: 'ring' }, benedict: { col: '#C8D4EA', dk: '#4A566E', atk: 'beam' },
     w7king: { col: '#BFE8E8', dk: '#2A5A6A', atk: 'spike' }, w8goat: { col: '#3A3034', dk: '#0A0808', atk: 'cring' } };
@@ -377,7 +378,7 @@
     e.cursed = true; e.cid = e.cid || Math.random();
     e.cTrait = trait || (e.elite ? 'mask' : pick(carrierOK() ? ['mimic', 'split', 'loot', 'carrier', 'mimic', 'split', 'carrier'] : ['mimic', 'split', 'loot', 'mimic', 'split']));
     if (e.cTrait === 'mask') { const own = stage && STAGES[stageIdx] ? STAGES[stageIdx].boss : '', ids = Object.keys(MASKS).filter(k => k !== own && BOSSES[k]); e.cMask = pick(ids); e.cAtkT = rand(3, 5);
-      if (playing()) floatText(e.x, e.y, e.hh + 40, 'IT WEARS THE FACE OF ' + BOSSES[e.cMask].name.toUpperCase(), '#C8C2CC', 12); }
+      if (playing()) floatText(e.x, e.y, e.hh + 40, 'MARKED BY ' + BOSSES[e.cMask].name.toUpperCase(), '#C8C2CC', 12); }
     e.hp = e.maxHp = Math.round(e.maxHp * 1.15);
     if (e.cTrait === 'carrier') carrierInit(e);
   }
@@ -394,9 +395,9 @@
     if (e.cRoad && L.road && Math.abs(e.x - P.x) > 110) e.y += (L.road.y - e.y) * Math.min(1, dt * 8); // (a thing of the road keeps to it until it is on him)
     if (e.boss) return; // (a corrupted lord is stepped from worldStep: some fights' own rules never pass it down this far)
     if (e.cTrait === 'carrier') { try { carrierFoe(e, dt); } catch (err) { console.error(err); } }
-    if (e.cTrait === 'mask' && ['idle', 'walk', 'recover'].includes(e.state) && Math.abs(e.x - P.x) < 300) { e.cAtkT -= dt; if (e.cAtkT <= 0) { e.cAtkT = rand(5.5, 8.5); borrowed(e, MASKS[e.cMask].atk); } }
+    if (e.cTrait === 'mask' && ['idle', 'walk', 'recover'].includes(e.state) && Math.abs(e.x - P.x) < 300) { e.cAtkT -= dt; if (e.cAtkT <= 0) { e.cAtkT = rand(5.5, 8.5); e.cFireT = now(); borrowed(e, MASKS[e.cMask].atk); } } // (cFireT: when it struck, for its growths' flare)
   }
-  function borrowed(e, k) { // one of another lord's attacks, borrowed with its face
+  function borrowed(e, k) { // one of another lord's attacks, borrowed by an elite that lord has marked (its growths: cursed_foes.js)
     const dmg = Math.max(4, Math.round(e.dmg * .9)), col = '150,140,160';
     if (k === 'ring') { hazards.push({ kind: 'ring', x: e.x, y: e.y, r: 0, speed: 230, delay: .6, dmg, t: 99 }); fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .6, max: .6, r: 40, col: '#8A8090', flat: 1 }); }
     else if (k === 'beam') hazards.push({ kind: 'beam', y: clamp(P.y, FLOOR_TOP + 10, FLOOR_BOT - 4), t: 1.2, max: 1.2, dmg, col: '160,120,200' });
@@ -445,25 +446,6 @@
     ctx.save(); ctx.lineWidth = r * .42; ctx.strokeStyle = 'rgba(12,8,12,.92)'; circle(x, y, r); ctx.stroke();
     ctx.lineWidth = Math.max(.6, r * .12); ctx.strokeStyle = 'rgba(150,140,150,.65)'; circle(x, y, r * 1.24); ctx.stroke();
     ctx.fillStyle = `rgba(${190 + Math.round(50 * Math.sin(t * 4 + x))},36,44,1)`; circle(x, y, r * .34); ctx.fill(); ctx.restore();
-  }
-  function drawMask(e, x, y, s, t) { // another lord's face, worn
-    const M = MASKS[e.cMask]; if (!M) return; ctx.save(); ctx.translate(x, y); ctx.scale(e.facing * s, s);
-    ctx.fillStyle = '#1A1218'; ctx.beginPath(); ctx.ellipse(0, 0, 9.5, 11.5, 0, 0, TAU); ctx.fill();
-    const g = ctx.createLinearGradient(-8, -10, 8, 10); g.addColorStop(0, awMixSafe(M.col, '#FFFFFF', .2)); g.addColorStop(1, awMixSafe(M.col, '#6A6070', .45)); ctx.fillStyle = g;
-    ctx.beginPath(); ctx.ellipse(0, 0, 8.5, 10.5, 0, 0, TAU); ctx.fill();
-    const k = e.cMask; ctx.fillStyle = M.dk; ctx.strokeStyle = M.dk; ctx.lineWidth = 1.2;
-    if (k === 'w8goat') { ctx.beginPath(); ctx.moveTo(-5, -8); ctx.quadraticCurveTo(-16, -16, -12, -2); ctx.moveTo(5, -8); ctx.quadraticCurveTo(16, -16, 12, -2); ctx.lineWidth = 2.6; ctx.stroke(); }
-    if (k === 'mossback') { for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s2 * 8, -9, 5, 2.4, s2 * .6, 0, TAU); ctx.fill(); } }
-    if (k === 'colossus') { ctx.lineWidth = 1; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 2.6, 3); ctx.lineTo(i * 2.6, 8); ctx.stroke(); } }
-    if (k === 'wyrm') { ctx.beginPath(); ctx.moveTo(0, -10.5); ctx.lineTo(4, -2); ctx.lineTo(0, 10.5); ctx.lineTo(-4, -2); ctx.closePath(); ctx.globalAlpha = .45; ctx.fill(); ctx.globalAlpha = 1; }
-    if (k === 'tyiga') { ctx.beginPath(); ctx.moveTo(-8, -6); ctx.lineTo(-6, -14); ctx.lineTo(-2, -8); ctx.moveTo(8, -6); ctx.lineTo(6, -14); ctx.lineTo(2, -8); ctx.fill(); ctx.lineWidth = .7; ctx.beginPath(); for (const s2 of [-1, 1]) { ctx.moveTo(s2 * 3, 3); ctx.lineTo(s2 * 11, 1); ctx.moveTo(s2 * 3, 4.5); ctx.lineTo(s2 * 11, 5); } ctx.stroke(); }
-    if (k === 'w7king') { ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(i * 3.5 - 1.5, -9); ctx.lineTo(i * 3.5, -15); ctx.lineTo(i * 3.5 + 1.5, -9); } ctx.fill(); }
-    if (k === 'benedict') { ctx.fillRect(-8, -2, 16, 2.4); }
-    // the eyes: slits, a red light in them
-    const eyeA = k === 'sleeper' ? 0 : 1; ctx.fillStyle = '#0A0608';
-    for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s2 * 3.6, -2.5, 2.4, k === 'sleeper' ? .5 : 1.3, 0, 0, TAU); ctx.fill(); }
-    if (eyeA) { ctx.fillStyle = `rgba(230,50,50,${.8 + .2 * Math.sin(t * 5)})`; for (const s2 of [-1, 1]) { circle(s2 * 3.6, -2.5, .9); ctx.fill(); } }
-    ctx.restore();
   }
   // ---------------- a corrupted lord: each one turned by the Circle in its own way ----------------
   // The lord is drawn as ever; then its own silhouette is caught in a small offscreen mask (one more pass of its own art,
@@ -812,7 +794,8 @@
     if (!NG() || DBL_DRAW) return _de(e, t);
     const puppet = L.fx && L.fx.k === 'puppet' && fxAmt() > .4;
     if (e.cB && e.def && e.def.ownCurse) return _de(e, t);
-    if (puppet && !TINT) { TINT = '#140C0A'; try { return _de(e, t); } finally { TINT = null; } }
+    const own = e.cursed && !e.cB && !(e.state === 'dying' && e.death && e.death !== 'pop') && window.CURSED_LOOK; // (a cursed foe: the curse grown into its own body, cursed_foes.js)
+    if (puppet && !TINT) { TINT = '#140C0A'; try { return own ? CURSED_LOOK.draw(e, t, _de) : _de(e, t); } finally { TINT = null; } }
     if (e.cB && e.def && e.def.ownCurse) return _de(e, t); // (a lord that wears the curse in its own drawing, its weak point built into it: no overlay, no halo, no mark)
     const lord = e.cB && !TINT && !(e.state === 'dying' && e.death && e.death !== 'pop') && e.def && CREATURES[e.def.draw];
     if (lord) { // (a corrupted lord: the Circle's work is laid on its body as it is drawn, in the drawing's own space; its halo behind)
@@ -823,16 +806,15 @@
         if (!FLASH) { try { curseBody(e, a, o, t); } catch (err) { console.error(err); } } };
       try { _de(e, t); } finally { CREATURES[key] = o; }
       cpDraw(t);
-    } else _de(e, t);
+    } else if (own) CURSED_LOOK.draw(e, t, _de);
+    else _de(e, t);
     if (!e.cursed || (e.state === 'dying' && e.death && e.death !== 'pop')) return;
     const sc = (e.boss ? e.size || 1 : e.champ ? 1.3 : 1) * (e.shrink || 1);
-    if (!e.cB && !LITE && !lite() && !TINT && !FLASH) { const tt = TINT; ctx.save(); ctx.globalAlpha *= e.boss ? .32 : .5; TINT = '#77727C'; try { _de(e, t); } finally { TINT = tt; ctx.restore(); } } // (grey: painted over itself in the Circle's ash)
+    if (!own && !e.cB && !LITE && !lite() && !TINT && !FLASH) { const tt = TINT; ctx.save(); ctx.globalAlpha *= e.boss ? .32 : .5; TINT = '#77727C'; try { _de(e, t); } finally { TINT = tt; ctx.restore(); } } // (grey: painted over itself in the Circle's ash)
     { // (painted on the figure itself, in its own layer, so the figure does not cover it)
       const cy = e.y - e.z - e.hh * sc * .55;
-      if (!e.cB && (lite() || LITE)) { ctx.save(); ctx.globalAlpha = .35; ctx.fillStyle = '#6A6670'; ell(e.x, cy, e.hw * .9, e.hh * .5 * sc); ctx.fill(); ctx.restore(); }
-      if (e.cB) { if ((e.w4vis ?? 1) > .03) { ctx.save(); ctx.globalAlpha *= Math.min(1, e.w4vis ?? 1); bossMark(e, e.x + e.facing * e.hw * .15, cy, sc, t); ctx.restore(); } } else circleMark(e.x + e.facing * e.hw * .15, cy, e.boss ? 9 : 5.5, t);
-      if (e.cMask) drawMask(e, e.x + e.facing * e.hw * .25, e.y - e.z - e.hh * sc * .86, .95 * Math.min(1.6, Math.max(.8, e.hh / 60)), t);
-      if (!e.cB && Math.random() < .25) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(0, e.hh), vx: rand(-8, 8), vy: 0, vz: rand(20, 50), life: .7, max: .7, col: pick(['rgba(30,24,30,.7)', 'rgba(90,84,92,.6)']), size: rand(2, 4), shape: 'puff', rot: 0, vr: 0 });
+      if (e.cB) { if ((e.w4vis ?? 1) > .03) { ctx.save(); ctx.globalAlpha *= Math.min(1, e.w4vis ?? 1); bossMark(e, e.x + e.facing * e.hw * .15, cy, sc, t); ctx.restore(); } } else if (!own) circleMark(e.x + e.facing * e.hw * .15, cy, e.boss ? 9 : 5.5, t);
+      if (!e.cB && Math.random() < (own ? .12 : .25)) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(0, e.hh), vx: rand(-8, 8), vy: 0, vz: rand(20, 50), life: .7, max: .7, col: pick(['rgba(30,24,30,.7)', 'rgba(90,84,92,.6)']), size: rand(2, 4), shape: 'puff', rot: 0, vr: 0 });
     }
   };
   // (a lord that draws its own curse keeps the ground's telegraph: the Circle's ring closing on it as its attack winds)
@@ -1646,10 +1628,11 @@
   // ======================================================================================================
   // THE PASSING CURSE: a curse that will not die with its host (the 'carrier' trait)
   // ------------------------------------------------------------------------------------------------------
-  // A carrier wears a wisp of the Circle on its back: a knot of ink with eyes in it, a thread of ink trailing. Killed, the
+  // A carrier wears a wisp of the Circle on its back: a knot of ink with eyes in it, rooted into the body (its roots:
+  // cursed_foes.js), a thread of ink trailing. Killed, the
   // curse does not die. It tears out of the body (and for a moment, rimmed in gold, it can be struck and broken), then flies
   // in a high arc to the nearest uncursed foe and takes it: the new host is bigger, harder, faster and heals whole, wears a
-  // mark over its head for every hop, and wears pieces of the hosts before it (their heads and shoulders grafted on, grey,
+  // bead of the Circle on its thread for every hop, and wears pieces of the hosts before it (their heads and shoulders grafted on, grey,
   // stitched in red). Its blows leave grey puddles that drag at him; from the third hop it lashes and spits ink with what it
   // has taken. With no foe to go to it raises the nearest corpse ("the dead get up wrong"), and failing that it dives into
   // Corwin's own shadow, which stands up behind him and follows where he was a moment ago, striking, until he strikes it.
@@ -1916,7 +1899,7 @@
     const h = e.cHops | 0, [sx, sy] = sigilAt(e);
     wispArt(sx, sy, (6 + .9 * h) * Math.min(1.2, Math.sqrt(B.hh / 40)), t, { tr: e.cTr, seed: e.cid });
     const my = e.y - e.z - e.hh - 10 * k - 12;
-    for (let i = 0; i < h; i++) circleMark(e.x + (i - (h - 1) / 2) * 10, my, 3, t + i); // (a mark of the Circle for every hop the curse has made)
+    for (let i = 0; i < h; i++) circleMark(sx - e.facing * (8 + i * 6.5), sy - 3 - i * 2.4 + Math.sin(t * 3 + i) * 1.2, 2.6, t + i); // (a mark of the Circle for every hop the curse has made: beads on the ink thread trailing off its knot)
     if (e.cChim) { const w = 120, x = e.x - w / 2, y = my - 16; ctx.save(); ctx.fillStyle = 'rgba(10,6,12,.85)'; rrect(x - 2, y - 2, w + 4, 8, 3); ctx.fill(); ctx.fillStyle = '#A02838'; rrect(x, y, Math.max(0, w * e.hp / e.maxHp), 4, 2); ctx.fill();
       ctx.textAlign = 'center'; ctx.font = '700 10px Cinzel, Georgia, serif'; ctx.lineWidth = 3; ctx.strokeStyle = '#0A060C'; ctx.strokeText('CHIMERA OF THE CURSE', e.x, y - 5); ctx.fillStyle = '#D8D0DC'; ctx.fillText('CHIMERA OF THE CURSE', e.x, y - 5); ctx.restore(); }
   }; }
