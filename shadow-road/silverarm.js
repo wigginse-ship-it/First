@@ -128,6 +128,12 @@
     if (m.jk === 'scissors') SA.objs.push({ kind: 'rend', x: P.x + dir * 70, y, dir, t: 0, max: .55 });
     if (big) { SA.objs.push({ kind: 'eclipse', x: fx0, y, t: 0, max: 1.3 }); flashT = Math.max(flashT, .08); shakeMag = Math.max(shakeMag, 12); sfx('roar', .5); }
   }
+  // the charged hand's kills die as its shape says: a rock flattens them as the hammer does, scissors cut them in two as the
+  // great sword does (only the charged shapes, and only while the arm is on)
+  { const _ke = killEnemy; killEnemy = function (e, dir, m) {
+    const jk = SA.on() && m && m.jk && !m.trump && !e.dead ? (m.jk === 'rock' ? 'splat' : m.jk === 'scissors' ? 'slice' : null) : null;
+    if (!jk) return _ke(e, dir, m);
+    const was = DEATH_BY.fists; DEATH_BY.fists = jk; try { return _ke(e, dir, m); } finally { if (was === undefined) delete DEATH_BY.fists; else DEATH_BY.fists = was; } }; }
   // ---------------- the mechanics ----------------
   { const _mpk = movePoseKey; movePoseKey = function (m) { return m && m.arm ? 'arm:' + m.key : _mpk(m); }; }
   const _me = moveExtras;
