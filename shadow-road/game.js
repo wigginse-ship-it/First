@@ -492,7 +492,7 @@ function killEnemy(e, dir, m) {
       sfx('slice');
     } else if (e.death === 'crumple') {
       e.dents = [0, 1, 2].map(() => ({ x: rand(-.6, .6), y: rand(.25, .85), r: rand(3, 6) }));
-      e.crk = { k: .45 + 2.65 * Math.pow(Math.random(), 1.25), y: rand(.38, .62), r: rand(.85, 1.45) }; // (each one folds its own way: how sharply (from a slight bend all the way to folded flat over on itself), where, and how far over)
+      e.crk = { k: .45 + 2.65 * Math.pow(Math.random(), 1.25), y: rand(.38, .62), r: rand(.85, 1.45), T: rand(.65, 1.0), n: Math.random() < .4 ? 1 : 0, rest: Math.random() < .5 ? rand(1.35, 1.75) : rand(-1.75, -1.4) + TAU, hop: rand(14, 34) }; // (each one folds its own way: how sharply (from a slight bend all the way to folded flat over on itself), where, and how far over)
       burst(e.x, e.y, cy, cols, 14, e.def.mat === 'flesh' ? 'rock' : e.def.mat, dir);
       sfx('crunch'); shakeMag = Math.max(shakeMag, 5);
     } else if (e.death === 'splat') {

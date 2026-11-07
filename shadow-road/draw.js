@@ -478,7 +478,15 @@ function drawDeath(e, t) {
     // staff caught it (two pieces meeting at the bend, overlapping so no seam shows; no line drawn across it)
     const q = Math.min(1, el / .45), c = 1 - (1 - q) * (1 - q), wide = e.boss || e.hw > e.hh * .7; // (a wide beast or a boss slumps where it stands instead of tipping over)
     const K = e.crk || { k: .8, y: .5, r: 1.2 };
-    ctx.rotate(dl * c * (wide ? .1 * K.r : K.r));
+    if (wide) ctx.rotate(dl * c * .1 * K.r);
+    else { // thrown: it pops up off the blow and tumbles over about its middle (now and then a whole turn more), comes down, rocks, and settles flat
+      const T = K.T || .8, turns = K.n || 0, rest = K.rest || 1.55, hop = K.hop || 22, u = Math.min(1, el / T), spinK = 1 - Math.pow(1 - u, 2.6);
+      const after = el - T, wob = after > 0 && after < .7 ? .2 * Math.exp(-6 * after) * Math.sin(after * 15) : 0;
+      const ang = dl * ((turns * TAU + rest) * spinK + wob);
+      const up = u < .7 ? hop * Math.sin(Math.PI * u / .7) : hop * .28 * Math.sin(Math.PI * (u - .7) / .3);
+      const lie = 1 - Math.pow(1 - Math.min(1, el / (T * .9)), 2), ph = lerp(e.hh * .5, Math.max(6, e.hw * .55), lie);
+      ctx.translate(0, -ph - up); ctx.rotate(ang); ctx.translate(0, e.hh * .5);
+    }
     const ky = -e.hh * K.y, kink = -dl * c * (wide ? .44 * K.k : K.k);
     ctx.save(); ctx.beginPath(); ctx.rect(-400, ky - 1, 800, 400); ctx.clip(); draw(); ctx.restore();
     ctx.save(); ctx.translate(0, ky); ctx.rotate(kink); ctx.translate(0, -ky); ctx.beginPath(); ctx.rect(-400, ky - 400, 800, 400 + 3); ctx.clip(); draw(); ctx.restore();
