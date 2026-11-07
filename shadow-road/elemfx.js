@@ -24,9 +24,20 @@ const FXEL = (() => {
     S = { c, w, h, ax, ay }; cache.set(key, S); return S;
   }
   // lay a sprite down at x, y, sc times its size; with a turn (and a stretch along it) it is drawn about its anchor
+  // the particles are many: while they are drawn (FAST.on) the scene's transform is read once a frame and each turned sprite
+  // is set straight onto it, instead of a save, translate, rotate, scale and restore per particle
+  const FAST = { on: false, f: -1, c: null, m: null };
+  let frameNo = 0;
+  { const _ds = drawScene; drawScene = function (t) { frameNo++; return _ds(t); }; }
   function put(S, x, y, sc, rot, sx, sy) {
     if (!(sc > 0)) return;
     if (!rot && !sx && !sy) { ctx.drawImage(S.c, x - S.ax * sc, y - S.ay * sc, S.w * sc, S.h * sc); return; }
+    if (FAST.on) {
+      if (FAST.f !== frameNo || FAST.c !== ctx) { FAST.m = ctx.getTransform(); FAST.f = frameNo; FAST.c = ctx; }
+      const M = FAST.m, c = Math.cos(rot || 0), s = Math.sin(rot || 0), kx = sc * (sx || 1), ky = sc * (sy || 1);
+      ctx.setTransform((M.a * c + M.c * s) * kx, (M.b * c + M.d * s) * kx, (M.c * c - M.a * s) * ky, (M.d * c - M.b * s) * ky, M.a * x + M.c * y + M.e, M.b * x + M.d * y + M.f);
+      ctx.drawImage(S.c, -S.ax, -S.ay, S.w, S.h); ctx.setTransform(M); return;
+    }
     ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); ctx.scale(sc * (sx || 1), sc * (sy || 1));
     ctx.drawImage(S.c, -S.ax, -S.ay, S.w, S.h); ctx.restore();
   }
@@ -265,7 +276,7 @@ const FXEL = (() => {
     else if (mat === 'void') { for (let i = 0; i < n; i++) { const a = rand(0, TAU); wispP(x + Math.cos(a) * 30, y + Math.sin(a) * 10, z + rand(-10, 20), -Math.cos(a) * 90, -Math.sin(a) * 20); } }
   }
   { const _b = burst; burst = function (x, y, z, cols, n, mat, dir, big) { if (ELM.has(mat)) return emit(x, y, z, cols, n, mat, dir, big); return _b(x, y, z, cols, n, mat, dir, big); }; }
-  { const _dp = drawPart; drawPart = function (p) { if (MINE.has(p.shape)) drawMine(p); else _dp(p); }; }
+  { const _dp = drawPart; drawPart = function (p) { if (!MINE.has(p.shape)) return _dp(p); FAST.on = true; try { drawMine(p); } finally { FAST.on = false; } }; }
 
   // ---------------- the bolt, and the blooms ----------------
   function drawBolt(f) {
@@ -330,8 +341,9 @@ const FXEL = (() => {
     if (burn) {
       const pal = e.burn > 0 ? 'fire' : 'black', k = Math.min(1, (e.burn > 0 ? e.burn : e.cwBurn.t) / .4);
       // behind: the heat's glow and the taller tongues rising behind the body
-      onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * (.55 + .12 * Math.sin(t * 9 + e._sd)); put(glowSpr(FIRE[pal].glow), x, foot - h * .4, Math.max(w * 1.6, h * .75));
-        ctx.globalCompositeOperation = 'source-over'; if (!dl || e.boss) tongues(e, t, x, foot, w, h, pal, k, true); ctx.restore(); });
+      // (in a crowd, or the lighter paint, only a boss keeps these: the glow is a lot of pixels for each of many foes)
+      if (!dl || e.boss) onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * (.55 + .12 * Math.sin(t * 9 + e._sd)); put(glowSpr(FIRE[pal].glow), x, foot - h * .4, Math.max(w * 1.4, h * .65));
+        ctx.globalCompositeOperation = 'source-over'; tongues(e, t, x, foot, w, h, pal, k, true); ctx.restore(); });
       // on the body: firelight washing up it from below
       if (ink) { ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.globalAlpha = k * (.5 + .12 * Math.sin(t * 13 + e._sd)); put(washSpr(pal === 'fire' ? 'f' : 'b', pal === 'fire' ? '255,120,40' : '60,10,70', .85, 0), x - w - 4, foot + 2, 1, 0, (w * 2 + 8), (h * .9) / 32); ctx.restore(); }
       front.push(() => { ctx.save(); tongues(e, t, x, foot, w, h, pal, k, false); ctx.restore(); });
@@ -400,23 +412,23 @@ const FXEL = (() => {
     const t = now(), n = pts.length; if (n < 2) return;
     ctx.save();
     if (el === 'fire') { ctx.globalAlpha = .95;
-      for (let i = 0; i < n; i++) { const [x, y, nx, ny] = pts[i], k = (i + 1) / n, s = (5 + 13 * k) / 36 * (.8 + .2 * Math.sin(t * 20 + i));
-        put(flameSprite('fire', (Math.floor(t * 14) + i) % 6), x - nx * 2, y - ny * 2, s, Math.atan2(ny, nx) + Math.PI / 2 - .5 * Math.sign(nx || 1) * (1 - k)); }
+      for (let i = 0; i < n; i++) { const [x, y, nx, ny] = pts[i], k = (i + 1) / n, s = (9 + 20 * k) / 36 * (.8 + .2 * Math.sin(t * 20 + i * 2.3));
+        put(flameSprite('fire', (Math.floor(t * 14) + i) % 6), x - nx * 3, y - ny * 3, s, Math.atan2(ny - 1.3, nx) + Math.PI / 2); } // (licking outward off the edge, and up, as flame does)
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .5; const [lx, ly] = pts[n - 1]; put(glowSpr(FIRE.fire.glow), lx, ly, 16);
     } else if (el === 'frost') {
       for (let i = 0; i < n; i++) { const [x, y, nx, ny] = pts[i], k = (i + 1) / n; ctx.globalAlpha = .6 + .4 * k;
-        put(shardSpr(i % 3), x + nx * 3, y + ny * 3, (.45 + .55 * k) * .8, Math.atan2(ny, nx) + Math.PI / 2); if (i % 2) put(flakeSpr(i % 3), x - nx * 4, y - ny * 4, .55 * k, t * 3 + i); }
+        put(shardSpr(i % 3), x + nx * 4, y + ny * 4, (.5 + .7 * k) * 1.2, Math.atan2(ny, nx) + Math.PI / 2); if (i % 2) put(flakeSpr(i % 3), x - nx * 5, y - ny * 5, .9 * k, t * 3 + i); }
       ctx.strokeStyle = 'rgba(240,252,255,.85)'; ctx.lineWidth = 1.1; ctx.beginPath(); pts.forEach(([x, y, nx, ny], i) => ctx[i ? 'lineTo' : 'moveTo'](x + nx * 5, y + ny * 5)); ctx.stroke();
     } else if (el === 'storm') {
       const rr = mulberry(Math.floor(t * 30)), paths = [];
-      for (let p = 0; p < 2; p++) { const q = []; for (let i = 0; i < n; i++) { const [x, y, nx, ny] = pts[i], o = (rr() - .5) * 12; q.push(x + nx * o, y + ny * o); } paths.push(q); }
-      drawLightning(paths, ELEMENTS.storm.col, .9, .8);
+      for (let p = 0; p < 2; p++) { const q = []; for (let i = 0; i < n; i++) { const [x, y, nx, ny] = pts[i], o = (rr() - .5) * 18; q.push(x + nx * o, y + ny * o); } paths.push(q); }
+      drawLightning(paths, ELEMENTS.storm.col, 1, 1);
       const [lx, ly] = pts[n - 1]; ctx.globalCompositeOperation = 'lighter'; put(sparkSpr('232,224,255'), lx, ly, 1.5, t * 9);
     }
     ctx.restore();
   }
   { const _dt = drawTrail; drawTrail = function (cx, cy, pose) { _dt(cx, cy, pose); const bc = brandCol(); if (!bc || pose.trailCol !== bc) return;
-    const a0 = pose.trailFrom, a1 = pose.arm, r = pose.trail; if (Math.abs(a1 - a0) < .05) return; const n = busy() ? 5 : 8, pts = [];
+    const a0 = pose.trailFrom, a1 = pose.arm, r = pose.trail; if (Math.abs(a1 - a0) < .05) return; const n = busy() ? 5 : 9, pts = [];
     for (let i = 0; i < n; i++) { const a = a0 + (a1 - a0) * (.15 + .85 * i / (n - 1)), c = Math.cos(a), s = Math.sin(a); pts.push([cx + c * r, cy + s * r, c, s]); }
     onPage(() => dressTrail(pts, brandEl)); }; }
   { const _dft = drawFlatTrail; drawFlatTrail = function (cx, cy, f) { _dft(cx, cy, f); const bc = brandCol(); if (!bc || f.col !== bc) return;
@@ -433,7 +445,7 @@ const FXEL = (() => {
     status, emit, streak, flameP, emberP, smokeP, flakeP, iceP, sparkP, dropP, wispP,
     // a burning foe's sparks and smoke, in place of the old puffs (as often as they were)
     burning(e, pal = 'fire') { const r = Math.random(), x = e.x + rand(-e.hw, e.hw) * .6, z = e.z + rand(e.hh * .1, e.hh * .9);
-      if (r < .55) P_({ x, y: e.y, z, vx: rand(-25, 25), vy: 0, vz: rand(60, 150), life: rand(.5, .9), col: '#FFC860', size: rand(2, 3.2), shape: 'ember', pal, rot: rand(0, 6), vr: 0, lift: .9 });
+      if (r < .55) P_({ x, y: e.y, z, vx: rand(-25, 25), vy: 0, vz: rand(60, 150), life: rand(.4, .7), col: '#FFC860', size: rand(2, 3.2), shape: 'ember', pal, rot: rand(0, 6), vr: 0, lift: .9 });
       else if (r < .75 && !busy()) smokeP(x, e.y, e.z + e.hh * rand(.7, 1), pal); },
     // the brand's element shed from the weapon as it is carried
     shed(el, x, y, z) {
