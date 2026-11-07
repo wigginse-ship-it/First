@@ -102,7 +102,7 @@ function arrowHit(p) {
   p.hit.add(best); if (best === p.tgt) p.tgt = null; if (p.shard) p.splash.add(best);
   const wasDead = best.dead, dir = Math.sign(p.vx), first = !p.struck; p.struck = true;
   const ad = p.dmg * arrowVs(best);
-  strike(best, ad, dir, p.shard ? { dmg: ad, kb: 140, launch: 60, power: 1, arrow: 1, crit: Math.random() < p.crit * .5 } : { dmg: ad, kb: 300, launch: 120, power: 2, arrow: 1, crit: p.perfect || Math.random() < .08 + p.crit * .7 });
+  strike(best, ad, dir, p.shard ? { dmg: ad, kb: 140, launch: 60, power: 1, arrow: 1, crit: Math.random() < p.crit * .5 } : { dmg: ad, kb: 300, launch: 120, power: 2, arrow: 1, perfect: p.perfect ? 1 : 0, crit: p.perfect || Math.random() < .08 + p.crit * .7 });
   if (p.bleed && !best.dead) arrowBleed(best, p.dmg * .06 * arrowVs(best)); // barbs: it bleeds for a moment after
   const killed = best.dead && !wasDead;
   if (killed && p.ret && !p.returned && !p.shard) { // shadowsteel: the killing arrow walks back through Shadow into the quiver

@@ -118,7 +118,7 @@
   // ---------------- great overkill ----------------
   const _he = hurtEnemy;
   hurtEnemy = function (e, dmg, dir, m, crit) {
-    if (NG() && CTX && CTX.own && !pureHand() && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill'); // (a purified blade is never cruel)
+    if (NG() && CTX && CTX.own && !pureHand() && !(m && m.perfect) && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill'); // (a purified blade is never cruel)
     return _he(e, dmg, dir, m, crit);
   };
   // ---------------- every kill ----------------
@@ -129,10 +129,15 @@
     if (!NG() || was || !e.dead) return r;
     m = m || {};
     const t = now(); L.kills.push(t); L.kills = L.kills.filter(k => t - k < 2);
-    if (L.kills.length >= 5) { L.kills = []; if (!pureHand()) feed(WT.massacre, 'massacre'); }
+    const pureBlow = !!m.perfect && !m.trump; // a perfect charged blow (any weapon, a perfect bow release too) is never cruel, and it cleanses as a purified blade does
+    if (L.kills.length >= 5) { L.kills = []; if (!pureHand() && !pureBlow) feed(WT.massacre, 'massacre'); }
+    if (pureBlow && !pureHand()) { const k = e.boss ? 3 : e.cursed ? 1 : (e.elite || e.champ) ? .8 : .35, d = ease(k, 'a perfect blow cleanses');
+      if (d > 0 && playing()) { fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .5, max: .5, r: 60 + Math.min(1.6, (e.hh || 60) / 60) * 50, col: '#FFE9A8', flat: 1 });
+        for (let i = 0; i < 6 && parts.length < 420; i++) parts.push({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: rand(6, (e.hh || 60) * .9), vx: rand(-20, 20), vy: 0, vz: rand(50, 120), life: .7, max: .7, col: pick(['#FFF4C8', '#FFE08A', '#FFFFFF']), size: rand(1.4, 2.4), shape: 'star', rot: 0, vr: 4 });
+        if (e.cursed || e.boss || rl('pureTxt', 6)) floatText(e.x, e.y, (e.hh || 60) + 34, e.cursed || e.boss ? 'THE CURSE IS DRAWN OUT' : 'THE CURSE EASES', '#FFE9A8', 12); } }
     if (m.pearl && !m.trump) ease(-WT.pearlKill, 'a Pearl kill');
     const ctx0 = CTX && CTX.e === e ? CTX : null;
-    if (ctx0 && ctx0.behind && !pureHand()) feed(WT.backKill, e.w7turn > 0 ? 'a kill from behind (the glass turned it)' : 'a kill from behind');
+    if (ctx0 && ctx0.behind && !pureHand() && !pureBlow) feed(WT.backKill, e.w7turn > 0 ? 'a kill from behind (the glass turned it)' : 'a kill from behind');
     // thrown into a hazard: the death came from the place, not from him, moments after he sent it flying
     if (!mine(m) && m.trump && !(e.burn > 0) && e.cHitT && t - e.cHitT < 2.5 && !trumpBusy()) feed(WT.hazardKill, 'a kill by a hazard');
     if (e.boss) ease(-WT.boss, 'a lord of a world falls');
@@ -1003,7 +1008,7 @@
     const items = c ? [...Object.keys(c.wc).filter(w => WEAPONS[w]).map(w => `${WCURSE[c.wc[w]].name} ${WEAPONS[w].name}`), ...GEAR_SLOTS.filter(s => save.gear.eq[s] && save.gear.eq[s].curse).map(s => itemName(save.gear.eq[s]))] : [];
     if (!items.length) { if (el) el.remove(); return; }
     const anchor = document.getElementById('walkBtn'); if (!anchor) return;
-    if (!el) { el = document.createElement('div'); el.id = 'cForge'; el.style.cssText = 'margin:8px auto;max-width:520px;padding:8px 10px;border:1px solid #5A4A5A;border-radius:6px;background:rgba(20,12,18,.6);color:#E8DCE4;font:13px/1.35 Georgia,serif;text-align:left'; anchor.parentElement.insertBefore(el, anchor); }
+    if (!el) { el = document.createElement('div'); el.id = 'cForge'; el.dataset.sec = 'cleanse'; el.style.cssText = 'margin:8px auto;max-width:520px;padding:8px 10px;border:1px solid #5A4A5A;border-radius:6px;background:rgba(20,12,18,.6);color:#E8DCE4;font:13px/1.35 Georgia,serif;text-align:left'; anchor.parentElement.insertBefore(el, anchor); }
     const rows = [...Object.keys(c.wc).filter(w => WEAPONS[w]).map(w => ({ kind: 'w', key: w, name: `${WCURSE[c.wc[w]].name} ${WEAPONS[w].name}`, gain: 'comes out clean and keener: +15% damage, for good' })),
       ...GEAR_SLOTS.filter(s => save.gear.eq[s] && save.gear.eq[s].curse).map(s => ({ kind: 'a', key: s, name: itemName(save.gear.eq[s]), gain: 'comes out HALLOWED: ' + HALLOW[s].txt }))];
     el.innerHTML = `<b style="font-family:Cinzel,Georgia,serif;color:#C8A0B0">BLACK VEINS</b><br><span style="opacity:.8">The smith can draw the black out in the forge-fire, one piece at a time, at a great price; what comes out is better than it ever was.</span>` +
