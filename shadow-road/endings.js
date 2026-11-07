@@ -392,14 +392,19 @@
     },
     update(E, T, dt) {
       const b = E.boss; if (b && b.def.draw === 'tyiga') b.w4halo = E.halo0 * (1 - sm(T / 1.5));
-      if (T > 1.6 && T < this.d0) { P.state = T > 4 ? 'down' : 'idle'; P.walk = 0; }
-      if (T > 4 && !E.lay) { E.lay = 1; dust(P.x, P.y, 5); }
+      if (T > 1.6 && T < this.d0) { P.state = T > 4.5 ? 'down' : 'idle'; P.walk = 0; }
+      if (T > 4.3 && !E.lay) { E.lay = 1; dust(P.x, P.y, 5); }
       if (T > 7.1 && !E.dream) { E.dream = 1; if (TRACKS.dream) playMusic('dream'); }
       if (T > 8.6 && !E.chime) { E.chime = 1; sfx('learned'); }
       if (T > 10.6) E.walk += dt * 30 / 10.2;
     },
-    pose(E, pose) { // spent: down on one knee, head bowed, before he lies back
-      const T = E.t; if (T > 2.6 && T < 4) { const q = sm((T - 2.6) / .4); pose.crouch = 1; pose.crouchK = 8 * q; pose.lean = lerp(pose.lean || 0, .4, q); pose.arm = 1.4; pose.backArm = 1.2; }
+    pose(E, pose) { // spent: he sinks slowly onto one knee, head bowed; then eases back onto the dais, the legs going long as he lies down
+      const T = E.t; if (T > 2.4 && T < 4.5) {
+        const q = sm((T - 2.4) / .9), d = sm((T - 3.4) / 1.1);
+        pose.crouch = 1; pose.crouchK = 8 * q * (1 - d); pose.lean = lerp(lerp(pose.lean || 0, .4, q), 0, d);
+        pose.arm = lerp(lerp(pose.arm ?? .2, 1.4, q), 1.62, d); pose.backArm = lerp(lerp(pose.backArm ?? 1.5, 1.2, q), 1.7, d); pose.elbow = lerp(pose.elbow ?? .3, .1, d); pose.backElbow = lerp(pose.backElbow ?? .3, .2, d);
+        if (d > 0) pose.downK = d; if (d > .6) pose.crouch = 0;
+      }
     },
     breath(T, t) { // the Abyss breathing under the rim: a pale haze swelling up over the edge of the dais and sinking back, and the soft Z's of a sleeper rising out of the dark
       const on = sm((T - 1.4) / 1.2); if (on <= 0) return; const b = .5 - .5 * Math.cos((T - 1.4) / 3.4 * TAU);
@@ -429,7 +434,11 @@
     act2(E, T, dt, t) { // behind his eyes, the dream: he lies on the paving of the piazza in its long shadows, and gets up, and walks on into it
       const B = freshAlt(E), cam = 240, walk = T > 10.6;
       withSet(B, () => paintWorld('dream', { cam }, t));
-      const pose = poseAs(T < 9.7 ? 'down' : walk ? 'walk' : 'idle', E.walk); if (T >= 9.7 && T < 10.2) { pose.crouch = 1; pose.crouchK = 8; }
+      // he lies still while his eyes open, then sits up, gets his feet under him, rises, and walks on: one movement, eased
+      const pose = poseAs(T < 9.4 ? 'down' : walk ? 'walk' : 'idle', E.walk);
+      if (T >= 9.4 && T < 10.6) { const up = sm((T - 9.4) / .7), rise = sm((T - 9.95) / .6);
+        pose.downK = 1 - up; pose.crouch = up > .35 && rise < 1 ? 1 : 0; pose.crouchK = 8 * Math.min(1, (up - .35) / .4) * (1 - rise);
+        pose.lean = .35 * Math.sin(Math.PI * up) * (1 - rise); pose.arm = lerp(1.62, pose.arm ?? .3, rise); pose.backArm = lerp(1.7, pose.backArm ?? 1.5, rise); }
       ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.hx + (walk ? E.walk * 10.2 : 0), FLOOR_TOP + 64, 1, 1, pose, 1, true); ctx.restore();
       gradeFrame('dream');
       const wk = sm((T - 7.8) / 1.8); if (wk < 1) { ctx.fillStyle = `rgba(255,250,240,${.3 * (1 - wk)})`; view(); } // waking into it, the light is too bright at first

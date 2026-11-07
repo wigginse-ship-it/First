@@ -663,6 +663,7 @@ function drawHumanoid(look, pose) {
   if (pose.oy) ctx.translate(0, pose.oy); // the whole figure dropped (a slide)
   if (pose.rot) { ctx.translate(0, -34); ctx.rotate(pose.rot); ctx.translate(0, 34); }
   if (pose.down) { ctx.translate(-6, -4); ctx.rotate(-1.5); }
+  else if (pose.downK > 0) { const k = pose.downK; ctx.translate(-6 * k, -4 * k); ctx.rotate(-1.5 * k); } // part way down (lying back, or sitting up): the same turn as lying flat, eased
   // a walking or running body carries its weight: the hips dip as each foot lands and rise as the legs pass,
   // and each arm swings against its own leg
   const gait = walk && !pose.legs && !pose.kick && pose.kickK === undefined && !pose.down && !pose.crouch;
