@@ -386,11 +386,10 @@
     ctx.save();
     try {
       ctx.fillStyle = '#0E0908'; ctx.fillRect(0, Y_OFF - 2, VW, VIEW_H + 4);
-      const PR = window.__fhProf, tm = () => performance.now(); let q = PR && tm();
-      drawStatic(); if (PR) { PR.st = (PR.st || 0) + tm() - q; q = tm(); }
-      liveBack(T); if (PR) { PR.back = (PR.back || 0) + tm() - q; q = tm(); }
-      figures(T); if (PR) { PR.fig = (PR.fig || 0) + tm() - q; q = tm(); }
-      liveFront(T); if (PR) { PR.front = (PR.front || 0) + tm() - q; q = tm(); }
+      drawStatic();
+      liveBack(T);
+      figures(T);
+      liveFront(T);
     } finally { ctx.restore(); }
     vignette();
   }
