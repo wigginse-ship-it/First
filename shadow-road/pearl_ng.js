@@ -443,7 +443,6 @@
     return { mul: Math.max(.85, 1.15 - (c - GLEAM - PCW()) * .3) }; // (held past the gleam it sours a little)
   }
   function perfectShotFx(S) {
-    if (window.__perfectPurge) window.__perfectPurge('a perfect throw');
     floatText(P.x, P.y, P.z + 96, 'PERFECT', '#FFE08A', 15); flashT = Math.max(flashT, .06); sfx('crit');
     fx.push({ kind: 'ring', x: P.x, y: P.y, z: P.z + 46, t: .22, max: .22, r: 44, col: '#FFF4D0' });
     if (S.f.has('heldthunder')) { const fx0 = P.x + P.facing * 120;

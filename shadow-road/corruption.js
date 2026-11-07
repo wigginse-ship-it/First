@@ -119,7 +119,9 @@
   const _he = hurtEnemy;
   hurtEnemy = function (e, dmg, dir, m, crit) {
     if (NG() && CTX && CTX.own && !pureHand() && !(m && m.perfect) && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill'); // (a purified blade is never cruel)
-    return _he(e, dmg, dir, m, crit);
+    const hp0 = e.hp, r = _he(e, dmg, dir, m, crit);
+    if (NG() && m && m.perfect && !m.trump && e.hp < hp0 && ((CTX && CTX.own) || m.pearl || m.arrow)) perfectPurge(m.arrow ? 'a perfect draw lands' : m.pearl ? 'a perfect throw lands' : 'a perfect charge lands');
+    return r;
   };
   // ---------------- every kill ----------------
   const pureHand = () => !!(P && save && save.cw && save.cw[P.w] && save.cw[P.w].pure); // (a purified weapon in hand: cursedw.js)
@@ -170,9 +172,10 @@
   };
   // ---------------- discipline ----------------
   { const _rp = riposte; riposte = function (fromX) { if (NG() && rl('parry', .3)) ease(-WT.parry, 'a perfect parry'); if (NG()) L.ripT = now() + 1; return _rp(fromX); }; }
-  function perfectPurge(why) { if (!NG() || !rl('perf', .3)) return; const d = ease(-WT.perfect, why); if (d > 0 && P && playing()) { fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .45, max: .45, r: 70, col: '#FFE9A8', flat: 1 }); if (rl('perfTxt', 4)) floatText(P.x, P.y, 120, 'THE CURSE EASES', '#FFE9A8', 11); } } // (the perfect release itself draws a little of the curse out, whatever it then hits)
+  function perfectPurge(why) { if (!NG() || !rl('perf', .3)) return; const d = ease(-WT.perfect, why); if (d > 0 && P && playing()) { fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .45, max: .45, r: 70, col: '#FFE9A8', flat: 1 }); if (rl('perfTxt', 4)) floatText(P.x, P.y, 120, 'THE CURSE EASES', '#FFE9A8', 11); } } // (a perfect release that lands draws a little of the curse out; a whiff does nothing)
   window.__perfectPurge = perfectPurge;
-  { const _pc = perfectCue; perfectCue = function () { perfectPurge('a perfect charge'); return _pc.apply(this, arguments); }; }
+  // a perfect release purifies only when it lands: see the hurtEnemy wrapper
+  { const _pc = perfectCue; perfectCue = function () { return _pc.apply(this, arguments); }; }
   // ---------------- restraint: a downed foe let up unhit ----------------
   const _ue = updateEnemy;
   updateEnemy = function (e, dt) {
