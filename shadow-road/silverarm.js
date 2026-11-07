@@ -330,9 +330,9 @@
     if (big > 1.2 || shape) { ctx.save(); ctx.translate(12, 0); RIG(shape || 'rock', { s: .19 * big, rot: pose.armRot || 0, t }); ctx.restore(); K.glowAt(12 + 10 * big, 0, 10 + 8 * big, LT('225,235,255'), .3); }
     else { let done = false; if (SA.black() && pose.cwArt && typeof CWART !== 'undefined') { try { done = CWART.draw('fists', pose.cwArt, pose, false); } catch (e) { done = false; } } if (!done) _dw(kind, pose); K.glowAt(17, 0, 9, LT('225,235,255'), .28);
       if (SA.pure()) { const T = typeof t === 'number' ? t : performance.now() / 1000; ctx.save(); ctx.globalCompositeOperation = 'lighter'; // (the Dawn Knuckles: the silver fist itself, white fire licking round the knuckles)
-        K.glowAt(17, 0, 13 + 2 * Math.sin(T * 9), '255,236,180', .32 + .08 * Math.sin(T * 13));
-        for (let i = 0; i < 4; i++) { const ph = T * 7 + i * 1.7, fl = .5 + .5 * Math.sin(ph), y0 = -4 + i * 2.6, L = 5 + 4 * fl;
-          ctx.fillStyle = `rgba(255,${226 + i * 7},${150 + i * 25},${(.35 + .3 * fl).toFixed(3)})`; ctx.beginPath(); ctx.moveTo(15, y0 - 1.6); ctx.quadraticCurveTo(19 + L * .5, y0 - 2.5 - fl * 1.5, 19 + L, y0 + Math.sin(ph * 1.3) * 1.2); ctx.quadraticCurveTo(19 + L * .4, y0 + 1.8, 15, y0 + 1.6); ctx.fill(); }
+        K.glowAt(17, 0, 9 + 1.5 * Math.sin(T * 9), '255,236,180', .3 + .08 * Math.sin(T * 13));
+        for (let i = 0; i < 4; i++) { const ph = T * 7 + i * 1.7, fl = .5 + .5 * Math.sin(ph), y0 = -2.4 + i * 1.6, L = 2.4 + 2 * fl;
+          ctx.fillStyle = `rgba(255,${226 + i * 7},${150 + i * 25},${(.35 + .3 * fl).toFixed(3)})`; ctx.beginPath(); ctx.moveTo(17, y0 - 1); ctx.quadraticCurveTo(19 + L * .5, y0 - 1.4 - fl * .8, 19 + L, y0 + Math.sin(ph * 1.3) * .7); ctx.quadraticCurveTo(19 + L * .4, y0 + 1.1, 17, y0 + 1); ctx.fill(); }
         ctx.restore(); } } // (the Black Knuckles' own fist when it is the plain fist)
     ctx.restore();
   };
