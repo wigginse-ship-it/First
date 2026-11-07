@@ -80,9 +80,11 @@
   // the hand itself drawn through RIG (tinted to blackened iron with a crimson heart), and its light, chain and trails in
   // violet and blood instead of moonlight
   SA.black = () => !!(typeof save !== 'undefined' && save && save.cw && save.cw.fists && !save.cw.fists.pure && SA.on());
-  const LT = (rgb) => SA.black() ? ({ '230,238,255': '150,20,45', '225,235,255': '110,20,50', '210,225,255': '120,40,110', '200,215,255': '150,40,110', '255,255,255': '255,120,150', '245,248,255': '255,90,120' }[rgb] || '170,50,120') : rgb;
+  const LT = (rgb) => SA.pure() ? ({ '255,255,255': '255,255,245', '245,248,255': '255,250,230' }[rgb] || '255,236,180') : SA.black() ? ({ '230,238,255': '150,20,45', '225,235,255': '110,20,50', '210,225,255': '120,40,110', '200,215,255': '150,40,110', '255,255,255': '255,120,150', '245,248,255': '255,90,120' }[rgb] || '170,50,120') : rgb;
   let rigC = null, rigG = null, rigD = null, rigDG = null, rigH = null, rigHG = null;
+  SA.pure = () => !!(typeof save !== 'undefined' && save && save.cw && save.cw.fists && save.cw.fists.pure && SA.on()); // (the Dawn Knuckles: purified)
   function RIG(shape, o = {}) {
+    if (SA.pure() && !FLASH && !TINT) return RIG_PURE(shape, o);
     if (!SA.black() || FLASH || TINT) return W5.ben.rig(shape, o);
     const m = ctx.getTransform(), sc = Math.max(.5, Math.min(4, Math.hypot(m.a, m.b))), s = o.s || 1, R = 150 * s, N = Math.max(8, Math.ceil(2 * R * sc));
     if (!rigC || rigC.width < N) { rigC = document.createElement('canvas'); rigC.width = rigC.height = Math.max(N, 64); rigG = rigC.getContext('2d'); rigD = document.createElement('canvas'); rigD.width = rigD.height = rigC.width; rigDG = rigD.getContext('2d'); rigH = document.createElement('canvas'); rigH.width = rigH.height = rigC.width; rigHG = rigH.getContext('2d'); }
@@ -112,10 +114,29 @@
     ctx.drawImage(rigD, 0, 0, N, N, -R, -R, 2 * R, 2 * R); ctx.restore();
   }
 
+  // the Dawn Knuckles (purified): the silver hand left as it is, in white fire, as the purified moves' flourish burns: a soft
+  // white-gold halo behind it, a glowing rim of white fire round it, and a sheen over it
+  function RIG_PURE(shape, o = {}) {
+    const m = ctx.getTransform(), sc = Math.max(.5, Math.min(4, Math.hypot(m.a, m.b))), s = o.s || 1, R = 150 * s, N = Math.max(8, Math.ceil(2 * R * sc)), t = o.t || performance.now() / 1000, beat = .5 + .5 * Math.sin(t * 3);
+    if (!rigC || rigC.width < N) { rigC = document.createElement('canvas'); rigC.width = rigC.height = Math.max(N, 64); rigG = rigC.getContext('2d'); rigD = document.createElement('canvas'); rigD.width = rigD.height = rigC.width; rigDG = rigD.getContext('2d'); rigH = document.createElement('canvas'); rigH.width = rigH.height = rigC.width; rigHG = rigH.getContext('2d'); }
+    rigG.setTransform(1, 0, 0, 1, 0, 0); rigG.globalCompositeOperation = 'source-over'; rigG.globalAlpha = 1; rigG.clearRect(0, 0, N + 2, N + 2);
+    rigG.setTransform(sc, 0, 0, sc, N / 2, N / 2); const old = ctx; ctx = rigG; try { W5.ben.rig(shape, Object.assign({}, o, { a: undefined })); } finally { ctx = old; }
+    rigHG.setTransform(1, 0, 0, 1, 0, 0); rigHG.globalCompositeOperation = 'source-over'; rigHG.clearRect(0, 0, N + 2, N + 2); rigHG.drawImage(rigC, 0, 0);
+    rigHG.globalCompositeOperation = 'source-in'; rigHG.fillStyle = 'rgb(255,240,200)'; rigHG.fillRect(0, 0, N, N); rigHG.globalCompositeOperation = 'source-over';
+    const rot = o.rot || 0, cx = Math.cos(rot) * 32 * s, cy = Math.sin(rot) * 32 * s;
+    ctx.save(); if (o.a !== undefined) ctx.globalAlpha *= o.a; const ga = ctx.globalAlpha;
+    ctx.globalCompositeOperation = 'lighter'; const hg = ctx.createRadialGradient(cx, cy, 2, cx, cy, 70 * s); hg.addColorStop(0, `rgba(255,246,214,${(.4 + .15 * beat).toFixed(3)})`); hg.addColorStop(1, 'rgba(255,220,140,0)'); ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, 70 * s, 0, Math.PI * 2); ctx.fill(); // (the halo behind it)
+    { const d = Math.max(1, sc * .9) / Math.max(.5, sc); for (const [rr, al, n] of [[1.2, .16, 8], [2.6, .1, 10], [4.2, .05, 12]]) { ctx.globalAlpha = ga * al * (.8 + .4 * beat);
+        for (let i = 0; i < n; i++) { const an = (i + rr * .37) / n * Math.PI * 2; ctx.drawImage(rigH, 0, 0, N, N, -R + Math.cos(an) * d * rr, -R + Math.sin(an) * d * rr, 2 * R, 2 * R); } } } // (its rim of white fire)
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = ga; ctx.drawImage(rigC, 0, 0, N, N, -R, -R, 2 * R, 2 * R);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga * (.12 + .06 * beat); ctx.drawImage(rigH, 0, 0, N, N, -R, -R, 2 * R, 2 * R); // (a sheen of it over the silver)
+    ctx.restore();
+  }
   // the arm with the Black Knuckles on it hits far harder than the clean silver arm: every blow of its moveset and all it
   // throws out (the rocket fist, the giant hands, the lightning); the cursed weapon's own level multiplier comes on top
-  SA.BLACK_K = 2.1;
-  { const _st = strike; strike = function (e, base, dir, m, echo) { if (m && m.arm && !m.trump && SA.black()) base *= SA.BLACK_K; return _st(e, base, dir, m, echo); }; }
+  // and the arm with the Dawn Knuckles on it (purified) hits harder again: clean light outweighs the curse
+  SA.BLACK_K = 2.1; SA.PURE_K = 2.8;
+  { const _st = strike; strike = function (e, base, dir, m, echo) { if (m && m.arm && !m.trump) { if (SA.black()) base *= SA.BLACK_K; else if (SA.pure()) base *= SA.PURE_K; } return _st(e, base, dir, m, echo); }; }
   // the Black Knuckles' rock, paper and scissors, let go: rock cracks the street open in crimson and calls lightning down
   // into the cracks; paper is a black gale full of torn crimson shreds; scissors leave a hanging X of red rents that close
   // with a snap; the great Rock!! sets an eclipse over the street that implodes, then a pillar of crimson lightning
@@ -161,7 +182,7 @@
         burst(fx0, P.y, z0 + 20, col, 18, 'spark', f(), true); fx.push({ kind: 'ring', x: fx0, y: P.y, z: z0 + 10, t: .2, max: .2, r: 46, col: col[1] }); });
       if (k > m.h[0] && k < m.h[1] + .1 && Math.random() < dt * 30) { const fx0 = P.x + f() * 30; fx.push({ kind: 'bolt', x: fx0 + rand(-20, 20), y: P.y, z: P.z + 50 + rand(0, 50), x2: fx0 + rand(-20, 20), y2: P.y, z2: P.z + 50 + rand(0, 50), t: .1, max: .1, col: col[2], seed: Math.random() * 99 }); } }
     if (m.snap) once('s', m.h[0], () => { sfx('crit'); sfx('slam'); flashT = Math.max(flashT, .05); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .4, max: .4, r: 120, col: '#EEF2FA', flat: 1 }); shockwave(P.x, P.y, 100, m); });
-    if (m.crescent) once('c', m.h[0], () => { SA.objs.push({ kind: 'crescent', x: P.x + f() * 30, y: P.y, dir: f(), t: 0, max: .8, hit: new Set(), m, black: SA.black(), seed: Math.random() * 99 }); sfx('whoosh'); if (SA.black()) sfx('growl', .4); });
+    if (m.crescent) once('c', m.h[0], () => { SA.objs.push({ kind: 'crescent', x: P.x + f() * 30, y: P.y, dir: f(), t: 0, max: .8, hit: new Set(), m, black: SA.black(), pure: SA.pure(), seed: Math.random() * 99 }); sfx('whoosh'); if (SA.black()) sfx('growl', .4); if (SA.pure()) { sfx('learned', .45); sfx('hit-crystal', .5); } });
     if (m.hook) { once('h0', 0, () => { const e = foes().filter(o => Math.abs(o.x - P.x) < 280 && Math.abs(o.y - P.y) < 60).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0]; P.hookE = e || null; if (e) { P.facing = Math.sign(e.x - P.x) || P.facing; sfx('whoosh'); } });
       const e = P.hookE; if (e && !e.dead && k < m.h[0]) { const tx = e.x - P.facing * (e.hw + 26); P.jvx = (tx - P.x) / Math.max(.05, (m.h[0] - k) * m.dur); P.y += (e.y - P.y) * Math.min(1, dt * 12); P.vz = Math.max(P.vz, 40); } else if (k >= m.h[0]) P.jvx *= .9; }
     if (m.ride && k < m.h[1] && Math.random() < dt * 30) parts.push({ x: P.x - f() * 10, y: P.y + rand(-3, 3), z: 2, vx: -f() * rand(60, 160), vy: 0, vz: rand(30, 90), life: .4, max: .4, col: pick(['#FFFFFF', '#DDE6FF', '#C8D4EC']), size: rand(1.5, 3), shape: 'star', rot: 0, vr: 4 }); // silver sparks off the street
@@ -176,6 +197,7 @@
     if (SA.stage !== ST()) { SA.stage = ST(); SA.objs = []; }
     if (P.shocked && P.move && P.move.sky) for (const o of SA.objs) if (o.kind === 'sky' && !o.landed) { o.landed = true; o.t = 0; o.x = P.x + P.facing * 40; o.y = P.y; silverBurst(o.x, o.y, 4, 30); shakeMag = Math.max(shakeMag, 12); }
     for (const o of SA.objs) step(o, dt);
+    if (SA.pure() && SA.wrist && Math.random() < dt * 7 && parts.length < 400) parts.push({ x: SA.wrist.x + rand(-6, 6), y: P.y + rand(-2, 2), z: Math.max(4, P.y - SA.wrist.y) + rand(-4, 4), vx: rand(-10, 10), vy: 0, vz: rand(30, 70), life: .6, max: .6, col: pick(['#FFFFFF', '#FFF4D0', '#FFE08A']), size: rand(1.2, 2.2), shape: 'star', rot: 0, vr: 3 }); // (white fire shed off the Dawn Knuckles)
     // what the arm sends out strikes the fallen too (the curse counts it: corruption.js), each body once per thing
     if (window.__corpsesNear && corpses.length) for (const o of SA.objs) { if (o.gone) continue;
       const r = { rocket: (o.z || 0) < 70 ? 18 : 0, ghost: (o.z || 0) < 60 ? 16 : 0, burst: o.struck ? 44 : 0, crescent: 20, crack: o.t > .08 ? (o.R || 90) * .6 : 0, gale: 60, rend: 30, eclipse: o.done ? 110 : 0 }[o.kind];
@@ -217,6 +239,20 @@
     } else if (o.kind === 'burst') { // up out of the floor under them
       if (o.t > .1 && !o.struck) { o.struck = true; sfx('slam'); sfx('crunch'); shakeMag = Math.max(shakeMag, 8); dust(o.x, o.y, 14); silverBurst(o.x, o.y, 10, 18);
         for (const e of foes()) if (Math.hypot(e.x - o.x, (e.y - o.y) * 2) < 46 + e.hw && e.z < 60) hitE(e, o.m.dmg, o.dir, o.m); }
+      if (o.t > o.max) o.gone = true;
+    } else if (o.kind === 'crescent' && o.pure) { // Dawnfall: a tall crescent of white fire that widens as it runs, and calls a pillar of sunrise down on each it cuts
+      o.x += o.dir * 720 * dt; o.max = 1.05; const gw = 1 + o.t * .9;
+      for (const e of foes()) { if (o.hit.has(e) || Math.abs(e.x - o.x) > e.hw + 26 * gw || Math.abs(e.y - o.y) > 30 * gw || e.z > 110) continue; o.hit.add(e); hitE(e, 24, o.dir, o.m, { kb: 340, power: 2 });
+        burst(e.x, e.y, e.z + e.hh * .5, ['#FFFFFF', '#FFF0C8', '#FFD27A'], 10, 'spark', 0, true);
+        SA.objs.push({ kind: 'dawn', e, x: e.x, y: e.y, t: 0, max: .75, at: .22, m: o.m, dir: o.dir, done: false, seed: Math.random() * 99 }); }
+      if (Math.random() < dt * 40) parts.push({ x: o.x - o.dir * rand(0, 40), y: o.y + rand(-6, 6), z: rand(6, 90 * gw), vx: -o.dir * rand(30, 110), vy: 0, vz: rand(40, 120), life: .55, max: .55, col: pick(['#FFFFFF', '#FFF0C8', '#FFD27A', '#FFE9A8']), size: rand(1.6, 3), shape: 'spark', rot: 0, vr: 0 });
+      if (o.t > o.max || o.x < leftWall() - 40 || o.x > rightWall() + 40) { if (!o.bloom) { o.bloom = 1; SA.objs.push({ kind: 'dawn', e: null, x: o.x, y: o.y, t: 0, max: .75, at: .05, m: o.m, dir: o.dir, done: false, seed: Math.random() * 99, end: 1 }); } o.gone = true; }
+    } else if (o.kind === 'dawn') { // the sunrise answering the Dawnfall's cut: a column of white fire, and a ring of it out along the street
+      const e = o.e; if (e && !e.dead) { o.x = e.x; o.y = e.y; }
+      if (!o.done && o.t >= o.at) { o.done = true; shakeMag = Math.max(shakeMag, o.end ? 6 : 4); sfx('learned', .4); sfx('slam', .5);
+        if (e && !e.dead) hitE(e, 20, o.dir, o.m, { kb: 80, launch: 260, power: 2, crit: 1 });
+        for (const q of foes()) if (q !== e && Math.hypot(q.x - o.x, (q.y - o.y) * 2) < 70 + q.hw) hitE(q, 12, Math.sign(q.x - o.x) || o.dir, o.m, { kb: 220, launch: 140, power: 1 });
+        burst(o.x, o.y, 20, ['#FFFFFF', '#FFF0C8', '#FFD27A'], 18, 'spark', 0, true); burst(o.x, o.y, 90, ['#FFFFFF', '#FFE9A8'], 10, 'spark', 0, true); }
       if (o.t > o.max) o.gone = true;
     } else if (o.kind === 'crescent') { // a crescent of moonlight sliding down the street
       o.x += o.dir * 560 * dt;
@@ -264,6 +300,11 @@
         for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(bx - uy * k * 2.2, by + ux * k * 2.2); ctx.lineTo(bx - uy * k * 5.6 - ux * 1.2, by + ux * k * 5.6 - uy * 1.2); ctx.lineTo(bx - uy * k * 1.2 - ux * 2.4, by + ux * k * 1.2 - uy * 2.4); ctx.closePath(); ctx.fill(); outline(.5); } }
       for (const [x, y, r] of [[bx, by, 2.5], [ax, ay, 3]]) { ctx.fillStyle = C('#050206'); circle(x, y, r); ctx.fill(); outline(.8); if (!FLASH && !TINT) K.add(() => { ctx.strokeStyle = `rgba(255,60,80,${(.5 + .4 * b).toFixed(3)})`; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(x, y, r * .62, t * 2, t * 2 + 4); ctx.stroke(); }); }
       K.glowAt((bx + cx) / 2, (by + cy) / 2, 14, '170,20,60', .2 + .1 * b);
+    } else if (SA.pure()) { // the Dawn Knuckles' arm: the silver lit from within by white fire, its joints burning white-gold
+      const t = performance.now() / 1000, b = .5 + .5 * Math.sin(t * 3);
+      for (const [x, y, r] of [[bx, by, 2.5], [ax, ay, 3]]) { ctx.fillStyle = C('#FFF0C0'); circle(x, y, r); ctx.fill(); outline(.8); }
+      if (!FLASH && !TINT) K.add(() => { ctx.strokeStyle = `rgba(255,246,214,${(.45 + .3 * b).toFixed(3)})`; ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx, cy); ctx.stroke(); });
+      K.glowAt((ax + bx) / 2, (ay + by) / 2, 14, '255,236,180', .28 + .1 * b); K.glowAt((bx + cx) / 2, (by + cy) / 2, 16, '255,236,180', .34 + .12 * b); K.glowAt(bx, by, 9, '255,250,230', .4);
     } else {
     ctx.fillStyle = C(BN.gilt); circle(bx, by, 2.5); ctx.fill(); outline(.8); if (K.DET()) { ctx.fillStyle = '#FFFFFF'; circle(bx - .5, by - .7, .7); ctx.fill(); }
     ctx.fillStyle = C(BN.gilt); circle(ax, ay, 3); ctx.fill(); outline(.9);
@@ -287,7 +328,7 @@
     if (pose.armGone) { ctx.fillStyle = C(BN.gilt); rrect(10, -3.4, 3.4, 6.8, 1.2); ctx.fill(); outline(.7); return; } // the cuff, the hand away on its chain
     ctx.save(); ctx.translate(chain, 0);
     if (big > 1.2 || shape) { ctx.save(); ctx.translate(12, 0); RIG(shape || 'rock', { s: .19 * big, rot: pose.armRot || 0, t }); ctx.restore(); K.glowAt(12 + 10 * big, 0, 10 + 8 * big, LT('225,235,255'), .3); }
-    else { let done = false; if (SA.black() && pose.cwArt && typeof CWART !== 'undefined') { try { done = CWART.draw('fists', pose.cwArt, pose, false); } catch (e) { done = false; } } if (!done) _dw(kind, pose); K.glowAt(17, 0, 9, LT('225,235,255'), .28); } // (the Black Knuckles' own fist when it is the plain fist)
+    else { let done = false; if ((SA.black() || SA.pure()) && pose.cwArt && typeof CWART !== 'undefined') { try { done = CWART.draw('fists', pose.cwArt, pose, false); } catch (e) { done = false; } } if (!done) _dw(kind, pose); K.glowAt(17, 0, 9, LT('225,235,255'), .28); } // (the Black Knuckles' own fist when it is the plain fist)
     ctx.restore();
   };
   const _pp = playerPose;
@@ -339,6 +380,20 @@
     else if (o.kind === 'brand') list.push([o.y, () => onMain(() => { if (o.done) return; const k = o.t / o.at, z = o.e ? o.e.z + o.e.hh * .5 : 30; ctx.save(); ctx.globalCompositeOperation = 'lighter';
         ctx.strokeStyle = `rgba(255,50,80,${(.4 + .5 * k).toFixed(3)})`; ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = 0; i < 3; i++) { const yy = o.y - z - 6 + i * 6; ctx.moveTo(o.x - 8, yy - 3); ctx.lineTo(o.x + 8, yy + 3); } ctx.stroke();
         ctx.beginPath(); ctx.ellipse(o.x, o.y, 14 * (1.2 - k * .4), 4.5 * (1.2 - k * .4), 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); })]);
+    else if (o.kind === 'crescent' && o.pure) list.push([o.y, () => onMain(() => { const a = Math.min(1, o.t / .05) * (1 - Math.max(0, (o.t - o.max * .7) / (o.max * .3))), gw = 1 + o.t * .9, fl = mulberry(Math.floor(o.t * 30) + (o.seed | 0)); ctx.save(); ctx.translate(o.x, o.y - 40 * gw); ctx.scale(o.dir * gw, gw);
+        const hg = ctx.createRadialGradient(0, 0, 4, 0, 0, 70); hg.addColorStop(0, `rgba(255,240,200,${(.35 * a).toFixed(3)})`); hg.addColorStop(1, 'rgba(255,200,120,0)'); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(-10, 0, 70, 60, 0, 0, Math.PI * 2); ctx.fill();
+        for (let i = 0; i < 4; i++) { const L = 46 - i * 4, W = 20 - i * 3; ctx.beginPath(); ctx.moveTo(-i * 12, -L);
+          for (let k = 1; k <= 10; k++) { const q = k / 10, an = -Math.PI / 2 + q * Math.PI; ctx.lineTo(-i * 12 + Math.cos(an) * W + (i ? (fl() - .5) * 5 : 0), Math.sin(an) * L); }
+          ctx.strokeStyle = i ? `rgba(255,${210 + i * 10},${120 + i * 30},${(a * (.75 - i * .15)).toFixed(3)})` : `rgba(255,255,255,${a.toFixed(3)})`; ctx.lineWidth = i ? 6 - i : 7; ctx.lineCap = 'round'; ctx.stroke(); }
+        for (let k = 0; k < 9; k++) { const q = fl(), an = -Math.PI / 2 + q * Math.PI, x = Math.cos(an) * 20, y = Math.sin(an) * 46; ctx.fillStyle = `rgba(255,${200 + fl() * 55 | 0},150,${(.7 * a).toFixed(3)})`; ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.quadraticCurveTo(x + 4 + fl() * 8, y - 2, x + 10 + fl() * 14, y + (fl() - .5) * 6); ctx.quadraticCurveTo(x + 4, y + 3, x - 3, y); ctx.fill(); }
+        ctx.restore(); })]);
+    else if (o.kind === 'dawn') list.push([o.y + .2, () => onMain(() => { const k = o.t / o.max, z = o.e ? o.e.z + o.e.hh * .5 : 30; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        if (!o.done) { const q = o.t / o.at; ctx.strokeStyle = `rgba(255,236,170,${(.5 + .5 * q).toFixed(3)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(o.x, o.y, 34 * (1.4 - q), 11 * (1.4 - q), 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = `rgba(255,250,230,${(.3 * q).toFixed(3)})`; ctx.fillRect(o.x - 2, o.y - 300, 4, 300); }
+        else { const d = (o.t - o.at) / (o.max - o.at), w = (o.end ? 30 : 22) * (1 - d * .7), A = 1 - d; const lg = ctx.createLinearGradient(o.x - w, 0, o.x + w, 0); lg.addColorStop(0, 'rgba(255,200,110,0)'); lg.addColorStop(.5, `rgba(255,252,236,${(.95 * A).toFixed(3)})`); lg.addColorStop(1, 'rgba(255,200,110,0)'); ctx.fillStyle = lg; ctx.fillRect(o.x - w, o.y - 340, w * 2, 340);
+          ctx.strokeStyle = `rgba(255,230,160,${(.8 * A).toFixed(3)})`; ctx.lineWidth = 3 * A + .5; const R = 20 + d * 80; ctx.beginPath(); ctx.ellipse(o.x, o.y, R, R * .32, 0, 0, Math.PI * 2); ctx.stroke();
+          const g = ctx.createRadialGradient(o.x, o.y - z, 2, o.x, o.y - z, 46); g.addColorStop(0, `rgba(255,255,255,${(.8 * A).toFixed(3)})`); g.addColorStop(1, 'rgba(255,220,140,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(o.x, o.y - z, 46, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore(); })]);
     else if (o.kind === 'crescent') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(o.x, o.y - 30); ctx.scale(o.dir, 1);
       for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(${i ? LT('200,215,255') : LT('255,255,255')},${a * (.9 - i * .25)})`; ctx.lineWidth = 5 - i * 1.4; ctx.beginPath(); ctx.ellipse(-i * 10, 0, 14, 34, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke(); } ctx.restore(); })]);
     else if (o.kind === 'gust') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('225,235,255')},${a * .8})`; ctx.lineWidth = 2; for (let i = 0; i < 7; i++) { const y = o.y - 10 - i * 9, x = o.x + o.dir * o.t * 500; ctx.beginPath(); ctx.moveTo(x - o.dir * 60, y); ctx.lineTo(x + o.dir * (20 + i % 2 * 20), y); ctx.stroke(); } ctx.restore(); })]);
