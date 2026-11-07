@@ -745,7 +745,7 @@
       else if (p.k === 'spark2') glowR(p.x, p.y, 10, '150,190,255', a * .9); }); }
     // the names over the stalls, in CSS pixels, so they read on a phone
     const f1 = 12.5 * u, f2 = 11 * u; BUB.length = 0;
-    for (const v of H.cast) { const V = CAST[v.id], sl = SL(v), isT = v.id === H.target, h = (v.id === 'dworkin' ? 62 : 96 * V.s) * sl.s, x = vxOf(v), y = sl.vy - h - 3 * u;
+    for (const v of H.cast) { const V = CAST[v.id], sl = SL(v), isT = v.id === H.target, h = (v.id === 'dworkin' ? 62 : 96 * V.s) * sl.s * VFIG, x = vxOf(v), y = sl.vy - h - 3 * u;
       ctx.save(); ctx.globalAlpha = isT ? 1 : .88; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(20,10,14,.92)'; ctx.lineJoin = 'round';
       ctx.font = `700 ${f1.toFixed(2)}px Cinzel, Georgia, serif`; ctx.lineWidth = 3.2 * u; ctx.fillStyle = isT ? '#FFE8A8' : '#EBCB7C'; ctx.strokeText(V.name.toUpperCase(), x, y - f2 - 1 * u); ctx.fillText(V.name.toUpperCase(), x, y - f2 - 1 * u);
       ctx.font = `700 ${f2.toFixed(2)}px Cinzel, Georgia, serif`; ctx.lineWidth = 2.8 * u; ctx.fillStyle = '#E8DCC8'; ctx.strokeText(V.role.toUpperCase(), x, y); ctx.fillText(V.role.toUpperCase(), x, y);
@@ -918,13 +918,15 @@
       ctx.fillStyle = C('#D8AA55'); ctx.fillRect(x - 5, -36, 10, 2); ctx.fillStyle = C('#3A2418'); ctx.fillRect(x - 1, -44, 2, 8); ctx.fillStyle = C('#D8AA55'); circle(x, -45, 1.6); ctx.fill(); ctx.globalAlpha = 1; }
     else if (h.k === 'vial') { ctx.save(); ctx.translate(f[0], f[1] - 3); ctx.rotate(h.tilt); ctx.globalAlpha = h.a; ctx.fillStyle = 'rgba(90,220,150,.85)'; rrect(-2, -6, 4, 7, 1.6); ctx.fill(); outline(.5); ctx.fillStyle = C('#E8DCC0'); ctx.fillRect(-1, -8, 2, 2); ctx.restore(); if (h.a > .5) glowR(f[0], f[1] - 6, 10, '120,255,180', .4 * h.a); }
   }
+  // the people drawn larger than the hall's own scale (the stalls stay where they are): the keepers by VFIG, he by HFIG
+  const VFIG = 1.45, HFIG = 1.22;
   function drawVendor(v, t) {
     const V = CAST[v.id], L = lookOf(v.id), sl = SL(v), isNear = H.target === v.id || H.panel === v.id || near(v) < 70;
     const dwarf = !!L.dwarf, p = dwarf ? dwarfPose(v, t) : vendorPose(v, t);
     const x = vxOf(v), y = sl.vy, local = (p.work ?? V.f) * Math.sign(sl.m.a || 1);
     const toward = Math.sign(H.x - x) || 1, hall = Math.sign(geo().cx - x) || 1;
     const f = H.uniLook > 0 && U.on ? (Math.sign(U.x - x) || 1) : (p.face || isNear) && !(v.act && v.act.k === 'quench') ? toward : (p.work !== undefined ? local : (sl.kind === 'back' && v.id !== 'gerard' ? hall : local));
-    const s = sl.s;
+    const s = sl.s * VFIG;
     ctx.save(); ctx.translate(x, y); ctx.scale(f * s * (V.w || 1), s * (dwarf ? 1 : V.s));
     shadow(0, 0, dwarf ? 15 : 13);
     if (dwarf) { const hands = drawDwarf(L, p, t); if (v.act && v.act.k === 'float' && v.act.delay <= 0) glowR(hands.f[0], hands.f[1], 10, '190,170,255', .5); }
@@ -948,7 +950,7 @@
     finally { P.state = s0; P.walk = w0; P.move = m0; P.t = t0; }
   }
   function drawHero(t) {
-    const st = H.moving ? (H.run ? 'run' : 'walk') : 'idle', s = geo().sAt(H.y), a = H.leaving ? 1 - cl01((H.leaving.t - .7) / .4) : 1;
+    const st = H.moving ? (H.run ? 'run' : 'walk') : 'idle', s = geo().sAt(H.y) * HFIG, a = H.leaving ? 1 - cl01((H.leaving.t - .7) / .4) : 1;
     if (a <= 0) return;
     const m = mode; mode = 'play';
     try {
@@ -966,7 +968,7 @@
   function figures(t) {
     const list = H.cast.map(v => [SL(v).vy, v]).sort((a, b) => a[0] - b[0]);
     for (const [, v] of list) { try { drawVendor(v, t); } catch (e) { console.error(e); } }
-    const s = geo().sAt(H.y), hm = HEAD_MASK, uniFirst = U.on && U.y <= H.y;
+    const s = geo().sAt(H.y) * HFIG, hm = HEAD_MASK, uniFirst = U.on && U.y <= H.y;
     if (uniFirst) uniDraw(t);
     inkBegin([[H.x - 70 * s, H.y - 120 * s, H.x + 70 * s, H.y + 10 * s]]);
     try { drawHero(t); } catch (e) { console.error(e); }
