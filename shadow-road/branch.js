@@ -489,7 +489,7 @@
       y = say(k.open ? (STAGES[k.stage].name || c.name).toUpperCase() : c.name, y, a, 11, '244,226,170');
       y = say(k.open ? c.line : 'The card is cold and grey, and whatever is painted on it will not come clear. The way is not open yet.', y - 2, a, 8.5, '236,230,218', Math.min(VW - 80, 430), 'Spectral');
       const st = [];
-      if (c.relic && c.relic.name && k.open) st.push(relicWon(c) ? `RELIC WON: ${c.relic.name.toUpperCase()}` : `AT THE ROAD'S END: ${c.relic.name.toUpperCase()}`);
+      if (c.relic && c.relic.name && k.open && relicWon(c)) st.push(`RELIC WON: ${c.relic.name.toUpperCase()}`); // (what waits at a road's end is not told until it is won)
       if (seen(c)) st.push('ENDING SEEN');
       if (st.length) y = say(st.join('  ·  '), y, a * .9, 6.5, relicWon(c) ? '232,200,110' : '190,196,214');
       const armed = sm((C.real - C.armAt) / .4);
