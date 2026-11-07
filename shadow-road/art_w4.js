@@ -562,7 +562,8 @@
     grade: { desat: .08, top: 'rgba(60,30,130,.5)', bot: 'rgba(220,90,50,.42)', vig: 'rgba(8,2,10,.7)' },
     liveSky(camX, t) {
       const th = THEMES.chaosBoss, sx = VW * th.sun[0] - camX * .02, sy = Y_OFF + VIEW_H * th.sun[1];
-      if (vortC) { ctx.save(); ctx.translate(sx, sy); ctx.rotate(t * .025); ctx.scale(1, 1); ctx.globalAlpha = .95; ctx.drawImage(vortC, -380, -380, 760, 760); ctx.restore(); }
+      // (only down to the dais: the floor is painted solid over everything below its back edge, so the storm stops there)
+      if (vortC) { ctx.save(); ctx.beginPath(); ctx.rect(-20, sy - 400, VW + 40, FLOOR_TOP - 1 - (sy - 400)); ctx.clip(); ctx.translate(sx, sy); ctx.rotate(t * .025); ctx.scale(1, 1); ctx.globalAlpha = .95; ctx.drawImage(vortC, -380, -380, 760, 760); ctx.restore(); }
       skyEclipse(th, camX);
       const W = VW + 260; // fragments of worlds, falling slowly round into the eye
       frags.forEach((f, i) => { const a = t * .03 + i / frags.length * TAU, d = 150 + (i % 3) * 50 + Math.sin(t * .05 + i) * 20, s = .3 + (i % 3) * .1;
@@ -1617,7 +1618,7 @@
     ups(h, list, t) { for (const g of h.lanes) list.push([g.y, () => onMain(() => { // spectral copies of its old shapes, running
       ctx.save(); ctx.translate(g.x, g.y - (g.form === 2 ? 30 : g.form === 3 ? 16 : 0)); ctx.scale(h.dir * .62, .62); ctx.globalAlpha = .55; ctx.globalCompositeOperation = 'lighter'; TINT = '#7A58C0';
       FORMS[g.form]({ state: 'idle', phase: g.form, walk: 0 }, { walk: t * 14, t }, t); TINT = null; ctx.restore(); })]); },
-    box(h, box) { for (const g of h.lanes) box(g.x, g.y, 0, 100, 140); },
+    // (no box: the pack is light painted straight onto the page, none of it in the figure layer)
   });
   // ---------------- the Mask's hands: they drift free of it, and wherever they are the world draws them in depth ----------------
   const pinHand = (h, x, y, z, rot, curl, side) => Object.assign(h, { x, y, z, rot, curl, side, flip: 1, pin: 2 });
@@ -2322,7 +2323,7 @@
       }
       if (m.phase === 'calm' && m.debris.length && m.debris.every(d => d.z <= 0)) m.debris = [];
     },
-    boxes(m, box) { hzBoxes(box); if (m.debris.length) box(camX + VW / 2, FLOOR_BOT, 0, VW / 2 + 20, 200); },
+    boxes(m, box) { hzBoxes(box); for (const d of m.debris) box(d.x, d.y, d.z, d.s * 2 + 10, d.s * 2 + 10); }, // (each piece its own small box: the ink work stays on the pieces, not the whole floor)
     list(m, list, t) {
       hzList(list, t);
       for (const d of m.debris) list.push([d.y, () => { const y = d.y - d.z; shadow(d.x, d.y, d.s * (1 - Math.min(.7, d.z / 120)));

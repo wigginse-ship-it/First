@@ -99,7 +99,8 @@ function texPat(g, name) { // patterns belong to a context, so cache one per con
 // once the same view has come round two frames running).
 const STILL = {};
 const STILL_PROPS = ['fillStyle', 'strokeStyle', 'lineWidth', 'lineCap', 'lineJoin', 'miterLimit', 'font', 'textAlign', 'textBaseline', 'imageSmoothingEnabled', 'shadowBlur', 'shadowColor', 'shadowOffsetX', 'shadowOffsetY'];
-function stillLayer(id, key, paint) {
+// rect [x, y, w, h] (optional, in the current space): all the layer paints lies inside it, so only that part is laid back
+function stillLayer(id, key, paint, rect) {
   const g = ctx;
   if (!g || typeof cv === 'undefined' || g.canvas !== cv || g.globalAlpha !== 1 || g.globalCompositeOperation !== 'source-over') { paint(); return; }
   const m = g.getTransform(), k = key + '|' + m.a + ',' + m.b + ',' + m.c + ',' + m.d + ',' + m.e + ',' + m.f + '|' + cv.width + 'x' + cv.height;
@@ -113,7 +114,14 @@ function stillLayer(id, key, paint) {
     try { paint(); } finally { ctx = g; }
     S.k = k;
   }
-  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(S.c, 0, 0); g.restore();
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+  if (rect && !m.b && !m.c) { // (outside the rect the layer is empty: laying it there changes nothing, so only the rect's pixels are drawn)
+    const ax = rect[0] * m.a + m.e, bx = (rect[0] + rect[2]) * m.a + m.e, ay = rect[1] * m.d + m.f, by = (rect[1] + rect[3]) * m.d + m.f; // (a mirrored view flips them)
+    const x0 = Math.max(0, Math.floor(Math.min(ax, bx)) - 2), y0 = Math.max(0, Math.floor(Math.min(ay, by)) - 2);
+    const x1 = Math.min(cv.width, Math.ceil(Math.max(ax, bx)) + 2), y1 = Math.min(cv.height, Math.ceil(Math.max(ay, by)) + 2);
+    if (x1 > x0 && y1 > y0) g.drawImage(S.c, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+  } else g.drawImage(S.c, 0, 0);
+  g.restore();
 }
 // ---------- painting a pre-rendered background layer (done once, when a world is built) ----------
 // ink: contour color, line: contour strength, lw: contour width, brush: how much brushwork shows, hatch: modelling strokes low down
@@ -153,15 +161,25 @@ const perfWin = [], perfUseless = {};
 // how sharp the canvas is drawn, in device pixels per screen pixel. A phone starts at 1.5 (most phone screens pack 3; the
 // paint reads just as well at half that, for a quarter of the pixels); anything else at 2
 let RES_CAP = (window.matchMedia && matchMedia('(pointer: coarse)').matches) ? 1.5 : 2;
-// Every second and a half of play (90 frames at most, 20 at least): if the game is running slow, take the next step down:
+// Every 1.2 seconds of play (90 frames at most, 6 at least): if the game is running slow, take the next step down:
 // the canvas a step softer, down to 1.25 device pixels per screen pixel; then the lighter paint; then softer again, down
 // to one; and last the plain renderer. A step that didn't make it any faster is put back and not tried again; two such in a
 // row mean the frame rate is capped (Low Power Mode runs at 30), and it is then left alone for good.
 // The speed is the median frame time of the window, so a one-off hitch (a new place being painted) doesn't count; and
 // frames are counted however slow they are (on a very slow phone every frame is slow, and that is just when it matters)
+// Far too slow (a median frame over 1/26 s, which no 30-a-second cap explains), the first steps are taken together: the
+// canvas straight down to one device pixel per screen pixel and the lighter paint at once, so a slow phone is not left
+// struggling through several windows; and such a step that doesn't help is not taken for a frame-rate cap
+const PERF_SEVERE = 1 / 26;
 function perfRes() { return Math.min(window.devicePixelRatio || 1, RES_CAP); }
 function perfNext(avg) {
   const res = perfRes(), resOk = !perfUseless.res && res > 1.01 && (res > 1.26 || PAINT_LITE || perfUseless.lite);
+  const r = !perfUseless.res && res > 1.01, l = !PAINT_LITE && !perfUseless.lite;
+  if (avg > PERF_SEVERE && !perfUseless.big && (r || l)) {
+    const was = RES_CAP, lite = PAINT_LITE;
+    if (r) RES_CAP = 1; if (l) PAINT_LITE = true; if (r) layout();
+    return ['big', () => { PAINT_LITE = lite; if (r) { RES_CAP = was; layout(); } }];
+  }
   if (avg > 1 / 50 && resOk) { const was = RES_CAP; RES_CAP = Math.max(1, res - .25); layout(); return ['res', () => { RES_CAP = was; layout(); }]; }
   if (avg <= 1 / 42 || PAINT_Q === 0) return null;
   if (!PAINT_LITE && !perfUseless.lite) { PAINT_LITE = true; return ['lite', () => { PAINT_LITE = false; }]; }
@@ -173,11 +191,11 @@ function paintPerf(rawDt, gap = rawDt) {
   if (gap > 1) { perfWin.length = 0; perfT = 0; perfSkip = Math.max(perfSkip, .5); return; } // a stall (tab switch, menu) says nothing about drawing speed
   if (perfSkip > 0) { perfSkip -= gap; return; } // ignore the first second after starting, and half a second after a change
   perfWin.push(gap); perfT += gap;
-  if (perfWin.length < 20 || (perfWin.length < 90 && perfT < 1.5)) return;
+  if (perfWin.length < 6 || (perfWin.length < 90 && perfT < 1.2)) return; // (a slow phone gives few frames a second: it is judged on fewer)
   perfWin.sort((a, b) => a - b); const avg = perfWin[perfWin.length >> 1]; perfWin.length = 0; perfT = 0;
   if (perfPrev) { // the step just taken: did it help?
     const helped = avg < perfPrev * .9; perfPrev = 0;
-    if (!helped) { if (perfUndo) perfUndo(); perfUndo = null; perfUseless[perfKind] = true; perfSkip = .5; if (++perfMiss >= 2) perfLock = true; return; }
+    if (!helped) { if (perfUndo) perfUndo(); perfUndo = null; perfUseless[perfKind] = true; perfSkip = .5; if (++perfMiss >= 2 && avg <= PERF_SEVERE) perfLock = true; return; }
     perfMiss = 0;
   }
   perfUndo = null;
@@ -459,7 +477,9 @@ function skyWash(camX) { // the sky is laid in with long, nearly level strokes t
 function paperFrame() {
   buildFrame();
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalCompositeOperation = 'soft-light'; ctx.drawImage(frameC, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .3; ctx.drawImage(frameC, 0, 0); // (mostly soft-lit: the varnish warms the paint but never lifts its blacks)
+  // (mostly soft-lit: the varnish warms the paint but never lifts its blacks; the plain renderer keeps only the thin coat)
+  if (PAINT_Q !== 0) { ctx.globalCompositeOperation = 'soft-light'; ctx.drawImage(frameC, 0, 0); }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .3; ctx.drawImage(frameC, 0, 0);
   ctx.restore();
 }
 

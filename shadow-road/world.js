@@ -538,10 +538,13 @@ function gainWeapon(id, lvl = 1) {
 }
 
 // ---------- the stage ----------
+// the fallen are let go with the place they lie in: each one's kept picture is given back at once (Safari frees a dropped
+// canvas only when it gets round to it, and counts it against its limit until then)
+function dropCorpses() { for (const c of corpses) if (c && c.bake) { c.bake.cv.width = c.bake.cv.height = 1; c.bake = null; } corpses = []; }
 function startStage(i) {
   stageIdx = i; stage = baseStage = STAGES[i]; runFoundW = false; zoneTrans = null;
   P = newPlayer();
-  enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; corpses = []; craters = [];
+  enemies = []; projs = []; parts = []; fx = []; nums = []; loot = []; ghosts = []; echoes = []; spawnQ = []; hazards = []; dropCorpses(); craters = [];
   setGlideView(glideWanted()); setZoom(VIEW_NORMAL);
   camX = 0; lockX = null; waveIdx = 0; waveActive = false; bossSpawned = false; boss = null;
   hitstop = 0; shakeMag = 0; zoom = 0; slowmo = 0; clearT = 0; flashT = 0; hurtFlash = 0;

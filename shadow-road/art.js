@@ -1156,7 +1156,7 @@ function drawBackdrop(themeId, camX, t) {
     skyWash(camX);
   };
   // the sky, its sun and its wash change only with the camera: kept while the view holds still (paint.js stillLayer)
-  if (tilt) sky(); else stillLayer('sky', themeId + '|' + camX + '|' + VW + '|' + Y_OFF + '|' + FLOOR_TOP, sky);
+  if (tilt) sky(); else stillLayer('sky', themeId + '|' + camX + '|' + VW + '|' + Y_OFF + '|' + FLOOR_TOP, sky, [0, Math.min(0, sy - 160), VW, Math.max(FLOOR_TOP, sy + 160) - Math.min(0, sy - 160)]); // (the sky, its sun's glow and its wash: nothing below)
   const skyKind = th.skyKind || (themeId === 'prism' ? 'ribbons' : 'clouds'); // a locale may also paint its own live sky
   if (th.liveSky) th.liveSky(camX, t);
   else if (skyKind === 'none') {}
@@ -1192,7 +1192,7 @@ function drawFloor(themeId, th, camX, t) {
     ctx.save(); ctx.scale(.5, .5); ctx.fillRect(0, (FLOOR_TOP - 2) * 2, (VW + 512) * 2, (VH - FLOOR_TOP + 2) * 2); ctx.restore();
     ctx.globalAlpha = .16; ctx.fillStyle = texPat(ctx, 'hatch'); ctx.scale(.5, .5); ctx.fillRect(0, (VH - 34) * 2, (VW + 512) * 2, 68);
     ctx.restore();
-  });
+  }, [0, FLOOR_TOP - 2, VW, VH - FLOOR_TOP + 2]);
 }
 function drawFloorLayer(themeId, th, camX, t) {
   const fg = ctx.createLinearGradient(0, FLOOR_TOP, 0, VH);
