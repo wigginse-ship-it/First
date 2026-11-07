@@ -69,7 +69,11 @@
     heart: null, roadT: 4, itemDone: false, flick: 0, flickT: 2, rate: {}, lastWave: 0, villSaved: 0, cBurn: 0, cBurnT: 0, drumLast: 0, stdT: 0, coda: null, log: [],
     wisps: [], shade: null, ripT: 0, carSaid: false, cStat: { hops: 0, broke: 0, burnt: 0, risen: 0, shades: 0, sank: 0, last: null } }; }
   const LOG = [];
-  const note = (why, d) => { LOG.push({ why, d: Math.round(d * 100) / 100, v: Math.round(CS().v * 10) / 10, t: Math.round(now() * 10) / 10 }); if (LOG.length > 80) LOG.shift(); };
+  const note = (why, d) => { LOG.push({ why, d: Math.round(d * 100) / 100, v: Math.round(CS().v * 10) / 10, t: Math.round(now() * 10) / 10 }); if (LOG.length > 80) LOG.shift(); tick(why, d); };
+  // the live ticker under the curse meter: like reasons within 2s are summed into one line
+  const TICK = [];
+  function tick(why, d) { const t = performance.now() / 1000, base = String(why || '?').replace(/ \(\d+ this cycle\)$/, ''), last = TICK.find(x => x.base === base && x.sgn === Math.sign(d) && t - x.t < 2);
+    if (last) { last.d += d; last.n++; last.t = t; last.why = why; } else { TICK.unshift({ base, why, d, n: 1, t, t0: t, sgn: Math.sign(d) }); if (TICK.length > 12) TICK.pop(); } }
   const rl = (k, gap) => { const t = now(); if ((L.rate[k] || 0) > t) return false; L.rate[k] = t + gap; return true; };
   const onRoad = () => !!(L.road && P && roadHas(P.x) && Math.abs(P.y - L.road.y) < L.road.h && P.z < 30);
   const cursedGirdle = () => !!(save.gear && save.gear.eq && save.gear.eq.waist && save.gear.eq.waist.curse);
@@ -1989,21 +1993,46 @@
   // ---------------- THE CURSE METER (for testing): a bar under his health in every New Game+ game. Set SHOW_METER to
   // false to hide it again (the curse is meant to be felt, not read)
   const SHOW_METER = true;
-  const TOUCH_ONLY = (() => { try { return matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) { return false; } })();
+  const SMALL = (() => { try { return matchMedia('(hover: none) and (pointer: coarse)').matches || innerWidth < 700; } catch (e) { return false; } })();
   const TIER_NAMES = ['UNTOUCHED', 'WHISPERS', 'TAINT', 'BLIGHT', 'CONSUMED'], HORN_NAMES = ['', 'SOUR', 'TURNING', 'TURNED', 'BLACK'];
-  let meterEl = null;
+  // a few words on what each reason is (shown after it in the ticker)
+  const GLOSS = {
+    'cruelty: overkill': 'a blow far past what it needed', 'massacre': '5 kills in quick succession', 'a kill from behind': 'a foe slain from its back',
+    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body',
+    'a kill by a hazard': 'a foe killed by the world, not you', 'standing on the Black Road': 'step off it', 'cursed loot taken': 'black shards picked up',
+    'a death': 'more each death this cycle', 'a death to a corrupted lord': 'fell to a cursed boss', 'the cursed weapon feeds': 'its hunger drawback',
+    'the curse took his shadow': 'a cursed foe caught you', 'his shadow kept the curse': 'the shade was not broken in time',
+    'the curse passes on': 'a carrier passed it on', 'the passing curse broken': 'carrier slain before it passed', 'the passing curse burnt out': 'carrier ran out of time',
+    'restraint': 'let a downed foe get up unhit', 'a perfect parry': 'parry timed exactly', 'a perfect blow cleanses': 'a perfect charge that landed',
+    'a perfect charge lands': 'perfect charged attack hit', 'a perfect draw lands': 'perfect bow draw hit', 'a perfect throw lands': 'perfect Pearl throw hit',
+    'a purified blade cleanses': 'kill with a purified weapon', 'a Pearl kill': 'the Pearl purifies', 'a wave cleared unhit': 'no damage taken that wave',
+    'a villager saved': 'Lorraine', 'a villager of Lorraine lost': 'Lorraine', 'a villager left to the Circle': 'Lorraine',
+    'a shrine room': 'the shrine cleanses gear too', 'a lord of a world falls': 'boss beaten', 'a corrupted lord beaten cleanly': 'cursed boss, no deaths',
+    'a world walked without falling': 'cleared a world without dying', 'the Horn of Lorraine blown': 'the Horn', 'the Pattern of his own walked': 'the Pattern',
+    'the Abyss taken into the Pearl': 'the Pearl drinks the Abyss',
+  };
+  const gloss = (b) => GLOSS[b] || GLOSS[b.replace(/ \(.*\)$/, '')] || '';
+  let meterEl = null, hist = [];
   function meter() {
-    const show = SHOW_METER && !TOUCH_ONLY && NG() && !!save.w8relic && (mode === 'play' || mode === 'pause'); // (never on a phone or tablet: no room for it) // (only once Lorraine is beaten: the Horn in hand)
-    if (!show) { if (meterEl) meterEl.hidden = true; return; }
+    const show = SHOW_METER && NG() && !!save.w8relic && (mode === 'play' || mode === 'pause'); // (only once Lorraine is beaten: the Horn in hand)
+    if (!show) { hist = []; if (meterEl) meterEl.hidden = true; return; }
     if (!meterEl) { const bars = document.querySelector('.hud-l .bars'); if (!bars) return;
-      meterEl = document.createElement('div'); meterEl.id = 'curseMeter'; meterEl.style.cssText = 'margin:3px 0 1px;pointer-events:none;font:700 8px/1.1 sans-serif;letter-spacing:.08em;color:#D8B8D0;filter:drop-shadow(0 1px 1px #000)';
-      meterEl.innerHTML = '<div style="position:relative;height:6px;width:min(150px,30vw);background:rgba(20,10,24,.75);border:1px solid #6A4A6A;border-radius:3px;overflow:hidden"><div id="cmFill" style="height:100%;width:0;background:linear-gradient(90deg,#7A5A8A,#A03050,#200810)"></div>' +
-        TIERS.map(x => `<div style="position:absolute;top:0;bottom:0;left:${x}%;width:1px;background:rgba(255,255,255,.35)"></div>`).join('') + '</div><div id="cmTxt" style="margin-top:1px"></div>';
+      const W = SMALL ? 'min(160px,44vw)' : '225px';
+      meterEl = document.createElement('div'); meterEl.id = 'curseMeter'; meterEl.style.cssText = `margin:3px 0 1px;pointer-events:none;font:700 ${SMALL ? 8 : 9}px/1.25 sans-serif;letter-spacing:.04em;color:#D8B8D0;text-shadow:0 1px 1px #000,0 0 2px #000;width:${W};background:rgba(12,6,16,.42);padding:2px 4px 3px;border-radius:3px`;
+      meterEl.innerHTML = '<div style="position:relative;height:6px;width:100%;background:rgba(20,10,24,.75);border:1px solid #6A4A6A;border-radius:3px;overflow:hidden"><div id="cmFill" style="height:100%;width:0;background:linear-gradient(90deg,#7A5A8A,#A03050,#200810);transition:width .2s"></div>' +
+        TIERS.map(x => `<div style="position:absolute;top:0;bottom:0;left:${x}%;width:1px;background:rgba(255,255,255,.35)"></div>`).join('') + '</div><div id="cmTxt" style="margin-top:1px;white-space:nowrap"></div><div id="cmTick" style="font-weight:600;letter-spacing:0"></div>';
       bars.appendChild(meterEl); }
     meterEl.hidden = false;
-    const c = CS(), t = tier(), hs = hornSt();
+    const c = CS(), t = tier(), hs = hornSt(), tn = performance.now() / 1000;
+    hist.push({ t: tn, v: c.v }); while (hist.length && tn - hist[0].t > 10) hist.shift();
+    const dv = c.v - hist[0].v, next = TIERS.find(x => x > c.v);
     meterEl.querySelector('#cmFill').style.width = c.v.toFixed(1) + '%';
-    meterEl.querySelector('#cmTxt').textContent = `CURSE ${Math.round(c.v)} · ${TIER_NAMES[t]}${hs ? ' · HORN ' + HORN_NAMES[hs] : ''}`;
+    const trend = Math.abs(dv) < .05 ? '<span style="color:#9A8A9A">— steady</span>' : dv > 0 ? `<span style="color:#FF7A8A">▲ +${dv.toFixed(1)}</span>` : `<span style="color:#FFE08A">▼ ${dv.toFixed(1)}</span>`;
+    meterEl.querySelector('#cmTxt').innerHTML = `CURSE <b style="color:#fff">${c.v.toFixed(1)}</b> ${TIER_NAMES[t]} ${trend}<span style="color:#9A8A9A"> /10s</span>` +
+      `<br><span style="color:#9A8A9A;font-weight:600">${next != null ? 'next tier at ' + next : 'max tier'} · horn ${c.horn.toFixed(0)}${hs ? ' ' + HORN_NAMES[hs] : ''}</span>`;
+    const max = SMALL ? 3 : 5, rows = TICK.filter(x => tn - x.t < 7).slice(0, max);
+    meterEl.querySelector('#cmTick').innerHTML = rows.map(x => { const a = Math.max(.25, 1 - Math.max(0, tn - x.t - 4) / 3), up = x.d > 0, g = gloss(x.base);
+      return `<div style="opacity:${a.toFixed(2)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="color:${up ? '#FF7A8A' : '#FFE08A'}">${up ? '+' : '−'}${Math.abs(x.d).toFixed(2)}</span> ${x.why.replace(/ \(\d+ this cycle\)$/, '')}${x.n > 1 ? ' ×' + x.n : ''}${g && !SMALL ? `<span style="color:#9A8A9A"> · ${g}</span>` : ''}</div>`; }).join('');
   }
   setInterval(() => { try { meter(); } catch (e) {} }, 250);
 
