@@ -236,6 +236,7 @@
   }
   function enterHall() {
     buildUi(); H.on = true; H.flush = true;
+    try { if (!U.on && save.fhUni && save.fhUni.key === visitKey()) uniSpawn(); } catch (e) { console.error(e); }
     if (!H.cast.length) { computeCast(); placeHero(); }
     try { if (typeof setZoom === 'function' && VIEW_H !== VIEW_NORMAL) setZoom(VIEW_NORMAL); } catch (e) {}
     app.classList.add('fhall');
@@ -269,6 +270,7 @@
     if (!H.on || H.panel || blocked()) return;
     const T = H.target; if (!T) return;
     if (T === 'door') { leave(); return; }
+    if (T === 'unicorn') { uniTalk(); return; }
     openPanel(T);
   }
   // the quick way out: straight on to the next world, as the menu's Walk on and the road's arch do (no walking to it)
@@ -286,9 +288,9 @@
     if (key === promptKey && !b.hidden === !!T) return; promptKey = key;
     if (!T || H.panel) { b.hidden = true; return; }
     b.hidden = false; b.classList.toggle('door', T === 'door');
-    const who = T === 'door' ? `Walk on: ${STAGES[roadStage()].name}` : `${CAST[T].name} · ${CAST[T].role}`;
+    const who = T === 'door' ? `Walk on: ${STAGES[roadStage()].name}` : T === 'unicorn' ? 'The Unicorn of Amber' : `${CAST[T].name} · ${CAST[T].role}`;
     b.querySelector('.fh-tw').textContent = who;
-    b.querySelector('.fh-tk').innerHTML = KBD ? `${T === 'door' ? 'Walk on' : 'Talk'} <kbd>J</kbd>` : (T === 'door' ? 'WALK ON' : 'TALK');
+    b.querySelector('.fh-tk').innerHTML = KBD ? `${T === 'door' ? 'Walk on' : T === 'unicorn' ? 'Approach' : 'Talk'} <kbd>J</kbd>` : (T === 'door' ? 'WALK ON' : T === 'unicorn' ? 'APPROACH' : 'TALK');
   }
 
   // ---------------- the hooks ----------------
@@ -296,12 +298,12 @@
     const want = id === 'forgeOv' && pref === 'hall', was = H.on;
     _so(id);
     if (want) enterHall();
-    else if (was) leaveHall(id === 'invOv');
+    else if (was) { if (id === null && save.fhUni && save.fhUni.on && !save.fhUni.done) { save.fhUni.done = true; persist(); } leaveHall(id === 'invOv'); } // (walked on without going to the Unicorn: her gift is lost)
   }; }
   { const _of = openForge; openForge = function (k) {
     H.cast = []; H.panel = null; H.resume = null; H.fx.length = 0;
     const r = _of(k);
-    try { computeCast(); placeHero(); applyLens(); if (H.on) refreshUi(); staticKey = ''; } catch (e) { console.error(e); }
+    try { computeCast(); placeHero(); applyLens(); if (H.on) refreshUi(); staticKey = ''; uniDecide(); U.on = false; H.uniLook = 0; if (H.on) uniSpawn(); } catch (e) { console.error(e); }
     return r;
   }; }
   { const _rf = renderForge; renderForge = function (note) { const r = _rf(note);
@@ -368,10 +370,11 @@
     let T = null, best = 30;
     for (const v of H.cast) { const d = near(v); if (d < best) { best = d; T = v.id; } }
     if (Math.hypot(H.x - G.door.tx, (H.y - G.door.ty) * 1.4) < 30) T = 'door';
+    if (U.on && U.phase === 'wait') { const sp = uniSpot(); if (Math.hypot(H.x - sp.x, (H.y - sp.y) * 1.4) < 34) T = 'unicorn'; }
     H.target = T;
     setPrompt(H.panel || H.leaving ? null : T);
     if (H.hint > 0) { H.hint -= dt; const el = ui && ui.querySelector('#fhHint'); if (el) { el.textContent = KBD ? 'Arrows / WASD to walk · J to talk · K to swing' : 'Joystick to walk · tap Talk at a stall'; el.style.opacity = String(cl01(H.hint / 1.5)); } }
-    life(dt);
+    life(dt); uniUpdate(dt); if (H.uniLook > 0) H.uniLook -= dt;
     // sparks, embers and the rest, in their stall's own frame
     for (const p of H.fx) { p.t += dt; p.x += (p.vx || 0) * dt; p.y += (p.vy || 0) * dt; p.vy = (p.vy || 0) + (p.g || 0) * dt; }
     H.fx = H.fx.filter(p => p.t < p.life);
@@ -535,6 +538,87 @@
     if (first) say(first, CAST[first.id].say.bye, 1.6);
   }
 
+
+  // ======================================================================================================
+  // THE UNICORN. Now and then (about one forge visit in fourteen, never two visits running, never the first forge of a
+  // new game) the Unicorn of Amber is there: she comes in a shimmer just inside the road's arch, and waits on the floor.
+  // The stall-keepers turn to her (Gérard kneels; someone murmurs; Random whistles low). If he goes up to her and speaks,
+  // she bows her head and leaves a gift where she stood, then is gone; if he walks on without going to her, it is lost.
+  // The roll is made once per visit, from a salt kept on the save and the visit itself (cycle, world, road), and kept on
+  // the save (save.fhUni), so reopening the forge or reloading in the middle of a visit never rolls again.
+  // She is unicorn.js's own drawing (UNICORN.drawNew), laid straight onto the page in the hall's perspective.
+  // ======================================================================================================
+  const UNI_P = .07, U = { on: false };
+  const visitKey = () => `${save.cycle | 0}|${save.stage | 0}|${save.branch ?? ''}`;
+  function uniRoll(key, salt) { let h = 2166136261; for (const ch of key + '#' + salt) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return ((h >>> 0) % 100000) / 100000 < UNI_P; }
+  function uniDecide() {
+    if (!save.fhSalt) save.fhSalt = Math.floor(Math.random() * 1e9) + 1;
+    const key = visitKey(), R = save.fhUni || (save.fhUni = { key: '', on: false, done: false, prev: false });
+    if (R.key !== key) { const first = (save.cycle | 0) === 0 && (save.stage | 0) <= 1;
+      const prev = !!R.on; Object.assign(R, { key, prev, on: !first && !prev && uniRoll(key, save.fhSalt), done: false }); persist(); }
+    return R;
+  }
+  function uniSpawn() {
+    const R = save.fhUni, G = geo();
+    if (!window.UNICORN || !UNICORN.drawNew || !R || !R.on || R.done) { U.on = false; return; }
+    Object.assign(U, { say: null, say2: null, on: true, phase: 'in', t: 0, x: G.cx + VW * .1, y: G.yb + (G.bot - G.yb) * .3, f: -1, said: false, gleam: 0, gift: null, sparks: [] });
+  }
+  const uniS = () => geo().sAt(U.y) * .92;
+  const uniSpot = () => ({ x: U.x + U.f * 64 * uniS(), y: U.y + 12 }); // (in front of her head: she faces down the hall toward the door he came in by)
+  function uniUpdate(dt) {
+    if (!U.on) return; U.t += dt;
+    if (U.phase === 'in' && U.t > 1.6) { U.phase = 'wait'; U.t = 0; }
+    if (U.phase === 'gift') { if (U.t > 1.0 && !U.gift) uniGive(); if (U.t > 2.6) { U.phase = 'out'; U.t = 0; } }
+    if (U.phase === 'out' && U.t > 1.5) { U.phase = 'gone'; U.t = 0; }
+    if (U.phase === 'gone' && U.t > 5) U.on = false;
+    if (U.phase === 'in' && U.t > .5 && !U.said) { U.said = true; uniHeralds(); }
+    if (U.phase !== 'gone' && fine() && Math.random() < dt * (U.phase === 'wait' ? 6 : 26)) { const s = uniS(); U.sparks.push({ x: U.x + rand(-40, 40) * s, y: U.y - rand(0, 110) * s, t: 0, life: rand(.6, 1.2) }); }
+    for (const S2 of [U.say, U.say2]) if (S2) S2.t += dt;
+    for (const p of U.sparks) { p.t += dt; p.y -= 8 * dt; } U.sparks = U.sparks.filter(p => p.t < p.life);
+  }
+  function uniHeralds() { // the stall-keepers turn to her: Gérard kneels, someone murmurs, Random whistles low
+    H.uniLook = 6; const lines = { julian: '...the Unicorn.', fiona: '...the Unicorn.', llewella: 'She came...', ganelon: 'By the Pattern...', dworkin: 'Ah. Her.' };
+    let said = 0;
+    for (const v of H.cast) {
+      if (v.id === 'gerard') { act(v, 'kneel', 5); say(v, 'My lady.', 2.4); }
+      else if (v.id === 'random') { act(v, 'glance', 2); say(v, '*a low whistle*', 2.2); if (sfxOn && actx) try { tone(1400, .25, 'sine', .03, 2100); tone(2100, .35, 'sine', .025, 1300, .28); } catch (e) {} }
+      else { act(v, 'glance', 2.4); if (said < 2 && lines[v.id]) { said++; say(v, lines[v.id], 2.4); } }
+    }
+    if (sfxOn && actx) try { for (let i = 0; i < 5; i++) tone(1320 + i * 220, .5, 'sine', .018, 0, i * .09); } catch (e) {}
+  }
+  // the gift: a purse, a free level for the weapon in hand, a card inscribed again, or (rarest, in New Game+) the black eased
+  function uniGive() {
+    const R = save.fhUni, c = 1 + .5 * (save.cycle || 0), rnd = (() => { let h = (save.fhSalt || 1) ^ 0x9e3779b9; for (const ch of R.key) h = Math.imul(h ^ ch.charCodeAt(0), 2654435761); return ((h >>> 0) % 1000) / 1000; })();
+    let g = null;
+    const curse = (save.cycle | 0) >= 1 && window.CURSE && CURSE.ease && CURSE.state && CURSE.state();
+    if (curse && rnd < .12) { try { CURSE.ease(14, 'the Unicorn\'s gift'); g = 'The black in you thins: the curse eases.'; } catch (e) { console.error(e); } }
+    const w = save.weapon && save.owned[save.weapon] && WEAPONS[save.weapon] && save.weapon !== 'fists' ? save.weapon : null;
+    if (!g && rnd < .45 && w && save.wl[w] < WMAX(w)) { save.wl[w]++; g = `${WEAPONS[w].name} grows keener: level ${save.wl[w]}.`; }
+    if (!g && rnd < .6 && save.trump && TL(save.trump) < 3) { save.tlv[save.trump] = TL(save.trump) + 1; g = `${TRUMPS[save.trump].name} is inscribed anew: level ${['', 'I', 'II', 'III'][TL(save.trump)]}.`; }
+    if (!g) { const s = Math.round(400 * c), gg = Math.round(8 * c); save.shards += s; save.sigils += gg; g = `+${s} shards, +${gg} sigils.`; }
+    U.gift = g; R.done = true; persist(); refreshUi(); try { renderForge(); } catch (e) {}
+    sfx('learned'); flashT = Math.max(flashT || 0, .06);
+    for (let i = 0; i < 40; i++) { const a = rand(0, TAU), r = rand(10, 60) * uniS(); U.sparks.push({ x: U.x + Math.cos(a) * r, y: U.y - 40 * uniS() + Math.sin(a) * r * .6, t: 0, life: rand(.8, 1.6), big: 1 }); }
+    U.say = { txt: 'The Unicorn bows her head. Something gleams where she stood.', t: 0, dur: 4.2 }; U.say2 = { txt: g, t: 0, dur: 4.2 };
+  }
+  function uniTalk() { if (!U.on || U.phase !== 'wait') return; U.phase = 'gift'; U.t = 0; H.f = Math.sign(U.x - H.x) || 1; }
+  function uniDraw(t) {
+    if (!U.on || U.phase === 'gone' || !window.UNICORN) return;
+    const s = uniS(), a = U.phase === 'in' ? sm(U.t / 1.6) : U.phase === 'out' ? 1 - sm(U.t / 1.5) : 1, bow = U.phase === 'gift' ? Math.sin(Math.min(1, U.t / 2.2) * Math.PI) : 0;
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(U.x, U.y); ctx.scale(s * -U.f, s); // (she is drawn facing left)
+    try { UNICORN.drawNew(0, 0, t, { bow }); } catch (e) { console.error(e); }
+    ctx.restore();
+    glowR(U.x, U.y - 60 * s, 90 * s, '230,236,255', .12 * a + .25 * bow);
+  }
+  function uniFront(t, u) {
+    if (!U.on) return; const s = uniS();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const p of U.sparks) { const a = Math.sin(p.t / p.life * Math.PI); ctx.fillStyle = `rgba(240,244,255,${a * .9})`; const r = (p.big ? 1.6 : 1) * (1 + .3 * Math.sin(p.t * 20)); ctx.beginPath(); ctx.moveTo(p.x, p.y - r * 2); ctx.lineTo(p.x + r * .5, p.y); ctx.lineTo(p.x, p.y + r * 2); ctx.lineTo(p.x - r * .5, p.y); ctx.closePath(); ctx.fill(); ctx.fillRect(p.x - r * 1.6, p.y - .3, r * 3.2, .6); }
+    ctx.restore();
+    if (U.gift && (U.phase === 'out' || U.phase === 'gone')) glowR(U.x, U.y - 4, 22 * s + 4 * Math.sin(t * 4), '255,244,200', .5 * (U.phase === 'gone' ? Math.max(0, 1 - U.t / 5) : 1));
+    for (const [S2, dy] of [[U.say, 0], [U.say2, 1]]) if (S2 && S2.t < S2.dur) bubble(clamp(U.x, 120, VW - 120), U.y - 128 * s + dy * 22 * u, S2, u);
+  }
+
   // ---------------- the figures' poses ----------------
   // where a prince's hand is, in his own frame (feet at 0, facing +x): from the shoulder, the upper arm, the forearm
   const handAt = (a, e, back) => { const sx = back ? -3 : 1, sy = back ? -59.5 : -59; if (e === undefined) e = back ? -.25 : 0;
@@ -563,6 +647,7 @@
     switch (A.k) {
       case 'greet': case 'wave': wave(); break;
       case 'glance': p.face = 1; p.lean = -.06 * w; break;
+      case 'kneel': p.weapon = id === 'gerard' ? 'hammer' : p.weapon; p.arm = 1.2; p.grip = .6; p.sink = 11 * w; p.lean = .3 * w; p.backArm = lerp(p.backArm, .6, w); p.backElbow = lerp(p.backElbow || 0, 1.6, w); p.face = 1; break;
       case 'startle': p.face = 1; if (id === 'gerard') { p.arm = 1.2; p.grip = .6; p.sink = 0; } else { p.arm = lerp(p.arm, -.5, w); p.elbow = lerp(p.elbow || 0, 1.7, w); }
         p.backArm = lerp(p.backArm, -.3, w); p.backElbow = lerp(p.backElbow || 0, 1.7, w); p.lean = -.22 * w; p.oy = -3 * Math.sin(Math.min(1, u * 2.5) * Math.PI); break;
       // Gérard
@@ -666,6 +751,7 @@
       if (v.say) bubble(x, y - f1 - f2 - 4 * u, v.say, u); }
     { ctx.save(); ctx.font = `700 ${(11 * u).toFixed(2)}px Cinzel, Georgia, serif`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,236,196,.95)'; ctx.strokeStyle = 'rgba(20,10,10,.85)'; ctx.lineWidth = 2.8 * u; ctx.lineJoin = 'round';
       const s = `THE ROAD · ${String(STAGES[roadStage()].name).toUpperCase()}`, y = G.yb - 86 * G.door.s - 4 * u; ctx.strokeText(s, G.door.x, y); ctx.fillText(s, G.door.x, y); ctx.restore(); }
+    try { uniFront(t, u); } catch (e) { console.error(e); }
   }
   const BUB = [];
   function bubble(x, y, S, u) { // a word, in a small parchment bubble over the speaker
@@ -835,7 +921,7 @@
     const dwarf = !!L.dwarf, p = dwarf ? dwarfPose(v, t) : vendorPose(v, t);
     const x = vxOf(v), y = sl.vy, local = (p.work ?? V.f) * Math.sign(sl.m.a || 1);
     const toward = Math.sign(H.x - x) || 1, hall = Math.sign(geo().cx - x) || 1;
-    const f = (p.face || isNear) && !(v.act && v.act.k === 'quench') ? toward : (p.work !== undefined ? local : (sl.kind === 'back' && v.id !== 'gerard' ? hall : local));
+    const f = H.uniLook > 0 && U.on ? (Math.sign(U.x - x) || 1) : (p.face || isNear) && !(v.act && v.act.k === 'quench') ? toward : (p.work !== undefined ? local : (sl.kind === 'back' && v.id !== 'gerard' ? hall : local));
     const s = sl.s;
     ctx.save(); ctx.translate(x, y); ctx.scale(f * s * (V.w || 1), s * (dwarf ? 1 : V.s));
     shadow(0, 0, dwarf ? 15 : 13);
@@ -878,10 +964,12 @@
   function figures(t) {
     const list = H.cast.map(v => [SL(v).vy, v]).sort((a, b) => a[0] - b[0]);
     for (const [, v] of list) { try { drawVendor(v, t); } catch (e) { console.error(e); } }
-    const s = geo().sAt(H.y), hm = HEAD_MASK;
+    const s = geo().sAt(H.y), hm = HEAD_MASK, uniFirst = U.on && U.y <= H.y;
+    if (uniFirst) uniDraw(t);
     inkBegin([[H.x - 70 * s, H.y - 120 * s, H.x + 70 * s, H.y + 10 * s]]);
     try { drawHero(t); } catch (e) { console.error(e); }
     finally { inkEnd(); HEAD_MASK = hm; }
+    if (U.on && !uniFirst) uniDraw(t);
   }
 
   // ---------------- a vendor's portrait, for the head of the panel ----------------
@@ -1112,6 +1200,11 @@
     hold(T) { H.cast.forEach(v => { v.next = T ?? 1e9; }); },
     view(v) { setPref(v === 'menu' ? 'menu' : 'hall'); if (mode === 'forge') showOnly('forgeOv'); return pref; },
     // (a test can paint any of them in any pose: FORGEHALL.dbg.draw(id, pose, x, y, s) on the current context)
+    // (the Unicorn: force her for this visit, or read the roll; rate(n) samples the roll over n made-up visits)
+    dev: { unicorn() { if (!save.fhUni || save.fhUni.key !== visitKey()) uniDecide(); Object.assign(save.fhUni, { on: true, done: false }); persist(); uniSpawn(); return U.on; },
+      get uni() { return { on: U.on, phase: U.phase, x: U.x, y: U.y, gift: U.gift, spot: U.on ? uniSpot() : null, save: save.fhUni && Object.assign({}, save.fhUni) }; },
+      roll: (key, salt) => uniRoll(key, salt), decide: () => Object.assign({}, uniDecide()),
+      rate(n = 4000, salt = 12345) { let k = 0; for (let i = 0; i < n; i++) if (uniRoll(`${i % 3}|${i}|`, salt)) k++; return k / n; } },
     dbg: { lookOf, draw(id, pose, x, y, s = 1) { const L = lookOf(id), hm = HEAD_MASK; ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
       if (L.dwarf) drawDwarf(L, pose, 0); else { HEAD_MASK = null; drawHumanoid(L, pose); const head = HEAD_MASK; HEAD_MASK = hm; dressBody(L, pose); if (head) dressHead(L, head, 0); }
       ctx.restore(); } },

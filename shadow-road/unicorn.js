@@ -304,6 +304,7 @@
   }
   function drawNew(x, y, t, o = {}) {
     const m = motion(t), base = ctx.getTransform(); TIP = null;
+    if (o.bow) { m.nod += o.bow * .55; m.head += o.bow * .3; m.toss = 0; } // (o.bow 0..1: she bows her head, forgehall.js)
     ctx.save(); ctx.translate(x, y); ctx.scale(-S, S);
     if (o.shadow !== false) shadowOf(1);
     spr('far', -34, -50, 60, 52, () => { leg(foreNodes(16, 0, 0), FAR, true, false); leg(hindNodes(-21), FAR, true, true); }); // the far legs, in the shade of her body
