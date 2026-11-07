@@ -873,16 +873,16 @@
   const FX_DUR = { drain: [5, 8], tilt: [4.5, 7], tear: [1.4, 2.2], mirror: [4, 5.5], puppet: [5, 7], rewind: [1.3, 1.3], tapestry: [5, 7], close: [4, 6] };
   const busy = () => !!((typeof zoneTrans !== 'undefined' && zoneTrans) || (window.W8 && W8.cine && W8.cine()) || (window.ENDINGS && ENDINGS.active) || (window.W8 && W8.releasing) || L.coda); // (W8.releasing: the curse let go, w8_late.js, paints its own grey)
   function fxSchedule(dt) {
-    const t = teff();
-    if (L.fx) { L.fx.t += dt; if (L.fx.t >= L.fx.dur) { L.fx = null; L.fxNext = t >= 4 ? rand(12, 24) : t >= 3 ? rand(18, 32) : rand(26, 44); } return; }
-    if (t < 2 || busy() || L.heart) return;
+    const v = CS().v, t = tierOf(v), q = clamp((v - 25) / 75, 0, 1); // (by the curse's value, not its worst moment: the episodes grow on with it)
+    if (L.fx) { L.fx.t += dt; if (L.fx.t >= L.fx.dur) { L.fx = null; L.fxNext = lerp(55, 12, q) * rand(.8, 1.25); } return; }
+    if (v < 25 || busy() || L.heart) return;
     L.fxNext -= dt; if (L.fxNext > 0) return;
-    startFx(pick(FX_BY_TIER[Math.min(4, t)]));
+    startFx(pick(FX_BY_TIER[clamp(t, 2, 4)]));
   }
   function startFx(k, dur) { const d = FX_DUR[k] || [4, 6]; L.fx = { k, t: 0, dur: dur || rand(d[0], d[1]), seed: Math.random() * 999, dir: Math.random() < .5 ? -1 : 1 };
     if (k === 'mirror') { floatText(P.x, P.y, 110, 'THE WORLD TURNS ROUND', '#C8C2CC', 12); sfx('whoosh'); }
     if (k === 'rewind') sfx('whoosh'); return L.fx; }
-  function fxAmt() { const f = L.fx; if (!f) return 0; return Math.min(sm(f.t / .5), sm((f.dur - f.t) / .6)); }
+  function fxAmt() { const f = L.fx; if (!f) return 0; return Math.min(sm(f.t / .5), sm((f.dur - f.t) / .6)) * (.45 + .55 * clamp((CS().v - 25) / 75, 0, 1)); } // (fainter while the curse is light)
   // mirrored, his left is his right
   { const _rm = readMove; readMove = function () { _rm(); if (NG() && L.fx && L.fx.k === 'mirror' && fxAmt() > .5) input.mx = -input.mx; }; }
 
@@ -918,7 +918,7 @@
     const T = teff(), g = ctx;
     // how cursed the picture looks: the curse itself (0..1), not its tier, eased so the world visibly clears (or darkens)
     // as it moves; a spike or the Circle's last hour push it to the worst
-    let cv = clamp(CS().v / 100, 0, 1); if (L.spike) cv = Math.max(cv, .95); if (finalHigh()) cv = Math.max(cv, .75);
+    const cv = clamp(CS().v / 100, 0, 1); // (the curse's own value, and nothing else: purified, the world clears however it got there)
     CVS.v += (cv - CVS.v) * Math.min(1, (1 / 60) * 1.6); if (Math.abs(cv - CVS.v) < .002) CVS.v = cv; const cvs = CVS.v;
     // the transforms of the whole picture (copied, then laid back turned, mirrored or nearer)
     if (f && k > 0 && ['tilt', 'mirror', 'close', 'tear', 'rewind'].includes(f.k)) {
@@ -942,10 +942,10 @@
     }
     g.save();
     // the omens that stay: grey at the edges, the light guttering
-    if (cvs >= .06) { const fa = (.1 + .74 * sm((cvs - .06) / .94)) * (1 + .08 * Math.sin(t * .7)); g.globalAlpha = Math.min(1, fa); g.drawImage(fogCanvas(), -VW * .06 + VW * .03 * Math.sin(t * .3), Y_OFF - VIEW_H * .02, VW * 1.12, VIEW_H * 1.04); g.globalAlpha = 1;
-      L.flickT -= 1 / 60; if (L.flickT <= 0) { L.flickT = rand(1.5, 5) / Math.max(1, cvs * 4); L.flick = rand(.12, .3); } if (L.flick > 0) { L.flick -= 1 / 60; g.fillStyle = `rgba(8,4,10,${Math.min(.32, L.flick) * (.3 + .9 * cvs)})`; view(); } }
+    if (cvs >= .02) { const fa = .84 * Math.pow(cvs, 1.35) * (1 + .08 * Math.sin(t * .7)); g.globalAlpha = Math.min(1, fa); g.drawImage(fogCanvas(), -VW * .06 + VW * .03 * Math.sin(t * .3), Y_OFF - VIEW_H * .02, VW * 1.12, VIEW_H * 1.04); g.globalAlpha = 1;
+      L.flickT -= 1 / 60; if (L.flickT <= 0) { L.flickT = rand(1.5, 5) / Math.max(1, cvs * 4); L.flick = rand(.12, .3); } if (L.flick > 0) { L.flick -= 1 / 60; if (cvs > .2) { g.fillStyle = `rgba(8,4,10,${Math.min(.32, L.flick) * 1.2 * (cvs - .2)})`; view(); } } }
     // the Circle's greys and reds: drained colour, a red in the corners
-    const drain = .95 * Math.pow(clamp((cvs - .1) / .9, 0, 1), 1.15) + (f && f.k === 'drain' ? .65 * k : 0) + (finalHigh() ? .4 : 0) + (L.pulse ? .5 * Math.max(0, 1 - L.pulse.t / 2.5) : 0);
+    const drain = .95 * Math.pow(cvs, 1.6) + (f && f.k === 'drain' ? .65 * k * (.4 + .6 * cvs) : 0) + (finalHigh() ? .4 * cvs : 0) + (L.pulse ? .5 * Math.max(0, 1 - L.pulse.t / 2.5) : 0);
     if (drain > 0) { if (lite()) { g.fillStyle = `rgba(110,106,114,${Math.min(.55, drain * .5)})`; view(); }
       else { g.globalCompositeOperation = 'saturation'; g.fillStyle = `rgba(128,128,128,${Math.min(1, drain)})`; view(); g.globalCompositeOperation = 'source-over'; }
       const rg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .55, VIEW_H * .3, VW / 2, Y_OFF + VIEW_H * .55, VW * .72); rg.addColorStop(0, 'rgba(150,20,30,0)'); rg.addColorStop(1, `rgba(150,20,30,${Math.min(.5, drain * .4)})`);

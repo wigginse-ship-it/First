@@ -68,7 +68,11 @@
   // ---------------- the prince ----------------
   // his cloak only moves while the game is live; the vignettes are not, so it is let move while he is drawn
   function withLive(fn) { const m = mode; mode = 'play'; try { fn(); } finally { mode = m; } }
-  function poseAs(state, walk) { const s = P.state, w = P.walk; P.state = state; if (walk !== undefined) P.walk = walk; try { return playerPose(); } finally { P.state = s; P.walk = w; } }
+  function poseAs(state, walk) {
+    const s = P.state, w = P.walk, pw = P.w, W = typeof WEAPONS !== 'undefined' && WEAPONS[pw], base = W && W.pearl && W.base && WEAPONS[W.base] ? W.base : null; // (the reforged Pearl is carried in a scene as its base weapon is, not held out as it is in a fight)
+    P.state = state; if (walk !== undefined) P.walk = walk; if (base) P.w = base;
+    try { const pose = playerPose(); if (base) { pose.weapon = pw; pose.tier = Math.min(7, save.wl[pw] || 1); } return pose; } finally { P.state = s; P.walk = w; P.w = pw; }
+  }
   // drawn in the ink layer like every figure in the game (contour, rim light, hatching); s scales him about his feet
   function inkHero(x, y, s, facing, pose, alpha, live) {
     if (alpha <= 0) return;
