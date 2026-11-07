@@ -404,7 +404,9 @@
   // THE DROPS: the Circle gives one back
   // ======================================================================================================
   const dropChance = (e) => e.boss ? .4 : e.champ ? .25 : e.elite ? .1 : e.cursed ? .05 : .006;
-  const eligible = () => IDS.filter(id => WEAPONS[id] && !cw(id) && !LS.dropped[id]);
+  const armWon = () => !!(save && save.silverArm); // the Black Knuckles are found only by one who already wears Benedict's silver arm (Tir-na Nog'th's relic)
+  const canDrop = (id) => id !== 'fists' || armWon();
+  const eligible = () => IDS.filter(id => WEAPONS[id] && !cw(id) && !LS.dropped[id] && canDrop(id));
   function maybeDrop(e, m) {
     if (!NG() || !e || e.noLoot) return;
     if (loot.some(k => k.kind === 'cweapon') || now() < LS.nextDrop) return;
@@ -414,7 +416,7 @@
     if (Math.random() < p || LS.acc >= 1.5) { LS.acc = 0; const pref = ids.filter(id => id === P.w); dropAt(Math.random() < .35 && pref.length ? pref[0] : pick(ids), e.x, e.y); }
   }
   function dropAt(id, x, y) {
-    if (!WEAPONS[id] || !IDS.includes(id) || cw(id)) return null;
+    if (!WEAPONS[id] || !IDS.includes(id) || cw(id) || !canDrop(id)) return null;
     LS.dropped[id] = 1; LS.nextDrop = now() + 20;
     const k = { kind: 'cweapon', weapon: id, val: 0, x: clamp(x, camX + 40, camX + VW - 40), y: lane(y), z: 120, vz: 0, vx: 0, t: 0, stand: 0, landed: false };
     loot.push(k);
@@ -657,7 +659,7 @@
     cw, CM, ratio, held, live: () => LS, isFin,
     give(id, lvl, db, bf) { if (!IDS.includes(id)) return null; const pure = lvl === 'pure' || lvl === 9; const c = setCw(id, pure ? LVMAX : lvl || LV0, db, bf, pure); save.weapon = id; if (P) { P.w = id; P.seq = ''; } persist(); if (P) refreshHud(true); return c; },
     take, drop: (id, x, y) => dropAt(id || pick(eligible().length ? eligible() : IDS), x ?? (P ? P.x + P.facing * 60 : 300), y ?? (P ? P.y : 300)),
-    canOffer: (id) => NG() && IDS.includes(id) && !cw(id) && !LS.dropped[id] && !loot.some(k => k.kind === 'cweapon'),
+    canOffer: (id) => NG() && IDS.includes(id) && canDrop(id) && !cw(id) && !LS.dropped[id] && !loot.some(k => k.kind === 'cweapon'),
     clear(id) { if (save.cw) { if (id) delete save.cw[id]; else save.cw = {}; } persist(); if (P) refreshHud(true); },
     eligible, migrate,
   };
