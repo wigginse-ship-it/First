@@ -118,21 +118,23 @@
   let GEO = null;
   function geo() {
     const key = [VW, Y_OFF, VIEW_H].join('|'); if (GEO && GEO.key === key) return GEO;
-    const cx = VW / 2, yb = Y_OFF + VIEW_H * .46, bx = VW * .2, drop = VIEW_H * .19, bot = VH, k = drop / bx;
+    const cx = VW / 2, yb = Y_OFF + VIEW_H * .46, bx = VW * .16, drop = VIEW_H * .19, bot = VH, k = drop / bx;
     const sAt = (y) => lerp(.56, .82, cl01((y - yb) / (bot - yb)));
     const footY = (x) => x < bx ? yb + (bx - x) * k : x > VW - bx ? yb + (x - (VW - bx)) * k : yb;
     const slots = {};
-    for (const [id, f] of [['BL2', .235], ['BL1', .365], ['BR1', .635], ['BR2', .765]]) { const x = VW * f, s = sAt(yb);
-      slots[id] = { id, kind: 'back', dir: 0, wx: x, wy: yb, s, sg: 1, m: new DOMMatrix([s, 0, 0, s, x, yb]), cell: VW * .13 }; }
-    for (const [id, t, dir] of [['SL1', .28, 1], ['SL2', .64, 1], ['SR1', .28, -1], ['SR2', .64, -1]]) {
+    // (the far wall is all stalls now: four equal bays across it; the road is reached by the near side of the hall, off the bottom of the view)
+    const BW = (VW - 2 * bx) / 4;
+    for (const [id, i] of [['BL2', 0], ['BL1', 1], ['BR1', 2], ['BR2', 3]]) { const x = bx + (i + .5) * BW, s = sAt(yb);
+      slots[id] = { id, kind: 'back', dir: 0, wx: x, wy: yb, s, sg: 1, m: new DOMMatrix([s, 0, 0, s, x, yb]), cell: BW }; }
+    for (const [id, t, dir] of [['SL1', .2, 1], ['SL2', .7, 1], ['SR1', .2, -1], ['SR2', .7, -1]]) {
       const x = dir > 0 ? bx * (1 - t) : VW - bx * (1 - t), y = yb + t * drop, s = sAt(y) * .96, a = s * .62;
       slots[id] = { id, kind: dir > 0 ? 'left' : 'right', dir, wx: x, wy: y, s, sg: dir, m: new DOMMatrix([dir * a, -k * a, 0, s, x, y]) }; }
     // (hw: a booth's half-width in the stall's units, a far-wall bay's to the piers between them; mv: the keeper's frame, the stall's scaled to VFIG about the feet)
     for (const sl of Object.values(slots)) { const p = sl.m.transformPoint(new DOMPoint(0, 22)); sl.vx = p.x; sl.vy = p.y;
-      sl.hw = sl.kind === 'back' ? sl.cell / 2 / sl.s - 6 : 56; sl.mv = sl.m.translate(0, 22).scale(VFIG, VFIG).translate(0, -22);
+      sl.hw = sl.kind === 'back' ? sl.cell / 2 / sl.s - 6 : 66; sl.mv = sl.m.translate(0, 22).scale(VFIG, VFIG).translate(0, -22);
       sl.tx = sl.vx + (sl.dir ? sl.dir * 16 * sl.s : 0); sl.ty = sl.vy + (sl.dir ? 14 : 30) * sl.s; }
-    const door = { x: cx, y: yb, s: sAt(yb), tx: cx, ty: yb + 18 };
-    door.m = new DOMMatrix([door.s * 1.05, 0, 0, door.s * 1.05, cx, yb]);
+    const door = { x: cx, y: bot, s: sAt(bot), tx: cx, ty: bot - 12 };
+    door.m = new DOMMatrix([door.s, 0, 0, door.s, cx, bot]);
     return (GEO = { key, cx, yb, bx, drop, k, bot, sAt, footY, slots, door, pat: { x: cx, y: yb + (bot - yb) * .58 } });
   }
 
@@ -147,7 +149,7 @@
     H.key = ids.join(',');
   }
   const SL = (v) => geo().slots[v.slot];
-  function placeHero() { const G = geo(); H.x = G.cx + 30; H.y = G.bot - 10; H.f = -1; H.walk = 0; H.hint = 7; H.swing = null; H.leaving = null; H.idleGate = 1; }
+  function placeHero() { const G = geo(); H.x = G.cx + 30; H.y = G.pat.y + 4; H.f = -1; H.walk = 0; H.hint = 7; H.swing = null; H.leaving = null; H.idleGate = 1; }
   const heroYMin = (x) => geo().footY(x) + 14, heroYMax = () => VH - 6;
 
   const vxOf = (v) => { const sl = SL(v); return sl.vx + (v.dx || 0) * sl.m.a; };
@@ -277,6 +279,9 @@
     const T = H.target; if (!T) return;
     if (T === 'door') { leave(); return; }
     if (T === 'unicorn') { uniTalk(); return; }
+    // Ganelon's trade is the inventory itself: talking to him opens it straight away (back to the hall after, or to his
+    // panel when the Horn's Long March is also his to offer)
+    if (T === 'ganelon' && typeof openInventory === 'function') { keys.clear(); clearInput(); sfx('pick'); H.panel = document.getElementById('w8marchForge') ? 'ganelon' : null; openInventory('forge'); return; }
     openPanel(T);
   }
   // the quick way out: straight on to the next world, as the menu's Walk on and the road's arch do (no walking to it)
@@ -363,7 +368,7 @@
       if (pressed.light || pressed.heavy) swing(!!pressed.heavy);
     }
     for (const k in pressed) pressed[k] = false;
-    if (H.leaving) { const L = H.leaving; L.t += dt; mx = clamp((G.door.tx - H.x) / 30, -1, 1); my = clamp((G.door.ty - 6 - H.y) / 30, -1, 1);
+    if (H.leaving) { const L = H.leaving; L.t += dt; mx = clamp((G.door.tx - H.x) / 30, -1, 1); my = 1;
       if (L.t > 1.15 && !L.done) { L.done = true; const w = document.getElementById('walkBtn'); if (w) w.click(); return; } }
     const s = G.sAt(H.y), run = !!input.run && Math.abs(mx) > .3, sp = (run ? 230 : 125) * s / .6;
     H.moving = Math.hypot(mx, my) > .05; H.run = run && H.moving;
@@ -449,8 +454,7 @@
     // corner piers where the walls meet
     for (const x of [bx, VW - bx]) { const pg = ctx.createLinearGradient(x - 7, 0, x + 7, 0); pg.addColorStop(0, '#2A1E1A'); pg.addColorStop(.6, '#5A463A'); pg.addColorStop(1, '#3A2C24'); ctx.fillStyle = pg; ctx.fillRect(x - 7, top, 14, yb - top); }
     // the road's arch, and the stalls (the far wall's first, then the side walls')
-    withM(G.door.m, () => door(0, 0));
-    for (const x of [VW * .3, VW * .43, VW * .57, VW * .7]) { const s = G.sAt(yb); ctx.save(); ctx.translate(x, yb); ctx.scale(s, s); pillar(0, 0); ctx.restore(); }
+    for (const x of [1, 2, 3].map(i => bx + i * (VW - 2 * bx) / 4)) { const s = G.sAt(yb); ctx.save(); ctx.translate(x, yb); ctx.scale(s, s); pillar(0, 0); ctx.restore(); }
     const order = ['BL2', 'BL1', 'BR1', 'BR2', 'SL1', 'SR1', 'SL2', 'SR2'];
     for (const id of order) { const sl = G.slots[id], v = H.cast.find(q => q.slot === id);
       ctx.save(); if (sl.kind === 'back') { ctx.beginPath(); ctx.rect(sl.wx - sl.cell / 2, top, sl.cell, yb - top + 2); ctx.clip(); }
@@ -537,7 +541,7 @@
   function leave() {
     if (H.leaving) return; H.leaving = { t: 0 };
     const G = geo(); let first = null, bd = 1e9;
-    for (const v of H.cast) { const sl = SL(v); act(v, 'wave', 1.8, { delay: hsh(sl.wx) * .25 }); const d = Math.hypot(sl.vx - G.door.x, sl.vy - G.door.y); if (d < bd) { bd = d; first = v; } }
+    for (const v of H.cast) { if (v.id === 'dworkin') continue; const sl = SL(v); act(v, 'wave', 1.8, { delay: hsh(sl.wx) * .25 }); const d = Math.hypot(sl.vx - G.door.x, sl.vy - G.door.y); if (d < bd) { bd = d; first = v; } } // (Dworkin, bent over his cards, never even notices him go)
     if (first) say(first, CAST[first.id].say.bye, 1.6);
   }
 
@@ -567,7 +571,7 @@
     // she has no stall: she simply comes, wherever there is room on the floor (clear of the Pattern, the door and him), and faces him
     let px = G.cx + VW * .1, py = G.yb + (G.bot - G.yb) * .3;
     for (let i = 0; i < 80; i++) { const x = rand(50, VW - 50), y = rand(G.yb + 40, G.bot - 30);
-      const onFloor = y > G.footY(x) + 24, offPat = ((x - G.pat.x) / 150) ** 2 + ((y - G.pat.y) / 44) ** 2 > 1, offDoor = Math.abs(x - G.cx) > 60 || y > G.yb + 60;
+      const onFloor = y > G.footY(x) + 24, offPat = ((x - G.pat.x) / 150) ** 2 + ((y - G.pat.y) / 44) ** 2 > 1, offDoor = Math.abs(x - G.cx) > 90 || y < G.bot - 70;
       const offHim = Math.hypot(x - H.x, (y - H.y) * 1.6) > 110, offStalls = Object.values(G.slots).every(sl => Math.hypot(x - sl.tx, (y - sl.ty) * 1.4) > 80);
       if (onFloor && offPat && offDoor && offHim && offStalls) { px = x; py = y; break; } }
     Object.assign(U, { say: null, say2: null, on: true, phase: 'in', t: 0, x: px, y: py, f: Math.sign(H.x - px) || -1, said: false, gleam: 0, gift: null, sparks: [] });
@@ -730,7 +734,15 @@
           glowR(-34, 20, 44, '200,140,255', .12 + .05 * Math.sin(t * 1.7) + (fl - 1) * .2); }
         else if (v.id === 'julian') { for (const sa of v.stuck) arrowAt(JULIAN_BUTT.x + sa[0], JULIAN_BUTT.y + sa[1], sa[2]); }
       }); }
-    glowR(G.door.x, yb - 20, 70, '255,190,120', .14 + .03 * Math.sin(t * .8));
+    roadOut(t);
+  }
+  function roadOut(t) { // the way out to the road: the near side of the hall stands open, its light coming up off the street below the view
+    const G = geo(), x = G.door.x, y = G.bot, near = Math.max(0, 1 - Math.hypot(H.x - G.door.tx, (H.y - G.door.ty) * 1.4) / 120);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(0, y - 46, 0, y); g.addColorStop(0, 'rgba(255,190,120,0)'); g.addColorStop(1, `rgba(255,190,120,${(.22 + .03 * Math.sin(t * .8) + .14 * near).toFixed(3)})`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 46, y - 46); ctx.lineTo(x + 46, y - 46); ctx.lineTo(x + 78, y); ctx.lineTo(x - 78, y); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = `rgba(255,214,150,${(.35 + .25 * near).toFixed(3)})`; ctx.lineWidth = 1.4; for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + sd * 46, y - 46); ctx.lineTo(x + sd * 78, y); ctx.stroke(); }
+    ctx.restore();
   }
   function arrowAt(x, y, a) { ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.strokeStyle = '#4A3018'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-14, 0); ctx.stroke(); ctx.fillStyle = '#E8E0C8'; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-18, -2.4); ctx.lineTo(-17, 0); ctx.lineTo(-18, 2.4); ctx.closePath(); ctx.fill(); ctx.restore(); }
   function mirrorLive(mx, my, rx, ry, t, A, u) { // the sea standing in the glass: light moving down through it; its ripples, and now and then a fish
@@ -774,7 +786,7 @@
       const fh = (v.id === 'dworkin' ? 62 : 96 * V.s) * sl.s * VFIG;
       if (v.say) bubble(vxOf(v), sl.vy - fh - 3 * u, v.say, u); }
     { ctx.save(); ctx.font = `700 ${(11 * u).toFixed(2)}px Cinzel, Georgia, serif`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,236,196,.95)'; ctx.strokeStyle = 'rgba(20,10,10,.85)'; ctx.lineWidth = 2.8 * u; ctx.lineJoin = 'round';
-      const s = `THE ROAD · ${String(STAGES[roadStage()].name).toUpperCase()}`, y = G.yb - 86 * G.door.s - 4 * u; ctx.strokeText(s, G.door.x, y); ctx.fillText(s, G.door.x, y); ctx.restore(); }
+      const s = `▼ THE ROAD · ${String(STAGES[roadStage()].name).toUpperCase()}`, y = G.bot - 6 * u; ctx.strokeText(s, G.door.x, y); ctx.fillText(s, G.door.x, y); ctx.restore(); }
     try { uniFront(t, u); } catch (e) { console.error(e); }
   }
   const BUB = [];
