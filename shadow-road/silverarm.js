@@ -77,11 +77,11 @@
   // violet and blood instead of moonlight
   SA.black = () => !!(typeof save !== 'undefined' && save && save.cw && save.cw.fists && !save.cw.fists.pure && SA.on());
   const LT = (rgb) => SA.black() ? ({ '230,238,255': '150,20,45', '225,235,255': '110,20,50', '210,225,255': '120,40,110', '200,215,255': '150,40,110', '255,255,255': '255,120,150', '245,248,255': '255,90,120' }[rgb] || '170,50,120') : rgb;
-  let rigC = null, rigG = null, rigD = null, rigDG = null;
+  let rigC = null, rigG = null, rigD = null, rigDG = null, rigH = null, rigHG = null;
   function RIG(shape, o = {}) {
     if (!SA.black() || FLASH || TINT) return W5.ben.rig(shape, o);
     const m = ctx.getTransform(), sc = Math.max(.5, Math.min(4, Math.hypot(m.a, m.b))), s = o.s || 1, R = 150 * s, N = Math.max(8, Math.ceil(2 * R * sc));
-    if (!rigC || rigC.width < N) { rigC = document.createElement('canvas'); rigC.width = rigC.height = Math.max(N, 64); rigG = rigC.getContext('2d'); rigD = document.createElement('canvas'); rigD.width = rigD.height = rigC.width; rigDG = rigD.getContext('2d'); }
+    if (!rigC || rigC.width < N) { rigC = document.createElement('canvas'); rigC.width = rigC.height = Math.max(N, 64); rigG = rigC.getContext('2d'); rigD = document.createElement('canvas'); rigD.width = rigD.height = rigC.width; rigDG = rigD.getContext('2d'); rigH = document.createElement('canvas'); rigH.width = rigH.height = rigC.width; rigHG = rigH.getContext('2d'); }
     rigG.setTransform(1, 0, 0, 1, 0, 0); rigG.globalCompositeOperation = 'source-over'; rigG.globalAlpha = 1; rigG.clearRect(0, 0, N + 2, N + 2);
     rigG.setTransform(sc, 0, 0, sc, N / 2, N / 2); const old = ctx; ctx = rigG; try { W5.ben.rig(shape, Object.assign({}, o, { a: undefined })); } finally { ctx = old; }
     // the same hand, its silver multiplied down to blackened iron with a violet cast, cut back to the hand's own shape
@@ -89,7 +89,16 @@
     rigDG.globalCompositeOperation = 'multiply'; rigDG.fillStyle = '#2C1830'; rigDG.fillRect(0, 0, N, N);
     rigDG.globalCompositeOperation = 'lighter'; const g = rigDG.createRadialGradient(N / 2, N / 2, 2, N / 2, N / 2, N * .38); g.addColorStop(0, 'rgba(140,16,36,.32)'); g.addColorStop(1, 'rgba(60,0,30,0)'); rigDG.fillStyle = g; rigDG.fillRect(0, 0, N, N); // (the crimson at its heart)
     rigDG.globalCompositeOperation = 'destination-in'; rigDG.drawImage(rigC, 0, 0); rigDG.globalCompositeOperation = 'source-over';
-    ctx.save(); if (o.a !== undefined) ctx.globalAlpha *= o.a; ctx.drawImage(rigD, 0, 0, N, N, -R, -R, 2 * R, 2 * R); ctx.restore();
+    // a soft crimson rim round it, so the dark iron reads against any ground: its silhouette in light, laid a hair out all round
+    rigHG.setTransform(1, 0, 0, 1, 0, 0); rigHG.globalCompositeOperation = 'source-over'; rigHG.clearRect(0, 0, N + 2, N + 2); rigHG.drawImage(rigC, 0, 0);
+    rigHG.globalCompositeOperation = 'source-in'; rigHG.fillStyle = 'rgb(255,96,128)'; rigHG.fillRect(0, 0, N, N); rigHG.globalCompositeOperation = 'source-over';
+    ctx.save(); if (o.a !== undefined) ctx.globalAlpha *= o.a;
+    { const ga = ctx.globalAlpha, d = 1.6 / Math.max(.5, sc) * Math.max(1, sc * .9); 
+      for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; ctx.globalAlpha = ga * .5; ctx.drawImage(rigH, 0, 0, N, N, -R + Math.cos(an) * d, -R + Math.sin(an) * d, 2 * R, 2 * R); }
+      ctx.globalAlpha = ga * .22; for (let i = 0; i < 8; i++) { const an = (i + .5) / 8 * Math.PI * 2; ctx.drawImage(rigH, 0, 0, N, N, -R + Math.cos(an) * d * 2.2, -R + Math.sin(an) * d * 2.2, 2 * R, 2 * R); }
+      ctx.globalAlpha = ga; }
+    ctx.drawImage(rigD, 0, 0, N, N, -R, -R, 2 * R, 2 * R);
+    ctx.drawImage(rigD, 0, 0, N, N, -R, -R, 2 * R, 2 * R); ctx.restore();
   }
 
   // the arm with the Black Knuckles on it hits far harder than the clean silver arm: every blow of its moveset and all it
