@@ -111,7 +111,10 @@ const thHash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; retu
     if (T.nextDY) g.translate(0, T.nextDY);
     const old = ctx, A = getSet(); ctx = g; putSet(B);
     try { drawWorld(B.theme, camX + (T.nextDX || 0), t); } finally { putSet(A); ctx = old; }
-    g.setTransform(m); g.globalCompositeOperation = 'destination-in'; g.drawImage(maskFor(kind, T), L + MX0 - camX, -GLIDE_DY, MX1 - MX0, VH + GLIDE_DY); g.restore(); } // through its ragged edge
+    // through its ragged edge. The mask ends at MX1, but before the last wave falls the road still runs on past it: right of
+    // the mask the next place stays whole (the mask is laid on only over its own width, so nothing beyond it is cleared)
+    g.setTransform(m); g.beginPath(); g.rect(-1e5, -1e5, L + MX1 - camX - 1 + 1e5, 2e5); g.clip();
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(maskFor(kind, T), L + MX0 - camX, -GLIDE_DY, MX1 - MX0, VH + GLIDE_DY); g.restore(); }
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = T.nextA ?? 1; ctx.drawImage(nwC, px0, 0, pw, H, px0, 0, pw, H); ctx.restore();
   }
   window.nextWorldInto = (g, t, o = {}) => { // the next place's world painted into g (a passage's last moments use it), or false if it isn't ready
@@ -270,6 +273,7 @@ THRESH.clouds = {
   hazeB: [-520, 74, 300, VH], haze(r) {
     for (let i = 0; i < 10; i++) { const x = -480 + r() * 760, y = thKeel(x) - 10 - r() * 30; softDab(x, y, 30 + r() * 30, '255,214,190', .25); } // the sunset caught in the haze behind the hull
     for (let i = 0; i < 14; i++) softDab(-60 + r() * 340, FLOOR_TOP - 20 + r() * 40, 40 + r() * 30, '255,236,220', .35); // and lying over the end of the pier
+    for (let i = 0; i < 30; i++) { const x = -500 + r() * 780, y = thKeel(x) + 2 + r() * 20; if (Math.abs(x + 10) < 40) continue; softDab(x, y, 22 + r() * 26, i % 3 ? '255,232,214' : '232,186,180', .35); } // cloud wrapped round the keel (behind the fighters: nothing of the passage is laid over the fight)
   },
   backB: [-520, 60, 300, VH], back(r) {
     const T = FLOOR_TOP, X0 = -500, X1 = 300, at = (x, d) => thKeel(x) - d;
@@ -291,11 +295,6 @@ THRESH.clouds = {
       ctx.strokeStyle = '#4A3424'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(hx, at(hx, -2)); ctx.quadraticCurveTo((hx + bx) / 2 + 6, (at(hx, 0) + by) / 2 + 14, bx, by); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,214,170,.45)'; ctx.lineWidth = .7; ctx.stroke();
       ctx.fillStyle = '#3E3440'; ctx.fillRect(bx - 4, by - 2, 8, 12); ctx.fillStyle = '#B88A48'; ctx.fillRect(bx - 5, by - 3, 10, 2.4); }
-  },
-  frontInk: false, frontB: [-520, 74, 300, VH + 10], front(r) {
-    for (let i = 0; i < 30; i++) { const x = -500 + r() * 780, y = thKeel(x) + 2 + r() * 20; if (Math.abs(x + 10) < 40) continue; softDab(x, y, 22 + r() * 26, i % 3 ? '255,232,214' : '232,186,180', .5); } // cloud wrapped round the keel
-    for (let i = 0; i < 26; i++) { const y = FLOOR_TOP + 10 + r() * (VH - FLOOR_TOP), x = 70 + (y - FLOOR_TOP) * .35 + r() * 200; softDab(x, y, 26 + r() * 30, i % 4 ? '250,226,214' : '214,170,170', .7); } // the pier runs out into cloudbank
-    for (let i = 0; i < 12; i++) { const y = FLOOR_TOP + 10 + r() * (VH - FLOOR_TOP), x = 90 + (y - FLOOR_TOP) * .35 + r() * 160; dab(x, y - 8, 8 + r() * 10, 'rgba(255,244,232,.5)', 1); }
   },
   live(x, k, t) {
     const T = FLOOR_TOP;
