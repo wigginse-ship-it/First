@@ -42,7 +42,7 @@
   const WT = { // what feeds it (+) and what eases it (-)
     death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, groupPer: .6, groupMax: 4, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
-    pearlKill: -.5, blackPearlDmg: 1.35, cwCursedKill: .4, cwCursedBoss: 1.5, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
+    pearlKill: -.5, curseMyDmg: .45, curseFoeDmg: .3, blackPearlDmg: 1.35, cwCursedKill: .4, cwCursedBoss: 1.5, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
   const tierOf = (v) => v >= TIERS[3] ? 4 : v >= TIERS[2] ? 3 : v >= TIERS[1] ? 2 : v >= TIERS[0] ? 1 : 0;
   const hornStOf = (h) => h >= HORN_ST[3] ? 4 : h >= HORN_ST[2] ? 3 : h >= HORN_ST[1] ? 2 : h >= HORN_ST[0] ? 1 : 0;
@@ -60,6 +60,7 @@
     c.deaths = 0; c.fell = {}; c.bfell = {}; c.endCyc = -1; c.endHigh = false; c.heartDone = false;
   }
   const V = () => NG() ? CS().v : 0;
+  const curseMul = (k) => 1 + k * clamp(V() / 100, 0, 1); // the curse's weight on every blow: +k at its worst, nothing at none
   const tier = () => NG() ? tierOf(CS().v) : 0;
   const hornV = () => NG() ? CS().horn : 0;
   const hornSt = () => NG() ? Math.max(hornStOf(CS().horn), tier() >= 4 ? 4 : 0) : 0; // (Consumed: the Horn is turned)
@@ -105,6 +106,7 @@
     if (!NG() || !e || e.dead || !m) return _strike(e, base, dir, m, echo);
     if (m.pearl && !m.trump && pearlBlack()) { base *= WT.blackPearlDmg; if (!m.crit && Math.random() < WT.blackPearlCrit) m = Object.assign({}, m, { crit: 1 }); } // (the Pearl gone black bites harder too: more Pearl kills, and each of those eases the curse)
     const own = mine(m), c = CS();
+    if (own) base *= curseMul(WT.curseMyDmg); // (the deeper the curse, the harder he hits: more than they do)
     if (own) {
       if (e.state === 'down' && !e.boss && !m.px) { e.cDownHit = true; if (rl('down' + (e.cid || (e.cid = Math.random())), .5)) feed(WT.downHit, 'cruelty: a downed foe'); }
       if (onRoad()) base *= 1.3;
@@ -171,6 +173,7 @@
     if (L.cv.charge && src && src.e && !src.e.cFirstOnP) { src.e.cFirstOnP = true; dmg *= 2; }
     if (L.cv.hunt && P.hp < maxHp() / 3) dmg *= 1.3;
     if (eqCurse('gauntlets')) dmg *= 1.2;
+    dmg *= curseMul(WT.curseFoeDmg); // (the deeper the curse, the harder they hit: less than he does)
     const h0 = P.hp, st0 = P.state, r = _pd(Math.round(dmg), fromX, big);
     if (P.hp < h0) { L.waveHit = true; if (L.heart && !L.heart.done) L.heart.prog = Math.max(L.heart.start, L.heart.prog - .015); }
     return r;
@@ -2065,7 +2068,8 @@
     meterEl.querySelector('#cmFill').style.width = c.v.toFixed(1) + '%';
     const trend = Math.abs(dv) < .05 ? '<span style="color:#9A8A9A">— steady</span>' : dv > 0 ? `<span style="color:#FF7A8A">▲ +${dv.toFixed(1)}</span>` : `<span style="color:#FFE08A">▼ ${dv.toFixed(1)}</span>`;
     meterEl.querySelector('#cmTxt').innerHTML = `CURSE <b style="color:#fff">${c.v.toFixed(1)}</b> ${TIER_NAMES[t]} ${trend}<span style="color:#9A8A9A"> /10s</span>` +
-      `<br><span style="color:#9A8A9A;font-weight:600">${next != null ? 'next tier at ' + next : 'max tier'} · horn ${c.horn.toFixed(0)}${hs ? ' ' + HORN_NAMES[hs] : ''}</span>`;
+      `<br><span style="color:#9A8A9A;font-weight:600">${next != null ? 'next tier at ' + next : 'max tier'} · horn ${c.horn.toFixed(0)}${hs ? ' ' + HORN_NAMES[hs] : ''}</span>` +
+      `<br><span style="font-weight:600"><span style="color:#FFE08A">you +${Math.round((curseMul(WT.curseMyDmg) - 1) * 100)}% dmg</span> <span style="color:#9A8A9A">·</span> <span style="color:#FF7A8A">foes +${Math.round((curseMul(WT.curseFoeDmg) - 1) * 100)}% dmg</span></span>`;
     const max = SMALL ? 3 : 5, rows = TICK.filter(x => tn - x.t < 7).slice(0, max);
     meterEl.querySelector('#cmTick').innerHTML = rows.map(x => { const a = Math.max(.25, 1 - Math.max(0, tn - x.t - 4) / 3), up = x.d > 0, g = gloss(x.base);
       if (x.note) return `<div style="opacity:${a.toFixed(2)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9FD8C0">✓ ${x.why}${x.n > 1 ? ' ×' + x.n : ''}</div>`;
