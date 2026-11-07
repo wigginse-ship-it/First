@@ -84,11 +84,18 @@
     if (!rigC || rigC.width < N) { rigC = document.createElement('canvas'); rigC.width = rigC.height = Math.max(N, 64); rigG = rigC.getContext('2d'); rigD = document.createElement('canvas'); rigD.width = rigD.height = rigC.width; rigDG = rigD.getContext('2d'); rigH = document.createElement('canvas'); rigH.width = rigH.height = rigC.width; rigHG = rigH.getContext('2d'); }
     rigG.setTransform(1, 0, 0, 1, 0, 0); rigG.globalCompositeOperation = 'source-over'; rigG.globalAlpha = 1; rigG.clearRect(0, 0, N + 2, N + 2);
     rigG.setTransform(sc, 0, 0, sc, N / 2, N / 2); const old = ctx; ctx = rigG; try { W5.ben.rig(shape, Object.assign({}, o, { a: undefined })); } finally { ctx = old; }
-    // the same hand, its silver multiplied down to blackened iron with a violet cast, cut back to the hand's own shape
+    // the same hand in the Black Knuckles' own iron: its silver multiplied down to a dark violet-grey, so every plate, joint
+    // and highlight of the metal still reads; the jewel in its back turned to a black stone ringed in crimson
     rigDG.setTransform(1, 0, 0, 1, 0, 0); rigDG.globalCompositeOperation = 'source-over'; rigDG.clearRect(0, 0, N + 2, N + 2); rigDG.drawImage(rigC, 0, 0);
-    rigDG.globalCompositeOperation = 'multiply'; rigDG.fillStyle = '#2C1830'; rigDG.fillRect(0, 0, N, N);
-    rigDG.globalCompositeOperation = 'lighter'; const g = rigDG.createRadialGradient(N / 2, N / 2, 2, N / 2, N / 2, N * .38); g.addColorStop(0, 'rgba(140,16,36,.32)'); g.addColorStop(1, 'rgba(60,0,30,0)'); rigDG.fillStyle = g; rigDG.fillRect(0, 0, N, N); // (the crimson at its heart)
+    rigDG.globalCompositeOperation = 'multiply'; rigDG.fillStyle = '#6A5A76'; rigDG.fillRect(0, 0, N, N);
+    rigDG.globalCompositeOperation = 'multiply'; rigDG.fillStyle = '#B8A8C4'; rigDG.fillRect(0, 0, N, N); // (twice over: the darks go near black, the lights stay a cold gunmetal)
     rigDG.globalCompositeOperation = 'destination-in'; rigDG.drawImage(rigC, 0, 0); rigDG.globalCompositeOperation = 'source-over';
+    { const rot = o.rot || 0, jx = N / 2 + Math.cos(rot) * 32 * s * sc, jy = N / 2 + Math.sin(rot) * 32 * s * sc - 1 * s * sc, jr = 7.5 * s * sc, beat = .5 + .5 * Math.sin((o.t || 0) * 3);
+      rigDG.fillStyle = '#060208'; rigDG.beginPath(); rigDG.arc(jx, jy, jr, 0, Math.PI * 2); rigDG.fill(); // (the stone)
+      rigDG.globalCompositeOperation = 'lighter'; const jg = rigDG.createRadialGradient(jx, jy, jr * .3, jx, jy, jr * 1.8); jg.addColorStop(0, 'rgba(255,40,70,0)'); jg.addColorStop(.55, `rgba(255,40,70,${(.35 + .35 * beat).toFixed(3)})`); jg.addColorStop(1, 'rgba(255,40,70,0)');
+      rigDG.fillStyle = jg; rigDG.beginPath(); rigDG.arc(jx, jy, jr * 1.8, 0, Math.PI * 2); rigDG.fill();
+      rigDG.strokeStyle = `rgba(255,70,90,${(.55 + .4 * beat).toFixed(3)})`; rigDG.lineWidth = Math.max(1, .9 * s * sc); rigDG.beginPath(); rigDG.arc(jx, jy, jr * .72, (o.t || 0) * 2, (o.t || 0) * 2 + 4); rigDG.stroke();
+      rigDG.globalCompositeOperation = 'source-over'; }
     // a soft crimson rim round it, so the dark iron reads against any ground: its silhouette in light, laid a hair out all round
     rigHG.setTransform(1, 0, 0, 1, 0, 0); rigHG.globalCompositeOperation = 'source-over'; rigHG.clearRect(0, 0, N + 2, N + 2); rigHG.drawImage(rigC, 0, 0);
     rigHG.globalCompositeOperation = 'source-in'; rigHG.fillStyle = 'rgb(150,62,96)'; rigHG.fillRect(0, 0, N, N); rigHG.globalCompositeOperation = 'source-over';
