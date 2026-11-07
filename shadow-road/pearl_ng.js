@@ -1146,6 +1146,52 @@
     ctx.restore();
     const u = (t * .45) % 1; if (u < .5) { const k = u / .5, a = Math.PI * (1.1 + .8 * k), R = r * 1.98 * br; glint(Math.cos(a) * R, hy + Math.sin(a) * R, r * .34, Math.sin(Math.PI * k)); }
   }
+  // SCALLOP MIRROR, worn: a clear shell of nacre closed round the pearl and everything set on it, seen in the round. Its
+  // ribs are meridians on a tilted sphere, turning slowly; the fluted lip where the two valves meet runs round its middle.
+  // It is glass, not plate: the body is clear, thickening only at its rim (as a bubble does), the ribs are thin and
+  // tinted, so every other part reads through it. The far half is drawn behind everything, the near half over it.
+  const SC_N = 10, SC_W = .42, SC_TILT = .5, SC_ROLL = -.22, SC_PER = TAU / SC_N / SC_W;
+  function scPt(th, ph, R) { // a point of the sphere (th from the hinge pole, ph round it) seen from the front: [x, y, depth]
+    const x = Math.sin(th) * Math.cos(ph), y = -Math.cos(th), z = Math.sin(th) * Math.sin(ph), cb = Math.cos(SC_TILT), sb = Math.sin(SC_TILT);
+    const y2 = y * cb - z * sb, z2 = y * sb + z * cb, cr = Math.cos(SC_ROLL), sr = Math.sin(SC_ROLL);
+    return [(x * cr - y2 * sr) * R, (x * sr + y2 * cr) * R, z2];
+  }
+  function scPoly(pts, back) { // the runs of a polyline on the asked-for side
+    let on = false; ctx.beginPath();
+    for (const q of pts) { const vis = back ? q[2] < 0 : q[2] >= 0; if (vis) { if (on) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); } on = vis; }
+  }
+  function scallopGlass(r, p, back, tt) {
+    const R = r * 2.05, rgb = p.glow || '200,240,235', ph0 = tt * SC_W, IRI = ['246,194,212', '242,214,138', '150,226,214', '196,180,246'];
+    if (back) { // the far wall: clear in the middle, thick at the rim
+      const g = ctx.createRadialGradient(-R * .2, -R * .25, R * .1, 0, 0, R); g.addColorStop(0, `rgba(${rgb},.02)`); g.addColorStop(.72, `rgba(${rgb},.06)`); g.addColorStop(.93, `rgba(${rgb},.2)`); g.addColorStop(1, `rgba(${rgb},.34)`);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill(); }
+    ctx.lineCap = 'round';
+    for (let i = 0; i < SC_N; i++) { const ph = ph0 + i / SC_N * TAU, pts = []; for (let k = 0; k <= 22; k++) pts.push(scPt(k / 22 * Math.PI, ph, R));
+      scPoly(pts, back); ctx.strokeStyle = `rgba(${IRI[i % 4]},${back ? .3 : .42})`; ctx.lineWidth = Math.max(.3, r * (back ? .05 : .07)); ctx.stroke();
+      if (!back) { ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = Math.max(.2, r * .025); ctx.stroke(); } }
+    // the fluted lip where the valves close
+    const lip = []; for (let k = 0; k <= 96; k++) { const ph = k / 96 * TAU + ph0 * .5, w = .975 + .025 * Math.sin(ph * 14); lip.push(scPt(Math.PI / 2 + .04 * Math.cos(ph * 14), ph, R * w)); }
+    scPoly(lip, back); ctx.strokeStyle = `rgba(42,27,44,${back ? .25 : .55})`; ctx.lineWidth = Math.max(.6, r * .13); ctx.stroke();
+    scPoly(lip, back); ctx.strokeStyle = back ? 'rgba(214,174,88,.35)' : p.metal; ctx.lineWidth = Math.max(.4, r * .075); ctx.stroke();
+    if (!back) { scPoly(lip, back); ctx.strokeStyle = 'rgba(255,246,206,.8)'; ctx.lineWidth = Math.max(.2, r * .028); ctx.stroke(); }
+    // the hinge: a little gilt boss where the ribs meet, on whichever side it faces
+    const hp = scPt(0, 0, R); if ((hp[2] < 0) === back) { ctx.globalAlpha *= back ? .5 : 1; goldFill(() => { ctx.beginPath(); ctx.ellipse(hp[0], hp[1], r * .2, r * .13, SC_ROLL, 0, TAU); }, hp[0] - r * .2, hp[1] - r * .1, hp[0] + r * .2, hp[1] + r * .1, p, inkW(r, .05)); }
+    if (!back) { // the near wall's rim and its light
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.strokeStyle = `rgba(${rgb},.55)`; ctx.lineWidth = Math.max(.4, r * .06); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, R + r * .05, 0, TAU); ctx.strokeStyle = 'rgba(30,20,40,.35)'; ctx.lineWidth = Math.max(.3, r * .04); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, R * .9, Math.PI * 1.08, Math.PI * 1.42); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = Math.max(.4, r * .1); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, R * .9, Math.PI * 1.5, Math.PI * 1.56); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.ellipse(-R * .52, -R * .55, r * .2, r * .09, -.75, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, R * .93, Math.PI * .15, Math.PI * .55); ctx.strokeStyle = 'rgba(246,194,212,.4)'; ctx.lineWidth = Math.max(.3, r * .06); ctx.stroke(); }
+  }
+  function pntScallopBack(r, p, o) { const br = 1 + .03 * Math.sin(o.t * 1.6); ctx.save(); ctx.scale(br, br); pcf('scG0', r, p, 2.25, o.t, SC_PER, 16, (rq, tt) => scallopGlass(rq, p, true, tt)); ctx.restore(); }
+  function pntScallopFront(r, p, o) {
+    const t = o.t, br = 1 + .03 * Math.sin(t * 1.6); ctx.save(); ctx.scale(br, br); pcf('scG1', r, p, 2.25, t, SC_PER, 16, (rq, tt) => scallopGlass(rq, p, false, tt)); ctx.restore();
+    // mirror light: a sweep of sheen crossing the near wall now and then, and a glint running round the lip
+    const R = r * 2.05 * br, u = (t * .3) % 1;
+    if (u < .45) { const k = u / .45, a = Math.PI * (.85 + 1.1 * k); ctx.save(); ctx.globalAlpha *= Math.sin(Math.PI * k) * .5; ctx.beginPath(); ctx.arc(0, 0, R * .97, a, a + .5); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = Math.max(.5, r * .16); ctx.lineCap = 'round'; ctx.stroke(); ctx.restore(); }
+    const v = (t * .45 + .5) % 1; if (v < .5) { const k = v / .5, q = scPt(Math.PI / 2, -Math.PI * .1 + Math.PI * 1.2 * k, R); if (q[2] >= 0) glint(q[0], q[1], r * .32, Math.sin(Math.PI * k)); }
+  }
   // NARWHAL SPIRE: ivory, its spiral grooves running out along it as if it turned, set in a gilt ferrule; a glint runs out
   function pntHorn(r, p, o) {
     const t = o.t;
@@ -1223,6 +1269,7 @@
   // RIPTIDE REFLEX: a dorsal fin, translucent, with rays, set in the top mount and swept back; it ripples
   function pntFin(r, p, o) {
     const t = o.t, k = o.has.coral ? .8 : 1, root0 = [r * .3, -r * .88], root1 = [-r * .62, -r * .78];
+    { const lean = .1 * Math.sin(t * 1.7) + .04 * Math.sin(t * 4.3 + 1); ctx.translate(-r * .16, -r * .83); ctx.rotate(lean); ctx.translate(r * .16, r * .83); } // (it leans into a current that is not there)
     const tip = [-r * (1.25 + .08 * Math.sin(t * 3.4)) * k, -r * (2.05 - .06 * Math.cos(t * 3.4)) * k - r * (1 - k) * .3];
     const mid = (u) => [lerp(tip[0], root1[0], u) + Math.sin(t * 5 - u * 4) * r * .08, lerp(tip[1], root1[1], u) - Math.sin(Math.PI * u) * r * .28];
     const m1 = mid(.33), m2 = mid(.66);
@@ -1233,6 +1280,7 @@
     for (const q of [tip, m1, m2]) { ctx.beginPath(); ctx.moveTo(lerp(root0[0], root1[0], .45), -r * .85); ctx.quadraticCurveTo((q[0] - r * .1) * .7, q[1] * .75, q[0] * .94, q[1] * .94); ctx.stroke(); }
     ctx.beginPath(); ctx.moveTo(root0[0], root0[1]); ctx.quadraticCurveTo(r * .1, -r * 1.75 * k, tip[0], tip[1]); stroke('rgba(255,255,255,.85)', Math.max(.3, r * .08));
     path(); stroke(OUT, inkW(r, .08));
+    const u = (t * .55) % 1; if (u < .4) { const q = u / .4, x = lerp(root0[0], tip[0], q), y = lerp(root0[1], tip[1], q) - Math.sin(Math.PI * q) * r * .5; glint(x, y, r * .26, Math.sin(Math.PI * q)); }
   }
   // QUICKWATER: two silk ribbons streaming back from the rear mount, twisting as they flutter (one face the colour, the
   // other its shade), forked at the tails; swung by the pendulum and faster with speed
@@ -1259,14 +1307,15 @@
       pc(face ? 'link0' : 'link1', r, p, .4, (r) => { const w = Math.max(.4, r * .09);
         if (face) gilt(() => { ctx.beginPath(); ctx.ellipse(0, 0, r * .14, r * .25, 0, 0, TAU); }, w, p);
         else goldFill(() => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(-r * .055, -r * .27, r * .11, r * .54, r * .055); else ctx.rect(-r * .055, -r * .27, r * .11, r * .54); }, -r * .06, 0, r * .06, 0, p, inkW(r, .06)); });
-      ctx.restore(); x -= s * step; y += c * step; }
+      ctx.restore(); x -= s * step; y += c * step;
+      const u = (o.t * .6) % 1 * (n + 2) - i; if (u > 0 && u < 1) glint(x + s * step * .5, y - c * step * .5, r * .2, Math.sin(Math.PI * u)); }
     o.end = [x, y, sw[2]];
   }
   // SUNKEN ANCHOR: ring, stock with ball ends, shank, arms and barbed flukes, in gilt; it hangs from the bail (or the
   // tether's last link) and swings
   function pntAnchor(r, p, o) {
     const E = o.end, px = E ? E[0] : 0, py = E ? E[1] : r * 1.42, a = E ? E[2] : o.sw[0];
-    ctx.save(); ctx.translate(px, py); ctx.rotate(a); ctx.translate(0, r * .7);
+    ctx.save(); ctx.translate(px, py); ctx.rotate(a); ctx.translate(0, r * .7); ctx.scale(.72 + .28 * Math.cos(o.t * .9), 1); // (it turns slowly on its ring)
     pc('anchor', r, p, .86, (r) => { const s = r * 1.05, w = Math.max(.5, s * .13); ctx.translate(0, -r * .7); ctx.lineCap = 'round';
       gilt(() => { ctx.beginPath(); ctx.arc(0, s * .14, s * .13, 0, TAU); }, w * .75, p);
       gilt(() => { ctx.beginPath(); ctx.moveTo(0, s * .28); ctx.lineTo(0, s * 1.22); }, w * 1.15, p);
@@ -1351,20 +1400,23 @@
   // HELD THUNDER: a gilt-clasped bolt floating by the pearl, trembling, flaring now and then with sparks
   function pntBolt(r, p, o) {
     const t = o.t, n = Math.floor(t * 12), side = o.has.charm ? -1 : 1, hi = o.has.cloud ? -r * .95 : -r * 1.45, x = side * r * (o.has.cloud ? 1.45 : 1.3) + (hs(n) - .5) * r * .05, y = hi + (hs(n + 1) - .5) * r * .05, fl = (t % 1.3) / 1.3 > .85;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(.15 * side);
+    const by = Math.sin(t * 2.2) * r * .1, gl = .35 + .25 * Math.sin(t * 5.3) + (fl ? .4 : 0);
+    ctx.save(); ctx.globalAlpha *= gl; const gg = ctx.createRadialGradient(x, y + by, 0, x, y + by, r * .75); gg.addColorStop(0, 'rgba(255,236,150,.55)'); gg.addColorStop(1, 'rgba(255,236,150,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y + by, r * .75, 0, TAU); ctx.fill(); ctx.restore();
+    if (fl || (t % 2.1) / 2.1 > .93) { const m = Math.floor(t * 30); ctx.beginPath(); ctx.moveTo(x, y + by + r * .3); for (let i = 1; i <= 4; i++) { const k = i / 4; ctx.lineTo(lerp(x, x * .35, k) + (hs(m + i) - .5) * r * .3, lerp(y + by + r * .3, y * .3, k) + (hs(m + i + 9) - .5) * r * .2); } stroke('rgba(255,250,210,.9)', Math.max(.3, r * .06)); }
+    ctx.save(); ctx.translate(x, y + by); ctx.rotate(.15 * side + .06 * Math.sin(t * 2.2));
     pc('bolt' + (fl ? 'L' : ''), r, p, .8, (s) => { const r = s, path = () => { ctx.beginPath(); ctx.moveTo(-s * .1, -s * .62); ctx.lineTo(s * .32, -s * .62); ctx.lineTo(s * .06, -s * .08); ctx.lineTo(s * .34, -s * .08); ctx.lineTo(-s * .24, s * .72); ctx.lineTo(-s * .02, s * .1); ctx.lineTo(-s * .3, s * .1); ctx.closePath(); };
       const g = ctx.createLinearGradient(-s * .3, -s * .6, s * .3, s * .7); g.addColorStop(0, '#FFFDF0'); g.addColorStop(.5, fl ? '#FFFFFF' : '#FFE27A'); g.addColorStop(1, fl ? '#FFF2A0' : '#D89A2A');
       path(); ctx.fillStyle = g; ctx.fill(); stroke(OUT, inkW(r, .07));
       ctx.beginPath(); ctx.moveTo(-s * .04, -s * .55); ctx.lineTo(s * .2, -s * .55); stroke('rgba(255,255,255,.9)', Math.max(.2, r * .05));
       goldFill(() => { ctx.beginPath(); ctx.rect(-s * .2, -s * .14, s * .5, s * .12); }, 0, -s * .14, 0, 0, p, inkW(r, .05)); });
     ctx.restore();
-    if (fl) for (let i = 0; i < 3; i++) { const a = hs(n * 3 + i) * TAU; let sx = x + Math.cos(a) * r * .4, sy = y + Math.sin(a) * r * .5; ctx.beginPath(); ctx.moveTo(sx, sy); sx += Math.cos(a) * r * .3; sy += Math.sin(a) * r * .3; ctx.lineTo(sx + (hs(i + n) - .5) * r * .2, sy); stroke('#FFF6C0', Math.max(.3, r * .06)); }
+    if (fl) for (let i = 0; i < 3; i++) { const a = hs(n * 3 + i) * TAU; let sx = x + Math.cos(a) * r * .4, sy = y + by + Math.sin(a) * r * .5; ctx.beginPath(); ctx.moveTo(sx, sy); sx += Math.cos(a) * r * .3; sy += Math.sin(a) * r * .3; ctx.lineTo(sx + (hs(i + n) - .5) * r * .2, sy); stroke('#FFF6C0', Math.max(.3, r * .06)); }
   }
   const PART = {
     ring: [[12, pntMoonRing], [21, pntMoonShade], [32, pntMoonRing]],
     chain: [[40, pntChain]],
     coral: [[7, pntCoral]],
-    scallop: [[3, pntScallop]],
+    scallop: [[3, pntScallopBack], [45, pntScallopFront]],
     horn: [[35, pntHorn]],
     tines: [[35, pntTines]],
     swirl: [[11, pntSwirl], [33, pntSwirl]],
@@ -1409,7 +1461,7 @@
     for (const e of L.list) { if ((e.z < 20) !== back) continue; if ((only === 'still' && e.hang) || (only === 'hang' && !e.hang)) continue; ctx.save(); e.fn(r, pal, o); ctx.restore(); }
   }
   // one part alone (the shell burst's flying pieces)
-  function orbPart(part, r, pal, t) { const P_ = PART[part]; if (!P_) return; const o = { t, sw: swView(null, 1, t), has: {}, mounts: {}, edge: false, back: true, end: null }; for (const [z, fn] of P_) { o.back = z < 20; ctx.save(); fn(r, pal, o); ctx.restore(); } }
+  function orbPart(part, r, pal, t) { const P_ = part === 'scallop' ? [[3, pntScallop]] : PART[part]; if (!P_) return; const o = { t, sw: swView(null, 1, t), has: {}, mounts: {}, edge: false, back: true, end: null }; for (const [z, fn] of P_) { o.back = z < 20; ctx.save(); fn(r, pal, o); ctx.restore(); } }
   function drawSpinner(picks, r, pal, spin) {
     if (!hasSpin(picks)) return;
     const ar = r * BLADE_R, lit = picks.includes('thunder'), teeth = picks.includes('serrate');
