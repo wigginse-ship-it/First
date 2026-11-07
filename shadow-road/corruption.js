@@ -248,7 +248,7 @@
       if (co.boss || co.cHitMove === P.moveId || (co.cHits || 0) >= 3) continue;
       if (!inReach(m, co.x, co.y, 0, co.hw || 14, 24)) continue;
       co.cHitMove = P.moveId; co.cHits = (co.cHits || 0) + 1;
-      feed(WT.corpse, 'cruelty: a corpse struck');
+      // (striking a corpse no longer feeds the curse: the body still flinches)
       burst(co.x, co.y, 8, ['#2A2028', '#5A4A50', '#8A2A30'], 7, 'flesh', P.facing); sfx('hit-flesh', .2); co.sqx = 1.15; co.sqy = .9;
     }
   }
