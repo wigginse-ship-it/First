@@ -946,7 +946,7 @@ function drawHumanoid(look, pose) {
   } else if (arms) CW.arm(look, 0, 0, ex, ey, reach, 0, BACK);
   else { seg(0, 0, ex, ey, 8.6, 6.6, sleeve, 1.4); seg(ex, ey, reach, 0, 6.6, 5, sleeve, .9); }
   pose.glove = look.glove;
-  if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); }
+  if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); if (typeof FXEL !== 'undefined') FXEL.streak(reach + 6, reach + pose.streak.len, pose.streak); }
   if (!pose.elbow) ctx.translate(reach - 15, 0);
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   { const kind = pose.weapon || look.weapon, held = ['hammer', 'staff', 'sword', 'grayblade', 'rapier', 'shortbow'].includes(kind) && !pose.noHand; // (the weapons whose last stroke is the hand)

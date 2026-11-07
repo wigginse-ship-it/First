@@ -178,9 +178,9 @@ const FXEL = (() => {
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a * .85; ctx.strokeStyle = '#08040C'; ctx.lineWidth = 3.6 * wide; paths.forEach(strokePts);
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.strokeStyle = `rgb(${Math.min(255, r + 90)},${Math.min(255, g + 40)},${Math.min(255, b + 120)})`; ctx.lineWidth = 1.1 * wide; paths.forEach(strokePts); return; }
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = a * .22; ctx.strokeStyle = `rgb(${r},${g},${b})`; ctx.lineWidth = 7 * wide; strokePts(paths[0]);
-    ctx.globalAlpha = a * .7; ctx.lineWidth = 2.6 * wide; paths.forEach(strokePts);
-    ctx.globalAlpha = a; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.05 * wide; paths.forEach((p, i) => { if (!i || wide > .8) strokePts(p); });
+    ctx.globalAlpha = a * .16; ctx.strokeStyle = `rgb(${r},${g},${b})`; ctx.lineWidth = 5 * wide; strokePts(paths[0]);
+    ctx.globalAlpha = a * .75; ctx.lineWidth = 1.7 * wide; paths.forEach(strokePts);
+    ctx.globalAlpha = a; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = .7 * wide; paths.forEach((p, i) => { if (!i || wide > .8) strokePts(p); });
   }
   // ---------------- blood, the tide, the abyss ----------------
   const dropSpr = (pal) => sprite('dr' + pal, 6, 9, 3, 5.5, (g) => { const D = DROP[pal];
@@ -286,8 +286,8 @@ const FXEL = (() => {
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, k * 1.3); put(glowSpr(FIRE[f.pal || 'fire'].glow), x, y, f.r * (1.1 + e * .8));
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
       const n = busy() ? 5 : 7, sw = Math.sin(Math.PI * Math.min(1, e * 1.3 + .12));
-      for (let i = 0; i < n; i++) { const a = f.seed + i / n * TAU, d = f.r * (.15 + .5 * e), s = f.r / 30 * sw * (i % 2 ? .7 : 1) * (1.15 - .3 * Math.abs(Math.sin(a)));
-        put(flameSprite(f.pal || 'fire', (i + Math.floor(e * 9)) % 6), x + Math.cos(a) * d, y + Math.sin(a) * d * .55 + 4 * s, s, Math.cos(a) * .7 * (1 - e * .5)); }
+      for (let i = 0; i < n; i++) { const j = hash(f.seed + i), a = f.seed + (i + j * .7) / n * TAU, d = f.r * (.1 + (.45 + .4 * j) * e), s = f.r / 32 * sw * (.45 + .75 * hash(f.seed * 3 + i));
+        put(flameSprite(f.pal || 'fire', (i + Math.floor(e * 9)) % 6), x + Math.cos(a) * d, y + Math.sin(a) * d * .5 + 10 * s, s, Math.cos(a) * (.4 + .5 * j) * (1 - e * .4)); }
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * k; put(glowSpr('255,240,200'), x, y, f.r * .7);
     } else if (f.el === 'frost') {
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * .7; put(glowSpr('190,232,255'), x, y, f.r * (1 + e * .6));
@@ -297,10 +297,10 @@ const FXEL = (() => {
       ctx.strokeStyle = 'rgba(235,250,255,.9)'; ctx.lineWidth = 1.4 * k; ctx.beginPath(); ctx.ellipse(x, y, f.r * (.6 + e), f.r * (.6 + e) * .8, 0, 0, TAU); ctx.stroke();
     } else if (f.el === 'storm') {
       const [r, g, b] = hexRgb(f.col), rgb = `${r},${g},${b}`, rr = mulberry(Math.floor(f.seed * 100) + Math.floor(f.t * 40));
-      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k; put(glowSpr(rgb), x, y, f.r * 1.3); put(sparkSpr(rgb), x, y, 1.6 + e * 2, f.seed);
-      const n = busy() ? 3 : 5, paths = [];
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = k * .8; put(glowSpr(rgb), x, y, f.r * 1.1); put(sparkSpr(rgb), x, y, 1.2 + e * 1.4, f.seed);
+      const n = busy() ? 2 : 4, paths = [];
       for (let i = 0; i < n; i++) { const a = f.seed + i / n * TAU + rr() * .6, l = f.r * (.7 + rr() * .7); paths.push(jag(rr, x, y, x + Math.cos(a) * l, y + Math.sin(a) * l * .8, 4, l * .22)); }
-      drawLightning(paths, f.col, k, .7);
+      drawLightning(paths, f.col, k * .8, .6);
     }
     ctx.restore();
   }
@@ -423,10 +423,14 @@ const FXEL = (() => {
     const n = busy() ? 5 : 8, pts = [], A0 = f.rev ? Math.PI : 0, A1 = f.rev ? Math.PI * (1 - f.k) : Math.PI * f.k;
     for (let i = 0; i < n; i++) { const a = A0 + (A1 - A0) * (.1 + .9 * i / (n - 1)), c = Math.cos(a), s = Math.sin(a), L = Math.hypot(c, s * 3.3) || 1; pts.push([cx + c * f.r, cy + 6 + s * f.r * .3, c / L, s * 3.3 / L]); }
     onPage(() => dressTrail(pts, brandEl)); }; }
+  // a thrust's streak (art.js): along the line of the thrust, in the arm's own space
+  function streak(x0, x1, st) { const bc = brandCol(); if (!bc || st.col !== bc || !(st.a > .05)) return;
+    const n = busy() ? 4 : 6, pts = []; for (let i = 0; i < n; i++) pts.push([x0 + (x1 - x0) * i / (n - 1), 0, 0, -1]);
+    onPage(() => { ctx.save(); ctx.globalAlpha = Math.min(1, st.a * 1.2); dressTrail(pts, brandEl); ctx.restore(); }); }
 
   // ---------------- for the rest of the game ----------------
   return {
-    status, emit, flameP, emberP, smokeP, flakeP, iceP, sparkP, dropP, wispP,
+    status, emit, streak, flameP, emberP, smokeP, flakeP, iceP, sparkP, dropP, wispP,
     // a burning foe's sparks and smoke, in place of the old puffs (as often as they were)
     burning(e, pal = 'fire') { const r = Math.random(), x = e.x + rand(-e.hw, e.hw) * .6, z = e.z + rand(e.hh * .1, e.hh * .9);
       if (r < .55) P_({ x, y: e.y, z, vx: rand(-25, 25), vy: 0, vz: rand(60, 150), life: rand(.5, .9), col: '#FFC860', size: rand(2, 3.2), shape: 'ember', pal, rot: rand(0, 6), vr: 0, lift: .9 });
