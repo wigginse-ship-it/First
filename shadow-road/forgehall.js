@@ -137,11 +137,11 @@
     cast: [], key: '', target: null, sparks: [], embers: [], fx: [], padA: false, padB: false, hint: 0, swing: null, leaving: null, idleGate: 2, snap: null };
   function computeCast() {
     const ids = ORDER.filter(id => { try { return present[id](); } catch (e) { return false; } });
-    H.cast = ids.map((id, i) => ({ id, slot: SLOT_OF[id], ph: hsh(i + 3) * 10, act: null, next: 2 + i * 1.7 + hsh(i + 9) * 3, last: '', near: false, away: true, say: null, stuck: [], dx: 0 }));
+    H.cast = ids.map((id, i) => ({ id, slot: SLOT_OF[id], ph: hsh(i + 3) * 10, act: null, next: 1 + i * 1.2 + hsh(i + 9) * 2, last: '', near: false, away: true, say: null, stuck: [], dx: 0 }));
     H.key = ids.join(',');
   }
   const SL = (v) => geo().slots[v.slot];
-  function placeHero() { const G = geo(); H.x = G.cx + 30; H.y = G.bot - 10; H.f = -1; H.walk = 0; H.hint = 7; H.swing = null; H.leaving = null; H.idleGate = 2; }
+  function placeHero() { const G = geo(); H.x = G.cx + 30; H.y = G.bot - 10; H.f = -1; H.walk = 0; H.hint = 7; H.swing = null; H.leaving = null; H.idleGate = 1; }
   const heroYMin = (x) => geo().footY(x) + 14, heroYMax = () => VH - 6;
 
   const vxOf = (v) => { const sl = SL(v); return sl.vx + (v.dx || 0) * sl.m.a; };
