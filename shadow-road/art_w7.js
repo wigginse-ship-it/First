@@ -2485,6 +2485,7 @@
     e.death = 'w7glassend'; e.air = false; e.spin = 0; e.vx = 0; e.vz = 0; e.t = e.dmax = 3; e.w7nopearl = 1;
     W7.pearl = { x: e.x, y: e.y, z: e.z + 120, vz: 0, t: 0 }; if (W7.G) { W7.G.refl = null; W7.G.wreck = []; }
     save.w7relic = true; (save.endings = save.endings || {}); if (typeof persist === 'function') persist();
+    W7.holdGlide = true; // (the Pearl's glide waits until the Pattern of Rebma has been walked: pearl_ng.js curOn, cleared when the ending is over or the place changes)
     shakeMag = 16; flashT = .3; sfx('break'); sfx('hit-crystal'); bubbles(e.x, e.y, 80, 60, 200);
     setTimeout(() => { if (mode === 'play') banner('The Pearl of Judgement', "THE SEA'S REFLECTION OF THE JEWEL · IT IS YOURS", 2.8); }, 900);
   };

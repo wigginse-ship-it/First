@@ -575,7 +575,7 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
     if (down && !END.padDown) moireGo(); END.padDown = down; }
   function skipEnding() { if (!END || END.t < 1.2) return; if (END.t >= SECT[2] && END.t < SECT[3]) { moireGo(); return; } const T = END.t; const nx = SECT.find(s => s > T + .05); if (nx === undefined) finishEnding(); else END.t = nx === SECT[1] ? SECT[1] + .8 : nx; }
   function finishEnding() {
-    if (!END) return; const sc = END.sc; END = null; W7.ending = false;
+    if (!END) return; const sc = END.sc; END = null; W7.ending = false; W7.holdGlide = false;
     app.classList.remove('nocontrols', 'sr-end'); $('#banner').classList.remove('on');
     sc();
   }
@@ -586,6 +586,7 @@ window.pearlNG = (k, on) => { if (k in PEARL_NG_SAVED) { PEARL_NG_SAVED[k] = !!o
     $('#bossbar').hidden = true; app.classList.add('nocontrols', 'sr-end'); app.classList.remove('playing');
     if (typeof TRACKS !== 'undefined' && TRACKS.w7tide) playMusic('w7tide');
   };
+  { const _ss = startStage; startStage = function (i) { W7.holdGlide = false; return _ss(i); }; } // (a place begun afresh: no glide held back from an unfinished Pattern walk)
   W7.setEndT = (v) => { if (END) { END.t = v; END.last = performance.now(); } }; // (for tests: jump the ending's clock)
   W7.endT = () => END && END.t; W7.skipEnding = skipEnding; W7.finishEnding = finishEnding;
   { const _sc = stageClear; stageClear = function () { if (isMine() && !END) { W7.startEnding(_sc); return; } return _sc(); }; }
