@@ -170,6 +170,10 @@
     if (SA.stage !== ST()) { SA.stage = ST(); SA.objs = []; }
     if (P.shocked && P.move && P.move.sky) for (const o of SA.objs) if (o.kind === 'sky' && !o.landed) { o.landed = true; o.t = 0; o.x = P.x + P.facing * 40; o.y = P.y; silverBurst(o.x, o.y, 4, 30); shakeMag = Math.max(shakeMag, 12); }
     for (const o of SA.objs) step(o, dt);
+    // what the arm sends out strikes the fallen too (the curse counts it: corruption.js), each body once per thing
+    if (window.__corpsesNear && corpses.length) for (const o of SA.objs) { if (o.gone) continue;
+      const r = { rocket: (o.z || 0) < 70 ? 18 : 0, ghost: (o.z || 0) < 60 ? 16 : 0, burst: o.struck ? 44 : 0, crescent: 20, crack: o.t > .08 ? (o.R || 90) * .6 : 0, gale: 60, rend: 30, eclipse: o.done ? 110 : 0 }[o.kind];
+      if (r) window.__corpsesNear(o, o.x, o.y, r); }
     SA.objs = SA.objs.filter(o => !o.gone);
     SA.fistOut = SA.objs.some(o => o.kind === 'rocket');
   };

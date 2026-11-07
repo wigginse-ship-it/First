@@ -40,7 +40,7 @@
   const HIGH_END = 50; // reaching the last world at or past this, the Circle has taken it
   const RESIDUE = .25, HORN_KEEP = .6;
   const WT = { // what feeds it (+) and what eases it (-)
-    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, groupPer: .6, groupMax: 4, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
+    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 6.6, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, groupPer: .6, groupMax: 4, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
     pearlKill: -.5, curseMyDmg: .45, curseFoeDmg: .3, blackPearlDmg: 1.35, cwCursedKill: .4, cwCursedBoss: 1.5, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
@@ -277,15 +277,24 @@
     for (const co of corpses) {
       if (co.boss || co.cHitMove === P.moveId || (co.cHits || 0) >= 3) continue;
       if (!inReach(m, co.x, co.y, 0, co.hw || 14, 24)) continue;
-      co.cHitMove = P.moveId; co.cHits = (co.cHits || 0) + 1;
-      { const cw = save.cw && save.cw[P.w], cap = cw && !cw.pure ? WT.corpseCapCursed : WT.corpseCap; // (a purified blade is never cruel; the rest are capped per world, a cursed one higher)
-        L.corpseCap = cap;
-        if (cw && cw.pure) tickNote('corpse', 'corpse struck · purified: no penalty');
-        else if ((L.corpseFed || 0) < cap - 1e-6) { L.corpseFed = (L.corpseFed || 0) + feed(Math.min(WT.corpse, cap - (L.corpseFed || 0)), 'cruelty: a corpse struck'); if (L.corpseFed >= cap - 1e-6) tickNote('corpse', `corpse cap reached (${cap}) · no more penalty`); }
-        else tickNote('corpse', `corpse struck · capped (${cap}): no penalty`); }
-      burst(co.x, co.y, 8, ['#2A2028', '#5A4A50', '#8A2A30'], 7, 'flesh', P.facing); sfx('hit-flesh', .2); co.sqx = 1.15; co.sqy = .9;
+      co.cHitMove = P.moveId; corpseStruck(co, P.facing);
     }
   }
+  // one corpse struck (by a blow, or by something his weapon sent out: the silver arm's flying fist, its hands, its tears):
+  // the cruelty, capped per world (higher for a cursed weapon; a purified one never), and the body flinches
+  function corpseStruck(co, dir) {
+    if (!NG() || !co || co.boss || (co.cHits || 0) >= 3) return false; co.cHits = (co.cHits || 0) + 1;
+    { const cw = save.cw && save.cw[P.w], cap = cw && !cw.pure ? WT.corpseCapCursed : WT.corpseCap; // (a purified blade is never cruel; the rest are capped per world, a cursed one higher)
+      L.corpseCap = cap;
+      if (cw && cw.pure) tickNote('corpse', 'corpse struck · purified: no penalty');
+      else if ((L.corpseFed || 0) < cap - 1e-6) { L.corpseFed = (L.corpseFed || 0) + feed(Math.min(WT.corpse, cap - (L.corpseFed || 0)), 'cruelty: a corpse struck'); if (L.corpseFed >= cap - 1e-6) tickNote('corpse', `corpse cap reached (${cap}) · no more penalty`); }
+      else tickNote('corpse', `corpse struck · capped (${cap}): no penalty`); }
+    burst(co.x, co.y, 8, ['#2A2028', '#5A4A50', '#8A2A30'], 7, 'flesh', dir || P.facing); sfx('hit-flesh', .2); co.sqx = 1.15; co.sqy = .9;
+    return true;
+  }
+  // (for what his weapons send out: each thing strikes each body once; x, y, r: where and how wide it reaches)
+  window.__corpsesNear = (thing, x, y, r) => { if (!NG() || !corpses.length) return; const set = thing.__cc || (thing.__cc = new Set());
+    for (const co of corpses) { if (set.has(co) || co.boss) continue; if (Math.abs(co.x - x) < r + (co.hw || 14) && Math.abs(co.y - y) < 26) { set.add(co); corpseStruck(co, Math.sign(co.x - x) || 1); } } };
   // ---------------- Lorraine's villagers ----------------
   function villagers() {
     if (!mech || mech.kind !== 'w8flight' || !mech.vs || !window.W8 || !W8.vill) return;
