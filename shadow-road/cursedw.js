@@ -70,6 +70,13 @@
   const lvOf = (c) => c ? (c.pure ? LVMAX : c.lvl) : 0;
   const held = () => (P && cw(P.w)) || null;
   const cursedHeld = () => { const c = held(); return c && !c.pure ? c : null; };
+  // a purified weapon bites the cursed: ×1.5 on a foe or a lord the curse has touched, with a flash of white-gold where it lands
+  const PURE_VS_CURSED = 1.5;
+  { const _st = strike; strike = function (e, base, dir, m, echo) {
+    const c = held();
+    if (c && c.pure && e && !e.dead && (e.cursed || e.cB) && m && !m.trump) { base *= PURE_VS_CURSED;
+      if (Math.random() < .5 && parts.length < 400) burst(e.x, e.y, e.z + (e.hh || 50) * .55, ['#FFFFFF', '#FFF4D0', '#FFE08A'], 6, 'spark', dir || 0, true); }
+    return _st(e, base, dir, m, echo); }; }
   const hasDB = (k) => { const c = cursedHeld(); return !!c && c.db === k; };
   const hasBF = (k) => { const c = cursedHeld(); return !!c && c.bf === k; };
   const CM = (id) => { const c = cw(id); return c ? REF[id] * (c.pure ? PURE_K : CK[clamp(c.lvl, LV0, LVMAX)]) : wMult(id); };
@@ -658,7 +665,7 @@
     const lv = lvOf(c);
     return cmList(id).map(m => `<li class="${lv >= m.cl ? 'got' : m.cl === lv + 1 || m.cl === lv + 2 && m.cl > lv ? 'next' : ''}"><b style="color:${m.pt ? '#FFF4D0' : c.pure ? '#FFE8B0' : '#D8B0F0'}">${m.pt ? 'PURIFIED' : (c.pure ? 'PURE' : 'CURSED') + ' LV' + m.cl} · ${esc(m.name)}</b> ${typeof chips === 'function' ? chips(id, m) : ''}<br><em>${lv >= m.cl ? m.desc : 'Locked: ' + m.desc}</em></li>`).join('');
   }
-  const curseBox = (c) => c.pure ? `<div style="font-size:11.5px;line-height:1.35;color:#F8E8C0;background:rgba(80,60,20,.35);border:1px solid #B89048;border-radius:6px;padding:5px 7px;text-align:left;width:100%;box-sizing:border-box">Purified: no price, no gift. Its moves burn white.</div>`
+  const curseBox = (c) => c.pure ? `<div style="font-size:11.5px;line-height:1.35;color:#F8E8C0;background:rgba(80,60,20,.35);border:1px solid #B89048;border-radius:6px;padding:5px 7px;text-align:left;width:100%;box-sizing:border-box">Purified: no price, no gift. Its moves burn white, and it strikes the cursed half again as hard.</div>`
     : `<div style="font-size:11.5px;line-height:1.35;color:#EAD8F0;background:rgba(30,8,24,.6);border:1px solid #7A2A4A;border-radius:6px;padding:5px 7px;text-align:left;width:100%;box-sizing:border-box"><span style="color:#E86A7A">✕ <b>${DB[c.db].name}</b></span>: ${DB[c.db].txt}.<br><span style="color:#C8A0F0">✦ <b>${BF[c.bf].name}</b></span>: ${BF[c.bf].txt}.</div>`;
   { const _rf = renderForge; renderForge = function (note) {
     _rf(note);
