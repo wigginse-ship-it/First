@@ -138,7 +138,7 @@
         burst(fx0, P.y, z0 + 20, col, 18, 'spark', f(), true); fx.push({ kind: 'ring', x: fx0, y: P.y, z: z0 + 10, t: .2, max: .2, r: 46, col: col[1] }); });
       if (k > m.h[0] && k < m.h[1] + .1 && Math.random() < dt * 30) { const fx0 = P.x + f() * 30; fx.push({ kind: 'bolt', x: fx0 + rand(-20, 20), y: P.y, z: P.z + 50 + rand(0, 50), x2: fx0 + rand(-20, 20), y2: P.y, z2: P.z + 50 + rand(0, 50), t: .1, max: .1, col: col[2], seed: Math.random() * 99 }); } }
     if (m.snap) once('s', m.h[0], () => { sfx('crit'); sfx('slam'); flashT = Math.max(flashT, .05); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .4, max: .4, r: 120, col: '#EEF2FA', flat: 1 }); shockwave(P.x, P.y, 100, m); });
-    if (m.crescent) once('c', m.h[0], () => { SA.objs.push({ kind: 'crescent', x: P.x + f() * 30, y: P.y, dir: f(), t: 0, max: .8, hit: new Set(), m }); sfx('whoosh'); });
+    if (m.crescent) once('c', m.h[0], () => { SA.objs.push({ kind: 'crescent', x: P.x + f() * 30, y: P.y, dir: f(), t: 0, max: .8, hit: new Set(), m, black: SA.black(), seed: Math.random() * 99 }); sfx('whoosh'); if (SA.black()) sfx('growl', .4); });
     if (m.hook) { once('h0', 0, () => { const e = foes().filter(o => Math.abs(o.x - P.x) < 280 && Math.abs(o.y - P.y) < 60).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0]; P.hookE = e || null; if (e) { P.facing = Math.sign(e.x - P.x) || P.facing; sfx('whoosh'); } });
       const e = P.hookE; if (e && !e.dead && k < m.h[0]) { const tx = e.x - P.facing * (e.hw + 26); P.jvx = (tx - P.x) / Math.max(.05, (m.h[0] - k) * m.dur); P.y += (e.y - P.y) * Math.min(1, dt * 12); P.vz = Math.max(P.vz, 40); } else if (k >= m.h[0]) P.jvx *= .9; }
     if (m.ride && k < m.h[1] && Math.random() < dt * 30) parts.push({ x: P.x - f() * 10, y: P.y + rand(-3, 3), z: 2, vx: -f() * rand(60, 160), vy: 0, vz: rand(30, 90), life: .4, max: .4, col: pick(['#FFFFFF', '#DDE6FF', '#C8D4EC']), size: rand(1.5, 3), shape: 'star', rot: 0, vr: 4 }); // silver sparks off the street
@@ -193,8 +193,19 @@
       if (o.t > o.max) o.gone = true;
     } else if (o.kind === 'crescent') { // a crescent of moonlight sliding down the street
       o.x += o.dir * 560 * dt;
-      for (const e of foes()) { if (o.hit.has(e) || Math.abs(e.x - o.x) > e.hw + 18 || Math.abs(e.y - o.y) > 26 || e.z > 70) continue; o.hit.add(e); hitE(e, 18, o.dir, o.m, { kb: 300, power: 1 }); }
+      for (const e of foes()) { if (o.hit.has(e) || Math.abs(e.x - o.x) > e.hw + 18 || Math.abs(e.y - o.y) > 26 || e.z > 70) continue; o.hit.add(e); hitE(e, 18, o.dir, o.m, { kb: 300, power: 1 });
+        if (o.black) SA.objs.push({ kind: 'brand', e, x: e.x, y: e.y, t: 0, max: .9, at: .38, m: o.m, dir: o.dir, done: false }); }
+      if (o.black && Math.random() < dt * 26) { const z = rand(10, 60); parts.push({ x: o.x - o.dir * rand(0, 30), y: o.y + rand(-4, 4), z, vx: -o.dir * rand(20, 80), vy: 0, vz: rand(20, 70), life: .45, max: .45, col: pick(['#FF3A5A', '#7A1030', '#1A0A14']), size: rand(1.4, 2.6), shape: 'spark', rot: 0, vr: 0 }); }
+      if (o.black && Math.random() < dt * 14) fx.push({ kind: 'bolt', x: o.x + rand(-10, 10), y: o.y, z: rand(50, 80), x2: o.x - o.dir * rand(10, 40), y2: o.y, z2: rand(4, 30), t: .1, max: .1, col: '#FF5A7A', seed: Math.random() * 99 });
       if (o.t > o.max || o.x < leftWall() - 30 || o.x > rightWall() + 30) o.gone = true;
+    } else if (o.kind === 'brand') { // Rending Talons: the mark the black crescent left, and the crimson lightning that finds it
+      const e = o.e; if (e && !e.dead) { o.x = e.x; o.y = e.y; }
+      if (!o.done && o.t >= o.at) { o.done = true; const z = e ? e.z + e.hh * .5 : 30;
+        fx.push({ kind: 'bolt', x: o.x + rand(-8, 8), y: o.y, z: z + 220, x2: o.x, y2: o.y, z2: z, t: .24, max: .24, col: '#FF4A6A', seed: Math.random() * 99 });
+        fx.push({ kind: 'bolt', x: o.x + rand(-30, 30), y: o.y, z: z + 160, x2: o.x, y2: o.y, z2: z, t: .18, max: .18, col: '#B01030', seed: Math.random() * 99 });
+        if (e && !e.dead) hitE(e, 14, o.dir, o.m, { kb: 60, launch: 220, power: 2, crit: 1 });
+        burst(o.x, o.y, z, ['#FF3A5A', '#1A0A14', '#FF9AAA'], 14, 'spark', 0, true); sfx('shoot', .6); shakeMag = Math.max(shakeMag, 4); }
+      if (o.t > o.max) o.gone = true;
     } else if (o.kind === 'sky') { if (!o.landed) { o.x = P.x + P.facing * 40; o.y = P.y; if (o.t > 2) o.gone = true; } else if (o.t > .55) o.gone = true; }
     else if (o.t > o.max) o.gone = true;
   }
@@ -267,6 +278,15 @@
     else if (o.kind === 'titan' && o.e && !o.e.dead && !o.done.th && !o.e.boss) list.push([o.e.y + .3, () => { ctx.save(); ctx.translate(o.e.x - o.dir * (o.e.hw + 8), o.e.y - o.e.z - o.e.hh * .45); ctx.scale(o.dir, 1); RIG(o.t < .1 ? 'claw' : 'rock', { s: .5, t, a: .92 }); ctx.restore(); }]); // the huge hand closed round them
     else if (o.kind === 'burst') list.push([o.y, () => { const k = Math.min(1, o.t / .12), d = o.t > .45 ? (o.t - .45) / .25 : 0; ctx.save(); ctx.beginPath(); ctx.rect(o.x - 80, o.y - 200, 160, 202); ctx.clip(); ctx.translate(o.x, o.y + (1 - k) * 60 + d * 70); ctx.scale(o.dir, 1); RIG(o.t < .18 ? 'paper' : 'rock', { s: .5, rot: -Math.PI / 2, t, stump: 1 }); ctx.restore(); K.glowAt(o.x, o.y - 30, 50, LT('230,238,255'), .4 * (1 - d)); }]);
     else if (o.kind === 'ghost') list.push([o.y, () => { ctx.save(); ctx.globalAlpha *= .85 * Math.min(1, (1 - o.t / o.max) * 2); ctx.translate(o.x, o.y - o.z); ctx.scale(o.dir, 1); ctx.rotate(o.a); RIG('rock', { s: o.s * 1.3, t }); ctx.restore(); K.glowAt(o.x, o.y - o.z, 16, LT('225,235,255'), .35); }]);
+    else if (o.kind === 'crescent' && o.black) list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max, r = mulberry(Math.floor(o.t * 24) + (o.seed | 0)); ctx.save(); ctx.translate(o.x, o.y - 30); ctx.scale(o.dir, 1);
+        for (let i = 0; i < 3; i++) { const dy = (i - 1) * 16, x0 = -i * 6; ctx.beginPath(); ctx.moveTo(x0 - 18, dy - 22);
+          for (let k = 1; k <= 7; k++) { const q = k / 7, x = x0 - 18 + 30 * Math.sin(q * Math.PI) + (r() - .5) * 6, y = dy - 22 + 44 * q + (r() - .5) * 4; ctx.lineTo(x, y); }
+          ctx.strokeStyle = `rgba(20,6,16,${(.85 * a).toFixed(3)})`; ctx.lineWidth = 5 - i; ctx.lineJoin = 'miter'; ctx.stroke();
+          ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,50,80,${(.75 * a).toFixed(3)})`; ctx.lineWidth = 1.6; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+        ctx.restore(); })]);
+    else if (o.kind === 'brand') list.push([o.y, () => onMain(() => { if (o.done) return; const k = o.t / o.at, z = o.e ? o.e.z + o.e.hh * .5 : 30; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = `rgba(255,50,80,${(.4 + .5 * k).toFixed(3)})`; ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = 0; i < 3; i++) { const yy = o.y - z - 6 + i * 6; ctx.moveTo(o.x - 8, yy - 3); ctx.lineTo(o.x + 8, yy + 3); } ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(o.x, o.y, 14 * (1.2 - k * .4), 4.5 * (1.2 - k * .4), 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); })]);
     else if (o.kind === 'crescent') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(o.x, o.y - 30); ctx.scale(o.dir, 1);
       for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(${i ? LT('200,215,255') : LT('255,255,255')},${a * (.9 - i * .25)})`; ctx.lineWidth = 5 - i * 1.4; ctx.beginPath(); ctx.ellipse(-i * 10, 0, 14, 34, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke(); } ctx.restore(); })]);
     else if (o.kind === 'gust') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('225,235,255')},${a * .8})`; ctx.lineWidth = 2; for (let i = 0; i < 7; i++) { const y = o.y - 10 - i * 9, x = o.x + o.dir * o.t * 500; ctx.beginPath(); ctx.moveTo(x - o.dir * 60, y); ctx.lineTo(x + o.dir * (20 + i % 2 * 20), y); ctx.stroke(); } ctx.restore(); })]);
