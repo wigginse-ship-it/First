@@ -78,6 +78,7 @@ function loose() {
     dmg: Math.round(T.dmg * worldDiff().hp * (.4 + .6 * k) * (perfect ? 1.15 : 1) * (1 + gearStat('arrow'))), perfect, life: 1.3, hit: new Set(), splash: new Set(), tgt: arrowTarget(Math.max(30, P.z + 40)),
     pierce: full ? T.pierce : 0, crit: T.crit + (full ? .1 : 0), blast: full ? T.blast : T.blast * .5, full,
     bleed: T.bleed || 0, split: full ? T.split || 0 : 0, ret: T.ret || 0, chain: T.chain ? (full ? T.chain : 1) : 0 });
+  if (P.full && window.__chargeRelease) window.__chargeRelease(perfect, { arrow: 1 }); // (a full draw is a charge: corruption.js)
   sfx('shoot'); P.vx = -P.facing * (40 + 60 * k);
 }
 // while drawn: a faint line along the shot, brightening to gold at full strength

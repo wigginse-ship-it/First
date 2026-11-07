@@ -40,7 +40,7 @@
   const HIGH_END = 50; // reaching the last world at or past this, the Circle has taken it
   const RESIDUE = .25, HORN_KEEP = .6;
   const WT = { // what feeds it (+) and what eases it (-)
-    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, perfectMiss: .5, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
+    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 4.8, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
     pearlKill: -.5, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
@@ -124,6 +124,7 @@
   hurtEnemy = function (e, dmg, dir, m, crit) {
     if (NG() && CTX && CTX.own && !pureHand() && !(m && m.perfect) && !e.boss && e.hp > 0 && dmg > Math.max(1, e.hp) * 3 && dmg - e.hp > 30 && rl('ovk', .4)) feed(WT.overkill, 'cruelty: overkill'); // (a purified blade is never cruel)
     const hp0 = e.hp, r = _he(e, dmg, dir, m, crit);
+    if (NG() && e.hp < hp0) chargeHit(m);
     if (NG() && m && m.perfect && !m.trump && e.hp < hp0 && ((CTX && CTX.own) || m.pearl || m.arrow)) perfectPurge(m.arrow ? 'a perfect draw lands' : m.pearl ? 'a perfect throw lands' : 'a perfect charge lands');
     return r;
   };
@@ -178,9 +179,19 @@
   { const _rp = riposte; riposte = function (fromX) { if (NG() && rl('parry', .3)) ease(-WT.parry, 'a perfect parry'); if (NG()) L.ripT = now() + 1; return _rp(fromX); }; }
   function perfectPurge(why) { if (!NG() || !rl('perf', .3)) return; const d = ease(-WT.perfect, why); if (d > 0 && P && playing()) { fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .45, max: .45, r: 70, col: '#FFE9A8', flat: 1 }); if (rl('perfTxt', 4)) floatText(P.x, P.y, 120, 'THE CURSE EASES', '#FFE9A8', 11); } } // (a perfect release that lands draws a little of the curse out; a whiff does nothing)
   window.__perfectPurge = perfectPurge;
-  // a cursed weapon's charge let go outside the perfect window feeds it (not a purified one, and not when its Graceless price
-  // has taken the perfect window away altogether)
-  window.__missedPerfect = () => { const c = P && save && save.cw && save.cw[P.w]; if (!NG() || !c || c.pure || c.db === 'graceless' || !rl('pmiss', .3)) return; feed(WT.perfectMiss, 'a cursed charge, the perfect missed'); };
+  // CHARGED ATTACKS, the same for every weapon (normal, cursed, purified; the bow's full draw too): a perfect release that
+  // lands eases the curse (the hurtEnemy wrapper); one let go outside the window feeds it; and a charged blow that finds no
+  // one at all, perfect or not, feeds it as well. A cursed weapon pays more. (A Graceless weapon, which has no window, is
+  // not charged for missing it.)
+  const CHG = []; // the charged releases still in the air: { arrow, left, hit, cursed }
+  const cursedHand = () => { const c = P && save && save.cw && save.cw[P.w]; return !!(c && !c.pure); };
+  window.__chargeRelease = (perfect, o = {}) => {
+    if (!NG() || !P) return; const c = save.cw && save.cw[P.w], cursed = !o.arrow && cursedHand();
+    if (!perfect && !(c && !c.pure && c.db === 'graceless' && !o.arrow)) feed(cursed ? WT.chgMissC : WT.chgMiss, o.arrow ? 'a full draw, the perfect missed' : 'a charge, the perfect missed');
+    CHG.push({ arrow: !!o.arrow, left: o.arrow ? 1.5 : (P.move && P.move.dur || .6) + .6, hit: false, cursed }); // (game time: it waits through hitstop and pauses)
+  };
+  function chargeHit(m) { if (!CHG.length || !m || m.trump) return; for (const c of CHG) if (!c.hit && c.left > 0 && (c.arrow ? !!m.arrow : !m.arrow && !m.pearl && CTX && CTX.own)) c.hit = true; }
+  function chargeStep(dt) { for (let i = CHG.length - 1; i >= 0; i--) { const c = CHG[i]; if (c.hit) { CHG.splice(i, 1); continue; } c.left -= dt; if (c.left <= 0) { CHG.splice(i, 1); feed(c.cursed ? WT.chgWhiffC : WT.chgWhiff, c.arrow ? 'a full draw that hit nothing' : 'a charged blow that hit nothing'); } } }
   // a perfect release purifies only when it lands: see the hurtEnemy wrapper
   { const _pc = perfectCue; perfectCue = function () { return _pc.apply(this, arguments); }; }
   // ---------------- restraint: a downed foe let up unhit ----------------
@@ -198,7 +209,7 @@
   const _ss = startStage;
   startStage = function (i) {
     const r = _ss(i);
-    L = freshL();
+    L = freshL(); if (typeof CHG !== 'undefined') CHG.length = 0;
     if (NG()) { const c = CS(); abyssCheck();
       if (isFinal(i) && c.endCyc !== (save.cycle | 0)) { c.endCyc = save.cycle | 0; c.endHigh = c.v >= HIGH_END; c.heartDone = false; persist(); } }
     return r;
@@ -234,6 +245,7 @@
     return r;
   };
   function worldStep(dt) {
+    chargeStep(dt);
     const c = CS();
     if (onRoad()) feed(WT.roadPerSec * dt / WT.roadMul, 'standing on the Black Road');
     corpseHits(); villagers(); mimicStep(dt); clootStep(dt); verseStep(dt); patternStep(dt); roadStep(dt); pearlStep(dt); weaponStep(dt); heartStep(dt); fxSchedule(dt); carrierStep(dt);
@@ -2002,7 +2014,7 @@
   // a few words on what each reason is (shown after it in the ticker)
   const GLOSS = {
     'cruelty: overkill': 'a blow far past what it needed', 'massacre': '5 kills in quick succession', 'a kill from behind': 'a foe slain from its back',
-    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a cursed charge, the perfect missed': 'released outside the window',
+    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a full draw that hit nothing': 'the arrow found no one',
     'a kill by a hazard': 'a foe killed by the world, not you', 'standing on the Black Road': 'step off it', 'cursed loot taken': 'black shards picked up',
     'a death': 'more each death this cycle', 'a death to a corrupted lord': 'fell to a cursed boss', 'the cursed weapon feeds': 'its hunger drawback',
     'the curse took his shadow': 'a cursed foe caught you', 'his shadow kept the curse': 'the shade was not broken in time',
