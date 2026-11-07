@@ -330,12 +330,12 @@
     if (big > 1.2 || shape) { ctx.save(); ctx.translate(12, 0); RIG(shape || 'rock', { s: .19 * big, rot: pose.armRot || 0, t }); ctx.restore(); K.glowAt(12 + 10 * big, 0, 10 + 8 * big, LT('225,235,255'), .3); }
     else { let done = false; if (SA.black() && pose.cwArt && typeof CWART !== 'undefined') { try { done = CWART.draw('fists', pose.cwArt, pose, false); } catch (e) { done = false; } } if (!done) _dw(kind, pose); K.glowAt(17, 0, 9, LT('225,235,255'), .28);
       if (SA.pure()) { const T = typeof t === 'number' ? t : performance.now() / 1000, jx = 15.6, jy = -.4, pu = .5 + .5 * Math.sin(T * 3.2); // (the Dawn Knuckles: a jewel of white fire set in the back of the silver fist, its light turning inside it)
-        K.glowAt(jx, jy, 4.5 + 1.5 * pu, '255,236,180', .2 + .15 * pu);
+        K.glowAt(jx, jy, 7 + 2 * pu, '255,236,180', .25 + .2 * pu);
         ctx.save(); ctx.fillStyle = '#C9A24A'; ctx.beginPath(); ctx.arc(jx, jy, 1.75, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(40,30,10,.8)'; ctx.lineWidth = .4; ctx.stroke();
-        const sx = jx + Math.cos(T * 2.4) * .5, sy = jy + Math.sin(T * 2.4) * .5, g = ctx.createRadialGradient(sx, sy, .1, jx, jy, 1.3); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.45, `rgb(255,${236 + 14 * pu | 0},${170 + 60 * pu | 0})`); g.addColorStop(1, '#D88A2A');
+        const sx = jx + Math.cos(T * 2.4) * .8, sy = jy + Math.sin(T * 2.4) * .8, g = ctx.createRadialGradient(sx, sy, .1, jx, jy, 1.3); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.45, `rgb(255,${236 + 14 * pu | 0},${170 + 60 * pu | 0})`); g.addColorStop(1, '#D88A2A');
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(jx, jy, 1.3, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = .25; ctx.beginPath(); for (let k = 0; k < 3; k++) { const an = T * .9 + k * Math.PI / 3; ctx.moveTo(jx + Math.cos(an) * 1.2, jy + Math.sin(an) * 1.2); ctx.lineTo(jx - Math.cos(an) * 1.2, jy - Math.sin(an) * 1.2); } ctx.stroke();
-        const rq = (T * .7) % 1; ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,236,180,${(.6 * (1 - rq)).toFixed(3)})`; ctx.lineWidth = .45; ctx.beginPath(); ctx.arc(jx, jy, 1.75 + rq * 3.5, 0, Math.PI * 2); ctx.stroke();
+        const rq = (T * .7) % 1; ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,236,180,${(.6 * (1 - rq)).toFixed(3)})`; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(jx, jy, 1.75 + rq * 6, 0, Math.PI * 2); ctx.stroke();
         ctx.restore(); } } // (the Black Knuckles' own fist when it is the plain fist)
     ctx.restore();
   };
