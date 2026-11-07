@@ -185,10 +185,11 @@ function drawTornado(p, t) {
 function learnedCue(m) {
   P.specialT = P.specialMax = .5; P.specialHit = true; P.goldT = 0;
   sfx('learned');
-  fx.push({ kind: 'gild', x: P.x + P.facing * 6, y: P.y, z: P.z + 60, t: .5, max: .5, dir: P.facing, tone: gildTone() });
+  fx.push({ kind: 'gild', x: P.x + P.facing * 6, y: P.y, z: P.z + 60, t: .5, max: .5, dir: P.facing, tone: gildTone(m) });
 }
-// the flourish's colour: gold for his own weapons, violet and blood for a cursed one, white fire for one purified (cursedw.js)
-function gildTone() { const c = typeof save !== 'undefined' && save && save.cw && P && save.cw[P.w]; return c ? (c.pure ? 'pure' : 'cursed') : ''; }
+// the flourish's colour: gold for every move, but violet and blood for a cursed weapon's own moves, and white fire for
+// those same moves once the weapon is purified (cursedw.js)
+function gildTone(m) { if (!m || !m.cw) return ''; const c = typeof save !== 'undefined' && save && save.cw && P && save.cw[P.w]; return c && c.pure ? 'pure' : 'cursed'; }
 const GILD_TONE = { '': ['#FFE2A0', '#FFF4D0', '#FFFFFF', null], cursed: ['#B070E0', '#E83A5A', '#F0C8FF', '120,30,90'], pure: ['#FFFFFF', '#FFF8E0', '#FFFFFF', '255,244,200'] };
 function learnedTrail(dt) {
   P.goldT = (P.goldT || 0) - dt;
