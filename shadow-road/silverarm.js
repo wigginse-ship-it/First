@@ -125,7 +125,7 @@
       const col = SA.black() ? ['#FF3A5A', '#FF9AAA', '#B01030'] : ['#C8A0FF', '#F2E8FF', '#8A5AFF'];
       if (k < m.h[0]) { P.vx = f() * 330 * (1 - k / m.h[0] * .6); if (Math.random() < dt * 40) dust(P.x - f() * 10, P.y, 1); if (Math.random() < dt * 22 && ghosts.length < 18) ghosts.push({ x: P.x, y: P.y, z: P.z, facing: f(), pose: playerPose(), a: .45, dark: SA.black() ? 1 : 0 }); }
       else if (k < m.h[1]) P.vx = f() * 60;
-      once('e', m.h[0], () => { sfx('crit'); sfx('shoot', .7); flashT = Math.max(flashT, .05); shakeMag = Math.max(shakeMag, 7); if (P.z <= 2) P.vz = 220;
+      once('e', m.h[0], () => { sfx('crit'); sfx('shoot', .7); flashT = Math.max(flashT, .05); shakeMag = Math.max(shakeMag, 7);
         const fx0 = P.x + f() * 34, z0 = P.z + 40;
         for (let i = 0; i < 4; i++) fx.push({ kind: 'bolt', x: fx0 + rand(-14, 14), y: P.y, z: z0 + 120 + rand(0, 60), x2: fx0 + rand(-6, 6), y2: P.y, z2: z0 + rand(-6, 10), t: .22, max: .22, col: col[i % 2], seed: Math.random() * 99 });
         burst(fx0, P.y, z0 + 20, col, 18, 'spark', f(), true); fx.push({ kind: 'ring', x: fx0, y: P.y, z: z0 + 10, t: .2, max: .2, r: 46, col: col[1] }); });
@@ -282,9 +282,9 @@
     'arm:R'(pose, m, k) { pose.armShape = k > m.h[0] - .05 && k < m.h[1] + .1 ? 'paper' : undefined; pose.armBig = pose.armShape ? 1.6 : 1; },
     'arm:RH'(pose, m, k) { // Thunder Rise: crouched low and leaning in through the dash, the fist cocked down by the knee; then he comes up out of it, the arm swung straight up, and hangs a moment at the top
       const dash = 1 - sst(span(k, .26, m.h[0])), up = sst(span(k, m.h[0] - .06, m.h[0] + .08)), out = span(k, .82, 1);
-      pose.sink = 12 * dash; pose.crouch = dash > .3 ? 1 : 0; pose.lean = lerp(-.25, .5, dash) * (1 - out);
+      pose.sink = 6 * dash; pose.lean = lerp(-.15, .32, dash) * (1 - out); // (a slight crouch, straightening as the fist comes up: no hop)
       pose.arm = lerp(1.7, -1.5, up) * (1 - out) + .2 * out; pose.elbow = lerp(1.7, .15, up); pose.ext = .5 * up; pose.backArm = lerp(2.2, 1.4, up); pose.backElbow = 1.6;
-      pose.legs = dash > .2 ? { f: 18, b: -16, fk: 12, bk: 6, bh: .6 } : { f: 8, b: -10, fk: 2, bk: 4 }; pose.yaw = .25 * up;
+      pose.legs = { f: lerp(9, 15, dash), b: lerp(-10, -14, dash), fk: lerp(2, 8, dash), bk: lerp(4, 5, dash) }; pose.yaw = .25 * up;
       pose.armShape = 'rock'; pose.armBig = 1 + .9 * up * (1 - out); pose.armRot = -1.4 * up; pose.trail = 0; pose.streak = null; pose.flat = null; },
     'arm:HC'(pose, m, k) { const s = m.jk || 'rock', g = sst(span(k, 0, m.h[0])), r = 1 - span(k, .8, 1); pose.armShape = s; pose.armBig = (2.2 + .8 * g) * (.4 + .6 * r) + .0; pose.trail = 0; pose.streak = null; delete pose.sweep; pose.flat = null;
       if (s === 'rock') { pose.arm = lerp(-2.4, 1.3, g); pose.elbow = .2; pose.lean = lerp(-.2, .6, g); pose.sink = 8 * g; pose.legs = { f: 13, b: -12, fk: 9, bk: 3 }; }
