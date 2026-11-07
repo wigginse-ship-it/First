@@ -144,16 +144,32 @@
         dur: .72, h: [.55, .78], x0: 0, x1: 46, dmg: 16, kb: 120, launch: 300, arc: [-2.6, 1.4], hop: 380, lunge: 60, bounce: 1, smash: 1, shock: 90, power: 2, cx: 'eclipse' },
     },
   };
+  // THE PURIFIED MOVES: one more for each weapon, given when the smith burns the curse out of it (pt: only while purified).
+  // They are made of light where the cursed moves were made of ink: columns of dawn fall on the foes (sun), healing him a
+  // little for each one they catch, with the white-fire versions of the weapon's own effects
+  const PT = {
+    fists:  { HHL:   { name: 'Dawnstrike', seq: ['H', 'H', 'A'], how: 'Heavy, Heavy, Attack', desc: 'An uppercut that throws the morning up with it: a column of dawn falls on each of the three foes nearest in front of you, and each one it catches gives you back a little life.',
+                dur: .6, h: [.3, .55], x0: 0, x1: 46, dmg: 14, kb: 80, launch: 420, arc: [1.6, -1.2], lunge: 60, power: 2, style: 'thrust', cx: 'dawnfist' } },
+    hammer: { HHL:   { name: 'Matins', seq: ['H', 'H', 'A'], how: 'Heavy, Heavy, Attack', desc: 'The maul rung like a morning bell: three rings of light roll out across the street, and dawn falls on every foe they reach.',
+                dur: .82, h: [.5, .66], x0: 0, x1: 72, dmg: 20, kb: 200, launch: 220, arc: [-2.8, 1.5], hop: 140, lunge: 80, smash: 1, power: 2, depth: 26, cx: 'matins' } },
+    staff:  { LLLLH: { name: 'Halo of Morning', seq: ['A', 'A', 'A', 'A', 'H'], how: 'Four Attacks, then Heavy', desc: 'Whirl the staff into a halo: five suns circle you for a while, burning whatever comes near, and dawn falls on the foe nearest you.',
+                dur: .62, h: [.2, .8], x0: 0, x1: 72, dmg: 8, kb: 200, arc: [-P_, P_], around: 1, spin: 1, twirl: 1, power: 1, cx: 'halo' } },
+    sword:  { LLLLH: { name: 'Dawnbreak', seq: ['A', 'A', 'A', 'A', 'H'], how: 'Four Attacks, then Heavy', desc: 'Split the street with the morning: a seam of light runs away from you, and columns of dawn fall all along it.',
+                dur: .8, h: [.5, .66], x0: 0, x1: 96, dmg: 24, kb: 160, launch: 260, arc: [-2.9, 1.45], lunge: 100, power: 2, depth: 26, cx: 'dawnbreak' } },
+    rapier: { LLLLH: { name: 'Morning Star', seq: ['A', 'A', 'A', 'A', 'H'], how: 'Four Attacks, then Heavy', desc: 'A pirouette that sheds a ring of light, and a heartbeat later dawn falls on the four foes nearest you.',
+                dur: .6, h: [.25, .75], x0: 0, x1: 70, dmg: 4, kb: 90, arc: [-P_, 3 * P_], around: 1, multi: .08, spin: 2, power: 1, cx: 'mstar' } },
+  };
+  for (const id in PT) for (const k in PT[id]) { CT[id][k] = Object.assign(PT[id][k], { cl: LVMAX, pt: 1 }); }
   for (const id in CT) for (const k in CT[id]) Object.assign(CT[id][k], { key: k, cw: 1 });
-  const cmList = (id) => Object.values(CT[id] || {}).sort((a, b) => a.cl - b.cl);
-  const cmOK = (id, m) => { const c = cw(id); return !!c && !!m && lvOf(c) >= m.cl; };
+  const cmList = (id) => { const c = cw(id); return Object.values(CT[id] || {}).filter(m => !m.pt || (c && c.pure)).sort((a, b) => a.cl - b.cl || (a.pt ? 1 : 0) - (b.pt ? 1 : 0)); };
+  const cmOK = (id, m) => { const c = cw(id); return !!c && !!m && lvOf(c) >= m.cl && (!m.pt || c.pure); };
 
   // a combo that runs on into a cursed move
   { const _nm = nextMove; nextMove = function (key) {
     if (P && P.seq && held()) { const m = CT[P.w] && CT[P.w][P.seq + key]; if (m && cmOK(P.w, m)) return m; }
     return _nm(key); }; }
   const isFin = (m) => { if (!m || !m.key || !P) return false; if (m.cw) return true; if (!/^[LH]{3,}$/.test(m.key)) return false;
-    const t = WEAPONS[P.w] && WEAPONS[P.w].tree, c = CT[P.w] || {}; return !!t && !t[m.key + 'L'] && !t[m.key + 'H'] && !c[m.key + 'L'] && !c[m.key + 'H']; };
+    const t = WEAPONS[P.w] && WEAPONS[P.w].tree, c = CT[P.w] || {}; return !!t && !t[m.key + 'L'] && !t[m.key + 'H'] && !(c[m.key + 'L'] && cmOK(P.w, c[m.key + 'L'])) && !(c[m.key + 'H'] && cmOK(P.w, c[m.key + 'H'])); };
 
   // ---------------- the live state (not saved) ----------------
   let LS = fresh();
@@ -253,7 +269,7 @@
     const pure = c.pure; sfx(pure ? 'learned' : 'growl', .6); shakeMag = Math.max(shakeMag, 3);
     burst(P.x + P.facing * 14, P.y, 46, pure ? ['#FFF4D8', '#FFE08A', '#FFFFFF'] : ['#0A0608', '#4A2A5A', '#9A2038'], 14, 'spark', P.facing, true);
     floatText(P.x, P.y, 104, m.name.toUpperCase(), pure ? '#FFE8B0' : '#C8A0E8', 12);
-    if (!(m.lvl)) fx.push({ kind: 'gild', x: P.x + P.facing * 6, y: P.y, z: P.z + 60, t: .5, max: .5, dir: P.facing, tone: pure ? 'pure' : 'cursed' }); // (its own skill shows the flourish too, in its colours: moves.js drawGild)
+    if (!(m.lvl)) fx.push({ kind: 'gild', x: P.x + P.facing * 6, y: P.y, z: P.z + 60, t: .5, max: .5, dir: P.facing, tone: m.pt ? 'pure' : 'cursed' }); // (its own skill shows the flourish too, in its colours: moves.js drawGild)
   }
   { const _mx = moveExtras; moveExtras = function (m, k, dt, airborne) {
     if (m && m.cw && held() && P.cwCast === P.moveId) { try { castStep(m, k, dt, airborne); } catch (err) { console.error(err); } }
@@ -290,6 +306,19 @@
         while (P.cwBar < j) { P.cwBar++; const big = P.cwBar === 5;
           addFx({ k: 'fist', x: P.x + f * 26, y: lane(P.y + rand(-9, 9)), z: rand(28, 44), vx: f * (big ? 420 : 540), f, life: .5, d: D(big ? 12 : 5), big, hit: new Set() }); sfx(big ? 'whoosh' : 'swing', .5); }
         break; }
+      case 'dawnfist': if (fire(m.h[0])) { const tg = enemies.filter(e => !e.dead && (e.x - P.x) * f > -10 && Math.abs(e.x - P.x) < 300 && Math.abs(e.y - P.y) < 70).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x)).slice(0, 3);
+        if (!tg.length) addFx({ k: 'sun', e: null, x: P.x + f * 80, y: P.y, at: .25, life: .9, d: D(16), done: false });
+        tg.forEach((e, i) => addFx({ k: 'sun', e, x: e.x, y: e.y, at: .25 + i * .12, life: .9 + i * .12, d: D(16), done: false })); sfx('learned', .5); } break;
+      case 'matins': if (fire(m.h[0] + .02)) { const x = P.x + f * 50; for (let i = 0; i < 3; i++) addFx({ k: 'ring', x, y: P.y, at: i * .2, R: [120, 170, 220][i], life: .5 + i * .2, d: D(8), hit: new Set() });
+        const tg = enemies.filter(e => !e.dead && Math.hypot(e.x - x, (e.y - P.y) * 2.4) < 230).slice(0, 6); tg.forEach((e, i) => addFx({ k: 'sun', e, x: e.x, y: e.y, at: .35 + i * .08, life: 1 + i * .08, d: D(12), done: false }));
+        shakeMag = Math.max(shakeMag, 8); sfx('slam'); } break;
+      case 'halo': if (fire(m.h[0] + .1)) { for (let i = 0; i < 5; i++) addFx({ k: 'orb', a: i / 5 * TAU, life: 5, d: D(6), cd: new Map() });
+        const e = enemies.filter(o => !o.dead && Math.abs(o.x - P.x) < 320).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x))[0]; addFx({ k: 'sun', e: e || null, x: e ? e.x : P.x + f * 90, y: e ? e.y : P.y, at: .3, life: 1, d: D(18), done: false }); sfx('whoosh'); } break;
+      case 'dawnbreak': if (fire(m.h[0] + .02)) { addFx({ k: 'rift', x0: P.x + f * 44, y: P.y, len: 330, f, life: 1.75, grow: .42, d: D(13), tickD: D(2), tick: .3, hit: new Set(), seed: Math.random() * 1e4 });
+        for (let i = 0; i < 4; i++) addFx({ k: 'sun', e: null, x: P.x + f * (90 + i * 75), y: P.y, at: .25 + i * .1, life: .95 + i * .1, d: D(14), done: false }); shakeMag = Math.max(shakeMag, 9); sfx('slam'); } break;
+      case 'mstar': if (fire(.45)) { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + .15; addFx({ k: 'needle', x: P.x, y: P.y, z: 36, vx: Math.cos(a) * 430, vy: Math.sin(a) * 160, life: .5, d: D(5), hit: new Set() }); }
+        const tg = enemies.filter(e => !e.dead && Math.hypot(e.x - P.x, (e.y - P.y) * 2) < 320).sort((a, b) => Math.abs(a.x - P.x) - Math.abs(b.x - P.x)).slice(0, 4);
+        tg.forEach((e, i) => addFx({ k: 'sun', e, x: e.x, y: e.y, at: .45 + i * .1, life: 1.1 + i * .1, d: D(12), done: false })); sfx('hit-crystal', .8); } break;
       case 'eclipse': if (!airborne && k >= m.h[0] && P.cwFired !== P.moveId) { P.cwFired = P.moveId; addFx({ k: 'eclipse', x: P.x + f * 16, y: P.y, R: 112, life: 2.8, tick: .4, d: D(3) }); shakeMag = Math.max(shakeMag, 9); sfx('slam'); } break;
     }
   }
@@ -328,6 +357,11 @@
         case 'pillar': if (a > 0 && !f.done) { f.done = true; if (f.e && !f.e.dead) { f.x = f.e.x; f.y = f.e.y; } shakeMag = Math.max(shakeMag, 7); sfx('slam', .6);
           for (const e of enemies) if (!e.dead && Math.abs(e.x - f.x) < 26 + e.hw && Math.abs(e.y - f.y) < 22) hit(e, f.d, Math.sign(e.x - P.x) || 1, { power: 2, kb: 60, launch: 560 });
           burst(f.x, f.y, 10, f.pure ? ['#FFF4D8', '#FFE08A', '#FFFFFF'] : ['#0A0608', '#3A1A4A', '#C02040'], 18, 'spark', 0, true); }
+          else if (a < 0 && f.e && !f.e.dead) { f.x = f.e.x; f.y = f.e.y; } break;
+        case 'sun': if (a > 0 && !f.done) { f.done = true; if (f.e && !f.e.dead) { f.x = f.e.x; f.y = f.e.y; } shakeMag = Math.max(shakeMag, 4); sfx('learned', .35); let n = 0;
+          for (const e of enemies) if (!e.dead && Math.abs(e.x - f.x) < 30 + e.hw && Math.abs(e.y - f.y) < 24) { hit(e, f.d, Math.sign(e.x - P.x) || 1, { power: 2, kb: 40, launch: 440 }); n++; }
+          if (n && P.hp > 0) P.hp = Math.min(maxHp(), P.hp + n * Math.max(1, Math.round(maxHp() * .015)));
+          burst(f.x, f.y, 8, ['#FFFFFF', '#FFF4D8', '#FFE08A'], 16, 'spark', 0, true); }
           else if (a < 0 && f.e && !f.e.dead) { f.x = f.e.x; f.y = f.e.y; } break;
         case 'cut': if (a > 0 && !f.done) { f.done = true; const e = f.e; if (e && !e.dead) { hit(e, f.d, Math.sign(e.x - P.x) || P.facing, { power: 1, kb: 160, launch: 160 });
             for (const o of enemies) if (o !== e && !o.dead && Math.hypot(o.x - e.x, (o.y - e.y) * 2) < 54 + o.hw) hit(o, f.sp, Math.sign(o.x - e.x) || 1, { power: 0, kb: 120 }); }
@@ -540,6 +574,8 @@
           if (!L) { g.strokeStyle = f.pure ? 'rgba(200,150,60,.8)' : 'rgba(90,40,110,.9)'; g.lineWidth = 1.2; g.stroke(); }
           g.globalCompositeOperation = 'lighter'; g.strokeStyle = `rgba(${rgb},${.5 + .4 * Math.sin(t * 9 + f.seed)})`; g.lineWidth = 1.8; g.beginPath(); const r = mulberry(f.seed | 0); for (let i = 0; i <= 16; i++) { const q = i / 16; g.lineTo(f.x0 + (x1 - f.x0) * q, f.y + (r() - .5) * 5); } g.stroke();
           g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; } }
+      if (f.k === 'sun' && a < 0) { const q = sm(f.t / .2), r = 30 * q; g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,236,170,.85)'; g.lineWidth = 2; ell(f.x, f.y, r, r * .34); g.stroke();
+        g.fillStyle = `rgba(255,236,170,${.18 * q})`; ell(f.x, f.y, r, r * .34); g.fill(); g.restore(); }
       if (f.k === 'pillar' && a < 0) { const q = sm(f.t / .2), r = 26 * q; g.save(); g.globalAlpha = .9; g.strokeStyle = f.pure ? 'rgba(255,230,160,.9)' : `rgba(200,30,50,${.6 + .4 * Math.sin(t * 16)})`; g.lineWidth = 2; ell(f.x, f.y, r, r * .36); g.stroke();
         g.save(); g.translate(f.x, f.y); g.scale(1, .36); g.rotate(t * 2); g.beginPath(); for (let i = 0; i < 3; i++) { const an = i / 3 * TAU; g.moveTo(Math.cos(an) * r, Math.sin(an) * r); g.lineTo(Math.cos(an + 2.1) * r, Math.sin(an + 2.1) * r); } g.stroke(); g.restore(); g.restore(); }
       if (f.k === 'eclipse') { const R = f.R * sm(f.t / .25) * out; if (R > 1) { const q = g.createRadialGradient(f.x, f.y, 1, f.x, f.y, R); q.addColorStop(0, f.pure ? 'rgba(255,250,230,.95)' : 'rgba(0,0,0,.92)'); q.addColorStop(.82, f.pure ? 'rgba(255,230,170,.7)' : 'rgba(10,4,12,.85)'); q.addColorStop(1, 'rgba(0,0,0,0)');
@@ -574,6 +610,12 @@
           g.globalCompositeOperation = 'lighter'; g.strokeStyle = `rgba(${f.pure ? '255,230,160' : '170,90,230'},.85)`; g.lineWidth = 1.6; g.stroke();
           if (!L) for (let i = 1; i <= 3; i++) { g.globalAlpha = al * .18 * (4 - i); g.save(); g.translate(-i * 14, 0); g.beginPath(); g.moveTo(-6, -26); g.quadraticCurveTo(20, 0, -6, 26); g.stroke(); g.restore(); }
           g.restore(); }
+      if (f.k === 'sun' && a > 0) { const q = Math.min(1, a / .08), fade = Math.max(0, 1 - (a - .08) / Math.max(.1, f.life - (f.at || 0) - .08)), w = 30 * (.6 + .4 * fade), top = f.y - 320;
+        g.save(); g.globalCompositeOperation = 'lighter'; const lg = g.createLinearGradient(f.x - w, 0, f.x + w, 0); lg.addColorStop(0, 'rgba(255,220,140,0)'); lg.addColorStop(.35, `rgba(255,232,170,${.55 * fade})`); lg.addColorStop(.5, `rgba(255,255,245,${.95 * fade})`); lg.addColorStop(.65, `rgba(255,232,170,${.55 * fade})`); lg.addColorStop(1, 'rgba(255,220,140,0)');
+        g.fillStyle = lg; g.fillRect(f.x - w, top + (f.y - top) * (1 - q), w * 2, (f.y - top) * q);
+        if (!L) { const bl = g.createRadialGradient(f.x, f.y, 2, f.x, f.y, 64); bl.addColorStop(0, `rgba(255,250,225,${.8 * fade})`); bl.addColorStop(1, 'rgba(255,220,140,0)'); g.fillStyle = bl; g.save(); g.translate(f.x, f.y); g.scale(1, .4); g.beginPath(); g.arc(0, 0, 64, 0, TAU); g.fill(); g.restore();
+          g.strokeStyle = `rgba(255,255,255,${.7 * fade})`; g.lineWidth = 1; for (let i = 0; i < 4; i++) { const xx = f.x + (hsh(i + (f.x | 0)) - .5) * w * 1.4; g.beginPath(); g.moveTo(xx, top + 40 + i * 30); g.lineTo(xx, f.y - 8); g.stroke(); } }
+        g.restore(); }
       if (f.k === 'pillar' && a > 0) { const q = Math.min(1, a / .1), fade = Math.max(0, 1 - (a - .1) / (f.life - f.at - .1)), H = 150 * q, w = 26 * (1 - .4 * (1 - fade));
           g.save(); g.globalAlpha = fade; const lg = g.createLinearGradient(f.x - w, 0, f.x + w, 0); const c0 = f.pure ? 'rgba(255,240,200,' : 'rgba(10,4,14,'; lg.addColorStop(0, c0 + '0)'); lg.addColorStop(.25, c0 + '.95)'); lg.addColorStop(.75, c0 + '.95)'); lg.addColorStop(1, c0 + '0)');
           g.fillStyle = lg; g.fillRect(f.x - w, f.y - H, w * 2, H); g.globalCompositeOperation = 'lighter'; g.fillStyle = `rgba(${rgb},.55)`; g.fillRect(f.x - 2.5, f.y - H, 5, H); g.restore(); }
@@ -613,7 +655,7 @@
   const esc = (s) => String(s).replace(/</g, '&lt;');
   function cwMovesHtml(id, c) {
     const lv = lvOf(c);
-    return cmList(id).map(m => `<li class="${lv >= m.cl ? 'got' : m.cl === lv + 1 || m.cl === lv + 2 && m.cl > lv ? 'next' : ''}"><b style="color:${c.pure ? '#FFE8B0' : '#D8B0F0'}">${c.pure ? 'PURE' : 'CURSED'} LV${m.cl} · ${esc(m.name)}</b> ${typeof chips === 'function' ? chips(id, m) : ''}<br><em>${lv >= m.cl ? m.desc : 'Locked: ' + m.desc}</em></li>`).join('');
+    return cmList(id).map(m => `<li class="${lv >= m.cl ? 'got' : m.cl === lv + 1 || m.cl === lv + 2 && m.cl > lv ? 'next' : ''}"><b style="color:${m.pt ? '#FFF4D0' : c.pure ? '#FFE8B0' : '#D8B0F0'}">${m.pt ? 'PURIFIED' : (c.pure ? 'PURE' : 'CURSED') + ' LV' + m.cl} · ${esc(m.name)}</b> ${typeof chips === 'function' ? chips(id, m) : ''}<br><em>${lv >= m.cl ? m.desc : 'Locked: ' + m.desc}</em></li>`).join('');
   }
   const curseBox = (c) => c.pure ? `<div style="font-size:11.5px;line-height:1.35;color:#F8E8C0;background:rgba(80,60,20,.35);border:1px solid #B89048;border-radius:6px;padding:5px 7px;text-align:left;width:100%;box-sizing:border-box">Purified: no price, no gift. Its moves burn white.</div>`
     : `<div style="font-size:11.5px;line-height:1.35;color:#EAD8F0;background:rgba(30,8,24,.6);border:1px solid #7A2A4A;border-radius:6px;padding:5px 7px;text-align:left;width:100%;box-sizing:border-box"><span style="color:#E86A7A">✕ <b>${DB[c.db].name}</b></span>: ${DB[c.db].txt}.<br><span style="color:#C8A0F0">✦ <b>${BF[c.bf].name}</b></span>: ${BF[c.bf].txt}.</div>`;
@@ -635,7 +677,7 @@
       drawIcon(d.querySelector('canvas'), id, .78);
       const b = d.querySelector('button.buy:not([disabled])');
       if (b) b.addEventListener('click', () => { const k = top ? pureCost() : lvlCost(c.lvl); if (save.shards < k.s || save.sigils < k.g) return; save.shards -= k.s; save.sigils -= k.g;
-        if (top) { c.pure = true; persist(); sfx('learned'); flashT = Math.max(flashT, .1); renderForge(`THE CURSE IS DRAWN OUT: ${WEAPONS[id].name.toUpperCase()} COMES OUT OF THE FIRE BURNING WHITE · DAMAGE ×${CM(id).toFixed(2)}`); }
+        if (top) { c.pure = true; persist(); sfx('learned'); flashT = Math.max(flashT, .1); renderForge(`THE CURSE IS DRAWN OUT: ${WEAPONS[id].name.toUpperCase()} COMES OUT OF THE FIRE BURNING WHITE · DAMAGE ×${CM(id).toFixed(2)} · NEW PURIFIED MOVE: ${Object.values(PT[id] || {}).map(m => m.name.toUpperCase() + ' (' + m.how.toUpperCase() + ')').join(', ')}`); }
         else { c.lvl++; persist(); sfx('buy'); const m = cmList(id).find(q => q.cl === c.lvl); renderForge(`${WEAPONS[id].name} is fed: level ${c.lvl}, damage ×${CM(id).toFixed(2)}.${m ? ` New cursed move: ${m.name} (${m.how}).` : ''}${c.lvl >= LVMAX ? ' It can be purified now.' : ''}`); } });
       if (card) card.replaceWith(d); else wrap.insertBefore(d, wrap.firstChild);
     }
