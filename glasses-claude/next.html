@@ -123,6 +123,23 @@
   </div>
 </section>
 
+<!-- ARTIFACTS -->
+<section id="v-art" class="view">
+  <div class="top"><button class="small" id="a-back">← Menu</button><div class="title">Artifacts</div></div>
+  <div class="scroll" id="a-scroll">
+    <label for="a-text">What should Claude create? (a page, tool, game, checklist…)</label>
+    <textarea id="a-text" rows="3" placeholder="e.g. a big countdown timer with start and reset"></textarea>
+    <div class="row" style="margin-top:6px"><button id="a-mic" style="flex:0 0 70px">🎤</button><button class="primary" id="a-go">Create artifact</button></div>
+    <div class="hint" id="a-status" style="margin-top:6px"></div>
+    <div id="a-view" style="display:none;margin-top:8px">
+      <div class="q" id="a-vtitle"></div>
+      <iframe id="a-frame" sandbox="allow-scripts" style="width:100%;height:55vh;border:2px solid var(--line);border-radius:12px;background:#000"></iframe>
+      <div class="row" style="margin-top:6px"><button class="small" id="a-close">Close</button><button class="small" id="a-copy">Copy code</button><button class="small" id="a-dl">Download</button></div>
+    </div>
+    <div id="a-list" style="margin-top:10px"></div>
+  </div>
+</section>
+
 <!-- UPDATE APP -->
 <section id="v-dev" class="view">
   <div class="top"><button class="small" id="d-back">← Menu</button><div class="title">Update this app</div></div>
@@ -152,7 +169,7 @@
   <div id="l-form" style="display:none">
     <input id="l-a" autocomplete="off">
     <textarea id="l-b" rows="3" style="margin-top:6px"></textarea>
-    <div class="row" style="margin-top:6px"><button class="primary small" id="l-save">Save</button><button class="small" id="l-cancel">Cancel</button></div>
+    <div class="row" style="margin-top:6px"><button class="primary small" id="l-save">Save</button><button class="small" id="l-ai" style="display:none">✨ Draft</button><button class="small" id="l-cancel">Cancel</button></div>
   </div>
   <div class="hint" id="l-hint"></div>
   <div class="scroll" id="l-list"></div>
@@ -207,6 +224,8 @@
     <input id="s-lang" placeholder="en-US">
     <label for="s-size">Text size</label>
     <select id="s-size"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select>
+    <label for="s-share">Share history between chats in the same project</label>
+    <select id="s-share"><option value="0">Off</option><option value="3000">Small (about 750 words)</option><option value="6000">Medium (about 1,500 words)</option><option value="12000">Large (about 3,000 words)</option></select>
     <label for="s-sys">Instructions for Claude</label>
     <textarea id="s-sys" rows="4"></textarea>
     <label for="s-pin">Lock PIN (optional — asked each time the app opens or you tap Lock)</label>
@@ -238,7 +257,7 @@ const DEFAULT_SYS = "You are replying on the small heads-up display of smart gla
   "Lead with the answer; only elaborate if asked.";
 
 let settings = Object.assign({ model:"claude-sonnet-5-5", auto:"1", send:"1", rate:"1", voice:"", lang:"en-US",
-  size:"medium", sys:DEFAULT_SYS, pin:"" }, LS.get("gc.settings", {}));
+  size:"medium", sys:DEFAULT_SYS, pin:"", share:"6000" }, LS.get("gc.settings", {}));
 let chats = LS.get("gc.chats", []);            // [{id,title,updated,messages:[{role,content}]}]
 const DEFAULT_SKILLS = [
   { id:"s1", name:"Summarize this chat", prompt:"Summarize our conversation so far in three short bullets." },
@@ -247,7 +266,8 @@ const DEFAULT_SKILLS = [
   { id:"s4", name:"Draft a reply", prompt:"Draft a short, friendly reply I can send based on this conversation." },
 ];
 const DB = { projects: LS.get("gc.projects", []), saved: LS.get("gc.saved", []), skills: LS.get("gc.skills", DEFAULT_SKILLS),
-  memory: LS.get("gc.memory", []), activity: LS.get("gc.activity", []), active: LS.get("gc.active", null) };
+  memory: LS.get("gc.memory", []), activity: LS.get("gc.activity", []), active: LS.get("gc.active", null),
+  artifacts: LS.get("gc.artifacts", []) };
 const persist = k => LS.set("gc." + k, DB[k]);
 function logAct(type, text) { DB.activity.unshift({ t: Date.now(), type, text: String(text).slice(0, 100) }); DB.activity.length = Math.min(DB.activity.length, 200); persist("activity"); }
 const uid = () => String(Date.now()) + Math.random().toString(36).slice(2, 6);
@@ -255,6 +275,19 @@ function buildSystem() {
   let sys = settings.sys || DEFAULT_SYS;
   const proj = DB.projects.find(p => p.id === (current && current.projectId));
   if (proj) sys += "\n\nCurrent project: " + proj.name + (proj.instructions ? "\n" + proj.instructions : "");
+  const budget = parseInt(settings.share, 10) || 0;
+  if (proj && budget) {
+    const clip = (t, n) => t.length > n ? t.slice(0, n) + "…" : t;
+    let ctx = "", used = 0;
+    const others = chats.filter(c => c.projectId === proj.id && c !== current).sort((a, b) => b.updated - a.updated);
+    for (const c of others) {
+      let block = "- " + clip(c.title, 60) + "\n";
+      for (const m of c.messages) block += "  " + (m.role === "user" ? "User: " : "Assistant: ") + clip(m.content.replace(/\s+/g, " "), 280) + "\n";
+      if (used + block.length > budget) { if (!ctx) ctx = clip(block, budget); break; }
+      ctx += block; used += block.length;
+    }
+    if (ctx) sys += "\n\nEarlier conversations in this project, newest first (use them as context; you may refer to them):\n" + ctx;
+  }
   if (DB.memory.length) sys += "\n\nThings the user has asked you to remember:\n" + DB.memory.map(m => "- " + m.text).join("\n");
   return sys;
 }
@@ -274,7 +307,7 @@ const saveChats = () => {
 const apiKey = () => LS.get("gc.key", "");
 
 /* ---------- views ---------- */
-const NAV_VIEWS = ["menu", "history", "lib", "settings", "dev", "req"];
+const NAV_VIEWS = ["menu", "history", "lib", "settings", "dev", "req", "art"];
 const navView = () => { const v = document.querySelector(".view.on"); return v && NAV_VIEWS.includes(v.id.slice(2)) ? v : null; };
 function focusables(v) { return [...v.querySelectorAll("button, a[href], input:not([type=hidden]), select, textarea")].filter(el => !el.disabled && el.offsetParent !== null); }
 function stepFocus(d) {
@@ -540,6 +573,7 @@ const MENU = [
   ["⚡", "Skills", () => openLib("skills")],
   ["🧠", "Memory", () => openLib("memory")],
   ["📜", "Activity", () => openLib("activity")],
+  ["🧩", "Artifacts", () => { renderArt(); show("art"); }],
   ["📨", "Ask Claude Code", () => { show("req"); loadReqs(); }],
   ["🛠", "Update this app", () => { fillDev(); show("dev"); }],
   ["⚙", "Settings", () => { fillSettings(); show("settings"); }],
@@ -558,7 +592,7 @@ $("m-back").onclick = () => show("chat");
 const when = t => new Date(t).toLocaleString();
 const LIBS = {
   projects: { title: "Projects", add: ["Project name", "Instructions for Claude in this project"], hint: "Tap a project to make it active for new chats.",
-    items: () => DB.projects, label: x => x.name, sub: x => (DB.active === x.id ? "✔ active · " : "") + (x.instructions || "").slice(0, 60),
+    items: () => DB.projects, label: x => x.name, sub: x => (DB.active === x.id ? "✔ active · " : "") + chats.filter(c => c.projectId === x.id).length + " chats · " + (x.instructions || "").slice(0, 50),
     tap: x => { DB.active = DB.active === x.id ? null : x.id; LS.set("gc.active", DB.active); logAct("project", (DB.active ? "Active: " : "Cleared: ") + x.name); renderLib(); },
     create: (a, b) => { DB.projects.unshift({ id: uid(), name: a, instructions: b }); persist("projects"); logAct("project", "Created " + a); } },
   saved: { title: "Saved answers", add: null, hint: "Tap ★ in a chat to save an answer here.",
@@ -600,9 +634,32 @@ $("l-back").onclick = () => { renderMenu(); show("menu"); };
 $("l-add").onclick = () => {
   const c = LIBS[libKey]; $("l-form").style.display = "block";
   $("l-a").placeholder = c.add[0]; $("l-a").value = ""; $("l-b").value = "";
-  $("l-b").style.display = c.add[1] ? "" : "none"; $("l-b").placeholder = c.add[1] || ""; $("l-a").focus();
+  $("l-b").style.display = c.add[1] ? "" : "none"; $("l-b").placeholder = c.add[1] || "";
+  $("l-ai").style.display = libKey === "skills" ? "" : "none";
+  if (libKey === "skills") $("l-a").placeholder = "Skill name, or describe it and tap Draft";
+  $("l-a").focus();
 };
 $("l-cancel").onclick = () => { $("l-form").style.display = "none"; };
+$("l-ai").onclick = async () => {
+  const d = $("l-a").value.trim(), hint = $("l-hint");
+  if (!d) { hint.textContent = "Describe the skill first, then tap Draft"; return; }
+  if (!apiKey()) { hint.textContent = "Sign in first"; return; }
+  $("l-ai").disabled = true; hint.textContent = "Claude is drafting…";
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
+      headers: { "content-type":"application/json", "x-api-key": apiKey(), "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+      body: JSON.stringify({ model: settings.model, max_tokens: 500,
+        system: "You turn a short description into a reusable skill for a voice chat assistant on smart glasses. Reply with ONLY JSON: {\"name\":\"2-4 word title\",\"prompt\":\"a clear instruction to the assistant, written so it works in any chat, asking for brief answers suited to a small display\"}",
+        messages: [{ role:"user", content: d }] }) });
+    if (!r.ok) { let m = r.status; try { m = (await r.json()).error.message; } catch {} throw new Error(m); }
+    const j = await r.json(), raw = (j.content || []).map(x => x.text || "").join("");
+    let o; try { o = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)); } catch { throw new Error("Couldn't draft that — try rewording"); }
+    if (!o.name || !o.prompt) throw new Error("Couldn't draft that — try rewording");
+    $("l-a").value = String(o.name).slice(0, 60); $("l-b").value = String(o.prompt);
+    hint.textContent = "Drafted — review, then tap Save.";
+  } catch (e) { hint.textContent = "⚠ " + (e.message === "Failed to fetch" ? "Connection dropped. Try again." : e.message); }
+  $("l-ai").disabled = false;
+};
 $("l-save").onclick = () => {
   const c = LIBS[libKey], a = $("l-a").value.trim(), b = $("l-b").value.trim();
   if (!a) return; c.create(a, b); $("l-form").style.display = "none"; renderLib();
@@ -711,7 +768,7 @@ $("h-back").onclick = () => { renderMenu(); show("menu"); };
 $("h-new").onclick = newChat;
 
 /* ---------- settings ---------- */
-const FIELDS = { "s-model":"model","s-auto":"auto","s-send":"send","s-rate":"rate","s-voice":"voice","s-lang":"lang","s-size":"size","s-sys":"sys","s-pin":"pin" };
+const FIELDS = { "s-model":"model","s-auto":"auto","s-send":"send","s-rate":"rate","s-voice":"voice","s-lang":"lang","s-size":"size","s-share":"share","s-sys":"sys","s-pin":"pin" };
 function fillSettings() { loadVoices(); for (const [id, k] of Object.entries(FIELDS)) $(id).value = settings[k] ?? ""; }
 for (const [id, k] of Object.entries(FIELDS)) $(id).addEventListener("change", () => { settings[k] = $(id).value; saveSettings(); applySize(); });
 $("s-back").onclick = () => show("chat");
@@ -754,10 +811,21 @@ async function buildPreview() {
     dstat("Asking Claude to make the change…");
     const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
       headers: { "content-type":"application/json", "x-api-key": apiKey(), "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
-      body: JSON.stringify({ model: settings.model, max_tokens: 8000, system: EDIT_SYS,
+      body: JSON.stringify({ model: settings.model, max_tokens: 8000, stream: true, system: EDIT_SYS,
         messages: [{ role:"user", content: "<file>\n" + cur.text + "\n</file>\n\nRequested change: " + req }] }) });
     if (!r.ok) { let m = r.status; try { m = (await r.json()).error.message; } catch {} throw new Error(m); }
-    const raw = (await r.json()).content.map(c => c.text || "").join("");
+    let raw = ""; const rd = r.body.getReader(), dc = new TextDecoder(); let bf = "";
+    for (;;) {
+      const { done, value } = await rd.read(); if (done) break;
+      bf += dc.decode(value, { stream: true });
+      let k; while ((k = bf.indexOf("\n\n")) >= 0) {
+        const ev = bf.slice(0, k); bf = bf.slice(k + 2);
+        const dl = ev.split("\n").find(l => l.startsWith("data:")); if (!dl) continue;
+        let j; try { j = JSON.parse(dl.slice(5)); } catch { continue; }
+        if (j.type === "content_block_delta" && j.delta.type === "text_delta") { raw += j.delta.text; dstat("Claude is writing… " + raw.length + " characters"); }
+        else if (j.type === "error") throw new Error(j.error.message);
+      }
+    }
     let out; try { out = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)); } catch { throw new Error("Claude's reply wasn't usable — try rewording"); }
     if (!Array.isArray(out.edits) || !out.edits.length) throw new Error("No changes were proposed");
     let t = cur.text;
@@ -773,7 +841,7 @@ async function buildPreview() {
     LS.set("gc.cand", { text: t, baseSha: cur.sha, summary: out.summary || req, request: req, at: Date.now() });
     logAct("update", "Preview built: " + (out.summary || req));
     dstat("Preview ready (GitHub needs about a minute to publish it)."); renderCand();
-  } catch (e) { dstat("⚠ " + e.message); }
+  } catch (e) { dstat("⚠ " + (e.message === "Failed to fetch" ? "Connection dropped (network or the glasses browser). Try again, ideally on Wi-Fi." : e.message)); }
   $("d-build").disabled = false;
 }
 function renderCand() {
@@ -866,6 +934,83 @@ $("r-mic").onclick = () => {
   r.onresult = e => { $("r-text").value = (($("r-text").value + " ") + e.results[0][0].transcript).trim(); };
   r.onerror = e => rstat("Mic: " + e.error); r.onend = () => { $("r-mic").textContent = "🎤"; };
   try { r.start(); $("r-mic").textContent = "…"; } catch (e) { rstat("Mic: " + e.message); }
+};
+
+/* ---------- artifacts ---------- */
+const ART_SYS = "You create small self-contained web artifacts: a single HTML file with inline CSS and JS, no external scripts, no network requests, no external images. " +
+  "Design for smart-glasses displays: pure black background (#000), bright high-contrast text at least 24px, buttons at least 56px tall with generous spacing, no hover-only interactions, no tiny controls, minimal scrolling, and include a viewport meta tag so it fits a small screen. " +
+  "Reply with ONLY the complete HTML document starting with <!doctype html>, no markdown fences, no commentary.";
+const astat = t => { $("a-status").textContent = t; };
+let artCur = null;
+function viewArt(a) {
+  artCur = a; $("a-view").style.display = "block"; $("a-vtitle").textContent = a.title;
+  $("a-frame").srcdoc = a.html; $("a-view").scrollIntoView({ block: "start" });
+}
+function renderArt() {
+  const l = $("a-list"); l.innerHTML = "";
+  if (!DB.artifacts.length) { l.innerHTML = '<div class="hint">No artifacts yet.</div>'; return; }
+  DB.artifacts.forEach(a => {
+    const d = document.createElement("div"); d.className = "item";
+    const o = document.createElement("button"); o.className = "open";
+    o.innerHTML = `<span>${esc(a.title)}</span><small>${esc(when(a.t))}</small>`;
+    o.onclick = () => viewArt(a);
+    const del = document.createElement("button"); del.textContent = "🗑"; del.setAttribute("aria-label", "Delete");
+    del.onclick = () => { if (del.dataset.arm) { DB.artifacts = DB.artifacts.filter(x => x !== a); persist("artifacts");
+        if (artCur === a) { $("a-close").click(); } renderArt(); }
+      else { del.dataset.arm = 1; del.textContent = "Sure?"; setTimeout(() => { del.dataset.arm = ""; del.textContent = "🗑"; }, 3000); } };
+    d.append(o, del); l.append(d);
+  });
+}
+async function createArt() {
+  const t = $("a-text").value.trim(); if (!t) return astat("Say what to make first");
+  if (!apiKey()) return astat("Sign in first");
+  $("a-go").disabled = true; astat("Claude is building…");
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
+      headers: { "content-type":"application/json", "x-api-key": apiKey(), "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+      body: JSON.stringify({ model: settings.model, max_tokens: 8000, stream: true, system: ART_SYS, messages: [{ role:"user", content: t }] }) });
+    if (!r.ok) { let m = r.status; try { m = (await r.json()).error.message; } catch {} throw new Error(m); }
+    let raw = ""; const rd = r.body.getReader(), dc = new TextDecoder(); let bf = "";
+    for (;;) {
+      const { done, value } = await rd.read(); if (done) break;
+      bf += dc.decode(value, { stream: true });
+      let k; while ((k = bf.indexOf("\n\n")) >= 0) {
+        const ev = bf.slice(0, k); bf = bf.slice(k + 2);
+        const dl = ev.split("\n").find(l => l.startsWith("data:")); if (!dl) continue;
+        let j; try { j = JSON.parse(dl.slice(5)); } catch { continue; }
+        if (j.type === "content_block_delta" && j.delta.type === "text_delta") { raw += j.delta.text; astat("Claude is writing… " + raw.length + " characters"); }
+        else if (j.type === "error") throw new Error(j.error.message);
+      }
+    }
+    let html = raw.replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+    const s = html.search(/<!doctype html|<html/i); if (s > 0) html = html.slice(s);
+    if (!/<html|<body|<!doctype/i.test(html)) throw new Error("Claude's reply wasn't usable — try rewording");
+    const a = { id: uid(), title: t.slice(0, 50), html, t: Date.now() };
+    DB.artifacts.unshift(a);
+    if (!persist("artifacts")) astat("⚠ Storage full — artifact shown but not saved"); else astat("Done.");
+    logAct("artifact", t); $("a-text").value = ""; renderArt(); viewArt(a);
+  } catch (e) { astat("⚠ " + (e.message === "Failed to fetch" ? "Connection dropped. Try again, ideally on Wi-Fi." : e.message)); }
+  $("a-go").disabled = false;
+}
+$("a-go").onclick = createArt;
+$("a-back").onclick = () => { renderMenu(); show("menu"); };
+$("a-close").onclick = () => { artCur = null; $("a-frame").srcdoc = ""; $("a-view").style.display = "none"; };
+$("a-copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(artCur.html); astat("Code copied"); } catch { astat("⚠ Clipboard blocked — use Download"); }
+};
+$("a-dl").onclick = () => {
+  if (!artCur) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([artCur.html], { type: "text/html" }));
+  a.download = (artCur.title.replace(/[^\w]+/g, "-").replace(/^-|-$/g, "") || "artifact") + ".html"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+$("a-mic").onclick = () => {
+  if (!SR) return astat("Voice isn't available here — tap the box and use the keyboard's mic");
+  const r = new SR(); r.lang = settings.lang || "en-US"; r.interimResults = false;
+  r.onresult = e => { $("a-text").value = (($("a-text").value + " ") + e.results[0][0].transcript).trim(); };
+  r.onerror = e => astat("Mic: " + e.error); r.onend = () => { $("a-mic").textContent = "🎤"; };
+  try { r.start(); $("a-mic").textContent = "…"; } catch (e) { astat("Mic: " + e.message); }
 };
 
 /* ---------- boot ---------- */
