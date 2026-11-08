@@ -482,6 +482,7 @@
   function take(id, lvl, db, bf) {
     const c = setCw(id, lvl || LV0, db, bf, false);
     save.weapon = id; if (P) { P.w = id; P.seq = ''; }
+    if (NG() && window.CURSE) CURSE.feed(3, 'a cursed weapon taken up'); // (taking it up at all lets the black into the world)
     persist();
     sfx('weapon'); sfx('growl'); flashT = .18; zoom = .06; slowmo = .6; shakeMag = Math.max(shakeMag, 8);
     if (P) { burst(P.x, P.y, 50, ['#0A0608', '#3A1A4A', '#9A2038', '#C8A0E8'], 36, 'spark', 0, true); fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .6, max: .6, r: 110, col: '#5A1A3A', flat: 1 });

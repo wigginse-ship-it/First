@@ -40,7 +40,7 @@
   const HIGH_END = 50; // reaching the last world at or past this, the Circle has taken it
   const RESIDUE = .25, HORN_KEEP = .6;
   const WT = { // what feeds it (+) and what eases it (-)
-    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCap: 2.4, corpseCapCursed: 6.6, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, groupPer: .6, groupMax: 4, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
+    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCursed: .4, corpseCap: 2.4, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, groupPer: .6, groupMax: 4, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
     pearlKill: -.5, curseMyDmg: .45, curseFoeDmg: .3, roadAt: 50, blackPearlDmg: 1.35, cwCursedKill: .4, cwCursedBoss: 1.5, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
@@ -275,18 +275,21 @@
     if (!P.move || (P.state !== 'atk' && P.state !== 'air')) return;
     const m = P.move, k = P.t / (m.dur || 1); if (!m.h || k < m.h[0] || k > m.h[1]) return;
     for (const co of corpses) {
-      if (co.boss || co.cHitMove === P.moveId || (co.cHits || 0) >= 3) continue;
+      if (co.boss || co.cHitMove === P.moveId) continue; // (how many times a body may be struck is corpseStruck's to say: a cursed weapon's blows have no limit)
       if (!inReach(m, co.x, co.y, 0, co.hw || 14, 24)) continue;
       co.cHitMove = P.moveId; corpseStruck(co, P.facing);
     }
   }
   // one corpse struck (by a blow, or by something his weapon sent out: the silver arm's flying fist, its hands, its tears):
-  // the cruelty, capped per world (higher for a cursed weapon; a purified one never), and the body flinches
+  // the cruelty, capped per world (a cursed weapon's has no cap at all, however often and however many; a purified one is
+  // never cruel), and the body flinches
   function corpseStruck(co, dir) {
-    if (!NG() || !co || co.boss || (co.cHits || 0) >= 3) return false; co.cHits = (co.cHits || 0) + 1;
-    { const cw = save.cw && save.cw[P.w], cap = cw && !cw.pure ? WT.corpseCapCursed : WT.corpseCap; // (a purified blade is never cruel; the rest are capped per world, a cursed one higher)
+    const cw = save.cw && save.cw[P.w], cursedHand = !!(cw && !cw.pure);
+    if (!NG() || !co || co.boss || (!cursedHand && (co.cHits || 0) >= 3)) return false; co.cHits = (co.cHits || 0) + 1;
+    { const cap = cursedHand ? Infinity : WT.corpseCap;
       L.corpseCap = cap;
       if (cw && cw.pure) tickNote('corpse', 'corpse struck · purified: no penalty');
+      else if (cursedHand) { L.corpseFed = (L.corpseFed || 0) + feed(WT.corpseCursed, 'cruelty: a corpse struck'); } // (each blow a little less than a plain weapon's, but never capped)
       else if ((L.corpseFed || 0) < cap - 1e-6) { L.corpseFed = (L.corpseFed || 0) + feed(Math.min(WT.corpse, cap - (L.corpseFed || 0)), 'cruelty: a corpse struck'); if (L.corpseFed >= cap - 1e-6) tickNote('corpse', `corpse cap reached (${cap}) · no more penalty`); }
       else tickNote('corpse', `corpse struck · capped (${cap}): no penalty`); }
     burst(co.x, co.y, 8, ['#2A2028', '#5A4A50', '#8A2A30'], 7, 'flesh', dir || P.facing); sfx('hit-flesh', .2); co.sqx = 1.15; co.sqy = .9;
@@ -2051,8 +2054,8 @@
   // a few words on what each reason is (shown after it in the ticker)
   const GLOSS = {
     'cruelty: overkill': 'a blow far past what it needed', 'massacre': '5 kills in quick succession', 'a kill from behind': 'a foe slain from its back',
-    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a perfect blow through': 'more for each foe past the first', 'a full draw that hit nothing': 'the arrow found no one', 'a cursed blade takes a cursed foe': 'like takes like',
-    'a kill by a hazard': 'a foe killed by the world, not you', 'standing on the Black Road': 'step off it', 'cursed loot taken': 'black shards picked up',
+    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world, except with a cursed weapon)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a perfect blow through': 'more for each foe past the first', 'a full draw that hit nothing': 'the arrow found no one', 'a cursed blade takes a cursed foe': 'like takes like',
+    'a kill by a hazard': 'a foe killed by the world, not you', 'standing on the Black Road': 'step off it', 'cursed loot taken': 'black shards picked up', 'a cursed weapon taken up': 'picked up a cursed weapon',
     'a death': 'more each death this cycle', 'a death to a corrupted lord': 'fell to a cursed boss', 'the cursed weapon feeds': 'its hunger drawback',
     'the curse took his shadow': 'a cursed foe caught you', 'his shadow kept the curse': 'the shade was not broken in time',
     'the curse passes on': 'a carrier passed it on', 'the passing curse broken': 'carrier slain before it passed', 'the passing curse burnt out': 'carrier ran out of time',
@@ -2064,7 +2067,7 @@
     'a world walked without falling': 'cleared a world without dying', 'the Horn of Lorraine blown': 'the Horn', 'the Pattern of his own walked': 'the Pattern',
     'the Abyss taken into the Pearl': 'the Pearl drinks the Abyss',
   };
-  const gloss = (b) => b === 'cruelty: a corpse struck' && L.corpseCap ? `hit a body · ${(L.corpseFed || 0).toFixed(1)} of ${L.corpseCap} cap this stage` : GLOSS[b] || GLOSS[b.replace(/ \(.*\)$/, '')] || (b.startsWith('a perfect blow through') ? GLOSS['a perfect blow through'] : '');
+  const gloss = (b) => b === 'cruelty: a corpse struck' && L.corpseCap ? (L.corpseCap === Infinity ? `hit a body · ${(L.corpseFed || 0).toFixed(1)} this stage · cursed weapon: no cap` : `hit a body · ${(L.corpseFed || 0).toFixed(1)} of ${L.corpseCap} cap this stage`) : GLOSS[b] || GLOSS[b.replace(/ \(.*\)$/, '')] || (b.startsWith('a perfect blow through') ? GLOSS['a perfect blow through'] : '');
   let meterEl = null, hist = [];
   function meter() {
     const show = SHOW_METER && NG() && !!save.w8relic && (mode === 'play' || mode === 'pause'); // (only once Lorraine is beaten: the Horn in hand)
