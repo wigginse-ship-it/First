@@ -171,7 +171,7 @@
     // (hw: a booth's half-width in the stall's units, a far-wall bay's to the piers between them; mv: the keeper's frame, the stall's scaled to VFIG about the feet)
     for (const sl of Object.values(slots)) { const p = sl.m.transformPoint(new DOMPoint(0, 22)); sl.vx = p.x; sl.vy = p.y;
       sl.hw = sl.kind === 'back' ? sl.cell / 2 / sl.s - 6 : sl.sideHw; sl.mv = sl.m.translate(0, 22).scale(VFIG, VFIG).translate(0, -22);
-      sl.tx = sl.vx + (sl.dir ? sl.dir * 16 * sl.s : 0); sl.ty = sl.vy + (sl.dir ? 14 : 30) * sl.s;
+      sl.tx = sl.vx + (sl.dir ? sl.dir * 40 * sl.s : 0); sl.ty = sl.vy + (sl.dir ? 30 : 30) * sl.s;
       // (dv: a booth's depth, out of its wall, in the stall's own frame: a side wall's booth stands well out into the hall, square
       // to its wall (straight across the view, a little down); a far-wall booth only a little, toward us and away from the middle.
       // mf: the booth's front (its posts, awning, lantern and sign); mb: its back, set into the wall behind)
@@ -1501,7 +1501,7 @@
   // on the page, its far side runs square out of the wall, and its awning reaches out over the floor from the stone above it.
   // We see a block's top, its side toward the near end and its face to the hall. What stands nearer us than the keeper (the
   // near post, the awning's top, hem and cheek, the lantern and the sign, and whatever stands before them) is in the front layer.
-  const SQ = .12, SB = 15, SF = 46, SA0 = -206, SA1 = -182, SVAL = 16, SLH = -152, SCL = -112;
+  const SQ = .12, SB = 15, SF = 74, SA0 = -206, SA1 = -182, SVAL = 16, SLH = -152, SCL = -112;
   let P3 = (u, h, w) => [u, h + w];
   // (uo: the booth itself stands a little toward the near end of its bay, its keeper toward its middle; the keeper's own
   // things, before and behind them, are placed from where the keeper stands, unshifted)
@@ -1618,7 +1618,7 @@
   const FRONT3 = {
     fiona() { fionaTable(); },
     random() { // his gaming table, between him and the hall: green baize, a hand of cards, the dice and their cup, stacked coin
-      const uc = -47, wc = 29, U0 = uc - 14, U1 = uc + 14, W0 = wc - 11, W1 = wc + 11, top = -54, th = 5, wood = '#5A3220';
+      const uc = -47, wc = 54, U0 = uc - 14, U1 = uc + 14, W0 = wc - 11, W1 = wc + 11, top = -54, th = 5, wood = '#5A3220';
       { const p = P3(uc, 0, wc + 6); ctx.save(); ctx.translate(p[0], p[1]); ctx.scale(1, .3); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 34); g.addColorStop(0, 'rgba(6,3,3,.5)'); g.addColorStop(1, 'rgba(6,3,3,0)'); ctx.fillStyle = g; ctx.fillRect(-40, -40, 80, 80); ctx.restore(); }
       for (const [lu, lw] of [[U1 - 4, W0 + 1], [U0 + 1, W0 + 1], [U1 - 4, W1 - 4], [U0 + 1, W1 - 4]]) box3(lu, lu + 3, top + th, 0, lw, lw + 3, '#2E1C12', false);
       // (its apron under the top, and the top itself, its edge in gold)
@@ -1675,7 +1675,7 @@
     { const p = P3(uc + .5, top - 2.6, wc + 6); ctx.fillStyle = '#D8C080'; circle(p[0], p[1], .9); ctx.fill(); }
     }
   const BEHIND3 = { fiona() { cursedBlade(FIONA_TABLE.bu, FIONA_TABLE.bw); } };
-  const FIONA_TABLE = { u: -30, w: 40, candle: [-5, -6], bu: 20, bw: 16 };
+  const FIONA_TABLE = { u: -30, w: 64, candle: [-5, -6], bu: 20, bw: 16 };
   function sideStall(sl, id) {
     const hw = sl.hw, U = side3(sl, 1), uo = SUO[sl.id] || 0;
     DV = sl.dv;
