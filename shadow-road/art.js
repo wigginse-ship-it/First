@@ -933,6 +933,7 @@ function drawHumanoid(look, pose) {
   const arm = (pose.arm ?? 1.1) - sw * (pose.run ? .8 : .3) * armSw;
   const ARX = 19 * (AS - 1); // longer arms carry the weapon further out: its trails follow
   if (pose.trail) drawTrail(0, SHO + 2, ARX ? Object.assign({}, pose, { trail: pose.trail + ARX }) : pose);
+  if (pose.trail && pose.trailBack) drawTrail(0, SHO + 2, { trail: 26, trailFrom: pose.trailFrom + Math.PI, arm: arm + Math.PI, trailCol: pose.trailCol, trailW: (pose.trailW || 6) * .6 }); // a staff's far end, whipping round on the other side of his shoulder
   if (pose.flat) drawFlatTrail(1, SHO + 2, ARX ? Object.assign({}, pose.flat, { r: pose.flat.r + ARX }) : pose.flat);
   ctx.save(); ctx.translate(PX(1, SG * SWL), SHO + 2);
   { const ca = Math.cos(arm) * ASX, sa = Math.sin(arm); ctx.rotate(Math.atan2(sa, ca)); ctx.scale(Math.hypot(ca, sa), 1); } // turned, the arm only shortens along its length: it never gets thinner
@@ -949,6 +950,7 @@ function drawHumanoid(look, pose) {
   pose.glove = look.glove;
   if (pose.streak) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = pose.streak.a; ctx.strokeStyle = pose.streak.col; ctx.lineWidth = 2; for (const dy of [-4, 0, 4]) { ctx.beginPath(); ctx.moveTo(reach + 6, dy); ctx.lineTo(reach + pose.streak.len, dy * .4); ctx.stroke(); } ctx.restore(); if (typeof FXEL !== 'undefined') FXEL.streak(reach + 6, reach + pose.streak.len, pose.streak); }
   if (!pose.elbow) ctx.translate(reach - 15, 0);
+  if (pose.whirl) drawWhirl(17, 0, pose.whirl, pose.grip || 0); // a staff whirled through the fingers: both ends draw a pinwheel round the hand
   if (pose.grip) { ctx.translate(17, 0); ctx.rotate(pose.grip); ctx.translate(-17, 0); } // the wrist turns the weapon to rest it
   { const kind = pose.weapon || look.weapon, held = ['hammer', 'staff', 'sword', 'grayblade', 'rapier', 'shortbow'].includes(kind) && !pose.noHand; // (the weapons whose last stroke is the hand)
     if (held) { GRIP.cx = gripCX(kind); GRIP.rot = kind === 'shortbow' ? Math.PI / 2 : 0; gripBack(look.glove || '#FFF1E0'); GRIP.back = true; } // the palm, under the handle
@@ -982,6 +984,10 @@ function brushArc(path, col, w, a) {
 function onPage(f) { if (inkG && (ctx === inkG || ctx === heroG)) onMain(f); else f(); }
 function drawFlatTrail(cx, cy, f) { // the trail of a horizontal swing: a flattened arc around the waist
   onPage(() => brushArc((o, h) => { const r = f.r + o; ctx.beginPath(); ctx.ellipse(cx, cy + 6, Math.max(1, r), Math.max(1, r * .3), 0, f.rev ? Math.PI * (1 - f.k * (.85 + h * .15)) : 0, f.rev ? Math.PI : Math.PI * f.k * (.85 + h * .15), false); }, f.col, f.w, .8));
+}
+function drawWhirl(cx, cy, w, g) { // the pinwheel of a twirled staff: the last stretch of each end's circle round the hand
+  const lo = g - Math.abs(w.span), hi = g;
+  onPage(() => { for (const o of [0, Math.PI]) brushArc((d, h) => { ctx.beginPath(); ctx.arc(cx, cy, Math.max(1, (w.r || 42) + d - 3), lo + o + (hi - lo) * h * .3, hi + o); }, w.col, (w.w || 5) * 1.5, .8); });
 }
 function drawTrail(cx, cy, pose) {
   const a0 = pose.trailFrom, a1 = pose.arm, r = pose.trail;
