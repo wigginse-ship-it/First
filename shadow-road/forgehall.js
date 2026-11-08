@@ -123,19 +123,22 @@
     const footY = (x) => x < bx ? yb + (bx - x) * k : x > VW - bx ? yb + (x - (VW - bx)) * k : yb;
     const slots = {};
     // (the far wall is all stalls now: four equal bays across it; the road is reached by the near side of the hall, off the bottom of the view)
-    const BW = (VW - 2 * bx) / 4;
-    for (const [id, i] of [['BL2', 0], ['BL1', 1], ['BR1', 2], ['BR2', 3]]) { const x = bx + (i + .5) * BW, s = sAt(yb);
-      slots[id] = { id, kind: 'back', dir: 0, wx: x, wy: yb, s, sg: 1, m: new DOMMatrix([s, 0, 0, s, x, yb]), cell: BW }; }
-    for (const [id, t, dir] of [['SL1', .2, 1], ['SL2', .7, 1], ['SR1', .2, -1], ['SR2', .7, -1]]) {
+    // (the bays aren't equal: each is as wide as its trade needs, Gérard's whole smithy the widest, Dworkin's desk the narrowest)
+    const BAYS = [['BL2', .8], ['BL1', 1.6], ['BR1', 1.05], ['BR2', .95]], BWT = BAYS.reduce((a, b) => a + b[1], 0), WALL = VW - 2 * bx, piers = [];
+    let at = bx;
+    for (const [id, wgt] of BAYS) { const cell = WALL * wgt / BWT, x = at + cell / 2, s = sAt(yb);
+      slots[id] = { id, kind: 'back', dir: 0, wx: x, wy: yb, s, sg: 1, m: new DOMMatrix([s, 0, 0, s, x, yb]), cell }; at += cell; piers.push(at); }
+    piers.pop();
+    for (const [id, t, dir, hw] of [['SL1', .2, 1, 66], ['SL2', .7, 1, 60], ['SR1', .26, -1, 80], ['SR2', .76, -1, 48]]) {
       const x = dir > 0 ? bx * (1 - t) : VW - bx * (1 - t), y = yb + t * drop, s = sAt(y) * .96, a = s * .62;
-      slots[id] = { id, kind: dir > 0 ? 'left' : 'right', dir, wx: x, wy: y, s, sg: dir, m: new DOMMatrix([dir * a, -k * a, 0, s, x, y]) }; }
+      slots[id] = { id, kind: dir > 0 ? 'left' : 'right', dir, wx: x, wy: y, s, sg: dir, m: new DOMMatrix([dir * a, -k * a, 0, s, x, y]), sideHw: hw }; }
     // (hw: a booth's half-width in the stall's units, a far-wall bay's to the piers between them; mv: the keeper's frame, the stall's scaled to VFIG about the feet)
     for (const sl of Object.values(slots)) { const p = sl.m.transformPoint(new DOMPoint(0, 22)); sl.vx = p.x; sl.vy = p.y;
-      sl.hw = sl.kind === 'back' ? sl.cell / 2 / sl.s - 6 : 66; sl.mv = sl.m.translate(0, 22).scale(VFIG, VFIG).translate(0, -22);
+      sl.hw = sl.kind === 'back' ? sl.cell / 2 / sl.s - 6 : sl.sideHw; sl.mv = sl.m.translate(0, 22).scale(VFIG, VFIG).translate(0, -22);
       sl.tx = sl.vx + (sl.dir ? sl.dir * 16 * sl.s : 0); sl.ty = sl.vy + (sl.dir ? 14 : 30) * sl.s; }
     const door = { x: cx, y: bot, s: sAt(bot), tx: cx, ty: bot - 12 };
     door.m = new DOMMatrix([door.s, 0, 0, door.s, cx, bot]);
-    return (GEO = { key, cx, yb, bx, drop, k, bot, sAt, footY, slots, door, pat: { x: cx, y: yb + (bot - yb) * .58 } });
+    return (GEO = { key, cx, yb, bx, drop, k, bot, sAt, footY, slots, door, piers, pat: { x: cx, y: yb + (bot - yb) * .58 } });
   }
 
   // ======================================================================================================
@@ -454,7 +457,7 @@
     // corner piers where the walls meet
     for (const x of [bx, VW - bx]) { const pg = ctx.createLinearGradient(x - 7, 0, x + 7, 0); pg.addColorStop(0, '#2A1E1A'); pg.addColorStop(.6, '#5A463A'); pg.addColorStop(1, '#3A2C24'); ctx.fillStyle = pg; ctx.fillRect(x - 7, top, 14, yb - top); }
     // the road's arch, and the stalls (the far wall's first, then the side walls')
-    for (const x of [1, 2, 3].map(i => bx + i * (VW - 2 * bx) / 4)) { const s = G.sAt(yb); ctx.save(); ctx.translate(x, yb); ctx.scale(s, s); pillar(0, 0); ctx.restore(); }
+    for (const x of G.piers) { const s = G.sAt(yb); ctx.save(); ctx.translate(x, yb); ctx.scale(s, s); pillar(0, 0); ctx.restore(); }
     const order = ['BL2', 'BL1', 'BR1', 'BR2', 'SL1', 'SR1', 'SL2', 'SR2'];
     for (const id of order) { const sl = G.slots[id], v = H.cast.find(q => q.slot === id);
       ctx.save(); if (sl.kind === 'back') { ctx.beginPath(); ctx.rect(sl.wx - sl.cell / 2, top, sl.cell, yb - top + 2); ctx.clip(); }
