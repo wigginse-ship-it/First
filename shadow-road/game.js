@@ -516,11 +516,12 @@ function dropLoot(e) {
   const [a, b] = e.def.shards || [30, 40];
   // richer pickings deeper in: each world drops more, and an armored elite drops a lot more
   maybeDropPower(e); maybeDropArrow(e); maybeDropGear(e);
-  if (e.champ) { loot.push(makeLoot('sigil', e.x, e.y, 1)); loot.push(makeLoot('heal', e.x, e.y, 30)); } // a champion always pays
+  if (e.champ) { if (Math.random() < .5) loot.push(makeLoot('sigil', e.x, e.y, 1)); loot.push(makeLoot('heal', e.x, e.y, 30)); } // a champion pays: always in life, sometimes in ink
   const n = Math.round(rand(a, b) * (pw('fortune') ? 2 : 1) * (1 + gearStat('shards')) * (1 + .2 * save.cycle) * [.47, .77, 1.1, 1.45, 1.62, 1.8][Math.min(stageIdx, 5)] * (e.elite ? 2 : 1)), pieces = Math.min(n, 8);
   for (let i = 0; i < pieces; i++) loot.push(makeLoot('shard', e.x, e.y, Math.ceil(n / pieces)));
-  if (e.boss) for (let i = 0; i < 3 + Math.min(stageIdx, 2); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
-  else if (Math.random() < (e.def.sigil || 0) * [1, 1.4, 1.8, 2.1, 2.25, 2.4][Math.min(stageIdx, 5)] + (e.elite ? .65 : 0) + .04 * Math.min(stageIdx, 4) + ((save.cycle || 0) >= 1 && stageIdx === 0 ? .1 : 0)) loot.push(makeLoot('sigil', e.x, e.y, 1)); // elites usually carry a sigil, the ink for Trump cards
+  // sigils, the ink for Trump cards, are rare: a boss gives one or two, an elite now and then, anything else seldom (a little less rarely round the road again)
+  if (e.boss) for (let i = 0; i < 1 + (stageIdx >= 3 ? 1 : 0); i++) loot.push(makeLoot('sigil', e.x, e.y, 1));
+  else if (Math.random() < ((e.def.sigil || 0) * .3 + (e.elite ? .25 : 0) + .008 * Math.min(stageIdx, 5)) * ((save.cycle || 0) >= 1 ? 1.3 : 1)) loot.push(makeLoot('sigil', e.x, e.y, 1));
   if (Math.random() < (e.boss ? 1 : .15)) loot.push(makeLoot('heal', e.x, e.y, e.boss ? 50 : 25));
   if (e.dropWeapon && !save.owned[e.dropWeapon]) loot.push(makeLoot('weapon', e.x, e.y, 0, e.dropWeapon));
 }

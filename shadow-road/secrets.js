@@ -60,7 +60,7 @@ const BOONS = {
     ok: () => TRUMP_ORDER.some(k => !save.trumps[k] || TL(k) < 3),
     give() { const id = TRUMP_ORDER.find(k => !save.trumps[k]); if (id) { save.trumps[id] = true; if (!save.trump) save.trump = id; } else { const k = pick(TRUMP_ORDER.filter(k => TL(k) < 3)); save.tlv[k] = TL(k) + 1; } } },
   hoard: { name: "The Unicorn's Hoard", sub: () => `${hoardN()} SHARDS`, ok: () => true, give() { const n = hoardN(); save.shards += n; runShards += n; } },
-  ink: { name: 'The Inkwell of Dworkin', sub: () => `${5 + stageIdx} SIGILS`, ok: () => true, give() { save.sigils += 5 + stageIdx; runSigils += 5 + stageIdx; } },
+  ink: { name: 'The Inkwell of Dworkin', sub: () => `${2 + (stageIdx >> 1)} SIGILS`, ok: () => true, give() { save.sigils += 2 + (stageIdx >> 1); runSigils += 2 + (stageIdx >> 1); } },
   blade: { name: 'A Blade from Shadow', sub: () => 'A WEAPON YOU HAVE NOT FOUND', ok: () => WEAPON_ORDER.some(id => id !== 'fists' && !save.owned[id]), give() { gainWeapon(pick(WEAPON_ORDER.filter(id => id !== 'fists' && !save.owned[id])), foundLvl()); } },
 };
 const hoardN = () => Math.round(110 * (1 + stageIdx * .8) * (1 + .5 * save.cycle));
@@ -94,14 +94,14 @@ function updateSecret(dt) {
     if (R.kind === 'hall') {
       banner('THE CARD’S REWARD', 'SHARDS, SIGILS, ARROWS AND ARMOR', 2);
       for (let i = 0; i < 10; i++) loot.push(makeLoot('shard', x, y, 6 + stageIdx * 4));
-      for (let i = 0; i < 2 + (stageIdx >= 2 ? 1 : 0); i++) loot.push(makeLoot('sigil', x, y, 1));
+      for (let i = 0; i < 1 + (stageIdx >= 3 ? 1 : 0); i++) loot.push(makeLoot('sigil', x, y, 1));
       for (let i = 0; i < 2; i++) loot.push(makeLoot('arrow', x, y, 1));
       secretGear(x, y, .6, Math.random() < .35 ? 2 : 1); // and armor
     } else { // Eric yields, and pays: a level for your weapon (or a purse if they're all tempered), and ink
       const id = boonW();
       if (id) { save.wl[id]++; persist(); banner('ERIC YIELDS', `${WEAPONS[id].name.toUpperCase()} +1 LEVEL · AND HIS PURSE`, 2.4); }
       else { banner('ERIC YIELDS', 'HIS PURSE IS YOURS', 2.2); for (let i = 0; i < 8; i++) loot.push(makeLoot('shard', x, y, Math.round(hoardN() / 8))); }
-      for (let i = 0; i < 3; i++) loot.push(makeLoot('sigil', x, y, 1));
+      for (let i = 0; i < 2; i++) loot.push(makeLoot('sigil', x, y, 1));
       secretGear(x, y, 1); // and a piece of enchanted armor from his own wardrobe
     }
     loot.push(Object.assign(makeLoot('power', x, y, 0), { power: pick(POWER_ORDER) }));
@@ -256,14 +256,14 @@ const ericDef = () => Object.assign({}, EDEF.chknight || EDEF.bandit, { name: 'E
     if (p.gold) {
       floatText(p.x, p.y, 70, 'A GOLDEN URN', '#EED48A', 15); flashT = .1;
       for (let i = 0; i < 6; i++) loot.push(makeLoot('shard', p.x, p.y, 5 + stageIdx * 3));
-      for (let i = 0; i < 3; i++) loot.push(makeLoot('sigil', p.x, p.y, 1));
+      for (let i = 0; i < 2; i++) loot.push(makeLoot('sigil', p.x, p.y, 1));
       loot.push(makeLoot('arrow', p.x, p.y, 1)); loot.push(Object.assign(makeLoot('power', p.x, p.y, 0), { power: pick(POWER_ORDER) }));
       secretGear(p.x, p.y, .5); // a piece of armor from Rebma's drowned armoury
       const un = WEAPON_ORDER.filter(id => id !== 'fists' && !save.owned[id]); if (un.length && Math.random() < .35) loot.push(makeLoot('weapon', p.x, p.y, 0, pick(un)));
       return;
     }
     for (let i = 0; i < 3; i++) loot.push(makeLoot('shard', p.x, p.y, 2 + stageIdx * 2));
-    if (Math.random() < .2) loot.push(makeLoot('sigil', p.x, p.y, 1));
+    if (Math.random() < .08) loot.push(makeLoot('sigil', p.x, p.y, 1));
     if (Math.random() < .15) loot.push(makeLoot('heal', p.x, p.y, 20));
   };
   const _pod = drawPod;

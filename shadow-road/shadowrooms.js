@@ -815,7 +815,7 @@ const SR_WARES = {
   power: { name: 'A Spark in a Bottle', glyph: 'ink', ok: () => true, price: () => [srPrice(15), 'shards'], give() { const k = pick(POWER_ORDER); gainPower(k); PW[k] = 20; } },
   parcel: { name: 'A Sealed Parcel', glyph: 'hoard', ok: () => true, price: () => [srPrice(50), 'shards'], give(R, pd) { srPay(pd.x, pd.y, rand(.3, 2.2)); } },
   blade: { name: 'A Blade from Shadow', glyph: 'blade', ok: () => BOONS.blade.ok(), price: () => [srPrice(220), 'shards'], give() { BOONS.blade.give(); } },
-  ink: { name: 'Dworkin\'s Ink', glyph: 'ink', ok: () => true, price: () => [srPrice(45), 'shards'], give() { const n = 3 + stageIdx; save.sigils += n; runSigils += n; } },
+  ink: { name: 'Dworkin\'s Ink', glyph: 'ink', ok: () => true, price: () => [srPrice(45), 'shards'], give() { const n = 2 + (stageIdx >> 1); save.sigils += n; runSigils += n; } },
 };
 function srShadowDef() { // the prince's own shadow, stepped out of a mirror: a duellist's frame, dark all through
   EDEF.srshadow = Object.assign({}, EDEF.chknight || EDEF.bandit, { name: "The Prince's Shadow", noRandom: 1, hp: 120, dmg: 12, spd: 96, plans: EDEF.chknight ? ['swing', 'w4blink', 'swing', 'pounce'] : ['swing', 'pounce'], sigil: 1, shards: [10, 14] });
@@ -893,7 +893,7 @@ function srMutate(R, e) {
 }
 function srOnDeath(R, e) {
   if (R.kind === 'horde' && R.phase === 'fight') R.kills++;
-  if (e.srCrown) { floatText(e.x, e.y, e.hh + 30, 'BOUNTY!', '#FFD27A', 17); for (let i = 0; i < 3; i++) loot.push(makeLoot('sigil', e.x, e.y, 1)); secretGear(e.x, e.y, .7); sfx('weapon'); }
+  if (e.srCrown) { floatText(e.x, e.y, e.hh + 30, 'BOUNTY!', '#FFD27A', 17); for (let i = 0; i < 2; i++) loot.push(makeLoot('sigil', e.x, e.y, 1)); secretGear(e.x, e.y, .7); sfx('weapon'); }
   if (srHas(R, 'volatile') && !e.boss) hazards.push({ kind: 'srboom', x: e.x, y: e.y, r: 64, t: .95, max: .95, dmg: 10 + stageIdx * 3 });
   if (srHas(R, 'hydra') && !e.srChild && !e.champ && !e.boss && e.def.move !== 'fly' && e.type !== 'srshadow' && enemies.filter(o => !o.dead).length < 9) { // two small ones crawl out of it
     for (const s of [-1, 1]) { SR.noEnt = true; const c = spawnEnemy(e.type, s); SR.noEnt = false; c.x = clamp(e.x + s * 24, camX + 30, camX + VW - 30); c.y = clamp(e.y + rand(-10, 10), FLOOR_TOP + 8, FLOOR_BOT); c.srChild = 1; c.srTiny = 1; c.hp = c.maxHp = Math.max(1, Math.round(c.maxHp * .4)); c.state = 'idle'; c.cd = rand(.8, 1.4); c.vz = 160; c.z = 1; c.vx = s * 80; c.air = true; }
@@ -917,7 +917,7 @@ function srChestUpdate(R, dt) {
 function srPay(x, y, v) { // shards, sigils, arrows, armor and a power, more of each as v grows; a very rich room may give a card or a blade too
   v = Math.max(.3, v); const sv = Math.round((5 + stageIdx * 4) * (1 + .5 * save.cycle)), out = [];
   for (let i = 0; i < Math.round(4 + 6 * v); i++) loot.push(makeLoot('shard', x, y, sv)); out.push('SHARDS');
-  const ns = Math.floor(.6 + 1.6 * v + Math.random() * .8); for (let i = 0; i < ns; i++) loot.push(makeLoot('sigil', x, y, 1)); if (ns) out.push(`${ns} SIGIL${ns > 1 ? 'S' : ''}`);
+  const ns = Math.floor(.3 + .8 * v + Math.random() * .6); for (let i = 0; i < ns; i++) loot.push(makeLoot('sigil', x, y, 1)); if (ns) out.push(`${ns} SIGIL${ns > 1 ? 'S' : ''}`);
   const na = v >= .7 ? 2 : 1; for (let i = 0; i < na; i++) loot.push(makeLoot('arrow', x, y, 1));
   const ng = v >= 2.2 ? 2 : v >= .8 ? 1 : Math.random() < v ? 1 : 0; if (ng) { secretGear(x, y, clamp(.25 + .3 * v, 0, 1), ng); out.push(ng > 1 ? 'TWO PIECES OF ARMOR' : 'ARMOR'); }
   if (v >= .5) loot.push(Object.assign(makeLoot('power', x, y, 0), { power: pick(POWER_ORDER) }));
@@ -928,7 +928,7 @@ function srPay(x, y, v) { // shards, sigils, arrows, armor and a power, more of 
 }
 function srBonus(x, y, k) { // an old room under hard rules pays a little over its usual
   if (k <= 0) return; for (let i = 0; i < Math.round(8 * k); i++) loot.push(makeLoot('shard', x, y, Math.round((5 + stageIdx * 4) * (1 + .5 * save.cycle))));
-  for (let i = 0; i < Math.round(2 * k); i++) loot.push(makeLoot('sigil', x, y, 1)); floatText(x, y, 90, 'THE RULES PAY TOO', '#EED48A', 13);
+  for (let i = 0; i < Math.round(k); i++) loot.push(makeLoot('sigil', x, y, 1)); floatText(x, y, 90, 'THE RULES PAY TOO', '#EED48A', 13);
 }
 // stand on something for a moment to choose it (passing over it doesn't count); a ring fills while you do
 function srPads(R, dt, dwell, fire, small) {
