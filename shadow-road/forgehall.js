@@ -281,7 +281,21 @@
     talk.addEventListener('click', (e) => { if (e.detail === 0) interact(); }); // (a keyboard's Enter on the focused button)
     return ui;
   }
+  // tap (or click) someone and he walks over and talks to them: a keeper, the Unicorn, or the way out to the road
+  function hallTap(e) {
+    if (!H.on || H.panel || H.leaving || mode !== 'forge' || blocked()) return;
+    const c = cv.getBoundingClientRect(); if (!c.width) return; const u = VW / c.width, x = (e.clientX - c.left) * u, y = Y_OFF + (e.clientY - c.top) * u, G = geo();
+    let best = null, bd = 1e9;
+    for (const v of H.cast) { const sl = SL(v), s = sl.s * VFIG, vx = vxOf(v), top = sl.vy - 104 * s, hw = 30 * s + 6;
+      if (x > vx - hw && x < vx + hw && y > top && y < sl.vy + 26) { const d = Math.abs(x - vx); if (d < bd) { bd = d; best = { id: v.id, tx: sl.tx, ty: sl.ty }; } } }
+    if (!best && U.on && U.phase === 'wait') { const us = uniS(); if (Math.abs(x - U.x) < 70 * us && y > U.y - 120 * us && y < U.y + 14) { const sp = uniSpot(); best = { id: 'unicorn', tx: sp.x, ty: sp.y }; } }
+    if (!best && y > G.bot - 46 && Math.abs(x - G.door.x) < 90) best = { id: 'door', tx: G.door.tx, ty: G.door.ty };
+    if (!best) return;
+    e.preventDefault(); audioInit(); H.auto = best; sfx('pick');
+  }
+  let tapOn = false;
   function enterHall() {
+    if (!tapOn) { tapOn = true; cv.addEventListener('pointerdown', hallTap); }
     buildUi(); H.on = true; H.flush = true;
     try { if (!U.on && save.fhUni && save.fhUni.key === visitKey()) uniSpawn(); } catch (e) { console.error(e); }
     if (!H.cast.length) { computeCast(); placeHero(); }
@@ -352,7 +366,7 @@
   }; }
   { const _of = openForge; openForge = function (k) {
     pref = 'hall';
-    H.cast = []; H.panel = null; H.resume = null; H.chat = null; H.chatT = undefined; H.chatSeen = new Set(); H.fx.length = 0;
+    H.cast = []; H.panel = null; H.resume = null; H.auto = null; H.chat = null; H.chatT = undefined; H.chatSeen = new Set(); H.fx.length = 0;
     const r = _of(k);
     try { computeCast(); placeHero(); applyLens(); if (H.on) refreshUi(); staticKey = ''; uniDecide(); U.on = false; H.uniLook = 0; if (H.on) uniSpawn(); } catch (e) { console.error(e); }
     return r;
@@ -407,9 +421,14 @@
       if (pressed.light || pressed.heavy) swing(!!pressed.heavy);
     }
     for (const k in pressed) pressed[k] = false;
+    if (H.auto && !H.panel && !H.leaving) { // walking to whoever was tapped: any stick or key of his own takes over
+      if (Math.hypot(mx, my) > .1) H.auto = null;
+      else { const A = H.auto, dx = A.tx - H.x, dy = A.ty - H.y, d = Math.hypot(dx, dy * 1.4); A.t = (A.t || 0) + dt;
+        if (d < 7 || A.t > 6) { H.auto = null; if (d < 40) { if (A.id === 'door') leave(); else if (A.id === 'unicorn') uniTalk(); else { H.target = A.id; interact(); } } }
+        else { const n = Math.max(1e-3, Math.hypot(dx, dy)); mx = dx / n * Math.min(1, d / 18); my = dy / n * Math.min(1, d / 18) / .66; if (Math.abs(my) > 1) { mx /= Math.abs(my); my = Math.sign(my); } A.run = d > 110; } } }
     if (H.leaving) { const L = H.leaving; L.t += dt; mx = clamp((G.door.tx - H.x) / 30, -1, 1); my = 1;
       if (L.t > 1.15 && !L.done) { L.done = true; const w = document.getElementById('walkBtn'); if (w) w.click(); return; } }
-    const s = G.sAt(H.y), run = !!input.run && Math.abs(mx) > .3, sp = (run ? 230 : 125) * s / .6;
+    const s = G.sAt(H.y), run = ((!!input.run && Math.abs(mx) > .3) || !!(H.auto && H.auto.run)), sp = (run ? 230 : 125) * s / .6;
     H.moving = Math.hypot(mx, my) > .05; H.run = run && H.moving;
     if (H.swing) { H.swing.t += dt; if (H.swing.t >= H.swing.dur) H.swing = null; mx *= .2; my *= .2; }
     if (H.moving) {
