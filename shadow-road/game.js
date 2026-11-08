@@ -403,10 +403,10 @@ function hurtEnemy(e, dmg, dir, m, crit) {
   fx.push({ kind: 'slash', x: hx, y: e.y, z: hz, ang: rand(-.6, .6) + (m.launch ? -1.2 : 0), t: .16, max: .16, size: 18 + pw * 10, col: pw === 2 ? '#D8AA55' : '#FFFFFF' });
   fx.push({ kind: 'ring', x: hx, y: e.y, z: hz, t: .2, max: .2, r: 10 + pw * 8, col: '#FFFFFF' });
   if (crit) {
-    floatText(e.x, e.y, e.z + e.hh + 14, dmg + '!', '#FF4A32', 22 + pw * 4); // red: never mistaken for a heavy blow's gold
+    floatText(e.x, e.y, e.z + e.hh + 14, dmg + '!', '#FF4A32', 16 + pw * 3); // red: never mistaken for a heavy blow's gold
     fx.push({ kind: 'crit', x: hx, y: e.y, z: hz, t: .3, max: .3, r: 34 + pw * 10 });
     hitstop = Math.max(hitstop, .14); flashT = Math.max(flashT, .04); zoom = Math.max(zoom, .04); shakeMag = Math.max(shakeMag, 7); sfx('crit');
-  } else floatText(e.x, e.y, e.z + e.hh + 10, String(dmg), pw === 2 ? '#D8AA55' : '#FFFFFF', 14 + pw * 4);
+  } else floatText(e.x, e.y, e.z + e.hh + 10, String(dmg), pw === 2 ? '#D8AA55' : '#FFFFFF', 11 + pw * 3);
   sfx(MAT_SFX[e.def.mat], pw * .5);
   comboN++; comboT = 1.8; refreshCombo(true);
   if (save.trump && mirrorT <= 0 && stillT <= 0) trumpCharge = Math.min(TRUMP_CHARGE, trumpCharge + dmg * (1 + gearStat('trump')));
@@ -564,7 +564,7 @@ function playerDamage(dmg, fromX, big) {
   if (stageIdx === 7) dmg = Math.min(dmg, Math.max(1, Math.round(maxHp() * .75))); // Lorraine hits hard, but nothing there takes him from full in one blow (75% at most) // armor turns part of every blow aside (gear.js)
   if (P.noKO && P.hp > 1) dmg = Math.min(dmg, P.hp - 1); // (a blow marked noKO can bring him to his last breath, never past it)
   P.hp -= dmg; P.inv = .8; shakeMag = Math.max(shakeMag, big ? 7 : 4); hitstop = .07; hurtFlash = .25;
-  floatText(P.x, P.y, 70, '-' + dmg, '#D0566A', 16); sfx('hurt');
+  floatText(P.x, P.y, 70, '-' + dmg, '#D0566A', 13); sfx('hurt');
   burst(P.x, P.y, 34, ['#D0566A', '#FFFFFF'], 10, 'spark');
   const dir = Math.sign(P.x - fromX) || -P.facing;
   P.vx = dir * (big ? 240 : 130); P.facing = -dir; P.seq = '';
@@ -644,7 +644,7 @@ function updateElements(e, dt) { // burning, chill and freeze on one enemy; retu
     if (Math.random() < .6) FXEL.burning(e); // embers and smoke off it (its flames are drawn on it: elemfx.js)
     if (e.burnTick <= 0) {
       e.burnTick = .5; const d = Math.round(e.burnBase); e.hp -= d;
-      floatText(e.x, e.y, e.z + e.hh + 6, String(d), '#FF8A4A', 11);
+      floatText(e.x, e.y, e.z + e.hh + 6, String(d), '#FF8A4A', 9);
       if (e.hp <= 0) killEnemy(e, 1, { trump: 1 });
     }
   }

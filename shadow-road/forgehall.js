@@ -635,7 +635,7 @@
     if (k === 'quench') v.dx = 0;
   }
   // a line for this keeper: from a pool when given one, never the same one twice running
-  function say(v, txt, dur = 2.2) { if (!v || !txt) return; if (Array.isArray(txt)) { const pool = txt.filter(q => q !== v.lastSaid); txt = pick(pool.length ? pool : txt); } v.lastSaid = txt; v.say = { txt, t: 0, dur: Math.max(dur, 1.2 + txt.length * .045) }; }
+  function say(v, txt, dur = 2.2) { if (!v || !txt) return; if (Array.isArray(txt)) { const pool = txt.filter(q => q !== v.lastSaid); txt = pick(pool.length ? pool : txt); } v.lastSaid = txt; v.say = { txt, t: 0, dur: Math.max(dur * 1.5, 2 + txt.length * .065) }; }
   // the keepers talk among themselves: now and then two (or three) of those present have a short exchange
   const CHAT = [
     [['dworkin', 'Gérard, have you seen my blue?'], ['gerard', 'Your blue what?'], ['dworkin', 'Exactly.']],
@@ -662,7 +662,7 @@
   function chatTick(dt) {
     if (H.panel || H.leaving || !H.on) return;
     if (H.chat) { const C = H.chat; C.t -= dt; if (C.t > 0) return; const line = C.lines[C.i++]; if (!line) { H.chat = null; H.chatT = rand(14, 24); return; }
-      const v = H.cast.find(q => q.id === line[0]); if (v) { say(v, line[1], 3.6 + line[1].length * .06); if (!v.act) act(v, 'glance', 1.6); C.t = Math.max(2.6, 1.6 + line[1].length * .06); } else C.t = 0; return; } // (each line stays up a good while, still showing as the answer comes)
+      const v = H.cast.find(q => q.id === line[0]); if (v) { say(v, line[1], 3.6 + line[1].length * .06); if (!v.act) act(v, 'glance', 1.6); C.t = Math.max(3.2, 2.2 + line[1].length * .075); } else C.t = 0; return; } // (each line stays up a good while, still showing as the answer comes)
     H.chatT = (H.chatT ?? rand(5, 9)) - dt; if (H.chatT > 0) return;
     const here = new Set(H.cast.map(v => v.id)), seen = H.chatSeen || (H.chatSeen = new Set());
     const ok = CHAT.map((c, i) => [c, i]).filter(([c, i]) => !seen.has(i) && c.every(l => here.has(l[0])));
@@ -766,17 +766,13 @@
   // the gift: a purse, a free level for the weapon in hand, a card inscribed again, or (rarest, in New Game+) the black eased
   function uniGive() {
     const R = save.fhUni, c = 1 + .5 * (save.cycle || 0), rnd = (() => { let h = (save.fhSalt || 1) ^ 0x9e3779b9; for (const ch of R.key) h = Math.imul(h ^ ch.charCodeAt(0), 2654435761); return ((h >>> 0) % 1000) / 1000; })();
-    let g = null;
-    const curse = (save.cycle | 0) >= 1 && window.CURSE && CURSE.ease && CURSE.state && CURSE.state();
-    if (curse && rnd < .12) { try { CURSE.ease(14, 'the Unicorn\'s gift'); g = 'The black in you thins: the curse eases.'; } catch (e) { console.error(e); } }
-    const w = save.weapon && save.owned[save.weapon] && WEAPONS[save.weapon] && save.weapon !== 'fists' ? save.weapon : null;
-    if (!g && rnd < .45 && w && save.wl[w] < WMAX(w)) { save.wl[w]++; g = `${WEAPONS[w].name} grows keener: level ${save.wl[w]}.`; }
-    if (!g && rnd < .6 && save.trump && TL(save.trump) < 3) { save.tlv[save.trump] = TL(save.trump) + 1; g = `${TRUMPS[save.trump].name} is inscribed anew: level ${['', 'I', 'II', 'III'][TL(save.trump)]}.`; }
+    // what only she gives (unicorn_boons.js): one of her own boons, kept for good, never one he has; with all hers, a blessing
+    let g = null; try { if (window.UNIBOON) g = UNIBOON.give(rnd).txt; } catch (e) { console.error(e); }
     if (!g) { const s = Math.round(400 * c), gg = Math.round(8 * c); save.shards += s; save.sigils += gg; g = `+${s} shards, +${gg} sigils.`; }
     U.gift = g; R.done = true; persist(); refreshUi(); try { renderForge(); } catch (e) {}
     sfx('learned'); flashT = Math.max(flashT || 0, .06);
     for (let i = 0; i < 40; i++) { const a = rand(0, TAU), r = rand(10, 60) * uniS(); U.sparks.push({ x: U.x + Math.cos(a) * r, y: U.y - 40 * uniS() + Math.sin(a) * r * .6, t: 0, life: rand(.8, 1.6), big: 1 }); }
-    U.say = { txt: 'The Unicorn bows her head. Something gleams where she stood.', t: 0, dur: 4.2 }; U.say2 = { txt: g, t: 0, dur: 4.2 };
+    U.say = { txt: 'The Unicorn bows her head. Something gleams where she stood.', t: 0, dur: 6.5 }; U.say2 = { txt: g, t: 0, dur: 6.5 };
   }
   function uniTalk() { if (!U.on || U.phase !== 'wait') return; U.phase = 'gift'; U.t = 0; H.f = Math.sign(U.x - H.x) || 1; }
   function uniDraw(t) {
@@ -793,7 +789,7 @@
     for (const p of U.sparks) { const a = Math.sin(p.t / p.life * Math.PI); ctx.fillStyle = `rgba(240,244,255,${a * .9})`; const r = (p.big ? 1.6 : 1) * (1 + .3 * Math.sin(p.t * 20)); ctx.beginPath(); ctx.moveTo(p.x, p.y - r * 2); ctx.lineTo(p.x + r * .5, p.y); ctx.lineTo(p.x, p.y + r * 2); ctx.lineTo(p.x - r * .5, p.y); ctx.closePath(); ctx.fill(); ctx.fillRect(p.x - r * 1.6, p.y - .3, r * 3.2, .6); }
     ctx.restore();
     if (U.gift && (U.phase === 'out' || U.phase === 'gone')) glowR(U.x, U.y - 4, 22 * s + 4 * Math.sin(t * 4), '255,244,200', .5 * (U.phase === 'gone' ? Math.max(0, 1 - U.t / 5) : 1));
-    for (const [S2, dy] of [[U.say, 0], [U.say2, 1]]) if (S2 && S2.t < S2.dur) bubble(clamp(U.x, 120, VW - 120), U.y - 128 * s + dy * 22 * u, S2, u);
+    for (const [S2, dy] of [[U.say, 0], [U.say2, 1]]) if (S2 && S2.t < S2.dur) bubble(clamp(U.x, 120, VW - 120), U.y - 128 * s + dy * 26 * u, S2, u);
   }
 
   // ---------------- the figures' poses ----------------
@@ -962,12 +958,12 @@
   }
   function bubble(x, y, S, u) { // a word, in a small parchment bubble over the speaker
     const a = cl01(Math.min(S.t / .15, (S.dur - S.t) / .3)); if (a <= 0) return;
-    ctx.save(); ctx.globalAlpha = a; ctx.font = `italic 600 ${(11.5 * u).toFixed(2)}px Spectral, Georgia, serif`; const w = ctx.measureText(S.txt).width + 10 * u, h = 16 * u;
+    ctx.save(); ctx.globalAlpha = a; ctx.font = `italic 600 ${(13.5 * u).toFixed(2)}px Spectral, Georgia, serif`; const w = ctx.measureText(S.txt).width + 16 * u, h = 20 * u;
     const bx = clamp(x - w / 2, 2, VW - w - 2); let by = y - h;
     for (let k = 0; k < 4; k++) { const hit = BUB.find(r => bx < r[0] + r[2] && r[0] < bx + w && by < r[1] + r[3] && r[1] < by + h); if (!hit) break; by = hit[1] - h - 2 * u; } // (one bubble never covers another: it rises over it)
     for (const r of HUD) if (bx < r[2] && r[0] < bx + w && by < r[3]) by = Math.max(by, r[3] + 3 * u); // (nor goes up under the plate or the buttons)
     BUB.push([bx, by, w, h]);
-    ctx.fillStyle = 'rgba(244,234,214,.95)'; rrect(bx, by, w, h, 5 * u); ctx.fill(); ctx.strokeStyle = 'rgba(60,40,30,.8)'; ctx.lineWidth = .8 * u; ctx.stroke();
+    ctx.fillStyle = 'rgba(244,234,214,.95)'; rrect(bx, by, w, h, 6 * u); ctx.fill(); ctx.strokeStyle = 'rgba(60,40,30,.8)'; ctx.lineWidth = .8 * u; ctx.stroke();
     const tx = clamp(x, bx + 4 * u, bx + w - 4 * u); ctx.beginPath(); ctx.moveTo(tx - 3 * u, by + h - .5); ctx.lineTo(tx, by + h + 4 * u); ctx.lineTo(tx + 3 * u, by + h - .5); ctx.closePath(); ctx.fillStyle = 'rgba(244,234,214,.95)'; ctx.fill();
     ctx.fillStyle = '#2A1A14'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(S.txt, bx + w / 2, by + h / 2 + .5 * u); ctx.restore();
   }

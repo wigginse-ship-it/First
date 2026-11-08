@@ -791,10 +791,10 @@ function drawScene(t) {
   for (const f of fx) drawFx(f);
   ctx.textAlign = 'center';
   for (const n of nums) {
-    const k = n.t / n.max, pop = 1 + Math.max(0, (k - .82) / .18) * .7;
+    const k = n.t / n.max, pop = 1 + Math.max(0, (k - .82) / .18) * .45;
     ctx.globalAlpha = Math.min(1, n.t * 3);
     ctx.font = `700 ${Math.round(n.size * pop)}px Cinzel, Georgia, serif`;
-    ctx.lineWidth = 4; ctx.strokeStyle = OUT; ctx.strokeText(n.txt, n.x, n.y - n.z);
+    ctx.lineWidth = n.size < 13 ? 3 : 4; ctx.strokeStyle = OUT; ctx.strokeText(n.txt, n.x, n.y - n.z);
     ctx.fillStyle = n.col; ctx.fillText(n.txt, n.x, n.y - n.z);
     if (n.icon === 'guard') { // the guard's remaining diamonds beside the number
       const sz = Math.round(n.size * pop), d = sz * .3; let gx = n.x + ctx.measureText(n.txt).width / 2 + sz * .4 + d; const gy = n.y - n.z - sz * .35;

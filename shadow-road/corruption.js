@@ -87,7 +87,10 @@
   }
   function ease(amt, why) {
     if (!NG() || !(amt > 0)) return 0;
-    const c = CS(), t0 = tierOf(c.v); c.v = clamp(c.v - amt, 0, 100); note(why, -amt); if (tierOf(c.v) !== t0) onTier(t0, tierOf(c.v)); return amt;
+    const c = CS(), t0 = tierOf(c.v); c.v = clamp(c.v - amt, 0, 100); note(why, -amt); if (tierOf(c.v) !== t0) onTier(t0, tierOf(c.v));
+    // the purifying light builds while he keeps easing it, and fades if he stops (drawn in postFx, no words)
+    if (playing()) { L.pure = Math.min(1.6, (L.pure || 0) + clamp(amt * .14, .08, .5)); L.pureFlash = Math.max(L.pureFlash || 0, .35); }
+    return amt;
   }
   function onTier(a, b) { if (b > a && b >= 2 && playing()) { sfx('growl'); shakeMag = Math.max(shakeMag, 3); L.flick = .5; } }
   let persistT = 0; // (the save is written now and then, not on every blow)
@@ -148,9 +151,9 @@
         for (let i = 0; i < 6 && parts.length < 420; i++) parts.push({ x: e.x + rand(-e.hw, e.hw), y: e.y, z: rand(6, (e.hh || 60) * .9), vx: rand(-20, 20), vy: 0, vz: rand(50, 120), life: .7, max: .7, col: pick(['#FFF4C8', '#FFE08A', '#FFFFFF']), size: rand(1.4, 2.4), shape: 'star', rot: 0, vr: 4 });
         if (e.cursed || e.boss || rl('pureTxt', 6)) floatText(e.x, e.y, (e.hh || 60) + 34, e.cursed || e.boss ? 'THE CURSE IS DRAWN OUT' : 'THE CURSE EASES', '#FFE9A8', 12); } }
     if (m.pearl && !m.trump) ease(-WT.pearlKill, 'a Pearl kill');
-    // like takes like: a cursed blade that cuts down a cursed foe (or a cursed lord) draws a little of the curse back out
+    // a cursed blade that cuts down a cursed foe (or a cursed lord) draws a little of the curse back out
     if (body(m) && (e.cursed || (e.boss && e.cB)) && cursedHand()) { const d = ease(e.boss ? WT.cwCursedBoss : WT.cwCursedKill, 'a cursed blade takes a cursed foe');
-      if (d > 0 && playing()) { fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 54, col: '#C8A0E8', flat: 1 }); if (rl('cwcTxt', 5)) floatText(e.x, e.y, (e.hh || 60) + 30, 'LIKE TAKES LIKE', '#D8C0F0', 11); } }
+      if (d > 0 && playing()) { fx.push({ kind: 'ring', x: e.x, y: e.y, z: 2, t: .45, max: .45, r: 54, col: '#C8A0E8', flat: 1 }); } }
     const ctx0 = CTX && CTX.e === e ? CTX : null;
     if (ctx0 && ctx0.behind && !pureHand() && !pureBlow) feed(WT.backKill, e.w7turn > 0 ? 'a kill from behind (the glass turned it)' : 'a kill from behind');
     // thrown into a hazard: the death came from the place, not from him, moments after he sent it flying
@@ -986,7 +989,29 @@
     if (L.pulse) { const p = L.pulse; p.t += 1 / 60; const R = p.t * 520, a = Math.max(0, 1 - p.t / 1.8), sx = p.x - camX, sy = p.y - 40;
       if (a > 0) { g.lineWidth = 46 * a + 6; g.strokeStyle = `rgba(6,2,6,${.8 * a})`; g.beginPath(); g.ellipse(sx, sy, R, R * .62, 0, 0, TAU); g.stroke(); g.lineWidth = 3; g.strokeStyle = `rgba(190,30,40,${a})`; g.stroke();
         g.fillStyle = `rgba(20,10,16,${.35 * a})`; view(); } if (p.t > 2.5) L.pulse = null; }
+    pureOverlay(t);
     if (L.heart) heartOverlay(t);
+    g.restore();
+  }
+  // PURIFYING: while he keeps drawing the curse out, a warm light rises through the picture: gold motes drifting up from
+  // the floor, a soft glow at the edges and round him, each easing a brief brightening. It grows as he keeps it up
+  // and fades away when he stops. (No words: the light is the sign.)
+  function pureOverlay(t) {
+    const dt = 1 / 60; L.pure = Math.max(0, (L.pure || 0) - dt * (.1 + .08 * (L.pure || 0))); L.pureFlash = Math.max(0, (L.pureFlash || 0) - dt);
+    const m = Math.min(1, L.pure || 0), fl = L.pureFlash || 0; if (m < .02 && fl <= 0) return;
+    const g = ctx, a = sm(Math.min(1, m * 1.4)), bot = Y_OFF + VIEW_H;
+    g.save(); g.globalCompositeOperation = 'screen';
+    // the rising warmth from below and the edges
+    const lg = g.createLinearGradient(0, bot, 0, bot - VIEW_H * (.18 + .14 * a)); lg.addColorStop(0, `rgba(255,214,130,${(.1 * a + .08 * fl).toFixed(3)})`); lg.addColorStop(1, 'rgba(255,214,130,0)'); g.fillStyle = lg; view();
+    const vg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .5, VIEW_H * .65, VW / 2, Y_OFF + VIEW_H * .5, VW * .66); vg.addColorStop(0, 'rgba(255,236,180,0)'); vg.addColorStop(1, `rgba(255,236,180,${(.2 * a + .12 * fl).toFixed(3)})`); g.fillStyle = vg; view();
+    // a glow round him
+    if (P && P.state !== 'dead') { const hx = P.x - camX, hy = P.y - (P.z || 0) - 50, R = 90 + 50 * a; const hg = g.createRadialGradient(hx, hy, 4, hx, hy, R); hg.addColorStop(0, `rgba(255,240,190,${(.22 * a + .15 * fl).toFixed(3)})`); hg.addColorStop(1, 'rgba(255,240,190,0)'); g.fillStyle = hg; g.fillRect(hx - R, hy - R, R * 2, R * 2); }
+    // motes drifting up, more of them the longer he keeps it up
+    const n = Math.round((lite() ? 18 : 36) * a);
+    for (let i = 0; i < n; i++) { const sp = 30 + 40 * hsh(i + 3), u = ((t * sp / VIEW_H) + hsh(i)) % 1, x = hsh(i + 7) * VW + Math.sin(t * (.6 + hsh(i + 9)) + i) * 14, y = bot - u * VIEW_H * .9;
+      const al = Math.sin(u * Math.PI) * (.35 + .5 * a), r = 1.2 + 1.8 * hsh(i + 11);
+      g.fillStyle = `rgba(255,${226 + (hsh(i + 5) * 29 | 0)},${150 + (hsh(i + 13) * 80 | 0)},${al.toFixed(3)})`; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+      if (r > 2.4) { g.fillStyle = `rgba(255,240,200,${(al * .12).toFixed(3)})`; g.beginPath(); g.arc(x, y, r * 2.2, 0, TAU); g.fill(); } }
     g.restore();
   }
   function drawNumsMirrored(list) { // the numbers stay readable in a mirrored stretch: set where they would be, in plain writing
@@ -2063,7 +2088,7 @@
   // a few words on what each reason is (shown after it in the ticker)
   const GLOSS = {
     'cruelty: overkill': 'a blow far past what it needed', 'massacre': '5 kills in quick succession', 'a kill from behind': 'a foe slain from its back',
-    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world, except with a cursed weapon)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a perfect blow through': 'more for each foe past the first', 'a full draw that hit nothing': 'the arrow found no one', 'a cursed blade takes a cursed foe': 'like takes like',
+    'a kill from behind (the glass turned it)': 'the mirror turned it', 'cruelty: a downed foe': 'hit a foe while it was down', 'cruelty: a corpse struck': 'hit a body (capped per world, except with a cursed weapon)', 'a cursed skill used': 'a cursed weapon\'s own move (not a perfect one)', 'a charge, the perfect missed': 'released outside the window (more with a cursed weapon)', 'a full draw, the perfect missed': 'loosed outside the window', 'a charged blow that hit nothing': 'whiffed (more with a cursed weapon)', 'a perfect blow through': 'more for each foe past the first', 'a full draw that hit nothing': 'the arrow found no one', 'a cursed blade takes a cursed foe': 'a cursed weapon kills a cursed foe',
     'a kill by a hazard': 'a foe killed by the world, not you', 'standing on the Black Road': 'step off it', 'cursed loot taken': 'black shards picked up', 'a cursed weapon taken up': 'picked up a cursed weapon',
     'a death': 'more each death this cycle', 'a death to a corrupted lord': 'fell to a cursed boss', 'the cursed weapon feeds': 'its hunger drawback',
     'the curse took his shadow': 'a cursed foe caught you', 'his shadow kept the curse': 'the shade was not broken in time',

@@ -795,7 +795,7 @@ const SR_OFFERS = {
   bless: { name: 'A Blessing', cost: () => 'FREELY GIVEN', ok: () => true, col: '#EED48A', glyph: 'heart',
     give(R, pd) { P.hp = maxHp(); const k = pick(POWER_ORDER); gainPower(k); PW[k] = 30; banner('BLESSED', `HEALED · ${POWERS[k].name} FOR THIRTY SECONDS`, 2.2); } },
   blood: { name: 'Give Blood', cost: () => 'A THIRD OF YOUR LIFE', ok: () => P.hp > maxHp() * .45, col: '#D0566A', glyph: 'heart',
-    give(R, pd) { const n = Math.round(maxHp() * .33); P.hp -= n; floatText(P.x, P.y, 70, '-' + n, '#D0566A', 16); hurtFlash = .3; banner('THE ALTAR DRINKS', 'AND PAYS IN KIND', 2); srChest(R, 1.7, pd.x); } },
+    give(R, pd) { const n = Math.round(maxHp() * .33); P.hp -= n; floatText(P.x, P.y, 70, '-' + n, '#D0566A', 13); hurtFlash = .3; banner('THE ALTAR DRINKS', 'AND PAYS IN KIND', 2); srChest(R, 1.7, pd.x); } },
   quiver: { name: 'Give Your Arrows', cost: () => 'EVERY ARROW YOU CARRY', ok: () => (save.arrows || 0) >= 2, col: '#9FD8E0', glyph: 'quiver',
     give(R, pd) { const n = save.arrows; save.arrows = 0; refreshArrows(); const s = 2 + n; save.sigils += s; runSigils += s; banner('THE ARROWS ARE TAKEN', `${s} SIGILS IN THEIR PLACE`, 2); } },
   tithe: { name: 'A Tithe of Shards', cost: () => `${srPrice(70)} SHARDS`, ok: () => save.shards >= srPrice(70), col: '#7EC2B0', glyph: 'hoard',
