@@ -376,6 +376,8 @@
       ctx.strokeStyle = '#1A0C0A'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; for (let i = 0; i <= 30; i++) { const u = i / 30, x = u * VW, y = edge + s * curve * u * (1 - u) * 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + (u - .5) * 8, y + s * 6, x + (u - .5) * 16, y + s * (10 + 4 * Math.sin(u * Math.PI))); ctx.stroke(); }
       ctx.restore(); }
   }
+  // down on one knee (k 0..1): the front foot planted ahead, the back knee to the ground, the hips dropped onto the back heel
+  function kneel(pose, k) { if (k <= 0) return; pose.crouch = 1; pose.crouchK = 9 * k; pose.legs = { f: lerp(7, 10, k), b: lerp(-7, -8, k), fk: lerp(2, 15, k), bk: lerp(2, 24, k) }; pose.sink = lerp(pose.sink || 0, 15, k); }
   function keyed(keys, T) { // eased between [time, value] keys
     if (T <= keys[0][0]) return keys[0][1];
     for (let i = 1; i < keys.length; i++) if (T < keys[i][0]) { const [t0, v0] = keys[i - 1], [t1, v1] = keys[i]; return lerp(v0, v1, sm((T - t0) / (t1 - t0))); }
@@ -392,18 +394,18 @@
     },
     update(E, T, dt) {
       const b = E.boss; if (b && b.def.draw === 'tyiga') b.w4halo = E.halo0 * (1 - sm(T / 1.5));
-      if (T > 1.6 && T < this.d0) { P.state = T > 4.5 ? 'down' : 'idle'; P.walk = 0; }
-      if (T > 4.3 && !E.lay) { E.lay = 1; dust(P.x, P.y, 5); }
+      if (T > 1.6 && T < this.d0) { P.state = T > 4.9 ? 'down' : 'idle'; P.walk = 0; }
+      if (T > 4.7 && !E.lay) { E.lay = 1; dust(P.x, P.y, 5); }
       if (T > 7.1 && !E.dream) { E.dream = 1; if (TRACKS.dream) playMusic('dream'); }
       if (T > 8.6 && !E.chime) { E.chime = 1; sfx('learned'); }
-      if (T > 10.6) E.walk += dt * 30 / 10.2;
+      if (T > 11.0) E.walk += dt * 30 / 10.2;
     },
-    pose(E, pose) { // spent: he sinks slowly onto one knee, head bowed; then eases back onto the dais, the legs going long as he lies down
-      const T = E.t; if (T > 2.4 && T < 4.5) {
-        const q = sm((T - 2.4) / .9), d = sm((T - 3.4) / 1.1);
-        pose.crouch = 1; pose.crouchK = 8 * q * (1 - d); pose.lean = lerp(lerp(pose.lean || 0, .4, q), 0, d);
+    pose(E, pose) { // spent: he goes down on one knee and stays there a moment, head bowed; then lies back onto the dais
+      const T = E.t; if (T > 2.4 && T < 4.9) {
+        const q = sm((T - 2.4) / .8), d = sm((T - 3.8) / 1.1);
+        kneel(pose, q * (1 - d)); pose.lean = lerp(lerp(pose.lean || 0, .45, q), 0, d);
         pose.arm = lerp(lerp(pose.arm ?? .2, 1.4, q), 1.62, d); pose.backArm = lerp(lerp(pose.backArm ?? 1.5, 1.2, q), 1.7, d); pose.elbow = lerp(pose.elbow ?? .3, .1, d); pose.backElbow = lerp(pose.backElbow ?? .3, .2, d);
-        if (d > 0) pose.downK = d; if (d > .6) pose.crouch = 0;
+        if (d > 0) pose.downK = d;
       }
     },
     breath(T, t) { // the Abyss breathing under the rim: a pale haze swelling up over the edge of the dais and sinking back, and the soft Z's of a sleeper rising out of the dark
@@ -432,14 +434,14 @@
       lids(keyed(this.lidKeys, T), t);
     },
     act2(E, T, dt, t) { // behind his eyes, the dream: he lies on the paving of the piazza in its long shadows, and gets up, and walks on into it
-      const B = freshAlt(E), cam = 240, walk = T > 10.6;
+      const B = freshAlt(E), cam = 240;
       withSet(B, () => paintWorld('dream', { cam }, t));
-      // he lies still while his eyes open, then sits up, gets his feet under him, rises, and walks on: one movement, eased
-      const pose = poseAs(T < 9.4 ? 'down' : walk ? 'walk' : 'idle', E.walk);
-      if (T >= 9.4 && T < 10.6) { const up = sm((T - 9.4) / .7), rise = sm((T - 9.95) / .6);
-        pose.downK = 1 - up; pose.crouch = up > .35 && rise < 1 ? 1 : 0; pose.crouchK = 8 * Math.min(1, (up - .35) / .4) * (1 - rise);
-        pose.lean = .35 * Math.sin(Math.PI * up) * (1 - rise); pose.arm = lerp(1.62, pose.arm ?? .3, rise); pose.backArm = lerp(1.7, pose.backArm ?? 1.5, rise); }
-      ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.hx + (walk ? E.walk * 10.2 : 0), FLOOR_TOP + 64, 1, 1, pose, 1, true); ctx.restore();
+      // he lies still while his eyes open, sits up onto one knee and stays there a moment, then stands, and walks on
+      const walk2 = T > 11.0, pose = poseAs(T < 9.4 ? 'down' : walk2 ? 'walk' : 'idle', E.walk);
+      if (T >= 9.4 && T < 11.0) { const up = sm((T - 9.4) / .7), rise = sm((T - 10.3) / .6);
+        pose.downK = 1 - up; kneel(pose, Math.min(1, up * 1.4) * (1 - rise));
+        pose.lean = .4 * Math.min(1, up * 1.4) * (1 - rise); pose.arm = lerp(1.62, lerp(1.4, pose.arm ?? .3, rise), up); pose.backArm = lerp(1.7, lerp(1.2, pose.backArm ?? 1.5, rise), up); }
+      ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.hx + (walk2 ? E.walk * 10.2 : 0), FLOOR_TOP + 64, 1, 1, pose, 1, true); ctx.restore();
       gradeFrame('dream');
       const wk = sm((T - 7.8) / 1.8); if (wk < 1) { ctx.fillStyle = `rgba(255,250,240,${.3 * (1 - wk)})`; view(); } // waking into it, the light is too bright at first
       cycleTint(); lids(keyed(this.lidKeys, T), t);
