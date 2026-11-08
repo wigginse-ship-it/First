@@ -2074,8 +2074,8 @@
       const bx = -38; ctx.strokeStyle = '#6A4626'; ctx.lineWidth = .9; ctx.beginPath(); for (let k = 0; k < 7; k++) { ctx.moveTo(bx - 5 + k * 1.7, 2); ctx.lineTo(bx - 7 + k * 2.3, -14 - hsh(k + 90) * 4); } ctx.stroke();
       for (let k = 0; k < 7; k++) { ctx.fillStyle = k % 2 ? '#E8E0C8' : '#3A7A4A'; ell(bx - 7 + k * 2.3, -14 - hsh(k + 90) * 4, 1, 2.6); ctx.fill(); }
       barrel(bx, 0, 8, 21, '#6A4626', [.22, .78]); ctx.fillStyle = '#2A1A10'; ell(bx, 0, 6.8, 1.6); ctx.fill(); },
-    ganelon() { // a sword stood point-down in a weapon stand
-      const x = -34; ctx.fillStyle = '#4A3222'; ctx.fillRect(x - 9, 12, 18, 9); ctx.beginPath(); ctx.rect(x - 9, 12, 18, 9); outline(.7);
+    ganelon() { // a sword stood point-down in a weapon stand, to the right of him
+      const x = 24; ctx.fillStyle = '#4A3222'; ctx.fillRect(x - 9, 12, 18, 9); ctx.beginPath(); ctx.rect(x - 9, 12, 18, 9); outline(.7);
       for (const k of [-5, 0, 5]) sword(x + k, -24 + Math.abs(k) * .6, 38, k ? '#B8BCC6' : '#D8AA55', k * .02); },
     fiona() { // the braziers on their tripods, the big one over its circle of runes
       for (const [bx, sc] of [[-34, 1]]) { const fy = 20;
