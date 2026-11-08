@@ -1022,10 +1022,12 @@ function drawProj(p, t) {
   ctx.restore();
 }
 function drawIcon(canvas, id, scale) { // weapon card portraits
-  const g = canvas.getContext('2d'), old = ctx; ctx = g;
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
-  const s = canvas.width / 64 * (scale || 1);
-  g.setTransform(s, 0, 0, s, 0, 0);
+  // (drawn first onto a scratch canvas twice the card's size, so nothing that reaches past the card's edge, like a long
+  // cursed blade, is cut off; then fitted (shrunk only if it must be) and centred on the card)
+  const W = canvas.width, Hh = canvas.height, tmp = document.createElement('canvas'); tmp.width = W * 2; tmp.height = Hh * 2;
+  const g = tmp.getContext('2d'), old = ctx; ctx = g;
+  const s = W / 64 * (scale || 1);
+  g.setTransform(s, 0, 0, s, W / 2, Hh / 2);
   // the weapon on its own, laid diagonally across the card
   const tier = id === 'fists' ? 1 : Math.min(id === 'rapier' ? 8 : 7, save.wl[id]);
   if (id === 'arrow') { ctx.translate(34, 30); ctx.rotate(-.75); ctx.scale(1.5, 1.5); drawArrowShape(arrowLv(), 24); }
@@ -1040,8 +1042,19 @@ function drawIcon(canvas, id, scale) { // weapon card portraits
   }
   else { const mid = { hammer: 30, staff: 15, sword: 40, rapier: 38 }[id] || 30, sc = { hammer: .95, staff: .62, sword: .72, rapier: .78 }[id] || .8; ctx.translate(32, 32); ctx.rotate(-.8); ctx.scale(sc, sc); ctx.translate(-mid, 0); drawWeapon(id, { tier, noHand: 1 }); }
   ctx = old;
-  centerArt(canvas);
+  fitArt(tmp, canvas);
   paintCard(canvas, s * .7);
+}
+// lay what was drawn on the scratch canvas onto the card: shrunk only if it would not fit (with a small margin), and centred
+function fitArt(src, canvas) {
+  const g = canvas.getContext('2d'), w = canvas.width, h = canvas.height, sw = src.width, sh = src.height;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
+  let d; try { d = src.getContext('2d').getImageData(0, 0, sw, sh).data; } catch (e) { g.drawImage(src, -w / 2, -h / 2); return; }
+  let x0 = sw, y0 = sh, x1 = -1, y1 = -1;
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (d[(y * sw + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return;
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, k = Math.min(1, w * .94 / bw, h * .94 / bh);
+  g.drawImage(src, x0, y0, bw, bh, (w - bw * k) / 2, (h - bh * k) / 2, bw * k, bh * k);
 }
 // slide what was drawn on a card so the middle of its drawn shape sits in the middle of the card (each weapon is a
 // different shape, and grows with its level, so no fixed offset centres them all)

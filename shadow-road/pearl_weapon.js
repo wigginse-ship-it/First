@@ -438,11 +438,11 @@
   { const _dw = drawWeapon; drawWeapon = function (kind, pose) { if (kind === ID) { drawPW(pose || {}); return; } return _dw(kind, pose); }; }
   { const _di = drawIcon; drawIcon = function (canvas, id, scale) {
     if (id !== ID || !WEAPONS[ID] || !WEAPONS[ID].pearl) return _di(canvas, id, scale);
-    const g = canvas.getContext('2d'), old = ctx; ctx = g; const c = picture(WEAPONS[ID].pearl);
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
-    const s = canvas.width / 64 * (scale || 1), len = Math.hypot(c.bw, c.bh * .6), k = 74 / len;
-    g.setTransform(s, 0, 0, s, 0, 0); ctx.translate(32, 32); ctx.rotate(-.8); ctx.scale(k, k); ctx.translate(-(c.bx + c.bw / 2), -(c.by + c.bh / 2)); drawPW({ noHand: 1, noGlow: 1 });
-    ctx = old; centerArt(canvas); paintCard(canvas, s * .7);
+    const W = canvas.width, H = canvas.height, tmp = document.createElement('canvas'); tmp.width = W * 2; tmp.height = H * 2; // (drawn large, then fitted: nothing cut off)
+    const g = tmp.getContext('2d'), old = ctx; ctx = g; const c = picture(WEAPONS[ID].pearl);
+    const s = W / 64 * (scale || 1), len = Math.hypot(c.bw, c.bh * .6), k = 74 / len;
+    g.setTransform(s, 0, 0, s, W / 2, H / 2); ctx.translate(32, 32); ctx.rotate(-.8); ctx.scale(k, k); ctx.translate(-(c.bx + c.bw / 2), -(c.by + c.bh / 2)); drawPW({ noHand: 1, noGlow: 1 });
+    ctx = old; fitArt(tmp, canvas); paintCard(canvas, s * .7);
   }; }
   // a big close-up, for the reforging and the sheets (painted straight, not from the kept picture)
   function drawBig(g, spec, cx, cy, size, rot = -.32, hmax) {

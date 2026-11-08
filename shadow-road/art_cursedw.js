@@ -500,11 +500,12 @@ const CWART = (() => {
   }
   // the card portrait of the fists: a gauntlet, knuckles forward (draw.js drawIcon's frame)
   function fistIcon(canvas, A, scale) {
-    const g = canvas.getContext('2d'), old = ctx; ctx = g;
-    try { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height); const s = canvas.width / 64 * (scale || 1); g.setTransform(s, 0, 0, s, 0, 0);
+    const W = canvas.width, H = canvas.height, tmp = document.createElement('canvas'); tmp.width = W * 2; tmp.height = H * 2; // (drawn large, then fitted: nothing cut off at the card's edge)
+    const g = tmp.getContext('2d'), old = ctx; ctx = g;
+    try { const s = W / 64 * (scale || 1); g.setTransform(s, 0, 0, s, W / 2, H / 2);
       g.translate(32, 33); g.rotate(-.25); g.scale(2.3, 2.3); g.translate(-17, 0);
       draw('fists', A, {}, true);
-      ctx = old; if (typeof centerArt === 'function') centerArt(canvas); if (typeof paintCard === 'function') paintCard(canvas, s * .7);
+      ctx = old; if (typeof fitArt === 'function') fitArt(tmp, canvas); if (typeof paintCard === 'function') paintCard(canvas, s * .7);
     } finally { g.setTransform(1, 0, 0, 1, 0, 0); ctx = old; }
   }
   return { draw, trail, flat, fistIcon };
