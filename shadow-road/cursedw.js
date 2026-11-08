@@ -57,7 +57,7 @@
     graceless: { name: 'Graceless', txt: 'no parries, and no perfect charges' },
   };
   const BF = {
-    pyre: { name: 'Black Pyre', txt: 'kills burst into black flame that spreads to those nearby' },
+    pyre: { name: 'Black Pyre', txt: 'kills burst into black flame, each weapon burning its own way' },
     echo: { name: 'Shadow Echo', txt: 'every third blow is struck again by its own shadow' },
     chain: { name: 'Black Lightning', txt: 'critical hits arc black lightning to three more foes' },
     circle: { name: 'The Circle', txt: 'heavy blows leave a Black Circle that drains foes and feeds you' },
@@ -234,12 +234,24 @@
       maybeDrop(e, m);
     } catch (err) { console.error(err); }
     return r; }; }
+  // the Black Pyre burns its own way in each weapon's hands: an ember blast from the fists, a pool of burning ground
+  // from the hammer, wildfire leaping body to body from the staff, a funeral column from the great sword, and from the
+  // rapier a witch-candle left burning that throws darts of black fire at whoever is nearest
+  const PYRE = { fists: { rgb: '255,120,50', n: 'EMBER BURST' }, hammer: { rgb: '255,80,30', n: 'FORGE PYRE' }, staff: { rgb: '120,230,90', n: 'WILDFIRE' }, sword: { rgb: '230,30,70', n: 'FUNERAL PYRE' }, rapier: { rgb: '120,150,255', n: 'WITCH-CANDLE' } };
+  const nearFoes = (x, y, r, not) => enemies.filter(o => !o.dead && o !== not && o.state !== 'enter' && Math.hypot(o.x - x, (o.y - y) * 2) < r + o.hw).sort((a, b) => Math.abs(a.x - x) - Math.abs(b.x - x));
   function pyre(e) {
     const t = now(); LS.pyreT = LS.pyreT.filter(x => x > t - 1); if (LS.pyreT.length >= 6) return; LS.pyreT.push(t);
-    addFx({ k: 'flame', x: e.x, y: e.y, life: 1.4, r: 16 + e.hw * .5 }); sfx('growl', .3);
-    const d = 4 * CM(P.w);
-    const tg = enemies.filter(o => !o.dead && o !== e && Math.hypot(o.x - e.x, (o.y - e.y) * 2) < 120 + o.hw).sort((a, b) => Math.abs(a.x - e.x) - Math.abs(b.x - e.x)).slice(0, 2);
-    for (const o of tg) { o.cwBurn = { t: 2, tick: .2, d }; addFx({ k: 'leap', x: e.x, y: e.y, x2: o.x, y2: o.y, life: .3 }); }
+    const w = PYRE[P.w] ? P.w : 'sword', S = PYRE[w], d = 4 * CM(P.w), rgb = S.rgb; sfx('growl', .3);
+    LS.pyreSaid = LS.pyreSaid || {}; if (!(t - (LS.pyreSaid[w] || -99) < 8)) { LS.pyreSaid[w] = t; floatText(e.x, e.y, e.hh + 40, S.n, `rgb(${rgb})`, 12); } // (its name, now and then)
+    if (w === 'fists') { addFx({ k: 'flame', x: e.x, y: e.y, life: .9, r: 30 + e.hw * .5, rgb }); shakeMag = Math.max(shakeMag, 4);
+      for (const o of nearFoes(e.x, e.y, 95, e)) { hit(o, d * 3.5, Math.sign(o.x - e.x) || 1, { power: 1, kb: 240, launch: 120, pyre: 1 }); o.cwBurn = { t: 1, tick: .2, d, rgb }; }
+      for (let i = 0; i < 18 && parts.length < 420; i++) { const an = i / 18 * TAU; parts.push({ x: e.x, y: e.y, z: 20, vx: Math.cos(an) * 220, vy: Math.sin(an) * 50, vz: rand(40, 140), life: .5, max: .5, col: pick(['#0A0608', '#FF7A30', '#FFB060']), size: rand(2, 3.4), shape: 'ember' }); } }
+    else if (w === 'hammer') { addFx({ k: 'pool', x: e.x, y: e.y, life: 3.2, r: 52, tick: .4, d, rgb }); addFx({ k: 'flame', x: e.x, y: e.y, life: 1, r: 16 + e.hw * .5, rgb }); }
+    else if (w === 'staff') { addFx({ k: 'flame', x: e.x, y: e.y, life: 1.2, r: 16 + e.hw * .5, rgb }); addFx({ k: 'wild', x: e.x, y: e.y, life: 1.2, hops: 4, next: .12, from: e, seen: new Set([e]), d, rgb }); }
+    else if (w === 'sword') { addFx({ k: 'flame', x: e.x, y: e.y, life: 1.6, r: 22 + e.hw * .5, tall: 2.2, rgb }); shakeMag = Math.max(shakeMag, 5);
+      for (const o of nearFoes(e.x, e.y, 60, e)) hit(o, d * 3, Math.sign(o.x - e.x) || 1, { power: 2, kb: 120, launch: 420, pyre: 1 });
+      for (const o of nearFoes(e.x, e.y, 130, e).slice(0, 2)) { o.cwBurn = { t: 2, tick: .2, d, rgb }; addFx({ k: 'leap', x: e.x, y: e.y, x2: o.x, y2: o.y, life: .3, rgb }); } }
+    else { addFx({ k: 'candle', x: e.x, y: e.y, life: 1.8, shots: 3, next: .35, d, rgb }); }
   }
 
   // ---------------- the price: the dodge, the parry, the perfect charge ----------------
@@ -390,6 +402,12 @@
         case 'eclipse': { for (const e of foesIn(f.x, f.y, f.R)) e.cwSlow = Math.max(e.cwSlow || 0, .3); f.tk = (f.tk || 0) - dt; if (f.tk <= 0 && f.t < f.life - .3) { f.tk = f.tick; for (const e of foesIn(f.x, f.y, f.R)) hit(e, f.d, Math.sign(e.x - f.x) || 1, { power: 0, kb: 0, noStun: 1 }); } break; }
         case 'circle': { f.tk = (f.tk || 0) - dt; if (f.tk <= 0 && f.t < f.life - .2) { f.tk = f.tick; let n = 0; for (const e of foesIn(f.x, f.y, f.R)) { hit(e, f.d, Math.sign(e.x - f.x) || 1, { power: 0, kb: 0, noStun: 1 }); n++; }
           if (n && P.hp > 0) { const h = Math.min(n, 2) * Math.max(1, Math.round(maxHp() * .004)); P.hp = Math.min(maxHp(), P.hp + h); } } break; }
+        case 'pool': { f.tk = (f.tk || 0) - dt; if (f.tk <= 0 && f.t < f.life - .2) { f.tk = f.tick; for (const o of nearFoes(f.x, f.y, f.r)) { hit(o, f.d, Math.sign(o.x - f.x) || 1, { power: 0, kb: 0, noStun: 1, pyre: 1 }); } }
+          if (Math.random() < dt * 30 && parts.length < 420) parts.push({ x: f.x + rand(-f.r, f.r), y: f.y + rand(-f.r * .3, f.r * .3), z: 2, vx: rand(-8, 8), vy: 0, vz: rand(40, 100), life: .5, max: .5, col: pick(['#0A0608', '#FF5A20', '#FFB060']), size: rand(2, 3.4), shape: 'ember' }); break; }
+        case 'wild': { f.next -= dt; if (f.next <= 0 && f.hops > 0) { f.hops--; f.next = .15; const o = nearFoes(f.x, f.y, 150).find(q => !f.seen.has(q)); if (!o) { f.hops = 0; break; }
+            f.seen.add(o); addFx({ k: 'leap', x: f.x, y: f.y, x2: o.x, y2: o.y, life: .3, rgb: f.rgb }); hit(o, f.d * 1.4, Math.sign(o.x - f.x) || 1, { power: 0, kb: 60, pyre: 1 }); o.cwBurn = { t: 1.6, tick: .2, d: f.d, rgb: f.rgb }; f.x = o.x; f.y = o.y; } break; }
+        case 'candle': { f.next -= dt; if (f.next <= 0 && f.shots > 0) { f.shots--; f.next = .45; const o = nearFoes(f.x, f.y, 220)[0]; if (o) { addFx({ k: 'leap', x: f.x, y: f.y - 10, x2: o.x, y2: o.y, life: .25, rgb: f.rgb }); hit(o, f.d * 2.6, Math.sign(o.x - f.x) || 1, { power: 1, kb: 120, pyre: 1 }); sfx('shoot', .3); } }
+          if (Math.random() < dt * 20 && parts.length < 420) parts.push({ x: f.x + rand(-3, 3), y: f.y, z: rand(16, 26), vx: 0, vy: 0, vz: rand(30, 60), life: .4, max: .4, col: pick(['#0A0814', '#7A90FF', '#C8D4FF']), size: rand(1.6, 2.6), shape: 'ember' }); break; }
         case 'flame': if (Math.random() < dt * 24) parts.push({ x: f.x + rand(-f.r, f.r) * .6, y: f.y + rand(-3, 3), z: rand(4, 26), vx: rand(-10, 10), vy: 0, vz: rand(50, 110), life: .55, max: .55, col: pick(f.pure ? ['#FFF4D8', '#FFE08A'] : ['#0A0608', '#3A1A4A', '#7A2A9A', '#C02040']), size: rand(2, 4), shape: 'ember', pal: f.pure ? 'white' : 'black', lift: .9, rot: rand(0, 6), vr: 0 }); break;
       }
     }
@@ -397,7 +415,7 @@
     // the burning: black flame on those the pyre leapt to
     for (const e of enemies) { const b = e.cwBurn; if (!b) continue; if (e.dead) { e.cwBurn = null; continue; } b.t -= dt; b.tick -= dt;
       if (b.tick <= 0) { b.tick = .5; hit(e, b.d, Math.sign(e.x - P.x) || 1, { power: 0, kb: 0, noStun: 1, pyre: 1 }); }
-      if (Math.random() < dt * 16 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(4, e.hh * .8), vx: rand(-10, 10), vy: 0, vz: rand(40, 90), life: .5, max: .5, col: pick(['#0A0608', '#5A2A7A', '#C02040']), size: rand(2, 3.6), shape: 'ember', pal: 'black', lift: .9, rot: rand(0, 6), vr: 0 });
+      if (Math.random() < dt * 16 && parts.length < 400) parts.push({ x: e.x + rand(-e.hw, e.hw) * .6, y: e.y, z: e.z + rand(4, e.hh * .8), vx: rand(-10, 10), vy: 0, vz: rand(40, 90), life: .5, max: .5, col: b.rgb ? pick(['#0A0608', `rgb(${b.rgb})`, `rgba(${b.rgb},.7)`]) : pick(['#0A0608', '#5A2A7A', '#C02040']), size: rand(2, 3.6), shape: 'ember', pal: 'black', lift: .9, rot: rand(0, 6), vr: 0 });
       if (b.t <= 0) e.cwBurn = null; }
     // the shadow of him that strikes again
     const S = LS.dbl;
@@ -647,12 +665,17 @@
           g.fillStyle = f.pure ? '#FFF2D8' : '#120A16'; g.beginPath(); g.ellipse(0, 0, 7, 6, 0, 0, TAU); g.fill(); g.strokeStyle = f.pure ? '#C8A050' : '#6A3A8A'; g.lineWidth = 1; g.stroke();
           g.strokeStyle = f.pure ? '#C8A050' : '#3A1A4A'; g.beginPath(); for (const y of [-2.5, 0, 2.5]) { g.moveTo(3, y); g.lineTo(7, y); } g.stroke();
           g.globalCompositeOperation = 'lighter'; g.fillStyle = `rgba(${rgb},.7)`; circle(-1, 0, 1.4); g.fill(); g.restore(); }
-      if (f.k === 'flame') { const q = f.t / f.life, h = (30 + f.r) * Math.sin(Math.PI * Math.min(1, q * 1.4)); if (h > 1) { g.save(); g.translate(f.x, f.y);
+      if (f.k === 'flame') { const q = f.t / f.life, h = (30 + f.r) * (f.tall || 1) * Math.sin(Math.PI * Math.min(1, q * 1.4)); if (h > 1) { g.save(); g.translate(f.x, f.y);
           for (let i = 0; i < (L ? 3 : 5); i++) { const ox = (i - 2) * f.r * .35, hh = h * (1 - Math.abs(i - 2) * .22) * (.85 + .15 * Math.sin(t * 14 + i)), sw = Math.sin(t * 9 + i * 1.7) * 4;
             g.beginPath(); g.moveTo(ox - 6, 0); g.quadraticCurveTo(ox - 6 + sw, -hh * .5, ox + sw * 1.5, -hh); g.quadraticCurveTo(ox + 6 + sw, -hh * .5, ox + 6, 0); g.closePath(); g.fillStyle = f.pure ? 'rgba(255,240,200,.85)' : 'rgba(10,4,14,.9)'; g.fill();
-            g.globalCompositeOperation = 'lighter'; g.strokeStyle = `rgba(${f.pure ? '255,220,140' : '170,40,120'},.7)`; g.lineWidth = 1.2; g.stroke(); g.globalCompositeOperation = 'source-over'; }
+            g.globalCompositeOperation = 'lighter'; g.strokeStyle = `rgba(${f.pure ? '255,220,140' : f.rgb || '170,40,120'},.7)`; g.lineWidth = 1.2; g.stroke(); g.globalCompositeOperation = 'source-over'; }
           g.restore(); } }
-      if (f.k === 'leap') { const q = f.t / f.life; g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = `rgba(170,40,120,${1 - q})`; g.lineWidth = 2; g.beginPath(); g.moveTo(f.x, f.y - 20); g.quadraticCurveTo((f.x + f.x2) / 2, Math.min(f.y, f.y2) - 60, lerp(f.x, f.x2, Math.min(1, q * 2)), lerp(f.y, f.y2, Math.min(1, q * 2)) - 20); g.stroke(); g.restore(); }
+      if (f.k === 'pool') { const q = f.t / f.life, a = Math.min(1, f.t / .2, (f.life - f.t) / .5); g.save(); const rg = g.createRadialGradient(f.x, f.y, 4, f.x, f.y, f.r); rg.addColorStop(0, `rgba(20,6,4,${.75 * a})`); rg.addColorStop(1, 'rgba(20,6,4,0)'); g.fillStyle = rg; ell(f.x, f.y, f.r, f.r * .34); g.fill();
+          g.globalCompositeOperation = 'lighter'; for (let i = 0; i < (L ? 4 : 8); i++) { const an = i / 8 * TAU + t * .5, px = f.x + Math.cos(an) * f.r * .6, py = f.y + Math.sin(an) * f.r * .2, hh = 10 + 8 * Math.sin(t * 11 + i * 1.3); g.fillStyle = `rgba(${f.rgb},${.55 * a})`; g.beginPath(); g.moveTo(px - 3, py); g.quadraticCurveTo(px + Math.sin(t * 9 + i) * 2, py - hh * .6, px, py - hh); g.quadraticCurveTo(px + 3, py - hh * .5, px + 3, py); g.fill(); }
+          g.strokeStyle = `rgba(${f.rgb},${.5 * a})`; g.lineWidth = 1.2; ell(f.x, f.y, f.r * (.9 + .05 * Math.sin(t * 6)), f.r * .32); g.stroke(); g.restore(); }
+      if (f.k === 'candle') { const a = Math.min(1, f.t / .15, (f.life - f.t) / .3); g.save(); g.fillStyle = `rgba(10,8,20,${.9 * a})`; g.fillRect(f.x - 2, f.y - 14, 4, 14); g.globalCompositeOperation = 'lighter'; const fl = 1 + .2 * Math.sin(t * 20);
+          g.fillStyle = `rgba(${f.rgb},${.9 * a})`; g.beginPath(); g.moveTo(f.x - 3, f.y - 14); g.quadraticCurveTo(f.x, f.y - 14 - 12 * fl, f.x + 3, f.y - 14); g.fill(); const rg = g.createRadialGradient(f.x, f.y - 20, 0, f.x, f.y - 20, 22); rg.addColorStop(0, `rgba(${f.rgb},${.4 * a})`); rg.addColorStop(1, `rgba(${f.rgb},0)`); g.fillStyle = rg; g.fillRect(f.x - 22, f.y - 42, 44, 44); g.restore(); }
+      if (f.k === 'leap') { const q = f.t / f.life; g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = `rgba(${f.rgb || '170,40,120'},${1 - q})`; g.lineWidth = 2; g.beginPath(); g.moveTo(f.x, f.y - 20); g.quadraticCurveTo((f.x + f.x2) / 2, Math.min(f.y, f.y2) - 60, lerp(f.x, f.x2, Math.min(1, q * 2)), lerp(f.y, f.y2, Math.min(1, q * 2)) - 20); g.stroke(); g.restore(); }
     }
     g.restore();
   }
