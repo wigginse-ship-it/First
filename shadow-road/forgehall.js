@@ -71,31 +71,67 @@
   };
   const CAST = {
     gerard: { name: 'Gérard', role: 'Weapons', secs: ['weapons'], bg: ['#A2B6D0', '#2A3A5A'], s: 1.16, w: 1.12, f: -1,
-      say: { greet: 'Brother.', startle: 'Easy! Not in my forge.', buy: 'Good steel, that.', bye: 'Go carefully, Corwin.' },
+      say: { greet: ['Brother.', 'Corwin. Good.', 'Back in one piece, I see.', 'There he is.', 'Come in out of Shadow.'],
+        startle: ['Easy! Not in my forge.', 'Swing that at me and I will take it off you.', 'Mind the anvil, brother!', 'Not near the quench.'],
+        buy: ['Good steel, that.', 'It will hold.', 'Feel the balance on it now.', 'That will bite.', 'Better than new.'],
+        bye: ['Go carefully, Corwin.', 'Bring it back nicked, not broken.', 'Strike first.', 'Keep your guard up, brother.'],
+        idle: ['Hm. Needs more heat.', 'Benedict would want this edge finer.', 'Hold, hold... there.', 'Good iron. Stubborn, like us.', 'Where did I put the tongs...'] },
       lines: () => {
         if (save.owned.rapier && save.wl.rapier === WLEARN && wLearn('rapier') > WLEARN) return 'That rapier of yours... there is something under its finish, brother. Give me the hammer to it, and we will see what it really is.';
         if (save.cycle > 0) return pick(['Round the road again? Then the iron must go harder too. I will temper what you carry.', 'Shadow-steel takes a good edge, if you hit it hard enough and often enough. Lay it on the anvil.']);
-        return pick(['Lay it on the anvil, Corwin. Every level I beat into it, it remembers. Steel is more loyal than family.', 'Shadow-steel takes a good edge, if you hit it hard enough and often enough. Show me what you carry.']); } },
+        return pick(['Lay it on the anvil, Corwin. Every level I beat into it, it remembers. Steel is more loyal than family.', 'Shadow-steel takes a good edge, if you hit it hard enough and often enough. Show me what you carry.',
+          'I could wrestle a bull for you, or I could temper that blade. The blade will thank me more.', 'Every nick on that edge is a story. I would rather hear fewer stories.', 'Set it down. Let the fire do the talking.']); } },
     julian: { name: 'Julian', role: 'Arrows', secs: ['arrows'], bg: ['#CED8C4', '#3A4A3A'], s: 1.02, w: .93, f: 1,
-      say: { greet: 'Corwin.', startle: 'Mind where you point that.', buy: 'Dead centre.', bye: 'Good hunting.' },
-      lines: () => pick(['Grey goose and Arden yew. My hounds have run down worse than anything you will shoot at.', 'Arrows are scarce on your road, brother. Make each one count. I would.']) },
+      say: { greet: ['Corwin.', 'Brother.', 'You again.', 'Ah. The hunter returns.', 'Well. Still breathing.'],
+        startle: ['Mind where you point that.', 'Try that in Arden and my hounds will have you.', 'Careless.', 'I have shot men for less.'],
+        buy: ['Dead centre.', 'Fletched true.', 'They will fly straight.', 'Do not waste them.', 'Arden yew. You are welcome.'],
+        bye: ['Good hunting.', 'Aim before you loose, brother.', 'Do not come back empty-handed.', 'Ride fast.'],
+        idle: ['Too much wind for a clean shot.', 'Morgenstern would have run that down by now.', 'Steady...', 'The hounds are restless.', 'Hm. Pulled left.'] },
+      lines: () => pick(['Grey goose and Arden yew. My hounds have run down worse than anything you will shoot at.', 'Arrows are scarce on your road, brother. Make each one count. I would.',
+        'I hunt what runs through Arden. You hunt what runs through Shadow. The arrows do not care which.', 'A good shaft is patient. Most of the family is not.', 'Choose your arrows the way you choose your enemies: carefully, and not too many.']) },
     ganelon: { name: 'Ganelon', role: 'Armor', secs: ['gear', 'march'], bg: ['#8AA0C8', '#1A2440'], s: 1.04, w: 1.05, f: -1,
-      say: { greet: 'Corwin!', startle: 'Ha! Save it for the road.', buy: 'Well chosen.', bye: 'Ride well, my friend.' },
+      say: { greet: ['Corwin!', 'My lord!', 'There you are, lad.', 'Ha! Still standing.', 'Good to see you whole.'],
+        startle: ['Ha! Save it for the road.', 'Not bad. Your guard is low, though.', 'Easy, easy. I am on your side.', 'You swing like a man who has slept too little.'],
+        buy: ['Well chosen.', 'That will turn a blade.', 'Wear it in good health.', 'Snug? It should be.', 'A fine fit.'],
+        bye: ['Ride well, my friend.', 'Keep your back to a wall.', 'Come back to me in one piece.', 'Remember Avalon.'],
+        idle: ['These straps will not last.', 'In Avalon we polished till we could see our faces.', 'Rust. Always rust.', 'Hm. A dent the size of a fist.', 'Good leather, this.'] },
       lines: () => document.getElementById('w8marchForge') ? 'Mail before glory. And the horn: blow it as we rode at the Black Circle, and the march goes on behind you.'
-        : pick(['Mail before glory, Corwin. I learned that at the Black Circle, and so will you.', 'Let us see what you have hauled out of Shadow in that bag. Some of it might even fit.']) },
+        : pick(['Mail before glory, Corwin. I learned that at the Black Circle, and so will you.', 'Let us see what you have hauled out of Shadow in that bag. Some of it might even fit.',
+          'You exiled me once, and I forgave you. Do not make me patch you up as well.', 'A soldier is only as good as what stands between him and the steel.']) },
     dworkin: { name: 'Dworkin', role: 'Trumps', secs: ['cards'], bg: ['#C8B8E8', '#2A1E40'], s: 1, w: 1, f: -1,
-      say: { greet: 'Ah. The boy.', startle: 'Careful of my ink!', buy: 'Mm. Good. Good.', bye: 'Mind the Pattern.', mutter: '...Brand never could hold a line...' },
-      lines: () => (save.stage > FORK && !save.done) ? 'The deck again? Every card is a door, if the hand that drew it was steady. Draw another, if the road you hold is not the one you want.'
-        : pick(['Every card is a door, if the hand that drew it was steady. Mine was, once. Mostly.', 'Hold still. No, not you: the ink. Whose face shall I give you?']) },
+      say: { greet: ['Ah. The boy.', 'Oberon? No... the other one.', 'You. You have your father\'s chin.', 'Hm? Yes, yes, come in.', 'Corwin! Or is it Thursday?', 'Do not step on the Pattern. Oh. You did. Never mind.', 'Have we met? We have. Often.'],
+        startle: ['Careful of my ink!', 'The cards! Mind the cards!', 'Violence. Always violence with your family.', 'Shoo. Shoo!', 'I drew you with better manners than that.', 'If you spill that pot I will draw you a pig.'],
+        buy: ['Mm. Good. Good.', 'A fine likeness, if I say so. And I do.', 'Do not let it see you blink.', 'Still wet. Do not touch the eyes.', 'That one bites. Gently.', 'Hold it to the light. No, the other light.'],
+        bye: ['Mind the Pattern.', 'Off you go. Off, off.', 'Bring me back some colour, the blue is running out.', 'Do not get lost in a card. I will not come looking.'],
+        mutter: ['...Brand never could hold a line...', '...seven parts lamp-black, one part blood... or was it the other way...', '...the unicorn had such sad eyes...', '...a door, a door, every face a door...', '...Oberon never paid me for the first deck...', '...if I tilt the world a little, the ink runs uphill...', '...where did I leave the Jewel... no, the boy has it...', '...not that face. Never that face again...', '...one more card. Just one more...', '...the Pattern hums when it is pleased. It is not pleased...', '...shadows of shadows, and the ink still smells of the sea...'],
+        idle: ['Hmm. Hmmm.', 'Who drew this? Oh. I did.', 'No, no, the nose is wrong.', 'Ha! Ha. Yes.', 'Shh. The cards are thinking.'] },
+      lines: () => (save.stage > FORK && !save.done) ? pick(['The deck again? Every card is a door, if the hand that drew it was steady. Draw another, if the road you hold is not the one you want.', 'Another road? The cards will show you one. They always do. Whether you like it is your affair.'])
+        : pick(['Every card is a door, if the hand that drew it was steady. Mine was, once. Mostly.', 'Hold still. No, not you: the ink. Whose face shall I give you?',
+          'I drew the first of these when your father was a boy, and he was a dreadful boy.', 'A Trump is only a picture until someone remembers to be afraid of it.', 'Sit. Do not sit there. That is the Abyss. In miniature.', 'Faces, faces. I am running out of faces. Bring me some new ones.']) },
     fiona: { name: 'Fiona', role: 'Curses', secs: ['cursed', 'cleanse'], bg: ['#A8D0AC', '#284A38'], s: .88, w: .94, f: -1,
-      say: { greet: 'Brother.', startle: 'Really, Corwin.', buy: 'It is done.', bye: 'Be wary of the black.' },
-      lines: () => pick(['The black runs through it like ink in water. It can be drawn out, for a price, and it comes out cleaner than it went in.', 'Hold it in the fire and do not flinch, brother. I will not.']) },
+      say: { greet: ['Brother.', 'Corwin. You look tired.', 'Ah. And what have you brought back this time?', 'There is black on you. Come here.', 'Sit, before you fall.'],
+        startle: ['Really, Corwin.', 'Do not test me in my own circle.', 'How very like Eric.', 'Put that down before it puts you down.'],
+        buy: ['It is done.', 'Cleaner. For now.', 'The fire took it. Mostly.', 'Do not thank me. Pay me.', 'There. Breathe.'],
+        bye: ['Be wary of the black.', 'Do not let the road into you.', 'Come back before it spreads.', 'Watch your shadow, brother.'],
+        idle: ['The flame is too blue.', 'Hm. Brand would have liked this one.', 'Patience. The curse is patient too.', 'Bleed it slowly...', 'Such a mess, our family.'] },
+      lines: () => pick(['The black runs through it like ink in water. It can be drawn out, for a price, and it comes out cleaner than it went in.', 'Hold it in the fire and do not flinch, brother. I will not.',
+        'Curses are only promises somebody else made for you. I can unmake most of them.', 'You carry the black road with you, Corwin. I can smell it.', 'Do not mistake the cure for a kindness. It hurts.']) },
     llewella: { name: 'Llewella', role: 'The Pearl', secs: ['pearl'], bg: ['#86C4C4', '#1A3A48'], s: .95, w: .95, f: 1,
-      say: { greet: 'Corwin.', startle: 'Not near the glass!', buy: 'The sea remembers.', bye: 'Swim well, brother.' },
-      lines: () => pick(['The sea gave it up for you. Moire will want to hear that you kept it well.', 'Look into the glass, Corwin: the tide is still turning in it.']) },
+      say: { greet: ['Corwin.', 'Brother. You smell of the road.', 'The tide brought you back.', 'Rebma sends her greetings. Moire less so.', 'Come, look into the water.'],
+        startle: ['Not near the glass!', 'The mirror is older than you are.', 'Careful. The sea is listening.', 'If you crack it, you go through it.'],
+        buy: ['The sea remembers.', 'It shines brighter in your hand.', 'Keep it wet. Figuratively.', 'Moire would be furious. Good.', 'A pearl for a prince.'],
+        bye: ['Swim well, brother.', 'Do not drown.', 'The stairs down to Rebma are always open to you.', 'Mind the deep water.'],
+        idle: ['The tide is late today.', 'Hush, little fish.', 'There is a storm somewhere under the glass.', 'Rebma is quiet tonight.', 'Salt and silver.'] },
+      lines: () => pick(['The sea gave it up for you. Moire will want to hear that you kept it well.', 'Look into the glass, Corwin: the tide is still turning in it.',
+        'Everything the sea takes, it gives back changed. The Pearl is no different.', 'Walk the Pattern under the water once, and you never quite dry off.', 'Hold it to your ear. That is not the sea. That is Rebma.']) },
     random: { name: 'Random', role: 'Trade', secs: ['trade'], bg: ['#D49866', '#4A2A1A'], s: .9, w: .92, f: -1,
-      say: { greet: 'Hey, Corwin!', startle: 'Whoa! I am unarmed!', buy: 'Pleasure doing business.', bye: 'Don\'t lose it all at once.' },
-      lines: () => pick(['Shards for sigils, brother. The house always takes its little cut.', 'I would give you a better rate, but then I would not be me, would I?']) },
+      say: { greet: ['Hey, Corwin!', 'Well, look who it is.', 'Brother! Got any money?', 'Ah, my favourite customer.', 'Corwin! Cut the deck?'],
+        startle: ['Whoa! I am unarmed!', 'Hey, hey, I paid you back!', 'Watch it, I just tuned these drums.', 'Do that again and the rate goes up.'],
+        buy: ['Pleasure doing business.', 'Nice. You got robbed, but nice.', 'The house thanks you.', 'Sold, to the man with the sword.', 'Spend it wisely. Or not, that is fun too.'],
+        bye: ['Don\'t lose it all at once.', 'Bring me something shiny.', 'If you see Benedict, you never saw me.', 'Later, brother.'],
+        idle: ['Seven. No... seven again?', 'Anybody want to bet on Gérard?', '*drums a little fill*', 'I swear these dice are honest.', 'Hm. Snake eyes.'] },
+      lines: () => pick(['Shards for sigils, brother. The house always takes its little cut.', 'I would give you a better rate, but then I would not be me, would I?',
+        'Everything is for sale here, brother. Including my opinion of your hair.', 'You win some, you lose some. I mostly win some.', 'Trade with me, Corwin, I am the only honest crook in the hall.']) },
   };
   const ORDER = ['gerard', 'julian', 'ganelon', 'dworkin', 'fiona', 'llewella', 'random'];
   const present = {
@@ -316,7 +352,7 @@
   }; }
   { const _of = openForge; openForge = function (k) {
     pref = 'hall';
-    H.cast = []; H.panel = null; H.resume = null; H.fx.length = 0;
+    H.cast = []; H.panel = null; H.resume = null; H.chat = null; H.chatT = undefined; H.chatSeen = new Set(); H.fx.length = 0;
     const r = _of(k);
     try { computeCast(); placeHero(); applyLens(); if (H.on) refreshUi(); staticKey = ''; uniDecide(); U.on = false; H.uniLook = 0; if (H.on) uniSpawn(); } catch (e) { console.error(e); }
     return r;
@@ -508,22 +544,57 @@
     if (k === 'shoot') v.shot = false;
     if (k === 'quench') v.dx = 0;
   }
-  function say(v, txt, dur = 2.2) { if (v && txt) v.say = { txt, t: 0, dur }; }
+  // a line for this keeper: from a pool when given one, never the same one twice running
+  function say(v, txt, dur = 2.2) { if (!v || !txt) return; if (Array.isArray(txt)) { const pool = txt.filter(q => q !== v.lastSaid); txt = pick(pool.length ? pool : txt); } v.lastSaid = txt; v.say = { txt, t: 0, dur: Math.max(dur, 1.2 + txt.length * .045) }; }
+  // the keepers talk among themselves: now and then two (or three) of those present have a short exchange
+  const CHAT = [
+    [['dworkin', 'Gérard, have you seen my blue?'], ['gerard', 'Your blue what?'], ['dworkin', 'Exactly.']],
+    [['random', 'Ten shards says Gérard can lift the anvil one-handed.'], ['gerard', 'Twenty says I can lift you.'], ['random', '...no bet.']],
+    [['julian', 'Your hammering scares the hounds, Gérard.'], ['gerard', 'Your hounds scare the horses.'], ['julian', 'Good.']],
+    [['fiona', 'Dworkin, you have ink in your beard again.'], ['dworkin', 'It is not ink. It is a map.'], ['fiona', 'Of what?'], ['dworkin', 'My beard.']],
+    [['llewella', 'The glass is cloudy today.'], ['fiona', 'So is our brother.']],
+    [['random', 'Dworkin! Draw me a card where I win.'], ['dworkin', 'I drew you one where you are quiet. It did not take.']],
+    [['ganelon', 'In my day we fought with what we could carry.'], ['julian', 'In your day you carried too much.'], ['ganelon', 'And I am still here, archer.']],
+    [['gerard', 'Fiona, your fire is stealing my heat.'], ['fiona', 'Your heat is too loud.']],
+    [['dworkin', 'Has anyone seen the Unicorn?'], ['random', 'Not since you asked yesterday.'], ['dworkin', 'Yesterday? How time flies when it is not looking.']],
+    [['llewella', 'Random, you still owe Moire a pearl.'], ['random', 'Moire owes me a rematch.']],
+    [['julian', 'Dworkin, my card has the wrong hounds on it.'], ['dworkin', 'They are the right hounds. They are simply someone else\'s.']],
+    [['ganelon', 'Gérard, lend me your arm for a strap.'], ['gerard', 'You will want it back in one piece, I suppose.']],
+    [['fiona', 'Llewella, your sea is dripping on my circle.'], ['llewella', 'Then your circle is learning to swim.']],
+    [['random', 'Anyone fancy a hand?'], ['julian', 'Not with your cards.'], ['ganelon', 'Not with your hands.']],
+    [['dworkin', '...Brand. Bleys. Caine...'], ['gerard', 'He is counting us again.'], ['dworkin', '...one missing. Always one missing.']],
+    [['dworkin', 'If you look at the Pattern long enough, it looks back.'], ['fiona', 'Then stop looking, old man.'], ['dworkin', 'I cannot. It is rude.']],
+    [['gerard', 'Julian. That arrow is in my wall.'], ['julian', 'It is in the target.'], ['gerard', 'The target is in my wall.']],
+    [['llewella', 'Dworkin, what is the sea made of?'], ['dworkin', 'Blue. And then more blue. I ran out, you see.']],
+    [['random', 'Ganelon, how much for the helmet?'], ['ganelon', 'More than you have.'], ['random', 'Everybody says that.']],
+    [['fiona', 'The black road is wider than last time.'], ['julian', 'Then shoot straighter.'], ['gerard', 'Then hit harder.']],
+  ];
+  function chatTick(dt) {
+    if (H.panel || H.leaving || !H.on) return;
+    if (H.chat) { const C = H.chat; C.t -= dt; if (C.t > 0) return; const line = C.lines[C.i++]; if (!line) { H.chat = null; H.chatT = rand(14, 24); return; }
+      const v = H.cast.find(q => q.id === line[0]); if (v) { say(v, line[1], 2.6); if (!v.act) act(v, 'glance', 1.6); C.t = Math.max(2.2, 1.2 + line[1].length * .05); } else C.t = 0; return; }
+    H.chatT = (H.chatT ?? rand(5, 9)) - dt; if (H.chatT > 0) return;
+    const here = new Set(H.cast.map(v => v.id)), seen = H.chatSeen || (H.chatSeen = new Set());
+    const ok = CHAT.map((c, i) => [c, i]).filter(([c, i]) => !seen.has(i) && c.every(l => here.has(l[0])));
+    if (!ok.length) { H.chatT = 30; return; }
+    const [c, i] = pick(ok); seen.add(i); H.chat = { lines: c, i: 0, t: 0 };
+  }
   function life(dt) {
+    chatTick(dt);
     H.idleGate -= dt; const busy = H.cast.filter(v => v.act && v.act.idle).length;
     for (const v of H.cast) {
       if (v.say) { v.say.t += dt; if (v.say.t > v.say.dur) v.say = null; }
       if (v.act) { if (v.act.delay > 0) v.act.delay -= dt; else { v.act.t += dt; if (v.act.t >= v.act.dur) v.act = null; } }
       const d = near(v);
       // a greeting as he comes up to the stall; a glance if he runs past close by
-      if (d < 46 && v.away && !H.panel && !H.leaving) { v.away = false; if (!v.act || v.act.idle) { act(v, 'greet'); say(v, CAST[v.id].say.greet, 1.6); } }
+      if (d < 46 && v.away && !H.panel && !H.leaving) { v.away = false; if (!v.act || v.act.idle) { act(v, 'greet'); say(v, CAST[v.id].say.greet, 1.8); } }
       else if (d > 90) v.away = true;
       if (H.run && d < 70 && (!v.act || v.act.idle) && !v.glanced) { v.glanced = true; act(v, 'glance'); }
       if (d > 110) v.glanced = false;
       v.next -= dt;
       if (!v.act && v.next <= 0 && H.idleGate <= 0 && busy < 2 && !(H.panel === v.id)) {
         const opts = IDLES[v.id].filter(q => q[0] !== v.last), [k, du] = pick(opts.length ? opts : IDLES[v.id]);
-        act(v, k, du, { idle: true }); if (k === 'mutter') say(v, CAST.dworkin.say.mutter, 2.4);
+        act(v, k, du, { idle: true }); if (k === 'mutter') say(v, CAST.dworkin.say.mutter, 2.6); else if (!H.chat && CAST[v.id].say.idle && Math.random() < (v.id === 'dworkin' ? .45 : .22)) say(v, CAST[v.id].say.idle, 2);
         v.next = rand(4, 9); H.idleGate = rand(1.2, 2.4);
       }
     }
