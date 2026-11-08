@@ -218,9 +218,9 @@ document.querySelectorAll('.btn').forEach((b) => {
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
   b.addEventListener('contextmenu', (e) => e.preventDefault());
 });
-// the PEARL button shows only while the Pearl can be fired: evolving at his shoulder, or forged and in his hand
+// the PEARL button (Attack + Heavy together) shows while the Pearl can be fired at his shoulder, and while a forged Pearl weapon is in his hand
 setInterval(() => { const b = document.getElementById('pearlBtn'); if (!b) return; let on = false;
-  try { on = !!(window.PEARLNG && PEARLNG.evoOn() && !PEARLNG.forged() && PEARLNG.curStats()); } catch (_) {}
+  try { on = !!(window.PEARLNG && PEARLNG.evoOn() && !PEARLNG.forged() && PEARLNG.curStats()) || !!(typeof P !== 'undefined' && P && P.w === 'pearlw'); } catch (_) {} // (and while a forged Pearl weapon is in his hand: its Attack + Heavy chord)
   if (b.hidden === on) b.hidden = !on; }, 300);
 const KEYMAP = { KeyJ: 'light', KeyZ: 'light', KeyK: 'heavy', KeyX: 'heavy', Space: 'jump', KeyL: 'dodge', ShiftLeft: 'dodge', KeyQ: 'swap', KeyC: 'swap', KeyE: 'trump', KeyV: 'trump', KeyI: 'shoot', KeyF: 'shoot' };
 const keys = new Set();
