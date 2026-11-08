@@ -192,7 +192,8 @@ function unlockList(id) {
 }
 const WLEARN = 7; // the last level that teaches a move; NG+ tempering goes past it
 const wLearn = (id) => WLEARN + (id === 'rapier' ? 1 : 0); // the rapier has one level more than the rest: at 8 it shows itself as Grayswandir (a new blade, no new move)
-const wMult = (id) => { const L = wLearn(id), v = save.wl[id]; return (1 + 0.2 * (Math.min(L, v) - 1) + .1 * Math.max(0, Math.min(6, v - L)) + .15 * Math.max(0, v - L - 6)) * (save.keen && save.keen[id] ? 1.15 : 1); }; // (keen: cleansed of the curse at the forge, corruption.js) // (past six tempers: the Pearl's deep tempers, +15% each) each level to 7 adds 20% and a new move; tempering past 7 (new cycles) adds 10%
+const DEEP_TEMPER = .3; // each of the reforged Pearl's deep tempers (its levels past the others' six) adds this much again
+const wMult = (id) => { const L = wLearn(id), v = save.wl[id]; return (1 + 0.2 * (Math.min(L, v) - 1) + .1 * Math.max(0, Math.min(6, v - L)) + DEEP_TEMPER * Math.max(0, v - L - 6)) * (save.keen && save.keen[id] ? 1.15 : 1); }; // (keen: cleansed of the curse at the forge, corruption.js) // (past six tempers: the Pearl's deep tempers, +15% each) each level to 7 adds 20% and a new move; tempering past 7 (new cycles) adds 10%
 const maxHp = () => gearMaxHp(); // 120, plus what his armor adds (gear.js)
 
 // ---------- enemies ----------

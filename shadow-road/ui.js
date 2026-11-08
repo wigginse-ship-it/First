@@ -167,7 +167,7 @@ function moveListHtml(id) {
 // ---------- the forge ----------
 // prices climb steeply, and each new cycle of the road makes everything dearer again
 const cyc = () => 1 + .5 * (save.cycle || 0);
-const PEARL_XT = 4; // the reforged Pearl takes four more tempers past the others' six, dearer each time, and each worth more (+15%)
+const PEARL_XT = 4; // the reforged Pearl takes four more tempers past the others' six, dearer each time, and each worth more (data.js DEEP_TEMPER)
 const WMAX = (id) => save.cycle > 0 ? wLearn(id) + 6 + (id === 'pearlw' ? PEARL_XT : 0) : wLearn(id); // past level 7 (new cycles only) each level is a plain damage bump
 // tuned so a world pays for one or two upgrades, no more
 const wCost = (lvl, id) => { const L = wLearn(id), cy = 1 + .25 * (save.cycle || 0);
@@ -227,7 +227,7 @@ function forgeWeapons(wrap) {
     const moves = unlockList(id).map(m => `<li class="${lvl >= m.lvl ? 'got' : m.lvl === lvl + 1 ? 'next' : ''}"><b>LV${m.lvl} · ${m.name}</b> ${chips(id, m)}<br><em>${m.desc}</em></li>`).join('');
     d.innerHTML = `<canvas width="192" height="192"></canvas><div class="lv">${bare ? 'ALWAYS WITH YOU' : owned ? `LV ${lvl}/${WMAX(id)} · DAMAGE ×${wMult(id).toFixed(2)}` : 'NOT FOUND YET'}</div><div class="nm">${w.name}</div>
       <p>${bare ? w.desc + ' Fists never level up.' : owned ? w.desc : 'Not found yet. Defeat enemies to find it.'}</p><ul>${moves}</ul>
-      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX(id) > L ? 'Fully tempered' : id === 'rapier' ? 'Grayswandir revealed' : 'Every move learned') : lvl >= L ? `${lvl >= L + 6 ? 'Deep temper: +15%' : 'Temper: +10%'} damage · ${costTxt(c)}` : lvl >= WLEARN ? `Level 8: reveal Grayswandir + 20% damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
+      ${owned && !bare ? `<button class="buy" type="button" ${can ? '' : 'disabled'}>${max ? (WMAX(id) > L ? 'Fully tempered' : id === 'rapier' ? 'Grayswandir revealed' : 'Every move learned') : lvl >= L ? `${lvl >= L + 6 ? `Deep temper: +${Math.round(DEEP_TEMPER * 100)}%` : 'Temper: +10%'} damage · ${costTxt(c)}` : lvl >= WLEARN ? `Level 8: reveal Grayswandir + 20% damage · ${costTxt(c)}` : `Level up: new move + 20% damage · ${costTxt(c)}`}</button>` : ''}`;
     drawIcon(d.querySelector('canvas'), id, .78);
     const b = d.querySelector('button');
     if (b) b.addEventListener('click', () => {
