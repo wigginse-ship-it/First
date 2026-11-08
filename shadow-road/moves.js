@@ -474,17 +474,19 @@ const MOVE_POSE = {
     // the arm's way round: from the guard back and down behind him (slow, the weight loading), then faster and faster under
     // the hips and up in front, and on past over his head as the weight it has gathered spends itself
     let a, drive = 0, load = 0;
-    if (k < h0) { load = sstep(k / h0); a = lerp(.5, 2.75, load); }
-    else if (k < h1) { const q = span(k, h0, h1); drive = q; a = lerp(2.75, -1.2, Math.pow(q, 1.6)); load = 1 - q; }
-    else { const q = span(k, h1, 1); a = -1.2 - .45 * Math.sin(Math.PI * .5 * Math.min(1, q * 1.6)) + .1 * sstep(span(q, .6, 1)); drive = 1; }
-    pose.arm = a; pose.grip = k < h0 ? lerp(0, .35, load) : lerp(.35, -.1, sstep(drive)); groundGrip(pose, 60, 6);
+    const w0 = h0 * .55;
+    if (k < w0) { load = sstep(k / w0); a = lerp(.5, 2.4, load); pose.grip = .5 * load; }
+    else if (k < h0) { const q = span(k, w0, h0); load = 1; drive = .25 * q * q; a = lerp(2.4, 1.1, q * q); pose.grip = lerp(.5, .2, q); } // falling faster and faster under him
+    else if (k < h1) { const q = span(k, h0, h1); drive = .25 + .75 * q; a = lerp(1.1, -1.2, Math.pow(q, .85)); load = 1 - q; pose.grip = lerp(.2, -.1, q); }
+    else { const q = span(k, h1, 1); a = -1.2 - .45 * Math.sin(Math.PI * .5 * Math.min(1, q * 1.6)) + .1 * sstep(span(q, .6, 1)); drive = 1; pose.grip = -.1; }
+    pose.arm = a; groundGrip(pose, 60, 6);
     const out = k < h1 ? 0 : sstep(span(k, h1, 1)), step = sstep(span(k, h0 - .08, h0 + .16));
     pose.lean = k < h0 ? lerp(.08, -.18, load) : lerp(-.18, .32, Math.sin(Math.PI * .5 * Math.min(1, drive * 1.4))) * (1 - out) - .12 * out; // back on the heel, then pulled in after the blow, then drawn up tall by the staff rising over him
     pose.sink = k < h0 ? 2 + 5 * load : lerp(7, 9, Math.sin(Math.PI * drive)) * (1 - out) + 2 * out;
     pose.yaw = k < h0 ? -.45 * load : lerp(-.45, .5, sstep(drive)) * (1 - .4 * out); pose.shift = lerp(-1.5, 3, step) * (1 - .5 * out);
     pose.legs = { f: lerp(9, 15, step), b: lerp(-11, -14, step), fk: lerp(3, 9, step) - 4 * out, bk: lerp(10, 2, step), bh: .7 * step * (1 - out) };
     pose.backArm = lerp(1.4, 2.4, drive); pose.flow = 6 + 12 * drive;
-    if (k > h0 - .06 && k < h1 + .14) { pose.trail = 80; pose.trailFrom = a + Math.min(2.8, (k - h0 + .06) * 12); pose.trailCol = tcolOf(m); pose.trailW = 8; pose.trailBack = 1; }
+    if (k > w0 && k < h1 + .14) { pose.trail = 80; pose.trailFrom = a + Math.min(2.8, (k - w0) * 12); pose.trailCol = tcolOf(m); pose.trailW = 8; pose.trailBack = 1; }
   },
   'staff:HH'(pose, m, k) { // Turning Tide: the staff brought down level, and its pull turns him once round at arm's length; the turn winds it up behind his head
     delete pose.sweep; pose.trail = 0; pose.streak = null; pose.elbow = 0;
@@ -493,7 +495,7 @@ const MOVE_POSE = {
     const t = q * q * (3 - 2 * q) * .4 + Math.pow(q, 1.7) * .6;
     pose.spin = -TAU * t - (k > .72 ? .3 * Math.sin(Math.PI * span(k, .72, 1)) : 0);
     const level = ease(span(k, 0, .12)), wind = sstep(span(k, .68, .92));
-    pose.arm = lerp(lerp(-1.4, .28, level), -2.35, wind); pose.grip = lerp(-.35, 0, wind); pose.ext = .5 * (1 - wind);
+    pose.arm = lerp(lerp(-1.4, .28, level), -1.72, wind); pose.grip = lerp(-.35, -.6, wind); pose.ext = .5 * (1 - wind); // (the arm is measured in the leaning chest's frame: leaned back, -1.72 is up behind his head)
     pose.backArm = lerp(2.9, -2.2, wind); pose.backElbow = .3; if (wind > .4) pose.twoHand = 1;
     const pull = Math.sin(Math.PI * Math.min(1, q * 1.15));
     pose.lean = lerp(.05, -.2, pull) * (1 - wind) - .28 * wind; pose.sink = 4 + 5 * pull - 2 * wind; // leaning back against the staff's pull
@@ -503,25 +505,25 @@ const MOVE_POSE = {
   },
   'staff:HHH'(pose, m, k) { // Mountain Fall: reared up on his toes, the staff behind his head in both hands, then folded behind it into the street
     delete pose.sweep; pose.trail = 0; pose.streak = null; pose.flat = null; pose.spin = 0; pose.elbow = 0; pose.ext = 0; pose.twoHand = 1;
-    const h0 = m.h[0], h1 = m.h[1];
+    const h1 = m.h[1], h0 = m.h[0] - .1; // (the blow falls through the last tenth before the hit: it lands at m.h[0])
     if (k < h0) { const q = sstep(k / h0);
-      pose.arm = lerp(-2.35, -2.8, q); pose.grip = 0; pose.backArm = pose.arm + .1; pose.backElbow = .2;
+      pose.arm = lerp(-1.72, -1.62, q); pose.grip = lerp(-.6, -.8, q); pose.backArm = pose.arm + .1; pose.backElbow = .2;
       pose.lean = lerp(-.28, -.42, q); pose.sink = lerp(2, -3, q); pose.yaw = -.2 * q;
       pose.legs = { f: lerp(10, 8, q), b: lerp(-11, -9, q), fk: lerp(4, 2, q), bk: lerp(5, 3, q), bh: .5 * q }; pose.flow = 6;
-      if (k > h0 * .5) { pose.trail = 70; pose.trailFrom = pose.arm + .6 * q; pose.trailCol = tcolOf(m); pose.trailW = 5; }
-    } else { const q = Math.pow(span(k, h0, h0 + (h1 - h0) * .55), 1.7), r = sstep(span(k, .8, 1)), ring = k > h0 + .1 ? Math.sin(Math.PI * span(k, h0 + .1, h0 + .24)) : 0;
-      pose.arm = lerp(-2.8, 1.35, q) - .18 * ring; pose.grip = 0; groundGrip(pose, 62, 14 * q);
+      if (k > h0 * .5) { pose.trail = 70; pose.trailFrom = pose.arm + .5 * q; pose.trailCol = tcolOf(m); pose.trailW = 5; }
+    } else { const q = Math.pow(span(k, h0, h0 + .1), 1.7), r = sstep(span(k, .8, 1)), ring = k > h0 + .1 ? Math.sin(Math.PI * span(k, h0 + .1, h0 + .24)) : 0;
+      pose.arm = lerp(-1.62, .05, q) - .18 * ring; pose.grip = lerp(-.8, -.15, q); // (with the chest folded forward over the blow, .05 is down in front of him)
       pose.backArm = pose.arm - .05; pose.backElbow = .15;
       pose.lean = lerp(-.42, .85, q) * (1 - .45 * r); pose.sink = lerp(-3, 14, q) * (1 - .4 * r); pose.yaw = .25 * q * (1 - r);
       pose.legs = { f: lerp(8, 14, q), b: lerp(-9, -13, q), fk: lerp(2, 13, q) * (1 - .3 * r), bk: lerp(3, 16, q) * (1 - .5 * r) }; pose.flow = 8 + 10 * q; // down on the back knee behind the blow
-      if (k < h1 + .08) { pose.trail = 84; pose.trailFrom = -2.8; pose.trailCol = tcolOf(m); pose.trailW = 11; pose.trailBack = 1; }
+      if (k < h1 + .08) { pose.trail = 84; pose.trailFrom = -2.2; pose.trailCol = tcolOf(m); pose.trailW = 11; pose.trailBack = 1; }
     }
   },
   'staff:HHHH'(pose, m, k) { // Cyclone: up out of the crouch in a whirlwind, the staff flat round him, then heaved overhead at the top and driven down
     delete pose.sweep; pose.trail = 0; pose.streak = null; pose.flat = null; pose.elbow = 0; pose.rot = 0;
     const F = .5, air = P.z > 2;
     if (k < .1) { const q = sstep(k / .1); // the crouch the Mountain Fall left him in, and deeper: the spring loading
-      pose.arm = lerp(1.2, .4, q); pose.grip = lerp(0, -.3, q); pose.ext = .3; pose.backArm = 2.6; pose.backElbow = .3;
+      pose.arm = lerp(.05, .4, q); pose.grip = lerp(-.15, -.3, q); pose.ext = .3; pose.backArm = 2.6; pose.backElbow = .3;
       pose.lean = lerp(.5, .3, q); pose.sink = lerp(11, 13, q); pose.yaw = -.3 * q; pose.spin = -.5 * q * q;
       pose.legs = { f: 13, b: -12, fk: 12, bk: 13 }; pose.flow = 8;
     } else if (k < F) { const q = span(k, .1, F); // the spiral: slow off the street, faster and faster as it climbs
@@ -532,20 +534,19 @@ const MOVE_POSE = {
       if (q > .05) pose.flat = { r: 84 + 14 * q, k: .96, rev: false, col: tcolOf(m), w: 5 + 6 * q };
     } else { const h = ease(span(k, F, F + .045)), d = Math.pow(span(k, F + .04, F + .11), 1.6), r = sstep(span(k, .8, 1)); // heaved over his head at the top, and down with everything
       pose.spin = -2 * TAU;
-      pose.arm = d > 0 ? lerp(-2.8, 1.38, d) : lerp(.05, -2.8, h); pose.grip = 0; pose.twoHand = 1; pose.backArm = pose.arm - .05; pose.backElbow = .15;
-      if (!air) groundGrip(pose, 62, 15);
+      pose.arm = d > 0 ? lerp(-1.7, 0, d) : lerp(.05, -1.7, h); pose.grip = d > 0 ? lerp(-.6, -.15, d) : lerp(-.3, -.6, h); pose.twoHand = 1; pose.backArm = pose.arm - .05; pose.backElbow = .15;
       pose.lean = d > 0 ? lerp(-.4, .9, d) * (1 - .5 * r) : lerp(-.08, -.4, h);
       pose.sink = air ? 0 : 15 * (1 - .45 * r);
       pose.legs = air ? { f: lerp(8, 11, d), b: lerp(-5, -9, d), fk: lerp(14, 9, d), bk: lerp(13, 7, d), fl: 6 * (1 - d) } : { f: 14, b: -13, fk: 13 * (1 - .3 * r), bk: 17 * (1 - .5 * r) };
       pose.flow = 20 * (1 - r);
-      if (k < F + .2) { pose.trail = 86; pose.trailFrom = d > 0 ? -2.8 : pose.arm + 1.6 * h; pose.trailCol = tcolOf(m); pose.trailW = d > 0 ? 13 : 7; pose.trailBack = d > 0 ? 1 : 0; }
+      if (k < F + .2) { pose.trail = 86; pose.trailFrom = d > 0 ? -2.2 : pose.arm + 1.6 * h; pose.trailCol = tcolOf(m); pose.trailW = d > 0 ? 13 : 7; pose.trailBack = d > 0 ? 1 : 0; }
     }
   },
   'staff:LLH'(pose, m, k) { // Windmill: the staff whirled through his fingers, faster and faster, as he walks it forward into them; the last turn spent in one hard crack
     delete pose.sweep; pose.trail = 0; pose.streak = null; pose.flat = null; pose.elbow = 0; pose.spin = 0;
     const F = m.fin ? m.fin.at : (m.finBase ? m.finBase.fin.at : .78);
     if (k < F) { const q = span(k, 0, F), g = TAU * 4.048 * (q * q * .45 + q * .55); // the turns quicken (and the last one comes round to where the crack starts)
-      pose.grip = g; pose.arm = lerp(.35 - .55 * Math.sin(q * TAU * 1.5) * Math.min(1, q * 4), -1.3, sstep(span(q, .82, 1))); // a figure of eight, then raised for the last turn pose.ext = .25 + .2 * Math.sin(q * TAU * 3);
+      pose.grip = g; pose.arm = lerp(.35 - .55 * Math.sin(q * TAU * 1.5) * Math.min(1, q * 4), -1.3, sstep(span(q, .82, 1))); pose.ext = .25 + .2 * Math.sin(q * TAU * 3); // a figure of eight, then raised for the last turn
       pose.backArm = 1.5 + .6 * Math.sin(q * TAU * 1.5 + 1); pose.backElbow = .6; pose.openHand = 1;
       pose.lean = .1 + .06 * Math.sin(q * TAU * 3); pose.sink = 4 + 1.5 * Math.sin(q * TAU * 3);
       const st = Math.sin(q * TAU * 2); pose.legs = { f: 9 + 4 * st, b: -9 + 4 * st, fk: 5 - 2 * st, bk: 5 + 2 * st }; pose.flow = 8 + 8 * q;
@@ -562,12 +563,11 @@ const MOVE_POSE = {
     delete pose.sweep; pose.trail = 0; pose.streak = null; pose.flat = null; pose.spin = 0; pose.elbow = 0;
     const f = sstep(span(k, .08, .6)); pose.rot = TAU * f;
     const tuck = Math.sin(Math.PI * span(k, .1, .6)), plant = 1 - sstep(span(k, .1, .26));
-    if (k < .3) { pose.arm = lerp(-.4, 1.2, sstep(span(k, 0, .1))) * plant + -2.4 * (1 - plant); pose.grip = .5 * plant; pose.backArm = pose.arm + .2; pose.backElbow = .3; pose.lean = .35 * plant - .1 * (1 - plant); pose.twoHand = 1; }
-    else if (k < .48) { pose.arm = -2.5; pose.grip = 0; pose.backArm = -2.4; pose.backElbow = .3; pose.lean = -.1; pose.twoHand = 1;
-      pose.trail = 72; pose.trailFrom = -2.5 + 1.2 * span(k, .3, .48); pose.trailCol = tcolOf(m); pose.trailW = 5; }
-    else { const q = Math.pow(span(k, .48, .62), 1.5); pose.arm = lerp(-2.5, 1.4, q); pose.grip = 0; pose.backArm = pose.arm - .05; pose.backElbow = .15; pose.lean = lerp(-.1, .65, q); pose.twoHand = 1;
-      if (P.z <= 2) groundGrip(pose, 62, 10);
-      if (k < .72) { pose.trail = 82; pose.trailFrom = -2.5; pose.trailCol = tcolOf(m); pose.trailW = 10; pose.trailBack = 1; } }
+    if (k < .3) { pose.arm = lerp(-.4, 1.2, sstep(span(k, 0, .1))) * plant + -2.1 * (1 - plant); pose.grip = .5 * plant; pose.backArm = pose.arm + .2; pose.backElbow = .3; pose.lean = .35 * plant - .1 * (1 - plant); pose.twoHand = 1; }
+    else if (k < .44) { pose.arm = -2.1; pose.grip = -.5; pose.backArm = -2.0; pose.backElbow = .3; pose.lean = -.1; pose.twoHand = 1;
+      pose.trail = 72; pose.trailFrom = -2.1 + 1.2 * span(k, .3, .44); pose.trailCol = tcolOf(m); pose.trailW = 5; }
+    else { const q = Math.pow(span(k, .44, .56), 1.5); pose.arm = lerp(-2.1, .3, q); pose.grip = lerp(-.5, -.15, q); pose.backArm = pose.arm - .05; pose.backElbow = .15; pose.lean = lerp(-.1, .65, q); pose.twoHand = 1;
+      if (k < .72) { pose.trail = 82; pose.trailFrom = -2.4; pose.trailCol = tcolOf(m); pose.trailW = 10; pose.trailBack = 1; } }
     pose.legs = { f: lerp(9, 8, tuck), b: lerp(-9, -1, tuck), fk: lerp(4, 15, tuck), bk: lerp(4, 15, tuck) }; pose.crouch = 0;
     if (k < .12) { const l = sstep(k / .12); pose.sink = 7 * l; pose.legs = { f: 10, b: -11, fk: 3 + 8 * l, bk: 4 + 8 * l }; }
     if (k > .62 && P.z <= 2) { const r = span(k, .8, 1); pose.legs = { f: 13, b: -12, fk: 11 * (1 - .4 * r), bk: 13 * (1 - .6 * r) }; pose.sink = 11 * (1 - .6 * r); pose.lean = .65 * (1 - .7 * r); }
