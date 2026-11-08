@@ -2013,10 +2013,10 @@
       else if (m.phase === 'hold') { if (m.t <= 0) { m.phase = 'ebb'; m.t = 2.2; } }
       else if (m.phase === 'ebb') { m.E += 150 * dt; if (m.E >= restE || m.t <= 0) { m.phase = 'calm'; m.t = rand(3.5, 5); } }
       // the watchfires hold it back
-      for (const f of m.fires) { f.lit = Math.max(0, f.lit - dt); f.flash = Math.max(0, f.flash - dt); if (f.lit > 0) m.E = Math.max(m.E, f.x + 46); }
+      for (const f of m.fires) { f.lit = Math.max(0, f.lit - dt * (m.allLit ? .5 : 1)); f.flash = Math.max(0, f.flash - dt); if (f.lit > 0) m.E = Math.max(m.E, f.x + 46); }
       if (P && (P.state === 'atk' || P.state === 'air') && P.move) for (const f of m.fires) { if (f.lit > 1 || W8.inGrey(f.x, f.y)) continue; const fw = (f.x - P.x) * P.facing; if (fw > -10 && fw < (P.move.x1 || 50) + 20 && Math.abs(f.y - P.y) < 26) { f.lit = 13; f.flash = .3; sfx('hit-metal', .4); tn(520, .3, 'triangle', .05); burst(f.x, f.y, 52, ['#FFD27A', '#FF8A3A', '#FFF0C0'], 16, 'spark', 0, true); floatText(f.x, f.y, 90, 'THE FIRE HOLDS IT BACK', '#FFD890', 12); } }
-      // all the fires burning at once: his blows burn too (W8.allLit, hurtEnemy below)
-      { const all = m.fires.length >= 3 && m.fires.every(f => f.lit > 0); if (all && !m.allLit && P) { floatText(P.x, P.y, 116, 'ALL THE FIRES BURN · YOUR BLOWS BURN WITH THEM', '#FFC870', 14); sfx('charge', 2); tn(392, .5, 'triangle', .05); tn(587, .6, 'triangle', .04, 0, .08); for (const f of m.fires) burst(f.x, f.y, 60, ['#FFD27A', '#FF8A3A'], 10, 'spark', 0, true); } m.allLit = all; }
+      // all the fires burning at once: his blows burn too (W8.allLit, hurtEnemy below); lit together they are fed (topped up) and burn down at half the speed
+      { const all = m.fires.length >= 3 && m.fires.every(f => f.lit > 0); if (all && !m.allLit && P) { for (const f of m.fires) f.lit = Math.max(f.lit, 22); floatText(P.x, P.y, 116, 'ALL THE FIRES BURN · YOUR BLOWS BURN WITH THEM', '#FFC870', 14); sfx('charge', 2); tn(392, .5, 'triangle', .05); tn(587, .6, 'triangle', .04, 0, .08); for (const f of m.fires) burst(f.x, f.y, 60, ['#FFD27A', '#FF8A3A'], 10, 'spark', 0, true); } m.allLit = all; }
       // the grey drinks you
       if (P && P.state !== 'dead' && W8.inGrey(P.x, P.y)) { m.drink += dt; if (m.drink > .5) { m.drink = 0; if (P.hp > 1) { P.hp = Math.max(1, P.hp - Math.max(1, Math.round(maxHp() * .012 * (1 + .25 * (save.cycle || 0))))); hurtFlash = Math.max(hurtFlash, .08); if (!(m.msgT > 0)) { m.msgT = 3; floatText(P.x, P.y, 90, 'THE GREY DRINKS YOU', '#C8C2B4', 12); } } } }
       m.msgT = Math.max(0, (m.msgT || 0) - dt);
