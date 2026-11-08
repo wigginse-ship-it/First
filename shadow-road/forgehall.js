@@ -1488,8 +1488,8 @@
     julian: { back: 'boards', wall: '#3E4A30', awn: ['#2E6A3E', '#E4DCC4'], sign: 'hunt', side: -1, lamp: 1 },
     dworkin: { back: 'plaster', wall: '#4A3A5A', awn: ['#4E2C6E', '#C9A050'], sign: 'trump', side: 1, lamp: -1 },
     ganelon: { back: 'boards', wall: '#3A4256', roof: '#3A3E4A', post: '#4E3A2A', sign: 'helm', side: 1, lamp: -1 },
-    fiona: { back: 'plaster', wall: '#3E2E4E', awn: ['#4E2C6E', '#3E7A4A'], sign: 'flask', side: 1 },
-    random: { back: 'boards', wall: '#5A3424', awn: ['#9A2A22', '#E0B050'], sign: 'dice', side: 1, lamp: 1 },
+    fiona: { back: 'plaster', wall: '#3E2E4E', awn: ['#4E2C6E', '#3E7A4A'], side: 1 },
+    random: { back: 'boards', wall: '#5A3424', awn: ['#9A2A22', '#E0B050'], side: 1, lamp: 1 },
     llewella: { back: 'tile', wall: '#1E5A64', awn: ['#2A7A7A', '#E0ECF0'], sign: 'pearl', side: -1, post: '#6A5A4A' },
   };
   const LAMP = (id, hw) => { const o = SHOPS[id]; return o.lamp ? { x: o.lamp * (hw - 7 - 12), y: HEM + 16 } : null; };
