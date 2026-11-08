@@ -4,9 +4,9 @@
 // (NG+ can push levels higher) draws the level-7 form; level 6 falls through to art_tier6.js, lower levels to drawWeapon.
 //   hammer  Judgment: the Jewel of Judgment cut as a maul's head, a great faceted ruby in gold claws, the Pattern
 //           turning in its depths, its heart beating, and a ring of storm cloud circling it (the Jewel rules the weather)
-//   staff   the Logrus Stave: two strands of black Chaos-iron twisted round a core of green Chaos-fire, the twist crawling
-//           slowly along it; at either end a crown of writhing iron tines, the Logrus's shifting lines, holding a turning
-//           shard of Chaos-crystal, with now and then a thread of lightning snapping from a tine to the shard's point
+//   staff   the Ygg Branch: a living staff of pale silver-ash cut from Ygg, the great tree at the edge of Amber, sap-light
+//           breathing along its grain; its leading end still growing, a crown of swaying leaves and white blossoms that
+//           now and then lets a leaf go, and at the other end roots gripping a polished amber stone with a slow light in it
 //   sword   the Trumpblade: the blade is a window cut into Shadow, the land seen through it walking past and changing
 //           (dusk over Kolvir, night, aurora, the red sky of Chaos), rimmed in silver with light splitting at its edges;
 //           its guard is a fan of Trumps, one of them always cold with a contact
@@ -114,69 +114,53 @@ function t7Hammer(pose) {
 }
 
 // ======================================================================================================
-// THE LOGRUS STAVE — black Chaos-iron twisted round a core of green Chaos-fire, the Logrus writhing at either end
+// THE YGG BRANCH — a living staff cut from Ygg, the great tree at the edge of Amber, that never quite stopped growing
 // ======================================================================================================
-// Two strands of black iron wound about a core of green Chaos-fire, the twist crawling slowly along the staff with light
-// travelling down the core between the strands. Each end is a crown of curved iron tines, never quite still, like the
-// Logrus's own shifting lines, and holds a long shard of Chaos-crystal that turns slowly; now and then a thread of the
-// Logrus's lightning snaps from a tine to the shard's point. The far end is the same crown a little smaller, so either
-// end looks right when the staff slides through the hands.
+// A long branch of pale silver-ash wood, its grain running the length of it in fine dark lines and a few knots, and
+// a golden-green light breathing slowly along the grain as if sap still ran in it. Two silver wire bindings mark the
+// grip. The leading end has never stopped growing: three short twigs fork from it, each in a cluster of living leaves
+// that sway as it moves, with two small white blossoms among them, and now and then a leaf comes loose and drifts away.
+// At the other end the wood splits into roots that grip a polished stone of amber, a slow light turning inside it.
 function t7Staff(pose) {
-  const now = t7Now(), plain = t6Plain(), len = 62, back = -28, pulse = .5 + .5 * Math.sin(now * .9);
+  const now = t7Now(), plain = t6Plain(), len = 62, back = -28, breathe = .5 + .5 * Math.sin(now * 1.1);
   const sc = pose.noHand ? .86 : 1; if (sc !== 1) { ctx.save(); ctx.translate(15, 0); ctx.scale(sc, sc); ctx.translate(-22, 0); } // the card portrait: kept inside its frame
-  const IRON = '#363040', IRON2 = '#26222E', IRON3 = '#4A4458';
-  // the core: green Chaos-fire, with slow bright pulses travelling along it (seen only between the strands)
-  limb([back, 0, len, 0], plain ? '#22C487' : '#2AA878', 5);
-  t6Add(() => { ctx.lineCap = 'round';
-    for (let i = 0; i < 3; i++) { const p = (now * .16 + i / 3) % 1, x = back + 2 + p * (len - back - 4), a = Math.sin(p * Math.PI);
-      ctx.strokeStyle = `rgba(150,255,200,${.7 * a})`; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x - 6, 0); ctx.lineTo(x + 6, 0); ctx.stroke();
-      ctx.strokeStyle = `rgba(240,255,248,${.8 * a})`; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(x - 3.5, 0); ctx.lineTo(x + 3.5, 0); ctx.stroke(); } });
-  // the two strands of iron: the twist crawls slowly along the staff; the strand passing behind is darker
-  { const pb = new Path2D(), pf = new Path2D(), ph = new Path2D(), A = 1.4, step = 1.1, crawl = now * .7;
-    for (const s of [0, Math.PI]) for (let x = back + .6; x < len - .6; x += step) {
-      const a = x * .27 - crawl + s, y0 = Math.sin(a) * A, y1 = Math.sin(a + step * .27) * A, front = Math.cos(a) > 0, P = front ? pf : pb;
-      P.moveTo(x, y0); P.lineTo(x + step + .25, y1); if (front && plain) { ph.moveTo(x, y0 - .7); ph.lineTo(x + step + .25, y1 - .7); } }
-    ctx.lineCap = 'butt'; ctx.strokeStyle = C('#16141C'); ctx.lineWidth = 2.2; ctx.stroke(pb);
-    ctx.strokeStyle = C(IRON); ctx.lineWidth = 2.5; ctx.stroke(pf);
-    if (plain) { ctx.strokeStyle = 'rgba(200,235,225,.5)'; ctx.lineWidth = .55; ctx.stroke(ph); } }
+  const WOOD = '#D6CBB2', WOOD_DK = '#9A8A6C', BARK = '#7A6A50', LEAF = ['#5E9A48', '#7AB85A', '#4A8040', '#8CC468'], SILVER = '#D8DEE8';
+  // the shaft: pale wood, a hair thicker toward the living end
   ctx.lineCap = 'round';
-  for (const x of [8, 25]) { rrect(x - 1.3, -3, 2.6, 6, 1); ctx.fillStyle = t6VG(-3, 3, IRON3, .5, -.4); ctx.fill(); outline(.8); } // iron collars either side of the grip
-  // a crown of the Logrus at one end: swept iron fins inlaid with green fire round a turning shard of Chaos-crystal (drawn pointing along +x)
-  const crown = (X, dir, s, seed) => {
-    ctx.save(); ctx.translate(X, 0); ctx.scale(dir * s, s);
-    // a fin: a flat blade of iron swept forward, a channel of green fire let into it; the fins open and close a little, slowly
-    const FIN = [0, -2.4, 5, -9.5, 8.5, -11.6, 12, -10.9, 23, -6.2, 11, -6.8, 6.5, -4.6, 3, -2.2], INL = [5.2, -7.4, 9, -9.6, 18.5, -6.8];
-    const ang = (k) => .06 * Math.sin(now * .8 + seed + k * 2.2);
-    const at = ([x, y], sy, a) => [x * Math.cos(a) + y * Math.sin(a), (y * Math.cos(a) - x * Math.sin(a)) * sy]; // a fin point in the crown's frame
-    const fin = (sy, k, col) => { const a = ang(k); ctx.save(); ctx.scale(1, sy); ctx.rotate(-a);
-      t6Shape(FIN, t6VG(-12, -2, col, .5, -.35), 1);
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = C('#0E5A40'); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(INL[0], INL[1]); ctx.lineTo(INL[2], INL[3]); ctx.lineTo(INL[4], INL[5]); ctx.stroke();
-      t6Add(() => { ctx.strokeStyle = `rgba(110,255,190,${.6 + .35 * Math.sin(now * 1.7 + k * 2 + seed)})`; ctx.lineWidth = .65; ctx.stroke(); });
-      ctx.restore(); return at([23, -6.2], sy, a); };
-    const barb = (sy) => { ctx.save(); ctx.scale(1, sy); t6Shape([1, -2.6, -1.5, -6.5, -5, -10, -.4, -7.4, 3, -3.4], t6VG(-10, -2, IRON2, .5, -.3), .9); ctx.restore(); }; // short barbs swept back
-    barb(-1); barb(1);
-    const botTip = fin(-1, 1, IRON2);
-    // the shard: a long eight-sided crystal, its ridge turning as it rotates, floating a little
-    const sx = 3.6 + Math.sin(now * 1.1 + seed) * .5, sw = 4, r = Math.sin(now * .7 + seed) * 2.9, tip = sx + 22;
-    t6Path([sx, 0, sx + 7, -sw, tip, 0, sx + 7, r]); ctx.fillStyle = C('#A8FFD8'); ctx.fill();
-    t6Path([sx, 0, sx + 7, r, tip, 0, sx + 7, sw]); ctx.fillStyle = C('#0C7A56'); ctx.fill();
-    t6Path([sx, 0, sx + 7, -sw, tip, 0, sx + 7, sw]); outline(1);
-    if (plain) { ctx.strokeStyle = 'rgba(230,255,245,.9)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(sx + .8, 0); ctx.lineTo(sx + 7, r); ctx.lineTo(tip - .8, 0); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.75)'; t6Path([sx + 2.4, -.7, sx + 7, -sw + .9, sx + 9.5, -sw * .55]); ctx.fill(); }
-    const topTip = fin(1, 0, IRON);
-    t6Shape([-1, -3.4, 4.6, -2.8, 6.4, 0, 4.6, 2.8, -1, 3.4], t6VG(-3.4, 3.4, IRON3, .5, -.4), .9); // the clasp round the shard's foot
-    rrect(-2.5, -3.7, 4.4, 7.4, 1.4); ctx.fillStyle = t6VG(-3.7, 3.7, IRON3, .5, -.4); ctx.fill(); outline(.9); // the socket
-    circle(-.3, 0, 1.15); ctx.fillStyle = C('#6CFFC0'); ctx.fill(); outline(.5);
-    // glints, and a thread of the Logrus's lightning now and then from a tine's point to the shard's
-    t6Add(() => { ctx.fillStyle = 'rgba(235,255,245,.95)'; gbStar(tip, 0, 1.6 + .9 * pulse, .9); ctx.fillStyle = 'rgba(200,255,230,.9)'; gbStar(-.3, 0, 1, .8);
-      const c = now * .55 + seed * .37, ph = c % 1;
-      if (ph < .2) { const n = Math.floor(c), q = Math.floor(now * 14), a = 1 - ph / .2, from = n % 2 ? topTip : botTip, j = (k) => Math.sin(n * 12.9 + q * 7.3 + k * 4.1) * 1.6;
-        const pts = [from]; for (let k = 1; k < 4; k++) { const u = k / 4; pts.push([from[0] + (tip - from[0]) * u + j(k) * .4, from[1] * (1 - u) + j(k + 5)]); } pts.push([tip, 0]);
-        const line = () => { ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
-        ctx.lineJoin = 'round'; line(); ctx.strokeStyle = `rgba(60,255,170,${.5 * a})`; ctx.lineWidth = 1.5; ctx.stroke(); line(); ctx.strokeStyle = `rgba(240,255,250,${.95 * a})`; ctx.lineWidth = .55; ctx.stroke(); } });
-    ctx.restore();
-  };
-  crown(back, -1, .9, 2.3); crown(len, 1, 1.1, 0);
+  t6Shape([back, -2.3, len - 6, -2.8, len - 2, -2.4, len - 2, 2.4, len - 6, 2.8, back, 2.3], t6VG(-2.8, 2.8, WOOD, .3, -.32), 1.1);
+  // its grain: fine dark lines running the length, wandering a little, and three knots
+  ctx.strokeStyle = C(WOOD_DK); ctx.lineWidth = .45;
+  for (const [y0, ph] of [[-1.2, 0], [.1, 2.1], [1.3, 4.3]]) { ctx.beginPath(); for (let x = back + 1; x <= len - 3; x += 2) { const y = y0 + Math.sin(x * .19 + ph) * .35; x === back + 1 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); }
+  for (const [kx, ky, kr] of [[-14, .3, 1.1], [36, -.6, 1.3], [50, .7, .9]]) { ctx.fillStyle = C(BARK); ell(kx, ky, kr * 1.5, kr * .8); ctx.fill(); ctx.strokeStyle = C(WOOD_DK); ctx.lineWidth = .4; ell(kx, ky, kr * 2.2, kr * 1.3); ctx.stroke(); }
+  // the sap-light breathing along the grain, a bright pulse travelling toward the living end
+  t6Add(() => { ctx.lineCap = 'round';
+    const p = (now * .22) % 1, x = back + p * (len - back);
+    ctx.strokeStyle = `rgba(220,240,140,${(.18 + .14 * breathe).toFixed(3)})`; ctx.lineWidth = 1.1; ctx.beginPath(); for (let xx = back + 1; xx <= len - 3; xx += 2) { const y = .1 + Math.sin(xx * .19 + 2.1) * .35; xx === back + 1 ? ctx.moveTo(xx, y) : ctx.lineTo(xx, y); } ctx.stroke();
+    ctx.strokeStyle = `rgba(250,255,200,${(.7 * Math.sin(p * Math.PI)).toFixed(3)})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 5, .1); ctx.lineTo(x + 5, .1); ctx.stroke(); });
+  // silver wire bindings at the grip
+  for (const x of [8, 25]) { rrect(x - 1.6, -2.9, 3.2, 5.8, 1); ctx.fillStyle = t6VG(-3, 3, SILVER, .4, -.35); ctx.fill(); outline(.7);
+    if (plain) { ctx.strokeStyle = 'rgba(120,130,150,.8)'; ctx.lineWidth = .35; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(x - 1.4 + k * 1.1, -2.7); ctx.lineTo(x - .6 + k * 1.1, 2.7); ctx.stroke(); } } }
+  // a leaf: an almond of green with its midrib, turned to a, swaying with the branch
+  const leaf = (x, y, a, L, col) => { ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(L * .45, -L * .32, L, 0); ctx.quadraticCurveTo(L * .45, L * .32, 0, 0); ctx.fillStyle = C(col); ctx.fill(); outline(.55);
+    if (plain) { ctx.strokeStyle = 'rgba(230,250,200,.6)'; ctx.lineWidth = .35; ctx.beginPath(); ctx.moveTo(.6, 0); ctx.lineTo(L * .85, 0); ctx.stroke(); } ctx.restore(); };
+  const blossom = (x, y, r, rot) => { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); for (let k = 0; k < 5; k++) { const a = k / 5 * TAU; ctx.fillStyle = C('#F8F0F2'); ell(Math.cos(a) * r * .55, Math.sin(a) * r * .55, r * .55, r * .38, a); ctx.fill(); outline(.3); } ctx.fillStyle = C('#F2C860'); circle(0, 0, r * .3); ctx.fill(); ctx.restore(); };
+  // the living end: three twigs forking forward, each in its cluster of leaves; two blossoms among them
+  { const sway = (k) => .12 * Math.sin(now * 1.6 + k * 1.9) + .05 * Math.sin(now * 3.1 + k);
+    const twigs = [[-.6, 14, 0], [.05, 18, 1], [.65, 13, 2]], root = len - 3;
+    t6Add(() => t6Halo(len + 10, 0, 22, '220,240,150', .16 + .1 * breathe));
+    for (const [a0, L, k] of twigs) { const a = a0 + sway(k), ex = root + Math.cos(a) * L, ey = Math.sin(a) * L;
+      ctx.strokeStyle = C(BARK); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(root, 0); ctx.quadraticCurveTo(root + Math.cos(a * .5) * L * .6, Math.sin(a * .5) * L * .6, ex, ey); ctx.stroke();
+      for (let j = 0; j < 5; j++) { const la = a + (j - 2) * .5 + sway(k + j) * 1.5, LL = 8.5 + ((k * 3 + j) % 3) * 1.6; leaf(ex - Math.cos(a) * j * 2.2, ey - Math.sin(a) * j * 2.2, la, LL, LEAF[(k + j) % 4]); } }
+    blossom(root + 12, -4.5 + Math.sin(now * 1.4) * .4, 2.9, now * .2); blossom(root + 8.5, 6 + Math.sin(now * 1.2 + 1) * .4, 2.4, -now * .15); blossom(root + 17, 2 + Math.sin(now * 1.7 + 2) * .4, 2.1, now * .25);
+    // now and then a leaf comes loose and drifts back along the staff, turning, fading
+    const p = (now * .3) % 1; if (p < .8) { const q = p / .8; ctx.save(); ctx.globalAlpha *= 1 - q; leaf(root + 6 - q * 34, 3 + q * 14 + Math.sin(q * 9) * 2.5, q * 7, 5.5, LEAF[1]); ctx.restore(); } }
+  // the root end: the wood splits into roots that grip a polished stone of amber, a slow light turning in it
+  { const sx = back - 6.5, sr = 4.4, turn = now * .6;
+    const g = ctx.createRadialGradient(sx - 1.4, -1.4, .5, sx, 0, sr); g.addColorStop(0, C('#FFE6A0')); g.addColorStop(.5, C('#E89A30')); g.addColorStop(1, C('#8A4A14'));
+    ctx.fillStyle = g; ell(sx, 0, sr * 1.15, sr); ctx.fill(); outline(.9);
+    t6Add(() => { t6Halo(sx, 0, 11, '255,190,90', .22 + .12 * breathe); ctx.fillStyle = 'rgba(255,240,200,.85)'; ell(sx + Math.cos(turn) * 1.6, Math.sin(turn) * 1.2, 1.2, .8); ctx.fill(); });
+    for (const [s, k] of [[-1, 0], [1, 1], [-1, 2], [1, 3]]) { const ry = s * (2 + k * .3), tx = sx - 2 - k * 1.2;
+      ctx.strokeStyle = C(BARK); ctx.lineWidth = 1.3 - k * .15; ctx.beginPath(); ctx.moveTo(back + 1, s * 1.2); ctx.bezierCurveTo(back - 2, ry * 1.6, sx + 1, ry * 1.5, tx, s * (sr - .6 - k * .5)); ctx.stroke(); } }
   t6SwingGlow(pose, back - 26, len - back + 56, 20);
   if (sc !== 1) ctx.restore();
   if (!pose.noHand) gripHand(pose.glove || '#FFF1E0');
