@@ -972,6 +972,7 @@ function drawProj(p, t) {
   if (p.arrow) { drawArrowProj(p); return; }
   if (p.tornado) { drawTornado(p, t); return; }
   const x = p.x, y = p.y - p.z;
+  if (p.wv && window.drawWaveVar) { drawWaveVar(p, t); return; } // (cursed and purified waves: wavevar.js)
   if (p.quake) { // the hammer's fault line: shards of rock bursting up in a running crack
     ctx.strokeStyle = '#2A1B2C'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - Math.sign(p.vx) * 60, p.y); for (let i = 0; i <= 6; i++) ctx.lineTo(x - Math.sign(p.vx) * (60 - i * 10), p.y + (i % 2 ? 3 : -2)); ctx.stroke();
     for (let i = 0; i < 4; i++) { const sx = x - Math.sign(p.vx) * i * 12, h = (22 - i * 5) * (1 + .2 * Math.sin(t * 30 + i)); ctx.fillStyle = i % 2 ? '#8A7458' : '#B89A6E'; ctx.beginPath(); ctx.moveTo(sx - 7, p.y); ctx.lineTo(sx - 1, p.y - h); ctx.lineTo(sx + 2, p.y - h * .7); ctx.lineTo(sx + 7, p.y); ctx.closePath(); ctx.fill(); outline(1.2); }

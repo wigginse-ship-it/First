@@ -40,7 +40,7 @@
   const HIGH_END = 50; // reaching the last world at or past this, the Circle has taken it
   const RESIDUE = .25, HORN_KEEP = .6;
   const WT = { // what feeds it (+) and what eases it (-)
-    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCursed: .4, corpseCap: 2.4, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, groupPer: .6, groupMax: 4, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
+    death: 5, deathStep: 3, deathMax: 20, downHit: .5, corpse: .6, corpseCursed: .25, corpseCap: 2.4, chgMiss: .3, chgMissC: .5, chgWhiff: .4, chgWhiffC: .65, groupPer: .6, groupMax: 4, overkill: .35, massacre: 3, hazardKill: 1.2, backKill: .4,
     villLost: 2.5, villLeft: .6, hornBase: 1.5, hornTier: .75, abyss: 4, cloot: 1.5, roadPerSec: .3, roadMul: 1.5,
     pearlKill: -.5, curseMyDmg: .45, curseFoeDmg: .3, roadAt: 50, blackPearlDmg: 1.35, cwCursedKill: .4, cwCursedBoss: 1.5, blackPearlCrit: .3, cleanWorld: -5, cleanWave: -1.2, parry: -.8, perfect: -1, restraint: -.4, shrine: -22, boss: -2.5, villSaved: -.6,
   };
@@ -289,7 +289,7 @@
     { const cap = cursedHand ? Infinity : WT.corpseCap;
       L.corpseCap = cap;
       if (cw && cw.pure) tickNote('corpse', 'corpse struck · purified: no penalty');
-      else if (cursedHand) { L.corpseFed = (L.corpseFed || 0) + feed(WT.corpseCursed, 'cruelty: a corpse struck'); } // (each blow a little less than a plain weapon's, but never capped)
+      else if (cursedHand) { L.corpseFed = (L.corpseFed || 0) + feed(WT.corpseCursed * (L.road ? .5 : 1) / (onRoad() ? WT.roadMul : 1), 'cruelty: a corpse struck'); } // (less again while the Black Road is out, and the road's own surcharge never applies to it) // (each blow a little less than a plain weapon's, but never capped)
       else if ((L.corpseFed || 0) < cap - 1e-6) { L.corpseFed = (L.corpseFed || 0) + feed(Math.min(WT.corpse, cap - (L.corpseFed || 0)), 'cruelty: a corpse struck'); if (L.corpseFed >= cap - 1e-6) tickNote('corpse', `corpse cap reached (${cap}) · no more penalty`); }
       else tickNote('corpse', `corpse struck · capped (${cap}): no penalty`); }
     burst(co.x, co.y, 8, ['#2A2028', '#5A4A50', '#8A2A30'], 7, 'flesh', dir || P.facing); sfx('hit-flesh', .2); co.sqx = 1.15; co.sqy = .9;
