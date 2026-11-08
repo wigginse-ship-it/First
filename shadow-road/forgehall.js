@@ -1501,7 +1501,7 @@
   // on the page, its far side runs square out of the wall, and its awning reaches out over the floor from the stone above it.
   // We see a block's top, its side toward the near end and its face to the hall. What stands nearer us than the keeper (the
   // near post, the awning's top, hem and cheek, the lantern and the sign, and whatever stands before them) is in the front layer.
-  const SQ = .12, SB = 15, SF = 74, SA0 = -206, SA1 = -182, SVAL = 16, SLH = -152, SCL = -112;
+  const SQ = .12, SB = 15, SF = 74, SA0 = -242, SA1 = -226, SVAL = 14, SLH = -196, SCL = -112;
   let P3 = (u, h, w) => [u, h + w];
   // (uo: the booth itself stands a little toward the near end of its bay, its keeper toward its middle; the keeper's own
   // things, before and behind them, are placed from where the keeper stands, unshifted)
