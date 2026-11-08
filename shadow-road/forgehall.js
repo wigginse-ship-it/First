@@ -572,7 +572,7 @@
   function chatTick(dt) {
     if (H.panel || H.leaving || !H.on) return;
     if (H.chat) { const C = H.chat; C.t -= dt; if (C.t > 0) return; const line = C.lines[C.i++]; if (!line) { H.chat = null; H.chatT = rand(14, 24); return; }
-      const v = H.cast.find(q => q.id === line[0]); if (v) { say(v, line[1], 2.6); if (!v.act) act(v, 'glance', 1.6); C.t = Math.max(2.2, 1.2 + line[1].length * .05); } else C.t = 0; return; }
+      const v = H.cast.find(q => q.id === line[0]); if (v) { say(v, line[1], 3.6 + line[1].length * .06); if (!v.act) act(v, 'glance', 1.6); C.t = Math.max(2.6, 1.6 + line[1].length * .06); } else C.t = 0; return; } // (each line stays up a good while, still showing as the answer comes)
     H.chatT = (H.chatT ?? rand(5, 9)) - dt; if (H.chatT > 0) return;
     const here = new Set(H.cast.map(v => v.id)), seen = H.chatSeen || (H.chatSeen = new Set());
     const ok = CHAT.map((c, i) => [c, i]).filter(([c, i]) => !seen.has(i) && c.every(l => here.has(l[0])));
