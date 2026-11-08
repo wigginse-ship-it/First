@@ -1332,7 +1332,7 @@
   }
   let DBL_DRAW = false; // (the shadow is drawn through every hand that draws its lord, but without the lord's own marks)
   function drawDouble(e, D, t) {
-    const warn = D.q.length ? 1 : 0, a = D.a * (.5 + .25 * warn + (D.flash > 0 ? .2 : 0)), cy = D.y - e.z - e.hh * (e.size || 1) * .55;
+    const warn = D.q.length ? 1 : 0, a = D.a * (.22 + .18 * warn + (D.flash > 0 ? .15 : 0)), cy = D.y - e.z - e.hh * (e.size || 1) * .55; // (a faint shadow, seen through: darker only in the beat before it answers)
     ctx.save(); ctx.fillStyle = `rgba(0,0,0,${.25 * D.a})`; ell(D.x, D.y, e.hw * .8, 6); ctx.fill(); ctx.restore();
     { const sx = e.x, sy = e.y, sf = e.facing, fl = e.flash, tt = TINT; e.x = D.x; e.y = D.y; e.facing = Math.sign(P.x - D.x) || -sf; e.flash = 0;
       ctx.save(); ctx.globalAlpha *= a; TINT = '#140A12'; DBL_DRAW = true; try { drawEnemy(e, t); } catch (err) { console.error(err); } finally { DBL_DRAW = false; TINT = tt; ctx.restore(); e.x = sx; e.y = sy; e.facing = sf; e.flash = fl; } }
