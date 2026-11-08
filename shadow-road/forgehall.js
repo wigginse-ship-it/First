@@ -154,7 +154,7 @@
   let GEO = null;
   function geo() {
     const key = [VW, Y_OFF, VIEW_H].join('|'); if (GEO && GEO.key === key) return GEO;
-    const cx = VW / 2, yb = Y_OFF + VIEW_H * .46, bx = VW * .16, drop = VIEW_H * .19, bot = VH, k = drop / bx;
+    const cx = VW / 2, yb = Y_OFF + VIEW_H * .46, bx = VW * .21, bot = VH, drop = (bot - yb) * .97, k = drop / bx;
     const sAt = (y) => lerp(.56, .82, cl01((y - yb) / (bot - yb)));
     const footY = (x) => x < bx ? yb + (bx - x) * k : x > VW - bx ? yb + (x - (VW - bx)) * k : yb;
     const slots = {};
@@ -165,7 +165,7 @@
     for (const [id, wgt] of BAYS) { const cell = WALL * wgt / BWT, x = at + cell / 2, s = sAt(yb);
       slots[id] = { id, kind: 'back', dir: 0, wx: x, wy: yb, s, sg: 1, m: new DOMMatrix([s, 0, 0, s, x, yb]), cell }; at += cell; piers.push(at); }
     piers.pop();
-    for (const [id, t, dir, hw] of [['SL1', .2, 1, 66], ['SL2', .7, 1, 60], ['SR1', .26, -1, 80], ['SR2', .76, -1, 48]]) {
+    for (const [id, t, dir, hw] of [['SL1', .24, 1, 74], ['SL2', .62, 1, 70], ['SR1', .28, -1, 86], ['SR2', .66, -1, 56]]) {
       const x = dir > 0 ? bx * (1 - t) : VW - bx * (1 - t), y = yb + t * drop, s = sAt(y) * .96, a = s * .62;
       slots[id] = { id, kind: dir > 0 ? 'left' : 'right', dir, wx: x, wy: y, s, sg: dir, m: new DOMMatrix([dir * a, -k * a, 0, s, x, y]), sideHw: hw }; }
     // (hw: a booth's half-width in the stall's units, a far-wall bay's to the piers between them; mv: the keeper's frame, the stall's scaled to VFIG about the feet)
