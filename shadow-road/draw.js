@@ -977,6 +977,7 @@ function drawProj(p, t) {
     for (let i = 0; i < 4; i++) { const sx = x - Math.sign(p.vx) * i * 12, h = (22 - i * 5) * (1 + .2 * Math.sin(t * 30 + i)); ctx.fillStyle = i % 2 ? '#8A7458' : '#B89A6E'; ctx.beginPath(); ctx.moveTo(sx - 7, p.y); ctx.lineTo(sx - 1, p.y - h); ctx.lineTo(sx + 2, p.y - h * .7); ctx.lineTo(sx + 7, p.y); ctx.closePath(); ctx.fill(); outline(1.2); }
     return;
   }
+  if (p.drill && window.drawDrill) { drawDrill(p, t); return; } // (in its three forms: staffproj.js)
   if (p.drill) { // the Piercing Gale: a spinning cone of wind driven on down the street at chest height, its point leading
     const d = Math.sign(p.vx) || 1, a = Math.min(1, p.life / ((p.max || .5) * .4)), tt = performance.now() / 1000;
     ctx.save(); ctx.translate(x, y); ctx.scale(d, 1); ctx.globalCompositeOperation = 'lighter';

@@ -41,7 +41,7 @@ function moveExtras(m, k, dt, airborne) {
   }
   if (m.tornado && !P.stormed && k >= m.h[0] + .1) { // the staff tears a whirlwind loose
     P.stormed = true; sfx('whoosh');
-    projs.push({ owner: 'p', tornado: 1, x: P.x + P.facing * 50, y: P.y, z: 0, vx: P.facing * 150, life: 2.4, max: 2.4, dmg: Math.round(m.tornado * wMult(P.w) * (m.pmul || 1)), perfect: m.perfect, hitT: new Map(), hit: new Set(), seed: Math.random() * 9 });
+    { const tp = { owner: 'p', tornado: 1, x: P.x + P.facing * 50, y: P.y, z: 0, vx: P.facing * 150, life: 2.4, max: 2.4, dmg: Math.round(m.tornado * wMult(P.w) * (m.pmul || 1)), perfect: m.perfect, hitT: new Map(), hit: new Set(), seed: Math.random() * 9 }; projs.push(window.tornadoSpawn ? tornadoSpawn(tp) : tp); } // (its form by the staff in hand: staffproj.js)
   }
   if (m.blink && P.blinkList && P.blinkList.length) { // Hellride: step out of Shadow beside each of them in turn
     const n = P.blinkList.length, slot = (m.h[1] - m.h[0]) / n, i = Math.floor((k - m.h[0]) / slot);
