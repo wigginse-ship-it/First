@@ -4,7 +4,7 @@
 // ------------------------------------------------------------------------------------------------------
 // In a corrupted run (New Game+ with the Horn of Lorraine, corruption.js NG()), foes now and then drop a cursed version
 // of one of his weapons: more often the corrupted foes, elites, champions and lords, and more as the curse deepens. It
-// lies on the street in a pool of ink, the black veins of it crawling outward; step into the black to take it.
+// lies on the street in a pool of ink, the black veins of it crawling outward; stand in the black a moment to take it.
 // It REPLACES the weapon of that kind (save.cw[id], same id, same slot, every move of the old weapon kept):
 //   THE TRACK     it comes at its own level 3 (of 8) and starts a little weaker than a fully tempered weapon (x0.8 of
 //                 it); the forge feeds it up to 8 (dearer than any temper), each level a step of power and, at 3, 5
@@ -466,7 +466,7 @@
     sfx('growl'); shakeMag = Math.max(shakeMag, 5); floatText(k.x, k.y, 120, 'SOMETHING BLACK FALLS', '#C8A0E8', 13);
     return k;
   }
-  // its fall, its landing, and the taking (the moment he steps into the black)
+  // its fall, its landing, and the taking (a moment standing in the black)
   { const _ul = updateLoot; updateLoot = function (dt) {
     if (!loot.some(k => k.kind === 'cweapon')) return _ul(dt);
     const mine = loot.filter(k => k.kind === 'cweapon'); loot = loot.filter(k => k.kind !== 'cweapon');
@@ -475,7 +475,9 @@
       if (!k.landed) { k.vz -= 500 * dt; k.z = Math.max(0, k.z + k.vz * dt); if (k.z <= 0) { k.landed = true; shakeMag = Math.max(shakeMag, 8); sfx('slam'); burst(k.x, k.y, 4, ['#0A0608', '#3A1A4A', '#9A2038'], 24, 'rock', 0, true); fx.push({ kind: 'ring', x: k.x, y: k.y, z: 2, t: .45, max: .45, r: 70, col: '#6A2A7A', flat: 1 }); } continue; }
       if (Math.random() < dt * (lite() ? 6 : 14)) smoke(k.x + rand(-20, 20), k.y, 2, 1);
       const d = Math.hypot(P.x - k.x, (P.y - k.y) * 1.5), on = d < 30 && P.state !== 'dead' && P.z < 10;
-      if (on && k.landed) { k.got = true; take(k.weapon); } // (taken the moment he steps into the black, once it has come down)
+      const TAKE_T = .3; // (a moment in the black takes it: less than half the old wait)
+      k.stand = on && k.landed ? k.stand + dt : Math.max(0, k.stand - dt * 2);
+      if (k.stand >= TAKE_T) { k.got = true; take(k.weapon); }
     }
     loot = loot.filter(k => !k.got);
   }; }
@@ -506,6 +508,7 @@
         const g = ctx.createRadialGradient(x, y, 2, x, y, R * 1.4); g.addColorStop(0, 'rgba(4,2,6,.95)'); g.addColorStop(.7, 'rgba(14,6,18,.85)'); g.addColorStop(1, 'rgba(40,10,30,0)');
         ctx.fillStyle = g; ell(x, y, R * 1.4, R * .5); ctx.fill();
         ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(200,40,60,${.25 + .35 * pulse})`; ctx.lineWidth = 1.4; ell(x, y, R * 1.05, R * .38); ctx.stroke();
+        if (k.stand > 0) { ctx.strokeStyle = `rgba(230,170,255,${.6 + .4 * pulse})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y, 40, 14, 0, -P_ / 2, -P_ / 2 + TAU * Math.min(1, k.stand / .3)); ctx.stroke(); } // the taking: a ring closing round him as he stands in it
         // the column of its glow, violet and blood
         if (!L) softDab(x, y - 40, 46, '140,40,120', .1 + .06 * pulse);
         ctx.globalCompositeOperation = 'source-over'; }
