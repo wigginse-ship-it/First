@@ -687,7 +687,7 @@ function updateHazards(dt) {
       if (h.delay > 0) { h.delay -= dt; continue; }
       h.r += h.speed * dt;
       const d = Math.hypot(P.x - h.x, (P.y - h.y) * 2.2);
-      if (!h.hit && Math.abs(d - h.r) < 14 && P.z < 10) { h.hit = true; playerDamage(h.dmg, h.x, true); }
+      if (!h.hit && Math.abs(d - h.r) < 14 && P.z < 10) { h.hit = true; P.noKO = !!h.noKO; try { playerDamage(h.dmg, h.x, true); } finally { P.noKO = false; } }
       if (h.r > 520) h.t = -1;
       continue;
     }

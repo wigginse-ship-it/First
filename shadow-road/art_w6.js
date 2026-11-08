@@ -1287,6 +1287,10 @@
   const yClamp = (y) => clamp(y, FLOOR_TOP + 10, FLOOR_BOT - 2);
   const xClamp = (x) => clamp(x, leftWall() + 24, rightWall() - 24);
   const hitP = (dmg, fromX, big) => { if (P.state !== 'dead') playerDamage(dmg, fromX, big); };
+  // the waking dream's attacks fill the whole bed: none of them may take him in one blow (each is held to a share of his
+  // health, and none takes his last breath)
+  const W6_KO_CAP = .28, capW = (d) => Math.min(d, Math.max(1, Math.round(maxHp() * W6_KO_CAP)));
+  const hitP3 = (dmg, fromX, big) => { if (P.state === 'dead') return; P.noKO = true; try { playerDamage(capW(dmg), fromX, big); } finally { P.noKO = false; } };
   const fwdHit = (e, reach, dy = 20, z = 40) => { const fwd = (P.x - e.x) * e.facing; return fwd > -12 && fwd < reach + e.hw && Math.abs(P.y - e.y) < dy && P.z < z; };
   const tellCol = (k, a = 1) => `rgba(230,70,80,${(.14 + .3 * k) * a})`, tellLine = (k) => `rgba(255,130,110,${.5 + .4 * k})`;
   // an attack that takes time: the enemy is held in the 'w6act' state while a controller hazard drives it each frame
@@ -1739,7 +1743,7 @@
   reg('w6drop', {
     update(h, dt) { if (h.t <= 0 && !h.done) { h.done = 1;
         if (h.art === 'pillow') { sfx('hit-goo', .6); feathers(h.x, h.y, 16); } else { sfx('hit-crystal'); burst(h.x, h.y, 2, ['#F8F4EA', '#C8C0AC'], 6, 'crystal', 0); }
-        dust(h.x, h.y, 5); shakeMag = Math.max(shakeMag, 3); if (inEll(P.x, P.y, h.x, h.y, h.r + 6) && P.z < 30) hitP(h.dmg, h.x, true); }
+        dust(h.x, h.y, 5); shakeMag = Math.max(shakeMag, 3); if (inEll(P.x, P.y, h.x, h.y, h.r + 6) && P.z < 30) (h.art === 'tooth' ? hitP3 : hitP)(h.dmg, h.x, true); }
       if (h.t < -.35) h.t = -1; },
     draw(h) { if (h.t <= 0) return; const k = 1 - h.t / h.max; ctx.fillStyle = tellCol(k); ell(h.x, h.y, h.r * k, h.r / 2.2 * k); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke();
       ctx.fillStyle = `rgba(20,16,30,${.15 + .4 * k})`; ell(h.x, h.y, 6 + 14 * k, 2 + 3 * k); ctx.fill(); }, // its shadow, growing as it comes
@@ -1887,7 +1891,7 @@
   reg('w6rem', {
     update(h, dt) { h.el += dt; const Bd = BOARD();
       if (h.el >= h.wait && !h.fired) { h.fired = 1; sfx('shoot'); shakeMag = Math.max(shakeMag, 6); }
-      if (h.fired && h.el < h.wait + .3 && !h.hit && Bd.row(P.y) === h.row && P.z < 60) { h.hit = 1; hitP(h.dmg, P.x - P.facing, true); }
+      if (h.fired && h.el < h.wait + .3 && !h.hit && Bd.row(P.y) === h.row && P.z < 60) { h.hit = 1; hitP3(h.dmg, P.x - P.facing, true); }
       if (h.el > h.wait + .5) h.t = -1; },
     draw(h, t) { const Bd = BOARD(), y = Bd.y0 + h.row * Bd.rh, k = Math.min(1, h.el / h.wait);
       if (!h.fired) { ctx.fillStyle = tellCol(k, .9); ctx.fillRect(Bd.L, y + 1, Bd.R - Bd.L, Bd.rh - 2); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.4; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 90; ctx.strokeRect(Bd.L + 1, y + 1.5, Bd.R - Bd.L - 2, Bd.rh - 3); ctx.setLineDash([]); ctx.lineDashOffset = 0;
@@ -1898,7 +1902,7 @@
   // THE SNOOZE: a vast hand in a pyjama sleeve comes down flat, three times, wherever you were standing a moment before
   reg('w6slap', {
     update(h, dt) { if (h.delay > 0) { h.delay -= dt; if (h.delay <= 0) { h.x = xClamp(P.x); h.y = yClamp(P.y); const e = SB(); h.f = e ? Math.sign(h.x - e.x) || 1 : 1; } return; } h.el += dt;
-      if (h.el >= h.tell && !h.hit) { h.hit = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 8); dust(h.x, h.y, 10); floatText(h.x, h.y, 50, 'SNOOZE', '#FFE0A0', 15); if (inEll(P.x, P.y, h.x, h.y, h.r + 6) && P.z < 50) hitP(h.dmg, h.x, true); }
+      if (h.el >= h.tell && !h.hit) { h.hit = 1; sfx('slam'); shakeMag = Math.max(shakeMag, 8); dust(h.x, h.y, 10); floatText(h.x, h.y, 50, 'SNOOZE', '#FFE0A0', 15); if (inEll(P.x, P.y, h.x, h.y, h.r + 6) && P.z < 50) hitP3(h.dmg, h.x, true); }
       if (h.el > h.tell + .7) h.t = -1; },
     draw(h) { if (h.delay > 0 || h.el > h.tell + .05) return; const k = h.el / h.tell; ctx.fillStyle = tellCol(k); ell(h.x, h.y, h.r * k, h.r / 2.2 * k); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.8; ell(h.x, h.y, h.r, h.r / 2.2); ctx.stroke();
       ctx.fillStyle = `rgba(20,16,30,${.15 + .35 * k})`; ell(h.x + 6, h.y, 12 + 24 * k, 3 + 6 * k); ctx.fill(); },
@@ -1925,7 +1929,7 @@
       if (h.el < h.wait && n !== h.n && n >= 1) { h.n = n; floatText(P.x, P.y, 100, n === 1 ? '1 · JUMP!' : String(n), '#FFE0B0', 20); sfx('hit-crystal'); }
       if (h.el >= h.wait && !h.done) { h.done = 1; sfx('slam'); sfx('roar'); shakeMag = 16; flashT = Math.max(flashT, .06); floatText(P.x, P.y, 112, 'JOLT!', '#FFE0B0', 22);
         for (let i = 0; i < 6; i++) dust(rand(leftWall() + 30, rightWall() - 30), rand(FLOOR_TOP + 12, FLOOR_BOT - 6), 6);
-        if (P.z < 8) hitP(h.dmg, P.x - P.facing, true); }
+        if (P.z < 8) hitP3(h.dmg, P.x - P.facing, true); }
       if (h.el > h.wait + .5) h.t = -1; },
     draw(h, t) { if (h.done) return; const Bd = BOARD(), k = Math.min(1, h.el / h.wait), pul = .5 + .5 * Math.sin(t * (8 + k * 14));
       ctx.fillStyle = tellCol(k, .35 + .35 * pul); ctx.fillRect(Bd.L, Bd.y0, Bd.R - Bd.L, Bd.rh * 4); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 2.4; ctx.strokeRect(Bd.L, Bd.y0, Bd.R - Bd.L, Bd.rh * 4);
@@ -1939,7 +1943,7 @@
       B.rem = late2 ? 2.4 : 1.4; floatText(e.x, e.y - e.z, 150, 'R · E · M', '#D8D0FF', 15); sfx('charge', 2); W6.mouth = .3; }
     if (kind === 'teeth') { dropRain(e, 'tooth', 6, .8); floatText(e.x, e.y - e.z, 150, 'ITS TEETH ARE FALLING OUT!', '#F4F0FF', 14); W6.mouth = 1; }
     if (kind === 'snooze') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'w6slap', delay: .05 + i * .75, tell: .9, el: 0, r: 38, x: P.x, y: P.y, f: 1, t: 9, max: 9, dmg: Math.round(dmg * .9) }); floatText(e.x, e.y - e.z, 150, 'FIVE MORE MINUTES...', '#F4F0FF', 14); W6.mouth = .6; }
-    if (kind === 'alarm') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'ring', x: e.x + 40, y: e.y + 14, r: 20, delay: .35 + i * .9, speed: 250, dmg: Math.round(dmg * .8), t: 9, max: 9 }); hazards.push({ kind: 'w6bell', x: e.x + 40, y: e.y + 14, t: 2.4, max: 2.4 }); shakeMag = 10; W6.mouth = 1; // (its rings come far enough apart to jump each one)
+    if (kind === 'alarm') { for (let i = 0; i < 3; i++) hazards.push({ kind: 'ring', x: e.x + 40, y: e.y + 14, r: 20, delay: .35 + i * .9, speed: 250, dmg: capW(Math.round(dmg * .8)), noKO: 1, t: 9, max: 9 }); hazards.push({ kind: 'w6bell', x: e.x + 40, y: e.y + 14, t: 2.4, max: 2.4 }); shakeMag = 10; W6.mouth = 1; // (its rings come far enough apart to jump each one)
       let n = 0; const bell = () => { if (n++ < 14 && sfxOn && actx) { tone(1800 + (n % 2) * 200, .05, 'square', .05); setTimeout(bell, 60); } }; bell(); floatText(e.x, e.y - e.z, 170, 'BRRRRRING', '#FFE0A0', 18); }
     if (kind === 'jolt') { hazards.push({ kind: 'w6jolt', el: 0, wait: 2.1, step: .7, n: 0, t: 9, max: 9, dmg: Math.round(dmg * .9) }); floatText(e.x, e.y - e.z, 150, 'IT DREAMS IT IS FALLING...', '#F4F0FF', 14); W6.mouth = .8; }
   }
@@ -2016,7 +2020,7 @@
       if (ph === 1) { e.x = homeX() + Math.sin(t * .5) * 4; }
       // outside the waking dream there is nothing: whoever stands out there is forgotten, a little at a time
       if (B.iris && !B.dead && ph === 3) { const I = B.iris, sx = P.x - homeX(), sy = (P.y - P.z - 30) - (FLOOR_TOP + 40);
-        if (Math.hypot(sx, sy) > I.r - 6 && P.state !== 'dead') { I.outT += dt; if (I.outT > .6) { I.outT = 0; hitP(Math.max(3, Math.round(edmg(e) * .3)), homeX(), false); floatText(P.x, P.y, 80, 'FORGOTTEN', '#C8D0F0', 13); } } else I.outT = 0; }
+        if (Math.hypot(sx, sy) > I.r - 6 && P.state !== 'dead') { I.outT += dt; if (I.outT > .6) { I.outT = 0; hitP3(Math.max(3, Math.round(edmg(e) * .3)), homeX(), false); floatText(P.x, P.y, 80, 'FORGOTTEN', '#C8D0F0', 13); } } else I.outT = 0; }
     },
     boxes(m, box) { const e = SB(); if (!e) box(stage.len - VW / 2, FLOOR_TOP + 16, 62, 300, 240); },
     list(m, list, t) {

@@ -562,6 +562,7 @@ function playerDamage(dmg, fromX, big) {
   if (pw('ward')) dmg = Math.max(1, Math.round(dmg * .5));
   dmg = armorDamage(dmg); thornsBack(raw); P.hurtT = 0;
   if (stageIdx === 7) dmg = Math.min(dmg, Math.max(1, Math.round(maxHp() * .75))); // Lorraine hits hard, but nothing there takes him from full in one blow (75% at most) // armor turns part of every blow aside (gear.js)
+  if (P.noKO && P.hp > 1) dmg = Math.min(dmg, P.hp - 1); // (a blow marked noKO can bring him to his last breath, never past it)
   P.hp -= dmg; P.inv = .8; shakeMag = Math.max(shakeMag, big ? 7 : 4); hitstop = .07; hurtFlash = .25;
   floatText(P.x, P.y, 70, '-' + dmg, '#D0566A', 16); sfx('hurt');
   burst(P.x, P.y, 34, ['#D0566A', '#FFFFFF'], 10, 'spark');
