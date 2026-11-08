@@ -884,12 +884,12 @@
   { const _dp = drawPlayerAt; drawPlayerAt = function (x, y, z, f, pose, a) { if (NG() && L.fx && L.fx.k === 'puppet' && fxAmt() > .4 && !TINT) { TINT = '#140C0A'; try { return _dp(x, y, z, f, pose, a); } finally { TINT = null; } } return _dp(x, y, z, f, pose, a); }; }
 
   // ---------------- the shifts of the view: each comes and goes in a stretch ----------------
-  const FX_BY_TIER = { 2: ['drain', 'tilt', 'tear'], 3: ['drain', 'tilt', 'tear', 'mirror', 'puppet', 'rewind', 'tapestry'], 4: ['drain', 'tilt', 'tear', 'mirror', 'puppet', 'rewind', 'tapestry', 'close'] };
-  const FX_DUR = { drain: [5, 8], tilt: [4.5, 7], tear: [1.4, 2.2], mirror: [4, 5.5], puppet: [5, 7], rewind: [1.3, 1.3], tapestry: [5, 7], close: [4, 6] };
+  const FX_BY_TIER = { 2: ['drain', 'tilt', 'tear', 'blood'], 3: ['drain', 'tilt', 'tear', 'mirror', 'puppet', 'rewind', 'tapestry', 'blood'], 4: ['drain', 'tilt', 'tear', 'mirror', 'puppet', 'rewind', 'tapestry', 'close', 'blood'] };
+  const FX_DUR = { blood: [6, 9], drain: [5, 8], tilt: [4.5, 7], tear: [1.4, 2.2], mirror: [4, 5.5], puppet: [5, 7], rewind: [1.3, 1.3], tapestry: [5, 7], close: [4, 6] };
   const busy = () => !!((typeof zoneTrans !== 'undefined' && zoneTrans) || (window.W8 && W8.cine && W8.cine()) || (window.ENDINGS && ENDINGS.active) || (window.W8 && W8.releasing) || L.coda); // (W8.releasing: the curse let go, w8_late.js, paints its own grey)
   function fxSchedule(dt) {
     const v = CS().v, t = tierOf(v), q = clamp((v - 25) / 75, 0, 1); // (by the curse's value, not its worst moment: the episodes grow on with it)
-    if (L.fx) { L.fx.t += dt; if (L.fx.t >= L.fx.dur) { L.fx = null; L.fxNext = lerp(55, 12, q) * rand(.8, 1.25); } return; }
+    if (L.fx) { L.fx.t += dt; if (L.fx.t >= L.fx.dur) { L.fx = null; L.fxNext = lerp(55, 7, q) * rand(.8, 1.25); } return; }
     if (v < 25 || busy() || L.heart) return;
     L.fxNext -= dt; if (L.fxNext > 0) return;
     startFx(pick(FX_BY_TIER[clamp(t, 2, 4)]));
@@ -970,6 +970,11 @@
       const rg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .55, VIEW_H * .3, VW / 2, Y_OFF + VIEW_H * .55, VW * .72); rg.addColorStop(0, 'rgba(150,20,30,0)'); rg.addColorStop(1, `rgba(150,20,30,${Math.min(.5, drain * .4)})`);
       g.globalCompositeOperation = lite() ? 'source-over' : 'multiply'; g.fillStyle = lite() ? `rgba(120,20,30,${Math.min(.18, drain * .14)})` : rg; view(); g.globalCompositeOperation = 'source-over'; }
     if (f && k > 0) {
+      if (f.k === 'blood') { // the blood light: everything seen through red, still clear (laid over the light, not over the picture), and a slow heartbeat of red at the very edges
+        const beat = Math.pow(Math.max(0, Math.sin(t * 2.4)), 6) + .6 * Math.pow(Math.max(0, Math.sin(t * 2.4 - .5)), 6);
+        if (!lite()) { g.globalCompositeOperation = 'color'; g.fillStyle = `rgba(190,40,48,${(.4 * k).toFixed(3)})`; view(); } // (the colours turn toward red, the light and dark of things left as they are)
+        g.globalCompositeOperation = 'multiply'; g.fillStyle = `rgba(255,${200 - 24 * beat | 0},${196 - 24 * beat | 0},${(.45 * k).toFixed(3)})`; view(); g.globalCompositeOperation = 'source-over';
+        const vg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .5, VIEW_H * .6, VW / 2, Y_OFF + VIEW_H * .5, VW * .66); vg.addColorStop(0, 'rgba(120,0,10,0)'); vg.addColorStop(1, `rgba(120,0,10,${((.25 + .3 * beat) * k).toFixed(3)})`); g.fillStyle = vg; view(); }
       if (f.k === 'puppet') { const vg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .45, VIEW_H * .2, VW / 2, Y_OFF + VIEW_H * .5, VW * .62); vg.addColorStop(0, 'rgba(40,16,4,0)'); vg.addColorStop(1, `rgba(30,12,4,${.75 * k})`); g.fillStyle = vg; view();
         g.globalAlpha = .1 * k; g.fillStyle = weavePat(g); view(); g.globalAlpha = 1; }
       if (f.k === 'tapestry') { if (!lite()) { g.globalCompositeOperation = 'color'; g.fillStyle = `rgba(150,120,80,${.7 * k})`; view(); g.globalCompositeOperation = 'source-over'; }
