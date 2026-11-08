@@ -62,7 +62,11 @@ const endingsSeen = () => Object.keys(save.endings || {}).filter(k => save.endin
     if (save.started) persist();
   }
 }
+// where he fell: dying sends him back only to the start of the place (the area) he fell in, not the start of the world;
+// kept on the save so Try again, the forge's Walk on and Continue all take him back there
+const resumeZone = (i) => { const f = save.fallenAt; return f && f.stage === i && (f.cycle | 0) === (save.cycle | 0) && ZONES[i] && ZONES[i].zones[f.zone] ? f.zone : 0; };
 function play(i, zone = 0) {
+  save.fallenAt = null;
   save.started = true; persist(); clearInput();
   startStage(i); retryZone = 0;
   if (zone > 0) { enterZone(zone); const Z = ZONES[i].zones[zone]; banner(Z.title, Z.sub, 2.4); } // a retry starts where you fell
@@ -71,6 +75,7 @@ function play(i, zone = 0) {
 function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); if (typeof invBtnText === 'function') $('#invBtn').textContent = invBtnText(); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
 function resume() { mode = 'play'; clearInput(); showOnly(null); }
 function gameOver() {
+  save.fallenAt = { stage: stageIdx, zone: typeof retryZone === 'number' ? retryZone : 0, cycle: save.cycle | 0 };
   mode = 'over'; persist();
   $('#overText').textContent = `${stage.name} got the better of you this time. You keep everything you picked up: ${runShards} shards and ${runSigils} sigil${runSigils === 1 ? '' : 's'}. Spend them at the forge, or jump straight back in.`;
   showOnly('overOv'); playMusic('fallen');
@@ -209,7 +214,7 @@ function renderForge(note) {
   const tw = $('#trumpCards'); tw.innerHTML = '';
   forgeTrumps(tw);
   $('#forgeNote').textContent = note || '';
-  $('#walkBtn').textContent = `Walk on: ${STAGES[roadStage()].name}`;
+  { const z = resumeZone(roadStage()), Z = z && ZONES[roadStage()].zones[z]; $('#walkBtn').textContent = `Walk on: ${Z && Z.title ? Z.title : STAGES[roadStage()].name}`; }
 }
 // the weapons: a card each, to level up (and past the moves, in a new cycle, to temper)
 function forgeWeapons(wrap) {
@@ -304,7 +309,7 @@ $('#newBtn').addEventListener('click', () => {
   if (save.started && !confirmNew) { confirmNew = true; $('#newBtn').textContent = 'Tap again to erase your save'; return; }
   confirmNew = false; save = freshSave(); gearChanged(); persist(); play(0);
 });
-$('#walkBtn').addEventListener('click', () => play(roadStage()));
+$('#walkBtn').addEventListener('click', () => play(roadStage(), resumeZone(roadStage())));
 $('#forgeTitleBtn').addEventListener('click', () => { mode = 'title'; refreshTitle(); showOnly('titleOv'); });
 $('#pauseBtn').addEventListener('click', pauseGame);
 // one button (and the M key) silences everything, sound and music together, and remembers it; turning it back on restores both
@@ -319,7 +324,7 @@ $('#resumeBtn').addEventListener('click', resume);
 $('#sfxBtn').addEventListener('click', () => { setTimeout(refreshMute); sfxOn = !sfxOn; try { localStorage.setItem('shadowroad-sfx', sfxOn ? '1' : '0'); } catch (e) {} $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); });
 $('#quitBtn').addEventListener('click', () => { persist(); mode = 'title'; refreshTitle(); showOnly('titleOv'); playMusic('title'); });
 $('#musicBtn').addEventListener('click', () => { setTimeout(refreshMute); setMusic(!musicOn); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); });
-$('#retryBtn').addEventListener('click', () => play(roadStage()));
+$('#retryBtn').addEventListener('click', () => play(roadStage(), resumeZone(roadStage())));
 $('#overForgeBtn').addEventListener('click', () => openForge('REGROUP AND REFORGE'));
 $('#cycleBtn').addEventListener('click', () => { // a new cycle: the road from the start, and the choice on the Rim to make again
   save.cycle++; save.stage = 0; save.branch = null; save.done = false; save.atChoice = false;
