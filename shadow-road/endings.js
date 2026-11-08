@@ -394,18 +394,19 @@
     },
     update(E, T, dt) {
       const b = E.boss; if (b && b.def.draw === 'tyiga') b.w4halo = E.halo0 * (1 - sm(T / 1.5));
-      if (T > 1.6 && T < this.d0) { P.state = T > 4.9 ? 'down' : 'idle'; P.walk = 0; }
-      if (T > 4.7 && !E.lay) { E.lay = 1; dust(P.x, P.y, 5); }
+      if (T > 1.6 && T < this.d0) { P.state = T > 5.65 ? 'down' : 'idle'; P.walk = 0; }
+      if (T > 5.3 && !E.lay) { E.lay = 1; dust(P.x, P.y, 5); }
       if (T > 7.1 && !E.dream) { E.dream = 1; if (TRACKS.dream) playMusic('dream'); }
       if (T > 8.6 && !E.chime) { E.chime = 1; sfx('learned'); }
-      if (T > 11.0) E.walk += dt * 30 / 10.2;
+      if (T > 11.4) E.walk += dt * 30 / 10.2;
     },
-    pose(E, pose) { // spent: he goes down on one knee and stays there a moment, head bowed; then lies back onto the dais
-      const T = E.t; if (T > 2.4 && T < 4.9) {
-        const q = sm((T - 2.4) / .8), d = sm((T - 3.8) / 1.1);
-        kneel(pose, q * (1 - d)); pose.lean = lerp(lerp(pose.lean || 0, .45, q), 0, d);
-        pose.arm = lerp(lerp(pose.arm ?? .2, 1.4, q), 1.62, d); pose.backArm = lerp(lerp(pose.backArm ?? 1.5, 1.2, q), 1.7, d); pose.elbow = lerp(pose.elbow ?? .3, .1, d); pose.backElbow = lerp(pose.backElbow ?? .3, .2, d);
-        if (d > 0) pose.downK = d;
+    pose(E, pose) { // spent: he goes down on one knee and stays there a moment, head bowed; sits back onto his heel; then lies back, slowly
+      const T = E.t; if (T > 2.4 && T < 5.7) {
+        const q = sm((T - 2.4) / .8), d = cl01((T - 3.8) / 1.8), sit = sm(d / .35), tilt = sm((d - .25) / .75);
+        kneel(pose, q * (1 - tilt)); pose.sink = (pose.sink || 0) + 7 * sit * (1 - tilt);
+        pose.lean = lerp(lerp(lerp(pose.lean || 0, .45, q), .15, sit), 0, tilt);
+        pose.arm = lerp(lerp(pose.arm ?? .2, 1.4, q), 1.62, tilt); pose.backArm = lerp(lerp(pose.backArm ?? 1.5, 1.2, q), 1.7, tilt); pose.elbow = lerp(pose.elbow ?? .3, .1, tilt); pose.backElbow = lerp(pose.backElbow ?? .3, .2, tilt);
+        if (tilt > 0) pose.downK = tilt;
       }
     },
     breath(T, t) { // the Abyss breathing under the rim: a pale haze swelling up over the edge of the dais and sinking back, and the soft Z's of a sleeper rising out of the dark
@@ -437,8 +438,8 @@
       const B = freshAlt(E), cam = 240;
       withSet(B, () => paintWorld('dream', { cam }, t));
       // he lies still while his eyes open, sits up onto one knee and stays there a moment, then stands, and walks on
-      const walk2 = T > 11.0, pose = poseAs(T < 9.4 ? 'down' : walk2 ? 'walk' : 'idle', E.walk);
-      if (T >= 9.4 && T < 11.0) { const up = sm((T - 9.4) / .7), rise = sm((T - 10.3) / .6);
+      const walk2 = T > 11.4, pose = poseAs(T < 9.4 ? 'down' : walk2 ? 'walk' : 'idle', E.walk);
+      if (T >= 9.4 && T < 11.4) { const up = sm((T - 9.4) / 1.2), rise = sm((T - 10.75) / .65);
         pose.downK = 1 - up; kneel(pose, Math.min(1, up * 1.4) * (1 - rise));
         pose.lean = .4 * Math.min(1, up * 1.4) * (1 - rise); pose.arm = lerp(1.62, lerp(1.4, pose.arm ?? .3, rise), up); pose.backArm = lerp(1.7, lerp(1.2, pose.backArm ?? 1.5, rise), up); }
       ctx.save(); ctx.translate(-cam, 0); inkHero(cam + E.hx + (walk2 ? E.walk * 10.2 : 0), FLOOR_TOP + 64, 1, 1, pose, 1, true); ctx.restore();

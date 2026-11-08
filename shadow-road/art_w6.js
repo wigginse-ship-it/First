@@ -1521,30 +1521,53 @@
   }
   W6.hourStrike = hourStrike;
   { const _he = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) { if (e.w6stop > 0) { dmg = Math.round(dmg * STOP_DMG); m = Object.assign({}, m, { kb: (m && m.kb || 0) * .2, launch: 0 }); } return _he(e, dmg, dir, m, crit); }; }
+  // THE DROPPED HOUR (it replaces the pools and the turning hours): every so often a great soft watch falls out of the sky
+  // onto the thickest knot of them near him (a gold ring on the sand shows where, a moment before). It crushes what it
+  // lands on and stops the hour round it: a dome of gold where everything but the prince is held still, their thrown
+  // things hanging in the air. Blows on what it holds land half as hard again, and every one is kept; when the
+  // hour runs out the dome folds up and time starts again, and every kept blow lands at once, throwing them.
+  // One hour falls at a time, and its watch runs away into the sand when its hour is spent: the shore stays clear.
+  const HOUR = { r: 112, dur: 5, fall: 1.05, gap: [6.5, 8.5], crush: 22 };
+  let hourId = 0;
+  { const _he2 = hurtEnemy; hurtEnemy = function (e, dmg, dir, m, crit) { if (e && e.w6dome && e.w6stop > 0 && !(m && m.hourRelease)) e.w6store = (e.w6store || 0) + dmg; return _he2(e, dmg, dir, m, crit); }; }
+  function hourTarget() {
+    const live = enemies.filter(e => !e.dead && !e.boss && e.state !== 'enter' && e.x > camX + 30 && e.x < camX + VW - 30);
+    if (!live.length) return null; let best = null, bn = -1;
+    for (const e of live) { const n = live.filter(o => Math.hypot(o.x - e.x, (o.y - e.y) * 2) < HOUR.r).length - Math.abs(e.x - P.x) / 600; if (n > bn) { bn = n; best = e; } }
+    return { x: clamp(best.x, camX + 70, camX + VW - 70), y: clamp(best.y, FLOOR_TOP + 22, FLOOR_BOT - 16) };
+  }
+  function hourRelease(m, d) {
+    d.done = true; sfx('slam'); sfx('hit-crystal'); shakeMag = Math.max(shakeMag, 9); flashT = Math.max(flashT || 0, .1);
+    fx.push({ kind: 'ring', x: d.x, y: d.y, z: 0, t: .5, max: .5, r: HOUR.r * 1.6, col: '#FFFFFF', flat: 1 }); fx.push({ kind: 'ring', x: d.x, y: d.y, z: 0, t: .7, max: .7, r: HOUR.r * 1.2, col: '#FFE08A', flat: 1 });
+    let n = 0;
+    for (const e of enemies) { if (e.w6dome !== d.id) continue; e.w6dome = 0; e.w6stop = 0; const s = Math.round(e.w6store || 0); e.w6store = 0; if (e.dead) continue;
+      const dir = Math.sign(e.x - d.x) || 1;
+      if (s > 0) { n++; hurtEnemy(e, s, dir, { kb: 380, launch: 340, power: 2, hourRelease: 1 }, true); burst(e.x, e.y, e.hh * .5, ['#FFFFFF', '#FFE08A', '#F0B040'], 12, 'spark', 0, true); } }
+    floatText(d.x, d.y, 130, n ? 'TIME RESUMES' : 'THE HOUR ENDS', '#FFE6A0', n ? 18 : 13);
+    if (sfxOn && actx) { tone(1046, .5, 'triangle', .07, 0); tone(784, .6, 'sine', .07, 0, .06); tone(523, .9, 'sine', .08, 0, .14); }
+  }
   MECH_FX.w6melt = {
-    start(m) {
-      m.pools = []; m.turnT = 9; m.warned = false; m.dripT = 5; m.drops = [];
-      for (let i = 0; i < 4; i++) { const p = newPool(400 + i * 300 + rand(-50, 50), FLOOR_TOP + 26 + ((i * 41) % 66), i % 2 ? 'fast' : 'slow'); p.g = 1; m.pools.push(p); }
-      hazards.push({ kind: 'w6pools', m, t: 1e9, max: 1e9 });
-    },
+    start(m) { m.pools = []; m.turnT = 1e9; m.hours = []; m.dripT = 4; },
     update(m, dt) {
       if (stillT > 0) return;
-      for (const p of m.pools) { p.g = Math.min(1, p.g + dt * 1.5); if (p.dead) p.dead += dt; }
-      m.pools = m.pools.filter(p => p.dead < 1);
       const busy = waveActive || enemies.some(e => !e.dead);
-      m.turnT -= dt;
-      if (m.turnT < 3 && !m.warned) { m.warned = true; m.tick = 3; floatText(P.x, P.y, 110, 'THE HOURS STRIKE', '#F6D07A', 16); }
-      if (m.warned && m.turnT < m.tick) { if (sfxOn && actx) tone(1250 - m.tick * 120, .06, 'square', .03 + (3 - m.tick) * .02, 0); m.tick--; } // the countdown ticks, louder each second
-      if (m.turnT <= 0) { hourStrike(m); m.warned = false; m.turnT = rand(8, 10); for (const p of m.pools) p.kind = p.kind === 'slow' ? 'fast' : 'slow'; }
-      m.dripT -= dt;
-      if (m.dripT <= 0 && busy) { m.dripT = rand(6, 8); const x = clamp(P.x + rand(-160, 160), camX + 60, camX + VW - 60), y = clamp(P.y + rand(-40, 40), FLOOR_TOP + 20, FLOOR_BOT - 14); m.drops.push({ x, y, z: 300, vz: 0, kind: Math.random() < .55 ? 'slow' : 'fast', rot: rand(0, 6) }); }
-      for (const d of m.drops) { d.vz -= GRAV * .5 * dt; d.z += d.vz * dt; d.rot += dt * 2;
-        if (d.z <= 0 && !d.done) { d.done = 1; sfx('hit-goo'); const p = newPool(d.x, d.y, d.kind); m.pools.push(p); const live = m.pools.filter(q => !q.dead); if (live.length > 6) live[0].dead = .01; for (let i = 0; i < 10; i++) parts.push({ x: d.x, y: d.y, z: 2, vx: rand(-80, 80), vy: rand(-10, 10), vz: rand(40, 140), life: .6, max: .6, col: d.kind === 'slow' ? '#F2C860' : '#E0583A', size: rand(2, 3.4), shape: 'blob', rot: 0, vr: 0 }); } }
-      m.drops = m.drops.filter(d => !d.done);
-      // whatever is thrown through a slow hour crawls
-      for (const pr of projs) if (pr.owner === 'e') { const p = W6.poolAt(pr.x, pr.y); if (p && p.kind === 'slow') { pr.x -= pr.vx * dt * .62; pr.life += dt * .62; } }
+      if (!m.hours.some(d => !d.gone)) { m.dripT -= dt; if (m.dripT <= 0 && busy) { const tg = hourTarget(); m.dripT = tg ? rand(HOUR.gap[0], HOUR.gap[1]) : 1; if (tg) { m.hours.push({ id: ++hourId, x: tg.x, y: tg.y, t: 0, phase: 'fall', rot: rand(-.4, .4) }); sfx('whoosh'); } } }
+      for (const d of m.hours) { d.t += dt;
+        if (d.phase === 'fall' && d.t >= HOUR.fall) { d.phase = 'hold'; d.t = 0; sfx('slam'); sfx('hit-goo'); shakeMag = Math.max(shakeMag, 10);
+          for (const e of enemies) if (!e.dead && Math.hypot(e.x - d.x, (e.y - d.y) * 2) < 40 + e.hw) hurtEnemy(e, HOUR.crush, Math.sign(e.x - d.x) || 1, { kb: 120, power: 2, hourRelease: 1 }, false);
+          for (let i = 0; i < 18; i++) parts.push({ x: d.x, y: d.y, z: 2, vx: rand(-140, 140), vy: rand(-30, 30), vz: rand(80, 240), life: .7, max: .7, col: pick(['#FFE08A', '#D8A848', '#FFFFFF']), size: rand(2, 3.4), shape: 'puff' });
+          floatText(d.x, d.y, 120, 'THE HOUR STOPS', '#FFE08A', 16);
+          if (sfxOn && actx) { tone(523, 1.2, 'sine', .09, 0); tone(659, 1.2, 'sine', .06, 0, .03); tone(784, 1.4, 'triangle', .05, 0, .06); } }
+        if (d.phase === 'hold') {
+          for (const e of enemies) { if (e.dead || e.boss || e.state === 'enter') continue; const inside = Math.hypot(e.x - d.x, (e.y - d.y) * 2.2) < HOUR.r;
+            if (inside) { if (e.w6dome !== d.id) { e.w6dome = d.id; e.w6store = e.w6store || 0; e.plan = null; if (e.state === 'wind' || e.state === 'strike') e.state = 'idle'; } e.w6stop = Math.max(e.w6stop || 0, .25); e.vx = e.vy = 0; } }
+          for (const pr of projs) if (pr.owner === 'e' && Math.hypot(pr.x - d.x, (pr.y - d.y) * 2.2) < HOUR.r) { pr.x -= (pr.vx || 0) * dt; pr.y -= (pr.vy || 0) * dt; pr.life += dt; }
+          if (d.t > HOUR.dur - 3 && Math.floor(d.t) !== d.tick) { d.tick = Math.floor(d.t); if (sfxOn && actx) tone(1250 - (HOUR.dur - d.t) * 150, .06, 'square', .04, 0); }
+          if (d.t >= HOUR.dur) { hourRelease(m, d); d.phase = 'melt'; d.t = 0; } }
+        if (d.phase === 'melt' && d.t > 1.4) d.gone = true; }
+      m.hours = m.hours.filter(d => !d.gone);
     },
-    boxes(m, box) { for (const d of m.drops) box(d.x, d.y, 0, 40, d.z + 40); for (const e of enemies) if (e.w6pool) box(e.x, e.y, e.z, 30, e.hh + 40); },
+    boxes(m, box) { for (const d of m.hours) box(d.x, d.y, 0, HOUR.r * 1.2, d.phase === 'fall' ? 360 : HOUR.r * .9); },
     list(m, list, t) {
       for (const e of enemies) if (e.w6stop > 0 && !e.dead) { const k = Math.min(1, e.w6stop / .4), cy = e.y - e.z - e.hh * .5, rx = e.hw + 14, ry = e.hh * .62 + 8;
         list.push([e.y + .03, () => onMain(() => { ctx.save(); ctx.globalAlpha = k; // held in amber: a gold glass round it, a stopped dial over its head
@@ -1555,7 +1578,30 @@
           for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * r * .72, y + Math.sin(a) * r * .72); ctx.lineTo(x + Math.cos(a) * r * .9, y + Math.sin(a) * r * .9); ctx.lineWidth = 1; ctx.stroke(); }
           const left = e.w6stop / STOP_T; ctx.fillStyle = 'rgba(120,70,20,.35)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r * .7, -Math.PI / 2, -Math.PI / 2 + TAU * left); ctx.closePath(); ctx.fill(); // how long it is held
           ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - r * .7); ctx.moveTo(x, y); ctx.lineTo(x + r * .45, y); ctx.stroke(); ctx.restore(); })]); }
-      for (const d of m.drops) list.push([d.y, () => { shadow(d.x, d.y, 10 * (1 - Math.min(.7, d.z / 300))); W6_ART.softWatch(d.x, d.y - d.z, 1.4, .4 + Math.sin(t * 6) * .2, d.rot * .2, d.kind === 'slow' ? '#D8A848' : '#C84A30'); }]);
+      for (const d of m.hours) {
+        const R = HOUR.r, ry = R * .42;
+        if (d.phase === 'fall') { const q = Math.min(1, d.t / HOUR.fall), z = 340 * (1 - q * q);
+          list.push([d.y - ry - 1, () => onMain(() => { ctx.save(); // where it will land: a ring of gold on the sand, closing in, and the watch's shadow growing under it
+            ctx.strokeStyle = `rgba(255,224,140,${(.35 + .5 * q).toFixed(3)})`; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 30; ell(d.x, d.y, R, ry); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle = `rgba(255,214,120,${(.08 + .14 * q).toFixed(3)})`; ell(d.x, d.y, R * (1.3 - .3 * q), ry * (1.3 - .3 * q)); ctx.fill(); ctx.restore(); shadow(d.x, d.y, 10 + 26 * q); })]);
+          list.push([d.y, () => W6_ART.softWatch(d.x, d.y - z - 20, 1.5, .35 + .1 * Math.sin(t * 8), d.rot + d.t * .8, '#D8A848')]); continue; }
+        const life = d.phase === 'hold' ? 1 : Math.max(0, 1 - d.t / .35), left = d.phase === 'hold' ? 1 - d.t / HOUR.dur : 0, open = d.phase === 'hold' ? Math.min(1, d.t / .25) : life, warn = d.phase === 'hold' && d.t > HOUR.dur - 1.2;
+        if (open > 0) list.push([d.y - ry - 1, () => onMain(() => { ctx.save(); ctx.translate(d.x, d.y); // the stopped hour on the sand: a clock face of gold, its hand turning back, what is left of the hour shaded round it
+          const g = ctx.createRadialGradient(0, 0, 4, 0, 0, R); g.addColorStop(0, `rgba(255,236,170,${(.3 * open).toFixed(3)})`); g.addColorStop(1, `rgba(232,170,60,${(.16 * open).toFixed(3)})`); ctx.fillStyle = g; ell(0, 0, R * open, ry * open); ctx.fill();
+          ctx.strokeStyle = `rgba(255,226,140,${(.85 * open).toFixed(3)})`; ctx.lineWidth = 2; ell(0, 0, R * open, ry * open); ctx.stroke();
+          ctx.lineWidth = 1.4; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a) * R * .82 * open, Math.sin(a) * ry * .82 * open); ctx.lineTo(Math.cos(a) * R * .94 * open, Math.sin(a) * ry * .94 * open); ctx.stroke(); }
+          if (left > 0) { ctx.fillStyle = 'rgba(255,240,190,.22)'; ctx.beginPath(); ctx.moveTo(0, 0); for (let i = 0; i <= 30; i++) { const a = -Math.PI / 2 + TAU * left * i / 30; ctx.lineTo(Math.cos(a) * R * .78, Math.sin(a) * ry * .78); } ctx.closePath(); ctx.fill(); }
+          const ha = -Math.PI / 2 - (warn ? t * 14 : t * .8); ctx.strokeStyle = `rgba(90,52,12,${(.8 * open).toFixed(3)})`; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(ha) * R * .7, Math.sin(ha) * ry * .7); ctx.stroke();
+          ctx.restore(); })]);
+        if (d.phase === 'hold' || d.t < 1.4) list.push([d.y, () => { const melt = d.phase === 'melt' ? Math.min(1, d.t / 1.2) : 0; ctx.save(); ctx.globalAlpha *= 1 - melt; ctx.translate(d.x, d.y + 2); ctx.scale(1 + melt * .8, 1 - melt * .85); ctx.rotate(1.25); W6_ART.softWatch(0, -6, .95, .85 + .08 * Math.sin(t * 2), 0, '#D8A848'); ctx.restore(); }]);
+        if (open > 0) list.push([d.y + ry + 1, () => onMain(() => { ctx.save(); // and the dome over it: a bell of gold glass, brightest at its rim, flickering as the hour runs out
+          const fl = warn ? (Math.sin(t * 30) > 0 ? 1 : .55) : 1, H2 = R * .95 * open; ctx.globalAlpha = open * fl;
+          const g = ctx.createLinearGradient(0, d.y - H2, 0, d.y); g.addColorStop(0, 'rgba(255,236,170,.05)'); g.addColorStop(1, 'rgba(255,214,120,.16)'); ctx.fillStyle = g;
+          ctx.beginPath(); ctx.moveTo(d.x - R * open, d.y); ctx.bezierCurveTo(d.x - R * open, d.y - H2 * 1.3, d.x + R * open, d.y - H2 * 1.3, d.x + R * open, d.y); ctx.ellipse(d.x, d.y, R * open, ry * open, 0, 0, Math.PI); ctx.fill();
+          ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,236,170,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(d.x - R * open, d.y); ctx.bezierCurveTo(d.x - R * open, d.y - H2 * 1.3, d.x + R * open, d.y - H2 * 1.3, d.x + R * open, d.y); ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,250,220,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(d.x - R * .6 * open, d.y - H2 * .55); ctx.quadraticCurveTo(d.x - R * .35 * open, d.y - H2 * .9, d.x, d.y - H2 * .96); ctx.stroke();
+          ctx.restore(); })]);
+      }
       for (const e of enemies) if (e.w6pool && !e.dead) list.push([e.y + .02, () => onMain(() => { // a little dial turning over its head, slow or fast
         const x = e.x, y = e.y - e.z - e.hh - 14, slow = e.w6pool === 'slow', a = t * (slow ? .6 : 9);
         ctx.save(); ctx.globalAlpha = .85; ctx.fillStyle = slow ? 'rgba(255,224,140,.85)' : 'rgba(255,120,90,.85)'; circle(x, y, 6); ctx.fill(); ctx.strokeStyle = '#3A2010'; ctx.lineWidth = 1; ctx.stroke();
