@@ -1289,7 +1289,7 @@
   const hitP = (dmg, fromX, big) => { if (P.state !== 'dead') playerDamage(dmg, fromX, big); };
   // the waking dream's attacks fill the whole bed: none of them may take him in one blow (each is held to a share of his
   // health, and none takes his last breath)
-  const W6_KO_CAP = .28, capW = (d) => Math.min(d, Math.max(1, Math.round(maxHp() * W6_KO_CAP)));
+  const W6_KO_CAP = .8, capW = (d) => Math.min(d, Math.max(1, Math.round(maxHp() * W6_KO_CAP)));
   const hitP3 = (dmg, fromX, big) => { if (P.state === 'dead') return; P.noKO = true; try { playerDamage(capW(dmg), fromX, big); } finally { P.noKO = false; } };
   const fwdHit = (e, reach, dy = 20, z = 40) => { const fwd = (P.x - e.x) * e.facing; return fwd > -12 && fwd < reach + e.hw && Math.abs(P.y - e.y) < dy && P.z < z; };
   const tellCol = (k, a = 1) => `rgba(230,70,80,${(.14 + .3 * k) * a})`, tellLine = (k) => `rgba(255,130,110,${.5 + .4 * k})`;
