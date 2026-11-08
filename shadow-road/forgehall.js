@@ -152,6 +152,9 @@
   const VFIG = 1.45, HFIG = 1.22;
   const SLOT_OF = { dworkin: 'BL2', gerard: 'BL1', julian: 'BR1', ganelon: 'BR2', fiona: 'SL1', random: 'SL2', llewella: 'SR1' };
   let GEO = null;
+  // the rooms behind the booths: a far bay's back wall drawn G of its opening's size toward (its middle's x, VY), that point
+  // held within VXM of the bay; a side booth's back wall at w = WB in its wall, its wares on it at F of their size
+  const RM = { G: .84, VY: -128, VXM: 230, WB: -30, F: .76 };
   function geo() {
     const key = [VW, Y_OFF, VIEW_H].join('|'); if (GEO && GEO.key === key) return GEO;
     const cx = VW / 2, yb = Y_OFF + VIEW_H * .46, bx = VW * .21, bot = VH, drop = (bot - yb) * .97, k = drop / bx;
@@ -176,8 +179,15 @@
       // to its wall (straight across the view, a little down); a far-wall booth only a little, toward us and away from the middle.
       // mf: the booth's front (its posts, awning, lantern and sign); mb: its back, set into the wall behind)
       // mw: the wares on the back (a side booth's let down a little, so its awning, standing out over them, leaves them in sight)
-      if (sl.kind === 'back') { sl.dv = { x: (sl.wx - cx) / VW * 14, y: 9 }; sl.mf = sl.m; sl.mb = sl.mw = sl.m.translate(-sl.dv.x, -sl.dv.y); }
-      else { const D = 30, q = .12; sl.dv = { x: D / .62, y: D * (q + k) }; sl.mf = sl.m.translate(sl.dv.x / 2, sl.dv.y / 2); sl.mb = sl.m.translate(-sl.dv.x / 2, -sl.dv.y / 2); sl.mw = sl.mb.translate(0, sl.dv.y * .9); } }
+      if (sl.kind === 'back') { sl.dv = { x: (sl.wx - cx) / VW * 14, y: 9 }; sl.mf = sl.m; sl.mb = sl.m.translate(-sl.dv.x, -sl.dv.y);
+        // (the room behind: its back wall set in, drawn smaller toward a point over the hall's middle, so the bays left of it
+        // show the inside of their left-hand jamb and those right of it their right-hand; mw: the wares, on that back wall)
+        const R = sl.rv = { x: clamp((cx - sl.wx) / sl.s + sl.dv.x, -RM.VXM, RM.VXM), y: RM.VY, g: RM.G }; sl.mw = sl.mb.translate(R.x, R.y).scale(R.g).translate(-R.x, -R.y); }
+      else { const D = 30, q = .12; sl.dv = { x: D / .62, y: D * (q + k) }; sl.mf = sl.m.translate(sl.dv.x / 2, sl.dv.y / 2); sl.mb = sl.m.translate(-sl.dv.x / 2, -sl.dv.y / 2);
+        // (a side booth's room runs back into its wall to w = RM.WB: mU its upright frame, rm the back wall's (the wares on it,
+        // drawn a little smaller and kept toward the far side, as the near jamb hides the near end of it), mw the two together)
+        const ax = sl.m.a / sl.s, by = sl.m.b / sl.s, d = sl.dir, uo = SUO[sl.id] || 0, f = RM.F, uc = sl.hw - 6 - f * (sl.hw - 7), p = sl.m.transformPoint(new DOMPoint(0, 0));
+        sl.mU = new DOMMatrix([sl.s, 0, 0, sl.s, p.x, p.y]); sl.rm = new DOMMatrix([ax * f, by * f, 0, f, ax * (uc + uo) + d * RM.WB, by * (uc + uo) + SQ * RM.WB]); sl.mw = sl.mU.multiply(sl.rm); } }
     const door = { x: cx, y: bot, s: sAt(bot), tx: cx, ty: bot - 12 };
     door.m = new DOMMatrix([door.s, 0, 0, door.s, cx, bot]);
     return (GEO = { key, cx, yb, bx, drop, k, bot, sAt, footY, slots, door, piers, pat: { x: cx, y: yb + (bot - yb) * .58 } });
@@ -606,7 +616,7 @@
     // the lights of the hall caught in the floor: the torches on the far wall and the forge's fire, each a long soft streak down the stone
     { const sF = G.sAt(yb); ctx.save(); ctx.globalCompositeOperation = 'lighter';
       const streak = (x, y, w, len, rgb, a) => { ctx.save(); ctx.translate(x, y); ctx.scale(w / len, 1); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, len); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(.5, `rgba(${rgb},${a * .3})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(-len, 0, len * 2, len); ctx.restore(); };
-      for (const x of [VW * .3, VW * .43, VW * .57, VW * .7]) streak(x, yb + 3, 7 * sF, 46 * sF, '255,170,90', .16);
+      for (const x of G.piers) streak(x + 2 * sF, yb + 3, 7 * sF, 46 * sF, '255,170,90', .16);
       const g = H.cast.find(v => v.id === 'gerard'); if (g) { const sl = SL(g); streak(sl.wx, yb + 2, 30 * sF, 90 * sF, '255,140,60', .2); }
       for (const v of H.cast) { const sl = SL(v); if (sl.kind === 'back') continue; const [r, gg, b] = POOL[v.id] || [255, 170, 90]; streak(sl.vx + sl.dir * 18 * sl.s, sl.vy + 4, 16 * sl.s, 60 * sl.s, `${r},${gg},${b}`, .1); }
       ctx.restore(); }
@@ -882,8 +892,8 @@
     const G = geo(), yb = G.yb;
     // the Pattern laid in the floor at the near end, its lines burning faintly
     if (window.W7 && W7.drawPattern) { ctx.save(); ctx.translate(G.pat.x, G.pat.y); const s = Math.min(.42, VW / 1500); ctx.scale(-s, s); try { W7.drawPattern(0, 0, .35, .85, .45 + .25 * Math.sin(t * .9), t); } catch (e) {} ctx.restore(); }
-    // torches on the far wall's piers
-    for (const x of [VW * .3, VW * .43, VW * .57, VW * .7]) { const s = G.sAt(yb), y = yb - 98 * s; flame(x + s, y, 1.1 * s, t, '255,240,180', '255,130,50', x); glowR(x, y - 6 * s, 40 * s, '255,160,80', .2); }
+    // torches on the far wall's piers (in their brackets, between the bays, not out in the rooms behind them)
+    for (const px of G.piers) { const s = G.sAt(yb), x = px + 2 * s, y = yb - 98 * s; flame(x, y, 1.1 * s, t, '255,240,180', '255,130,50', x); glowR(x, y - 6 * s, 40 * s, '255,160,80', .2); }
     for (const v of H.cast) { const sl = SL(v), A = v.act && v.act.delay <= 0 ? v.act : null, u = A ? cl01(A.t / A.dur) : 0;
       // on the booth's back: the forge's fire-bed, the sea in the glass, the lanterns
       { const lp = LAMP(v.id, sl.hw), a = .26 + .05 * Math.sin(t * 4 + v.ph); if (lp) { if (sl.kind === 'back') withM(sl.mf, () => glowR(lp.x, lp.y, 30, '255,200,120', a));
@@ -1676,12 +1686,184 @@
     }
   const BEHIND3 = { fiona() { cursedBlade(FIONA_TABLE.bu, FIONA_TABLE.bw); } };
   const FIONA_TABLE = { u: -30, w: 64, candle: [-5, -6], bu: 20, bw: 16 };
+  // ---------------- the room behind each booth ----------------
+  const LIT = (id) => (POOL[id] || [255, 170, 90]).join(',');
+  const CLOSED = { back: 'boards', wall: '#2E241C' };
+  function bayRoom(sl, id) { // a far bay's room, in its back frame (sl.mb): the back wall set in, the jambs, floor and ceiling running back to it, then the wares
+    const o = id ? SHOPS[id] : CLOSED, iw = sl.hw - 4, top = AWN, R = sl.rv, g = R.g, L = id ? LIT(id) : '120,110,100', wl = o.wall;
+    const bk = (x, y) => [R.x + (x - R.x) * g, R.y + (y - R.y) * g], A = [-iw, top], B = [iw, top], C = [iw, 0], D = [-iw, 0], a = bk(-iw, top), b = bk(iw, top), c = bk(iw, 0), d = bk(-iw, 0);
+    const inR = (fn) => { ctx.save(); ctx.translate(R.x, R.y); ctx.scale(g, g); ctx.translate(-R.x, -R.y); try { fn(); } finally { ctx.restore(); } };
+    ctx.save(); ctx.beginPath(); ctx.rect(-iw, top, iw * 2, -top); ctx.clip();
+    ctx.fillStyle = '#0A0605'; ctx.fillRect(-iw, top, iw * 2, -top);
+    inR(() => { if (id) { boothBack(iw, o.back, wl); if (ROOMB[id]) ROOMB[id](iw); } else closedBack(iw + 7); });
+    // the floor running back, its boards toward the back wall, lit at the front by the booth's own light
+    quad(D, C, c, d); { const fg = ctx.createLinearGradient(0, 0, 0, d[1]); fg.addColorStop(0, '#3A2A20'); fg.addColorStop(1, '#120A08'); ctx.fillStyle = fg; ctx.fill(); }
+    ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = .7; ctx.beginPath(); for (let x = -iw + 12; x < iw; x += 12) { const q = bk(x, 0); ctx.moveTo(x, 0); ctx.lineTo(q[0], q[1]); } ctx.stroke();
+    { const fl = ctx.createRadialGradient(0, 0, 0, 0, 0, iw); fl.addColorStop(0, `rgba(${L},.16)`); fl.addColorStop(1, `rgba(${L},0)`); quad(D, C, c, d); ctx.fillStyle = fl; ctx.fill(); }
+    // the ceiling, a strip of dark boards under the lintel
+    quad(A, B, b, a); ctx.fillStyle = '#0E0807'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,220,180,.06)'; ctx.lineWidth = .7; ctx.beginPath(); for (let x = -iw + 16; x < iw; x += 16) { const q = bk(x, top); ctx.moveTo(x, top); ctx.lineTo(q[0], q[1]); } ctx.stroke();
+    // the jambs, the inside of the wall: lit at the front by the booth's light, falling dark toward the back
+    for (const [P, Q, q, pp] of [[A, D, d, a], [B, C, c, b]]) { if (Math.abs(pp[0] - P[0]) < .5) continue;
+      quad(P, Q, q, pp); const jg = ctx.createLinearGradient(P[0], 0, pp[0], 0); jg.addColorStop(0, shade(wl, -.18)); jg.addColorStop(1, shade(wl, -.72)); ctx.fillStyle = jg; ctx.fill();
+      ctx.save(); ctx.clip(); ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .6; ctx.beginPath(); for (let y = top + 14; y < 0; y += 14) { const e = bk(P[0], y); ctx.moveTo(P[0], y); ctx.lineTo(e[0], e[1]); } ctx.stroke();
+      const lg = ctx.createLinearGradient(P[0], 0, pp[0], 0); lg.addColorStop(0, `rgba(${L},.2)`); lg.addColorStop(1, `rgba(${L},0)`); ctx.fillStyle = lg; ctx.fillRect(Math.min(P[0], pp[0]), top, Math.abs(pp[0] - P[0]), -top); ctx.restore();
+      quad(P, Q, q, pp); outline(.7);
+      ctx.strokeStyle = 'rgba(255,226,190,.3)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(P[0] + Math.sign(pp[0] - P[0]) * .8, top); ctx.lineTo(P[0] + Math.sign(pp[0] - P[0]) * .8, 0); ctx.stroke();
+      if (id && JAMB[id]) JAMB[id]((t, y) => { const e = bk(P[0], y); return [lerp(P[0], e[0], t), lerp(y, e[1], t)]; }, Math.sign(pp[0] - P[0])); }
+    // the wares on the back wall, and the shade over them where it meets the floor and the jambs
+    if (id) inR(() => { WARES[id](sl.hw - 7); roomShade(iw, top); });
+    quad(a, b, c, d); outline(.7);
+    ctx.restore();
+  }
+  function roomShade(iw, top) { // in the back wall's own frame: dark in its deep corners, a soft shade along its foot and under its ceiling
+    const cg = ctx.createLinearGradient(0, -16, 0, 0); cg.addColorStop(0, 'rgba(6,3,3,0)'); cg.addColorStop(1, 'rgba(6,3,3,.6)'); ctx.fillStyle = cg; ctx.fillRect(-iw, -16, iw * 2, 16);
+    const tg = ctx.createLinearGradient(0, top, 0, top + 46); tg.addColorStop(0, 'rgba(6,3,3,.6)'); tg.addColorStop(1, 'rgba(6,3,3,0)'); ctx.fillStyle = tg; ctx.fillRect(-iw, top, iw * 2, 46);
+    for (const sd of [-1, 1]) { const eg = ctx.createLinearGradient(sd * iw, 0, sd * (iw - 26), 0); eg.addColorStop(0, 'rgba(6,3,3,.5)'); eg.addColorStop(1, 'rgba(6,3,3,0)'); ctx.fillStyle = eg; ctx.fillRect(sd > 0 ? iw - 26 : -iw, top, 26, -top); }
+  }
+  function sideRoom(sl, id) { // a side booth's room, in its upright frame (side3(sl, 1)): the back wall deep in the side wall, its floor, its far jamb, the wares
+    const hw = sl.hw, u0 = -hw + 4, u1 = hw - 4, uL = u0 - 90, hT = AWN + 3, WB = RM.WB, o = id ? SHOPS[id] : CLOSED, L = id ? LIT(id) : '120,110,100', wl = o.wall;
+    ctx.save(); path3([[u0, hT, 0], [u1, hT, 0], [u1, 0, 0], [u0, 0, 0]]); ctx.clip();
+    { const p = P3(u0, hT, 0), q = P3(u1, 0, WB); ctx.fillStyle = '#0A0605'; ctx.fillRect(Math.min(p[0], q[0]) - 60, p[1] - 30, 200, 260); }
+    wallPlane(WB, () => { ctx.translate((uL + u1) / 2, 0); boothBack((u1 - uL) / 2, o.back, wl); });
+    // its floor, the booth's boards running on back into the room
+    path3([[uL, 0, WB], [u1, 0, WB], [u1, 0, 0], [uL, 0, 0]]); ctx.fillStyle = lin3([0, 0, WB], [0, 0, 0], ['#120A08', '#22180F']); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = .7; ctx.beginPath(); for (let u = -hw + 11; u < u1; u += 11) { const a = P3(u, 0, WB), b = P3(u, 0, 0); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); } ctx.stroke();
+    // the wares on the back wall
+    ctx.save(); ctx.transform(sl.rm.a, sl.rm.b, sl.rm.c, sl.rm.d, sl.rm.e, sl.rm.f); if (id) WARES[id](hw - 7); else closedBack(hw); ctx.restore();
+    if (id && ROOM3[id]) ROOM3[id](sl, { u0, u1, hT, WB });
+    // the shade at the back wall's foot, and down its far corner, and under the lintel
+    wallPlane(WB, () => { const g = ctx.createLinearGradient(0, -18, 0, 0); g.addColorStop(0, 'rgba(6,3,3,0)'); g.addColorStop(1, 'rgba(6,3,3,.6)'); ctx.fillStyle = g; ctx.fillRect(uL, -18, u1 - uL, 18);
+      const e = ctx.createLinearGradient(u1, 0, u1 - 30, 0); e.addColorStop(0, 'rgba(6,3,3,.6)'); e.addColorStop(1, 'rgba(6,3,3,0)'); ctx.fillStyle = e; ctx.fillRect(u1 - 30, hT - 10, 30, -hT + 10);
+      const t = ctx.createLinearGradient(0, hT, 0, hT + 50); t.addColorStop(0, 'rgba(6,3,3,.65)'); t.addColorStop(1, 'rgba(6,3,3,0)'); ctx.fillStyle = t; ctx.fillRect(uL, hT - 10, u1 - uL, 60); });
+    { const a = P3(uL, 0, WB), b = P3(u1, 0, WB); ctx.strokeStyle = 'rgba(10,6,4,.7)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    // the far jamb: the inside of the side wall, square to it, lit at its mouth and dark at the back
+    const jp = [[u1, hT - 6, 0], [u1, hT - 6, WB], [u1, 0, WB], [u1, 0, 0]];
+    path3(jp); ctx.fillStyle = lin3([u1, 0, 0], [u1, 0, WB], [shade(wl, -.2), shade(wl, -.5), shade(wl, -.78)]); ctx.fill();
+    ctx.save(); ctx.clip(); ctx.strokeStyle = 'rgba(0,0,0,.42)'; ctx.lineWidth = .6; ctx.beginPath(); for (let h = hT + 8; h < 0; h += 14) { const a = P3(u1, h, 0), b = P3(u1, h, WB); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); } ctx.stroke();
+    path3(jp); ctx.fillStyle = lin3([u1, 0, 0], [u1, 0, WB], [`rgba(${L},.2)`, `rgba(${L},0)`]); ctx.fill(); ctx.restore();
+    path3(jp); outline(.8);
+    { const a = P3(u1, hT - 6, -.8), b = P3(u1, 0, -.8); ctx.strokeStyle = 'rgba(255,226,190,.3)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    if (id && JAMB3[id]) JAMB3[id]({ u1, hT, WB });
+    ctx.restore();
+  }
+  // (what each keeper's room holds beyond its wares: on a far bay's back wall, ROOMB (in the back wall's frame); on a far bay's
+  // jamb, JAMB (jp(t, y): the point t of the way back along the jamb at height y; sd which way the back lies); in a side
+  // booth's room, ROOM3 and on its far jamb JAMB3, in the booth's upright frame)
+  const jq = (jp, t0, t1, y0, y1) => quad(jp(t0, y0), jp(t1, y0), jp(t1, y1), jp(t0, y1));
+  const JAMB = {
+    dworkin(jp, sd) { // his study's books, shelved down the jamb and on back into the dark: each board's top and lit edge, the books stood on it
+      const cols = ['#6A2A2A', '#2A4A6A', '#5A5A2A', '#3A2A4A', '#7A5A2A', '#1E3A2E'];
+      jq(jp, .04, .96, -150, -8); ctx.fillStyle = 'rgba(20,12,10,.55)'; ctx.fill();
+      for (let s = 0; s < 4; s++) { const y = -12 - s * 34;
+        for (let t = .07, k = 0; t < .9; k++) { const w = .05 + hsh(s * 11 + k) * .04, h = 16 + hsh(s * 5 + k * 3) * 10;
+          jq(jp, t, t + w, y - h, y); ctx.fillStyle = shade(cols[(s + k) % 6], -.1 - t * .5); ctx.fill();
+          if (hsh(s + k * 7) > .5) { const a = jp(t + w * .2, y - h + 4), b = jp(t + w * .8, y - h + 4); ctx.strokeStyle = 'rgba(216,170,85,.45)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+          t += w + .006; }
+        // (the board: its edge toward us, lit, and its shade under it)
+        jq(jp, .02, .98, y, y + 3.4); ctx.fillStyle = '#5A3C26'; ctx.fill(); outline(.5);
+        const a = jp(.02, y + .4), b = jp(.98, y + .4); ctx.strokeStyle = 'rgba(255,220,170,.35)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+        jq(jp, .02, .98, y + 3.4, y + 8); ctx.fillStyle = 'rgba(6,3,3,.4)'; ctx.fill(); }
+      jq(jp, .02, .98, -150, -8); outline(.6);
+    },
+    gerard(jp, sd) { // the smith's tools on their pegs down the jamb: tongs, a hammer, a rake, gone red in the fire's light
+      { const a = jp(.05, -132), b = jp(.95, -132); ctx.strokeStyle = '#3A2A1E'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+      for (const [t, len, k] of [[.16, 62, 0], [.38, 54, 1], [.6, 70, 0], [.8, 44, 2]]) { const p = jp(t, -130), q = jp(t, -130 + len);
+        ctx.fillStyle = 'rgba(6,3,3,.4)'; ctx.fillRect(p[0] + sd * 2, p[1] + 2, 1.8, q[1] - p[1]);
+        ctx.strokeStyle = iron; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); if (k === 0) { ctx.moveTo(p[0] + 1.4, p[1] + 4); ctx.lineTo(q[0] + 2.4, q[1]); } ctx.stroke();
+        if (k === 1) { ctx.fillStyle = '#4A4440'; ctx.fillRect(q[0] - 5, q[1] - 2, 10, 5); ctx.beginPath(); ctx.rect(q[0] - 5, q[1] - 2, 10, 5); outline(.5); }
+        if (k === 2) { ctx.strokeStyle = iron; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(q[0] - 5, q[1]); ctx.lineTo(q[0] + 5, q[1]); ctx.stroke(); }
+        ctx.strokeStyle = 'rgba(255,150,80,.4)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(p[0] - .6, p[1] + 3); ctx.lineTo(q[0] - .6, q[1] - 2); ctx.stroke(); }
+      // (a heap of coal against the jamb's foot)
+      ctx.fillStyle = '#16100E'; ctx.beginPath(); const c0 = jp(.2, 0), c1 = jp(.85, 0); ctx.moveTo(c0[0], c0[1]); ctx.quadraticCurveTo((c0[0] + c1[0]) / 2 + sd * 6, c0[1] - 18, c1[0], c1[1]); ctx.closePath(); ctx.fill(); outline(.6);
+      ctx.fillStyle = 'rgba(255,140,60,.35)'; for (let k = 0; k < 6; k++) { const p = jp(.3 + k * .09, -3 - hsh(k + 3) * 8); circle(p[0] + sd * 2, p[1], .9); ctx.fill(); }
+    },
+    julian(jp, sd) { // his racks: a rail along the jamb, longbows and boar-spears stood in it, a hide pegged out over them
+      jq(jp, .1, .62, -170, -128); ctx.fillStyle = '#7A5A3A'; ctx.fill(); outline(.6);
+      ctx.strokeStyle = 'rgba(40,24,12,.45)'; ctx.lineWidth = .6; ctx.beginPath(); for (let k = 1; k < 4; k++) { const a = jp(.12, -166 + k * 9), b = jp(.6, -166 + k * 9); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); } ctx.stroke();
+      for (const t of [.1, .62]) for (const y of [-170, -128]) { const p = jp(t, y); ctx.fillStyle = '#2A1E14'; circle(p[0], p[1], 1.2); ctx.fill(); }
+      for (const [t, spear] of [[.12, 0], [.26, 1], [.4, 0], [.54, 1], [.68, 0], [.82, 1]]) { const top = jp(t, spear ? -124 : -116), bot = jp(t + .03, 0);
+        ctx.fillStyle = 'rgba(6,3,3,.35)'; ctx.fillRect(top[0] + sd * 2.4, top[1] + 4, 1.6, bot[1] - top[1] - 4);
+        if (spear) { ctx.strokeStyle = '#5A3A22'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(top[0], top[1]); ctx.lineTo(bot[0], bot[1]); ctx.stroke(); ctx.fillStyle = '#B8BCC6'; ctx.beginPath(); ctx.moveTo(top[0] - 2, top[1]); ctx.lineTo(top[0], top[1] - 12); ctx.lineTo(top[0] + 2, top[1]); ctx.closePath(); ctx.fill(); outline(.4); }
+        else { ctx.strokeStyle = '#6A4626'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(top[0], top[1]); ctx.quadraticCurveTo(top[0] + sd * 7, (top[1] + bot[1]) / 2, bot[0], bot[1] - 6); ctx.stroke(); ctx.strokeStyle = '#E8E0C8'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(top[0], top[1]); ctx.lineTo(bot[0], bot[1] - 6); ctx.stroke(); } }
+      jq(jp, .06, .94, -62, -56); ctx.fillStyle = '#4A3226'; ctx.fill(); outline(.5);
+    },
+    ganelon(jp, sd) { // shields hung down the jamb, going dark toward the back
+      for (const [t, f, c] of [[.25, '#7A1E18', '#D8AA55'], [.62, '#24365E', '#B8BCC6']]) { const p = jp(t, -110), w = Math.abs(jp(t + .16, -110)[0] - p[0]);
+        ctx.fillStyle = f; ctx.beginPath(); ctx.moveTo(p[0] - w, p[1] - 12); ctx.lineTo(p[0] + w, p[1] - 12); ctx.lineTo(p[0] + w, p[1] + 2); ctx.quadraticCurveTo(p[0], p[1] + 16, p[0] - w, p[1] + 2); ctx.closePath(); ctx.fill(); outline(.7);
+        ctx.fillStyle = c; ctx.fillRect(p[0] - .8, p[1] - 11, 1.6, 22); }
+    },
+  };
+  const ROOMB = {};
+  const ROOM3 = {
+    random(sl, R) { // the light out of his back room, laid across the floor from its door in the jamb
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; path3([[R.u1, 0, -24], [R.u1, 0, -8], [R.u1 - 70, 0, -2], [R.u1 - 70, 0, -30]]);
+      ctx.fillStyle = lin3([R.u1, 0, -16], [R.u1 - 70, 0, -16], ['rgba(255,190,110,.32)', 'rgba(255,190,110,0)']); ctx.fill(); ctx.restore(); },
+    fiona(sl, R) { // a heavy curtain hung inside her den's mouth, drawn back and tied, half hiding the dark beyond it
+      const w = -7, us = R.u0 - w / .62 + 4;
+      wallPlane(w, () => { const x0 = us - 12, x1 = us + 20, tie = -74, path = () => { ctx.beginPath(); ctx.moveTo(x0, R.hT - 4); ctx.lineTo(x1, R.hT - 4); ctx.quadraticCurveTo(x1 - 6, tie - 30, us + 3, tie); ctx.quadraticCurveTo(us + 8, -30, us + 10, 0); ctx.lineTo(x0, 0); ctx.closePath(); };
+        ctx.save(); ctx.translate(-4, 6); path(); ctx.fillStyle = 'rgba(6,3,3,.45)'; ctx.fill(); ctx.restore();
+        path(); const g = ctx.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, '#3A2050'); g.addColorStop(.6, '#7A48A8'); g.addColorStop(1, '#4E2C6E'); ctx.fillStyle = g; ctx.fill();
+        ctx.save(); path(); ctx.clip(); ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = .8; ctx.beginPath(); for (const f of [.2, .45, .7]) { const x = lerp(x0, x1, f); ctx.moveTo(x, R.hT); ctx.quadraticCurveTo(lerp(x, us + 3, .7), tie - 20, lerp(x0, us + 3, f), tie + 2); ctx.quadraticCurveTo(lerp(x0, us + 9, f) - 2, -30, lerp(x0, us + 10, f), 0); } ctx.stroke();
+          ctx.strokeStyle = 'rgba(220,180,255,.18)'; ctx.lineWidth = 1; ctx.beginPath(); for (const f of [.33, .58]) { const x = lerp(x0, x1, f) + 1.2; ctx.moveTo(x, R.hT); ctx.quadraticCurveTo(lerp(x, us + 3, .7) + 1, tie - 20, lerp(x0, us + 3, f) + 1.2, tie + 2); } ctx.stroke(); ctx.restore();
+        path(); outline(.8);
+        ctx.strokeStyle = '#3E7A4A'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, R.hT - 4); ctx.quadraticCurveTo(x1 - 6, tie - 30, us + 3, tie); ctx.quadraticCurveTo(us + 8, -30, us + 10, 0); ctx.stroke();
+        ctx.fillStyle = '#C9A050'; ctx.save(); ctx.translate(us + 1, tie); ctx.rotate(-.3); ctx.fillRect(-5, -1.4, 10, 2.8); ctx.restore(); circle(us + 5, tie + 5, 1.6); ctx.fill(); });
+    },
+    llewella(sl, R) { // a pool on the grotto's floor, the light off the water
+      wallPlane(R.WB + 6, () => { ctx.save(); ctx.translate(R.u1 - 30, 0); ctx.scale(1, .16); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 34); g.addColorStop(0, 'rgba(90,200,210,.45)'); g.addColorStop(1, 'rgba(90,200,210,0)'); ctx.fillStyle = g; ctx.fillRect(-40, -40, 80, 80); ctx.restore(); }); },
+  };
+  // (an opening in a side room's far jamb, w from w0 to w1 and up to h0: its frame drawn round it, and fill() to paint what is beyond)
+  function jambDoor(u1, w0, w1, h0, arch, fill, frame) {
+    sidePlane(u1, () => { const mw = (w0 + w1) / 2, rw = (w1 - w0) / 2, path = () => { ctx.beginPath(); ctx.moveTo(w0, 0); ctx.lineTo(w0, h0 + (arch ? rw : 0)); if (arch) ctx.arc(mw, h0 + rw, rw, Math.PI, 0); else ctx.lineTo(w1, h0); ctx.lineTo(w1, 0); ctx.closePath(); };
+      ctx.save(); path(); ctx.clip(); fill(w0, w1, h0, mw, rw); ctx.restore();
+      ctx.save(); ctx.lineJoin = 'round'; path(); ctx.strokeStyle = frame; ctx.lineWidth = 3.4; ctx.stroke(); outline(.8); ctx.restore(); });
+  }
+  const JAMB3 = {
+    random(R) { // a door in the room's far wall, standing open on his back room: lamplight, a card table and its chairs, smoke
+      jambDoor(R.u1, -25, -6, -96, false, (w0, w1, h0) => {
+        const g = ctx.createLinearGradient(0, h0, 0, 0); g.addColorStop(0, '#6A3A1A'); g.addColorStop(.5, '#D89048'); g.addColorStop(1, '#8A4A22'); ctx.fillStyle = g; ctx.fillRect(w0, h0, w1 - w0, -h0);
+        ctx.fillStyle = 'rgba(255,230,160,.6)'; ctx.beginPath(); ctx.arc(w0 + 11, h0 + 30, 9, 0, TAU); ctx.fill(); ctx.fillStyle = '#FFF0C0'; circle(w0 + 11, h0 + 30, 2.4); ctx.fill();
+        ctx.strokeStyle = '#2A1810'; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(w0 + 11, h0); ctx.lineTo(w0 + 11, h0 + 27); ctx.stroke();
+        ctx.fillStyle = '#2A1810'; ctx.fillRect(w0 + 2, -34, 18, 3); ctx.fillRect(w0 + 4, -31, 2, 31); ctx.fillRect(w0 + 16, -31, 2, 31);
+        ctx.fillStyle = '#1E6A40'; ctx.fillRect(w0 + 2, -35, 18, 1.4); ctx.fillStyle = '#F0E6D0'; for (let k = 0; k < 3; k++) { ctx.save(); ctx.translate(w0 + 7 + k * 4, -36); ctx.rotate(k * .4 - .4); ctx.fillRect(-1.4, -.8, 2.8, 1.6); ctx.restore(); }
+        ctx.fillStyle = '#3A2014'; ctx.fillRect(w0, -46, 2.4, 46); ctx.fillRect(w0, -26, 6, 2.4); ctx.fillRect(w1 - 2.4, -40, 2.4, 40); ctx.fillRect(w1 - 6, -24, 6, 2.4);
+        ctx.fillStyle = 'rgba(255,240,210,.12)'; for (let k = 0; k < 3; k++) { ell(w0 + 6 + k * 5, h0 + 16 + k * 6, 6, 2.4); ctx.fill(); } }, '#4A2A18');
+      // (the door itself, swung in against the jamb toward the back)
+      sidePlane(R.u1, () => { ctx.fillStyle = '#4A2A1A'; ctx.beginPath(); ctx.moveTo(-25, 0); ctx.lineTo(-25, -96); ctx.lineTo(-29.6, -94); ctx.lineTo(-29.6, 0); ctx.closePath(); ctx.fill(); outline(.6); });
+    },
+    fiona(R) { // a curtained alcove in the far wall of her den, a green light in it; and a shelf of jars beside it
+      jambDoor(R.u1, -27, -12, -112, true, (w0, w1, h0, mw) => {
+        const g = ctx.createLinearGradient(0, h0, 0, 0); g.addColorStop(0, '#120A1A'); g.addColorStop(.7, '#1E1430'); g.addColorStop(1, '#0E0A14'); ctx.fillStyle = g; ctx.fillRect(w0, h0, w1 - w0, -h0);
+        const gg = ctx.createRadialGradient(mw, -26, 0, mw, -26, 16); gg.addColorStop(0, 'rgba(120,255,170,.55)'); gg.addColorStop(1, 'rgba(120,255,170,0)'); ctx.fillStyle = gg; ctx.fillRect(w0, -46, w1 - w0, 40);
+        ctx.fillStyle = '#16101C'; ctx.beginPath(); ctx.moveTo(mw - 6, -12); ctx.quadraticCurveTo(mw, -24, mw + 6, -12); ctx.lineTo(mw + 5, -2); ctx.lineTo(mw - 5, -2); ctx.closePath(); ctx.fill();
+        // (the curtains, drawn back each side and tied)
+        for (const [x0, x1, c] of [[w0, mw - 2.4, '#4E2C6E'], [w1, mw + 2.4, '#3E7A4A']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x0, h0 - 4); ctx.lineTo(x1, h0 - 4); ctx.quadraticCurveTo(x0 + (x1 - x0) * .2, -60, x0 + (x1 - x0) * .7, -2); ctx.lineTo(x0, -2); ctx.closePath(); ctx.fill(); outline(.6);
+          ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = .6; ctx.beginPath(); for (const f of [.3, .6]) { ctx.moveTo(x0 + (x1 - x0) * f, h0); ctx.quadraticCurveTo(x0 + (x1 - x0) * f * .3, -60, x0 + (x1 - x0) * f * .7, -2); } ctx.stroke();
+          ctx.fillStyle = '#C9A050'; ctx.fillRect(Math.min(x0, x0 + (x1 - x0) * .25) - .5, -62, Math.abs(x1 - x0) * .3 + 1, 2); } }, '#2E1E28');
+      for (const h of [-62, -96]) { box3(R.u1 - 6, R.u1, h - 2.4, h, -10, -2, '#3A2A20', false);
+        for (let k = 0; k < 3; k++) { const w = -8.6 + k * 2.8, c = ['#7A3AB8', '#3AB88A', '#B83A5A', '#D8B84A'][(k + (h < -80 ? 1 : 0)) % 4];
+          cyl3(R.u1 - 3, w, 1.2, h - 6 - (k % 2) * 3, h - 2.4, c, shade(c, .3));
+          const p = P3(R.u1 - 3, h - 7 - (k % 2) * 3, w); ctx.fillStyle = '#E8DCC0'; ctx.fillRect(p[0] - .7, p[1] - 1.6, 1.4, 1.6); } }
+    },
+    llewella(R) { // the grotto going on beyond: an arch of rock, the sea-light in it, shells set in the jamb
+      jambDoor(R.u1, -26, -8, -118, true, (w0, w1, h0, mw) => {
+        const g = ctx.createLinearGradient(0, h0, 0, 0); g.addColorStop(0, '#0A2A3A'); g.addColorStop(.6, '#1E6A78'); g.addColorStop(1, '#0E3440'); ctx.fillStyle = g; ctx.fillRect(w0, h0, w1 - w0, -h0);
+        ctx.fillStyle = 'rgba(200,250,255,.14)'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(w0 + 3 + k * 5, h0); ctx.lineTo(w0 + 7 + k * 5, h0); ctx.lineTo(w0 + 2 + k * 6, 0); ctx.lineTo(w0 - 2 + k * 6, 0); ctx.closePath(); ctx.fill(); }
+        ctx.fillStyle = '#0A1E28'; ctx.beginPath(); ctx.moveTo(w0, 0); ctx.quadraticCurveTo(w0 + 4, -16, w0 + 8, -10); ctx.quadraticCurveTo(w1 - 4, -20, w1, -6); ctx.lineTo(w1, 0); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#D86A5A'; ctx.lineWidth = 1.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(w1 - 4, -10); ctx.quadraticCurveTo(w1 - 6, -20, w1 - 3, -26); ctx.moveTo(w1 - 5, -16); ctx.lineTo(w1 - 9, -22); ctx.stroke(); ctx.lineCap = 'butt';
+        const sh = ctx.createLinearGradient(0, h0, 0, h0 + 40); sh.addColorStop(0, 'rgba(4,10,16,.7)'); sh.addColorStop(1, 'rgba(4,10,16,0)'); ctx.fillStyle = sh; ctx.fillRect(w0, h0, w1 - w0, 40); }, '#8AA8A2');
+      // (the rough rock of the arch's rim, in lumps)
+      sidePlane(R.u1, () => { for (let k = 0; k < 9; k++) { const a = Math.PI + k / 8 * Math.PI, x = -17 + Math.cos(a) * 10.5, y = -109 + Math.sin(a) * 10.5; ctx.fillStyle = k % 2 ? '#6A8884' : '#587470'; ell(x, y, 2.6, 2.2, a); ctx.fill(); outline(.4); }
+        for (const x of [-27.5, -6.5]) for (let y = -100; y < -4; y += 13) { ctx.fillStyle = '#5E7C78'; ell(x, y + hsh(x + y) * 4, 2.2, 3.4); ctx.fill(); outline(.4); } });
+      sidePlane(R.u1, () => { for (const [w, h] of [[-4, -130], [-28.5, -60], [-3.5, -40]]) { ctx.fillStyle = '#F0D8C8'; ctx.beginPath(); ctx.moveTo(w - 3, h + 1.6); ctx.quadraticCurveTo(w, h - 4, w + 3, h + 1.6); ctx.closePath(); ctx.fill(); outline(.4); } });
+    },
+  };
   function sideStall(sl, id) {
-    const hw = sl.hw, U = side3(sl, 1), uo = SUO[sl.id] || 0;
+    const hw = sl.hw, U = side3(sl, 1);
     DV = sl.dv;
     withM(U, () => sideFloor(hw));
-    withM(sl.mb.translate(uo, 0), () => { wallHalo(hw - 4); if (id) boothBack(hw - 7, SHOPS[id].back, SHOPS[id].wall); else closedBack(hw); });
-    if (id) withM(sl.mw.translate(uo, 0), () => WARES[id](hw - 7));
+    side3(sl, 1); withM(U, () => sideRoom(sl, id));
     side3(sl, 1); withM(U, () => sideInner(hw, id ? SHOPS[id] : { post: '#4A3020' }, !id));
     side3(sl); if (id && BEHIND3[id]) withM(U, () => BEHIND3[id](sl));
   }
@@ -1689,8 +1871,7 @@
     if (sl.kind !== 'back') return sideStall(sl, id);
     DV = sl.dv;
     withM(sl.mf, () => boothFloor(sl.hw));
-    withM(sl.mb, () => { wallHalo(sl.hw - 4); if (id) boothBack(sl.hw - 7, SHOPS[id].back, SHOPS[id].wall); else closedBack(sl.hw); });
-    if (id) withM(sl.mw, () => WARES[id](sl.hw - 7));
+    withM(sl.mb, () => { wallHalo(sl.hw - 4); bayRoom(sl, id); });
     withM(sl.mf, () => { if (id) shopFront(id, sl.hw); else closedFront(sl.hw); });
   }
   function shopFront(id, hw) {
