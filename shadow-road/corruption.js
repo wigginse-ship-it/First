@@ -957,11 +957,15 @@
     }
     g.save();
     // the omens that stay: grey at the edges, the light guttering
-    if (cvs >= .02) { const fa = .84 * Math.pow(cvs, 1.35) * (1 + .08 * Math.sin(t * .7)); g.globalAlpha = Math.min(1, fa); g.drawImage(fogCanvas(), -VW * .06 + VW * .03 * Math.sin(t * .3), Y_OFF - VIEW_H * .02, VW * 1.12, VIEW_H * 1.04); g.globalAlpha = 1;
-      L.flickT -= 1 / 60; if (L.flickT <= 0) { L.flickT = rand(1.5, 5) / Math.max(1, cvs * 4); L.flick = rand(.12, .3); } if (L.flick > 0) { L.flick -= 1 / 60; if (cvs > .2) { g.fillStyle = `rgba(8,4,10,${Math.min(.32, L.flick) * 1.2 * (cvs - .2)})`; view(); } } }
-    // the Circle's greys and reds: drained colour, a red in the corners
-    const drain = .95 * Math.pow(cvs, 1.6) + (f && f.k === 'drain' ? .65 * k * (.4 + .6 * cvs) : 0) + (finalHigh() ? .4 * cvs : 0) + (L.pulse ? .5 * Math.max(0, 1 - L.pulse.t / 2.5) : 0);
-    if (drain > 0) { if (lite()) { g.fillStyle = `rgba(110,106,114,${Math.min(.55, drain * .5)})`; view(); }
+    // (no fog over the view: the curse shows as a tint that keeps everything clear to see, a dark rim only at the very
+    // edges, and the light guttering now and then)
+    if (cvs >= .02) { const p = Math.pow(cvs, 1.2) * (1 + .06 * Math.sin(t * .7));
+      g.globalCompositeOperation = 'soft-light'; g.fillStyle = `rgba(128,30,96,${Math.min(.65, .6 * p).toFixed(3)})`; view(); g.globalCompositeOperation = 'source-over'; // the colour of it, laid over the light without hiding anything
+      const vg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .5, VIEW_H * .62, VW / 2, Y_OFF + VIEW_H * .5, VW * .66); vg.addColorStop(0, 'rgba(26,8,24,0)'); vg.addColorStop(1, `rgba(26,8,24,${Math.min(.6, .55 * p).toFixed(3)})`); g.fillStyle = vg; view(); // a dark rim, only at the edges
+      L.flickT -= 1 / 60; if (L.flickT <= 0) { L.flickT = rand(1.5, 5) / Math.max(1, cvs * 4); L.flick = rand(.12, .3); } if (L.flick > 0) { L.flick -= 1 / 60; if (cvs > .2) { g.fillStyle = `rgba(8,4,10,${Math.min(.2, L.flick) * .8 * (cvs - .2)})`; view(); } } }
+    // the Circle's greys and reds: some of the colour drained (never all of it), a red in the corners
+    const drain = .4 * Math.pow(cvs, 1.6) + (f && f.k === 'drain' ? .65 * k * (.4 + .6 * cvs) : 0) + (finalHigh() ? .2 * cvs : 0) + (L.pulse ? .5 * Math.max(0, 1 - L.pulse.t / 2.5) : 0);
+    if (drain > 0) { if (lite()) { g.fillStyle = `rgba(110,106,114,${Math.min(.22, drain * .3)})`; view(); }
       else { g.globalCompositeOperation = 'saturation'; g.fillStyle = `rgba(128,128,128,${Math.min(1, drain)})`; view(); g.globalCompositeOperation = 'source-over'; }
       const rg = g.createRadialGradient(VW / 2, Y_OFF + VIEW_H * .55, VIEW_H * .3, VW / 2, Y_OFF + VIEW_H * .55, VW * .72); rg.addColorStop(0, 'rgba(150,20,30,0)'); rg.addColorStop(1, `rgba(150,20,30,${Math.min(.5, drain * .4)})`);
       g.globalCompositeOperation = lite() ? 'source-over' : 'multiply'; g.fillStyle = lite() ? `rgba(120,20,30,${Math.min(.18, drain * .14)})` : rg; view(); g.globalCompositeOperation = 'source-over'; }
