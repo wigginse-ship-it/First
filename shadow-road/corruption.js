@@ -2023,7 +2023,8 @@
   // ======================================================================================================
   let devEl = null;
   function devHud() {
-    const show = !!(window.DEV && DEV.active) && (mode === 'play' || mode === 'pause');
+    const touch = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches); // (not on a phone or tablet: there it only covers the controls)
+    const show = !!(window.DEV && DEV.active) && !touch && (mode === 'play' || mode === 'pause');
     if (!show) { if (devEl) devEl.hidden = true; return; }
     if (!devEl) { devEl = document.createElement('div'); devEl.id = 'curseDev'; devEl.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:60;background:rgba(10,6,14,.82);border:1px solid #6A4A6A;border-radius:6px;padding:5px 7px;color:#EADCE6;font:11px/1.35 system-ui,sans-serif;width:230px;pointer-events:auto';
       devEl.innerHTML = '<div id="cdTxt"></div><label style="display:flex;gap:4px;align-items:center">curse <input id="cdV" type="range" min="0" max="100" step="1" style="flex:1"></label><label style="display:flex;gap:4px;align-items:center">horn <input id="cdH" type="range" min="0" max="100" step="1" style="flex:1"></label>' +
