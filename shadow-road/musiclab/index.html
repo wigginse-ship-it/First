@@ -87,12 +87,13 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
       <label class="field">Snap <select id="snap"></select></label>
       <label class="field">New note <select id="newLen"></select></label>
       <label class="field">Zoom <input id="zoom" type="range" min="3" max="32" step="1" value="9"></label>
+      <label class="field" title="Plain click-drag adds notes instead of panning"><input id="draw" type="checkbox"> Draw mode</label>
       <label class="field"><input id="follow" type="checkbox" checked> Follow</label>
       <button id="undo" type="button">Undo</button><button id="redo" type="button">Redo</button><button id="del" type="button">Delete note</button>
     </div>
     <div class="roll-box" id="rollBox"><canvas id="roll" tabindex="0" aria-label="Piano roll"></canvas></div>
     <div class="chips" id="chips"></div>
-    <p class="hint">Drag a note to move it in time and pitch, drag its right edge to resize, click empty space to add one. Alt-click or right-click deletes. Arrow keys nudge the selected note (Shift for an octave). Click the bar numbers along the top to play from there. Notes stay inside their bar.</p>
+    <p class="hint"><b>Add:</b> shift-click or double-click empty space (drag right to set the length), or turn on Draw mode and just click-drag. <b>Move:</b> drag a note. <b>Resize:</b> drag the handle on its right edge. <b>Delete:</b> right-click, Alt-click, or select it and press Delete. Arrow keys nudge the selected note (Shift for an octave). Dragging empty space scrolls the roll, and clicking the bar numbers plays from that bar. Notes stay inside their bar.</p>
   </section>
 
   <div class="main">
@@ -183,7 +184,7 @@ const NN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const noteName = (m) => NN[m % 12] + (Math.floor(m / 12) - 1);
 const model = { lead: [], harm: [] };
 let editV = 'lead', sel = null, drag = null, rng = { lo: 60, hi: 84 }, px = 9, undoS = [], redoS = [];
-const ROW = 13, TOP = 22;
+const ROW = 16, TOP = 22; let hover = null;
 const editable = () => !!(view && info && track && !track.parts && Array.isArray(track.lead));
 const s0of = () => (info.first - (track.firstBar || 1)) * info.n;
 function tokensToNotes(bars, n) {
@@ -275,8 +276,10 @@ function draw() {
   for (const grp of ['bass', 'arp', 'dbl']) full.by.forEach((es, s) => es.forEach((e) => { if (e.ch !== grp) return; rect({ s, len: e.len || 1, midi: grp === 'bass' ? Math.max(rng.lo, Math.min(rng.hi, e.midi + 12)) : e.midi }, 0, muted.has(grp) ? .1 : .5, colorOf(grp)); }));
   for (const v of ['harm', 'lead']) for (const o of model[v]) {
     if (o.s < s0 || o.s >= s0 + steps) continue;
-    rect(o, s0, muted.has(v) ? .1 : v === editV ? 1 : .55, colorOf(v));
-    if (sel && sel.v === v && sel.s === o.s && sel.midi === o.midi) { const x = (o.s - s0) * px; g.strokeStyle = css('--fg'); g.lineWidth = 2; g.strokeRect(x, y(o.midi) + 1, Math.max(2, o.len * px - 1), ROW - 2); g.fillStyle = css('--fg'); g.globalAlpha = .8; g.fillRect(x + o.len * px - 4, y(o.midi) + 2, 2, ROW - 4); g.globalAlpha = 1; }
+    const [nx, ny] = rect(o, s0, muted.has(v) ? .1 : v === editV ? 1 : .55, colorOf(v)), nw = o.len * px - 1;
+    if (nw >= 26 && !muted.has(v)) { g.fillStyle = css('--bg'); g.textBaseline = 'middle'; g.fillText(noteName(o.midi), nx + 4, ny + ROW / 2 + .5); }
+    if (v === editV && hover && hover.s === o.s && hover.midi === o.midi && nw >= 10) { g.fillStyle = css('--fg'); g.globalAlpha = .55; g.fillRect(nx + nw - 4, ny + 3, 2, ROW - 6); g.globalAlpha = 1; }
+    if (sel && sel.v === v && sel.s === o.s && sel.midi === o.midi) { const x = (o.s - s0) * px; g.strokeStyle = css('--fg'); g.lineWidth = 2; g.strokeRect(x, y(o.midi) + 1, Math.max(2, o.len * px - 1), ROW - 2); g.fillStyle = css('--fg'); g.globalAlpha = .8; g.fillRect(x + o.len * px - 5, y(o.midi) + 3, 3, ROW - 6); g.globalAlpha = 1; }
   }
   full.by.forEach((es, s) => es.forEach((e) => { if (groupOf(e.ch) !== 'drums') return; g.globalAlpha = muted.has('drums') ? .1 : .8; g.fillStyle = css('--c-drums'); g.fillRect(s * px, H - 5, Math.max(2, px - 1), 4); g.globalAlpha = 1; }));
   g.fillStyle = css('--dim'); g.textBaseline = 'middle';
@@ -297,25 +300,37 @@ const barEnd = (s) => (Math.floor(s / info.n) + 1) * info.n;
 const noteAt = (p) => model[editV].find((o) => p.step >= o.s && p.step < o.s + o.len && o.midi === p.midi);
 function select(o) { sel = o ? { v: editV, s: o.s, midi: o.midi } : null; syncButtons(); }
 roll.addEventListener('contextmenu', (ev) => { ev.preventDefault(); if (!editable()) return; const o = noteAt(pt(ev)); if (o) { model[editV] = model[editV].filter((x) => x !== o); sel = null; commit(); } });
+const edgeZone = (o) => Math.min(10, Math.max(6, o.len * px * .3));
+function addNote(p, len) { const s = Math.floor(p.step / snapV()) * snapV(), o = { s, len: Math.max(1, Math.min(len, barEnd(s) - s)), midi: p.midi }; model[editV].push(o); select(o); audition(o.midi); return o; }
 roll.addEventListener('pointerdown', (ev) => {
-  if (!view || ev.button === 2) return; roll.focus(); const p = pt(ev);
+  if (!view || ev.button === 2) return; roll.focus(); const p = pt(ev), box = $('#rollBox');
   if (p.y < TOP) { play(info.first + Math.floor((p.step - s0of()) / info.n)); return; }
   if (!editable()) { $('#err').textContent = 'Roll editing needs a single-part track with a lead line.'; return; }
-  if (p.step < s0of() || p.step >= s0of() + view.steps) return;
-  let o = noteAt(p);
+  const inside = p.step >= s0of() && p.step < s0of() + view.steps; let o = inside ? noteAt(p) : null;
   if (o && ev.altKey) { model[editV] = model[editV].filter((x) => x !== o); sel = null; commit(); return; }
   roll.setPointerCapture(ev.pointerId);
-  if (o) { select(o); const edge = (o.s + o.len - s0of()) * px; drag = { o, mode: p.x > edge - 7 && o.len * px > 16 ? 'resize' : 'move', grab: p.step - o.s, len0: o.len, s: o.s, m: o.midi, moved: false }; }
-  else { const s = Math.floor(p.step / snapV()) * snapV(); o = { s, len: Math.min(+$('#newLen').value, barEnd(s) - s), midi: p.midi }; model[editV].push(o); select(o); drag = { o, mode: 'move', grab: 0, len0: o.len, s, m: o.midi, moved: true, fresh: true }; }
-  audition(o.midi);
+  if (o) { select(o); const edge = (o.s + o.len - s0of()) * px; drag = { o, mode: p.x > edge - edgeZone(o) && o.len * px >= 10 ? 'resize' : 'move', grab: p.step - o.s, len0: o.len, s: o.s, m: o.midi, moved: false }; audition(o.midi); }
+  else if (inside && (ev.shiftKey || $('#draw').checked)) { o = addNote(p, +$('#newLen').value); drag = { o, mode: 'create', anchor: o.s, grab: 0, len0: o.len, s: o.s, m: o.midi, moved: true, still: true }; }
+  else { drag = { mode: 'pan', x0: ev.clientX, sl0: box.scrollLeft, moved: false }; }
 });
+roll.addEventListener('dblclick', (ev) => { if (!editable() || ev.shiftKey) return; const p = pt(ev); if (p.y < TOP || p.step < s0of() || p.step >= s0of() + view.steps || noteAt(p)) return; const o = addNote(p, +$('#newLen').value); commit(); });
 roll.addEventListener('pointermove', (ev) => {
-  if (!drag) return; const p = pt(ev), o = drag.o, sn = snapV();
+  const p = pt(ev), sn = snapV();
+  if (!drag) {
+    if (!editable() || p.y < TOP) { roll.style.cursor = p.y < TOP ? 'pointer' : 'default'; hover = null; return; }
+    const o = noteAt(p); hover = o ? { s: o.s, midi: o.midi } : null;
+    roll.style.cursor = o ? (p.x > (o.s + o.len - s0of()) * px - edgeZone(o) && o.len * px >= 10 ? 'ew-resize' : 'grab') : ev.shiftKey || $('#draw').checked ? 'copy' : 'default';
+    return;
+  }
+  if (drag.mode === 'pan') { const dx = ev.clientX - drag.x0; if (Math.abs(dx) > 3) drag.moved = true; $('#rollBox').scrollLeft = drag.sl0 - dx; return; }
+  const o = drag.o;
+  if (drag.mode === 'create') { const l = Math.round((p.step + 1 - o.s) / sn) * sn; if (drag.still && Math.abs(p.step - drag.anchor) < sn) return; drag.still = false; o.len = Math.max(1, Math.min(barEnd(o.s) - o.s, Math.max(sn, l))); sel = { v: editV, s: o.s, midi: o.midi }; return; }
   if (drag.mode === 'resize') o.len = Math.max(1, Math.min(barEnd(o.s) - o.s, Math.max(sn, Math.round((p.step + 1 - o.s) / sn) * sn)));
   else { const ns = Math.max(0, Math.min(track.lead.length * info.n - 1, Math.floor((p.step - drag.grab) / sn) * sn)); o.s = ns; o.len = Math.min(drag.len0, barEnd(ns) - ns); if (p.midi !== o.midi) audition(p.midi); o.midi = p.midi; }
-  drag.moved = drag.moved || o.s !== drag.s || o.midi !== drag.m || o.len !== drag.len0; sel = { v: editV, s: o.s, midi: o.midi };
+  drag.moved = drag.moved || o.s !== drag.s || o.midi !== drag.m || o.len !== drag.len0; sel = { v: editV, s: o.s, midi: o.midi }; hover = { s: o.s, midi: o.midi };
 });
-const endDrag = () => { if (!drag) return; const d = drag; drag = null; if (d.moved) { resolve(d.o, editV); sel = { v: editV, s: d.o.s, midi: d.o.midi }; commit(); } };
+roll.addEventListener('pointerleave', () => { if (!drag) hover = null; });
+const endDrag = () => { if (!drag) return; const d = drag; drag = null; if (d.mode === 'pan') { if (!d.moved) select(null); return; } if (d.moved) { resolve(d.o, editV); sel = { v: editV, s: d.o.s, midi: d.o.midi }; commit(); } };
 roll.addEventListener('pointerup', endDrag); roll.addEventListener('pointercancel', endDrag);
 function nudge(ds, dm) { const o = selNote(); if (!o) return; const ns = Math.max(0, o.s + ds); o.s = ns; o.len = Math.min(o.len, barEnd(ns) - ns); o.midi = Math.max(0, Math.min(127, o.midi + dm)); resolve(o, sel.v); sel = { v: sel.v, s: o.s, midi: o.midi }; audition(o.midi); commit(); }
 document.addEventListener('keydown', (e) => {
