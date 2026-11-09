@@ -74,6 +74,7 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
       <button id="stop" type="button">Stop</button>
       <label class="field">Tempo <input id="tempo" type="number" step="0.5" min="20" max="240" value="71.5"> quarter-note BPM</label>
       <label class="field">Bars <input id="from" type="number" min="1" placeholder="first"> to <input id="to" type="number" min="1" placeholder="last"></label>
+      <label class="field" title="Where Play starts; the piece then loops from its first bar"><span>Start at bar</span> <input id="startAt" type="number" min="1" placeholder="first" value="38"></label>
       <label class="field"><input id="loop" type="checkbox" checked> Loop</label>
       <label class="field">Volume <input id="vol" type="range" min="0" max="1" step="0.02" value="0.5"></label>
       <span class="status" id="status">stopped</span>
@@ -85,14 +86,14 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
     <div class="row tools">
       <label class="field">Edit <select id="editV"><option value="both">lead + chord note</option><option value="lead">lead only</option><option value="harm">harm only</option></select></label>
       <label class="field" title="Make the second voice use the lead's pulse width and volume, so two notes read as a lead chord"><input id="chordSound" type="checkbox" checked> 2nd voice sounds like lead</label>
-      <label class="field" title="Volume of the second chord note as a share of the lead's"><span id="cvLabel">2nd note volume 75%</span> <input id="chordVol" type="range" min="0.2" max="1" step="0.05" value="0.75"></label>
+      <label class="field" title="Volume of the second chord note as a share of the lead's"><span id="cvLabel">2nd note volume 40%</span> <input id="chordLevel" type="range" min="0.1" max="1" step="0.05" value="0.4"></label>
       <label class="field">Snap <select id="snap"></select></label>
       <label class="field">New note <select id="newLen"></select></label>
       <label class="field">Zoom <input id="zoom" type="range" min="3" max="32" step="1" value="9"></label>
       <label class="field" title="0 is the engine's plucked note shape. Higher holds each note's level, shortens the release and overlaps the next note"><span id="lgLabel">Legato 85%</span> <input id="legato" type="range" min="0" max="1" step="0.05" value="0.85"></label>
       <label class="field" title="Plain click-drag adds notes instead of panning"><input id="draw" type="checkbox"> Draw mode</label>
       <label class="field"><input id="follow" type="checkbox" checked> Follow</label>
-      <button id="undo" type="button">Undo</button><button id="redo" type="button">Redo</button><button id="del" type="button">Delete note</button>
+      <button id="rmBar" type="button" title="Remove the last bar of the lead, harm and chords">Remove last bar</button><button id="undo" type="button">Undo</button><button id="redo" type="button">Redo</button><button id="del" type="button">Delete note</button>
     </div>
     <div class="roll-box" id="rollBox"><canvas id="roll" tabindex="0" aria-label="Piano roll"></canvas></div>
     <div class="chips" id="chips"></div>
@@ -158,7 +159,7 @@ const stored = (k) => { try { return localStorage.getItem(k); } catch (e) { retu
 function evalSrc() { return (new Function('L', 'return (' + $('#src').value + ')'))(L); }
 function barSize(t) { return t.n || (t.parts && Object.values(t.parts)[0].n) || 16; }
 
-function chordTrack(t) { if (!$('#chordSound').checked || t.parts) return t; t = Object.assign({}, t); t.hduty = t.duty || .25; t.hv = (t.lv || .16) * (+$('#chordVol').value || 1); return t; }
+function chordTrack(t) { if (!$('#chordSound').checked || t.parts) return t; t = Object.assign({}, t); t.hduty = t.duty || .25; t.hv = (t.lv || .16) * (+$('#chordLevel').value || 1); return t; }
 function build() {
   const obj = evalSrc(), n = barSize(obj), t = chordTrack(obj); t.legato = +$('#legato').value;
   const bpmQ = +$('#tempo').value; if (bpmQ > 0) { t.bpm = bpmQ * n / 16; if (t.parts) { t.parts = {}; for (const k in obj.parts) { t.parts[k] = Object.assign({}, obj.parts[k]); delete t.parts[k].bpm; } } }
@@ -174,6 +175,7 @@ function build() {
 function applyMute() { if (!full) return; Object.assign(view, { by: full.by.map((es) => es.filter((e) => !muted.has(groupOf(e.ch)))) }); }
 
 function play(startBar) {
+  startBar = startBar || +$('#startAt').value || 0;
   try { build(); $('#err').textContent = ''; } catch (e) { $('#err').textContent = String(e.message || e); return; }
   loadModel(); fillSnap(); syncButtons();
   audioInit(); musicOn = true; stopMusic();
@@ -364,12 +366,26 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowLeft') { e.preventDefault(); nudge(-sn, 0); } else if (e.key === 'ArrowRight') { e.preventDefault(); nudge(sn, 0); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); nudge(0, e.shiftKey ? 12 : 1); } else if (e.key === 'ArrowDown') { e.preventDefault(); nudge(0, e.shiftKey ? -12 : -1); }
 });
+function removeLastBar() {
+  if (!editable()) return; const ta = $('#src'), n = info.n, nBars = track.lead.length;
+  if (nBars < 2) { $('#err').textContent = 'A track needs at least one bar.'; return; }
+  undoS.push(ta.value); redoS = [];
+  const keep = (v) => model[v].filter((o) => o.s < (nBars - 1) * n);
+  let s = writeVoice(ta.value, 'lead', notesToLines(keep('lead'), n, nBars - 1));
+  if (track.harm) s = writeVoice(s, 'harm', notesToLines(keep('harm'), n, nBars - 1));
+  const ch = findArr(s, 'chords');
+  if (ch && Array.isArray(track.chords) && track.chords.length === nBars) s = s.slice(0, ch.a) + '[' + track.chords.slice(0, -1).map((c) => "'" + c + "'").join(', ') + ']' + s.slice(ch.b);
+  ta.value = s; store('musiclab-src', s); sel = null;
+  const last = (track.firstBar || 1) + nBars - 2; if (+$('#to').value > last) $('#to').value = ''; if (+$('#startAt').value > last) $('#startAt').value = last;
+  refresh(); if (musicCur === 'lab') play();
+}
+$('#rmBar').onclick = removeLastBar;
 $('#undo').onclick = () => undo(-1); $('#redo').onclick = () => undo(1);
 $('#del').onclick = () => { const o = selNote(); if (!o) return; dropNote(o); commit(); };
-const syncChordVol = () => { $('#chordVol').disabled = !$('#chordSound').checked; $('#cvLabel').textContent = '2nd note volume ' + Math.round($('#chordVol').value * 100) + '%'; };
+const syncChordVol = () => { $('#chordLevel').disabled = !$('#chordSound').checked; $('#cvLabel').textContent = '2nd note volume ' + Math.round($('#chordLevel').value * 100) + '%'; };
 $('#legato').oninput = () => { $('#lgLabel').textContent = 'Legato ' + Math.round($('#legato').value * 100) + '%'; refresh(); };
 $('#chordSound').onchange = () => { syncChordVol(); refresh(); };
-$('#chordVol').oninput = () => { syncChordVol(); refresh(); };
+$('#chordLevel').oninput = () => { syncChordVol(); refresh(); };
 syncChordVol();
 $('#editV').onchange = () => { editV = $('#editV').value; sel = null; syncButtons(); };
 

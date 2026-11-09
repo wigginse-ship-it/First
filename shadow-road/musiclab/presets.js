@@ -8,7 +8,7 @@ const LAB_PRESETS = {
   style: 'calm', duty: .25, lv: .17, vib: 10, echo: .22, echoSteps: 6,
   arp: '0-1-2-0-1-2-0-1-2-0-1-2-', arpDuty: .5, av: .045,
   bass: 'R-----------V-----------', bv: .28,
-  chords: ['F', 'F', 'Db/F', 'F', 'Db/F', 'Fm', 'Eb', 'Bb', 'Eb Fm', 'Db', 'Db', 'Bbm'],
+  chords: ['F', 'F', 'Db/F', 'F', 'Db/F', 'Fm', 'Eb', 'Bb', 'Eb Fm', 'Db', 'Db'],
   lead: [
     L(24, '.:24'),
     L(24, '.:18 F5:2 G5:2 F5:2'),
@@ -20,8 +20,7 @@ const LAB_PRESETS = {
     L(24, 'F4:18 D#4:3 F4:3'),
     L(24, 'A#4:12 C5:6 A#4:6'),
     L(24, '.:24'),
-    L(24, 'C5:12 A#4:3 A#4:3 C5:3 A#4:3'),
-    L(24, '.:24')
+    L(24, 'C5:12 A#4:3 A#4:3 C5:3 A#4:3')
   ]
 })`
 };
