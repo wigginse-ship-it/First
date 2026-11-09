@@ -24,4 +24,4 @@ const LAB_PRESETS = {
   ]
 })`
 };
-const LAB_TEMPO = { glory: 68 }; // quarter-note BPM
+const LAB_TEMPO = { glory: 72 }; // quarter-note BPM
