@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Walk</title>
+<style>
+  /* Optical see-through displays add light: pure black is transparent, so keep the page black
+     and draw only bright, high-contrast shapes. */
+  :root { --fg:#f2fbff; --dim:#8fb0bb; --acc:#19e0ff; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#000; color:var(--fg); overflow:hidden;
+    font:600 20px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-user-select:none; user-select:none; }
+  canvas { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+
+  #toolbar { position:fixed; left:0; right:0; bottom:0; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
+    padding:8px; background:linear-gradient(transparent,#000 40%); transition:opacity .25s; }
+  #toolbar.hide { opacity:0; pointer-events:none; }
+  button { font:inherit; color:var(--fg); background:#0b1418; border:2px solid #2b4650; border-radius:12px; padding:10px 16px; min-height:44px; }
+  button:focus-visible, button:active, input:focus-visible { outline:3px solid var(--acc); outline-offset:2px; }
+  button.on { border-color:var(--acc); color:var(--acc); }
+
+  #search { position:fixed; inset:0; background:#000; padding:16px; display:none; flex-direction:column; gap:12px; overflow:auto; }
+  #search.open { display:flex; }
+  #search h1 { margin:0; font-size:1.1em; color:var(--acc); }
+  #search form { display:flex; gap:8px; }
+  #q { flex:1; min-width:0; font:inherit; color:var(--fg); background:#0b1418; border:2px solid #2b4650; border-radius:12px; padding:12px; }
+  #results { display:flex; flex-direction:column; gap:8px; }
+  #results button { text-align:left; font-weight:500; font-size:.9em; }
+  #msg { color:var(--dim); font-weight:500; font-size:.9em; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="toolbar" class="hide">
+  <button id="bView">View</button>
+  <button id="bOut">Zoom −</button>
+  <button id="bIn">Zoom +</button>
+  <button id="bSearch">Where to?</button>
+  <button id="bMute">Voice on</button>
+  <button id="bEnd">End</button>
+</div>
+
+<div id="search">
+  <h1>Where to?</h1>
+  <form id="form"><input id="q" type="search" placeholder="Address or place" autocomplete="off" enterkeyhint="search"><button id="go" type="submit">Go</button></form>
+  <div id="msg"></div>
+  <div id="results"></div>
+  <button id="bClose" type="button">Cancel</button>
+</div>
+
+<script src="nav.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
