@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Shadow Road Music Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap">
+<style>
+/* Layout: one transport strip, then the piano roll over the editor; two columns once there is room. */
+:root {
+  --bg: #12141c; --panel: #1a1e2a; --line: #2b3142; --fg: #e4e7f0; --dim: #8b93a8;
+  --accent: #ffb347; --accent-ink: #1a1205; --err: #ff7b7b;
+  --c-lead: #ffb347; --c-harm: #7fd1b9; --c-dbl: #ffd9a0; --c-arp: #8ea2ff; --c-bass: #d98cff; --c-drums: #ff8a8a;
+  --font-display: 'Silkscreen', 'Courier New', monospace; --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f1f3f8; --panel: #ffffff; --line: #d3d8e6; --fg: #1b2030; --dim: #5a6279;
+  --accent: #a85a00; --accent-ink: #ffffff; --err: #b3261e;
+  --c-lead: #c46a00; --c-harm: #12806a; --c-dbl: #b88a4a; --c-arp: #4a5fd0; --c-bass: #9a3fc4; --c-drums: #c4423e; color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f1f3f8; --panel: #ffffff; --line: #d3d8e6; --fg: #1b2030; --dim: #5a6279;
+  --accent: #a85a00; --accent-ink: #ffffff; --err: #b3261e;
+  --c-lead: #c46a00; --c-harm: #12806a; --c-dbl: #b88a4a; --c-arp: #4a5fd0; --c-bass: #9a3fc4; --c-drums: #c4423e; color-scheme: light; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 13px/1.5 var(--font-mono);
+  padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1280px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+h1 { font: 700 20px/1.2 var(--font-display); letter-spacing: .04em; margin: 0; text-wrap: balance; }
+header p { margin: 0; color: var(--dim); min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; min-width: 0; }
+.panel h2 { font: 700 11px/1 var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 0 0 10px; }
+.transport { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.field { display: flex; align-items: center; gap: 6px; color: var(--dim); }
+.field input[type=number] { width: 78px; }
+button, input, select, textarea { font: inherit; color: var(--fg); }
+input[type=number], select { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; }
+button { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 5px 12px; cursor: pointer; }
+button:hover { border-color: var(--dim); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; min-width: 84px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.main { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) { .main { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; } }
+.roll-box { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
+canvas { display: block; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); cursor: pointer; user-select: none; }
+.chip i { width: 9px; height: 9px; border-radius: 2px; background: var(--c); }
+.chip[aria-pressed=false] { opacity: .45; text-decoration: line-through; }
+.hint { color: var(--dim); margin: 8px 0 0; }
+textarea { width: 100%; min-height: 440px; resize: vertical; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 10px; tab-size: 2; white-space: pre; overflow: auto; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+.err { color: var(--err); margin: 8px 0 0; min-height: 1.5em; white-space: pre-wrap; overflow-wrap: anywhere; }
+.status { color: var(--dim); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Shadow Road Music Lab</h1>
+    <p>Runs the game's own music.js. Edit the track, press Play, and nothing touches the game until you export it.</p>
+  </header>
+
+  <section class="panel">
+    <h2>Transport</h2>
+    <div class="transport">
+      <button id="play" class="primary" type="button">Play</button>
+      <button id="stop" type="button">Stop</button>
+      <label class="field">Tempo <input id="tempo" type="number" step="0.5" min="20" max="240" value="71.5"> quarter-note BPM</label>
+      <label class="field">Bars <input id="from" type="number" min="1" placeholder="first"> to <input id="to" type="number" min="1" placeholder="last"></label>
+      <label class="field"><input id="loop" type="checkbox" checked> Loop</label>
+      <label class="field">Volume <input id="vol" type="range" min="0" max="1" step="0.02" value="0.5"></label>
+      <span class="status" id="status">stopped</span>
+    </div>
+  </section>
+
+  <div class="main">
+    <div class="wrap" style="gap:16px">
+      <section class="panel">
+        <h2>Piano roll</h2>
+        <div class="roll-box"><canvas id="roll" height="230"></canvas></div>
+        <div class="chips" id="chips"></div>
+        <p class="hint">Click a bar to start playing from there. Chips mute a voice while it plays.</p>
+      </section>
+      <section class="panel">
+        <h2>Compare with a game track</h2>
+        <div class="row" style="margin-top:0">
+          <select id="gameTrack" aria-label="Game track"></select>
+          <button id="gamePlay" type="button">Play it</button>
+          <button id="gameLoad" type="button">Copy into editor</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Track source</h2>
+      <textarea id="src" spellcheck="false" aria-label="Track source"></textarea>
+      <div class="row">
+        <button id="apply" type="button" class="primary">Apply &amp; play</button>
+        <button id="copy" type="button">Copy as music.js entry</button>
+        <button id="reset" type="button">Reset to preset</button>
+        <span class="status">Ctrl+Enter applies</span>
+      </div>
+      <p class="err" id="err" role="status"></p>
+      <p class="hint">L(24, 'F5:2 G5:2 .:2 ...') writes one bar of 24 steps. A quarter note is 6 steps, an eighth 3, a triplet eighth 2. Voices: lead, harm, double, arp, bass, drums.</p>
+    </section>
+  </div>
+</div>
+
+<script>let actx = null, noiseBuf = null; // the game's core.js owns these; the lab supplies them</script>
+<script src="../music.js"></script>
+<script src="presets.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const GROUPS = [['lead', 'lead', '--c-lead'], ['harm', 'harm', '--c-harm'], ['dbl', 'double', '--c-dbl'], ['arp', 'arp', '--c-arp'], ['bass', 'bass', '--c-bass'], ['drums', 'drums', '--c-drums']];
+const groupOf = (ch) => ['lead', 'harm', 'dbl', 'arp', 'bass'].includes(ch) ? ch : 'drums';
+const muted = new Set();
+let full = null, view = null, info = null, track = null; // compiled, bar-sliced, layout, source object
+
+function audioInit() {
+  if (actx) { if (actx.state !== 'running') actx.resume().catch(() => {}); return; }
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.4, actx.sampleRate);
+  const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+function L(n, spec) { // one bar of n steps from 'NOTE:len' pairs
+  const out = []; let tot = 0;
+  for (const t of spec.trim().split(/\s+/)) {
+    const [nm, ln] = t.split(':'), len = +ln;
+    if (!(len >= 1)) throw new Error('bad length in "' + t + '"');
+    out.push(nm); for (let i = 1; i < len; i++) out.push(nm === '.' ? '.' : '-'); tot += len;
+  }
+  if (tot !== n) throw new Error('bar adds up to ' + tot + ' steps, not ' + n + ': ' + spec);
+  return out.join(' ');
+}
+const store = (k, v) => { try { v === undefined ? localStorage.getItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const stored = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+
+function evalSrc() { return (new Function('L', 'return (' + $('#src').value + ')'))(L); }
+function barSize(t) { return t.n || (t.parts && Object.values(t.parts)[0].n) || 16; }
+
+function build() {
+  const obj = evalSrc(), n = barSize(obj), t = Object.assign({}, obj);
+  const bpmQ = +$('#tempo').value; if (bpmQ > 0) { t.bpm = bpmQ * n / 16; if (t.parts) { t.parts = {}; for (const k in obj.parts) { t.parts[k] = Object.assign({}, obj.parts[k]); delete t.parts[k].bpm; } } }
+  const c = compile(t), bars = c.steps / n, first = obj.firstBar || 1;
+  const a = Math.max(1, +$('#from').value || first) - first, b = Math.min(bars, (+$('#to').value || first + bars - 1) - first + 1);
+  if (!(b > a)) throw new Error('bar range is empty');
+  const s0 = a * n, s1 = b * n;
+  const v = Object.assign({}, c, { steps: s1 - s0, by: c.by.slice(s0, s1), sd: c.sd.slice(s0, s1), off: c.off.slice(s0, s1), once: !$('#loop').checked });
+  track = obj; full = v; info = { n, bars: b - a, first: first + a };
+  view = Object.assign({}, v); applyMute();
+  return v;
+}
+function applyMute() { if (!full) return; Object.assign(view, { by: full.by.map((es) => es.filter((e) => !muted.has(groupOf(e.ch)))) }); }
+
+function play(startBar) {
+  try { build(); $('#err').textContent = ''; } catch (e) { $('#err').textContent = String(e.message || e); return; }
+  audioInit(); musicOn = true; stopMusic();
+  COMPILED.lab = view; TRACKS.lab = track; applyMute(); playMusic('lab');
+  if (!musicGain) return; musicGain.gain.value = +$('#vol').value;
+  if (startBar) musicStep = Math.max(0, Math.min(info.bars - 1, startBar - info.first)) * info.n;
+  $('#status').textContent = 'playing';
+}
+function stop() { stopMusic(); $('#status').textContent = 'stopped'; }
+
+// ---- piano roll ----
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function draw() {
+  const cv = $('#roll'), box = cv.parentElement, dpr = window.devicePixelRatio || 1;
+  if (!view) { requestAnimationFrame(draw); return; }
+  const steps = view.steps, px = Math.max(3, Math.floor((box.clientWidth - 2) / steps) || 3), W = steps * px, H = 230;
+  if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  let lo = 127, hi = 0;
+  for (const es of full.by) for (const e of es) if (e.midi !== undefined && e.ch !== 'bass') { lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); }
+  if (lo > hi) { lo = 60; hi = 72; } lo -= 1; hi += 1;
+  const row = (H - 22) / (hi - lo + 1), n = info.n;
+  g.font = '10px ' + css('--font-mono'); g.textBaseline = 'top';
+  for (let bar = 0; bar < info.bars; bar++) {
+    const x = bar * n * px; g.fillStyle = css('--line'); g.fillRect(x, 0, 1, H);
+    g.fillStyle = css('--dim'); g.fillText(String(info.first + bar), x + 3, 3);
+  }
+  for (let m = lo; m <= hi; m++) if ([1, 3, 6, 8, 10].includes(m % 12)) { g.fillStyle = css('--line'); g.globalAlpha = .25; g.fillRect(0, 22 + (hi - m) * row, W, row); g.globalAlpha = 1; }
+  const order = ['bass', 'arp', 'dbl', 'harm', 'lead'];
+  for (const grp of order) {
+    g.fillStyle = css(GROUPS.find((x) => x[0] === grp)[2]); g.globalAlpha = muted.has(grp) ? .12 : grp === 'lead' ? 1 : .6;
+    full.by.forEach((es, s) => es.forEach((e) => { if (e.ch !== grp) return; const midi = grp === 'bass' ? Math.max(lo, Math.min(hi, e.midi + 12)) : e.midi; g.fillRect(s * px, 22 + (hi - midi) * row, Math.max(2, (e.len || 1) * px - 1), Math.max(2, row - 1)); }));
+  }
+  g.globalAlpha = 1;
+  full.by.forEach((es, s) => es.forEach((e) => { if (groupOf(e.ch) !== 'drums') return; g.globalAlpha = muted.has('drums') ? .12 : .8; g.fillStyle = css('--c-drums'); g.fillRect(s * px, H - 5, Math.max(2, px - 1), 4); }));
+  g.globalAlpha = 1;
+  if (actx && musicCur === 'lab' && COMPILED.lab === view) {
+    const lead = (musicNext - actx.currentTime) / view.sd[0], pos = (musicStep - lead + view.steps) % view.steps;
+    g.fillStyle = css('--accent'); g.fillRect(pos * px, 0, 2, H);
+    $('#status').textContent = 'bar ' + (info.first + Math.floor(pos / info.n)) + ' · beat ' + (1 + Math.floor((pos % info.n) / (info.n / 4)));
+  } else if ($('#status').textContent !== 'stopped' && !musicCur) $('#status').textContent = 'stopped';
+  requestAnimationFrame(draw);
+}
+$('#roll').addEventListener('click', (ev) => { if (!info) return; const r = ev.currentTarget.getBoundingClientRect(), px = r.width / view.steps; play(info.first + Math.floor((ev.clientX - r.left) / px / info.n)); });
+
+// ---- controls ----
+GROUPS.forEach(([k, label, col]) => {
+  const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.setAttribute('aria-pressed', 'true'); b.style.setProperty('--c', 'var(' + col + ')');
+  b.innerHTML = '<i></i>' + label; b.addEventListener('click', () => { muted.has(k) ? muted.delete(k) : muted.add(k); b.setAttribute('aria-pressed', String(!muted.has(k))); applyMute(); });
+  $('#chips').appendChild(b);
+});
+Object.keys(TRACKS).forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = k; $('#gameTrack').appendChild(o); });
+$('#play').onclick = () => play();
+$('#stop').onclick = stop;
+$('#apply').onclick = () => { store('musiclab-src', $('#src').value); play(); };
+$('#loop').onchange = () => { if (full) full.once = view.once = !$('#loop').checked; };
+$('#vol').oninput = () => { if (musicGain) musicGain.gain.value = +$('#vol').value; };
+$('#tempo').onchange = () => { if (musicCur === 'lab') play(); else try { build(); } catch (e) {} };
+$('#from').onchange = $('#to').onchange = () => { try { build(); $('#err').textContent = ''; } catch (e) { $('#err').textContent = e.message; } };
+$('#src').addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); $('#apply').click(); } });
+$('#src').addEventListener('input', () => { store('musiclab-src', $('#src').value); });
+$('#reset').onclick = () => { $('#src').value = LAB_PRESETS.glory; $('#tempo').value = LAB_TEMPO.glory; store('musiclab-src', ''); try { build(); $('#err').textContent = ''; } catch (e) { $('#err').textContent = e.message; } };
+$('#copy').onclick = () => {
+  let text; try { const o = Object.assign({}, evalSrc()); delete o.firstBar; if (o.bpm === undefined) o.bpm = +$('#tempo').value * barSize(o) / 16; text = 'lab: ' + JSON.stringify(o, null, 2) + ','; } catch (e) { $('#err').textContent = e.message; return; }
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { $('#err').textContent = 'Copied.'; }, () => { $('#err').textContent = 'Copy was blocked; select the text below.'; $('#src').value = text; $('#src').select(); });
+};
+$('#gamePlay').onclick = () => { audioInit(); musicOn = true; stopMusic(); const k = $('#gameTrack').value; delete COMPILED[k]; full = view = null; playMusic(k); if (musicGain) musicGain.gain.value = +$('#vol').value; $('#status').textContent = 'game: ' + k; };
+$('#gameLoad').onclick = () => { const t = TRACKS[$('#gameTrack').value]; if (t.shuffle) { $('#err').textContent = 'That track is shuffled; copy one of its parts instead.'; return; } $('#src').value = '(' + JSON.stringify(t, null, 2) + ')'; $('#tempo').value = (t.bpm || 120) * 16 / barSize(t); $('#err').textContent = ''; try { build(); } catch (e) { $('#err').textContent = e.message; } };
+
+$('#src').value = stored('musiclab-src') || LAB_PRESETS.glory; $('#tempo').value = LAB_TEMPO.glory;
+try { build(); } catch (e) { $('#err').textContent = e.message; }
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
