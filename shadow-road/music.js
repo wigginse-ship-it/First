@@ -11,7 +11,8 @@
 //   double (a quieter copy of the lead at this interval), arp / bass (pattern strings, or arrays cycled per bar),
 //   arpOct, arpDuty, av, bv, drums ({k,s,h,o,t,u,m,c} lanes, or an array cycled per bar), fill, fillEvery.
 // Track-only: kit ('std', 'heavy', 'metal', 'soft'), swing (0..1 of a 16th, the off-beats lean late), echo (0..1 wet),
-//   echoSteps, vib (lead vibrato in cents on long notes), vol, once.
+//   echoSteps, vib (lead vibrato in cents on long notes), harmTone ('strings' plays the counter voice as a swelling, detuned saw section), legato (0..1: lead and counter notes hold their level, release
+//   briefly and overlap the next note; 0 is the default plucked shape), vol, once.
 // Arp patterns: digits pick chord tones counted up from the root an octave above the chord (0 root, 1 third, 2 fifth,
 //   3 the next root for triads ...). Bass patterns: R root, O octave up, F fifth, V fifth below, T third, S seventh,
 //   C a half step under the next chord's root. Drums: x hit, X accent, g ghost. '-' holds, '.' rests.
@@ -58,11 +59,56 @@ const TITLE_A = ['D5 - - - F5 - - - A5 - - - - - G5 -', 'F5 - - - - - D5 - Bb4 -
 
 return {
   // ---- menus ----
-  title: { bpm: 84, style: 'calm', duty: .5, vib: 10, form: ['A', 'H', 'B'], parts: {
+  titleClassic: { bpm: 84, style: 'calm', duty: .5, vib: 10, form: ['A', 'H', 'B'], parts: {
     A: { chords: ['Dm', 'Bb', 'Gm', 'A'], lead: TITLE_A },
     H: { chords: ['Dm', 'Bb', 'Gm', 'A'], lead: TITLE_A, harm: [H('A4', 'D5'), H('Bb4', 'F4'), H('D4', 'Bb4'), H('C#5', 'E4')] },
     B: { chords: ['Bb', 'C', 'Am', 'A'], lead: ['D5 - - - - - F5 - Bb5 - - - A5 - G5 -', 'G5 - - - - - E5 - C5 - - - - - - -', 'E5 - - - - - C5 - A4 - - - C5 - E5 -', 'A5 - - - - - - - G5 - - - E5 - C#5 -'],
          harm: [H('F4', 'D5'), H('E4', 'G4'), H('C5', 'A4'), H('C#5', 'A4')] } } },
+  title: {
+    bpm: 108,
+    n: 24,
+    style: 'calm',
+    duty: 0.25,
+    lv: 0.17,
+    vib: 10,
+    echo: 0.22,
+    echoSteps: 6,
+    arp: '0-1-2-0-1-2-0-1-2-0-1-2-',
+    arpDuty: 0.5,
+    av: 0.045,
+    bass: 'R-----------V-----------',
+    bv: 0.28,
+    chords: ['F', 'F', 'Db/F', 'F', 'Db/F', 'Fm', 'Eb', 'Bb', 'Eb Fm', 'Db', 'Db'],
+    lead: [
+      '. . . . . . . . . . . . . . . . . . . . . . . .',
+      '. . . . . . . . . . . . . . . . . . F5 - G5 - F5 -',
+      'C#5 - - - - - - - - - - - D#5 - - - - - C#5 - - - - -',
+      'C5 - - - - - - - - - - - - - - - . . F5 - G5 - F5 -',
+      'C#5 - - - - - - - - - - - D#5 - - - - - C#5 - - - - -',
+      'C5 - - - - - - - - - - - - - - - - - A#4 - - G#4 - -',
+      'G4 - - - - - - - - - - - G#4 - - - - - G4 - - - - -',
+      'F4 - - - - - - - - - - - - - - - - - D#4 - - F4 - -',
+      'G4 - - - - - - - - - - - F4 - - - - - G4 - - - - -',
+      'G#4 - - - - - - - - - - - - - - - - - - - - - - -',
+      '. . . . . . . . . . . . . . . . . . . . . . . .'
+    ],
+    harm: [
+      '. . . . . . . . . . . . . . . . . . . . . . . .',
+      '. . . . . . . . . . . . . . . . . . . . . . . .',
+      '. . . . . . . . . . . . . . . . . . . . . . . .',
+      '. . . . . . . . . . . . . . . . . . . . . . . .',
+      'F5 - - - - - - - - - - - G#4 - - - - . A#4 - - - - -',
+      'F4 - - - - - - - - - - - - - - - - - . . . . . .',
+      '. . . . . . . . . . . . . . . . . . . . . . . .',
+      '. . . . . . . . . . . . . . . . . . . . . . . .',
+      'A#4 - - - - - - - - - - - C5 - - - - - A#4 - - - - -',
+      'C5 - - - - - - - - - - - - - - - - - - - - - - -',
+      '. . . . . . . . . . . . . . . . . . . . . . . .'
+    ],
+    hduty: 0.25,
+    hv: 0.068,
+    legato: 0.95
+  },
   fallen: { bpm: 70, chords: ['Am', 'F', 'E', 'Am'], style: 'calm', duty: .5, once: true, vib: 10,
     lead: ['E5 - - - C5 - - - A4 - - - - - - -', 'F5 - - - E5 - - - D5 - - - C5 - - -', 'B4 - - - G#4 - - - E4 - - - - - - -', 'A4 - - - - - - - - - - - . . . .'],
     harm: [H('C5', 'E4'), H('A4', 'F4'), H('G#4', 'B3'), 'C4 - - - - - - - - - - - . . . .'] },
@@ -380,7 +426,7 @@ function compile(tr, opt) {
   }
   const by = [...Array(at)].map(() => []);
   for (const e of ev) by[e.s].push(e);
-  return { steps: at, by, sd, off, stepDur: sd[0], once: tr.once, duty: tr.duty, kit, echo: tr.echo || 0, echoSteps: tr.echoSteps || 3, vib: tr.vib || 0 };
+  return { steps: at, by, sd, off, stepDur: sd[0], once: tr.once, duty: tr.duty, kit, echo: tr.echo || 0, echoSteps: tr.echoSteps || 3, vib: tr.vib || 0, legato: tr.legato || 0, harmTone: tr.harmTone || null };
 }
 
 // ---------- playing ----------
@@ -407,12 +453,14 @@ function pulseWave(duty) { // a square wave with the given duty cycle, as in the
   for (let k = 1; k < n; k++) im[k] = 2 / (k * Math.PI) * Math.sin(k * Math.PI * duty);
   return (waves[duty] = actx.createPeriodicWave(re, im));
 }
-function voice(t, midi, dur, type, vol, duty, vib, echo) {
+// legato only smooths short notes: full below about a third of a second, gone by two thirds, so sustained notes keep their fade
+const musLegato = (dur, lg) => (lg || 0) * Math.max(0, Math.min(1, (.65 - dur) / .3));
+function voice(t, midi, dur, type, vol, duty, vib, echo, legato) { // legato (already scaled by musLegato) holds the level longer and shortens the release
   const o = actx.createOscillator(), g = actx.createGain();
   if (type === 'pulse') o.setPeriodicWave(pulseWave(duty)); else o.type = type;
   o.frequency.setValueAtTime(freqOf(midi), t);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .006);
-  g.gain.setValueAtTime(vol * .8, t + dur * .6); g.gain.linearRampToValueAtTime(0, t + dur);
+  const lg = legato || 0; g.gain.setValueAtTime(vol * (.8 + .2 * lg), t + dur * (.6 + .3 * lg)); g.gain.linearRampToValueAtTime(0, t + dur);
   if (vib && dur > .4) { // a delayed vibrato on long notes
     const l = actx.createOscillator(), lg = actx.createGain();
     l.frequency.value = 5.5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(0, t + .2); lg.gain.linearRampToValueAtTime(vib, t + .5);
@@ -421,6 +469,20 @@ function voice(t, midi, dur, type, vol, duty, vib, echo) {
   o.connect(g).connect(musicGain); if (echo && echoIn) g.connect(echoIn);
   o.start(t); o.stop(t + dur + .02);
 }
+function stringVoice(t, midi, dur, vol, echo) { // the counter voice as a bowed section: two detuned saws, a soft low-pass, a slow swell and a late vibrato
+  const g = actx.createGain(), f = actx.createBiquadFilter(), atk = Math.min(.09, dur * .35), rel = Math.min(.15, dur * .4);
+  f.type = 'lowpass'; f.frequency.value = Math.min(4200, Math.max(1400, freqOf(midi) * 4.5)); f.Q.value = .4;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol * STRING_GAIN, t + atk);
+  g.gain.setValueAtTime(vol * STRING_GAIN, Math.max(t + atk, t + dur - rel)); g.gain.linearRampToValueAtTime(0, t + dur);
+  const l = dur > .3 ? actx.createOscillator() : null, lg = l && actx.createGain();
+  if (l) { l.frequency.value = 5.2; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(0, t + .15); lg.gain.linearRampToValueAtTime(7, t + .45); l.start(t); l.stop(t + dur + .02); }
+  for (const d of [-7, 7]) {
+    const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(freqOf(midi), t); o.detune.value = d;
+    if (l) lg.connect(o.detune); o.connect(f); o.start(t); o.stop(t + dur + .02);
+  }
+  f.connect(g).connect(musicGain); if (echo && echoIn) g.connect(echoIn);
+}
+const STRING_GAIN = .43;
 function drum(t, kind, v, kit) {
   if (kind === 'kick' || kind === 'k' || kind === 't' || kind === 'u') { // the kick and two toms are falling sine thumps
     const o = actx.createOscillator(), g = actx.createGain();
@@ -449,8 +511,10 @@ function musicTick() {
     const sd = tr.sd[musicStep], t = musicNext + tr.off[musicStep];
     for (const e of tr.by[musicStep]) {
       const dur = (e.len || 1) * sd;
-      if (e.ch === 'lead') voice(t, e.midi, dur * .95, 'pulse', e.v, e.d, tr.vib, tr.echo);
-      else if (e.ch === 'harm' || e.ch === 'dbl') voice(t, e.midi, dur * .92, 'pulse', e.v, e.d, 0, tr.echo);
+      const lg = musLegato(dur, tr.legato);
+      if (e.ch === 'lead') voice(t, e.midi, dur * (.95 + .09 * lg), 'pulse', e.v, e.d, tr.vib, tr.echo, lg);
+      else if (e.ch === 'harm' && tr.harmTone === 'strings') stringVoice(t, e.midi, dur * 1.02, e.v, tr.echo);
+      else if (e.ch === 'harm' || e.ch === 'dbl') voice(t, e.midi, dur * (.92 + .12 * lg), 'pulse', e.v, e.d, 0, tr.echo, lg);
       else if (e.ch === 'arp') voice(t, e.midi, dur * .8, 'pulse', e.v, e.d);
       else if (e.ch === 'bass') voice(t, e.midi, dur * .9, 'triangle', e.v);
       else drum(t, e.ch, e.v, tr.kit);
