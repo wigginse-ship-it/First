@@ -267,7 +267,7 @@
     const c = CS();
     if (onRoad()) feed(WT.roadPerSec * dt / WT.roadMul, 'standing on the Black Road');
     corpseHits(); villagers(); mimicStep(dt); clootStep(dt); verseStep(dt); patternStep(dt); roadStep(dt); pearlStep(dt); weaponStep(dt); heartStep(dt); fxSchedule(dt); carrierStep(dt);
-    if (boss && boss.cB && !boss.dead && enemies.includes(boss)) bossStep(boss, dt);
+    if (boss && boss.cB && !boss.dead && enemies.includes(boss)) { if (typeof BSX !== 'undefined') BSX.run(boss, () => bossStep(boss, dt)); else bossStep(boss, dt); } // (its corrupted attacks call in its own voice: boss_sfx.js)
     if ((L.abT = (L.abT || 0) - dt) <= 0) { L.abT = 1; abyssCheck(); }
     if (P.cBurn > 0) burnHim(dt);
     L.recT -= dt; if (L.recT <= 0) { L.recT = .05; L.rec.push({ x: P.x, y: P.y, z: P.z, f: P.facing, pose: Object.assign({}, playerPose()) }); if (L.rec.length > 24) L.rec.shift(); }
