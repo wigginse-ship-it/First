@@ -46,6 +46,13 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 .tools { margin: 0 0 10px; gap: 8px 14px; }
 .tools select { max-width: 190px; }
 canvas { touch-action: none; cursor: crosshair; }
+input[type=text] { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; min-width: 0; flex: 1 1 160px; }
+.saved { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.saved li { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; background: var(--bg); }
+.saved .nm { flex: 1 1 140px; min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.saved .when { color: var(--dim); font-size: 12px; }
+.saved button { padding: 3px 10px; }
+.saved button.warn { border-color: var(--err); color: var(--err); }
 button:disabled { opacity: .4; cursor: default; }
 .roll-box { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
 canvas { display: block; }
@@ -113,6 +120,16 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
       <p class="err" id="err" role="status"></p>
       <textarea id="exportBox" readonly hidden aria-label="Exported track entry" style="min-height:140px"></textarea>
       <p class="hint">Editing on the roll rewrites the lead (or harm) bars here as L(24, 'F5:2 G5:2 ...') lines, one note:length pair per note. L builds one bar from note:length pairs; a quarter note is 6 steps, an eighth 3, a triplet eighth 2.</p>
+    </section>
+    <section class="panel">
+      <h2>Saved versions</h2>
+      <div class="row" style="margin-top:0">
+        <input id="saveName" type="text" maxlength="60" placeholder="Name this version" aria-label="Version name">
+        <button id="saveAs" type="button" class="primary">Save as</button>
+        <span class="status" id="saveStatus">connecting…</span>
+      </div>
+      <ul class="saved" id="saved"></ul>
+      <p class="hint">Everything is saved automatically as you work, and the page reopens where you left off. Naming a version keeps a copy you can come back to. Saving under an existing name replaces it.</p>
     </section>
     <section class="panel">
       <h2>Compare with a game track</h2>
@@ -409,8 +426,21 @@ $('#from').onchange = $('#to').onchange = refresh;
 $('#src').addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); $('#apply').click(); } });
 $('#src').addEventListener('input', () => { store('musiclab-src', $('#src').value); });
 $('#reset').onclick = () => { undoS.push($('#src').value); $('#src').value = LAB_PRESETS.glory; $('#tempoBpm').value = LAB_TEMPO.glory; store('musiclab-src', ''); refresh(); };
+const q = (s) => "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+function fmtVal(v, ind) {
+  const pad = '  '.repeat(ind + 1), end = '  '.repeat(ind);
+  if (Array.isArray(v)) { if (!v.some((x) => typeof x === 'string' && x.length > 24)) return '[' + v.map((x) => fmtVal(x, ind)).join(', ') + ']'; return '[\n' + v.map((x) => pad + fmtVal(x, ind + 1)).join(',\n') + '\n' + end + ']'; }
+  if (v && typeof v === 'object') return '{\n' + Object.entries(v).map(([k, x]) => pad + (/^[A-Za-z_]\w*$/.test(k) ? k : q(k)) + ': ' + fmtVal(x, ind + 1)).join(',\n') + '\n' + end + '}';
+  return typeof v === 'string' ? q(v) : String(v);
+}
+function entryText(name) { // the track exactly as the lab plays it, as a TRACKS entry
+  const src = chordTrack(evalSrc()), o = { bpm: src.bpm !== undefined ? src.bpm : +$('#tempoBpm').value * barSize(src) / 16 };
+  for (const k in src) if (k !== 'firstBar' && k !== 'bpm') o[k] = src[k];
+  if (+$('#legato').value > 0) o.legato = +$('#legato').value;
+  return name + ': ' + fmtVal(o, 1) + ',';
+}
 $('#copy').onclick = () => {
-  let text; try { const o = Object.assign({}, chordTrack(evalSrc())); delete o.firstBar; if (+$('#legato').value > 0) o.legato = +$('#legato').value; if (o.bpm === undefined) o.bpm = +$('#tempoBpm').value * barSize(o) / 16; text = 'lab: ' + JSON.stringify(o, null, 2) + ','; } catch (e) { $('#err').textContent = e.message; return; }
+  let text; try { text = entryText('lab'); } catch (e) { $('#err').textContent = e.message; return; }
   (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { $('#exportBox').hidden = true; $('#err').textContent = 'Copied.'; }, () => { const x = $('#exportBox'); x.hidden = false; x.value = text; x.select(); $('#err').textContent = 'Copy was blocked. The entry is in the box below; select it and copy.'; });
 };
 $('#gamePlay').onclick = () => { audioInit(); musicOn = true; stopMusic(); const k = $('#gameTrack').value; delete COMPILED[k]; full = view = null; playMusic(k); if (musicGain) musicGain.gain.value = +$('#vol').value; $('#status').textContent = 'game: ' + k; };
@@ -423,6 +453,65 @@ if (stored('musiclab-trim39') !== '1') {
   store('musiclab-trim39', '1');
   if (editable() && track.lead.length > 1 && !model.lead.concat(model.harm).some((o) => o.s >= (track.lead.length - 1) * info.n)) removeLastBar();
 }
+// ---- saved versions (the page's shared database; absent when the file is opened on its own) ----
+let DB = null, lastSaved = '', saving = false;
+const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'untitled';
+function getSettings() {
+  return { src: $('#src').value, tempo: +$('#tempoBpm').value, legato: +$('#legato').value, chordTone: $('#chordTone').value, chordLevel: +$('#chordLevel').value,
+    startAt: $('#startAt').value, from: $('#from').value, to: $('#to').value, loop: $('#loop').checked, snap: $('#snap').value, newLen: $('#newLen').value,
+    zoom: +$('#zoom').value, vol: +$('#vol').value, edit: $('#editV').value, muted: [...muted] };
+}
+function applySettings(s) {
+  if (!s || typeof s.src !== 'string') return;
+  const set = (id, v) => { if (v !== undefined && v !== null) $(id).value = v; };
+  $('#src').value = s.src; store('musiclab-src', s.src);
+  set('#tempoBpm', s.tempo); set('#legato', s.legato); set('#chordTone', s.chordTone); set('#chordLevel', s.chordLevel); set('#startAt', s.startAt); set('#from', s.from); set('#to', s.to); set('#zoom', s.zoom); set('#vol', s.vol); set('#editV', s.edit);
+  editV = $('#editV').value; if (typeof s.loop === 'boolean') $('#loop').checked = s.loop;
+  muted.clear(); (s.muted || []).forEach((k) => muted.add(k)); document.querySelectorAll('.chip').forEach((b, i) => b.setAttribute('aria-pressed', String(!muted.has(GROUPS[i][0]))));
+  $('#lgLabel').textContent = 'Legato ' + Math.round($('#legato').value * 100) + '%'; syncChordVol(); undoS = []; redoS = []; sel = null;
+  refresh(); set('#snap', s.snap); set('#newLen', s.newLen);
+  if (musicCur === 'lab') play();
+}
+async function autosave() {
+  if (!DB || saving || drag) return; const s = getSettings(), j = JSON.stringify(s); if (j === lastSaved) return;
+  saving = true;
+  try { await DB.doc('lab/current').set(Object.assign({ savedAt: Date.now() }, s)); $('#saveStatus').textContent = 'saved ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+  catch (e) { $('#saveStatus').textContent = 'could not save'; }
+  lastSaved = j; saving = false;
+}
+function renderSaved(snap) {
+  const ul = $('#saved'); ul.innerHTML = '';
+  if (snap.empty) { const li = document.createElement('li'); li.textContent = 'No named versions yet.'; li.style.color = 'var(--dim)'; ul.appendChild(li); return; }
+  snap.docs.forEach((d) => {
+    const v = d.data(), li = document.createElement('li'), nm = document.createElement('span'), when = document.createElement('span'), ld = document.createElement('button'), del = document.createElement('button');
+    nm.className = 'nm'; nm.textContent = v.name || d.id; when.className = 'when'; when.textContent = v.savedAt ? new Date(v.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    ld.type = del.type = 'button'; ld.textContent = 'Load'; del.textContent = 'Delete';
+    ld.onclick = () => { applySettings(v.settings); $('#err').textContent = 'Loaded "' + (v.name || d.id) + '".'; };
+    let armed = 0; del.onclick = () => { if (!armed) { armed = 1; del.textContent = 'Really delete?'; del.classList.add('warn'); setTimeout(() => { armed = 0; del.textContent = 'Delete'; del.classList.remove('warn'); }, 3000); return; } DB.doc('presets/' + d.id).delete().catch(() => { $('#err').textContent = 'Could not delete that version.'; }); };
+    li.append(nm, when, ld, del); ul.appendChild(li);
+  });
+}
+$('#saveAs').onclick = async () => {
+  const name = $('#saveName').value.trim();
+  if (!DB) { $('#err').textContent = 'Saving works in the published page.'; return; }
+  if (!name) { $('#err').textContent = 'Give this version a name first.'; $('#saveName').focus(); return; }
+  try { await DB.doc('presets/' + slug(name)).set({ name, savedAt: Date.now(), settings: getSettings() }); $('#saveName').value = ''; $('#err').textContent = 'Saved "' + name + '".'; }
+  catch (e) { $('#err').textContent = 'Could not save: ' + (e && e.message || e); }
+};
+$('#saveName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#saveAs').click(); });
+(async () => {
+  try {
+    const c = window.claude && window.claude.use ? await window.claude.use('db') : null;
+    if (!c) { $('#saveStatus').textContent = 'saving is off here'; $('#saveAs').disabled = true; return; }
+    DB = c; $('#saveStatus').textContent = 'loading…';
+    const cur = await DB.doc('lab/current').get();
+    if (cur.exists) { applySettings(cur.data()); lastSaved = JSON.stringify(getSettings()); $('#saveStatus').textContent = 'restored'; } else $('#saveStatus').textContent = 'ready';
+    const meta = await DB.doc('lab/meta').get(); // once: keep whatever is open now as the version called "new title"
+    if (!meta.exists) { await DB.doc('presets/new-title').set({ name: 'new title', savedAt: Date.now(), settings: getSettings() }); await DB.doc('lab/meta').set({ seededNewTitle: true, at: Date.now() }); }
+    DB.collection('presets').orderBy('savedAt', 'desc').onSnapshot(renderSaved, () => { $('#saved').textContent = 'Could not load saved versions.'; });
+    setInterval(autosave, 2500);
+  } catch (e) { $('#saveStatus').textContent = 'saving is off here'; $('#saveAs').disabled = true; }
+})();
 requestAnimationFrame(draw);
 </script>
 </body>
