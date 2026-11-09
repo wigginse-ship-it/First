@@ -85,6 +85,7 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
     <div class="row tools">
       <label class="field">Edit <select id="editV"><option value="both">lead + chord note</option><option value="lead">lead only</option><option value="harm">harm only</option></select></label>
       <label class="field" title="Make the second voice use the lead's pulse width and volume, so two notes read as a lead chord"><input id="chordSound" type="checkbox" checked> 2nd voice sounds like lead</label>
+      <label class="field" title="Volume of the second chord note as a share of the lead's"><span id="cvLabel">2nd note volume 75%</span> <input id="chordVol" type="range" min="0.2" max="1" step="0.05" value="0.75"></label>
       <label class="field">Snap <select id="snap"></select></label>
       <label class="field">New note <select id="newLen"></select></label>
       <label class="field">Zoom <input id="zoom" type="range" min="3" max="32" step="1" value="9"></label>
@@ -108,6 +109,7 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
         <span class="status">Ctrl+Enter applies</span>
       </div>
       <p class="err" id="err" role="status"></p>
+      <textarea id="exportBox" readonly hidden aria-label="Exported track entry" style="min-height:140px"></textarea>
       <p class="hint">Editing on the roll rewrites the lead (or harm) bars here as L(24, 'F5:2 G5:2 ...') lines, one note:length pair per note. L builds one bar from note:length pairs; a quarter note is 6 steps, an eighth 3, a triplet eighth 2.</p>
     </section>
     <section class="panel">
@@ -155,7 +157,7 @@ const stored = (k) => { try { return localStorage.getItem(k); } catch (e) { retu
 function evalSrc() { return (new Function('L', 'return (' + $('#src').value + ')'))(L); }
 function barSize(t) { return t.n || (t.parts && Object.values(t.parts)[0].n) || 16; }
 
-function chordTrack(t) { if (!$('#chordSound').checked || t.parts) return t; t = Object.assign({}, t); t.hduty = t.duty || .25; t.hv = t.lv || .16; return t; }
+function chordTrack(t) { if (!$('#chordSound').checked || t.parts) return t; t = Object.assign({}, t); t.hduty = t.duty || .25; t.hv = (t.lv || .16) * (+$('#chordVol').value || 1); return t; }
 function build() {
   const obj = evalSrc(), n = barSize(obj), t = chordTrack(obj);
   const bpmQ = +$('#tempo').value; if (bpmQ > 0) { t.bpm = bpmQ * n / 16; if (t.parts) { t.parts = {}; for (const k in obj.parts) { t.parts[k] = Object.assign({}, obj.parts[k]); delete t.parts[k].bpm; } } }
@@ -363,7 +365,10 @@ document.addEventListener('keydown', (e) => {
 });
 $('#undo').onclick = () => undo(-1); $('#redo').onclick = () => undo(1);
 $('#del').onclick = () => { const o = selNote(); if (!o) return; dropNote(o); commit(); };
-$('#chordSound').onchange = refresh;
+const syncChordVol = () => { $('#chordVol').disabled = !$('#chordSound').checked; $('#cvLabel').textContent = '2nd note volume ' + Math.round($('#chordVol').value * 100) + '%'; };
+$('#chordSound').onchange = () => { syncChordVol(); refresh(); };
+$('#chordVol').oninput = () => { syncChordVol(); refresh(); };
+syncChordVol();
 $('#editV').onchange = () => { editV = $('#editV').value; sel = null; syncButtons(); };
 
 // ---- controls ----
@@ -385,7 +390,7 @@ $('#src').addEventListener('input', () => { store('musiclab-src', $('#src').valu
 $('#reset').onclick = () => { undoS.push($('#src').value); $('#src').value = LAB_PRESETS.glory; $('#tempo').value = LAB_TEMPO.glory; store('musiclab-src', ''); refresh(); };
 $('#copy').onclick = () => {
   let text; try { const o = Object.assign({}, chordTrack(evalSrc())); delete o.firstBar; if (o.bpm === undefined) o.bpm = +$('#tempo').value * barSize(o) / 16; text = 'lab: ' + JSON.stringify(o, null, 2) + ','; } catch (e) { $('#err').textContent = e.message; return; }
-  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { $('#err').textContent = 'Copied.'; }, () => { $('#err').textContent = 'Copy was blocked; select the text below.'; $('#src').value = text; $('#src').select(); });
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { $('#exportBox').hidden = true; $('#err').textContent = 'Copied.'; }, () => { const x = $('#exportBox'); x.hidden = false; x.value = text; x.select(); $('#err').textContent = 'Copy was blocked. The entry is in the box below; select it and copy.'; });
 };
 $('#gamePlay').onclick = () => { audioInit(); musicOn = true; stopMusic(); const k = $('#gameTrack').value; delete COMPILED[k]; full = view = null; playMusic(k); if (musicGain) musicGain.gain.value = +$('#vol').value; $('#status').textContent = 'game: ' + k; };
 $('#gameLoad').onclick = () => { const t = TRACKS[$('#gameTrack').value]; if (t.shuffle) { $('#err').textContent = 'That track is shuffled; copy one of its parts instead.'; return; } $('#src').value = '(' + JSON.stringify(t, null, 2) + ')'; $('#tempo').value = (t.bpm || 120) * 16 / barSize(t); $('#err').textContent = ''; undoS.push($('#src').value); refresh(); };
