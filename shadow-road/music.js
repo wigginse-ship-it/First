@@ -408,7 +408,9 @@ function pulseWave(duty) { // a square wave with the given duty cycle, as in the
   for (let k = 1; k < n; k++) im[k] = 2 / (k * Math.PI) * Math.sin(k * Math.PI * duty);
   return (waves[duty] = actx.createPeriodicWave(re, im));
 }
-function voice(t, midi, dur, type, vol, duty, vib, echo, legato) { // legato 0..1 holds the level longer and shortens the release
+// legato only smooths short notes: full below about a third of a second, gone by two thirds, so sustained notes keep their fade
+const musLegato = (dur, lg) => (lg || 0) * Math.max(0, Math.min(1, (.65 - dur) / .3));
+function voice(t, midi, dur, type, vol, duty, vib, echo, legato) { // legato (already scaled by musLegato) holds the level longer and shortens the release
   const o = actx.createOscillator(), g = actx.createGain();
   if (type === 'pulse') o.setPeriodicWave(pulseWave(duty)); else o.type = type;
   o.frequency.setValueAtTime(freqOf(midi), t);
@@ -450,8 +452,9 @@ function musicTick() {
     const sd = tr.sd[musicStep], t = musicNext + tr.off[musicStep];
     for (const e of tr.by[musicStep]) {
       const dur = (e.len || 1) * sd;
-      if (e.ch === 'lead') voice(t, e.midi, dur * (.95 + .09 * tr.legato), 'pulse', e.v, e.d, tr.vib, tr.echo, tr.legato);
-      else if (e.ch === 'harm' || e.ch === 'dbl') voice(t, e.midi, dur * (.92 + .12 * tr.legato), 'pulse', e.v, e.d, 0, tr.echo, tr.legato);
+      const lg = musLegato(dur, tr.legato);
+      if (e.ch === 'lead') voice(t, e.midi, dur * (.95 + .09 * lg), 'pulse', e.v, e.d, tr.vib, tr.echo, lg);
+      else if (e.ch === 'harm' || e.ch === 'dbl') voice(t, e.midi, dur * (.92 + .12 * lg), 'pulse', e.v, e.d, 0, tr.echo, lg);
       else if (e.ch === 'arp') voice(t, e.midi, dur * .8, 'pulse', e.v, e.d);
       else if (e.ch === 'bass') voice(t, e.midi, dur * .9, 'triangle', e.v);
       else drum(t, e.ch, e.v, tr.kit);
