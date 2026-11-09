@@ -105,55 +105,76 @@ function audioInit() {
   if (actx) { if (actx.state !== 'running') actx.resume().catch(() => {}); return; }
   try {
     actx = new (window.AudioContext || window.webkitAudioContext)();
-    noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.4, actx.sampleRate);
+    noiseBuf = actx.createBuffer(1, actx.sampleRate * 1.2, actx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   } catch (e) { actx = null; }
   if (actx && musicWant) playMusic(musicWant); // music waits for the first touch
 }
+// every effect goes through one bus, its harsh top softened (music.js has its own path to the speakers); a pile-up of
+// blows is kept from clipping or drowning the music by sfx() itself, which plays each a little quieter when many land
+let sfxBus = null, VOLK = 1, PIT = 1;
+function bus() {
+  if (sfxBus && sfxBus.context === actx) return sfxBus;
+  const shelf = actx.createBiquadFilter(); shelf.type = 'highshelf'; shelf.frequency.value = 5200; shelf.gain.value = -6;
+  const out = actx.createGain(); out.gain.value = 1;
+  shelf.connect(out).connect(actx.destination); sfxBus = shelf; return sfxBus;
+}
 function tone(freq, dur, type, vol, slide, delay = 0) {
-  const t0 = actx.currentTime + delay;
+  const t0 = actx.currentTime + delay, f0 = freq * PIT, v = vol * VOLK;
   const o = actx.createOscillator(), g = actx.createGain();
-  o.type = type; o.frequency.setValueAtTime(freq, t0);
-  if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
-  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-  o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + dur);
+  o.type = type; o.frequency.setValueAtTime(f0, t0);
+  if (slide) o.frequency.exponentialRampToValueAtTime(slide * PIT, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(v, t0 + .004); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur); // (a 4 ms rise: no click at the start)
+  o.connect(g).connect(bus()); o.start(t0); o.stop(t0 + dur + .02);
 }
-function noise(dur, vol, freq, q = 0.8) {
-  const s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
-  s.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
-  g.gain.setValueAtTime(vol, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
-  s.connect(f).connect(g).connect(actx.destination); s.start(); s.stop(actx.currentTime + dur);
+function noise(dur, vol, freq, q = 0.8, delay = 0) {
+  const t0 = actx.currentTime + delay, s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain(), v = vol * VOLK;
+  s.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = freq * PIT; f.Q.value = q;
+  g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(v, t0 + .003); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  s.connect(f).connect(g).connect(bus()); s.start(t0, Math.random() * Math.max(0, noiseBuf.duration - dur - .01)); s.stop(t0 + dur + .02); // (from a different place in the noise each time)
 }
-// hit sounds are layered per material, and get deeper and longer the harder the hit
+// the body of a blow: a sine that drops in pitch, felt more than heard
+function thump(f0, f1, dur, vol, delay = 0) { tone(f0, dur, 'sine', vol, f1, delay); }
+// the same sound twice inside a few hundredths of a second is one sound; and when many land at once, each is a little quieter
+const SFX_LAST = {}, SFX_GAP = { whoosh: .045, swing: .04, slam: .05, charge: .06, shoot: .035, 'hit-crystal': .04, 'hit-metal': .03, 'hit-flesh': .03, 'hit-goo': .03, pick: .03, growl: .25, roar: .4 };
+let sfxRecent = [];
+// hit sounds are layered per material, and get deeper and longer the harder the hit (power 0..2); for the others power
+// is how loud (a call asking for .5 gets half)
 function sfx(k, power = 1) {
   if (!sfxOn || !actx) return;
   try {
+    const now = actx.currentTime;
+    if (now - (SFX_LAST[k] ?? -9) < (SFX_GAP[k] ?? .03)) return; SFX_LAST[k] = now;
+    sfxRecent = sfxRecent.filter(t => now - t < .12); sfxRecent.push(now);
+    const hit = k.startsWith('hit') || k === 'charge', p = hit ? clamp(power, 0, 2.5) : 1;
+    VOLK = (hit ? 1 : clamp(power, .2, 1.4)) * (sfxRecent.length > 4 ? 4 / sfxRecent.length : 1); PIT = 1 + (Math.random() - .5) * .07; // (a touch of pitch each time, so repeats don't drill)
     switch (k) {
-      case 'swing': noise(0.09, 0.1, 2600 + Math.random() * 800, 1.2); break;
-      case 'whoosh': noise(0.2, 0.14, 1400, 0.6); break;
-      case 'hit-flesh': noise(0.08 + 0.06 * power, 0.32, 700 - 200 * power); tone(150 - 40 * power, 0.1 + 0.08 * power, 'square', 0.09, 50); break;
-      case 'hit-goo': noise(0.12, 0.25, 400); tone(320, 0.15, 'sine', 0.12, 90); break;
-      case 'hit-metal': noise(0.06, 0.25, 3200, 3); tone(880 - 200 * power, 0.18, 'triangle', 0.08, 600); tone(1320, 0.12, 'square', 0.03); break;
-      case 'hit-crystal': tone(1500 + Math.random() * 400, 0.25, 'sine', 0.08); noise(0.06, 0.2, 4000, 2); break;
-      case 'slam': noise(0.3, 0.45, 220); tone(70, 0.35, 'sine', 0.25, 35); break;
-      case 'hurt': tone(240, 0.25, 'sawtooth', 0.1, 80); break;
-      case 'pick': tone(880, 0.08, 'triangle', 0.08, 1320); break;
-      case 'weapon': [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.25, 'triangle', 0.09, 0, i * 0.08)); break;
-      case 'jump': tone(300, 0.12, 'triangle', 0.06, 520); break;
-      case 'shoot': tone(1200, 0.14, 'square', 0.035, 300); break;
-      case 'learned': [1568, 2093, 2637].forEach((f, i) => tone(f, 0.32 - i * .05, 'sine', 0.07, 0, i * 0.045)); tone(3136, 0.5, 'triangle', 0.025, 0, 0.12); noise(0.18, 0.06, 6000, 2); break; // a small bright bell: a learned move
-      case 'charge': tone(400 + 200 * power, 0.14, 'sine', 0.09, 800 + 300 * power); break;
-      case 'trump': [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, 0.4, 'sine', 0.1, 0, i * 0.05)); noise(0.5, 0.15, 3000, 0.5); break;
-      case 'buy': tone(660, 0.1, 'triangle', 0.1); tone(990, 0.16, 'triangle', 0.1, 0, 0.09); break;
-      case 'slice': noise(0.12, 0.3, 5200, 2); tone(2400, 0.25, 'sine', 0.06, 600); noise(0.25, 0.2, 700); break;
-      case 'crunch': noise(0.2, 0.4, 600, 1.4); tone(110, 0.2, 'square', 0.1, 50); noise(0.1, 0.3, 2400, 3); break;
-      case 'roar': noise(0.9, 0.5, 260, 0.5); tone(70, 0.9, 'sawtooth', 0.12, 45); tone(110, 0.7, 'square', 0.05, 60); break;
-      case 'crit': tone(1760, 0.18, 'triangle', 0.1, 2640); tone(2637, 0.3, 'sine', 0.06); noise(0.12, 0.35, 3000, 1.5); break;
-      case 'growl': tone(90, 0.45, 'sawtooth', 0.07, 60); noise(0.4, 0.12, 300, 0.7); break;
-      case 'break': noise(0.25, 0.35, 1800, 0.7); tone(1200, 0.3, 'sine', 0.06, 2400); break;
+      case 'swing': noise(0.08, 0.07, 2000 + Math.random() * 700, 1); break;
+      case 'whoosh': noise(0.15, 0.085, 1100, 0.7); break;
+      case 'hit-flesh': thump(150 - 25 * p, 52, .1 + .05 * p, .19 + .05 * p); noise(0.05 + 0.04 * p, 0.2, 850 - 180 * p, 1); noise(0.015, 0.14, 3200, 1); break;
+      case 'hit-goo': thump(220, 70, .13, .16); noise(0.1, 0.17, 360, 1.2); tone(300, .12, 'sine', .05, 110, .02); break;
+      case 'hit-metal': noise(0.03, 0.2, 3600, 2.5); tone(760 - 120 * p, 0.14, 'triangle', 0.055, 520); thump(130, 60, .09, .16 + .04 * p); break;
+      case 'hit-crystal': tone(1400 + Math.random() * 300, 0.18, 'sine', 0.07); tone(2150 + Math.random() * 300, 0.11, 'sine', 0.025); noise(0.03, 0.1, 4500, 2); break;
+      case 'slam': thump(95, 36, .34, .32); noise(0.22, 0.26, 190, 0.8); noise(0.035, 0.14, 1300, 1); break;
+      case 'hurt': thump(120, 48, .14, .16); tone(230, 0.18, 'triangle', 0.1, 90); noise(0.07, 0.16, 520, 1); break;
+      case 'pick': tone(900, 0.07, 'triangle', 0.05, 1350); break;
+      case 'weapon': [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.24, 'triangle', 0.07, 0, i * 0.08)); break;
+      case 'jump': tone(260, 0.1, 'triangle', 0.04, 420); noise(0.05, 0.04, 900, 1); break;
+      case 'shoot': tone(900, 0.1, 'triangle', 0.04, 260); noise(0.03, 0.05, 2500, 1.2); break;
+      case 'learned': [1568, 2093, 2637].forEach((f, i) => tone(f, 0.3 - i * .05, 'sine', 0.06, 0, i * 0.045)); tone(3136, 0.45, 'triangle', 0.02, 0, 0.12); noise(0.16, 0.04, 6000, 2); break; // a small bright bell: a learned move
+      case 'charge': tone(380 + 180 * p, 0.12, 'sine', 0.06, 700 + 260 * p); break;
+      case 'trump': [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, 0.38, 'sine', 0.08, 0, i * 0.05)); noise(0.45, 0.1, 3000, 0.5); break;
+      case 'buy': tone(660, 0.1, 'triangle', 0.08); tone(990, 0.15, 'triangle', 0.08, 0, 0.09); break;
+      case 'slice': noise(0.07, 0.2, 4800, 2); tone(2000, 0.15, 'sine', 0.035, 700); noise(0.16, 0.13, 700); thump(130, 60, .1, .14); break;
+      case 'crunch': thump(105, 44, .18, .24); noise(0.16, 0.28, 600, 1.4); noise(0.06, 0.16, 2200, 3); break;
+      case 'roar': noise(0.8, 0.3, 240, 0.5); tone(70, 0.8, 'sawtooth', 0.06, 44); tone(105, 0.6, 'triangle', 0.05, 62); thump(60, 32, .5, .2); break;
+      case 'crit': thump(170, 58, .15, .26); tone(1500, 0.12, 'triangle', 0.055, 2200); tone(2400, 0.2, 'sine', 0.03, 0, .02); noise(0.07, 0.22, 3000, 1.5); break;
+      case 'growl': tone(88, 0.4, 'sawtooth', 0.045, 58); noise(0.36, 0.1, 300, 0.7); break;
+      case 'break': thump(110, 48, .12, .18); noise(0.22, 0.26, 1600, 0.7); tone(1100, 0.22, 'sine', 0.035, 2000); break;
+      default: if (window.SFX_EXTRA && SFX_EXTRA[k]) SFX_EXTRA[k](power); // (other files add sounds of their own here)
     }
-  } catch (e) {}
+  } catch (e) {} finally { VOLK = 1; PIT = 1; }
 }
 
 // iOS only lets a tap that ends (not one that starts) switch audio on, and it can pause audio when you leave the app:
