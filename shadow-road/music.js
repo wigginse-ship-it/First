@@ -107,7 +107,7 @@ return {
     ],
     hduty: 0.25,
     hv: 0.068,
-    legato: 0.85
+    legato: 0.95
   },
   fallen: { bpm: 70, chords: ['Am', 'F', 'E', 'Am'], style: 'calm', duty: .5, once: true, vib: 10,
     lead: ['E5 - - - C5 - - - A4 - - - - - - -', 'F5 - - - E5 - - - D5 - - - C5 - - -', 'B4 - - - G#4 - - - E4 - - - - - - -', 'A4 - - - - - - - - - - - . . . .'],
