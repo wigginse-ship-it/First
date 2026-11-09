@@ -72,7 +72,7 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
     <div class="transport">
       <button id="play" class="primary" type="button">Play</button>
       <button id="stop" type="button">Stop</button>
-      <label class="field">Tempo <input id="tempo" type="number" step="0.5" min="20" max="240" value="71.5"> quarter-note BPM</label>
+      <label class="field">Tempo <input id="tempoQ" type="number" step="0.5" min="20" max="240" value="68"> quarter-note BPM</label>
       <label class="field">Bars <input id="from" type="number" min="1" placeholder="first"> to <input id="to" type="number" min="1" placeholder="last"></label>
       <label class="field" title="Where Play starts; the piece then loops from its first bar"><span>Start at bar</span> <input id="startAt" type="number" min="1" placeholder="first" value="38"></label>
       <label class="field"><input id="loop" type="checkbox" checked> Loop</label>
@@ -162,7 +162,7 @@ function barSize(t) { return t.n || (t.parts && Object.values(t.parts)[0].n) || 
 function chordTrack(t) { if (!$('#chordSound').checked || t.parts) return t; t = Object.assign({}, t); t.hduty = t.duty || .25; t.hv = (t.lv || .16) * (+$('#chordLevel').value || 1); return t; }
 function build() {
   const obj = evalSrc(), n = barSize(obj), t = chordTrack(obj); t.legato = +$('#legato').value;
-  const bpmQ = +$('#tempo').value; if (bpmQ > 0) { t.bpm = bpmQ * n / 16; if (t.parts) { t.parts = {}; for (const k in obj.parts) { t.parts[k] = Object.assign({}, obj.parts[k]); delete t.parts[k].bpm; } } }
+  const bpmQ = +$('#tempoQ').value; if (bpmQ > 0) { t.bpm = bpmQ * n / 16; if (t.parts) { t.parts = {}; for (const k in obj.parts) { t.parts[k] = Object.assign({}, obj.parts[k]); delete t.parts[k].bpm; } } }
   const c = compile(t), bars = c.steps / n, first = obj.firstBar || 1;
   const a = Math.max(1, +$('#from').value || first) - first, b = Math.min(bars, (+$('#to').value || first + bars - 1) - first + 1);
   if (!(b > a)) throw new Error('bar range is empty');
@@ -401,19 +401,19 @@ $('#stop').onclick = stop;
 $('#apply').onclick = () => { store('musiclab-src', $('#src').value); play(); };
 $('#loop').onchange = () => { if (full) full.once = view.once = !$('#loop').checked; };
 $('#vol').oninput = () => { if (musicGain) musicGain.gain.value = +$('#vol').value; };
-$('#tempo').onchange = () => { if (musicCur === 'lab') play(); else refresh(); };
+$('#tempoQ').onchange = () => { if (musicCur === 'lab') play(); else refresh(); };
 $('#from').onchange = $('#to').onchange = refresh;
 $('#src').addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); $('#apply').click(); } });
 $('#src').addEventListener('input', () => { store('musiclab-src', $('#src').value); });
-$('#reset').onclick = () => { undoS.push($('#src').value); $('#src').value = LAB_PRESETS.glory; $('#tempo').value = LAB_TEMPO.glory; store('musiclab-src', ''); refresh(); };
+$('#reset').onclick = () => { undoS.push($('#src').value); $('#src').value = LAB_PRESETS.glory; $('#tempoQ').value = LAB_TEMPO.glory; store('musiclab-src', ''); refresh(); };
 $('#copy').onclick = () => {
-  let text; try { const o = Object.assign({}, chordTrack(evalSrc())); delete o.firstBar; if (+$('#legato').value > 0) o.legato = +$('#legato').value; if (o.bpm === undefined) o.bpm = +$('#tempo').value * barSize(o) / 16; text = 'lab: ' + JSON.stringify(o, null, 2) + ','; } catch (e) { $('#err').textContent = e.message; return; }
+  let text; try { const o = Object.assign({}, chordTrack(evalSrc())); delete o.firstBar; if (+$('#legato').value > 0) o.legato = +$('#legato').value; if (o.bpm === undefined) o.bpm = +$('#tempoQ').value * barSize(o) / 16; text = 'lab: ' + JSON.stringify(o, null, 2) + ','; } catch (e) { $('#err').textContent = e.message; return; }
   (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { $('#exportBox').hidden = true; $('#err').textContent = 'Copied.'; }, () => { const x = $('#exportBox'); x.hidden = false; x.value = text; x.select(); $('#err').textContent = 'Copy was blocked. The entry is in the box below; select it and copy.'; });
 };
 $('#gamePlay').onclick = () => { audioInit(); musicOn = true; stopMusic(); const k = $('#gameTrack').value; delete COMPILED[k]; full = view = null; playMusic(k); if (musicGain) musicGain.gain.value = +$('#vol').value; $('#status').textContent = 'game: ' + k; };
-$('#gameLoad').onclick = () => { const t = TRACKS[$('#gameTrack').value]; if (t.shuffle) { $('#err').textContent = 'That track is shuffled; copy one of its parts instead.'; return; } $('#src').value = '(' + JSON.stringify(t, null, 2) + ')'; $('#tempo').value = (t.bpm || 120) * 16 / barSize(t); $('#err').textContent = ''; undoS.push($('#src').value); refresh(); };
+$('#gameLoad').onclick = () => { const t = TRACKS[$('#gameTrack').value]; if (t.shuffle) { $('#err').textContent = 'That track is shuffled; copy one of its parts instead.'; return; } $('#src').value = '(' + JSON.stringify(t, null, 2) + ')'; $('#tempoQ').value = (t.bpm || 120) * 16 / barSize(t); $('#err').textContent = ''; undoS.push($('#src').value); refresh(); };
 
-$('#src').value = stored('musiclab-src') || LAB_PRESETS.glory; $('#tempo').value = LAB_TEMPO.glory;
+$('#src').value = stored('musiclab-src') || LAB_PRESETS.glory; $('#tempoQ').value = LAB_TEMPO.glory;
 refresh();
 requestAnimationFrame(draw);
 </script>
