@@ -11,7 +11,7 @@
 //   double (a quieter copy of the lead at this interval), arp / bass (pattern strings, or arrays cycled per bar),
 //   arpOct, arpDuty, av, bv, drums ({k,s,h,o,t,u,m,c} lanes, or an array cycled per bar), fill, fillEvery.
 // Track-only: kit ('std', 'heavy', 'metal', 'soft'), swing (0..1 of a 16th, the off-beats lean late), echo (0..1 wet),
-//   echoSteps, vib (lead vibrato in cents on long notes), legato (0..1: lead and counter notes hold their level, release
+//   echoSteps, vib (lead vibrato in cents on long notes), harmTone ('strings' plays the counter voice as a swelling, detuned saw section), legato (0..1: lead and counter notes hold their level, release
 //   briefly and overlap the next note; 0 is the default plucked shape), vol, once.
 // Arp patterns: digits pick chord tones counted up from the root an octave above the chord (0 root, 1 third, 2 fifth,
 //   3 the next root for triads ...). Bass patterns: R root, O octave up, F fifth, V fifth below, T third, S seventh,
@@ -381,7 +381,7 @@ function compile(tr, opt) {
   }
   const by = [...Array(at)].map(() => []);
   for (const e of ev) by[e.s].push(e);
-  return { steps: at, by, sd, off, stepDur: sd[0], once: tr.once, duty: tr.duty, kit, echo: tr.echo || 0, echoSteps: tr.echoSteps || 3, vib: tr.vib || 0, legato: tr.legato || 0 };
+  return { steps: at, by, sd, off, stepDur: sd[0], once: tr.once, duty: tr.duty, kit, echo: tr.echo || 0, echoSteps: tr.echoSteps || 3, vib: tr.vib || 0, legato: tr.legato || 0, harmTone: tr.harmTone || null };
 }
 
 // ---------- playing ----------
@@ -424,6 +424,20 @@ function voice(t, midi, dur, type, vol, duty, vib, echo, legato) { // legato (al
   o.connect(g).connect(musicGain); if (echo && echoIn) g.connect(echoIn);
   o.start(t); o.stop(t + dur + .02);
 }
+function stringVoice(t, midi, dur, vol, echo) { // the counter voice as a bowed section: two detuned saws, a soft low-pass, a slow swell and a late vibrato
+  const g = actx.createGain(), f = actx.createBiquadFilter(), atk = Math.min(.09, dur * .35), rel = Math.min(.15, dur * .4);
+  f.type = 'lowpass'; f.frequency.value = Math.min(4200, Math.max(1400, freqOf(midi) * 4.5)); f.Q.value = .4;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol * STRING_GAIN, t + atk);
+  g.gain.setValueAtTime(vol * STRING_GAIN, Math.max(t + atk, t + dur - rel)); g.gain.linearRampToValueAtTime(0, t + dur);
+  const l = dur > .3 ? actx.createOscillator() : null, lg = l && actx.createGain();
+  if (l) { l.frequency.value = 5.2; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(0, t + .15); lg.gain.linearRampToValueAtTime(7, t + .45); l.start(t); l.stop(t + dur + .02); }
+  for (const d of [-7, 7]) {
+    const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(freqOf(midi), t); o.detune.value = d;
+    if (l) lg.connect(o.detune); o.connect(f); o.start(t); o.stop(t + dur + .02);
+  }
+  f.connect(g).connect(musicGain); if (echo && echoIn) g.connect(echoIn);
+}
+const STRING_GAIN = .43;
 function drum(t, kind, v, kit) {
   if (kind === 'kick' || kind === 'k' || kind === 't' || kind === 'u') { // the kick and two toms are falling sine thumps
     const o = actx.createOscillator(), g = actx.createGain();
@@ -454,6 +468,7 @@ function musicTick() {
       const dur = (e.len || 1) * sd;
       const lg = musLegato(dur, tr.legato);
       if (e.ch === 'lead') voice(t, e.midi, dur * (.95 + .09 * lg), 'pulse', e.v, e.d, tr.vib, tr.echo, lg);
+      else if (e.ch === 'harm' && tr.harmTone === 'strings') stringVoice(t, e.midi, dur * 1.02, e.v, tr.echo);
       else if (e.ch === 'harm' || e.ch === 'dbl') voice(t, e.midi, dur * (.92 + .12 * lg), 'pulse', e.v, e.d, 0, tr.echo, lg);
       else if (e.ch === 'arp') voice(t, e.midi, dur * .8, 'pulse', e.v, e.d);
       else if (e.ch === 'bass') voice(t, e.midi, dur * .9, 'triangle', e.v);

@@ -85,7 +85,7 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
     <h2>Piano roll</h2>
     <div class="row tools">
       <label class="field">Edit <select id="editV"><option value="both">lead + chord note</option><option value="lead">lead only</option><option value="harm">harm only</option></select></label>
-      <label class="field" title="Make the second voice use the lead's pulse width and volume, so two notes read as a lead chord"><input id="chordSound" type="checkbox" checked> 2nd voice sounds like lead</label>
+      <label class="field" title="How the second chord note sounds"><span>2nd note tone</span> <select id="chordTone"><option value="lead">like the lead</option><option value="strings">strings</option><option value="own">as written (harm)</option></select></label>
       <label class="field" title="Volume of the second chord note as a share of the lead's"><span id="cvLabel">2nd note volume 40%</span> <input id="chordLevel" type="range" min="0.1" max="1" step="0.05" value="0.4"></label>
       <label class="field">Snap <select id="snap"></select></label>
       <label class="field">New note <select id="newLen"></select></label>
@@ -159,7 +159,10 @@ const stored = (k) => { try { return localStorage.getItem(k); } catch (e) { retu
 function evalSrc() { return (new Function('L', 'return (' + $('#src').value + ')'))(L); }
 function barSize(t) { return t.n || (t.parts && Object.values(t.parts)[0].n) || 16; }
 
-function chordTrack(t) { if (!$('#chordSound').checked || t.parts) return t; t = Object.assign({}, t); t.hduty = t.duty || .25; t.hv = (t.lv || .16) * (+$('#chordLevel').value || 1); return t; }
+function chordTrack(t) {
+  const tone = $('#chordTone').value; if (tone === 'own' || t.parts) return t;
+  t = Object.assign({}, t); t.hduty = t.duty || .25; t.hv = (t.lv || .16) * (+$('#chordLevel').value || 1); if (tone === 'strings') t.harmTone = 'strings'; return t;
+}
 function build() {
   const obj = evalSrc(), n = barSize(obj), t = chordTrack(obj); t.legato = +$('#legato').value;
   const bpmQ = +$('#tempoBpm').value; if (bpmQ > 0) { t.bpm = bpmQ * n / 16; if (t.parts) { t.parts = {}; for (const k in obj.parts) { t.parts[k] = Object.assign({}, obj.parts[k]); delete t.parts[k].bpm; } } }
@@ -382,9 +385,9 @@ function removeLastBar() {
 $('#rmBar').onclick = removeLastBar;
 $('#undo').onclick = () => undo(-1); $('#redo').onclick = () => undo(1);
 $('#del').onclick = () => { const o = selNote(); if (!o) return; dropNote(o); commit(); };
-const syncChordVol = () => { $('#chordLevel').disabled = !$('#chordSound').checked; $('#cvLabel').textContent = '2nd note volume ' + Math.round($('#chordLevel').value * 100) + '%'; };
+const syncChordVol = () => { $('#chordLevel').disabled = $('#chordTone').value === 'own'; $('#cvLabel').textContent = '2nd note volume ' + Math.round($('#chordLevel').value * 100) + '%'; };
 $('#legato').oninput = () => { $('#lgLabel').textContent = 'Legato ' + Math.round($('#legato').value * 100) + '%'; refresh(); };
-$('#chordSound').onchange = () => { syncChordVol(); refresh(); };
+$('#chordTone').onchange = () => { syncChordVol(); refresh(); };
 $('#chordLevel').oninput = () => { syncChordVol(); refresh(); };
 syncChordVol();
 $('#editV').onchange = () => { editV = $('#editV').value; sel = null; syncButtons(); };
