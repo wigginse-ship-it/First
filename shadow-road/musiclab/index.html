@@ -89,6 +89,7 @@ textarea { width: 100%; min-height: 380px; resize: vertical; background: var(--b
       <label class="field">Snap <select id="snap"></select></label>
       <label class="field">New note <select id="newLen"></select></label>
       <label class="field">Zoom <input id="zoom" type="range" min="3" max="32" step="1" value="9"></label>
+      <label class="field" title="0 is the engine's plucked note shape. Higher holds each note's level, shortens the release and overlaps the next note"><span id="lgLabel">Legato 85%</span> <input id="legato" type="range" min="0" max="1" step="0.05" value="0.85"></label>
       <label class="field" title="Plain click-drag adds notes instead of panning"><input id="draw" type="checkbox"> Draw mode</label>
       <label class="field"><input id="follow" type="checkbox" checked> Follow</label>
       <button id="undo" type="button">Undo</button><button id="redo" type="button">Redo</button><button id="del" type="button">Delete note</button>
@@ -159,7 +160,7 @@ function barSize(t) { return t.n || (t.parts && Object.values(t.parts)[0].n) || 
 
 function chordTrack(t) { if (!$('#chordSound').checked || t.parts) return t; t = Object.assign({}, t); t.hduty = t.duty || .25; t.hv = (t.lv || .16) * (+$('#chordVol').value || 1); return t; }
 function build() {
-  const obj = evalSrc(), n = barSize(obj), t = chordTrack(obj);
+  const obj = evalSrc(), n = barSize(obj), t = chordTrack(obj); t.legato = +$('#legato').value;
   const bpmQ = +$('#tempo').value; if (bpmQ > 0) { t.bpm = bpmQ * n / 16; if (t.parts) { t.parts = {}; for (const k in obj.parts) { t.parts[k] = Object.assign({}, obj.parts[k]); delete t.parts[k].bpm; } } }
   const c = compile(t), bars = c.steps / n, first = obj.firstBar || 1;
   const a = Math.max(1, +$('#from').value || first) - first, b = Math.min(bars, (+$('#to').value || first + bars - 1) - first + 1);
@@ -366,6 +367,7 @@ document.addEventListener('keydown', (e) => {
 $('#undo').onclick = () => undo(-1); $('#redo').onclick = () => undo(1);
 $('#del').onclick = () => { const o = selNote(); if (!o) return; dropNote(o); commit(); };
 const syncChordVol = () => { $('#chordVol').disabled = !$('#chordSound').checked; $('#cvLabel').textContent = '2nd note volume ' + Math.round($('#chordVol').value * 100) + '%'; };
+$('#legato').oninput = () => { $('#lgLabel').textContent = 'Legato ' + Math.round($('#legato').value * 100) + '%'; refresh(); };
 $('#chordSound').onchange = () => { syncChordVol(); refresh(); };
 $('#chordVol').oninput = () => { syncChordVol(); refresh(); };
 syncChordVol();
@@ -389,7 +391,7 @@ $('#src').addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e
 $('#src').addEventListener('input', () => { store('musiclab-src', $('#src').value); });
 $('#reset').onclick = () => { undoS.push($('#src').value); $('#src').value = LAB_PRESETS.glory; $('#tempo').value = LAB_TEMPO.glory; store('musiclab-src', ''); refresh(); };
 $('#copy').onclick = () => {
-  let text; try { const o = Object.assign({}, chordTrack(evalSrc())); delete o.firstBar; if (o.bpm === undefined) o.bpm = +$('#tempo').value * barSize(o) / 16; text = 'lab: ' + JSON.stringify(o, null, 2) + ','; } catch (e) { $('#err').textContent = e.message; return; }
+  let text; try { const o = Object.assign({}, chordTrack(evalSrc())); delete o.firstBar; if (+$('#legato').value > 0) o.legato = +$('#legato').value; if (o.bpm === undefined) o.bpm = +$('#tempo').value * barSize(o) / 16; text = 'lab: ' + JSON.stringify(o, null, 2) + ','; } catch (e) { $('#err').textContent = e.message; return; }
   (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { $('#exportBox').hidden = true; $('#err').textContent = 'Copied.'; }, () => { const x = $('#exportBox'); x.hidden = false; x.value = text; x.select(); $('#err').textContent = 'Copy was blocked. The entry is in the box below; select it and copy.'; });
 };
 $('#gamePlay').onclick = () => { audioInit(); musicOn = true; stopMusic(); const k = $('#gameTrack').value; delete COMPILED[k]; full = view = null; playMusic(k); if (musicGain) musicGain.gain.value = +$('#vol').value; $('#status').textContent = 'game: ' + k; };

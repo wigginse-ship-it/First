@@ -11,7 +11,8 @@
 //   double (a quieter copy of the lead at this interval), arp / bass (pattern strings, or arrays cycled per bar),
 //   arpOct, arpDuty, av, bv, drums ({k,s,h,o,t,u,m,c} lanes, or an array cycled per bar), fill, fillEvery.
 // Track-only: kit ('std', 'heavy', 'metal', 'soft'), swing (0..1 of a 16th, the off-beats lean late), echo (0..1 wet),
-//   echoSteps, vib (lead vibrato in cents on long notes), vol, once.
+//   echoSteps, vib (lead vibrato in cents on long notes), legato (0..1: lead and counter notes hold their level, release
+//   briefly and overlap the next note; 0 is the default plucked shape), vol, once.
 // Arp patterns: digits pick chord tones counted up from the root an octave above the chord (0 root, 1 third, 2 fifth,
 //   3 the next root for triads ...). Bass patterns: R root, O octave up, F fifth, V fifth below, T third, S seventh,
 //   C a half step under the next chord's root. Drums: x hit, X accent, g ghost. '-' holds, '.' rests.
@@ -380,7 +381,7 @@ function compile(tr, opt) {
   }
   const by = [...Array(at)].map(() => []);
   for (const e of ev) by[e.s].push(e);
-  return { steps: at, by, sd, off, stepDur: sd[0], once: tr.once, duty: tr.duty, kit, echo: tr.echo || 0, echoSteps: tr.echoSteps || 3, vib: tr.vib || 0 };
+  return { steps: at, by, sd, off, stepDur: sd[0], once: tr.once, duty: tr.duty, kit, echo: tr.echo || 0, echoSteps: tr.echoSteps || 3, vib: tr.vib || 0, legato: tr.legato || 0 };
 }
 
 // ---------- playing ----------
@@ -407,12 +408,12 @@ function pulseWave(duty) { // a square wave with the given duty cycle, as in the
   for (let k = 1; k < n; k++) im[k] = 2 / (k * Math.PI) * Math.sin(k * Math.PI * duty);
   return (waves[duty] = actx.createPeriodicWave(re, im));
 }
-function voice(t, midi, dur, type, vol, duty, vib, echo) {
+function voice(t, midi, dur, type, vol, duty, vib, echo, legato) { // legato 0..1 holds the level longer and shortens the release
   const o = actx.createOscillator(), g = actx.createGain();
   if (type === 'pulse') o.setPeriodicWave(pulseWave(duty)); else o.type = type;
   o.frequency.setValueAtTime(freqOf(midi), t);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .006);
-  g.gain.setValueAtTime(vol * .8, t + dur * .6); g.gain.linearRampToValueAtTime(0, t + dur);
+  const lg = legato || 0; g.gain.setValueAtTime(vol * (.8 + .2 * lg), t + dur * (.6 + .3 * lg)); g.gain.linearRampToValueAtTime(0, t + dur);
   if (vib && dur > .4) { // a delayed vibrato on long notes
     const l = actx.createOscillator(), lg = actx.createGain();
     l.frequency.value = 5.5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(0, t + .2); lg.gain.linearRampToValueAtTime(vib, t + .5);
@@ -449,8 +450,8 @@ function musicTick() {
     const sd = tr.sd[musicStep], t = musicNext + tr.off[musicStep];
     for (const e of tr.by[musicStep]) {
       const dur = (e.len || 1) * sd;
-      if (e.ch === 'lead') voice(t, e.midi, dur * .95, 'pulse', e.v, e.d, tr.vib, tr.echo);
-      else if (e.ch === 'harm' || e.ch === 'dbl') voice(t, e.midi, dur * .92, 'pulse', e.v, e.d, 0, tr.echo);
+      if (e.ch === 'lead') voice(t, e.midi, dur * (.95 + .09 * tr.legato), 'pulse', e.v, e.d, tr.vib, tr.echo, tr.legato);
+      else if (e.ch === 'harm' || e.ch === 'dbl') voice(t, e.midi, dur * (.92 + .12 * tr.legato), 'pulse', e.v, e.d, 0, tr.echo, tr.legato);
       else if (e.ch === 'arp') voice(t, e.midi, dur * .8, 'pulse', e.v, e.d);
       else if (e.ch === 'bass') voice(t, e.midi, dur * .9, 'triangle', e.v);
       else drum(t, e.ch, e.v, tr.kit);
