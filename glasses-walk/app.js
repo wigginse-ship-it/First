@@ -21,7 +21,7 @@
     zoom: params.has('zoom') ? clamp(+params.get('zoom') || 0, 0, 3) : 1,
     ways: [], buildings: [], destExtra: [], waysCenter: null, waysBusy: false,
     route: null, dest: null, snapSeg: 0, snap: null, prog: null, offCount: 0, spoken: -1,
-    muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
+    manual: false, geoErr: '', pendingDest: null, muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
   };
   let W = 600, H = 600, K = 1, DPR = 1;
 
@@ -56,7 +56,8 @@
   }
 
   // ---------------------------------------------------------------- location + heading
-  function onFix(lat, lon, acc, heading, speed) {
+  function onFix(lat, lon, acc, heading, speed, manual) {
+    S.manual = !!manual; if (!manual) S.geoErr = '';
     ensureProj(lat, lon);
     const xy = S.proj.toXY(lat, lon);
     S.pos = { lat, lon, acc: acc || 0, x: xy.x, y: xy.y };
@@ -65,13 +66,34 @@
     if (typeof heading === 'number' && !isNaN(heading) && S.speed > 0.8) S.gpsHeading = heading;
     updateProgress();
     maybeFetchWays();
+    if (S.pendingDest && !S.route) { const d = S.pendingDest; S.pendingDest = null; routeTo(d); }
+  }
+  // "I'm here": use when GPS is unavailable. Real GPS fixes replace it automatically if they arrive later.
+  function setManualLocation(lat, lon, label) {
+    onFix(lat, lon, 30, null, 0, true);
+    toast(label ? 'Location set: ' + label : 'Location set', 3000);
+  }
+  function parseLatLon(q) {
+    const m = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,\s]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/.exec(q);
+    if (!m) return null;
+    const lat = +m[1], lon = +m[2];
+    return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
   }
   function startGeolocation() {
-    if (!navigator.geolocation) return toast('No location sensor available', 8000);
-    navigator.geolocation.watchPosition(
-      (p) => { if (!S.sim) onFix(p.coords.latitude, p.coords.longitude, p.coords.accuracy, p.coords.heading, p.coords.speed); },
-      (e) => toast('Location: ' + e.message, 8000),
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+    if (!window.isSecureContext) S.geoErr = 'Location needs a secure (https) page';
+    if (!navigator.geolocation) { S.geoErr = 'This browser has no location sensor'; return; }
+    const ok = (p) => { if (!S.sim) onFix(p.coords.latitude, p.coords.longitude, p.coords.accuracy, p.coords.heading, p.coords.speed); };
+    let fallback = false, id = null;
+    const watch = (high) => {
+      if (id !== null) navigator.geolocation.clearWatch(id);
+      id = navigator.geolocation.watchPosition(ok, err, { enableHighAccuracy: high, maximumAge: high ? 1000 : 30000, timeout: high ? 15000 : 30000 });
+    };
+    const err = (e) => {
+      if (e.code === 1) { S.geoErr = 'Location permission denied'; return; }
+      if (!fallback) { fallback = true; watch(false); return; } // GPS slow or blocked: try Wi-Fi/cell location
+      S.geoErr = e.code === 3 ? 'Location timed out' : 'Location unavailable';
+    };
+    watch(true);
   }
   function startCompass() {
     const handler = (e) => {
@@ -154,11 +176,6 @@
     }
     if (found.size < 3) await query({}); // nothing close by: search everywhere
     return [...found.values()].sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0)).slice(0, 8);
-  }
-  async function waitForFix(ms) { // search needs to know where you are
-    const end = performance.now() + ms;
-    while (!S.pos && performance.now() < end) await new Promise((r) => setTimeout(r, 300));
-    return !!S.pos;
   }
   async function routeTo(dest, quiet) {
     if (!S.pos) { toast('Waiting for a location fix…'); return false; }
@@ -624,7 +641,11 @@
 
   function drawIdle() {
     text('Where to?', W / 2, H * 0.42, 48 * K, '#fff', 'center');
-    text(S.pos ? 'Press Enter or tap to search' : 'Waiting for GPS…', W / 2, H * 0.52, 24 * K, '#8fb0bb', 'center');
+    if (S.pos) text(S.manual ? 'Using the location you set · tap to search' : 'Press Enter or tap to search', W / 2, H * 0.52, 24 * K, '#8fb0bb', 'center');
+    else {
+      text(S.geoErr || 'Waiting for GPS…', W / 2, H * 0.52, 24 * K, S.geoErr ? '#ff9d6b' : '#8fb0bb', 'center', W - 40 * K);
+      text('Tap to tell me where you are', W / 2, H * 0.6, 24 * K, '#19e0ff', 'center');
+    }
     if (S.pos) { const cam = makeCamera(); drawWorld(cam); drawUser(cam); }
   }
 
@@ -673,15 +694,32 @@
   function updateButtons() { $('bMute').textContent = S.muted ? 'Voice off' : 'Voice on'; $('bMute').classList.toggle('on', !S.muted); }
   function cycleView() { S.view = VIEWS[(VIEWS.indexOf(S.view) + 1) % VIEWS.length]; toast({ chase: 'Ahead view', turn: 'Turn-by-turn', overhead: 'Overhead — heading up', overview: 'Whole route' }[S.view], 1500); }
   function zoom(dir) { S.zoom = clamp(S.zoom + dir, 0, 3); if (S.view === 'turn' || S.view === 'overview') S.view = 'overhead'; }
-  function openSearch() { search.classList.add('open'); $('q').value = ''; $('results').innerHTML = ''; $('msg').textContent = S.pos ? '' : 'Still waiting for a location fix — you can search, then pick once it arrives.'; setTimeout(() => $('q').focus(), 50); }
+  let mode = 'dest'; // 'dest' = where to?  'loc' = where am I?
+  function setMode(m) {
+    mode = m;
+    $('title').textContent = m === 'loc' ? 'Where are you now?' : 'Where to?';
+    $('q').placeholder = m === 'loc' ? 'Address, place, or lat, lon' : 'Place or address (searches near you first)';
+    $('bLoc').textContent = m === 'loc' ? 'Back to destination' : 'Set my location';
+  }
+  function openSearch(m) {
+    setMode(m || (S.pos ? 'dest' : 'loc'));
+    search.classList.add('open'); $('q').value = ''; $('results').innerHTML = '';
+    $('msg').textContent = mode === 'loc' ? (S.geoErr ? S.geoErr + ' — tell me where you are instead.' : 'GPS not ready? Type where you are.') : (S.pos ? '' : 'No location yet — tap “Set my location”.');
+    setTimeout(() => $('q').focus(), 50);
+  }
   function closeSearch() { search.classList.remove('open'); $('q').blur(); }
 
+  $('bLoc').onclick = () => { setMode(mode === 'loc' ? 'dest' : 'loc'); $('results').innerHTML = ''; $('q').focus(); };
   $('form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const q = $('q').value.trim(); if (!q) return;
     $('results').innerHTML = '';
-    if (!S.pos) { $('msg').textContent = 'Finding your location…'; await waitForFix(10000); }
-    $('msg').textContent = S.pos ? 'Searching near you…' : 'No location yet — searching everywhere…';
+    const ll = parseLatLon(q);
+    if (ll) { // raw coordinates: "37.7749, -122.4194"
+      if (mode === 'loc') { setManualLocation(ll.lat, ll.lon); closeSearch(); return; }
+      return pick({ name: `${ll.lat}, ${ll.lon}`, lat: ll.lat, lon: ll.lon });
+    }
+    $('msg').textContent = mode === 'dest' && S.pos ? 'Searching near you…' : 'Searching…';
     try {
       const rs = await geocode(q);
       $('msg').textContent = rs.length ? (S.pos ? 'Nearest first' : '') : 'No matches — try adding the city.';
@@ -691,12 +729,21 @@
         const d = r.dist == null ? '' : N.formatDist(r.dist, UNITS);
         b.textContent = first.trim() + (d ? ` · ${d.v} ${d.u}` : '');
         const sub = document.createElement('small'); sub.textContent = rest.slice(0, 3).join(',').trim(); b.appendChild(sub);
-        b.onclick = async () => { $('msg').textContent = 'Routing…'; if (await routeTo(r)) { closeSearch(); if (S.view === 'turn') S.view = 'chase'; } else $('msg').textContent = S.pos ? 'No walking route found.' : 'Waiting for a location fix…'; };
+        b.onclick = () => pick(r);
         $('results').appendChild(b);
       }
       const first = $('results').firstChild; if (first) first.focus();
     } catch (err) { $('msg').textContent = 'Search failed — check your connection.'; }
   });
+  async function pick(r) {
+    if (mode === 'loc') { setManualLocation(r.lat, r.lon, r.name.split(',')[0]); closeSearch(); return; }
+    if (!S.pos) { // remember the destination; route as soon as we know where you are
+      S.pendingDest = r; setMode('loc'); $('results').innerHTML = '';
+      $('msg').textContent = `Going to ${r.name.split(',')[0]}. Now tell me where you are (or wait for GPS).`; $('q').value = ''; $('q').focus(); return;
+    }
+    $('msg').textContent = 'Routing…';
+    if (await routeTo(r)) { closeSearch(); if (S.view === 'turn') S.view = 'chase'; } else $('msg').textContent = 'No walking route found.';
+  }
   $('bClose').onclick = closeSearch;
   $('bView').onclick = () => { cycleView(); showToolbar(); };
   $('bIn').onclick = () => { zoom(-1); showToolbar(); };
@@ -732,7 +779,12 @@
   resize();
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) { /* optional */ }
   startCompass();
-  if (DEMO) startDemo(); else startGeolocation();
+  if (DEMO) startDemo();
+  else {
+    startGeolocation();
+    const pl = parseFloat(params.get('lat')), pn = parseFloat(params.get('lon'));
+    if (!isNaN(pl) && !isNaN(pn)) setManualLocation(pl, pn); // e.g. ?lat=37.7749&lon=-122.4194
+  }
   requestAnimationFrame(loop);
   window.__walk = { S, Nav: N }; // handy for debugging in the console
 })();

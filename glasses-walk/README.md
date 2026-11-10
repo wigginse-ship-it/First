@@ -28,6 +28,9 @@ cd glasses-walk && python3 -m http.server 8000
 ```
 Real mode (no `?demo`) needs location permission and an HTTPS origin.
 
+## No GPS? Tell it where you are
+If location is denied, times out or isn't available, the start screen shows why. Tap it (or press `S`, then **Set my location**) and type an address, a place, or raw coordinates like `37.7749, -122.4194`. You can also start from a link: `…/glasses-walk/?lat=37.7749&lon=-122.4194`. If you pick a destination first, it remembers it and starts the route as soon as your location is known. A real GPS fix replaces a typed location automatically. A typed location doesn't move, so this gets you a route and the street scene but not live walking.
+
 ## Put it on the glasses
 1. Host this folder on any HTTPS static host (GitHub Pages, Netlify, Cloudflare Pages…).
 2. Register it as a Web App in Meta's Wearables developer preview (developers.meta.com/wearables) and share via the URL.
