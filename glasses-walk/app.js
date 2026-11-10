@@ -6,6 +6,7 @@
   const UNITS = params.get('units') || (/^en-(US|LR|MM)/i.test(navigator.language || '') ? 'imperial' : 'metric');
 
   const $ = (id) => document.getElementById(id);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const canvas = $('c'), ctx = canvas.getContext('2d');
 
   // ---------------------------------------------------------------- state
@@ -17,15 +18,14 @@
     gpsHeading: null, compass: null, speed: 0,
     heading: 0, headingInit: false,
     view: params.get('view') && VIEWS.includes(params.get('view')) ? params.get('view') : 'chase',
-    zoom: 1,
-    ways: [], waysCenter: null, waysBusy: false,
+    zoom: params.has('zoom') ? clamp(+params.get('zoom') || 0, 0, 3) : 1,
+    ways: [], buildings: [], waysCenter: null, waysBusy: false,
     route: null, dest: null, snapSeg: 0, snap: null, prog: null, offCount: 0, spoken: -1,
     muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
   };
   let W = 600, H = 600, K = 1, DPR = 1;
 
   // ---------------------------------------------------------------- helpers
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const toast = (t, ms = 3500) => { S.toast = t; S.toastUntil = performance.now() + ms; };
   async function getJSON(url, opts, timeout = 15000) {
     const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), timeout);
@@ -43,6 +43,7 @@
   }
   function reproject() {
     for (const w of S.ways) projectWay(w);
+    for (const b of S.buildings) projectWay(b);
     if (S.route) { const raw = S.route.raw; S.route = N.buildRoute(raw, S.proj); S.route.raw = raw; S.snapSeg = 0; }
     if (S.pos) Object.assign(S.pos, S.proj.toXY(S.pos.lat, S.pos.lon));
   }
@@ -95,20 +96,34 @@
   }
 
   // ---------------------------------------------------------------- map data (OpenStreetMap)
-  const PATHS = new Set(['footway', 'path', 'pedestrian', 'steps', 'cycleway', 'track', 'bridleway', 'corridor']);
+  // Real-world widths (metres) so streets read as streets: kerb to kerb.
+  const ROAD_STYLE = { trunk: 13, primary: 12, secondary: 10, tertiary: 9, residential: 7, unclassified: 7, living_street: 6, road: 7, service: 4, pedestrian: 5 };
+  const PATH_STYLE = { footway: 2, path: 1.8, steps: 2, cycleway: 2.2, track: 3, bridleway: 2, corridor: 2 };
+  function roadStyle(hw) {
+    if (PATH_STYLE[hw]) return { path: true, w: PATH_STYLE[hw] };
+    return { path: false, w: ROAD_STYLE[hw] || 6 };
+  }
   async function maybeFetchWays() {
     if (DEMO || S.waysBusy || !S.pos) return;
-    if (S.waysCenter && Math.hypot(S.pos.x - S.waysCenter.x, S.pos.y - S.waysCenter.y) < 150) return;
+    if (S.waysCenter && Math.hypot(S.pos.x - S.waysCenter.x, S.pos.y - S.waysCenter.y) < 120) return;
     S.waysBusy = true;
     const c = { x: S.pos.x, y: S.pos.y };
     try {
-      const q = `[out:json][timeout:20];way(around:500,${S.pos.lat.toFixed(5)},${S.pos.lon.toFixed(5)})[highway][highway!~"^(motorway|motorway_link|proposed|construction|raceway)$"];out geom;`;
-      const j = await getJSON('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) }, 25000);
-      S.ways = j.elements.filter((e) => e.geometry && e.geometry.length > 1).map((e) => {
-        const w = { ll: e.geometry.map((g) => ({ lat: g.lat, lon: g.lon })), path: PATHS.has(e.tags.highway) };
-        projectWay(w); return w;
-      });
-      S.waysCenter = c;
+      const at = `${S.pos.lat.toFixed(5)},${S.pos.lon.toFixed(5)}`;
+      const q = `[out:json][timeout:25];(way(around:500,${at})[highway][highway!~"^(motorway|motorway_link|proposed|construction|raceway)$"];way(around:300,${at})[building];);out geom;`;
+      const j = await getJSON('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) }, 30000);
+      const ways = [], blds = [];
+      for (const e of j.elements) {
+        if (!e.geometry || e.geometry.length < (e.tags.building ? 4 : 2)) continue;
+        const ll = e.geometry.map((g) => ({ lat: g.lat, lon: g.lon }));
+        if (e.tags.building) {
+          const h = parseFloat(e.tags.height) || parseFloat(e.tags['building:levels']) * 3.2 || 9;
+          const b = { ll, h: clamp(h, 4, 80) }; projectWay(b); blds.push(b);
+        } else {
+          const w = { ll, name: e.tags.name || '', ...roadStyle(e.tags.highway) }; projectWay(w); ways.push(w);
+        }
+      }
+      S.ways = ways; S.buildings = blds.slice(0, 1800); S.waysCenter = c;
     } catch (err) { toast('Map data unavailable — retrying'); S.waysCenter = null; setTimeout(() => (S.waysBusy = false), 8000); return; }
     S.waysBusy = false;
   }
@@ -166,19 +181,32 @@
   function startDemo() {
     const o = { lat: 37.7749, lon: -122.4194 };
     S.proj = N.makeProjector(o);
-    const ways = [];
-    const names = ['Market St', 'Mission St', 'Howard St', 'Folsom St', 'Harrison St'];
+    const ways = [], blds = [];
+    const vNames = { 0: 'Mission St', 4: 'Folsom St' }, hNames = { 3: 'Howard St', 5: 'Harrison St' };
     for (let i = -6; i <= 6; i++) {
       for (const horiz of [true, false]) {
         const pts = [];
         for (let j = -8; j <= 8; j++) pts.push(horiz ? S.proj.toLL(j * 60, i * 90) : S.proj.toLL(i * 90, j * 60));
-        ways.push({ ll: pts, path: Math.abs(i) % 3 === 2 });
+        const major = i % 3 === 0;
+        ways.push({ ll: pts, path: false, w: major ? 12 : 7, name: (horiz ? hNames : vNames)[i] || `${Math.abs(i) + (horiz ? 10 : 20)}th ${horiz ? 'St' : 'Ave'}` });
       }
     }
-    // a diagonal path and a park loop for variety
-    ways.push({ ll: [S.proj.toLL(-300, -300), S.proj.toLL(-100, -60), S.proj.toLL(100, 120), S.proj.toLL(330, 300)], path: true });
-    ways.forEach(projectWay);
-    S.ways = ways; S.waysCenter = { x: 0, y: 0 };
+    ways.push({ ll: [S.proj.toLL(-300, -300), S.proj.toLL(-100, -60), S.proj.toLL(100, 120), S.proj.toLL(330, 300)], path: true, w: 2, name: '' });
+    // city blocks: a few buildings per block, set back from the kerb
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let bi = -6; bi < 6; bi++) for (let bj = -6; bj < 6; bj++) {
+      if (rnd() < 0.07) continue; // the odd empty lot / plaza
+      const x0 = bi * 90 + 8, x1 = bi * 90 + 82, y0 = bj * 90 + 8, y1 = bj * 90 + 82;
+      const nx = 1 + Math.floor(rnd() * 3), ny = 1 + Math.floor(rnd() * 2);
+      for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) {
+        const ax = x0 + ((x1 - x0) * a) / nx + 1, bx = x0 + ((x1 - x0) * (a + 1)) / nx - 1;
+        const ay = y0 + ((y1 - y0) * b) / ny + 1, by = y0 + ((y1 - y0) * (b + 1)) / ny - 1;
+        const ring = [[ax, ay], [bx, ay], [bx, by], [ax, by], [ax, ay]].map(([x, y]) => S.proj.toLL(x, y));
+        blds.push({ ll: ring, h: 7 + rnd() * rnd() * 55 });
+      }
+    }
+    ways.forEach(projectWay); blds.forEach(projectWay);
+    S.ways = ways; S.buildings = blds; S.waysCenter = { x: 0, y: 0 };
     const wp = [[0, 0], [0, 270], [360, 270], [360, 450], [540, 450]];
     const ll = wp.map(([x, y]) => S.proj.toLL(x, y));
     const mk = (type, modifier, name, d, p) => ({ maneuver: { type, modifier, location: [ll[p].lon, ll[p].lat] }, name, distance: d });
@@ -208,7 +236,8 @@
   }
 
   // ---------------------------------------------------------------- camera
-  // Each camera turns world metres into screen pixels. `line(points)` returns visible path segments.
+  // zoom 0..3 = walking eye level -> raised chase -> high chase -> drone (chase view)
+  const CHASE = [{ h: 7, far: 230 }, { h: 9, far: 280 }, { h: 22, far: 400 }, { h: 48, far: 650 }];
   function makeCamera() {
     const u = S.pos || { x: 0, y: 0 };
     const mode = S.view;
@@ -216,34 +245,33 @@
       const xs = S.route.pts.map((p) => p.x), ys = S.route.pts.map((p) => p.y);
       const minx = Math.min(...xs, u.x), maxx = Math.max(...xs, u.x), miny = Math.min(...ys, u.y), maxy = Math.max(...ys, u.y);
       const span = Math.max(maxx - minx, maxy - miny, 80) * 1.25;
-      return { mode, kind: 'flat', cx: (minx + maxx) / 2, cy: (miny + maxy) / 2, heading: 0, scale: Math.min(W, H) / span, ax: W / 2, ay: H / 2 };
+      return { mode, kind: 'flat', cx: (minx + maxx) / 2, cy: (miny + maxy) / 2, heading: 0, scale: Math.min(W, H) / span, span, ax: W / 2, ay: H / 2 };
     }
     if (mode === 'overhead' || mode === 'overview' || mode === 'turn') {
       const span = OVERHEAD_SPANS[S.zoom] || 250;
-      return { mode, kind: 'flat', cx: u.x, cy: u.y, heading: S.heading, scale: Math.min(W, H) / span, ax: W / 2, ay: H * 0.64 };
+      return { mode, kind: 'flat', cx: u.x, cy: u.y, heading: S.heading, scale: Math.min(W, H) / span, span, ax: W / 2, ay: H * 0.64 };
     }
-    // chase: low camera behind you looking ahead, Tesla-style
-    const F = H * 0.38 * [1.5, 1, 0.7, 0.5][S.zoom];
-    return { mode, kind: 'persp', cx: u.x, cy: u.y, heading: S.heading, back: 14, height: 20, F, horizon: H * 0.2, ax: W / 2, far: 300 / [1.5, 1, 0.7, 0.5][S.zoom] * 1.0 };
+    // chase: a camera just behind and above you, looking down the street
+    const c = CHASE[S.zoom] || CHASE[1], horizon = H * 0.28, F = H * 0.6;
+    const back = c.h / ((H * 0.78 - horizon) / F); // places you ~78% of the way down the screen
+    return { mode, kind: 'persp', cx: u.x, cy: u.y, heading: S.heading, back, height: c.h, F, horizon, ax: W / 2, far: c.far };
   }
   function camSegments(cam, pts) {
     // returns array of polylines in screen space
     const out = []; let cur = null;
     const fwd = (p) => N.toForward(p.x - cam.cx, p.y - cam.cy, cam.heading);
     if (cam.kind === 'flat') {
-      const pr = (f) => ({ x: cam.ax + f.x * cam.scale, y: cam.ay - f.y * cam.scale });
-      const o = []; for (const p of pts) o.push(pr(fwd(p))); return [o];
+      const o = []; for (const p of pts) { const f = fwd(p); o.push({ x: cam.ax + f.x * cam.scale, y: cam.ay - f.y * cam.scale }); } return [o];
     }
     const near = 1.5;
-    const pr = (p) => ({ x: cam.ax + (cam.F * p.x) / p.y, y: cam.horizon + (cam.F * cam.height) / p.y, d: p.y });
     let prev = null;
     for (const p of pts) {
       const f = fwd(p), c = { x: f.x, y: f.y + cam.back };
       if (prev) {
         const clip = N.clipNear(prev, c, near);
         if (clip) {
-          if (!cur) { cur = [pr(clip[0])]; out.push(cur); }
-          cur.push(pr(clip[1]));
+          if (!cur) { cur = [projCam(cam, clip[0], 0)]; out.push(cur); }
+          cur.push(projCam(cam, clip[1], 0));
           if (clip[1] !== c) cur = null; // far end was clipped: start a new polyline next time
         } else cur = null;
       }
@@ -251,68 +279,174 @@
     }
     return out;
   }
-  function strokeLine(cam, s, meters) {
+  // camera-space point {x, y(depth incl. back)} at height z above ground -> screen
+  function projCam(cam, p, z) { return { x: cam.ax + (cam.F * p.x) / p.y, y: cam.horizon + (cam.F * (cam.height - z)) / p.y, d: p.y }; }
+  // single world point -> screen, or null when behind the camera
+  function projPoint(cam, p, z = 0) {
+    const f = N.toForward(p.x - cam.cx, p.y - cam.cy, cam.heading);
+    if (cam.kind === 'flat') return { x: cam.ax + f.x * cam.scale, y: cam.ay - f.y * cam.scale, d: 1 };
+    const c = { x: f.x, y: f.y + cam.back };
+    return c.y < 1.5 ? null : projCam(cam, c, z);
+  }
+  const fog = (cam, d) => clamp(1.25 - d / cam.far, 0.06, 1);
+  const rgbs = (c, f) => `rgb(${(c[0] * f) | 0},${(c[1] * f) | 0},${(c[2] * f) | 0})`;
+  function lineW(cam, meters, d, maxPx) {
+    if (cam.kind === 'flat') return clamp(meters * cam.scale, 1.2 * K, maxPx || 40 * K);
+    return clamp((cam.F * meters) / Math.max(d || 30, 3), 1 * K, maxPx || 16 * K);
+  }
+  // Stroke a screen polyline with a real-world width; perspective width and fog follow depth per segment.
+  function strokeLine(cam, s, meters, rgb, maxPx) {
     if (cam.kind === 'flat') {
-      ctx.lineWidth = lineW(cam, meters); ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y);
-      for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y); ctx.stroke(); return;
+      ctx.strokeStyle = rgbs(rgb, 1); ctx.lineWidth = lineW(cam, meters, 0, maxPx);
+      ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y); for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y); ctx.stroke(); return;
     }
-    const base = ctx.globalAlpha;
-    for (let i = 1; i < s.length; i++) { // width and fade follow depth, segment by segment
+    for (let i = 1; i < s.length; i++) {
       const d = (s[i - 1].d + s[i].d) / 2;
-      ctx.lineWidth = lineW(cam, meters, d);
-      ctx.globalAlpha = base * clamp(1.15 - d / (cam.far * 1.05), 0.12, 1);
+      ctx.strokeStyle = rgbs(rgb, fog(cam, d)); ctx.lineWidth = lineW(cam, meters, d, maxPx);
       ctx.beginPath(); ctx.moveTo(s[i - 1].x, s[i - 1].y); ctx.lineTo(s[i].x, s[i].y); ctx.stroke();
     }
-    ctx.globalAlpha = base;
-  }
-  function lineW(cam, meters, d) {
-    if (cam.kind === 'flat') return clamp(meters * cam.scale, 1.2 * K, 40 * K);
-    return clamp((cam.F * meters) / Math.max(d || 30, 3), 1 * K, 16 * K);
   }
 
-  // ---------------------------------------------------------------- drawing
+  // ---------------------------------------------------------------- drawing the street scene
+  const C = {
+    sidewalk: [58, 74, 82], curb: [150, 176, 186], asphalt: [30, 40, 46], centre: [190, 168, 80],
+    pathEdge: [100, 160, 135], pathFill: [60, 100, 88],
+    wall: [20, 34, 42], wallEdge: [92, 124, 138], roof: [34, 54, 64], bFill: [16, 30, 38], bEdge: [48, 76, 88],
+  };
   function drawWorld(cam) {
-    const range = cam.kind === 'persp' ? cam.far + 60 : (Math.max(W, H) / cam.scale) * 0.9;
-    const cx = cam.cx, cy = cam.cy;
-    const visible = S.ways.filter((w) => Math.hypot(w.c.x - cx, w.c.y - cy) - w.r < range);
+    const flat = cam.kind === 'flat';
+    const range = flat ? (Math.max(W, H) / cam.scale) * 0.9 : cam.far + 60;
+    const near = (o) => Math.hypot(o.c.x - cam.cx, o.c.y - cam.cy) - o.r < range;
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    for (const pass of [false, true]) { // roads first, then footpaths on top
-      ctx.strokeStyle = pass ? '#5fae8f' : '#6f8b97';
-      for (const w of visible) {
-        if (w.path !== pass) continue;
-        const segs = camSegments(cam, w.xy);
-        for (const s of segs) {
-          if (s.length < 2) continue;
-          ctx.globalAlpha = 0.9;
-          strokeLine(cam, s, pass ? 1.2 : 3.2);
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
+    if (flat) drawBuildings(cam); // under the streets when seen from above
+    const vis = S.ways.filter(near);
+    for (const w of vis) w._s = camSegments(cam, w.xy);
+    const roads = vis.filter((w) => !w.path), paths = vis.filter((w) => w.path);
+    const pass = (list, width, rgb) => { for (const w of list) for (const s of w._s) if (s.length > 1) strokeLine(cam, s, width(w), rgb, 400 * K); };
+    // all kerbs before all asphalt, so junctions read as one open space instead of crossing lines
+    pass(roads, (w) => w.w + 5, C.sidewalk);
+    pass(roads, (w) => w.w + 0.9, C.curb);
+    pass(paths, (w) => w.w + 0.9, C.pathEdge);
+    pass(roads, (w) => w.w, C.asphalt);
+    pass(paths, (w) => w.w, C.pathFill);
+    if (!flat || cam.span <= 300) pass(roads.filter((w) => w.w >= 7), () => 0.22, C.centre);
+    if (flat) { if (cam.span <= 500) drawStreetNames(cam, roads); }
+    else drawBuildings(cam);
   }
-  function drawRoute(cam) {
+  function drawStreetNames(cam, roads) {
+    const seen = new Set(); let n = 0;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const w of roads) {
+      if (!w.name || seen.has(w.name) || n > 22) continue;
+      const s = w._s[0]; if (!s || s.length < 2) continue;
+      let best = 0, bi = 0; // longest on-screen segment that is fully inside the frame
+      for (let i = 1; i < s.length; i++) {
+        const a = s[i - 1], b = s[i], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, l = Math.hypot(b.x - a.x, b.y - a.y);
+        if (l > best && mx > 40 * K && mx < W - 40 * K && my > 120 * K && my < H - 40 * K) { best = l; bi = i; }
+      }
+      if (best < 90 * K) continue;
+      const a = s[bi - 1], b = s[bi]; let ang = Math.atan2(b.y - a.y, b.x - a.x);
+      if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI; // never upside-down
+      ctx.save(); ctx.translate((a.x + b.x) / 2, (a.y + b.y) / 2); ctx.rotate(ang);
+      ctx.font = `700 ${Math.max(11, 14 * K)}px system-ui`; ctx.lineWidth = 4 * K; ctx.strokeStyle = '#000'; ctx.strokeText(w.name, 0, 0);
+      ctx.fillStyle = '#cfe3ea'; ctx.fillText(w.name, 0, 0); ctx.restore();
+      seen.add(w.name); n++;
+    }
+  }
+  function clipPolyNear(poly, near) {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length], ina = a.y >= near, inb = b.y >= near;
+      if (ina) out.push(a);
+      if (ina !== inb) { const t = (near - a.y) / (b.y - a.y); out.push({ x: a.x + (b.x - a.x) * t, y: near }); }
+    }
+    return out;
+  }
+  function drawBuildings(cam) {
+    if (cam.kind === 'flat') {
+      const range = (Math.max(W, H) / cam.scale) * 0.8;
+      ctx.lineWidth = Math.max(1, 1.2 * K); ctx.fillStyle = rgbs(C.bFill, 1); ctx.strokeStyle = rgbs(C.bEdge, 1);
+      for (const b of S.buildings) {
+        if (Math.hypot(b.c.x - cam.cx, b.c.y - cam.cy) - b.r > range) continue;
+        const s = camSegments(cam, b.xy)[0]; ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y); for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      return;
+    }
+    // Perspective: extrude each footprint into walls, then paint far-to-near.
+    const items = [];
+    for (const b of S.buildings) {
+      if (Math.hypot(b.c.x - cam.cx, b.c.y - cam.cy) - b.r > cam.far) continue;
+      const f = b.xy.map((p) => { const q = N.toForward(p.x - cam.cx, p.y - cam.cy, cam.heading); return { x: q.x, y: q.y + cam.back }; });
+      let mind = Infinity;
+      for (let i = 0; i < f.length - 1; i++) {
+        const a = f[i], c = f[i + 1], d = (a.y + c.y) / 2; mind = Math.min(mind, d);
+        const len = Math.hypot(c.x - a.x, c.y - a.y) || 1;
+        items.push({ a, c, h: b.h, d, shade: 0.72 + 0.28 * (Math.abs(c.x - a.x) / len) });
+      }
+      if (cam.height > b.h) items.push({ roof: f, h: b.h, d: mind - 0.01 });
+    }
+    items.sort((p, q) => q.d - p.d);
+    ctx.lineWidth = Math.max(1, 1.3 * K);
+    for (const it of items) {
+      if (it.roof) {
+        const poly = clipPolyNear(it.roof, 1.5); if (poly.length < 3) continue;
+        const sp = poly.map((p) => projCam(cam, p, it.h)), fg = fog(cam, it.d);
+        ctx.fillStyle = rgbs(C.roof, fg); ctx.strokeStyle = rgbs(C.wallEdge, fg);
+        ctx.beginPath(); ctx.moveTo(sp[0].x, sp[0].y); for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i].x, sp[i].y); ctx.closePath(); ctx.fill(); ctx.stroke();
+        continue;
+      }
+      const clip = N.clipNear(it.a, it.c, 1.5); if (!clip) continue;
+      const b0 = projCam(cam, clip[0], 0), b1 = projCam(cam, clip[1], 0), t0 = projCam(cam, clip[0], it.h), t1 = projCam(cam, clip[1], it.h);
+      const fg = fog(cam, it.d);
+      ctx.fillStyle = rgbs(C.wall, fg * it.shade); ctx.strokeStyle = rgbs(C.wallEdge, fg);
+      ctx.beginPath(); ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t0.x, t0.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  // Flowing chevrons painted on the ground along the route, like AR walking guidance.
+  function drawChevrons(cam, now) {
+    const r = S.route, sn = S.snap; if (!r || !sn) return;
+    const SP = 6.5, ahead = cam.kind === 'flat' ? cam.span * 0.9 : Math.min(cam.far, 160), phase = ((now / 1000) * 2.4) % SP;
+    const size = cam.kind === 'flat' ? clamp(3 / (cam.scale * 2.6), 1, 3) : 1; // keep them legible when zoomed out
+    const SHAPE = [[0.9, 0], [-0.9, 1.5], [-0.9, 0.75], [0.15, 0], [-0.9, -0.75], [-0.9, -1.5]];
+    let seg = sn.seg, a = { x: sn.x, y: sn.y };
+    for (let s = phase; s < ahead && seg < r.pts.length - 1; s += SP) {
+      // advance along the polyline by s from the snapped point
+      let rem = s, p = a, i = seg;
+      while (i < r.pts.length - 1) {
+        const q = r.pts[i + 1], l = Math.hypot(q.x - p.x, q.y - p.y);
+        if (rem <= l) break; rem -= l; p = q; i++;
+      }
+      if (i >= r.pts.length - 1) break;
+      const q = r.pts[i + 1], l = Math.hypot(q.x - p.x, q.y - p.y) || 1, ux = (q.x - p.x) / l, uy = (q.y - p.y) / l;
+      const c = { x: p.x + ux * rem, y: p.y + uy * rem };
+      const pts = SHAPE.map(([f, lat]) => projPoint(cam, { x: c.x + ux * f * size - uy * lat * size, y: c.y + uy * f * size + ux * lat * size }));
+      if (pts.some((v) => !v || (cam.kind === 'persp' && v.d < 6))) continue; // skip ones under your feet
+      const d = pts[0].d, fade = cam.kind === 'flat' ? 1 : fog(cam, d);
+      ctx.fillStyle = rgbs([25, 224, 255], fade);
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k].x, pts[k].y); ctx.closePath(); ctx.fill();
+    }
+  }
+  function drawRoute(cam, now) {
     if (!S.route) return;
     // remaining part of the route, starting at the snapped point
     const r = S.route, sn = S.snap;
     const pts = sn ? [{ x: sn.x, y: sn.y }, ...r.pts.slice(sn.seg + 1)] : r.pts;
     const segs = camSegments(cam, pts);
-    for (const [wm, col, a] of [[8, '#19e0ff', 0.28], [4.2, '#19e0ff', 1]]) {
-      for (const s of segs) {
-        if (s.length < 2) continue;
-        ctx.globalAlpha = a; ctx.strokeStyle = col;
-        strokeLine(cam, s, wm);
+    // a painted ribbon down the street: dark teal body, chevrons on top
+    for (const [wm, col] of [[3.4, [0, 74, 92]], [2.4, [6, 120, 150]]]) for (const s of segs) if (s.length > 1) strokeLine(cam, s, wm, col, 120 * K);
+    drawChevrons(cam, now);
+    // destination: ring on the ground and a pole you can see from afar
+    const dpt = r.pts[r.pts.length - 1], g = projPoint(cam, dpt, 0);
+    if (g) {
+      ctx.strokeStyle = '#ffd24a'; ctx.fillStyle = '#ffd24a'; ctx.lineWidth = 3 * K;
+      if (cam.kind === 'flat') { ctx.beginPath(); ctx.arc(g.x, g.y, 9 * K, 0, 7); ctx.stroke(); }
+      else {
+        const top = projPoint(cam, dpt, 14), rr = clamp((cam.F * 3) / Math.max(g.d, 3), 3 * K, 40 * K);
+        ctx.beginPath(); ctx.ellipse(g.x, g.y, rr, rr * 0.35, 0, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(g.x, g.y); ctx.lineTo(top.x, top.y); ctx.stroke();
+        ctx.beginPath(); ctx.arc(top.x, top.y, Math.max(3 * K, rr * 0.25), 0, 7); ctx.fill();
       }
-    }
-    ctx.globalAlpha = 1;
-    // destination ring
-    const dpt = r.pts[r.pts.length - 1];
-    const sl = camSegments(cam, [dpt, { x: dpt.x + 0.01, y: dpt.y }])[0];
-    const sd = sl && sl[0];
-    if (sd) {
-      const rr = cam.kind === 'flat' ? 9 * K : clamp((cam.F * 6) / Math.max(sd.d, 3), 5 * K, 40 * K);
-      ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 4 * K;
-      ctx.beginPath(); ctx.arc(sd.x, sd.y, rr, 0, 7); ctx.stroke();
-      if (cam.kind === 'persp') { ctx.beginPath(); ctx.moveTo(sd.x, sd.y); ctx.lineTo(sd.x, sd.y - rr * 3); ctx.stroke(); }
     }
   }
   function drawUser(cam) {
@@ -321,7 +455,7 @@
     else if (cam.mode === 'overview' && S.pos) {
       const f = N.toForward(S.pos.x - cam.cx, S.pos.y - cam.cy, 0); x = cam.ax + f.x * cam.scale; y = cam.ay - f.y * cam.scale; rot = S.heading;
     } else { x = cam.ax; y = cam.ay; }
-    const s = 15 * K;
+    const s = (cam.kind === 'persp' ? 11 : 15) * K;
     ctx.save(); ctx.translate(x, y); ctx.rotate((rot * Math.PI) / 180);
     if (S.pos && S.pos.acc > 12 && cam.kind === 'flat') { ctx.fillStyle = 'rgba(25,224,255,.12)'; ctx.beginPath(); ctx.arc(0, 0, S.pos.acc * cam.scale, 0, 7); ctx.fill(); }
     ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3 * K;
@@ -411,7 +545,7 @@
     else if (S.view === 'turn') { drawTurnCard(); }
     else {
       const cam = makeCamera();
-      drawWorld(cam); drawRoute(cam); drawUser(cam);
+      drawWorld(cam); drawRoute(cam, now); drawUser(cam);
       if (S.prog && S.prog.arrived) text('You have arrived', W / 2, H * 0.5, 40 * K, '#ffd24a', 'center');
       else hudBanner();
       hudFooter();

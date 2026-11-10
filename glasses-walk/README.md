@@ -7,16 +7,16 @@ Static HTML/JS, no build step, no API keys — it is designed to ship as a **Met
 
 | View | What you see |
 |------|--------------|
-| **Ahead** (default) | Tesla-style perspective: roads and paths in front of you, route in cyan, heading-up |
+| **Ahead** (default) | Walk-through street view: real-width roads with kerbs, sidewalks and centre lines, extruded buildings either side, flowing chevrons on the route, fog in the distance. Zoom raises the camera: eye level → raised → high → drone |
 | **Turn-by-turn** | Big first-person card: arrow, distance to the next turn, street, "then…" |
-| **Overhead** | Top-down, heading-up, 4 zoom levels (≈120 m → 1 km) |
+| **Overhead** | Top-down, heading-up map with building footprints, street names and 4 zoom levels (≈120 m → 1 km) |
 | **Whole route** | North-up overview of start → destination |
 
 Keys: `Enter`/`Space`/`V` next view · `+`/`-` zoom · `/` or `S` search · `M` voice · `Esc` end route.
 Voice prompts ("In 150 feet, turn right onto…") use the browser's speech synthesis.
 
 ## Data (all free, no keys)
-- Streets/paths: OpenStreetMap via Overpass · Address search: Nominatim · Walking routes: routing.openstreetmap.de (OSRM foot)
+- Streets, paths and building footprints (with heights where mapped, else ~9 m): OpenStreetMap via Overpass · Address search: Nominatim · Walking routes: routing.openstreetmap.de (OSRM foot)
 - These are public community servers with fair-use limits — fine for personal use. For anything bigger, host your own or use a commercial provider.
 - Rerouting happens automatically after you are >40 m off the route for three fixes.
 
