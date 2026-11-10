@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Tomer Snow</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tomer Snow">
+<style>
+  /* Glasses display: black = transparent. Pure black bg, big bright type, one idea per page. */
+  :root{--fg:#f2f2f2;--dim:#8a8a8a;--accent:#7CD4FF;--hot:#ffb86b;--line:#2a2a2a;--btn:#161616}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#000;color:var(--fg);font:24px/1.3 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+  .page{display:none;position:absolute;inset:0 0 70px 0;padding:12px 14px;flex-direction:column;gap:10px}
+  .page.on{display:flex}
+  h1{font-size:1em;margin:0;color:var(--accent);font-weight:600}
+  .dim{color:var(--dim);font-size:.7em}
+  .big{font-size:3.2em;font-weight:700;line-height:1;color:var(--hot)}
+  .where{font-size:1.2em}
+  .row{display:grid;grid-template-columns:5.2em 1fr 3.6em;gap:8px;align-items:center;font-size:.8em;margin:5px 0}
+  .row span:last-child{text-align:right;color:var(--hot)}
+  .track{height:20px;background:#141414;border-radius:10px;position:relative}
+  .fill{position:absolute;top:0;height:100%;background:var(--accent);border-radius:10px;min-width:8px}
+  .fill.top{background:var(--hot)}
+  .scroll{flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain}
+  ul{margin:0;padding-left:1.1em;font-size:.8em}li{margin:0 0 .6em}
+  nav{position:absolute;left:0;right:0;bottom:0;height:70px;padding:8px 14px;display:flex;gap:10px;align-items:center}
+  button{font:inherit;color:var(--fg);background:var(--btn);border:2px solid var(--line);border-radius:14px;min-height:52px;padding:6px 16px;cursor:pointer}
+  button:focus,button:focus-visible,button:active{outline:3px solid var(--accent);outline-offset:1px}
+  nav button{flex:1}.dots{display:flex;gap:6px;flex:0}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--line)}.dot.on{background:var(--accent)}
+  textarea{width:100%;flex:1;min-height:0;font:inherit;font-size:.7em;color:var(--fg);background:#0c0c0c;border:2px solid var(--line);border-radius:12px;padding:8px}
+  .acts{display:flex;gap:8px}.acts button{flex:1;font-size:.75em}
+</style>
+</head>
+<body>
+<section class="page on" id="p0"><h1>❄ Tomer Snow</h1><div class="dim" id="when">Loading…</div>
+  <div class="dim">Biggest total</div><div class="big" id="topn">–</div><div class="where" id="topw"></div>
+  <div class="dim" id="meta"></div></section>
+<section class="page" id="p1"><h1>By region (inches)</h1><div class="scroll" id="bars"></div></section>
+<section class="page" id="p2"><h1>Key points</h1><div class="scroll"><ul id="take"></ul></div></section>
+<section class="page" id="p3"><h1>Source</h1>
+  <textarea id="txt" placeholder="Paste forecast text…"></textarea>
+  <div class="acts"><button id="go">Summarize</button><button id="fetch">Fetch</button><button id="sample">Sample</button></div>
+  <div class="dim" id="status"></div></section>
+<nav><button id="prev" aria-label="Previous">◀</button><div class="dots" id="dots"></div><button id="next" aria-label="Next">▶</button></nav>
+<script>
+const REGIONS=["Sierra","Tahoe","Cascades","Pacific Northwest","Oregon","Washington","Wasatch","Utah","Colorado","Front Range","Tetons","Jackson Hole","Wyoming","Montana","Big Sky","Idaho","Sun Valley","Northern Rockies","Southwest","New Mexico","Northeast","Vermont","New Hampshire","Maine","Adirondacks","New York","Alaska","Canada","British Columbia","Banff","Whistler","Alta","Snowbird","Park City","Vail","Aspen","Breckenridge","Keystone","Loveland","Arapahoe Basin","Mammoth","Palisades","Mt. Hood","Stevens Pass","Crystal Mountain","Stowe","Killington","Sugarbush","Jay Peak","Telluride","Steamboat","Targhee","Bridger Bowl","Whitefish","Taos"];
+const NUM={a:1,one:1,two:2,three:3,four:4,five:5,six:6,eight:8,ten:10,twelve:12};
+const N="(\\d+(?:\\.\\d+)?|a|one|two|three|four|five|six|eight|ten|twelve)";
+const RANGE=new RegExp(N+"\\s*(?:-|–|to)\\s*"+N+"\\+?\\s*(inches|inch|in\\b|\"|feet|foot|ft)","gi");
+const SINGLE=new RegExp("(?:up to|over|around|about|nearly|more than)?\\s*"+N+"(\\+)?\\s*(inches|inch|\"|feet|foot|ft)","gi");
+const val=s=>NUM[s.toLowerCase()]??parseFloat(s);
+const mult=u=>/f/i.test(u)?12:1;
+
+function extract(text){
+  const sents=text.replace(/\s+/g," ").split(/(?<=[.!?])\s+/);
+  const found=[];
+  for(const s of sents){
+    const regs=REGIONS.filter(r=>new RegExp("\\b"+r.replace(/\./g,"\\.")+"\\b","i").test(s));
+    const amts=[];let masked=s;
+    for(const m of s.matchAll(RANGE)){const k=mult(m[3]);amts.push([val(m[1])*k,val(m[2])*k]);}
+    masked=s.replace(RANGE," ");
+    for(const m of masked.matchAll(SINGLE)){const v=val(m[1])*mult(m[3]);
+      amts.push([m[2]||/up to/i.test(m[0])?(/up to/i.test(m[0])?0:v):v,v]);}
+    if(!amts.length)continue;
+    const lo=Math.min(...amts.map(a=>a[0])),hi=Math.max(...amts.map(a=>a[1]));
+    if(hi>200||hi<=0)continue;
+    found.push({s,regs,lo,hi});
+  }
+  return found;
+}
+function summarize(text){
+  const f=extract(text),by=new Map();
+  for(const e of f)for(const r of (e.regs.length?e.regs:[])){
+    const c=by.get(r)||{lo:e.lo,hi:e.hi};c.lo=Math.min(c.lo,e.lo);c.hi=Math.max(c.hi,e.hi);by.set(r,c);}
+  const rows=[...by].map(([n,v])=>({n,...v})).sort((a,b)=>b.hi-a.hi).slice(0,12);
+  const take=[...f].sort((a,b)=>b.hi-a.hi).slice(0,5).map(e=>e.s);
+  return {rows,take,f,words:text.split(/\s+/).length};
+}
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $=id=>document.getElementById(id);
+const status=m=>$("status").textContent=m;
+function render(text,label){
+  const {rows,take,f}=summarize(text);
+  if(!f.length){status("No snowfall amounts found.");return}
+  const top=rows[0],max=Math.max(10,Math.ceil(Math.max(...rows.map(r=>r.hi),0)/10)*10);
+  $("when").textContent=label||"Pasted forecast";
+  $("topn").textContent=top?top.hi+'"':"–";
+  $("topw").textContent=top?top.n:"";
+  $("meta").textContent=`${rows.length} areas · ${f.filter(e=>e.hi>=12).length} foot-plus calls`;
+  $("bars").innerHTML=rows.map((r,i)=>`<div class="row"><span>${esc(r.n)}</span>
+    <div class="track"><div class="fill${i?"":" top"}" style="left:${r.lo/max*100}%;width:${(r.hi-r.lo)/max*100}%"></div></div>
+    <span>${r.lo===r.hi?r.hi:r.lo+"-"+r.hi}</span></div>`).join("")+`<div class="dim">scale 0–${max}"</div>`;
+  $("take").innerHTML=take.map(s=>`<li>${esc(s)}</li>`).join("");
+  status(`${f.length} snowfall statements parsed.`);go(0);
+}
+$("go").onclick=()=>render($("txt").value);
+$("sample").onclick=()=>{const t=`A major storm will move into the West this weekend. The Sierra and Tahoe could see 12-24 inches, with higher totals on the crest near Mammoth. The Wasatch, including Alta and Snowbird, should pick up 10 to 18 inches. Colorado will see 6-12 inches, with Loveland and Arapahoe Basin around 8 inches. Big Sky in Montana may get up to 17 inches through Sunday. The Northeast stays quiet, with only 1-3 inches in Vermont. The Cascades could see 2 feet at Crystal Mountain.`;$("txt").value=t;render(t,"Sample forecast")};
+async function fetchLatest(){
+  status("Loading latest…");
+  try{ // 1) daily snapshot published alongside the app (same origin, no CORS)
+    const r=await fetch("data/latest.json?"+Math.floor(Date.now()/36e5),{cache:"no-cache"});
+    if(!r.ok)throw 0;const p=await r.json();
+    $("txt").value=p.text;render(p.text,p.date.slice(0,10)+" · "+p.title);return true;
+  }catch(e){}
+  try{ // 2) direct from the source
+    const r=await fetch("https://unofficialnetworks.com/wp-json/wp/v2/posts?search=chris%20tomer&per_page=1&_fields=title,date,content");
+    const p=(await r.json())[0];if(!p)throw 0;
+    const t=new DOMParser().parseFromString(p.content.rendered,"text/html").body.textContent;
+    $("txt").value=t;render(t,p.date.slice(0,10)+" · Tomer");return true;
+  }catch(e){status("Fetch failed. Paste text or load sample.");return false}
+}
+$("fetch").onclick=fetchLatest;
+// paging: buttons, arrow keys, swipe
+let cur=0;const pages=[...document.querySelectorAll(".page")];
+$("dots").innerHTML=pages.map(()=>'<div class="dot"></div>').join("");
+function go(n){cur=(n+pages.length)%pages.length;pages.forEach((p,i)=>p.classList.toggle("on",i===cur));
+  [...$("dots").children].forEach((d,i)=>d.classList.toggle("on",i===cur));}
+$("prev").onclick=()=>go(cur-1);$("next").onclick=()=>go(cur+1);
+addEventListener("keydown",e=>{if(e.target.tagName==="TEXTAREA")return;
+  if(e.key==="ArrowRight")go(cur+1);if(e.key==="ArrowLeft")go(cur-1)});
+let sx=null;addEventListener("touchstart",e=>sx=e.touches[0].clientX,{passive:true});
+addEventListener("touchend",e=>{if(sx==null)return;const d=e.changedTouches[0].clientX-sx;
+  if(Math.abs(d)>50)go(cur+(d<0?1:-1));sx=null});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)fetchLatest()});
+go(0);fetchLatest().then(ok=>{if(!ok)$("sample").click()});
+</script>
+</body>
+</html>
