@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <title>Tomer Snow</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tomer Snow">
 <style>
   /* Glasses display: black = transparent. Pure black bg, big bright type, one idea per page. */
   :root{--fg:#f2f2f2;--dim:#8a8a8a;--accent:#7CD4FF;--hot:#ffb86b;--line:#2a2a2a;--btn:#161616}
@@ -98,8 +104,13 @@ function render(text,label){
 $("go").onclick=()=>render($("txt").value);
 $("sample").onclick=()=>{const t=`A major storm will move into the West this weekend. The Sierra and Tahoe could see 12-24 inches, with higher totals on the crest near Mammoth. The Wasatch, including Alta and Snowbird, should pick up 10 to 18 inches. Colorado will see 6-12 inches, with Loveland and Arapahoe Basin around 8 inches. Big Sky in Montana may get up to 17 inches through Sunday. The Northeast stays quiet, with only 1-3 inches in Vermont. The Cascades could see 2 feet at Crystal Mountain.`;$("txt").value=t;render(t,"Sample forecast")};
 async function fetchLatest(){
-  status("Fetching latest…");
-  try{
+  status("Loading latest…");
+  try{ // 1) daily snapshot published alongside the app (same origin, no CORS)
+    const r=await fetch("data/latest.json?"+Math.floor(Date.now()/36e5),{cache:"no-cache"});
+    if(!r.ok)throw 0;const p=await r.json();
+    $("txt").value=p.text;render(p.text,p.date.slice(0,10)+" · "+p.title);return true;
+  }catch(e){}
+  try{ // 2) direct from the source
     const r=await fetch("https://unofficialnetworks.com/wp-json/wp/v2/posts?search=chris%20tomer&per_page=1&_fields=title,date,content");
     const p=(await r.json())[0];if(!p)throw 0;
     const t=new DOMParser().parseFromString(p.content.rendered,"text/html").body.textContent;
@@ -118,6 +129,7 @@ addEventListener("keydown",e=>{if(e.target.tagName==="TEXTAREA")return;
 let sx=null;addEventListener("touchstart",e=>sx=e.touches[0].clientX,{passive:true});
 addEventListener("touchend",e=>{if(sx==null)return;const d=e.changedTouches[0].clientX-sx;
   if(Math.abs(d)>50)go(cur+(d<0?1:-1));sx=null});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)fetchLatest()});
 go(0);fetchLatest().then(ok=>{if(!ok)$("sample").click()});
 </script>
 </body>
