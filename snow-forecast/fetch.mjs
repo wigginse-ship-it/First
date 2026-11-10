@@ -3,6 +3,7 @@
 import { writeFile, mkdir } from "node:fs/promises";
 
 const API = "https://unofficialnetworks.com/wp-json/wp/v2/posts?search=chris%20tomer&per_page=10&_fields=title,date,link,content";
+const FEED = "https://unofficialnetworks.com/?s=chris+tomer&feed=rss2";
 const UA = { "User-Agent": "snow-brief/1.0" };
 const ENT = { amp: "&", nbsp: " ", quot: '"', lt: "<", gt: ">", rsquo: "'", lsquo: "'", ldquo: '"', rdquo: '"', ndash: "-", mdash: "-", hellip: "..." };
 const decode = s => s.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
@@ -31,10 +32,34 @@ function images(html) {
   return out.slice(0, 8);
 }
 
+// Tries the site's JSON API, then its public RSS search feed. Both identify as snow-brief;
+// if the site refuses automated requests (403) we stop and keep the app's fallback.
+async function getPosts() {
+  const errs = [];
+  try {
+    const r = await fetch(API, { headers: UA });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } catch (e) { errs.push("json: " + e.message); }
+  try {
+    const r = await fetch(FEED, { headers: UA });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const xml = await r.text();
+    const tag = (t, n) => ((t.match(new RegExp("<" + n + "[^>]*>([\\s\\S]*?)</" + n + ">")) || [])[1] || "")
+      .replace(/^\s*<!\[CDATA\[|\]\]>\s*$/g, "");
+    const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map(m => ({
+      title: { rendered: tag(m[1], "title") }, link: tag(m[1], "link").trim(),
+      date: new Date(tag(m[1], "pubDate")).toISOString(),
+      content: { rendered: tag(m[1], "content:encoded") || tag(m[1], "description") },
+    }));
+    if (!items.length) throw new Error("no items");
+    return items;
+  } catch (e) { errs.push("rss: " + e.message); }
+  throw new Error(errs.join("; "));
+}
+
 try {
-  const res = await fetch(API, { headers: UA });
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  let posts = await res.json();
+  let posts = await getPosts();
   const mine = posts.filter(p => /tomer/i.test(p.title.rendered + p.content.rendered));
   posts = (mine.length ? mine : posts).sort((a, b) => b.date.localeCompare(a.date));
   const p = posts[0];
