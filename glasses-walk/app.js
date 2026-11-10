@@ -19,7 +19,7 @@
     heading: 0, headingInit: false,
     view: params.get('view') && VIEWS.includes(params.get('view')) ? params.get('view') : 'chase',
     zoom: params.has('zoom') ? clamp(+params.get('zoom') || 0, 0, 3) : 1,
-    ways: [], buildings: [], destExtra: [], waysCenter: null, waysBusy: false,
+    ways: [], buildings: [], land: [], ground: params.get('ground') !== '0', destExtra: [], waysCenter: null, waysBusy: false,
     route: null, dest: null, snapSeg: 0, snap: null, prog: null, offCount: 0, spoken: -1,
     manual: false, geoErr: '', pendingDest: null, muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
   };
@@ -43,7 +43,7 @@
   }
   function reproject() {
     for (const w of S.ways) projectWay(w);
-    for (const b of S.buildings.concat(S.destExtra)) projectWay(b);
+    for (const b of S.buildings.concat(S.destExtra, S.land)) projectWay(b);
     findDestBuilding();
     if (S.route) { const raw = S.route.raw; S.route = N.buildRoute(raw, S.proj); S.route.raw = raw; S.snapSeg = 0; }
     if (S.pos) Object.assign(S.pos, S.proj.toXY(S.pos.lat, S.pos.lon));
@@ -133,20 +133,23 @@
     const c = { x: S.pos.x, y: S.pos.y };
     try {
       const at = `${S.pos.lat.toFixed(5)},${S.pos.lon.toFixed(5)}`;
-      const q = `[out:json][timeout:25];(way(around:500,${at})[highway][highway!~"^(motorway|motorway_link|proposed|construction|raceway)$"];way(around:300,${at})[building];);out geom;`;
+      const q = `[out:json][timeout:25];(way(around:500,${at})[highway][highway!~"^(motorway|motorway_link|proposed|construction|raceway)$"];way(around:300,${at})[building];way(around:450,${at})[leisure~"^(park|garden|pitch|playground|recreation_ground|golf_course)$"];way(around:450,${at})[landuse~"^(grass|forest|meadow|recreation_ground|cemetery|village_green|orchard|allotments)$"];way(around:450,${at})[natural~"^(water|wood|scrub|grassland|wetland|beach)$"];way(around:450,${at})[amenity=parking];);out geom;`;
       const j = await getJSON('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) }, 30000);
-      const ways = [], blds = [];
+      const ways = [], blds = [], land = [];
       for (const e of j.elements) {
         if (!e.geometry || e.geometry.length < (e.tags.building ? 4 : 2)) continue;
         const ll = e.geometry.map((g) => ({ lat: g.lat, lon: g.lon }));
         if (e.tags.building) {
           const h = parseFloat(e.tags.height) || parseFloat(e.tags['building:levels']) * 3.2 || 9;
           const b = { ll, h: clamp(h, 4, 80) }; projectWay(b); blds.push(b);
-        } else {
+        } else if (e.tags.highway) {
           const w = { ll, name: e.tags.name || '', ...roadStyle(e.tags.highway) }; projectWay(w); ways.push(w);
+        } else if (e.geometry.length > 3) { // land cover polygon
+          const t = e.tags, kind = t.natural === 'water' || t.natural === 'wetland' ? 'water' : t.amenity === 'parking' ? 'parking' : t.natural === 'beach' ? 'sand' : 'green';
+          const l = { ll, kind }; projectWay(l); land.push(l);
         }
       }
-      S.ways = ways; S.buildings = blds.slice(0, 1800); S.waysCenter = c; findDestBuilding();
+      S.ways = ways; S.buildings = blds.slice(0, 1800); S.land = land.slice(0, 500); S.waysCenter = c; findDestBuilding();
     } catch (err) { toast('Map data unavailable — retrying'); S.waysCenter = null; setTimeout(() => (S.waysBusy = false), 8000); return; }
     S.waysBusy = false;
   }
@@ -264,7 +267,7 @@
   function startDemo() {
     const o = { lat: 37.7749, lon: -122.4194 };
     S.proj = N.makeProjector(o);
-    const ways = [], blds = [];
+    const ways = [], blds = [], landDemo = [];
     const vNames = { 0: 'Mission St', 4: 'Folsom St' }, hNames = { 3: 'Howard St', 5: 'Harrison St' };
     for (let i = -6; i <= 6; i++) {
       for (const horiz of [true, false]) {
@@ -278,7 +281,11 @@
     // city blocks: a few buildings per block, set back from the kerb
     let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     for (let bi = -6; bi < 6; bi++) for (let bj = -6; bj < 6; bj++) {
-      if (rnd() < 0.07 && !(bi === 5 && bj === 4)) continue; // the odd empty lot / plaza
+      if (rnd() < 0.07 && !(bi === 5 && bj === 4)) { // the odd park / pond / car park instead of buildings
+        const kind = ['green', 'green', 'water', 'parking'][Math.floor(rnd() * 4)];
+        landDemo.push({ ll: [[bi * 90 + 6, bj * 90 + 6], [bi * 90 + 84, bj * 90 + 6], [bi * 90 + 84, bj * 90 + 84], [bi * 90 + 6, bj * 90 + 84], [bi * 90 + 6, bj * 90 + 6]].map(([x, y]) => S.proj.toLL(x, y)), kind });
+        continue;
+      }
       const x0 = bi * 90 + 8, x1 = bi * 90 + 82, y0 = bj * 90 + 8, y1 = bj * 90 + 82;
       const nx = 1 + Math.floor(rnd() * 3), ny = 1 + Math.floor(rnd() * 2);
       for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) {
@@ -288,8 +295,8 @@
         blds.push({ ll: ring, h: 7 + rnd() * rnd() * 55 });
       }
     }
-    ways.forEach(projectWay); blds.forEach(projectWay);
-    S.ways = ways; S.buildings = blds; S.waysCenter = { x: 0, y: 0 };
+    ways.forEach(projectWay); blds.forEach(projectWay); landDemo.forEach(projectWay);
+    S.land = landDemo; S.ways = ways; S.buildings = blds; S.waysCenter = { x: 0, y: 0 };
     const wp = [[0, 0], [0, 270], [360, 270], [360, 450], [540, 450]];
     const ll = wp.map(([x, y]) => S.proj.toLL(x, y));
     const mk = (type, modifier, name, d, p) => ({ maneuver: { type, modifier, location: [ll[p].lon, ll[p].lat] }, name, distance: d });
@@ -393,7 +400,8 @@
 
   // ---------------------------------------------------------------- drawing the street scene
   const C = {
-    sidewalk: [58, 74, 82], curb: [150, 176, 186], asphalt: [30, 40, 46], centre: [190, 168, 80],
+    ground: [15, 23, 27], park: [22, 58, 38], water: [12, 42, 72], parking: [38, 44, 50], sand: [70, 64, 44],
+    sidewalk: [84, 100, 108], curb: [190, 212, 220], asphalt: [54, 64, 70], centre: [210, 184, 84],
     pathEdge: [100, 160, 135], pathFill: [60, 100, 88],
     destWall: [150, 108, 8], destEdge: [255, 214, 80], destRoof: [215, 160, 20],
     wall: [20, 34, 42], wallEdge: [92, 124, 138], roof: [34, 54, 64], bFill: [16, 30, 38], bEdge: [48, 76, 88],
@@ -403,6 +411,7 @@
     const range = flat ? (Math.max(W, H) / cam.scale) * 0.9 : cam.far + 60;
     const near = (o) => Math.hypot(o.c.x - cam.cx, o.c.y - cam.cy) - o.r < range;
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    drawGround(cam, near);
     if (flat) drawBuildings(cam); // under the streets when seen from above
     const vis = S.ways.filter(near);
     for (const w of vis) w._s = camSegments(cam, w.xy);
@@ -434,6 +443,36 @@
     ctx.fillStyle = '#1a1300'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     let t = name; while (ctx.measureText(t).width > tw - 20 * K && t.length > 3) t = t.slice(0, -2); if (t !== name) t = t.trimEnd() + '…';
     ctx.fillText(t, x, y + 1);
+  }
+  // Ground: a tinted surface with parks, water and car parks, so roads read against it and you are never floating in a void.
+  function drawGround(cam, near) {
+    if (!S.ground) return;
+    const flat = cam.kind === 'flat';
+    if (flat) { ctx.fillStyle = rgbs(C.ground, 1); ctx.fillRect(0, 0, W, H); }
+    else {
+      const g = ctx.createLinearGradient(0, cam.horizon, 0, cam.horizon + (H - cam.horizon) * 0.5);
+      g.addColorStop(0, 'rgb(0,0,0)'); g.addColorStop(1, rgbs(C.ground, 1));
+      ctx.fillStyle = g; ctx.fillRect(0, cam.horizon, W, H - cam.horizon);
+    }
+    const order = { green: 0, sand: 0, parking: 1, water: 2 };
+    const vis = S.land.filter(near).sort((a, b) => order[a.kind] - order[b.kind]);
+    for (const l of vis) {
+      ctx.fillStyle = rgbs(C[l.kind === 'green' ? 'park' : l.kind], 1);
+      if (flat) {
+        const s = camSegments(cam, l.xy)[0];
+        ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y); for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y); ctx.closePath(); ctx.fill();
+      } else {
+        const poly = clipPolyNear(l.xy.map((p) => { const f = N.toForward(p.x - cam.cx, p.y - cam.cy, cam.heading); return { x: f.x, y: f.y + cam.back }; }), 1.5);
+        if (poly.length < 3) continue;
+        const sp = poly.map((p) => projCam(cam, p, 0));
+        ctx.beginPath(); ctx.moveTo(sp[0].x, sp[0].y); for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i].x, sp[i].y); ctx.closePath(); ctx.fill();
+      }
+    }
+    if (!flat) { // haze: distant ground melts into the horizon
+      const hz = ctx.createLinearGradient(0, cam.horizon, 0, cam.horizon + (H - cam.horizon) * 0.3);
+      hz.addColorStop(0, 'rgba(0,0,0,1)'); hz.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = hz; ctx.fillRect(0, cam.horizon, W, (H - cam.horizon) * 0.3);
+    }
   }
   function drawStreetNames(cam, roads) {
     const seen = new Set(); let n = 0;
@@ -543,6 +582,12 @@
     // a painted ribbon down the street: dark teal body, chevrons on top
     for (const [wm, col] of [[3.4, [0, 74, 92]], [2.4, [6, 120, 150]]]) for (const s of segs) if (s.length > 1) strokeLine(cam, s, wm, col, 120 * K);
     drawChevrons(cam, now);
+    const gd = guide();
+    if (gd && S.pos) { // bright line from you to the nearest point of the route, ringed
+      for (const s of camSegments(cam, [{ x: S.pos.x, y: S.pos.y }, { x: gd.x, y: gd.y }])) if (s.length > 1) strokeLine(cam, s, 0.5, [255, 214, 80], 9 * K);
+      const j = projPoint(cam, gd);
+      if (j) { ctx.strokeStyle = '#ffd650'; ctx.lineWidth = 3 * K; ctx.beginPath(); ctx.arc(j.x, j.y, cam.kind === 'flat' ? 8 * K : clamp((cam.F * 2.5) / Math.max(j.d, 3), 4 * K, 30 * K), 0, 7); ctx.stroke(); }
+    }
     // destination: ring on the ground and a pole you can see from afar
     const dpt = r.pts[r.pts.length - 1], g = projPoint(cam, dpt, 0);
     if (g) {
@@ -598,18 +643,30 @@
     ctx.fillStyle = color; ctx.fillText(s, x, y);
   }
 
+  // Standing off the route (in a park, a car park, GPS drift)? Point the way back instead of leaving you in empty space.
+  function guide() {
+    if (!S.route || !S.snap || !S.pos || !S.prog || S.prog.arrived || S.snap.dist <= 15) return null;
+    const rel = N.angleDiff(S.heading, N.bearing(S.snap.x - S.pos.x, S.snap.y - S.pos.y)), a = Math.abs(rel);
+    const where = a < 25 ? 'ahead' : a > 135 ? 'behind you' : rel < 0 ? 'to your left' : 'to your right';
+    return { angle: rel, dist: S.snap.dist, x: S.snap.x, y: S.snap.y, text: `Head to the route — ${where}` };
+  }
+  // what the banner / turn card show: the next manoeuvre, or the way back to the route
+  function bannerInfo() {
+    const p = S.prog, g = guide();
+    if (g) return { dist: g.dist, angle: g.angle, text: g.text };
+    return { dist: p.toManeuver, angle: N.arrowAngle(p.next || null), text: instrText(p.next || p.cur) };
+  }
   function hudBanner() {
     const p = S.prog; if (!p) return;
-    const step = p.next || p.cur;
-    const d = N.formatDist(p.toManeuver, UNITS);
+    const bi = bannerInfo(), d = N.formatDist(bi.dist, UNITS);
     const pad = 14 * K;
     ctx.fillStyle = 'rgba(0,0,0,.72)'; roundRect(pad / 2, pad / 2, W - pad, 104 * K, 18 * K); ctx.fill();
     ctx.strokeStyle = '#1e3a44'; ctx.lineWidth = 2 * K; ctx.stroke();
-    drawArrow(pad + 40 * K, pad / 2 + 58 * K, 46 * K, N.arrowAngle(p.next || null), '#19e0ff', 11 * K);
+    drawArrow(pad + 40 * K, pad / 2 + 58 * K, 46 * K, bi.angle, guide() ? '#ffd650' : '#19e0ff', 11 * K);
     text(d.v, pad + 108 * K, pad / 2 + 62 * K, 54 * K, '#fff');
     ctx.font = `700 ${54 * K}px system-ui`; const w = ctx.measureText(d.v).width;
     text(d.u, pad + 114 * K + w, pad / 2 + 62 * K, 26 * K, '#8fb0bb');
-    text(instrText(step), pad + 108 * K, pad / 2 + 94 * K, 22 * K, '#f2fbff', 'left', W - pad * 2 - 108 * K);
+    text(bi.text, pad + 108 * K, pad / 2 + 94 * K, 22 * K, '#f2fbff', 'left', W - pad * 2 - 108 * K);
   }
   function hudFooter() {
     if (!S.prog) return;
@@ -624,12 +681,12 @@
 
   function drawTurnCard() {
     const p = S.prog; if (!p) return;
-    const step = p.next || p.cur, d = N.formatDist(p.toManeuver, UNITS);
-    drawArrow(W / 2, H * 0.3, 170 * K, N.arrowAngle(p.next || null), '#19e0ff', 34 * K);
+    const bi = bannerInfo(), d = N.formatDist(bi.dist, UNITS);
+    drawArrow(W / 2, H * 0.3, 170 * K, bi.angle, guide() ? '#ffd650' : '#19e0ff', 34 * K);
     ctx.font = `800 ${104 * K}px system-ui`; const w1 = ctx.measureText(d.v).width; ctx.font = `700 ${40 * K}px system-ui`; const w2 = ctx.measureText(d.u).width;
     const x0 = W / 2 - (w1 + w2 + 12 * K) / 2;
     text(d.v, x0, H * 0.72, 104 * K, '#fff'); text(d.u, x0 + w1 + 12 * K, H * 0.72, 40 * K, '#8fb0bb');
-    text(instrText(step), W / 2, H * 0.81, 30 * K, '#f2fbff', 'center', W - 40 * K);
+    text(bi.text, W / 2, H * 0.81, 30 * K, '#f2fbff', 'center', W - 40 * K);
     const nn = S.route.steps[p.index + 2];
     if (nn && p.next && p.next.type !== 'arrive' && S.route.steps[p.index + 1].distance < 120)
       text('then ' + N.instruction(nn).toLowerCase(), W / 2, H * 0.875, 22 * K, '#8fb0bb', 'center', W - 40 * K);
@@ -691,7 +748,7 @@
   const tb = $('toolbar'), search = $('search');
   let tbTimer;
   function showToolbar() { tb.classList.remove('hide'); clearTimeout(tbTimer); tbTimer = setTimeout(() => tb.classList.add('hide'), 5000); updateButtons(); }
-  function updateButtons() { $('bMute').textContent = S.muted ? 'Voice off' : 'Voice on'; $('bMute').classList.toggle('on', !S.muted); }
+  function updateButtons() { $('bGround').textContent = S.ground ? 'Ground on' : 'Ground off'; $('bGround').classList.toggle('on', S.ground); $('bMute').textContent = S.muted ? 'Voice off' : 'Voice on'; $('bMute').classList.toggle('on', !S.muted); }
   function cycleView() { S.view = VIEWS[(VIEWS.indexOf(S.view) + 1) % VIEWS.length]; toast({ chase: 'Ahead view', turn: 'Turn-by-turn', overhead: 'Overhead — heading up', overview: 'Whole route' }[S.view], 1500); }
   function zoom(dir) { S.zoom = clamp(S.zoom + dir, 0, 3); if (S.view === 'turn' || S.view === 'overview') S.view = 'overhead'; }
   let mode = 'dest'; // 'dest' = where to?  'loc' = where am I?
@@ -749,6 +806,7 @@
   $('bIn').onclick = () => { zoom(-1); showToolbar(); };
   $('bOut').onclick = () => { zoom(1); showToolbar(); };
   $('bSearch').onclick = () => openSearch();
+  $('bGround').onclick = () => { S.ground = !S.ground; showToolbar(); };
   $('bMute').onclick = () => { S.muted = !S.muted; if (S.muted && window.speechSynthesis) speechSynthesis.cancel(); showToolbar(); };
   $('bEnd').onclick = () => { endRoute(); showToolbar(); };
 
@@ -786,5 +844,5 @@
     if (!isNaN(pl) && !isNaN(pn)) setManualLocation(pl, pn); // e.g. ?lat=37.7749&lon=-122.4194
   }
   requestAnimationFrame(loop);
-  window.__walk = { S, Nav: N }; // handy for debugging in the console
+  window.__walk = { S, Nav: N, onFix }; // handy for debugging in the console
 })();

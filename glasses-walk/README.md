@@ -28,6 +28,10 @@ cd glasses-walk && python3 -m http.server 8000
 ```
 Real mode (no `?demo`) needs location permission and an HTTPS origin.
 
+## Ground and "get back to the route"
+- Instead of a black void, the scene has a tinted **ground** with OSM **parks (green), water (blue), car parks (gray)**, so roads read clearly against everything else. Toolbar → **Ground** turns it off (or `?ground=0`) if the tint is too bright on your glasses; black is see-through on additive displays.
+- If you're more than 15 m from the route (in a park, a car park, GPS drift), the banner switches to **"Head to the route — to your left"** with a gold arrow and distance, and a gold line + ring marks the nearest point to rejoin.
+
 ## No GPS? Tell it where you are
 If location is denied, times out or isn't available, the start screen shows why. Tap it (or press `S`, then **Set my location**) and type an address, a place, or raw coordinates like `37.7749, -122.4194`. You can also start from a link: `…/glasses-walk/?lat=37.7749&lon=-122.4194`. If you pick a destination first, it remembers it and starts the route as soon as your location is known. A real GPS fix replaces a typed location automatically. A typed location doesn't move, so this gets you a route and the street scene but not live walking.
 
