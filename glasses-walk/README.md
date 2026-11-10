@@ -7,7 +7,7 @@ Static HTML/JS, no build step, no API keys — it is designed to ship as a **Met
 
 | View | What you see |
 |------|--------------|
-| **Ahead** (default) | Walk-through street view: real-width roads with kerbs, sidewalks and centre lines, extruded buildings either side, flowing chevrons on the route, fog in the distance. Zoom raises the camera: eye level → raised → high → drone |
+| **Ahead** (default) | Walk-through street view: real-width roads with kerbs, sidewalks and centre lines, extruded buildings either side, flowing chevrons on the route, fog in the distance. The destination building is gold with a name tag (visible through the fog) and the last instruction reads "Arrive at <name>". Zoom raises the camera: eye level → raised → high → drone |
 | **Turn-by-turn** | Big first-person card: arrow, distance to the next turn, street, "then…" |
 | **Overhead** | Top-down, heading-up map with building footprints, street names and 4 zoom levels (≈120 m → 1 km) |
 | **Whole route** | North-up overview of start → destination |

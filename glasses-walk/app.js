@@ -19,7 +19,7 @@
     heading: 0, headingInit: false,
     view: params.get('view') && VIEWS.includes(params.get('view')) ? params.get('view') : 'chase',
     zoom: params.has('zoom') ? clamp(+params.get('zoom') || 0, 0, 3) : 1,
-    ways: [], buildings: [], waysCenter: null, waysBusy: false,
+    ways: [], buildings: [], destExtra: [], waysCenter: null, waysBusy: false,
     route: null, dest: null, snapSeg: 0, snap: null, prog: null, offCount: 0, spoken: -1,
     muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
   };
@@ -43,7 +43,8 @@
   }
   function reproject() {
     for (const w of S.ways) projectWay(w);
-    for (const b of S.buildings) projectWay(b);
+    for (const b of S.buildings.concat(S.destExtra)) projectWay(b);
+    findDestBuilding();
     if (S.route) { const raw = S.route.raw; S.route = N.buildRoute(raw, S.proj); S.route.raw = raw; S.snapSeg = 0; }
     if (S.pos) Object.assign(S.pos, S.proj.toXY(S.pos.lat, S.pos.lon));
   }
@@ -123,7 +124,7 @@
           const w = { ll, name: e.tags.name || '', ...roadStyle(e.tags.highway) }; projectWay(w); ways.push(w);
         }
       }
-      S.ways = ways; S.buildings = blds.slice(0, 1800); S.waysCenter = c;
+      S.ways = ways; S.buildings = blds.slice(0, 1800); S.waysCenter = c; findDestBuilding();
     } catch (err) { toast('Map data unavailable — retrying'); S.waysCenter = null; setTimeout(() => (S.waysBusy = false), 8000); return; }
     S.waysBusy = false;
   }
@@ -150,10 +151,53 @@
   function setRoute(osrm, dest) {
     S.route = N.buildRoute(osrm, S.proj);
     S.route.raw = osrm;
-    S.dest = dest; S.snapSeg = 0; S.offCount = 0; S.spoken = -1; S.snap = null; S.prog = null;
+    S.dest = dest; S.destExtra = []; S.snapSeg = 0; S.offCount = 0; S.spoken = -1; S.snap = null; S.prog = null;
     updateProgress();
+    findDestBuilding(); fetchDestBuilding(dest);
   }
-  function endRoute() { S.route = null; S.dest = null; S.prog = null; S.snap = null; if (S.sim) S.sim = null; toast('Route ended'); }
+  // ---- destination building: the footprint containing (or nearest to) the address
+  const allBuildings = () => (S.destExtra.length ? S.buildings.concat(S.destExtra) : S.buildings);
+  const destName = () => (S.dest && S.dest.name ? S.dest.name.split(',')[0].trim() : '') || 'Destination';
+  function ringDist(ring, p) { // 0 if inside, else distance to the outline
+    let inside = false, best = Infinity;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i], b = ring[j];
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+      const vx = b.x - a.x, vy = b.y - a.y, l2 = vx * vx + vy * vy || 1;
+      const t = clamp(((p.x - a.x) * vx + (p.y - a.y) * vy) / l2, 0, 1);
+      best = Math.min(best, Math.hypot(p.x - (a.x + vx * t), p.y - (a.y + vy * t)));
+    }
+    return inside ? 0 : best;
+  }
+  function findDestBuilding() {
+    const list = allBuildings();
+    for (const b of list) b.isDest = false;
+    S.destB = null;
+    if (!S.dest || !S.proj) return;
+    const p = S.proj.toXY(S.dest.lat, S.dest.lon);
+    let best = null, bd = 45; // must be within 45 m of the address point
+    for (const b of list) {
+      if (Math.hypot(b.c.x - p.x, b.c.y - p.y) - b.r > bd) continue;
+      const d = ringDist(b.xy, p);
+      if (d < bd) { bd = d; best = b; }
+    }
+    if (best) { best.isDest = true; S.destB = best; }
+  }
+  async function fetchDestBuilding(dest) { // the area around the address may be outside the normal 300 m window
+    if (DEMO) return;
+    try {
+      const q = `[out:json][timeout:20];way(around:60,${dest.lat.toFixed(5)},${dest.lon.toFixed(5)})[building];out geom;`;
+      const j = await getJSON('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) }, 25000);
+      if (S.dest !== dest) return; // route changed meanwhile
+      S.destExtra = j.elements.filter((e) => e.geometry && e.geometry.length > 3).map((e) => {
+        const h = parseFloat(e.tags.height) || parseFloat(e.tags['building:levels']) * 3.2 || 9;
+        const b = { ll: e.geometry.map((g) => ({ lat: g.lat, lon: g.lon })), h: clamp(h, 4, 80) }; projectWay(b); return b;
+      });
+      findDestBuilding();
+    } catch (e) { /* the pole and ring still mark the spot */ }
+  }
+  const instrText = (step) => (step && step.type === 'arrive' && S.dest ? `Arrive at ${destName()}` : N.instruction(step));
+  function endRoute() { S.destExtra = []; S.destB = null; S.route = null; S.dest = null; S.prog = null; S.snap = null; if (S.sim) S.sim = null; toast('Route ended'); }
 
   function updateProgress() {
     if (!S.route || !S.pos) return;
@@ -169,7 +213,7 @@
     if (p.next && p.toManeuver < 45 && S.spoken !== p.index) {
       S.spoken = p.index;
       const d = N.formatDist(p.toManeuver, UNITS);
-      speak(`In ${d.v} ${({ ft: 'feet', mi: 'miles', m: 'metres', km: 'kilometres' })[d.u]}, ${N.instruction(p.next)}`);
+      speak(`In ${d.v} ${({ ft: 'feet', mi: 'miles', m: 'metres', km: 'kilometres' })[d.u]}, ${instrText(p.next)}`);
     }
   }
   function speak(t) {
@@ -195,7 +239,7 @@
     // city blocks: a few buildings per block, set back from the kerb
     let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     for (let bi = -6; bi < 6; bi++) for (let bj = -6; bj < 6; bj++) {
-      if (rnd() < 0.07) continue; // the odd empty lot / plaza
+      if (rnd() < 0.07 && !(bi === 5 && bj === 4)) continue; // the odd empty lot / plaza
       const x0 = bi * 90 + 8, x1 = bi * 90 + 82, y0 = bj * 90 + 8, y1 = bj * 90 + 82;
       const nx = 1 + Math.floor(rnd() * 3), ny = 1 + Math.floor(rnd() * 2);
       for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) {
@@ -216,7 +260,8 @@
       legs: [{ steps: [mk('depart', '', 'Mission St', 270, 0), mk('turn', 'right', 'Howard St', 360, 1), mk('turn', 'left', 'Folsom St', 180, 2), mk('turn', 'right', 'Harrison St', 180, 3), mk('arrive', '', '', 0, 4)] }],
     };
     onFix(o.lat, o.lon, 5, 0, 0);
-    setRoute(osrm, { name: 'Demo destination', lat: ll[4].lat, lon: ll[4].lon });
+    const dd = S.proj.toLL(500, 415);
+    setRoute(osrm, { name: 'Blue Door Café, Harrison St', lat: dd.lat, lon: dd.lon });
     startSim();
   }
   function startSim() {
@@ -311,6 +356,7 @@
   const C = {
     sidewalk: [58, 74, 82], curb: [150, 176, 186], asphalt: [30, 40, 46], centre: [190, 168, 80],
     pathEdge: [100, 160, 135], pathFill: [60, 100, 88],
+    destWall: [150, 108, 8], destEdge: [255, 214, 80], destRoof: [215, 160, 20],
     wall: [20, 34, 42], wallEdge: [92, 124, 138], roof: [34, 54, 64], bFill: [16, 30, 38], bEdge: [48, 76, 88],
   };
   function drawWorld(cam) {
@@ -332,6 +378,23 @@
     if (!flat || cam.span <= 300) pass(roads.filter((w) => w.w >= 7), () => 0.22, C.centre);
     if (flat) { if (cam.span <= 500) drawStreetNames(cam, roads); }
     else drawBuildings(cam);
+    drawDestLabel(cam);
+  }
+  // A name tag floating over the destination building (pinned to the screen edge when it is off to the side).
+  function drawDestLabel(cam) {
+    const b = S.destB; if (!b) return;
+    const g = projPoint(cam, b.c, cam.kind === 'persp' ? b.h + 5 : 0); if (!g) return;
+    const name = destName(), size = 20 * K;
+    ctx.font = `700 ${size}px system-ui`;
+    const tw = Math.min(ctx.measureText(name).width, W * 0.7) + 28 * K, th = 34 * K;
+    const x = clamp(g.x, tw / 2 + 6 * K, W - tw / 2 - 6 * K), y = clamp(g.y, 140 * K, H - 70 * K);
+    ctx.fillStyle = '#ffd650'; roundRect(x - tw / 2, y - th / 2, tw, th, th / 2); ctx.fill();
+    if (cam.kind === 'persp' && g.y > 140 * K && g.y < H - 70 * K && Math.abs(g.x - x) < 2) { // little pointer down to the roof
+      ctx.beginPath(); ctx.moveTo(x - 7 * K, y + th / 2 - 1); ctx.lineTo(x + 7 * K, y + th / 2 - 1); ctx.lineTo(x, y + th / 2 + 10 * K); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = '#1a1300'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    let t = name; while (ctx.measureText(t).width > tw - 20 * K && t.length > 3) t = t.slice(0, -2); if (t !== name) t = t.trimEnd() + '…';
+    ctx.fillText(t, x, y + 1);
   }
   function drawStreetNames(cam, roads) {
     const seen = new Set(); let n = 0;
@@ -365,40 +428,45 @@
   function drawBuildings(cam) {
     if (cam.kind === 'flat') {
       const range = (Math.max(W, H) / cam.scale) * 0.8;
-      ctx.lineWidth = Math.max(1, 1.2 * K); ctx.fillStyle = rgbs(C.bFill, 1); ctx.strokeStyle = rgbs(C.bEdge, 1);
-      for (const b of S.buildings) {
-        if (Math.hypot(b.c.x - cam.cx, b.c.y - cam.cy) - b.r > range) continue;
-        const s = camSegments(cam, b.xy)[0]; ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y); for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      const list = allBuildings();
+      for (const dest of [false, true]) { // destination last, on top
+        ctx.lineWidth = Math.max(1, (dest ? 2.5 : 1.2) * K);
+        ctx.fillStyle = rgbs(dest ? C.destWall : C.bFill, 1); ctx.strokeStyle = rgbs(dest ? C.destEdge : C.bEdge, 1);
+        for (const b of list) {
+          if (!!b.isDest !== dest || Math.hypot(b.c.x - cam.cx, b.c.y - cam.cy) - b.r > range * (dest ? 3 : 1)) continue;
+          const s = camSegments(cam, b.xy)[0]; ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y); for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
       }
       return;
     }
     // Perspective: extrude each footprint into walls, then paint far-to-near.
     const items = [];
-    for (const b of S.buildings) {
-      if (Math.hypot(b.c.x - cam.cx, b.c.y - cam.cy) - b.r > cam.far) continue;
+    for (const b of allBuildings()) {
+      if (Math.hypot(b.c.x - cam.cx, b.c.y - cam.cy) - b.r > cam.far * (b.isDest ? 1.8 : 1)) continue;
       const f = b.xy.map((p) => { const q = N.toForward(p.x - cam.cx, p.y - cam.cy, cam.heading); return { x: q.x, y: q.y + cam.back }; });
       let mind = Infinity;
       for (let i = 0; i < f.length - 1; i++) {
         const a = f[i], c = f[i + 1], d = (a.y + c.y) / 2; mind = Math.min(mind, d);
         const len = Math.hypot(c.x - a.x, c.y - a.y) || 1;
-        items.push({ a, c, h: b.h, d, shade: 0.72 + 0.28 * (Math.abs(c.x - a.x) / len) });
+        items.push({ a, c, h: b.h, d, dest: b.isDest, shade: 0.72 + 0.28 * (Math.abs(c.x - a.x) / len) });
       }
-      if (cam.height > b.h) items.push({ roof: f, h: b.h, d: mind - 0.01 });
+      if (cam.height > b.h) items.push({ roof: f, h: b.h, d: mind - 0.01, dest: b.isDest });
     }
     items.sort((p, q) => q.d - p.d);
     ctx.lineWidth = Math.max(1, 1.3 * K);
     for (const it of items) {
       if (it.roof) {
         const poly = clipPolyNear(it.roof, 1.5); if (poly.length < 3) continue;
-        const sp = poly.map((p) => projCam(cam, p, it.h)), fg = fog(cam, it.d);
-        ctx.fillStyle = rgbs(C.roof, fg); ctx.strokeStyle = rgbs(C.wallEdge, fg);
+        const sp = poly.map((p) => projCam(cam, p, it.h)), fg = it.dest ? Math.max(0.6, fog(cam, it.d)) : fog(cam, it.d);
+        ctx.fillStyle = rgbs(it.dest ? C.destRoof : C.roof, fg); ctx.strokeStyle = rgbs(it.dest ? C.destEdge : C.wallEdge, fg);
         ctx.beginPath(); ctx.moveTo(sp[0].x, sp[0].y); for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i].x, sp[i].y); ctx.closePath(); ctx.fill(); ctx.stroke();
         continue;
       }
       const clip = N.clipNear(it.a, it.c, 1.5); if (!clip) continue;
       const b0 = projCam(cam, clip[0], 0), b1 = projCam(cam, clip[1], 0), t0 = projCam(cam, clip[0], it.h), t1 = projCam(cam, clip[1], it.h);
-      const fg = fog(cam, it.d);
-      ctx.fillStyle = rgbs(C.wall, fg * it.shade); ctx.strokeStyle = rgbs(C.wallEdge, fg);
+      const fg = it.dest ? Math.max(0.6, fog(cam, it.d)) : fog(cam, it.d); // the destination stays visible through the fog
+      ctx.fillStyle = rgbs(it.dest ? C.destWall : C.wall, fg * it.shade); ctx.strokeStyle = rgbs(it.dest ? C.destEdge : C.wallEdge, fg);
+      ctx.lineWidth = Math.max(1, (it.dest ? 2.4 : 1.3) * K);
       ctx.beginPath(); ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t0.x, t0.y); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   }
@@ -502,7 +570,7 @@
     text(d.v, pad + 108 * K, pad / 2 + 62 * K, 54 * K, '#fff');
     ctx.font = `700 ${54 * K}px system-ui`; const w = ctx.measureText(d.v).width;
     text(d.u, pad + 114 * K + w, pad / 2 + 62 * K, 26 * K, '#8fb0bb');
-    text(N.instruction(step), pad + 108 * K, pad / 2 + 94 * K, 22 * K, '#f2fbff', 'left', W - pad * 2 - 108 * K);
+    text(instrText(step), pad + 108 * K, pad / 2 + 94 * K, 22 * K, '#f2fbff', 'left', W - pad * 2 - 108 * K);
   }
   function hudFooter() {
     if (!S.prog) return;
@@ -522,7 +590,7 @@
     ctx.font = `800 ${104 * K}px system-ui`; const w1 = ctx.measureText(d.v).width; ctx.font = `700 ${40 * K}px system-ui`; const w2 = ctx.measureText(d.u).width;
     const x0 = W / 2 - (w1 + w2 + 12 * K) / 2;
     text(d.v, x0, H * 0.72, 104 * K, '#fff'); text(d.u, x0 + w1 + 12 * K, H * 0.72, 40 * K, '#8fb0bb');
-    text(N.instruction(step), W / 2, H * 0.81, 30 * K, '#f2fbff', 'center', W - 40 * K);
+    text(instrText(step), W / 2, H * 0.81, 30 * K, '#f2fbff', 'center', W - 40 * K);
     const nn = S.route.steps[p.index + 2];
     if (nn && p.next && p.next.type !== 'arrive' && S.route.steps[p.index + 1].distance < 120)
       text('then ' + N.instruction(nn).toLowerCase(), W / 2, H * 0.875, 22 * K, '#8fb0bb', 'center', W - 40 * K);
