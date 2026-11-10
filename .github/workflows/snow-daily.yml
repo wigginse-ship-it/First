@@ -5,7 +5,6 @@ on:
     - cron: "17 13,19 * * *"   # twice daily (UTC) to catch the morning post
   push:
     branches: [claude/happy-fermat-kpuzeu]
-    paths: ["snow-forecast/**", ".github/workflows/snow-daily.yml"]
   workflow_dispatch:
 
 permissions:
@@ -32,6 +31,6 @@ jobs:
         run: node fetch.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
-        with: { path: snow-forecast }
+        with: { path: . }   # whole repo: each folder is served at /<repo>/<folder>/
       - id: deployment
         uses: actions/deploy-pages@v4

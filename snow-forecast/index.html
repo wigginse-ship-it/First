@@ -6,8 +6,14 @@
 <meta name="theme-color" content="#000000">
 <title>Tomer Snow</title>
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon-precomposed" href="icons/apple-touch-icon.png">
+<meta property="og:title" content="Tomer Snow">
+<meta property="og:image" content="https://wigginse-ship-it.github.io/First/snow-forecast/icons/icon-512.png">
+<meta name="application-name" content="Tomer Snow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Tomer Snow">
@@ -16,7 +22,7 @@
   :root{--fg:#f2f2f2;--dim:#8a8a8a;--accent:#7CD4FF;--hot:#ffb86b;--line:#2a2a2a;--btn:#161616}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;background:#000;color:var(--fg);font:24px/1.3 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
-  .page{display:none;position:absolute;inset:0 0 70px 0;padding:12px 14px;flex-direction:column;gap:10px}
+  .page{display:none;position:absolute;inset:0 0 70px 0;padding:12px 14px;flex-direction:column;gap:8px}
   .page.on{display:flex}
   h1{font-size:1em;margin:0;color:var(--accent);font-weight:600}
   .dim{color:var(--dim);font-size:.7em}
@@ -29,11 +35,18 @@
   .fill.top{background:var(--hot)}
   .scroll{flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain}
   ul{margin:0;padding-left:1.1em;font-size:.8em}li{margin:0 0 .6em}
+  .ev{font-size:.78em;margin:0 0 .75em;line-height:1.3}
+  .ev b{color:var(--accent);display:block;font-weight:600}
+  .ev em{font-style:normal;color:var(--hot)}
+  .ev small{display:block;color:var(--dim);font-size:.85em}
+  .note{font-size:.72em;color:var(--dim);margin:0 0 .7em}
+  #star{flex:1;min-height:0;width:100%}
+  #mapimg{flex:1;min-height:0;width:100%;object-fit:contain;background:#050505;border-radius:10px}
   nav{position:absolute;left:0;right:0;bottom:0;height:70px;padding:8px 14px;display:flex;gap:10px;align-items:center}
   button{font:inherit;color:var(--fg);background:var(--btn);border:2px solid var(--line);border-radius:14px;min-height:52px;padding:6px 16px;cursor:pointer}
   button:focus,button:focus-visible,button:active{outline:3px solid var(--accent);outline-offset:1px}
-  nav button{flex:1}.dots{display:flex;gap:6px;flex:0}
-  .dot{width:10px;height:10px;border-radius:50%;background:var(--line)}.dot.on{background:var(--accent)}
+  nav button{flex:1}.dots{display:flex;gap:5px;flex:0}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--line)}.dot.on{background:var(--accent)}
   textarea{width:100%;flex:1;min-height:0;font:inherit;font-size:.7em;color:var(--fg);background:#0c0c0c;border:2px solid var(--line);border-radius:12px;padding:8px}
   .acts{display:flex;gap:8px}.acts button{flex:1;font-size:.75em}
 </style>
@@ -41,84 +54,228 @@
 <body>
 <section class="page on" id="p0"><h1>❄ Tomer Snow</h1><div class="dim" id="when">Loading…</div>
   <div class="dim">Biggest total</div><div class="big" id="topn">–</div><div class="where" id="topw"></div>
-  <div class="dim" id="meta"></div></section>
+  <div class="dim" id="topd"></div><div class="dim" id="meta"></div></section>
 <section class="page" id="p1"><h1>By region (inches)</h1><div class="scroll" id="bars"></div></section>
-<section class="page" id="p2"><h1>Key points</h1><div class="scroll"><ul id="take"></ul></div></section>
-<section class="page" id="p3"><h1>Source</h1>
+<section class="page" id="p2"><h1>Day by day</h1><div class="scroll" id="days"></div></section>
+<section class="page" id="p3"><h1>California</h1><div class="dim" id="cahead"></div><div class="scroll" id="ca"></div></section>
+<section class="page" id="p4"><h1>The West</h1><div class="dim" id="westhead"></div><div class="scroll" id="west"></div></section>
+<section class="page" id="p5"><h1>Star chart</h1><svg id="star" viewBox="-340 -255 680 510" role="img" aria-label="Radar chart of snowfall by region"></svg></section>
+<section class="page" id="p6"><h1>Maps <span class="dim" id="mapn"></span></h1>
+  <img id="mapimg" alt="Forecast map" hidden><div class="dim" id="mapcap">No maps yet. Tap a map to see the next one.</div></section>
+<section class="page" id="p7"><h1>Key points</h1><div class="scroll"><ul id="take"></ul></div></section>
+<section class="page" id="p8"><h1>Source</h1>
   <textarea id="txt" placeholder="Paste forecast text…"></textarea>
   <div class="acts"><button id="go">Summarize</button><button id="fetch">Fetch</button><button id="sample">Sample</button></div>
   <div class="dim" id="status"></div></section>
 <nav><button id="prev" aria-label="Previous">◀</button><div class="dots" id="dots"></div><button id="next" aria-label="Next">▶</button></nav>
 <script>
-const REGIONS=["Sierra","Tahoe","Cascades","Pacific Northwest","Oregon","Washington","Wasatch","Utah","Colorado","Front Range","Tetons","Jackson Hole","Wyoming","Montana","Big Sky","Idaho","Sun Valley","Northern Rockies","Southwest","New Mexico","Northeast","Vermont","New Hampshire","Maine","Adirondacks","New York","Alaska","Canada","British Columbia","Banff","Whistler","Alta","Snowbird","Park City","Vail","Aspen","Breckenridge","Keystone","Loveland","Arapahoe Basin","Mammoth","Palisades","Mt. Hood","Stevens Pass","Crystal Mountain","Stowe","Killington","Sugarbush","Jay Peak","Telluride","Steamboat","Targhee","Bridger Bowl","Whitefish","Taos"];
-const NUM={a:1,one:1,two:2,three:3,four:4,five:5,six:6,eight:8,ten:10,twelve:12};
-const N="(\\d+(?:\\.\\d+)?|a|one|two|three|four|five|six|eight|ten|twelve)";
-const RANGE=new RegExp(N+"\\s*(?:-|–|to)\\s*"+N+"\\+?\\s*(inches|inch|in\\b|\"|feet|foot|ft)","gi");
-const SINGLE=new RegExp("(?:up to|over|around|about|nearly|more than)?\\s*"+N+"(\\+)?\\s*(inches|inch|\"|feet|foot|ft)","gi");
+/* ---------- vocabulary ---------- */
+const CA=["California","Northern California","Southern California","SoCal","Sierra Nevada","Central Sierra","Eastern Sierra","Sierra","Tahoe","Lake Tahoe","Donner","Palisades","Heavenly","Kirkwood","Northstar","Sugar Bowl","Mammoth","Mount Shasta","Mt. Shasta","Shasta","Big Bear","Mt. Baldy","Yosemite","Bear Valley","Dodge Ridge"];
+const WEST_ONLY=["Cascades","Pacific Northwest","Oregon","Washington","Wasatch","Utah","Colorado","Front Range","Tetons","Jackson Hole","Wyoming","Montana","Big Sky","Idaho","Sun Valley","Northern Rockies","Rockies","Southwest","Arizona","New Mexico","Nevada","Alta","Snowbird","Park City","Vail","Aspen","Breckenridge","Keystone","Loveland","Arapahoe Basin","Mt. Hood","Mount Hood","Stevens Pass","Crystal Mountain","Telluride","Steamboat","Targhee","Bridger Bowl","Whitefish","Taos","Brighton","Solitude","Snowbasin","Powder Mountain","Beaver Mountain"];
+const OTHER=["Northeast","Vermont","New Hampshire","Maine","Adirondacks","New York","Alaska","Canada","British Columbia","Banff","Whistler","Stowe","Killington","Sugarbush","Jay Peak","Midwest","Great Lakes","Michigan"];
+const REGIONS=[...CA,...WEST_ONLY,...OTHER,"West","Western U.S."];
+const reEsc=r=>r.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+const regRe=Object.fromEntries(REGIONS.map(r=>[r,new RegExp("(^|[^A-Za-z])"+reEsc(r)+"(?![A-Za-z])","i")]));
+const isCA=r=>CA.includes(r);
+const isWest=r=>CA.includes(r)||WEST_ONLY.includes(r)||r==="West"||r==="Western U.S.";
+const regionsIn=s=>{const hit=REGIONS.filter(r=>regRe[r].test(s));
+  // drop names swallowed by a longer match ("Sierra" inside "Sierra Nevada")
+  return hit.filter(a=>!hit.some(b=>b!==a&&b.length>a.length&&b.toLowerCase().includes(a.toLowerCase())));};
+
+/* ---------- snowfall amounts ---------- */
+const NUM={a:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,twelve:12};
+const N="(\\d+(?:\\.\\d+)?|a|one|two|three|four|five|six|seven|eight|nine|ten|twelve)";
+const RANGE=new RegExp(N+"\\s*(?:-|–|—|to)\\s*"+N+"\\+?\\s*(inches|inch|in\\b|\"|feet|foot|ft)","gi");
+const SINGLE=new RegExp("(up to|over|around|about|nearly|more than)?\\s*"+N+"(\\+)?\\s*(inches|inch|\"|feet|foot|ft)","gi");
 const val=s=>NUM[s.toLowerCase()]??parseFloat(s);
 const mult=u=>/f/i.test(u)?12:1;
+function amounts(s){
+  const a=[];
+  for(const m of s.matchAll(RANGE)){const k=mult(m[3]);a.push([val(m[1])*k,val(m[2])*k]);}
+  const rest=s.replace(RANGE," ");
+  for(const m of rest.matchAll(SINGLE)){const v=val(m[2])*mult(m[4]);
+    a.push([/up to/i.test(m[1]||"")?0:v,v]);}
+  if(!a.length)return null;
+  const lo=Math.min(...a.map(x=>x[0])),hi=Math.max(...a.map(x=>x[1]));
+  return hi>0&&hi<=200?{lo,hi}:null;
+}
 
-function extract(text){
-  const sents=text.replace(/\s+/g," ").split(/(?<=[.!?])\s+/);
-  const found=[];
-  for(const s of sents){
-    const regs=REGIONS.filter(r=>new RegExp("\\b"+r.replace(/\./g,"\\.")+"\\b","i").test(s));
-    const amts=[];let masked=s;
-    for(const m of s.matchAll(RANGE)){const k=mult(m[3]);amts.push([val(m[1])*k,val(m[2])*k]);}
-    masked=s.replace(RANGE," ");
-    for(const m of masked.matchAll(SINGLE)){const v=val(m[1])*mult(m[3]);
-      amts.push([m[2]||/up to/i.test(m[0])?(/up to/i.test(m[0])?0:v):v,v]);}
-    if(!amts.length)continue;
-    const lo=Math.min(...amts.map(a=>a[0])),hi=Math.max(...amts.map(a=>a[1]));
-    if(hi>200||hi<=0)continue;
-    found.push({s,regs,lo,hi});
+/* ---------- dates ---------- */
+const DAYS=["sun","mon","tue","wed","thu","fri","sat"],DN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTHS=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const day0=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate());
+const fmt=d=>`${DN[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}`;
+const nextDow=(base,i)=>addD(base,(i-base.getDay()+7)%7);
+const WD="(sun(?:day)?|mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday)?|fri(?:day)?|sat(?:urday)?)";
+function whenOf(s,base){
+  const t=s.toLowerCase();let start=null,end=null,m;
+  const setR=(a,b)=>{start=a;end=b||a};
+  // numeric dates: 11/16, 11/16-11/23
+  if((m=t.match(/\b(\d{1,2})\/(\d{1,2})(?:\s*(?:-|–|to|through)\s*(?:(\d{1,2})\/)?(\d{1,2}))?\b/))){
+    const y=base.getFullYear(),mo=+m[1]-1,a=new Date(y,mo,+m[2]);
+    const b=m[4]?new Date(y,m[3]?+m[3]-1:mo,+m[4]):a;if(mo<12)setR(a,b);}
+  // "Nov. 14", "November 14-16"
+  else if((m=t.match(new RegExp("\\b("+MONTHS.join("|")+")[a-z]*\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*(?:-|–|to|through)\\s*(\\d{1,2}))?","i")))){
+    const mo=MONTHS.indexOf(m[1].slice(0,3).toLowerCase()),y=base.getFullYear(),a=new Date(y,mo,+m[2]);
+    setR(a,m[3]?new Date(y,mo,+m[3]):a);}
+  // weekdays: "Saturday", "Friday through Sunday", "Saturday night into Monday"
+  else{
+    const ds=[...t.matchAll(new RegExp("\\b"+WD+"\\b","g"))].map(x=>DAYS.indexOf(x[1].slice(0,3)));
+    if(ds.length){let prev=null;const out=[];
+      for(const i of ds){let d=nextDow(base,i);if(prev&&d<prev)d=addD(d,7);out.push(d);prev=d;}
+      setR(out[0],out[out.length-1]);}
+    else if(/\btonight\b|\btoday\b|\bthis (morning|afternoon|evening)\b/.test(t))setR(base);
+    else if(/\btomorrow\b/.test(t))setR(addD(base,1));
+    else if(/\bthis weekend\b|\bweekend\b/.test(t))setR(nextDow(base,6),addD(nextDow(base,6),1));
+    else if(/\bearly next week\b/.test(t))setR(addD(nextDow(base,1),base.getDay()===1?7:0),addD(nextDow(base,1),(base.getDay()===1?7:0)+1));
+    else if(/\bmid(?:dle)? of next week\b|\bmidweek\b/.test(t))setR(addD(nextDow(base,3),base.getDay()===3?7:0));
+    else if(/\blate next week\b/.test(t))setR(addD(nextDow(base,4),base.getDay()===4?7:0),addD(nextDow(base,6),base.getDay()===6?7:0));
+    else if(/\bnext week\b/.test(t)){const mo=addD(nextDow(base,1),base.getDay()===1?7:0);setR(mo,addD(mo,6));}
+    else if(/\bhalloween\b/.test(t))setR(new Date(base.getFullYear(),9,31));
+    else if(/\bthanksgiving\b/.test(t)){const n=new Date(base.getFullYear(),10,1);const th=addD(n,(4-n.getDay()+7)%7+21);setR(th);}
   }
-  return found;
+  if(!start)return null;
+  if(end<start)end=start;
+  return {start,end,label:+start===+end?fmt(start):fmt(start)+" – "+fmt(end)};
 }
-function summarize(text){
-  const f=extract(text),by=new Map();
-  for(const e of f)for(const r of (e.regs.length?e.regs:[])){
-    const c=by.get(r)||{lo:e.lo,hi:e.hi};c.lo=Math.min(c.lo,e.lo);c.hi=Math.max(c.hi,e.hi);by.set(r,c);}
-  const rows=[...by].map(([n,v])=>({n,...v})).sort((a,b)=>b.hi-a.hi).slice(0,12);
-  const take=[...f].sort((a,b)=>b.hi-a.hi).slice(0,5).map(e=>e.s);
-  return {rows,take,f,words:text.split(/\s+/).length};
+function periodOf(title,base){
+  const m=(title||"").match(/(\d{1,2})\/(\d{1,2})\s*(?:-|–|to)\s*(?:(\d{1,2})\/)?(\d{1,2})/);
+  if(!m)return null;const y=base.getFullYear(),a=new Date(y,+m[1]-1,+m[2]),b=new Date(y,m[3]?+m[3]-1:+m[1]-1,+m[4]);
+  return {start:a,end:b,label:fmt(a)+" – "+fmt(b)};
 }
 
+/* ---------- parse the post into statements ---------- */
+const isHeading=l=>l.length<=70&&!/[.!?]$/.test(l.trim())&&!/\d\s*(inches|inch|"|feet|ft)/i.test(l)||/^[A-Z][A-Za-z .&/'-]{2,40}:\s*$/.test(l.trim());
+function parse(text,base){
+  const segs=[];let heading="";
+  for(const line of text.split(/\n+/)){
+    const l=line.trim();if(!l)continue;
+    if(isHeading(l)){heading=l.replace(/:\s*$/,"");continue}
+    for(const s of l.split(/(?<=[.!?])\s+(?=[A-Z"“])/)){
+      if(s.length<12)continue;
+      const regs=regionsIn(s),viaHead=regs.length?[]:regionsIn(heading);
+      const a=amounts(s);
+      segs.push({s,heading,regs:regs.length?regs:viaHead,lo:a?.lo,hi:a?.hi,has:!!a,when:whenOf(s,base)||whenOf(heading,base)});
+    }
+  }
+  return segs;
+}
+function summarize(text,title,base){
+  const segs=parse(text,base),f=segs.filter(e=>e.has),by=new Map();
+  for(const e of f)for(const r of e.regs){
+    const c=by.get(r)||{lo:e.lo,hi:e.hi,when:e.when};
+    if(e.hi>c.hi)c.when=e.when||c.when;
+    c.lo=Math.min(c.lo,e.lo);c.hi=Math.max(c.hi,e.hi);by.set(r,c);}
+  const rows=[...by].map(([n,v])=>({n,...v})).sort((a,b)=>b.hi-a.hi);
+  const take=[...f].sort((a,b)=>b.hi-a.hi).slice(0,5).map(e=>e.s);
+  return {segs,f,rows,take,period:periodOf(title,base)};
+}
+
+/* ---------- views ---------- */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const $=id=>document.getElementById(id);
 const status=m=>$("status").textContent=m;
-function render(text,label){
-  const {rows,take,f}=summarize(text);
+const rng=(lo,hi)=>lo===hi?hi+'"':lo===0?"≤"+hi+'"':lo+"-"+hi+'"';
+const amt=e=>e.has?rng(e.lo,e.hi):"";
+const short=(s,n=150)=>s.length>n?s.slice(0,n-1).replace(/\s+\S*$/,"")+"…":s;
+
+function eventList(list,{limit=12}={}){
+  const dated=[...list].sort((a,b)=>(a.when?+a.when.start:9e15)-(b.when?+b.when.start:9e15));
+  return dated.slice(0,limit).map(e=>`<div class="ev"><b>${esc(e.when?e.when.label:"Date not stated")}</b>
+    ${e.has?`<em>${amt(e)}</em> `:""}${esc(short(e.s))}</div>`).join("");
+}
+function regionPage(segs,pick,headEl,listEl,emptyMsg){
+  const mine=segs.filter(e=>(e.regs.some(pick)||/^(west|western)\b/i.test(e.heading)&&pick("West"))&&e.s);
+  const amts=mine.filter(e=>e.has);
+  if(!mine.length){headEl.textContent=emptyMsg;listEl.innerHTML="";return}
+  const hi=amts.length?Math.max(...amts.map(e=>e.hi)):null;
+  const best=amts.sort((a,b)=>b.hi-a.hi)[0];
+  headEl.textContent=hi?`Up to ${hi}" · ${best.when?best.when.label:"dates vary"}`:"No totals given";
+  // amounts first (by date), then context sentences
+  const ctx=mine.filter(e=>!e.has).slice(0,3);
+  listEl.innerHTML=eventList(mine.filter(e=>e.has),{limit:10})+
+    (ctx.length?`<p class="note">Context</p>`+ctx.map(e=>`<div class="ev"><small>${esc(short(e.s,160))}</small></div>`).join(""):"");
+}
+function star(rows){
+  const svg=$("star"),R=165,pts=rows.slice(0,8);
+  if(pts.length<3){svg.innerHTML=`<text x="0" y="0" fill="#8a8a8a" font-size="22" text-anchor="middle">Need 3+ regions</text>`;return}
+  const max=Math.max(10,Math.ceil(Math.max(...pts.map(r=>r.hi))/10)*10),n=pts.length;
+  const P=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/n,r=R*v/max;return [Math.cos(a)*r,Math.sin(a)*r]};
+  let g="";
+  for(const t of [.25,.5,.75,1])g+=`<polygon points="${pts.map((_,i)=>P(i,max*t).join(",")).join(" ")}" fill="none" stroke="#2a2a2a" stroke-width="1.5"/>`;
+  g+=`<text x="4" y="${-R*.5-3}" fill="#8a8a8a" font-size="15">${max/2}"</text><text x="4" y="${-R-3}" fill="#8a8a8a" font-size="15">${max}"</text>`;
+  pts.forEach((_,i)=>{const [x,y]=P(i,max);g+=`<line x1="0" y1="0" x2="${x}" y2="${y}" stroke="#2a2a2a" stroke-width="1.5"/>`});
+  g+=`<polygon points="${pts.map((r,i)=>P(i,r.hi).join(",")).join(" ")}" fill="rgba(124,212,255,.25)" stroke="#7CD4FF" stroke-width="3"/>`;
+  g+=`<polygon points="${pts.map((r,i)=>P(i,r.lo).join(",")).join(" ")}" fill="rgba(255,184,107,.3)" stroke="#ffb86b" stroke-width="2.5"/>`;
+  pts.forEach((r,i)=>{const [x,y]=P(i,r.hi);g+=`<circle cx="${x}" cy="${y}" r="5" fill="#7CD4FF"/>`;
+    const [lx,ly]=P(i,max*1.2),anchor=Math.abs(lx)<20?"middle":lx>0?"start":"end";
+    g+=`<text x="${lx}" y="${ly}" fill="#f2f2f2" font-size="19" text-anchor="${anchor}">${esc(r.n)}</text><text x="${lx}" y="${ly+19}" fill="#ffb86b" font-size="17" text-anchor="${anchor}">${rng(r.lo,r.hi)}</text>`});
+  svg.innerHTML=g;
+}
+let maps=[],mapI=0;
+function showMap(){
+  const img=$("mapimg");
+  if(!maps.length){img.hidden=true;$("mapn").textContent="";$("mapcap").textContent="No maps in this forecast.";return}
+  const m=maps[mapI%maps.length];
+  img.hidden=false;img.src=m.src;img.onerror=()=>{if(m.remote&&img.src!==m.remote)img.src=m.remote};
+  $("mapn").textContent=`${mapI%maps.length+1}/${maps.length}`;
+  $("mapcap").textContent=m.alt||"Tap map for next";
+}
+$("mapimg").onclick=()=>{mapI++;showMap()};
+
+function render(text,label,meta={}){
+  const base=day0(meta.date?new Date(meta.date):new Date());
+  const {segs,f,rows,take,period}=summarize(text,meta.title,base);
   if(!f.length){status("No snowfall amounts found.");return}
   const top=rows[0],max=Math.max(10,Math.ceil(Math.max(...rows.map(r=>r.hi),0)/10)*10);
   $("when").textContent=label||"Pasted forecast";
   $("topn").textContent=top?top.hi+'"':"–";
   $("topw").textContent=top?top.n:"";
+  $("topd").textContent=(top&&top.when?top.when.label:"")+(period?(top&&top.when?" · ":"")+"Forecast "+period.label:"");
   $("meta").textContent=`${rows.length} areas · ${f.filter(e=>e.hi>=12).length} foot-plus calls`;
-  $("bars").innerHTML=rows.map((r,i)=>`<div class="row"><span>${esc(r.n)}</span>
+  $("bars").innerHTML=rows.slice(0,14).map((r,i)=>`<div class="row"><span>${esc(r.n)}</span>
     <div class="track"><div class="fill${i?"":" top"}" style="left:${r.lo/max*100}%;width:${(r.hi-r.lo)/max*100}%"></div></div>
-    <span>${r.lo===r.hi?r.hi:r.lo+"-"+r.hi}</span></div>`).join("")+`<div class="dim">scale 0–${max}"</div>`;
+    <span>${rng(r.lo,r.hi).replace('"',"")}</span></div>`).join("")+`<div class="dim">scale 0–${max}"</div>`;
+  $("days").innerHTML=eventList(f,{limit:20});
+  regionPage(segs,isCA,$("cahead"),$("ca"),"No California mentions in this forecast.");
+  regionPage(segs,r=>isWest(r),$("westhead"),$("west"),"No western mentions in this forecast.");
+  star(rows);
+  maps=meta.maps||[];mapI=0;showMap();
   $("take").innerHTML=take.map(s=>`<li>${esc(s)}</li>`).join("");
   status(`${f.length} snowfall statements parsed.`);go(0);
 }
+
+/* ---------- data ---------- */
 $("go").onclick=()=>render($("txt").value);
-$("sample").onclick=()=>{const t=`A major storm will move into the West this weekend. The Sierra and Tahoe could see 12-24 inches, with higher totals on the crest near Mammoth. The Wasatch, including Alta and Snowbird, should pick up 10 to 18 inches. Colorado will see 6-12 inches, with Loveland and Arapahoe Basin around 8 inches. Big Sky in Montana may get up to 17 inches through Sunday. The Northeast stays quiet, with only 1-3 inches in Vermont. The Cascades could see 2 feet at Crystal Mountain.`;$("txt").value=t;render(t,"Sample forecast")};
+$("sample").onclick=()=>{const t=`West
+A major storm moves into the West Friday. The Sierra and Tahoe could see 12-24 inches from Friday night through Sunday, with higher totals on the crest near Mammoth.
+California
+Snow levels start near 6,000 feet Friday and fall to lake level by Saturday night. Palisades and Kirkwood may pick up 18-30 inches Saturday. Southern California mountains like Big Bear could see 4-8 inches Sunday.
+Rockies
+The Wasatch, including Alta and Snowbird, should pick up 10 to 18 inches Sunday into Monday. Colorado will see 6-12 inches Monday, with Loveland and Arapahoe Basin around 8 inches. Big Sky in Montana may get up to 17 inches through Tuesday.
+East
+The Northeast stays quiet, with only 1-3 inches in Vermont on Wednesday. The Cascades could see 2 feet at Crystal Mountain on Thursday.`;
+  $("txt").value=t;render(t,"Sample forecast",{title:"Snow forecast 11/13-11/19",date:new Date().toISOString()})};
 async function fetchLatest(){
   status("Loading latest…");
   try{ // 1) daily snapshot published alongside the app (same origin, no CORS)
     const r=await fetch("data/latest.json?"+Math.floor(Date.now()/36e5),{cache:"no-cache"});
     if(!r.ok)throw 0;const p=await r.json();
-    $("txt").value=p.text;render(p.text,p.date.slice(0,10)+" · "+p.title);return true;
+    $("txt").value=p.text;render(p.text,p.date.slice(0,10)+" · "+p.title,p);
+    $("status").innerHTML=esc($("status").textContent)+(p.link?` <a style="color:#7CD4FF" href="${esc(p.link)}">source</a>`:"");return true;
   }catch(e){}
   try{ // 2) direct from the source
     const r=await fetch("https://unofficialnetworks.com/wp-json/wp/v2/posts?search=chris%20tomer&per_page=1&_fields=title,date,content");
     const p=(await r.json())[0];if(!p)throw 0;
-    const t=new DOMParser().parseFromString(p.content.rendered,"text/html").body.textContent;
-    $("txt").value=t;render(t,p.date.slice(0,10)+" · Tomer");return true;
+    const h=p.content.rendered.replace(/<\/(p|h[1-6]|li|div)>|<br\s*\/?>/gi,"\n");
+    const t=new DOMParser().parseFromString(h,"text/html").body.textContent.replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim();
+    $("txt").value=t;render(t,p.date.slice(0,10)+" · Tomer",{date:p.date,title:p.title.rendered});return true;
   }catch(e){status("Fetch failed. Paste text or load sample.");return false}
 }
 $("fetch").onclick=fetchLatest;
-// paging: buttons, arrow keys, swipe
+
+/* ---------- paging: buttons, arrow keys, swipe ---------- */
 let cur=0;const pages=[...document.querySelectorAll(".page")];
 $("dots").innerHTML=pages.map(()=>'<div class="dot"></div>').join("");
 function go(n){cur=(n+pages.length)%pages.length;pages.forEach((p,i)=>p.classList.toggle("on",i===cur));
@@ -126,9 +283,9 @@ function go(n){cur=(n+pages.length)%pages.length;pages.forEach((p,i)=>p.classLis
 $("prev").onclick=()=>go(cur-1);$("next").onclick=()=>go(cur+1);
 addEventListener("keydown",e=>{if(e.target.tagName==="TEXTAREA")return;
   if(e.key==="ArrowRight")go(cur+1);if(e.key==="ArrowLeft")go(cur-1)});
-let sx=null;addEventListener("touchstart",e=>sx=e.touches[0].clientX,{passive:true});
-addEventListener("touchend",e=>{if(sx==null)return;const d=e.changedTouches[0].clientX-sx;
-  if(Math.abs(d)>50)go(cur+(d<0?1:-1));sx=null});
+let sx=null,sy=null;addEventListener("touchstart",e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy))go(cur+(dx<0?1:-1));sx=null});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)fetchLatest()});
 go(0);fetchLatest().then(ok=>{if(!ok)$("sample").click()});
 </script>
