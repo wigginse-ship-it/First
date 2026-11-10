@@ -1,6 +1,6 @@
 {
-  "name": "Tomer Snow",
-  "short_name": "Tomer Snow",
+  "name": "Snow Forecast",
+  "short_name": "Snow Forecast",
   "description": "Daily snow forecast summary and charts from Chris Tomer",
   "start_url": "./",
   "scope": "./",

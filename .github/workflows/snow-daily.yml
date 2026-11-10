@@ -1,4 +1,4 @@
-name: Tomer Snow daily update
+name: Snow Forecast daily update
 
 on:
   schedule:
