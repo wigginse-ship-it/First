@@ -130,13 +130,35 @@
   }
 
   // ---------------------------------------------------------------- search + routing
+  // Nearby-first search: look in a small box around you, widen only if that finds little,
+  // and finally fall back to a worldwide search. Results are merged and sorted by distance.
   async function geocode(q) {
-    const u = new URL('https://nominatim.openstreetmap.org/search');
-    u.search = new URLSearchParams({ format: 'jsonv2', q, limit: '5', addressdetails: '0' });
-    if (S.pos) { // bias toward where you are (~25 km box)
-      const d = 0.25; u.searchParams.set('viewbox', [S.pos.lon - d, S.pos.lat + d, S.pos.lon + d, S.pos.lat - d].join(','));
+    const found = new Map();
+    const add = (rows) => {
+      for (const r of rows) {
+        const lat = +r.lat, lon = +r.lon, key = lat.toFixed(5) + ',' + lon.toFixed(5);
+        if (!found.has(key)) found.set(key, { name: r.display_name, lat, lon, dist: S.pos ? N.haversine(S.pos, { lat, lon }) : null });
+      }
+    };
+    const query = async (extra) => {
+      const u = new URL('https://nominatim.openstreetmap.org/search');
+      u.search = new URLSearchParams({ format: 'jsonv2', q, limit: '10', ...extra });
+      try { add(await getJSON(u.toString())); } catch (e) { if (!found.size) throw e; }
+    };
+    if (S.pos) {
+      for (const d of [0.05, 0.25]) { // ~5 km, then ~27 km
+        const dx = d / Math.max(0.2, Math.cos((S.pos.lat * Math.PI) / 180));
+        await query({ viewbox: [S.pos.lon - dx, S.pos.lat + d, S.pos.lon + dx, S.pos.lat - d].join(','), bounded: '1' });
+        if (found.size >= 3) break;
+      }
     }
-    return (await getJSON(u.toString())).map((r) => ({ name: r.display_name, lat: +r.lat, lon: +r.lon }));
+    if (found.size < 3) await query({}); // nothing close by: search everywhere
+    return [...found.values()].sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0)).slice(0, 8);
+  }
+  async function waitForFix(ms) { // search needs to know where you are
+    const end = performance.now() + ms;
+    while (!S.pos && performance.now() < end) await new Promise((r) => setTimeout(r, 300));
+    return !!S.pos;
   }
   async function routeTo(dest, quiet) {
     if (!S.pos) { toast('Waiting for a location fix…'); return false; }
@@ -657,12 +679,18 @@
   $('form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const q = $('q').value.trim(); if (!q) return;
-    $('msg').textContent = 'Searching…'; $('results').innerHTML = '';
+    $('results').innerHTML = '';
+    if (!S.pos) { $('msg').textContent = 'Finding your location…'; await waitForFix(10000); }
+    $('msg').textContent = S.pos ? 'Searching near you…' : 'No location yet — searching everywhere…';
     try {
       const rs = await geocode(q);
-      $('msg').textContent = rs.length ? '' : 'No matches — try adding the city.';
+      $('msg').textContent = rs.length ? (S.pos ? 'Nearest first' : '') : 'No matches — try adding the city.';
       for (const r of rs) {
-        const b = document.createElement('button'); b.type = 'button'; b.textContent = r.name;
+        const b = document.createElement('button'); b.type = 'button';
+        const [first, ...rest] = r.name.split(',');
+        const d = r.dist == null ? '' : N.formatDist(r.dist, UNITS);
+        b.textContent = first.trim() + (d ? ` · ${d.v} ${d.u}` : '');
+        const sub = document.createElement('small'); sub.textContent = rest.slice(0, 3).join(',').trim(); b.appendChild(sub);
         b.onclick = async () => { $('msg').textContent = 'Routing…'; if (await routeTo(r)) { closeSearch(); if (S.view === 'turn') S.view = 'chase'; } else $('msg').textContent = S.pos ? 'No walking route found.' : 'Waiting for a location fix…'; };
         $('results').appendChild(b);
       }
