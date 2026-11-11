@@ -75,7 +75,7 @@ function play(i, zone = 0) {
 function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); if (typeof invBtnText === 'function') $('#invBtn').textContent = invBtnText(); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
 function resume() { mode = 'play'; clearInput(); showOnly(null); }
 function gameOver() {
-  save.fallenAt = { stage: stageIdx, zone: typeof retryZone === 'number' ? retryZone : 0, cycle: save.cycle | 0 };
+  save.fallenAt = { stage: stageIdx, zone: stageIdx === 0 ? 0 : typeof retryZone === 'number' ? retryZone : 0, cycle: save.cycle | 0 }; // (the first world sends him back to its very start)
   mode = 'over'; persist();
   $('#overText').textContent = `${stage.name} got the better of you this time. You keep everything you picked up: ${runShards} shards and ${runSigils} sigil${runSigils === 1 ? '' : 's'}. Spend them at the forge, or jump straight back in.`;
   showOnly('overOv'); playMusic('fallen');
