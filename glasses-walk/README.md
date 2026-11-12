@@ -28,6 +28,13 @@ cd glasses-walk && python3 -m http.server 8000
 ```
 Real mode (no `?demo`) needs location permission and an HTTPS origin.
 
+## Speed and precise location
+- **Rendering:** runs at the display's refresh rate (no 30 fps cap) and adapts: if drawing takes too much of a frame it drops detail (sidewalks, centre lines, far buildings, resolution) and brings it back when there's headroom. Force a level with `?q=0|1|2`; `?debug=1` shows fps / ms / level. On a stress scene (1,500 roads + 1,800 buildings) the first-person frame went from ~68 ms to ~23 ms in a software-rendered desktop browser (relative numbers only; a phone GPU differs).
+- **Position filter:** each GPS fix is weighted by its reported accuracy (Kalman filter), device speed/heading sharpen velocity, and the dot is dead-reckoned between fixes so it glides at full frame rate instead of hopping once a second. In simulation it cuts GPS error roughly in half (7.3 m → 3.6 m rms).
+- **Street lock:** when you're within ~12 m (or 1.2× the GPS accuracy) of the route the dot snaps to the street, and the camera faces along it. Standing still it follows the compass; walking it follows your direction of travel.
+- **Accuracy-aware:** rerouting and "head back to the route" thresholds widen when GPS is poor; the accuracy circle is drawn on the ground; the footer shows `GPS ±N ft`; turn prompts come earlier when you walk faster or the fix is poor.
+- **Fast start:** asks for a quick coarse fix (cached / Wi-Fi / cell) *and* precise GPS at the same time, so something shows within about a second and sharpens to full accuracy when the satellites lock; remembers your last area for search; loads a small patch of map first, then the full area. The start screen shows live status ("Finding you… 4 s", "Sharpening GPS ±120 ft").
+
 ## Ground and "get back to the route"
 - Instead of a black void, the scene has a tinted **ground** with OSM **parks (green), water (blue), car parks (gray)**, so roads read clearly against everything else. Toolbar → **Ground** turns it off (or `?ground=0`) if the tint is too bright on your glasses; black is see-through on additive displays.
 - If you're more than 15 m from the route (in a park, a car park, GPS drift), the banner switches to **"Head to the route — to your left"** with a gold arrow and distance, and a gold line + ring marks the nearest point to rejoin.

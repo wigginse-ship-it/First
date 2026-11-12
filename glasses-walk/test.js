@@ -54,4 +54,40 @@ assert.strictEqual(N.formatEta(30), '1 min'); assert.strictEqual(N.formatEta(400
 // near-plane clipping
 assert.strictEqual(N.clipNear({ x: 0, y: -5 }, { x: 0, y: -1 }, 1), null);
 const c = N.clipNear({ x: 0, y: -1 }, { x: 4, y: 3 }, 1); assert(Math.abs(c[0].x - 2) < 1e-9 && c[0].y === 1);
+
+// ---- GPS filter: noisy 1 Hz fixes of a 1.4 m/s walk east, sigma 5 m
+{
+  let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+  const f = N.createFilter();
+  let rawSq = 0, fSq = 0, midSq = 0, vSq = 0, n = 0;
+  for (let t = 0; t <= 90; t++) {
+    const truth = { x: 1.4 * t, y: 0 }, z = { x: truth.x + 5 * gauss(), y: truth.y + 5 * gauss() };
+    f.update(z, 5, null, null, t);
+    if (t >= 15) { // after warm-up
+      const e = f.at(t), m = f.at(t + 0.5), tm = { x: 1.4 * (t + 0.5), y: 0 };
+      rawSq += (z.x - truth.x) ** 2 + (z.y - truth.y) ** 2; fSq += (e.x - truth.x) ** 2 + (e.y - truth.y) ** 2;
+      midSq += (m.x - tm.x) ** 2 + (m.y - tm.y) ** 2; vSq += (e.vx - 1.4) ** 2 + e.vy ** 2; n++;
+    }
+  }
+  const raw = Math.sqrt(rawSq / n), fil = Math.sqrt(fSq / n), mid = Math.sqrt(midSq / n);
+  assert(fil < raw * 0.7, `filter should beat raw GPS: raw ${raw.toFixed(2)} filtered ${fil.toFixed(2)}`);
+  assert(mid < raw, 'dead-reckoned position between fixes is no worse than a raw fix');
+  const vel = Math.sqrt(vSq / n); assert(vel < 1.0, 'velocity learned from positions alone, rms error ' + vel.toFixed(2));
+  console.log(`  gps filter: raw rms ${raw.toFixed(1)} m -> ${fil.toFixed(1)} m (between fixes ${mid.toFixed(1)} m), velocity rms ${vel.toFixed(2)} m/s`);
+}
+{ // standing still: no drift, reads as stationary
+  let seed = 5; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+  const f = N.createFilter();
+  for (let t = 0; t < 120; t++) f.update({ x: 100 + 5 * gauss(), y: 50 + 5 * gauss() }, 5, null, null, t);
+  const e = f.at(120.4); assert(Math.hypot(e.x - 100, e.y - 50) < 4, 'stationary position settles'); assert.strictEqual(e.speed, 0, 'stationary reads as 0');
+}
+{ // device speed+heading sharpen the velocity fast; wild low-accuracy jump is ignored
+  const f = N.createFilter();
+  for (let t = 0; t < 8; t++) f.update({ x: 1.4 * t, y: 0 }, 4, 1.4, 90, t);
+  const e = f.at(7); assert(Math.abs(e.vx - 1.4) < 0.25 && Math.abs(e.vy) < 0.25, 'velocity from speed/heading');
+  f.update({ x: 900, y: 900 }, 80, null, null, 8); const j = f.at(8); assert(j.x < 30 && j.y < 30, 'ignores a wild 80 m-accuracy jump');
+}
+assert(Math.abs(N.lerpAngle(350, 10, 0.5) - 0) < 1e-9 || Math.abs(N.lerpAngle(350, 10, 0.5) - 360) < 1e-9, 'lerpAngle wraps');
 console.log('all nav tests passed');
