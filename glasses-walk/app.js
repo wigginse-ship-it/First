@@ -114,10 +114,14 @@
     if (!geo) { S.geoErr = 'This browser has no location sensor'; return; }
     geoIds.forEach((id) => geo.clearWatch(id)); geoIds = []; S.geoStart = performance.now();
     let loId = null, hiBad = false, loBad = false;
-    const ok = (p) => {
+    // `fresh`: the precise watch is asked with maximumAge 0, so its fixes are current by definition. Never judge
+    // those by their timestamp: device and GPS clocks often disagree, and that must not look like "stale".
+    const ok = (p, fresh) => {
       if (S.sim) return;
       const c = p.coords; S.geoErr = ''; S.fixCount++;
-      onFix(c.latitude, c.longitude, c.accuracy, c.heading, c.speed, false, Date.now() - p.timestamp);
+      let age = fresh === true ? 0 : Date.now() - p.timestamp;
+      if (age < 0 || age > 3600000) age = 0; // an implausible timestamp tells us nothing about age
+      onFix(c.latitude, c.longitude, c.accuracy, c.heading, c.speed, false, age);
       if (c.accuracy <= 30 && loId !== null) { geo.clearWatch(loId); loId = null; } // GPS is good now: stop the coarse watch
     };
     const bad = (hi) => (e) => {
@@ -127,7 +131,7 @@
       if (hiBad && loBad && !S.pos) S.geoErr = e.code === 3 ? 'Location timed out' : 'Location unavailable';
     };
     geo.getCurrentPosition(ok, () => {}, { enableHighAccuracy: false, maximumAge: 600000, timeout: 4000 }); // instant if the phone has any idea
-    geoIds.push(geo.watchPosition(ok, bad(true), { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 }));
+    geoIds.push(geo.watchPosition((p) => ok(p, true), bad(true), { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 }));
     loId = geo.watchPosition(ok, bad(false), { enableHighAccuracy: false, maximumAge: 120000, timeout: 15000 }); geoIds.push(loId);
     // learn about a permission change straight away instead of waiting for a timeout
     if (navigator.permissions && !startGeolocation.watching) {
