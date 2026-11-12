@@ -22,7 +22,7 @@
     ways: [], buildings: [], land: [], ground: params.get('ground') !== '0', destExtra: [], waysCenter: null, waysBusy: false,
     route: null, dest: null, snapSeg: 0, snap: null, prog: null, offCount: 0, spoken: -1,
     q: params.has('q') ? clamp(+params.get('q') || 0, 0, 2) : 2, qForced: params.has('q'), ms: 0, fps: 0, est: null,
-    hint: null, geoStart: performance.now(), manual: false, geoErr: '', pendingDest: null, muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
+    permState: '', lastErr: '', fixCount: 0, hint: null, geoStart: performance.now(), manual: false, geoErr: '', pendingDest: null, muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
   };
   let W = 600, H = 600, K = 1, DPR = 1;
 
@@ -116,11 +116,12 @@
     let loId = null, hiBad = false, loBad = false;
     const ok = (p) => {
       if (S.sim) return;
-      const c = p.coords; S.geoErr = '';
+      const c = p.coords; S.geoErr = ''; S.fixCount++;
       onFix(c.latitude, c.longitude, c.accuracy, c.heading, c.speed, false, Date.now() - p.timestamp);
       if (c.accuracy <= 30 && loId !== null) { geo.clearWatch(loId); loId = null; } // GPS is good now: stop the coarse watch
     };
     const bad = (hi) => (e) => {
+      S.lastErr = `${hi ? 'GPS' : 'network'} error ${e.code}${e.message ? ': ' + e.message : ''}`;
       if (e.code === 1) { S.geoErr = 'Location permission denied'; return; }
       if (hi) hiBad = true; else loBad = true;
       if (hiBad && loBad && !S.pos) S.geoErr = e.code === 3 ? 'Location timed out' : 'Location unavailable';
@@ -132,7 +133,8 @@
     if (navigator.permissions && !startGeolocation.watching) {
       startGeolocation.watching = true;
       navigator.permissions.query({ name: 'geolocation' }).then((st) => {
-        const check = () => { if (st.state === 'denied') S.geoErr = 'Location permission denied'; else if (S.geoErr === 'Location permission denied') { S.geoErr = ''; startGeolocation(); } };
+        S.permState = st.state;
+        const check = () => { S.permState = st.state; if (st.state === 'denied') S.geoErr = 'Location permission denied'; else if (S.geoErr === 'Location permission denied') { S.geoErr = ''; startGeolocation(); } };
         st.onchange = check; check();
       }).catch(() => {});
     }
@@ -823,6 +825,11 @@
       const secs = Math.round((performance.now() - S.geoStart) / 1000);
       text(S.geoErr || `Finding you… ${secs} s`, W / 2, H * 0.52, 24 * K, S.geoErr ? '#ff9d6b' : '#8fb0bb', 'center', W - 40 * K);
       text(secs >= 6 || S.geoErr ? 'Tap to tell me where you are' : 'Tap to search or set your location', W / 2, H * 0.6, 24 * K, '#19e0ff', 'center');
+    }
+    if (!S.pos && (S.geoErr || performance.now() - S.geoStart > 6000)) { // what the browser says, so a failure can be diagnosed
+      const api = navigator.geolocation ? 'yes' : 'NO', sec = window.isSecureContext ? 'yes' : 'NO';
+      text(`location API: ${api} · https: ${sec} · permission: ${S.permState || 'unknown'}`, W / 2, H * 0.74, 14 * K, '#8fb0bb', 'center', W - 24 * K);
+      text(S.lastErr || 'no response from the location sensor yet', W / 2, H * 0.79, 14 * K, '#8fb0bb', 'center', W - 24 * K);
     }
     if (S.pos && !S.manual && S.pos.acc > 50) text(`Sharpening GPS · ±${UNITS === 'metric' ? Math.round(S.pos.acc) + ' m' : Math.round(S.pos.acc * 3.28084) + ' ft'}`, W / 2, H * 0.6, 20 * K, '#ffd650', 'center');
     if (S.waysBusy && !S.ways.length) text('Loading map…', W / 2, H * 0.68, 20 * K, '#8fb0bb', 'center');
