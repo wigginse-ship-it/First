@@ -138,5 +138,55 @@
     return ina ? [a, m] : [m, b];
   }
 
-  return { haversine, makeProjector, bearing, angleDiff, toForward, cumulative, snap, buildRoute, progress, arrowAngle, instruction, formatDist, formatEta, clipNear };
+  // ---- GPS position filter ---------------------------------------------------------------
+  // Constant-velocity Kalman filter (x,y share one covariance). Each GPS fix is weighted by its reported
+  // accuracy, speed/heading (when the device gives them) corrects velocity, and at(t) dead-reckons between
+  // fixes so the dot moves smoothly at the display rate instead of hopping once a second.
+  function createFilter(opts) {
+    const o = Object.assign({ accel: 0.5, maxSpeed: 3.5, lead: 2.5, deadband: 0.3 }, opts);
+    const f = { init: false, x: 0, y: 0, vx: 0, vy: 0, P11: 100, P12: 0, P22: 4, t: 0 };
+    function predict(dt) {
+      if (dt <= 0) return;
+      const q = o.accel * o.accel;
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      f.P11 += dt * (2 * f.P12 + dt * f.P22) + (q * dt ** 4) / 4;
+      f.P12 += dt * f.P22 + (q * dt ** 3) / 2;
+      f.P22 += q * dt * dt;
+    }
+    f.reset = (xy, acc, t) => { Object.assign(f, { init: true, x: xy.x, y: xy.y, vx: 0, vy: 0, P11: Math.max(acc || 10, 3) ** 2, P12: 0, P22: 4, t }); };
+    // xy metres, acc metres (1-sigma-ish as reported), speed m/s or null, heading deg or null, t seconds
+    f.update = (xy, acc, speed, heading, t) => {
+      if (!f.init) { f.reset(xy, acc, t); return f; }
+      predict(clampN(t - f.t, 0, 10)); f.t = t;
+      const r = Math.max(acc || 10, 3) ** 2, ix = xy.x - f.x, iy = xy.y - f.y;
+      if ((acc || 0) > 40 && Math.hypot(ix, iy) > 3 * acc) return f; // wild low-quality jump: ignore it
+      const S = f.P11 + r, K1 = f.P11 / S, K2 = f.P12 / S;
+      f.x += K1 * ix; f.y += K1 * iy; f.vx += K2 * ix; f.vy += K2 * iy;
+      f.P22 -= K2 * f.P12; f.P11 *= 1 - K1; f.P12 *= 1 - K1;
+      if (typeof speed === 'number' && !isNaN(speed)) { // device-reported velocity corrects ours
+        const moving = speed > 0.4 && typeof heading === 'number' && !isNaN(heading);
+        if (moving || speed <= 0.1) {
+          const rad_ = (heading * Math.PI) / 180, mx = moving ? speed * Math.sin(rad_) : 0, my = moving ? speed * Math.cos(rad_) : 0;
+          const rv = moving ? 1.0 : 0.25, Sv = f.P22 + rv, k1 = f.P12 / Sv, k2 = f.P22 / Sv;
+          const dx = mx - f.vx, dy = my - f.vy;
+          f.x += k1 * dx; f.y += k1 * dy; f.vx += k2 * dx; f.vy += k2 * dy;
+          f.P11 -= (f.P12 * f.P12) / Sv; f.P12 -= (f.P12 * f.P22) / Sv; f.P22 -= (f.P22 * f.P22) / Sv;
+        }
+      }
+      const sp = Math.hypot(f.vx, f.vy); if (sp > o.maxSpeed) { f.vx *= o.maxSpeed / sp; f.vy *= o.maxSpeed / sp; }
+      return f;
+    };
+    // best estimate at time t: dead-reckoned from the last fix (not for ever), standing still reads as standing still
+    f.at = (t) => {
+      if (!f.init) return null;
+      const age = Math.max(0, t - f.t), sp = Math.hypot(f.vx, f.vy), still = sp < o.deadband;
+      const lead = still ? 0 : Math.min(age, o.lead);
+      return { x: f.x + f.vx * lead, y: f.y + f.vy * lead, vx: still ? 0 : f.vx, vy: still ? 0 : f.vy, speed: still ? 0 : sp, age, sigma: Math.sqrt(f.P11) };
+    };
+    return f;
+  }
+  const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerpAngle = (a, b, w) => (a + angleDiff(a, b) * w + 360) % 360;
+
+  return { createFilter, lerpAngle, haversine, makeProjector, bearing, angleDiff, toForward, cumulative, snap, buildRoute, progress, arrowAngle, instruction, formatDist, formatEta, clipNear };
 });

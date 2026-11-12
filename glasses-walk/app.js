@@ -19,9 +19,10 @@
     heading: 0, headingInit: false,
     view: params.get('view') && VIEWS.includes(params.get('view')) ? params.get('view') : 'chase',
     zoom: params.has('zoom') ? clamp(+params.get('zoom') || 0, 0, 3) : 1,
-    ways: [], buildings: [], destExtra: [], waysCenter: null, waysBusy: false,
+    ways: [], buildings: [], land: [], ground: params.get('ground') !== '0', destExtra: [], waysCenter: null, waysBusy: false,
     route: null, dest: null, snapSeg: 0, snap: null, prog: null, offCount: 0, spoken: -1,
-    manual: false, geoErr: '', pendingDest: null, muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
+    q: params.has('q') ? clamp(+params.get('q') || 0, 0, 2) : 2, qForced: params.has('q'), ms: 0, fps: 0, est: null,
+    permState: '', lastErr: '', fixCount: 0, hint: null, geoStart: performance.now(), manual: false, geoErr: '', pendingDest: null, muted: false, toast: '', toastUntil: 0, sim: null, lastFix: 0,
   };
   let W = 600, H = 600, K = 1, DPR = 1;
 
@@ -39,11 +40,13 @@
     if (!S.proj || N.haversine(S.proj.origin, { lat, lon }) > 15000) {
       S.proj = N.makeProjector({ lat, lon });
       reproject();
+      return true;
     }
+    return false;
   }
   function reproject() {
     for (const w of S.ways) projectWay(w);
-    for (const b of S.buildings.concat(S.destExtra)) projectWay(b);
+    for (const b of S.buildings.concat(S.destExtra, S.land)) projectWay(b);
     findDestBuilding();
     if (S.route) { const raw = S.route.raw; S.route = N.buildRoute(raw, S.proj); S.route.raw = raw; S.snapSeg = 0; }
     if (S.pos) Object.assign(S.pos, S.proj.toXY(S.pos.lat, S.pos.lon));
@@ -53,20 +56,43 @@
     let sx = 0, sy = 0; for (const p of w.xy) { sx += p.x; sy += p.y; }
     w.c = { x: sx / w.xy.length, y: sy / w.xy.length };
     w.r = Math.max(...w.xy.map((p) => Math.hypot(p.x - w.c.x, p.y - w.c.y)));
+    let area = 0; for (let i = 0; i < w.xy.length - 1; i++) area += w.xy[i].x * w.xy[i + 1].y - w.xy[i + 1].x * w.xy[i].y;
+    w.orient = area >= 0 ? 1 : -1; // +1 = counter-clockwise
   }
 
   // ---------------------------------------------------------------- location + heading
-  function onFix(lat, lon, acc, heading, speed, manual) {
+  const E = N.createFilter(); // GPS filter: weights fixes by accuracy, learns velocity, dead-reckons between fixes
+  function onFix(lat, lon, acc, heading, speed, manual, ageMs) {
+    const wasManual = S.manual, age = (ageMs || 0) / 1000;
+    if (!manual && age > 4) { // a cached fix: fine to start from, never better than what we already know
+      if (E.init) return;
+      acc = (acc || 50) + age * 1.5;
+    }
     S.manual = !!manual; if (!manual) S.geoErr = '';
-    ensureProj(lat, lon);
-    const xy = S.proj.toXY(lat, lon);
-    S.pos = { lat, lon, acc: acc || 0, x: xy.x, y: xy.y };
+    if (ensureProj(lat, lon)) E.init = false; // map origin moved: start the filter afresh
+    const xy = S.proj.toXY(lat, lon), t = performance.now() / 1000, first = !E.init;
+    if (manual || (wasManual && !manual)) E.reset(xy, acc || 30, t); else E.update(xy, acc, speed, heading, t);
+    if (!manual && acc < 100) rememberHere(lat, lon);
     S.lastFix = performance.now();
+    const e = E.at(t), ll = S.proj.toLL(e.x, e.y);
+    if (!S.pos) S.pos = { x: e.x, y: e.y };
+    Object.assign(S.pos, { lat: ll.lat, lon: ll.lon, acc: acc || 0 });
+    if (manual || first) { S.pos.x = e.x; S.pos.y = e.y; } // jump, don't glide
+    S.est = { x: e.x, y: e.y };
     if (typeof speed === 'number' && !isNaN(speed)) S.speed = speed;
     if (typeof heading === 'number' && !isNaN(heading) && S.speed > 0.8) S.gpsHeading = heading;
-    updateProgress();
+    updateProgress(true);
     maybeFetchWays();
     if (S.pendingDest && !S.route) { const d = S.pendingDest; S.pendingDest = null; routeTo(d); }
+  }
+  // Last known position survives reloads, so search can favour the right area before GPS has locked.
+  let lastSaved = 0;
+  function rememberHere(lat, lon) {
+    const now = Date.now(); if (now - lastSaved < 10000) return; lastSaved = now;
+    try { localStorage.setItem('walk.last', JSON.stringify({ lat, lon, t: now })); } catch (e) { /* private mode */ }
+  }
+  function loadHint() {
+    try { const j = JSON.parse(localStorage.getItem('walk.last') || 'null'); if (j && Date.now() - j.t < 7 * 864e5) S.hint = { lat: j.lat, lon: j.lon }; } catch (e) { /* ignore */ }
   }
   // "I'm here": use when GPS is unavailable. Real GPS fixes replace it automatically if they arrive later.
   function setManualLocation(lat, lon, label) {
@@ -79,28 +105,46 @@
     const lat = +m[1], lon = +m[2];
     return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
   }
+  // Cold GPS can take 30 s+. So ask three ways at once: a quick coarse fix (Wi-Fi / cell / cached) for an
+  // immediate start, a precise GPS watch that refines it, and a coarse watch as a safety net.
+  let geoIds = [];
   function startGeolocation() {
     if (!window.isSecureContext) S.geoErr = 'Location needs a secure (https) page';
-    if (!navigator.geolocation) { S.geoErr = 'This browser has no location sensor'; return; }
-    const ok = (p) => { if (!S.sim) onFix(p.coords.latitude, p.coords.longitude, p.coords.accuracy, p.coords.heading, p.coords.speed); };
-    let fallback = false, id = null;
-    const watch = (high) => {
-      if (id !== null) navigator.geolocation.clearWatch(id);
-      id = navigator.geolocation.watchPosition(ok, err, { enableHighAccuracy: high, maximumAge: high ? 1000 : 30000, timeout: high ? 15000 : 30000 });
+    const geo = navigator.geolocation;
+    if (!geo) { S.geoErr = 'This browser has no location sensor'; return; }
+    geoIds.forEach((id) => geo.clearWatch(id)); geoIds = []; S.geoStart = performance.now();
+    let loId = null, hiBad = false, loBad = false;
+    const ok = (p) => {
+      if (S.sim) return;
+      const c = p.coords; S.geoErr = ''; S.fixCount++;
+      onFix(c.latitude, c.longitude, c.accuracy, c.heading, c.speed, false, Date.now() - p.timestamp);
+      if (c.accuracy <= 30 && loId !== null) { geo.clearWatch(loId); loId = null; } // GPS is good now: stop the coarse watch
     };
-    const err = (e) => {
+    const bad = (hi) => (e) => {
+      S.lastErr = `${hi ? 'GPS' : 'network'} error ${e.code}${e.message ? ': ' + e.message : ''}`;
       if (e.code === 1) { S.geoErr = 'Location permission denied'; return; }
-      if (!fallback) { fallback = true; watch(false); return; } // GPS slow or blocked: try Wi-Fi/cell location
-      S.geoErr = e.code === 3 ? 'Location timed out' : 'Location unavailable';
+      if (hi) hiBad = true; else loBad = true;
+      if (hiBad && loBad && !S.pos) S.geoErr = e.code === 3 ? 'Location timed out' : 'Location unavailable';
     };
-    watch(true);
+    geo.getCurrentPosition(ok, () => {}, { enableHighAccuracy: false, maximumAge: 600000, timeout: 4000 }); // instant if the phone has any idea
+    geoIds.push(geo.watchPosition(ok, bad(true), { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 }));
+    loId = geo.watchPosition(ok, bad(false), { enableHighAccuracy: false, maximumAge: 120000, timeout: 15000 }); geoIds.push(loId);
+    // learn about a permission change straight away instead of waiting for a timeout
+    if (navigator.permissions && !startGeolocation.watching) {
+      startGeolocation.watching = true;
+      navigator.permissions.query({ name: 'geolocation' }).then((st) => {
+        S.permState = st.state;
+        const check = () => { S.permState = st.state; if (st.state === 'denied') S.geoErr = 'Location permission denied'; else if (S.geoErr === 'Location permission denied') { S.geoErr = ''; startGeolocation(); } };
+        st.onchange = check; check();
+      }).catch(() => {});
+    }
   }
   function startCompass() {
     const handler = (e) => {
       let h = null;
       if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;
       else if (e.absolute && typeof e.alpha === 'number') h = (360 - e.alpha) % 360;
-      if (h !== null) S.compass = h;
+      if (h !== null) S.compass = S.compass === null ? h : N.lerpAngle(S.compass, h, 0.3); // damp sensor jitter
     };
     window.addEventListener('deviceorientationabsolute', handler, true);
     window.addEventListener('deviceorientation', handler, true);
@@ -111,12 +155,22 @@
       window.addEventListener('pointerdown', ask);
     }
   }
-  function currentHeadingTarget() {
+  // Standing: face where the compass says. Walking: face the way you are going, along the street when on the route.
+  function headingTarget() {
     if (S.sim) return S.sim.heading;
-    if (S.gpsHeading !== null && S.speed > 1.0) return S.gpsHeading; // walking: direction of travel
-    if (S.compass !== null) return S.compass;                        // standing: where you're looking
+    const e = E.at(performance.now() / 1000), sp = e ? e.speed : 0;
+    let course = null;
+    if (e && sp > 0.5) {
+      course = N.bearing(e.vx, e.vy);
+      if (S.route && S.snap && S.snap.dist <= snapTol()) { const p = S.route.pts, i = S.snap.seg; course = N.bearing(p[i + 1].x - p[i].x, p[i + 1].y - p[i].y); }
+    }
+    const w = clamp((sp - 0.6) / 0.8, 0, 1);
+    if (S.compass !== null && course !== null) return N.lerpAngle(S.compass, course, w);
+    if (course !== null) return course;
+    if (S.compass !== null) return S.compass;
     return S.gpsHeading ?? S.heading;
   }
+  const snapTol = () => Math.max(12, 1.2 * ((S.pos && S.pos.acc) || 0)); // how far off the street still counts as "on it"
 
   // ---------------------------------------------------------------- map data (OpenStreetMap)
   // Real-world widths (metres) so streets read as streets: kerb to kerb.
@@ -126,28 +180,39 @@
     if (PATH_STYLE[hw]) return { path: true, w: PATH_STYLE[hw] };
     return { path: false, w: ROAD_STYLE[hw] || 6 };
   }
+  async function loadMap(lat, lon, roadR, bldR, landR, timeout) {
+    const at = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+    let q = `[out:json][timeout:25];(way(around:${roadR},${at})[highway][highway!~"^(motorway|motorway_link|proposed|construction|raceway)$"];way(around:${bldR},${at})[building];`;
+    if (landR) q += `way(around:${landR},${at})[leisure~"^(park|garden|pitch|playground|recreation_ground|golf_course)$"];way(around:${landR},${at})[landuse~"^(grass|forest|meadow|recreation_ground|cemetery|village_green|orchard|allotments)$"];way(around:${landR},${at})[natural~"^(water|wood|scrub|grassland|wetland|beach)$"];way(around:${landR},${at})[amenity=parking];`;
+    q += ');out geom;';
+    const j = await getJSON('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) }, timeout);
+    const ways = [], blds = [], land = [];
+    for (const e of j.elements) {
+      if (!e.geometry || e.geometry.length < (e.tags.building ? 4 : 2)) continue;
+      const ll = e.geometry.map((g) => ({ lat: g.lat, lon: g.lon }));
+      if (e.tags.building) {
+        const h = parseFloat(e.tags.height) || parseFloat(e.tags['building:levels']) * 3.2 || 9;
+        const b = { ll, h: clamp(h, 4, 80) }; projectWay(b); blds.push(b);
+      } else if (e.tags.highway) {
+        const w = { ll, name: e.tags.name || '', ...roadStyle(e.tags.highway) }; projectWay(w); ways.push(w);
+      } else if (e.geometry.length > 3) { // land cover polygon
+        const t = e.tags, kind = t.natural === 'water' || t.natural === 'wetland' ? 'water' : t.amenity === 'parking' ? 'parking' : t.natural === 'beach' ? 'sand' : 'green';
+        const l = { ll, kind }; projectWay(l); land.push(l);
+      }
+    }
+    return { ways, blds: blds.slice(0, 1800), land: land.slice(0, 500) };
+  }
   async function maybeFetchWays() {
     if (DEMO || S.waysBusy || !S.pos) return;
     if (S.waysCenter && Math.hypot(S.pos.x - S.waysCenter.x, S.pos.y - S.waysCenter.y) < 120) return;
     S.waysBusy = true;
-    const c = { x: S.pos.x, y: S.pos.y };
+    const c = { x: S.pos.x, y: S.pos.y }, { lat, lon } = S.pos, apply = (m) => { S.ways = m.ways; S.buildings = m.blds; S.land = m.land; findDestBuilding(); };
     try {
-      const at = `${S.pos.lat.toFixed(5)},${S.pos.lon.toFixed(5)}`;
-      const q = `[out:json][timeout:25];(way(around:500,${at})[highway][highway!~"^(motorway|motorway_link|proposed|construction|raceway)$"];way(around:300,${at})[building];);out geom;`;
-      const j = await getJSON('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) }, 30000);
-      const ways = [], blds = [];
-      for (const e of j.elements) {
-        if (!e.geometry || e.geometry.length < (e.tags.building ? 4 : 2)) continue;
-        const ll = e.geometry.map((g) => ({ lat: g.lat, lon: g.lon }));
-        if (e.tags.building) {
-          const h = parseFloat(e.tags.height) || parseFloat(e.tags['building:levels']) * 3.2 || 9;
-          const b = { ll, h: clamp(h, 4, 80) }; projectWay(b); blds.push(b);
-        } else {
-          const w = { ll, name: e.tags.name || '', ...roadStyle(e.tags.highway) }; projectWay(w); ways.push(w);
-        }
+      if (!S.ways.length) { // first load: a small patch right away so you see streets in a second or two
+        apply(await loadMap(lat, lon, 220, 140, 0, 12000)); S.waysCenter = c;
       }
-      S.ways = ways; S.buildings = blds.slice(0, 1800); S.waysCenter = c; findDestBuilding();
-    } catch (err) { toast('Map data unavailable — retrying'); S.waysCenter = null; setTimeout(() => (S.waysBusy = false), 8000); return; }
+      apply(await loadMap(lat, lon, 500, 300, 450, 30000)); S.waysCenter = c;
+    } catch (err) { toast('Map data unavailable — retrying'); if (!S.ways.length) S.waysCenter = null; setTimeout(() => (S.waysBusy = false), 8000); return; }
     S.waysBusy = false;
   }
 
@@ -155,11 +220,11 @@
   // Nearby-first search: look in a small box around you, widen only if that finds little,
   // and finally fall back to a worldwide search. Results are merged and sorted by distance.
   async function geocode(q) {
-    const found = new Map();
+    const here = S.pos || S.hint, found = new Map();
     const add = (rows) => {
       for (const r of rows) {
         const lat = +r.lat, lon = +r.lon, key = lat.toFixed(5) + ',' + lon.toFixed(5);
-        if (!found.has(key)) found.set(key, { name: r.display_name, lat, lon, dist: S.pos ? N.haversine(S.pos, { lat, lon }) : null });
+        if (!found.has(key)) found.set(key, { name: r.display_name, lat, lon, dist: here ? N.haversine(here, { lat, lon }) : null });
       }
     };
     const query = async (extra) => {
@@ -167,10 +232,10 @@
       u.search = new URLSearchParams({ format: 'jsonv2', q, limit: '10', ...extra });
       try { add(await getJSON(u.toString())); } catch (e) { if (!found.size) throw e; }
     };
-    if (S.pos) {
+    if (here) {
       for (const d of [0.05, 0.25]) { // ~5 km, then ~27 km
-        const dx = d / Math.max(0.2, Math.cos((S.pos.lat * Math.PI) / 180));
-        await query({ viewbox: [S.pos.lon - dx, S.pos.lat + d, S.pos.lon + dx, S.pos.lat - d].join(','), bounded: '1' });
+        const dx = d / Math.max(0.2, Math.cos((here.lat * Math.PI) / 180));
+        await query({ viewbox: [here.lon - dx, here.lat + d, here.lon + dx, here.lat - d].join(','), bounded: '1' });
         if (found.size >= 3) break;
       }
     }
@@ -179,6 +244,10 @@
   }
   async function routeTo(dest, quiet) {
     if (!S.pos) { toast('Waiting for a location fix…'); return false; }
+    if (!S.manual && !S.sim && S.pos.acc > 60) { // coarse fix: give the GPS a few seconds to sharpen before planning from it
+      toast('Sharpening your location…', 3000);
+      for (const end = performance.now() + 6000; S.pos.acc > 60 && performance.now() < end;) await new Promise((r) => setTimeout(r, 250));
+    }
     try {
       const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${S.pos.lon},${S.pos.lat};${dest.lon},${dest.lat}?overview=full&geometries=geojson&steps=true`;
       const j = await getJSON(url);
@@ -238,22 +307,35 @@
   const instrText = (step) => (step && step.type === 'arrive' && S.dest ? `Arrive at ${destName()}` : N.instruction(step));
   function endRoute() { S.destExtra = []; S.destB = null; S.route = null; S.dest = null; S.prog = null; S.snap = null; if (S.sim) S.sim = null; toast('Route ended'); }
 
-  function updateProgress() {
-    if (!S.route || !S.pos) return;
-    const sn = N.snap(S.route.pts, S.route.cum, S.pos, Math.max(0, S.snapSeg - 2), 60);
+  function updateProgress(isFix) {
+    if (!S.route || !S.est) return;
+    const sn = N.snap(S.route.pts, S.route.cum, S.est, Math.max(0, S.snapSeg - 2), 60);
     if (!sn) return;
     S.snap = sn; S.snapSeg = sn.seg;
     S.prog = N.progress(S.route, sn.along);
-    if (!S.sim && sn.dist > 40 && ++S.offCount >= 3) { S.offCount = 0; toast('Rerouting…'); routeTo(S.dest, true); return; }
-    if (sn.dist <= 40) S.offCount = 0;
-    // voice
-    const p = S.prog;
+    const acc = (S.pos && S.pos.acc) || 0, far = Math.max(40, 3 * acc); // poor GPS must not trigger a reroute
+    if (isFix && !S.sim) {
+      if (sn.dist > far) { if (++S.offCount >= 3) { S.offCount = 0; toast('Rerouting…'); routeTo(S.dest, true); return; } }
+      else S.offCount = 0;
+    }
+    // voice: warn earlier when you walk faster or the fix is poor
+    const p = S.prog, e = E.at(performance.now() / 1000), lead = clamp(((e && e.speed) || 1.3) * 7 + acc, 40, 95);
     if (p.arrived) { if (S.spoken !== -2) { speak('You have arrived'); S.spoken = -2; } return; }
-    if (p.next && p.toManeuver < 45 && S.spoken !== p.index) {
+    if (p.next && p.toManeuver < lead && S.spoken !== p.index) {
       S.spoken = p.index;
       const d = N.formatDist(p.toManeuver, UNITS);
       speak(`In ${d.v} ${({ ft: 'feet', mi: 'miles', m: 'metres', km: 'kilometres' })[d.u]}, ${instrText(p.next)}`);
     }
+  }
+  // Every frame: dead-reckon from the filter, glide the dot toward it, and lock to the street when you're on it.
+  function updatePose(now, dt) {
+    const e = E.at(now / 1000); if (!e || !S.pos) return;
+    S.est = { x: e.x, y: e.y };
+    updateProgress(false);
+    let tx = e.x, ty = e.y;
+    if (S.route && S.snap && S.snap.dist <= snapTol()) { tx += (S.snap.x - e.x) * 0.85; ty += (S.snap.y - e.y) * 0.85; }
+    const a = 1 - Math.exp(-dt / 0.07);
+    S.pos.x += (tx - S.pos.x) * a; S.pos.y += (ty - S.pos.y) * a;
   }
   function speak(t) {
     if (S.muted || !window.speechSynthesis) return;
@@ -264,7 +346,7 @@
   function startDemo() {
     const o = { lat: 37.7749, lon: -122.4194 };
     S.proj = N.makeProjector(o);
-    const ways = [], blds = [];
+    const ways = [], blds = [], landDemo = [];
     const vNames = { 0: 'Mission St', 4: 'Folsom St' }, hNames = { 3: 'Howard St', 5: 'Harrison St' };
     for (let i = -6; i <= 6; i++) {
       for (const horiz of [true, false]) {
@@ -278,7 +360,11 @@
     // city blocks: a few buildings per block, set back from the kerb
     let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     for (let bi = -6; bi < 6; bi++) for (let bj = -6; bj < 6; bj++) {
-      if (rnd() < 0.07 && !(bi === 5 && bj === 4)) continue; // the odd empty lot / plaza
+      if (rnd() < 0.07 && !(bi === 5 && bj === 4)) { // the odd park / pond / car park instead of buildings
+        const kind = ['green', 'green', 'water', 'parking'][Math.floor(rnd() * 4)];
+        landDemo.push({ ll: [[bi * 90 + 6, bj * 90 + 6], [bi * 90 + 84, bj * 90 + 6], [bi * 90 + 84, bj * 90 + 84], [bi * 90 + 6, bj * 90 + 84], [bi * 90 + 6, bj * 90 + 6]].map(([x, y]) => S.proj.toLL(x, y)), kind });
+        continue;
+      }
       const x0 = bi * 90 + 8, x1 = bi * 90 + 82, y0 = bj * 90 + 8, y1 = bj * 90 + 82;
       const nx = 1 + Math.floor(rnd() * 3), ny = 1 + Math.floor(rnd() * 2);
       for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) {
@@ -288,8 +374,8 @@
         blds.push({ ll: ring, h: 7 + rnd() * rnd() * 55 });
       }
     }
-    ways.forEach(projectWay); blds.forEach(projectWay);
-    S.ways = ways; S.buildings = blds; S.waysCenter = { x: 0, y: 0 };
+    ways.forEach(projectWay); blds.forEach(projectWay); landDemo.forEach(projectWay);
+    S.land = landDemo; S.ways = ways; S.buildings = blds; S.waysCenter = { x: 0, y: 0 };
     const wp = [[0, 0], [0, 270], [360, 270], [360, 450], [540, 450]];
     const ll = wp.map(([x, y]) => S.proj.toLL(x, y));
     const mk = (type, modifier, name, d, p) => ({ maneuver: { type, modifier, location: [ll[p].lon, ll[p].lat] }, name, distance: d });
@@ -378,22 +464,46 @@
     if (cam.kind === 'flat') return clamp(meters * cam.scale, 1.2 * K, maxPx || 40 * K);
     return clamp((cam.F * meters) / Math.max(d || 30, 3), 1 * K, maxPx || 16 * K);
   }
-  // Stroke a screen polyline with a real-world width; perspective width and fog follow depth per segment.
-  function strokeLine(cam, s, meters, rgb, maxPx) {
-    if (cam.kind === 'flat') {
-      ctx.strokeStyle = rgbs(rgb, 1); ctx.lineWidth = lineW(cam, meters, 0, maxPx);
-      ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y); for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y); ctx.stroke(); return;
-    }
+  // Strokes are batched: thousands of road segments collapse into a few dozen draw calls, one per
+  // (colour, fog level, width) bucket, which is what keeps the first-person view fast.
+  let batch = null;
+  const beginBatch = () => { batch = new Map(); };
+  function flushBatch() {
+    if (!batch) return;
+    const list = [...batch.values()].sort((a, b) => a.f - b.f); // faint/far first
+    for (const b of list) { ctx.strokeStyle = rgbs(b.rgb, b.f); ctx.lineWidth = b.w; ctx.stroke(b.path); }
+    batch = null;
+  }
+  function bucket(key, rgb, fq, wq) {
+    let b = batch.get(key);
+    if (!b) batch.set(key, (b = { path: new Path2D(), rgb, f: fq / 16, w: Math.max(0.5, wq / 2) }));
+    return b.path;
+  }
+  // Add a screen polyline with a real-world width; perspective width and fog follow depth per segment.
+  // Segments that are off-screen, past maxD, or too faint to matter are skipped; runs of segments that land
+  // in the same bucket stay one sub-path (fewer caps/joins for the rasteriser to build).
+  function strokeLine(cam, s, meters, rgb, maxPx, maxD) {
+    const own = !batch; if (own) beginBatch();
+    const rgbKey = (rgb[0] * 65536 + rgb[1] * 256 + rgb[2]) * 17;
+    let lastKey = -1, p = null;
     for (let i = 1; i < s.length; i++) {
-      const d = (s[i - 1].d + s[i].d) / 2;
-      ctx.strokeStyle = rgbs(rgb, fog(cam, d)); ctx.lineWidth = lineW(cam, meters, d, maxPx);
-      ctx.beginPath(); ctx.moveTo(s[i - 1].x, s[i - 1].y); ctx.lineTo(s[i].x, s[i].y); ctx.stroke();
+      const a = s[i - 1], b = s[i], persp = cam.kind !== 'flat';
+      const d = persp ? (a.d + b.d) / 2 : 0;
+      if (maxD && d > maxD) { lastKey = -1; continue; }
+      const f = persp ? fog(cam, d) : 1, w = lineW(cam, meters, d, maxPx), m = w / 2 + 12;
+      if ((a.x < -m && b.x < -m) || (a.x > W + m && b.x > W + m) || (a.y > H + m && b.y > H + m) || (a.y < -m && b.y < -m)) { lastKey = -1; continue; }
+      if (persp && f < 0.1) { lastKey = -1; continue; }
+      const fq = Math.round(f * 16), wq = Math.round(w * 2), key = (rgbKey + fq) * 4096 + wq;
+      if (key !== lastKey) { p = bucket(key, rgb, fq, wq); p.moveTo(a.x, a.y); lastKey = key; }
+      p.lineTo(b.x, b.y);
     }
+    if (own) flushBatch();
   }
 
   // ---------------------------------------------------------------- drawing the street scene
   const C = {
-    sidewalk: [58, 74, 82], curb: [150, 176, 186], asphalt: [30, 40, 46], centre: [190, 168, 80],
+    ground: [15, 23, 27], park: [22, 58, 38], water: [12, 42, 72], parking: [38, 44, 50], sand: [70, 64, 44],
+    sidewalk: [84, 100, 108], curb: [190, 212, 220], asphalt: [54, 64, 70], centre: [210, 184, 84],
     pathEdge: [100, 160, 135], pathFill: [60, 100, 88],
     destWall: [150, 108, 8], destEdge: [255, 214, 80], destRoof: [215, 160, 20],
     wall: [20, 34, 42], wallEdge: [92, 124, 138], roof: [34, 54, 64], bFill: [16, 30, 38], bEdge: [48, 76, 88],
@@ -403,18 +513,19 @@
     const range = flat ? (Math.max(W, H) / cam.scale) * 0.9 : cam.far + 60;
     const near = (o) => Math.hypot(o.c.x - cam.cx, o.c.y - cam.cy) - o.r < range;
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    drawGround(cam, near);
     if (flat) drawBuildings(cam); // under the streets when seen from above
     const vis = S.ways.filter(near);
     for (const w of vis) w._s = camSegments(cam, w.xy);
     const roads = vis.filter((w) => !w.path), paths = vis.filter((w) => w.path);
-    const pass = (list, width, rgb) => { for (const w of list) for (const s of w._s) if (s.length > 1) strokeLine(cam, s, width(w), rgb, 400 * K); };
+    const pass = (list, width, rgb, maxD) => { beginBatch(); for (const w of list) for (const s of w._s) if (s.length > 1) strokeLine(cam, s, width(w), rgb, 400 * K, maxD); flushBatch(); };
     // all kerbs before all asphalt, so junctions read as one open space instead of crossing lines
-    pass(roads, (w) => w.w + 5, C.sidewalk);
-    pass(roads, (w) => w.w + 0.9, C.curb);
-    pass(paths, (w) => w.w + 0.9, C.pathEdge);
+    if (S.q >= 1) pass(roads, (w) => w.w + 5, C.sidewalk, 75); // sidewalks only matter up close
+    pass(roads, (w) => w.w + 0.9, C.curb, 150);
+    pass(paths, (w) => w.w + 0.9, C.pathEdge, 130);
     pass(roads, (w) => w.w, C.asphalt);
-    pass(paths, (w) => w.w, C.pathFill);
-    if (!flat || cam.span <= 300) pass(roads.filter((w) => w.w >= 7), () => 0.22, C.centre);
+    pass(paths, (w) => w.w, C.pathFill, 160);
+    if (S.q >= 2 && (!flat || cam.span <= 300)) pass(roads.filter((w) => w.w >= 7), () => 0.22, C.centre, 110);
     if (flat) { if (cam.span <= 500) drawStreetNames(cam, roads); }
     else drawBuildings(cam);
     drawDestLabel(cam);
@@ -434,6 +545,36 @@
     ctx.fillStyle = '#1a1300'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     let t = name; while (ctx.measureText(t).width > tw - 20 * K && t.length > 3) t = t.slice(0, -2); if (t !== name) t = t.trimEnd() + '…';
     ctx.fillText(t, x, y + 1);
+  }
+  // Ground: a tinted surface with parks, water and car parks, so roads read against it and you are never floating in a void.
+  function drawGround(cam, near) {
+    if (!S.ground) return;
+    const flat = cam.kind === 'flat';
+    if (flat) { ctx.fillStyle = rgbs(C.ground, 1); ctx.fillRect(0, 0, W, H); }
+    else {
+      const g = ctx.createLinearGradient(0, cam.horizon, 0, cam.horizon + (H - cam.horizon) * 0.5);
+      g.addColorStop(0, 'rgb(0,0,0)'); g.addColorStop(1, rgbs(C.ground, 1));
+      ctx.fillStyle = g; ctx.fillRect(0, cam.horizon, W, H - cam.horizon);
+    }
+    const order = { green: 0, sand: 0, parking: 1, water: 2 };
+    const vis = S.land.filter(near).sort((a, b) => order[a.kind] - order[b.kind]);
+    for (const l of vis) {
+      ctx.fillStyle = rgbs(C[l.kind === 'green' ? 'park' : l.kind], 1);
+      if (flat) {
+        const s = camSegments(cam, l.xy)[0];
+        ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y); for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y); ctx.closePath(); ctx.fill();
+      } else {
+        const poly = clipPolyNear(l.xy.map((p) => { const f = N.toForward(p.x - cam.cx, p.y - cam.cy, cam.heading); return { x: f.x, y: f.y + cam.back }; }), 1.5);
+        if (poly.length < 3) continue;
+        const sp = poly.map((p) => projCam(cam, p, 0));
+        ctx.beginPath(); ctx.moveTo(sp[0].x, sp[0].y); for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i].x, sp[i].y); ctx.closePath(); ctx.fill();
+      }
+    }
+    if (!flat) { // haze: distant ground melts into the horizon
+      const hz = ctx.createLinearGradient(0, cam.horizon, 0, cam.horizon + (H - cam.horizon) * 0.3);
+      hz.addColorStop(0, 'rgba(0,0,0,1)'); hz.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = hz; ctx.fillRect(0, cam.horizon, W, (H - cam.horizon) * 0.3);
+    }
   }
   function drawStreetNames(cam, roads) {
     const seen = new Set(); let n = 0;
@@ -481,12 +622,13 @@
     // Perspective: extrude each footprint into walls, then paint far-to-near.
     const items = [];
     for (const b of allBuildings()) {
-      if (Math.hypot(b.c.x - cam.cx, b.c.y - cam.cy) - b.r > cam.far * (b.isDest ? 1.8 : 1)) continue;
+      if (Math.hypot(b.c.x - cam.cx, b.c.y - cam.cy) - b.r > cam.far * (b.isDest ? 1.8 : [0.6, 0.85, 1][S.q])) continue;
       const f = b.xy.map((p) => { const q = N.toForward(p.x - cam.cx, p.y - cam.cy, cam.heading); return { x: q.x, y: q.y + cam.back }; });
       let mind = Infinity;
       for (let i = 0; i < f.length - 1; i++) {
         const a = f[i], c = f[i + 1], d = (a.y + c.y) / 2; mind = Math.min(mind, d);
         const len = Math.hypot(c.x - a.x, c.y - a.y) || 1;
+        if (!S.noCull && ((c.x - a.x) * -a.y - (c.y - a.y) * -a.x) * (b.orient || 1) > 0) continue; // wall faces away from the camera
         items.push({ a, c, h: b.h, d, dest: b.isDest, shade: 0.72 + 0.28 * (Math.abs(c.x - a.x) / len) });
       }
       if (cam.height > b.h) items.push({ roof: f, h: b.h, d: mind - 0.01, dest: b.isDest });
@@ -501,12 +643,16 @@
         ctx.beginPath(); ctx.moveTo(sp[0].x, sp[0].y); for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i].x, sp[i].y); ctx.closePath(); ctx.fill(); ctx.stroke();
         continue;
       }
-      const clip = N.clipNear(it.a, it.c, 1.5); if (!clip) continue;
-      const b0 = projCam(cam, clip[0], 0), b1 = projCam(cam, clip[1], 0), t0 = projCam(cam, clip[0], it.h), t1 = projCam(cam, clip[1], it.h);
       const fg = it.dest ? Math.max(0.6, fog(cam, it.d)) : fog(cam, it.d); // the destination stays visible through the fog
+      if (!it.dest && fg < 0.18) continue; // lost in the haze anyway
+      const clip = N.clipNear(it.a, it.c, 1.5); if (!clip) continue;
+      const b0 = projCam(cam, clip[0], 0), b1 = projCam(cam, clip[1], 0);
+      if (Math.max(b0.x, b1.x) < -30 || Math.min(b0.x, b1.x) > W + 30) continue; // off to the side
+      const t0 = projCam(cam, clip[0], it.h), t1 = projCam(cam, clip[1], it.h);
+      if (!it.dest && b0.y - t0.y < 2 * K && b1.y - t1.y < 2 * K) continue; // smaller than a couple of pixels
       ctx.fillStyle = rgbs(it.dest ? C.destWall : C.wall, fg * it.shade); ctx.strokeStyle = rgbs(it.dest ? C.destEdge : C.wallEdge, fg);
       ctx.lineWidth = Math.max(1, (it.dest ? 2.4 : 1.3) * K);
-      ctx.beginPath(); ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t0.x, t0.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t0.x, t0.y); ctx.closePath(); ctx.fill(); if (fg > 0.45) ctx.stroke(); // distant walls: fill only
     }
   }
 
@@ -541,8 +687,14 @@
     const pts = sn ? [{ x: sn.x, y: sn.y }, ...r.pts.slice(sn.seg + 1)] : r.pts;
     const segs = camSegments(cam, pts);
     // a painted ribbon down the street: dark teal body, chevrons on top
-    for (const [wm, col] of [[3.4, [0, 74, 92]], [2.4, [6, 120, 150]]]) for (const s of segs) if (s.length > 1) strokeLine(cam, s, wm, col, 120 * K);
+    for (const [wm, col] of [[3.4, [0, 74, 92]], [2.4, [6, 120, 150]]]) { beginBatch(); for (const s of segs) if (s.length > 1) strokeLine(cam, s, wm, col, 120 * K); flushBatch(); }
     drawChevrons(cam, now);
+    const gd = guide();
+    if (gd && S.est) { // bright line from you to the nearest point of the route, ringed
+      for (const s of camSegments(cam, [{ x: S.est.x, y: S.est.y }, { x: gd.x, y: gd.y }])) if (s.length > 1) strokeLine(cam, s, 0.5, [255, 214, 80], 9 * K);
+      const j = projPoint(cam, gd);
+      if (j) { ctx.strokeStyle = '#ffd650'; ctx.lineWidth = 3 * K; ctx.beginPath(); ctx.arc(j.x, j.y, cam.kind === 'flat' ? 8 * K : clamp((cam.F * 2.5) / Math.max(j.d, 3), 4 * K, 30 * K), 0, 7); ctx.stroke(); }
+    }
     // destination: ring on the ground and a pole you can see from afar
     const dpt = r.pts[r.pts.length - 1], g = projPoint(cam, dpt, 0);
     if (g) {
@@ -562,6 +714,14 @@
     else if (cam.mode === 'overview' && S.pos) {
       const f = N.toForward(S.pos.x - cam.cx, S.pos.y - cam.cy, 0); x = cam.ax + f.x * cam.scale; y = cam.ay - f.y * cam.scale; rot = S.heading;
     } else { x = cam.ax; y = cam.ay; }
+    if (cam.kind === 'persp' && S.pos && S.pos.acc > 8 && !S.sim) { // where the GPS thinks you could be
+      ctx.strokeStyle = 'rgba(25,224,255,.5)'; ctx.lineWidth = 2 * K; ctx.beginPath(); let pen = false;
+      for (let i = 0; i <= 32; i++) {
+        const a = (i / 32) * 6.2832, v = projPoint(cam, { x: S.pos.x + Math.cos(a) * S.pos.acc, y: S.pos.y + Math.sin(a) * S.pos.acc });
+        if (!v) { pen = false; continue; } if (pen) ctx.lineTo(v.x, v.y); else ctx.moveTo(v.x, v.y); pen = true;
+      }
+      ctx.stroke();
+    }
     const s = (cam.kind === 'persp' ? 11 : 15) * K;
     ctx.save(); ctx.translate(x, y); ctx.rotate((rot * Math.PI) / 180);
     if (S.pos && S.pos.acc > 12 && cam.kind === 'flat') { ctx.fillStyle = 'rgba(25,224,255,.12)'; ctx.beginPath(); ctx.arc(0, 0, S.pos.acc * cam.scale, 0, 7); ctx.fill(); }
@@ -598,24 +758,43 @@
     ctx.fillStyle = color; ctx.fillText(s, x, y);
   }
 
+  // Standing off the route (in a park, a car park, GPS drift)? Point the way back instead of leaving you in empty space.
+  function guide() {
+    if (!S.route || !S.snap || !S.est || !S.prog || S.prog.arrived || S.snap.dist <= Math.max(15, 1.5 * ((S.pos && S.pos.acc) || 0))) return null;
+    const rel = N.angleDiff(S.heading, N.bearing(S.snap.x - S.est.x, S.snap.y - S.est.y)), a = Math.abs(rel);
+    const where = a < 25 ? 'ahead' : a > 135 ? 'behind you' : rel < 0 ? 'to your left' : 'to your right';
+    return { angle: rel, dist: S.snap.dist, x: S.snap.x, y: S.snap.y, text: `Head to the route — ${where}` };
+  }
+  // what the banner / turn card show: the next manoeuvre, or the way back to the route
+  function bannerInfo() {
+    const p = S.prog, g = guide();
+    if (g) return { dist: g.dist, angle: g.angle, text: g.text };
+    return { dist: p.toManeuver, angle: N.arrowAngle(p.next || null), text: instrText(p.next || p.cur) };
+  }
   function hudBanner() {
     const p = S.prog; if (!p) return;
-    const step = p.next || p.cur;
-    const d = N.formatDist(p.toManeuver, UNITS);
+    const bi = bannerInfo(), d = N.formatDist(bi.dist, UNITS);
     const pad = 14 * K;
     ctx.fillStyle = 'rgba(0,0,0,.72)'; roundRect(pad / 2, pad / 2, W - pad, 104 * K, 18 * K); ctx.fill();
     ctx.strokeStyle = '#1e3a44'; ctx.lineWidth = 2 * K; ctx.stroke();
-    drawArrow(pad + 40 * K, pad / 2 + 58 * K, 46 * K, N.arrowAngle(p.next || null), '#19e0ff', 11 * K);
+    drawArrow(pad + 40 * K, pad / 2 + 58 * K, 46 * K, bi.angle, guide() ? '#ffd650' : '#19e0ff', 11 * K);
     text(d.v, pad + 108 * K, pad / 2 + 62 * K, 54 * K, '#fff');
     ctx.font = `700 ${54 * K}px system-ui`; const w = ctx.measureText(d.v).width;
     text(d.u, pad + 114 * K + w, pad / 2 + 62 * K, 26 * K, '#8fb0bb');
-    text(instrText(step), pad + 108 * K, pad / 2 + 94 * K, 22 * K, '#f2fbff', 'left', W - pad * 2 - 108 * K);
+    text(bi.text, pad + 108 * K, pad / 2 + 94 * K, 22 * K, '#f2fbff', 'left', W - pad * 2 - 108 * K);
   }
   function hudFooter() {
     if (!S.prog) return;
     const rem = N.formatDist(S.prog.remaining, UNITS);
     const eta = N.formatEta(S.route.duration * (S.prog.remaining / Math.max(1, S.route.total)));
     text(`${rem.v} ${rem.u} · ${eta}`, 16 * K, H - 16 * K, 24 * K, '#f2fbff');
+    if (S.pos && !S.sim) {
+      const a = S.pos.acc || 0, q = S.manual ? null : a, col = q === null ? '#8fb0bb' : a <= 10 ? '#7dffb0' : a <= 25 ? '#ffd650' : '#ff8a6b';
+      const lab = S.manual ? 'location set by you' : 'GPS ±' + (UNITS === 'metric' ? Math.round(a) + ' m' : Math.round(a * 3.28084) + ' ft');
+      text(lab, W / 2, H - 52 * K, 16 * K, col, 'center');
+    }
+    if (S.waysBusy && !S.ways.length) text('Loading map…', W / 2, H * 0.4, 22 * K, '#8fb0bb', 'center');
+    if (params.has('debug')) text(`${S.fps.toFixed(0)} fps · ${S.ms.toFixed(1)} ms · q${S.q}`, 12 * K, 150 * K, 16 * K, '#ffd650');
     text(S.view === 'overhead' ? `overhead ${S.zoom + 1}/4` : S.view, W - 16 * K, H - 16 * K, 20 * K, '#8fb0bb', 'right');
   }
   function roundRect(x, y, w, h, r) {
@@ -624,12 +803,12 @@
 
   function drawTurnCard() {
     const p = S.prog; if (!p) return;
-    const step = p.next || p.cur, d = N.formatDist(p.toManeuver, UNITS);
-    drawArrow(W / 2, H * 0.3, 170 * K, N.arrowAngle(p.next || null), '#19e0ff', 34 * K);
+    const bi = bannerInfo(), d = N.formatDist(bi.dist, UNITS);
+    drawArrow(W / 2, H * 0.3, 170 * K, bi.angle, guide() ? '#ffd650' : '#19e0ff', 34 * K);
     ctx.font = `800 ${104 * K}px system-ui`; const w1 = ctx.measureText(d.v).width; ctx.font = `700 ${40 * K}px system-ui`; const w2 = ctx.measureText(d.u).width;
     const x0 = W / 2 - (w1 + w2 + 12 * K) / 2;
     text(d.v, x0, H * 0.72, 104 * K, '#fff'); text(d.u, x0 + w1 + 12 * K, H * 0.72, 40 * K, '#8fb0bb');
-    text(instrText(step), W / 2, H * 0.81, 30 * K, '#f2fbff', 'center', W - 40 * K);
+    text(bi.text, W / 2, H * 0.81, 30 * K, '#f2fbff', 'center', W - 40 * K);
     const nn = S.route.steps[p.index + 2];
     if (nn && p.next && p.next.type !== 'arrive' && S.route.steps[p.index + 1].distance < 120)
       text('then ' + N.instruction(nn).toLowerCase(), W / 2, H * 0.875, 22 * K, '#8fb0bb', 'center', W - 40 * K);
@@ -643,9 +822,17 @@
     text('Where to?', W / 2, H * 0.42, 48 * K, '#fff', 'center');
     if (S.pos) text(S.manual ? 'Using the location you set · tap to search' : 'Press Enter or tap to search', W / 2, H * 0.52, 24 * K, '#8fb0bb', 'center');
     else {
-      text(S.geoErr || 'Waiting for GPS…', W / 2, H * 0.52, 24 * K, S.geoErr ? '#ff9d6b' : '#8fb0bb', 'center', W - 40 * K);
-      text('Tap to tell me where you are', W / 2, H * 0.6, 24 * K, '#19e0ff', 'center');
+      const secs = Math.round((performance.now() - S.geoStart) / 1000);
+      text(S.geoErr || `Finding you… ${secs} s`, W / 2, H * 0.52, 24 * K, S.geoErr ? '#ff9d6b' : '#8fb0bb', 'center', W - 40 * K);
+      text(secs >= 6 || S.geoErr ? 'Tap to tell me where you are' : 'Tap to search or set your location', W / 2, H * 0.6, 24 * K, '#19e0ff', 'center');
     }
+    if (!S.pos && (S.geoErr || performance.now() - S.geoStart > 6000)) { // what the browser says, so a failure can be diagnosed
+      const api = navigator.geolocation ? 'yes' : 'NO', sec = window.isSecureContext ? 'yes' : 'NO';
+      text(`location API: ${api} · https: ${sec} · permission: ${S.permState || 'unknown'}`, W / 2, H * 0.74, 14 * K, '#8fb0bb', 'center', W - 24 * K);
+      text(S.lastErr || 'no response from the location sensor yet', W / 2, H * 0.79, 14 * K, '#8fb0bb', 'center', W - 24 * K);
+    }
+    if (S.pos && !S.manual && S.pos.acc > 50) text(`Sharpening GPS · ±${UNITS === 'metric' ? Math.round(S.pos.acc) + ' m' : Math.round(S.pos.acc * 3.28084) + ' ft'}`, W / 2, H * 0.6, 20 * K, '#ffd650', 'center');
+    if (S.waysBusy && !S.ways.length) text('Loading map…', W / 2, H * 0.68, 20 * K, '#8fb0bb', 'center');
     if (S.pos) { const cam = makeCamera(); drawWorld(cam); drawUser(cam); }
   }
 
@@ -670,19 +857,31 @@
   }
 
   // ---------------------------------------------------------------- loop
-  let lastDraw = 0;
+  let lastT = 0, frames = 0, qChanged = 0, raisedAt = 0, raiseWait = 6000, dtEma = 1 / 60;
   function loop(now) {
     requestAnimationFrame(loop);
+    const dt = clamp((now - (lastT || now - 16)) / 1000, 0.001, 0.1); lastT = now;
     if (S.sim) stepSim(now);
-    // smooth heading (shortest way round)
-    const tgt = currentHeadingTarget();
+    updatePose(now, dt);
+    const tgt = headingTarget();
     if (!S.headingInit) { S.heading = tgt; S.headingInit = true; }
-    else S.heading = (S.heading + N.angleDiff(S.heading, tgt) * 0.12 + 360) % 360;
-    if (now - lastDraw < 30) return; // ~30 fps is plenty and saves battery
-    lastDraw = now; draw(now);
+    else S.heading = N.lerpAngle(S.heading, tgt, 1 - Math.exp(-dt / 0.15));
+    const t0 = performance.now(); draw(now); const cost = performance.now() - t0;
+    S.fps += (1 / dt - S.fps) * 0.1; S.ms += (cost - S.ms) * 0.1; dtEma += (dt - dtEma) * 0.08;
+    // Adapt to what the device really delivers (frame interval, not just JS time: the raster work is deferred).
+    // Below ~42 fps: drop detail. Comfortably at display rate for a while: bring detail back, backing off if that
+    // immediately caused trouble last time.
+    if (!S.qForced && !document.hidden && ++frames % 45 === 0 && frames > 90) {
+      if ((dtEma > 0.024 || S.ms > 11) && S.q > 0) {
+        if (now - raisedAt < 20000) raiseWait = Math.min(raiseWait * 2, 120000);
+        setQuality(S.q - 1, now);
+      } else if (dtEma < 0.0185 && S.ms < 6 && S.q < 2 && now - qChanged > raiseWait) { raisedAt = now; setQuality(S.q + 1, now); }
+      else if (dtEma < 0.0185 && now - qChanged > 60000) raiseWait = 6000; // stable for a minute: forget the penalty
+    }
   }
+  function setQuality(q, now) { S.q = q; qChanged = now; dtEma = 1 / 60; frames = 0; resize(); }
   function resize() {
-    DPR = Math.min(2, window.devicePixelRatio || 1);
+    DPR = Math.min([1, 1.5, 2][S.q], window.devicePixelRatio || 1);
     W = window.innerWidth; H = window.innerHeight; K = Math.min(W, H) / 600;
     canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   }
@@ -691,7 +890,7 @@
   const tb = $('toolbar'), search = $('search');
   let tbTimer;
   function showToolbar() { tb.classList.remove('hide'); clearTimeout(tbTimer); tbTimer = setTimeout(() => tb.classList.add('hide'), 5000); updateButtons(); }
-  function updateButtons() { $('bMute').textContent = S.muted ? 'Voice off' : 'Voice on'; $('bMute').classList.toggle('on', !S.muted); }
+  function updateButtons() { $('bGround').textContent = S.ground ? 'Ground on' : 'Ground off'; $('bGround').classList.toggle('on', S.ground); $('bMute').textContent = S.muted ? 'Voice off' : 'Voice on'; $('bMute').classList.toggle('on', !S.muted); }
   function cycleView() { S.view = VIEWS[(VIEWS.indexOf(S.view) + 1) % VIEWS.length]; toast({ chase: 'Ahead view', turn: 'Turn-by-turn', overhead: 'Overhead — heading up', overview: 'Whole route' }[S.view], 1500); }
   function zoom(dir) { S.zoom = clamp(S.zoom + dir, 0, 3); if (S.view === 'turn' || S.view === 'overview') S.view = 'overhead'; }
   let mode = 'dest'; // 'dest' = where to?  'loc' = where am I?
@@ -749,6 +948,7 @@
   $('bIn').onclick = () => { zoom(-1); showToolbar(); };
   $('bOut').onclick = () => { zoom(1); showToolbar(); };
   $('bSearch').onclick = () => openSearch();
+  $('bGround').onclick = () => { S.ground = !S.ground; showToolbar(); };
   $('bMute').onclick = () => { S.muted = !S.muted; if (S.muted && window.speechSynthesis) speechSynthesis.cancel(); showToolbar(); };
   $('bEnd').onclick = () => { endRoute(); showToolbar(); };
 
@@ -781,10 +981,11 @@
   startCompass();
   if (DEMO) startDemo();
   else {
+    loadHint();
     startGeolocation();
     const pl = parseFloat(params.get('lat')), pn = parseFloat(params.get('lon'));
     if (!isNaN(pl) && !isNaN(pn)) setManualLocation(pl, pn); // e.g. ?lat=37.7749&lon=-122.4194
   }
   requestAnimationFrame(loop);
-  window.__walk = { S, Nav: N }; // handy for debugging in the console
+  window.__walk = { S, Nav: N, onFix, draw }; // handy for debugging in the console
 })();
