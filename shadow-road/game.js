@@ -392,7 +392,11 @@ function strike(e, base, dir, m, echo) {
 }
 const MAT_COL = { goo: ['#D88AAE', '#F0C8D8', '#FFF4E8'], fur: ['#B86A3E', '#E8C08A', '#FFF4E8'], spark: ['#F0D890', '#E0A0C0', '#FFF8E8'], rock: ['#9A8E80', '#7EA460', '#E8D08A'], metal: ['#F0D890', '#FFF8E8', '#9FD8E8'], crystal: ['#9FD8E0', '#D8A0C8', '#FFFFFF'], flesh: ['#8E2A40', '#C8607A', '#F0D8C8'] };
 const MAT_SFX = { goo: 'hit-goo', fur: 'hit-flesh', spark: 'hit-crystal', rock: 'hit-flesh', metal: 'hit-metal', crystal: 'hit-crystal', flesh: 'hit-flesh' };
+// a lord made a little gentler (data.js ease: wind, a longer wind-up; hurt, softer blows on him; taken, harder blows on
+// it; cd, longer rests; c0, only on the first walk of the road)
+const bossEase = (e) => { const z = e && e.boss && e.def && e.def.ease; return z && (!z.c0 || !(save.cycle | 0)) ? z : null; };
 function hurtEnemy(e, dmg, dir, m, crit) {
+  { const z = bossEase(e); if (z && z.taken && dmg > 0) dmg = Math.round(dmg * z.taken); }
   const pw = m.power || 0;
   e.hp -= dmg; e.flash = .09; e.sqx = 1 + .18 + .1 * pw; e.sqy = 1 - .16 - .06 * pw;
   hitstop = Math.max(hitstop, [.045, .075, .12][pw]); e.jit = hitstop + .04;
@@ -558,7 +562,7 @@ function playerDamage(dmg, fromX, big) {
   if (P.state === 'down' || (P.state === 'hurt' && P.knocked)) return; // knocked off his feet he cannot be hit again until he is up (and a moment after: see 'down')
   if (P.state === 'parry' && P.t < .28) { riposte(fromX); return; }
   if (tryReflect()) return; // prism scale: the shot goes back the way it came
-  if (boss && !boss.dead && boss.def.ease && dmg > 1) dmg = Math.max(1, Math.round(dmg * boss.def.ease.hurt)); // (everything in the first lords' fights hits a little softer)
+  if (boss && !boss.dead && bossEase(boss) && bossEase(boss).hurt && dmg > 1) dmg = Math.max(1, Math.round(dmg * bossEase(boss).hurt)); // (everything in the first lords' fights hits a little softer)
   const raw = dmg;
   if (pw('ward')) dmg = Math.max(1, Math.round(dmg * .5));
   dmg = armorDamage(dmg); thornsBack(raw); P.hurtT = 0;

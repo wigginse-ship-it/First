@@ -401,14 +401,14 @@ function recruitPartner(e) {
 }
 function wind(e, t) {
   if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * [1, .88, .76][e.phase - 1] * (e.enraged ? .9 : 1); sfx('growl'); if (e.plan === 'slam' || e.plan === 'dive') e.ty = P.y, e.tx = P.x; }
-  if (e.boss && e.def.ease) t *= e.def.ease.wind; // (the first lords give a longer look at what is coming)
+  if (bossEase(e) && bossEase(e).wind) t *= bossEase(e).wind; // (the first lords give a longer look at what is coming)
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
   if (!e.paired) recruitPartner(e); e.paired = false;
 }
 // each new cycle every foe has that much more health again (on top of its own increase)
 const ngPow = () => 1 + .5 * (save.cycle || 0);
 const ngCd = () => Math.max(.72, 1 - .09 * (save.cycle || 0)); // in later cycles foes press their attacks sooner
-function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = rand(e.def.cd[0], e.def.cd[1]) * worldDiff().cd * ngCd() * (save.cycle && !e.boss && (stageIdx < 5 || stageIdx === 7) ? .85 : 1); } // (New Game+ foes, fewer at once, come back at him quicker; the Trump worlds were tuned on their own, Lorraine aside)
+function recover(e, t) { e.state = 'recover'; e.t = t; e.cd = (bossEase(e) && bossEase(e).cd || 1) * rand(e.def.cd[0], e.def.cd[1]) * worldDiff().cd * ngCd() * (save.cycle && !e.boss && (stageIdx < 5 || stageIdx === 7) ? .85 : 1); } // (New Game+ foes, fewer at once, come back at him quicker; the Trump worlds were tuned on their own, Lorraine aside)
 // extension points: other files can add attack plans (PLAN_FX[plan](e)), their tells (TELL_FX[plan](e, t, k)) and hazard kinds
 // (HAZARD_FX[kind] = { update(h, dt), draw(h, t) }) without touching this file
 const PLAN_FX = {}, TELL_FX = {}, HAZARD_FX = {};

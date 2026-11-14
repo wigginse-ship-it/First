@@ -232,7 +232,7 @@ const BOSSES = {
     p1: ['bite', 'sweep', 'roll'], p2: ['bite', 'sweep', 'roll', 'erupt'], p3: ['bite', 'sweep', 'roll', 'erupt', 'submerge'] },
   colossus: { close: 'vent', ownCurse: 1, name: 'The Brass Colossus', title: 'WARDEN OF THE SKYPORT', draw: 'colossus', mat: 'metal', move: 'ground', hp: 790, spd: 52, hw: 34, hh: 118, dmg: 17, reach: 80, wind: .6, cd: [.9, 1.6], ease: { wind: 1.15, hurt: .8 }, weight: .3, poise: 9, ranged: 1,
     p1: ['swing', 'volley', 'groundwave'], p2: ['swing', 'volley', 'groundwave', 'beam', 'mines'], p3: ['swing', 'volley', 'groundwave', 'beam', 'mines', 'magnet'] },
-  wyrm:     { close: 'coil', name: 'The Kaleidoscope Wyrm', title: 'EATER OF COLORS', draw: 'wyrm', ownCurse: true, mat: 'crystal', move: 'fly', hover: 64, tail: 150, reachDown: 50, hp: 1080, spd: 64, hw: 44, hh: 56, dmg: 19, reach: 80, wind: .6, cd: [.6, 1.2], weight: .3, poise: 10, ranged: 1,
+  wyrm:     { close: 'coil', name: 'The Kaleidoscope Wyrm', title: 'EATER OF COLORS', draw: 'wyrm', ownCurse: true, mat: 'crystal', move: 'fly', hover: 64, tail: 150, reachDown: 50, hp: 1080, spd: 64, hw: 44, hh: 56, dmg: 19, reach: 80, wind: .6, cd: [.6, 1.2], ease: { wind: 1.15, hurt: .8, taken: 1.15, cd: 1.25, c0: 1 }, weight: .3, poise: 10, ranged: 1,
     p1: ['dive', 'breath', 'rain'], p2: ['dive', 'breath', 'rain', 'orbit'], p3: ['dive', 'breath', 'rain', 'orbit', 'prismwall'] },
 };
 
