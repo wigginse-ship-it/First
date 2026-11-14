@@ -401,6 +401,7 @@ function recruitPartner(e) {
 }
 function wind(e, t) {
   if (e.boss && BOSS_WIND[e.plan]) { t = BOSS_WIND[e.plan] * [1, .88, .76][e.phase - 1] * (e.enraged ? .9 : 1); sfx('growl'); if (e.plan === 'slam' || e.plan === 'dive') e.ty = P.y, e.tx = P.x; }
+  if (e.boss && e.def.ease) t *= e.def.ease.wind; // (the first lords give a longer look at what is coming)
   e.state = 'wind'; e.t = t; e.windMax = t; e.struck = false; e.walk = 0;
   if (!e.paired) recruitPartner(e); e.paired = false;
 }

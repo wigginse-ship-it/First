@@ -558,6 +558,7 @@ function playerDamage(dmg, fromX, big) {
   if (P.state === 'down' || (P.state === 'hurt' && P.knocked)) return; // knocked off his feet he cannot be hit again until he is up (and a moment after: see 'down')
   if (P.state === 'parry' && P.t < .28) { riposte(fromX); return; }
   if (tryReflect()) return; // prism scale: the shot goes back the way it came
+  if (boss && !boss.dead && boss.def.ease && dmg > 1) dmg = Math.max(1, Math.round(dmg * boss.def.ease.hurt)); // (everything in the first lords' fights hits a little softer)
   const raw = dmg;
   if (pw('ward')) dmg = Math.max(1, Math.round(dmg * .5));
   dmg = armorDamage(dmg); thornsBack(raw); P.hurtT = 0;
