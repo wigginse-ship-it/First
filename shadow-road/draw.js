@@ -771,8 +771,8 @@ function drawScene(t) {
   if (mirrorT > 0) list.push([P.y - .05, () => onMain(() => { ctx.globalCompositeOperation = 'lighter'; drawPlayerAt(P.x - P.facing * 34, P.y - 6, P.z, P.facing, playerPose(), .55); })]);
   list.push([P.y + .1, () => {
     shadow(P.x, P.y, 13 * Math.max(.5, 1 - P.z / 220));
-    if (P.inv > 0 && !['dodge', 'down', 'dead'].includes(P.state) && Math.floor(t * 18) % 2) return;
-    const blink = P.state === 'dodge' && P.dk === 'side' ? Math.max(.1, Math.abs(1 - P.t / (P.dodgeDur || .34) - .5) * 2) : 1; // stepping through Shadow, he is barely there mid-step
+    const off = P.inv > 0 && !['dodge', 'down', 'dead'].includes(P.state) && Math.floor(t * 18) % 2; // (hit, he flickers: dimmed, never gone, so he is never lost among foes who wear his face)
+    const blink = (P.state === 'dodge' && P.dk === 'side' ? Math.max(.1, Math.abs(1 - P.t / (P.dodgeDur || .34) - .5) * 2) : 1) * (off ? .4 : 1); // stepping through Shadow, he is barely there mid-step
     const pose = blendPose(Object.assign(playerPose(), { live: 1 })); // eased from last frame's pose (moves.js)
     if (P.specialT > 0) drawLearnedRim(pose);
     drawPlayerAt(P.x, P.y, P.z, P.facing, pose, blink);
