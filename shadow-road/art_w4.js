@@ -2657,7 +2657,7 @@
   };
   reg('w4decoy', {
     update(h, dt) { if (!h.live) { h.t = -1; return; } const e = h.e; if (!e || e.dead || e.state !== 'w4act' || e.w4a !== 'split') shatterDecoy(h, true); },
-    ups(h, list, t) { if (!h.live) return; list.push([h.y, () => { const s = h.s; ctx.save(); ctx.translate(h.x, h.y - h.z); ctx.scale(h.f, 1); ctx.scale(s, s); tyMask(h.fe, { t }, t); ctx.restore(); }]); },
+    ups(h, list, t) { if (!h.live) return; list.push([h.y, () => { const s = h.s; ctx.save(); ctx.translate(h.x, h.y - h.z); ctx.scale(h.f, 1); ctx.scale(s, s); if (h.e.cB) { h.fe.cB = h.e.cB; h.fe.cursed = h.e.cursed; } CREATURES.tyiga(h.fe, { t }); ctx.restore(); }]); }, // (corrupted, they wear its corruption too)
     box(h, box) { box(h.x, h.y, h.z, 60 * h.s, 130 * h.s); },
   });
   // a blow lands on a decoy as it would on a foe: one is enough to break it
