@@ -2023,7 +2023,7 @@
   { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); if (!NG()) return;
     for (const e of enemies) if (e.cTrait === 'carrier' && !e.dead) box(e.x, e.y, e.z, e.hw * 2 + 90, e.hh * 1.5 + 90);
     for (const w of L.wisps) box(w.x, w.y, w.z, 40, 50); }; }
-  const CARRIER = { CAR, live: () => ({ get wisps() { return L.wisps; }, get shade() { return L.shade; }, get stat() { return L.cStat; } }), possess: (o, hops, from) => possess(o, { hops: (hops | 0) - 1, chain: from ? from.map(graftOf) : [] }), breakCurse, ripNow };
+  const CARRIER = { CAR, live: () => ({ get wisps() { return L.wisps; }, get shade() { return L.shade; }, get stat() { return L.cStat; } }), possess: (o, hops, from) => possess(o, { hops: (hops | 0) - 1, chain: from ? from.map(graftOf) : [] }), breakCurse, ripNow, shade: (h) => startShade({ hops: h | 0 }) }; // (shade: for the dev panel and tests)
 
   // ======================================================================================================
   // THE SHRINE ROOMS: behind a card gate, a font that washes the curse out (shadowrooms.js deals it)

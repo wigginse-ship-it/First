@@ -1414,6 +1414,49 @@
     ['Walk me once and you are made anew. I lie beneath the true city, and the one who stops on me dies. What am I?', 'The Pattern', 'The Black Road', 'The moon-stair'],
     ['I have a mouth but never speak, a bed but never sleep, and I run but never walk. What am I?', 'A river', 'A road', 'A hound'],
     ['What can fill a hall to its rafters and yet take up no room at all?', 'Light', 'Water', 'A crowd'],
+    ["The more you take, the more you leave behind. What are they?", "Footsteps", "Shards", "Years"],
+    ["I have cities but no houses, forests but no trees, rivers but no water. What am I?", "A map", "Shadow", "A dream"],
+    ["What has keys but opens no locks?", "A harpsichord", "A jailer", "A Trump"],
+    ["I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?", "An echo", "A ghost", "A banner"],
+    ["What can run but never walks, has a bed but never sleeps?", "A river", "A hound", "A thief"],
+    ["The one who makes it sells it. The one who buys it never uses it. The one who uses it never knows. What is it?", "A coffin", "A crown", "A sword"],
+    ["What has a neck but no head, and wears a cork for a cap?", "A bottle", "A lute", "A swan"],
+    ["I am taken from a mine and shut in a wooden case, from which I am never released, and yet nearly everyone uses me. What am I?", "Pencil lead", "A gem", "Coal"],
+    ["What is broken as soon as you speak its name?", "Silence", "A vow", "A spell"],
+    ["What has one eye but cannot see?", "A needle", "A cyclops", "A storm"],
+    ["I fly without wings and cry without eyes. Wherever I go, darkness follows me. What am I?", "A cloud", "A raven", "A curse"],
+    ["Feed me and I live. Give me a drink and I die. What am I?", "Fire", "A thirst", "A sword"],
+    ["What gets wetter the more it dries?", "A towel", "The sea", "A tear"],
+    ["I have a face and two hands, but no arms or legs. What am I?", "A clock", "A Trump", "A mask"],
+    ["What comes once in a minute, twice in a moment, and never in a thousand years?", "The letter M", "A heartbeat", "The moon"],
+    ["Forward I am heavy, backward I am not. What am I?", "A ton", "A sword", "A promise"],
+    ["What belongs to you, yet others use it far more than you do?", "Your name", "Your blade", "Your shadow"],
+    ["I can be cracked, made, told and played. What am I?", "A joke", "A code", "A whip"],
+    ["What has roots that nobody sees, is taller than trees, up and up it goes, and yet never grows?", "A mountain", "Ygg", "A tower"],
+    ["Voiceless it cries, wingless flutters, toothless bites, mouthless mutters. What is it?", "The wind", "A ghost", "A rumour"],
+    ["Alive without breath, as cold as death, never thirsty, ever drinking, all in mail never clinking. What is it?", "A fish", "A knight's ghost", "A statue"],
+    ["This thing all things devours: birds, beasts, trees, flowers; gnaws iron, bites steel, grinds hard stones to meal. What is it?", "Time", "The curse", "Chaos"],
+    ["A box without hinges, key or lid, yet golden treasure inside is hid. What is it?", "An egg", "A heart", "A Pearl"],
+    ["I walk it once and am remade; stop upon it, and I die. Its pattern lies beneath the true city. What must I walk?", "The Pattern", "The Logrus", "The stair"],
+    ["I am a card that is a door; touch me and think, and you are elsewhere. What am I?", "A Trump", "A key", "A map"],
+    ["Black as the night it runs, through every Shadow it cuts, and Chaos rides along it. What is it?", "The Black Road", "A river", "The Abyss"],
+    ["I am the one true city; all others are my shadows. What am I?", "Amber", "Rebma", "Chaos"],
+    ["I am Amber turned upside down, a city in the sea, where every face is a reflection. What am I?", "Rebma", "Tir-na Nog'th", "Avalon"],
+    ["I exist only when the moon shines on me; my streets show what may be. Where are you standing?", "Tir-na Nog'th", "Rebma", "Kolvir"],
+    ["I am the twin of the Pattern, ever-shifting, the sign of Chaos. What am I?", "The Logrus", "The Abyss", "Ygg"],
+    ["A tree with roots in every world; its branches hold the Shadows up. What tree is it?", "Ygg", "The Oak", "The Yew"],
+    ["Born of a silver arm, I was made in the city in the sky. Whose arm am I?", "Benedict's", "Corwin's", "Oberon's"],
+    ["He walks in Shadow with a silver rose; his blade is Grayswandir. Who is he?", "Corwin", "Eric", "Brand"],
+    ["What may be held by one, shared by two, and is gone with three?", "A secret", "A sword", "A crown"],
+    ["I am always ahead of you, yet I cannot be seen. What am I?", "The future", "Your shadow", "The road"],
+    ["The more there is of me, the lighter I am; the less there is of me, the darker I become. What am I?", "Light", "Fog", "Gold"],
+    ["What can you catch, but not throw?", "A cold", "A ball", "A star"],
+    ["I have many teeth, but cannot bite. What am I?", "A comb", "A wolf", "A saw"],
+    ["What goes up and never comes down?", "Your age", "Smoke", "A prayer"],
+    ["What has a head, a tail, is brown, and has no legs?", "A penny", "A serpent", "A wyrm"],
+    ["Two brothers, one shining, one not: the dark one always follows, never wins, never stops. What are they?", "A man and his shadow", "Night and day", "Eric and Corwin"],
+    ["I am not alive, but I grow; I have no lungs, but I need air; I have no mouth, but water kills me. What am I?", "Fire", "A coral", "A curse"],
+    ["Whoever looks at me sees himself, yet I am never him. What am I?", "A mirror", "A Trump", "A twin"],
   ];
   MECH_FX.w5cloud = {
     start(m) { MECH_ONE = m; m.cl = cloudsFor(); m.warn = 0; m.sph = null; m.sphDone = false; },
@@ -1475,7 +1518,9 @@
     if (typeof spawnQ !== 'undefined') spawnQ.length = 0;
     if (!enemies.includes(e) && S.phase !== 'leave') { m.sph = null; if (S.phase === 'fight') m.sphDone = true; return; } // she is gone (a room change, a reset): ask again later
     if (S.phase === 'arrive' && e.state === 'idle') {
-      const q = pick(RIDDLES), opts = [q[1], q[2], q[3]].sort(() => Math.random() - .5), ys = [FLOOR_TOP + 24, (FLOOR_TOP + FLOOR_BOT) / 2 + 2, FLOOR_BOT - 12];
+      let last = -1; try { last = +(localStorage.getItem('shadowroad-riddle') ?? -1); } catch (er) {} // (never the same riddle twice running)
+      let qi = Math.floor(Math.random() * RIDDLES.length); if (qi === last) qi = (qi + 1 + Math.floor(Math.random() * (RIDDLES.length - 1))) % RIDDLES.length; try { localStorage.setItem('shadowroad-riddle', qi); } catch (er) {}
+      const q = RIDDLES[qi], opts = [q[1], q[2], q[3]].sort(() => Math.random() - .5), ys = [FLOOR_TOP + 24, (FLOOR_TOP + FLOOR_BOT) / 2 + 2, FLOOR_BOT - 12];
       for (const c of corpses) for (let i = 0; i < 6; i++) parts.push({ x: c.x + rand(-16, 16), y: c.y + rand(-4, 4), z: rand(2, 30), vx: rand(-20, 20), vy: 0, vz: rand(20, 60), life: .9, max: .9, col: 'rgba(210,222,245,.55)', size: rand(5, 10), shape: 'puff' });
       corpses.length = 0; // (any that were still falling when she landed)
       S.phase = 'ask'; S.t = 0; S.q = q[0]; S.right = q[1]; S.ex = e.x; e.state = 'w5riddle'; e.facing = -1;
