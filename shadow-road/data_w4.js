@@ -13,7 +13,7 @@
     3: { move: 'fly', hover: 34, tail: 0, reachDown: 34 },       // the Mask of a Thousand Faces, hanging over the floor in its mantle
   };
   // how close it closes before it starts each attack (it hunts up close as a wolf, keeps its distance as the others)
-  const STANDOFF = { w4rake: 150, w4howl: 170, w4clap: 170, w4faces: 190, w4swoop: 230, w4flame: 200, w4gust: 170, w4maw: 60, w4beam: 170, w4spit: 200, w4bite: 120, w4breath: 60 };
+  const STANDOFF = { w4rake: 150, w4howl: 170, w4clap: 170, w4faces: 190, w4swoop: 230, w4flame: 200, w4gust: 170, w4maw: 60, w4beam: 170, w4spit: 200, w4bite: 120, w4breath: 60, w4slash: 220, w4ring: 200, w4split: 200 };
 
   Object.assign(EDEF, {
     // humans of the Courts
@@ -41,8 +41,10 @@
     // the Drake keeps to the air, darting and wheeling, and comes down only to strike: a dive-bomb across the arena, wing-rakes
     // along the lanes, stoops out of a circle, a rain of burning feathers. Each leaves it low for a moment: your opening
     p2: ['w4swoop', 'w4embers', 'w4rakes', 'w4circle', 'w4flame', 'w4swoop', 'w4gust', 'w4embers', 'w4rakes', 'w4sweep', 'w4circle', 'w4howl'],
-    // the Mask is warded, its eyes and mouth shut, except when it opens them to attack: the beam, the spit, the bite
-    p3: ['w4beam', 'w4clap', 'w4spit', 'w4bite', 'w4gaze', 'w4beam', 'w4faces', 'w4bite', 'w4spit', 'w4howl', 'w4clap', 'w4beam', 'w4sweep'],
+    // the Mask is phased, half out of the world, and always on the wing (circling you out of reach, sweeping over you, darting
+    // aside, stepping through Shadow); it comes wholly into the world only to attack, and hangs spent and solid after each one:
+    // a dive through you, a ring of masks closing in, a split into three masks of which only one is real, the beam, the bite
+    p3: ['w4slash', 'w4split', 'w4beam', 'w4ring', 'w4spit', 'w4bite', 'w4slash', 'w4clap', 'w4split', 'w4gaze', 'w4ring', 'w4faces', 'w4slash', 'w4howl', 'w4beam', 'w4sweep'],
   };
 
   STAGES.push({ name: 'The Courts of Chaos', sub: 'THE END OF THE BLACK ROAD', theme: 'chaos', len: 2900,

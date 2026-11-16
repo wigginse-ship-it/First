@@ -119,6 +119,12 @@ const BSX = (() => {
     hurt: () => { beat(260, .16, .02, 11, 'sawtooth', 200); noise(.08, .08, 1500, 1); thump(140, 70, .07, .1); },
     stagger: () => { [180, 240, 300].forEach((f, i) => tone(f, .4, 'sawtooth', .02, f * .55, i * .02)); noise(.3, .12, 900, .7); thump(90, 34, .3, .26); },
     death: () => { [98, 131, 175, 233, 311].forEach((f, i) => tone(f * R(.98, 1.02), 1, 'sawtooth', .016, f * .5, i * .05)); noise(.9, .14, 700, .6); thump(62, 24, .8, .3); },
+    // on the wing: it goes out like a snuffed candle (a hollow pop, the air folding shut), dives through you (a tearing hiss
+    // over a falling chord), splits into three (glass chords cracking apart), and a decoy shatters like porcelain
+    blink: () => { noise(.1, .08, 700, .8); beat(560, .14, .01, 9, 'sine', 240); noise(.05, .04, 2600, 1.2, .07); },
+    slash: () => { noise(.2, .11, 2400, .9); beat(392, .2, .012, 8, 'sawtooth', 160, .02); noise(.08, .05, 900, .8, .1); },
+    split: () => { [196, 247, 294].forEach((f, i) => beat(f, .45, .012, 3 + i, 'triangle', f * 1.5, i * .05)); shatter(.07, .28); thump(110, 50, .12, .1, .28); },
+    shatter: () => { shatter(.11); noise(.12, .05, 1500, 1, .02); tone(R(900, 1100), .18, 'sine', .014, 500, .02); },
   };
   // THE PHANTOM OF BENEDICT, by his shape. The man: no roars; steel that rings, a sharp breath, the scrape of boots
   V.ben1 = {
@@ -284,7 +290,7 @@ const BSX = (() => {
     return null;
   };
   // how often each may sound (seconds): the hurt grunt at most every .6, calls never on top of each other
-  const GAP = { intro: 2, roar: .4, tell: .3, slam: .08, whoosh: .06, swing: .05, charge: .12, crunch: .08, shoot: .05, hurt: .6, stagger: .5, death: 2 };
+  const GAP = { blink: .15, slash: .1, split: .5, shatter: .05, intro: 2, roar: .4, tell: .3, slam: .08, whoosh: .06, swing: .05, charge: .12, crunch: .08, shoot: .05, hurt: .6, stagger: .5, death: 2 };
   const UNDER = { intro: 1, roar: .7, tell: .45, stagger: .5, death: 1.1 }; // (the corrupted lord's undertone, and how long)
   // each sound's level, set by rendering them all offline (sfxboss.cjs) against the core set: calls and deaths no louder
   // than the core roar and slam (about -10 dBFS at peak), wind-up cues near -19, hurt grunts near -20
