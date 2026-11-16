@@ -2055,7 +2055,7 @@
   // snuffed candle and comes back elsewhere in a puff of shadow; come close and it slips away. It comes wholly into the world
   // to attack, and after every attack it hangs spent, low and still, its eyes and mouth burning gold: that is your opening
   // (and late in the wind-up of the attacks that use its mouth or its dive, for a quick punish)
-  const SPENT = 2.1; // how long it hangs solid after an attack: time to walk up and land even a hammer's heavy blow
+  const SPENT = 1.8; // how long it hangs solid after an attack: time to walk up and land even a hammer's heavy blow
   const OPEN_AFTER = { bite: .8 }; // (the bite already left it stuck in the floor, mouth agape)
   const OPEN_WIND = { w4beam: .5, w4spit: .45, w4bite: .6, w4slash: .55 }; // its mouth unseals (its dive gathers) this late in the wind-up
   const bsx = (e, slot, alt) => { if (!(window.BSX && BSX.play(e, slot))) sfx(alt); }; // one of its own sounds (boss_sfx.js), or the generic one
@@ -2148,10 +2148,10 @@
       else e.w4vis = Math.min(1, (F.t - .2) / .22);
     }
     mSteer(e, maskGoal(e, F), dt); e.facing = Math.sign(P.x - e.x) || e.facing;
-    if (e.state === 'idle' && e.cd <= 0 && e.w4roam > (e.w4need || 1.5) && F.mode !== 'blink' && F.t > .25) {
+    if (e.state === 'idle' && e.cd <= 0 && e.w4roam > (e.w4need || 2) && F.mode !== 'blink' && F.t > .25) {
       if (!e.plan) e.plan = pick(e.def.p3);
       if (Math.abs(P.x - e.x) < e.hw + 70 && Math.random() < .4) e.plan = 'w4bite';
-      e.w4need = rand(1.2, 2.2); F.mode = null; e.w4T = null; e.w4vis = 1; wind(e, e.def.wind);
+      e.w4need = rand(1.8, 2.8); F.mode = null; e.w4T = null; e.w4vis = 1; wind(e, e.def.wind);
     }
   }
   updateEnemy = function (e, dt) {
@@ -2184,7 +2184,7 @@
     }
     // the Mask: never flinches; phased, a blow passes through it and barely marks it
     m = Object.assign({}, m, { noStun: 1, launch: 0, kb: (m.kb || 0) * .15, bounce: 0, spike: 0 });
-    if (maskOpen(e)) { base *= 1.8; if (!echo) e.w4hitN = (e.w4hitN || 0) + 1; } // solid, its eyes and mouth open: the weak points
+    if (maskOpen(e)) { base *= 1.5; if (!echo) e.w4hitN = (e.w4hitN || 0) + 1; } // solid, its eyes and mouth open: the weak points
     else {
       base *= m.trump ? .35 : .05; m.crit = 0;
       const now = performance.now(); if (!(e.w4ping > now)) { e.w4ping = now + 220; sfx('hit-crystal', .18); // the blow goes through it like a hand through smoke
