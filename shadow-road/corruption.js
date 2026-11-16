@@ -936,8 +936,8 @@
     const T = teff(), g = ctx;
     // how cursed the picture looks: the curse itself (0..1), not its tier, eased so the world visibly clears (or darkens)
     // as it moves; a spike or the Circle's last hour push it to the worst
-    const cv = clamp(CS().v / 100, 0, 1); // (the curse's own value, and nothing else: purified, the world clears however it got there)
-    CVS.v += (cv - CVS.v) * Math.min(1, (1 / 60) * 1.6); if (Math.abs(cv - CVS.v) < .002) CVS.v = cv; const cvs = CVS.v;
+    const cur = clamp(CS().v / 100, 0, 1); // (the curse's own value, and nothing else: purified, the world clears however it got there; not named cv, which is the canvas)
+    CVS.v += (cur - CVS.v) * Math.min(1, (1 / 60) * 1.6); if (Math.abs(cur - CVS.v) < .002) CVS.v = cur; const cvs = CVS.v;
     // the transforms of the whole picture (copied, then laid back turned, mirrored or nearer)
     if (f && k > 0 && ['tilt', 'mirror', 'close', 'tear', 'rewind'].includes(f.k)) {
       const W = cv.width, H = cv.height, half = lite(), bw = half ? Math.ceil(W / 2) : W, bh = half ? Math.ceil(H / 2) : H, b = buf(bw, bh);
