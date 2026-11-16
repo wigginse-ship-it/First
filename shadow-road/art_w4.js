@@ -1153,7 +1153,9 @@
     const X = maskMood(e, a, t), down = e.state === 'down', live = e.w4hl && !e.dead && !(e.w4shift > 0), fierce = e.state === 'wind' || e.state === 'w4act';
     const wo = e.dead ? 1 : cl01(e.w4open ?? 1), shut = wo < .5, tilt = (e.w4pose && e.w4pose.tilt) || 0; // the ward: shut, it is hard as glaze; open, its eyes and mouth are its weak points
     const bob = Math.sin(t * .9) * 2, cy = -64 + bob + (down ? 16 : 0), cx = 2, sw = Math.sin(t * .7) * 3;
+    const ghost = e.phase === 3 && shut && !e.dead, LK = maskLook(e, cy); // half out of the world (phased), and where its eyes are turned
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    maskVeil(e, cx, t); // the veil streaming out behind it as it flies
     if (!live) maskHand(-74, -24 - bob, -2.1, .35, .92, true);
     // the aureole: a disc of beaten gold, tooled with rays and punched dots, the dark of the Abyss inside it
     const hx = cx - 6, hy = cy - 4;
@@ -1202,15 +1204,18 @@
     ctx.beginPath(); ctx.moveTo(6, -39); ctx.lineTo(2, -30); ctx.lineTo(8, -22); ctx.lineTo(3, -14); ctx.moveTo(-25, 4); ctx.lineTo(-17, 11); ctx.lineTo(-15, 21); ctx.lineTo(-7, 27); ctx.moveTo(27, -9); ctx.lineTo(21, -5); ctx.lineTo(23, 2);
     ctx.strokeStyle = C(MK.giltDk); ctx.lineWidth = 2.4; ctx.stroke(); if (DET()) { ctx.strokeStyle = MK.goldLit; ctx.lineWidth = 1; ctx.stroke(); }
     fillPoly([fx, -30, fx + 3, -26, fx, -22, fx - 3, -26], MK.gold, .8); // a lozenge of gold on the brow
+    if (e.w4crack > .02) maskCracks(e.w4crack, t); // splitting: light breaking out through cracks across the face
     const eye = (x, y, d, sx) => { // d: which way the outer corner lies; grief lifts the inner corners, wrath drags them down, laughter narrows them to crescents
       const ix = x - d * 7 * sx, ox = x + d * 7.5 * sx, iy = y - X.b * (X.b > 0 ? 3 : 2.5), oy = y + X.b * 1.2, up = y - 5.5 + Math.max(0, -X.b) * 2.2, lo = y + 4 - Math.max(0, X.s) * 4;
       ctx.beginPath(); ctx.moveTo(ix, iy); ctx.quadraticCurveTo(x, up, ox, oy); ctx.quadraticCurveTo(x, lo, ix, iy); ctx.closePath(); ctx.fillStyle = C(MK.hole); ctx.fill(); outline(1.3);
-      if (shut) { // the porcelain lid, drawn down over the eye: a glazed shell with a gilt lash line
+      if (e.w4decoy) { if (DET()) { ctx.strokeStyle = 'rgba(150,120,210,.55)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(ix + d * 1.5, iy); ctx.quadraticCurveTo(x, lo - 1.2, ox - d * 1.5, oy); ctx.stroke(); } } // a decoy's eyes are empty: nothing looks out of them
+      else if (shut && !ghost) { // the porcelain lid, drawn down over the eye: a glazed shell with a gilt lash line
         const lid = lerp(lo, up, wo * 2); ctx.beginPath(); ctx.moveTo(ix, iy); ctx.quadraticCurveTo(x, up, ox, oy); ctx.quadraticCurveTo(x, lid + 2.4, ix, iy); ctx.closePath(); ctx.fillStyle = C(MK.glazeDk); ctx.fill(); outline(1.1);
         if (DET()) { ctx.strokeStyle = MK.glazeLit; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(ix + d * 2, iy - 1.4); ctx.quadraticCurveTo(x, up + 1.2, ox - d * 2, oy - 1.6); ctx.stroke(); }
         ctx.strokeStyle = C(MK.giltDk); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(ix, iy); ctx.quadraticCurveTo(x, lid + 2.4, ox, oy); ctx.stroke();
         ctx.lineWidth = .8; ctx.beginPath(); for (let j = 1; j < 5; j++) { const u = j / 5, lx = lerp(ix, ox, u), ly = lerp(iy, oy, u) + Math.sin(u * Math.PI) * (lid + 2.4 - (iy + oy) / 2) * .9; ctx.moveTo(lx, ly); ctx.lineTo(lx + d * .8, ly + 2); } ctx.stroke();
-      } else if (!a.hurt && DET()) { const ey = (up + lo) / 2 + .8, eh = Math.max(.5, Math.min(1.9, (lo - up) * .28)); ctx.fillStyle = fierce ? '#FFF0A8' : TY.eye; ell(x + 1, ey, 2.4 * sx, eh); ctx.fill(); ctx.fillStyle = '#1A0606'; ell(x + 1.5, ey, .5, eh * .8); ctx.fill(); glowAt(x + 1, ey, 9, SULF, fierce ? .6 : .32); }
+      } else if (!a.hurt && DET()) { const ey = (up + lo) / 2 + .8 + LK[1], eh = Math.max(.5, Math.min(1.9, (lo - up) * .28)), px = x + 1 + LK[0] * sx; // (its eyes follow you)
+        ctx.fillStyle = fierce ? '#FFF0A8' : ghost ? '#E4D8FF' : TY.eye; ell(px, ey, 2.4 * sx, eh); ctx.fill(); ctx.fillStyle = '#1A0606'; ell(px + .5, ey, .5, eh * .8); ctx.fill(); glowAt(px, ey, 9, ghost ? '190,160,255' : SULF, fierce ? .6 : .32); }
       ctx.strokeStyle = C(MK.umber); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(ix - d, iy - 5 - Math.max(0, X.b) * 1.5); ctx.quadraticCurveTo(x, up - 4 - Math.max(0, X.b) * 1.5 + Math.max(0, -X.b) * 2.4, ox + d * 1.5, oy - 4.5 + Math.max(0, -X.b) * .5); ctx.stroke(); // the painted brow
     };
     eye(fx - 10, -6, -1, .85); eye(fx + 11, -6, 1, 1);
@@ -1469,7 +1474,61 @@
       CURSE_ART.eye(0, 0, Math.max(3, wd * 1.6), k, { t, seed: 6, look, white: LL.burn > 0 ? '#FFF0C8' : '#D8C49A', iris: LL.burn > 0 ? '#E09A20' : '#B01418', blink: false, round: true });
       ctx.restore(); } });
   }
-  const FORMS = { 1: tyWolf, 2: tyDrake, 3: tyMask };
+  // ---------------------------------------------------------------- the Mask on the wing (phase 3)
+  // where its eyes are turned: toward the hero, in its own (mirrored) frame; a little offset of the pupils
+  function maskLook(e, cy) {
+    if (typeof P === 'undefined' || !P || e.x === undefined) return [0, 0];
+    const s = e.size || 1, dx = (P.x - e.x) * (e.facing || 1), dy = (P.y - (P.z || 0) - 40) - (e.y - (e.z || 0) + cy * s), d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 50);
+    return [clamp(dx / d * 2.4 * k, -2.4, 2.4), clamp(dy / d * 1.5 * k, -1.3, 1.5)];
+  }
+  // the veil: as it flies its mantle streams out behind it, a long banner of darkness rippling, its end fraying into smoke
+  function maskVeil(e, cx, t) {
+    const M = e.w4mm; if (!M) return; const s = e.size || 1;
+    const vx = M.vx * (e.facing || 1) / s, vy = (M.vy * .5 - M.vz) / s, sp = Math.hypot(vx, vy), L = Math.min(190, (sp - 60) * .24); if (L < 10) return;
+    const ux = -vx / sp, uy = -vy / sp, nx = -uy, ny = ux, ax = cx, ay = -14, N = 10, A = [], B = [], mid = [];
+    for (let i = 0; i <= N; i++) { const q = i / N, w = 26 * Math.pow(1 - q, .75) + 1.5, wv = Math.sin(t * 9 - q * 7) * 9 * q, x = ax + ux * L * q + nx * wv, y = ay + uy * L * q + ny * wv + q * q * 12;
+      A.push(x + nx * w, y + ny * w); B.push(x - nx * w, y - ny * w); mid.push(x, y); }
+    trace(A, B); ctx.fillStyle = C(MK.robe); ctx.fill(); outline(1.6);
+    if (DET()) {
+      ctx.save(); trace(A, B); ctx.clip(); ctx.lineWidth = 1.2; // its folds, catching the violet light, running down its length
+      for (const [o, c] of [[-.55, 'rgba(120,96,170,.5)'], [0, 'rgba(0,0,0,.45)'], [.5, 'rgba(150,120,200,.35)']]) { ctx.strokeStyle = c; ctx.beginPath();
+        for (let i = 0; i <= N; i++) { const q = i / N, w = 26 * Math.pow(1 - q, .75) * o; ctx.lineTo(mid[i * 2] + nx * w, mid[i * 2 + 1] + ny * w); } ctx.stroke(); }
+      const g = ctx.createLinearGradient(ax, ay, ax + ux * L, ay + uy * L); g.addColorStop(0, 'rgba(255,120,60,.16)'); g.addColorStop(1, 'rgba(255,120,60,0)'); ctx.fillStyle = g; ctx.fillRect(-300, -300, 600, 600); // the warm void inside it
+      ctx.restore();
+    }
+    for (let i = 0; i < 3; i++) { const q = .78 + i * .1; smokeLobe(ax + ux * L * q + Math.sin(t * 5 + i) * 5, ay + uy * L * q + q * q * 12 + Math.cos(t * 4 + i) * 4, 9 - i * 2.4, '#140C1A', .75 - i * .2); } // the end of it fraying into smoke
+  }
+  // the cracks that split it: light breaking out of the porcelain along lines running from the middle of the face to its rim
+  const MCRACK = [[3, -8, 0, -18, 5, -27, 1, -39], [3, -8, 12, -12, 17, -21, 26, -23], [3, -8, -6, -5, -15, -11, -26, -9], [3, -8, 9, 4, 6, 16, 12, 30], [3, -8, -4, 7, -11, 17, -14, 31], [3, -8, 14, -2, 22, 2, 27, 8]];
+  function maskCracks(k, t) {
+    const path = () => { ctx.beginPath(); for (const c of MCRACK) { const n = c.length / 2 - 1, e = k * n; ctx.moveTo(c[0], c[1]);
+      for (let i = 1; i <= n; i++) { const u = Math.min(1, e - (i - 1)); if (u <= 0) break; ctx.lineTo(lerp(c[i * 2 - 2], c[i * 2], u), lerp(c[i * 2 - 1], c[i * 2 + 1], u)); } } };
+    path(); ctx.strokeStyle = C('#1A0A12'); ctx.lineWidth = 2.6; ctx.stroke();
+    if (!DET()) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const pu = .75 + .25 * Math.sin(t * 22);
+    path(); ctx.strokeStyle = `rgba(255,200,120,${.5 * k * pu})`; ctx.lineWidth = 4; ctx.stroke(); path(); ctx.strokeStyle = `rgba(255,246,214,${.9 * k})`; ctx.lineWidth = 1.1; ctx.stroke();
+    ctx.restore(); glowAt(3, -8, 26 * k, SULF, .5 * k);
+  }
+  // a flat silhouette of it (aureole, face, mantle): its shadow-double, and the afterimages it leaves when it moves fast
+  function maskGhost(rgb, a) {
+    ctx.fillStyle = `rgba(${rgb},${a})`; ctx.beginPath(); ctx.arc(-4, -68, 46, 0, TAU); ctx.fill();
+    poly([-18, -58, -30, -34, -38, -18, -34, -2, 0, 2, 34, -2, 38, -20, 30, -34, 22, -58]); ctx.fill();
+    ctx.save(); ctx.translate(2, -64); poly(MASK_PATH); ctx.fillStyle = `rgba(${rgb},${Math.min(1, a * 1.4)})`; ctx.fill(); ctx.restore();
+  }
+  // the Mask as it is drawn now: phased (half out of the world, between its attacks) it is pale and see-through, its double slipping
+  // out of step with it; solid (attacking, or spent after an attack) it is all there, a hot gold light behind it
+  function maskForm(e, a, t) {
+    const so = e.dead || e.w4decoy ? 1 : cl01(e.w4open ?? 1), ph = 1 - so;
+    if (ph > .02) {
+      if (DET()) { const o = Math.sin(t * 5.3) * 6 * ph; ctx.save(); ctx.globalAlpha *= .3 * ph; ctx.translate(o, -2 + Math.cos(t * 4.1) * 3 * ph); maskGhost(TYC ? '150,40,70' : '150,110,235', 1); ctx.restore(); }
+      ctx.save(); ctx.globalAlpha *= 1 - .48 * ph; tyMask(e, a, t); ctx.restore();
+      return;
+    }
+    if (!e.dead && !e.w4decoy && DET()) { const pu = .8 + .2 * Math.sin(t * 7); glowAt(-4, -66, 92, '255,200,110', .3 * pu); add(() => { // its aureole blazing: the light of it all being there
+      ctx.strokeStyle = `rgba(255,220,140,${.35 * pu})`; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 16; i++) { const an = i / 16 * TAU + t * .4; ctx.moveTo(-4 + Math.cos(an) * 52, -68 + Math.sin(an) * 52); ctx.lineTo(-4 + Math.cos(an) * (62 + 6 * Math.sin(t * 6 + i)), -68 + Math.sin(an) * (62 + 6 * Math.sin(t * 6 + i))); } ctx.stroke(); }); }
+    tyMask(e, a, t);
+  }
+  const FORMS = { 1: tyWolf, 2: tyDrake, 3: maskForm };
   CREATURES.tyiga = function (e, a) { // (w4vis: it can leave sight, as in the Hunting Leap)
     const v = e.w4vis ?? 1; if (v <= .02) return; if (v < 1) { ctx.save(); ctx.globalAlpha *= v; const sv = e.w4vis; e.w4vis = 1; CREATURES.tyiga(e, a); e.w4vis = sv; ctx.restore(); return; }
     a = a || {}; const t = a.t || 0, ph = Math.min(3, Math.max(1, e.phase || 1));
@@ -1638,15 +1697,15 @@
   function handsUpdate(e, dt, t) {
     const G = handGoals(e, t);
     if (!e.w4H) e.w4H = G.map(g => Object.assign({ pin: 0, flip: 1 }, g));
-    const k = Math.min(1, dt * (e.state === 'wind' && e.plan === 'w4clap' ? 6 : 4)), kr = Math.min(1, dt * 6);
+    const k = Math.min(1, dt * (e.state === 'wind' && e.plan === 'w4clap' ? 6 : e.state === 'w4act' ? 4 : 11)), kr = Math.min(1, dt * 6); // (on the wing they keep up with it)
     e.w4H.forEach((h, i) => { if (h.pin > 0) { h.pin--; return; } const g = G[i];
       h.x += (g.x - h.x) * k; h.y += (g.y - h.y) * k; h.z += (g.z - h.z) * k; h.rot += (g.rot - h.rot) * kr; h.curl += (g.curl - h.curl) * kr; h.side = g.side; h.flip = 1; });
   }
   function handsList(e, list) {
-    if (!e.w4hl || !e.w4H) return; const s = e.size;
+    if (!e.w4hl || !e.w4H) return; const s = e.size, va = (e.w4vis ?? 1) * (1 - .45 * (1 - cl01(e.w4open ?? 1))); if (va < .03) return; // (they go out of the world with it)
     e.w4H.forEach((h, i) => list.push([h.y + (i ? -.5 : .5), () => {
       shadow(h.x, h.y, 16 * s * (1 - Math.min(.7, h.z / 160)));
-      ctx.save(); ctx.translate(h.x, h.y - h.z); ctx.scale(h.side * s, s); FLASH = e.flash > 0; maskHand(0, 0, h.rot, h.curl, 1, i === 1, h.flip); FLASH = false; ctx.restore();
+      ctx.save(); ctx.globalAlpha *= va; ctx.translate(h.x, h.y - h.z); ctx.scale(h.side * s, s); FLASH = e.flash > 0; maskHand(0, 0, h.rot, h.curl, 1, i === 1, h.flip); FLASH = false; ctx.restore();
     }]));
   }
   // THE GATHERING HANDS (mask): its hands fly out to either side of you, low over the floor, and sweep together in a clap.
@@ -1990,27 +2049,105 @@
     if (e.state === 'recover' && e.w4daze <= 0 && e.w4low <= 0) { const A = ARENA(); e.x += (clamp(e.x, A.l, A.r) - e.x) * Math.min(1, dt * 2); }
   }
   // ---------------- the Mask ----------------
-  const OPEN_AFTER = { clap: 1.6, faces: 1.2, gaze: 1.1 }; // a moment after some of its attacks, its eyes still open
-  const OPEN_WIND = { w4beam: .5, w4spit: .45, w4bite: .6 }; // and late in the wind-up of the ones that use its mouth
+  // The Mask never hangs in front of you. Between its attacks it is phased, half out of the world (pale, see-through, its
+  // shadow-double slipping out of step with it): blows pass through it, doing next to nothing. And it never keeps still: it
+  // circles you out of reach, sweeps over you from one side of the arena to the other, darts sideways, or goes out like a
+  // snuffed candle and comes back elsewhere in a puff of shadow; come close and it slips away. It comes wholly into the world
+  // to attack, and after every attack it hangs spent, low and still, its eyes and mouth burning gold: that is your opening
+  // (and late in the wind-up of the attacks that use its mouth or its dive, for a quick punish)
+  const SPENT = 2.1; // how long it hangs solid after an attack: time to walk up and land even a hammer's heavy blow
+  const OPEN_AFTER = { bite: .8 }; // (the bite already left it stuck in the floor, mouth agape)
+  const OPEN_WIND = { w4beam: .5, w4spit: .45, w4bite: .6, w4slash: .55 }; // its mouth unseals (its dive gathers) this late in the wind-up
+  const bsx = (e, slot, alt) => { if (!(window.BSX && BSX.play(e, slot))) sfx(alt); }; // one of its own sounds (boss_sfx.js), or the generic one
+  const MFIG = { orbit: 2.6, sweep: 1.35, dash: .75, blink: 1.05, rise: 1.0 };
+  function maskNext(e, mode) {
+    const F = e.w4mf || (e.w4mf = {}), A = ARENA(), last = F.last, side = Math.sign(e.x - P.x) || 1;
+    mode = mode || pick(['orbit', 'sweep', 'dash', 'blink', 'orbit', 'sweep'].filter(m => m !== last));
+    Object.assign(F, { mode, last: mode, t: 0, dur: MFIG[mode], dir: Math.random() < .5 ? 1 : -1, x0: e.x, y0: e.y, z0: e.z, jumped: false, ph: Math.atan2((e.y - P.y) * 3.4, e.x - P.x) });
+    if (mode === 'sweep') { F.tx = clamp(P.x - side * rand(180, 270), A.l, A.r); F.ty = clamp(P.y + rand(-46, 46), A.top, A.bot); if (Math.abs(F.tx - P.x) < 120) F.tx = clamp(P.x + side * 200, A.l, A.r); sfx('whoosh'); } // over you, to your far side
+    else if (mode === 'dash' || mode === 'blink') { // a dart sideways out to one side of you; or out of the world and back in somewhere else
+      const s = mode === 'dash' && Math.abs(e.x - P.x) < 160 ? side : pick([-1, 1]); F.tx = clamp(mode === 'dash' ? e.x + s * rand(230, 310) : P.x + s * rand(180, 250), A.l, A.r);
+      if (Math.abs(F.tx - P.x) < 150) F.tx = clamp(P.x + (Math.sign(F.tx - P.x) || s) * 190, A.l, A.r);
+      if (Math.abs(F.tx - P.x) < 150) F.tx = clamp(P.x - (Math.sign(F.tx - P.x) || s) * 190, A.l, A.r);
+      F.ty = clamp(P.y + rand(-48, 48), A.top, A.bot); F.tz = mode === 'dash' ? rand(58, 86) : rand(72, 108);
+      if (mode === 'dash') sfx('whoosh'); else bsx(e, 'blink', 'whoosh'); }
+    else if (mode === 'rise') { F.tx = clamp(e.x + side * 130, A.l, A.r); F.ty = e.y; F.tz = 140; sfx('whoosh'); } // straight up out of your reach, and away
+    return F;
+  }
+  function maskGoal(e, F) { // [x, y, z, chase, top speed] for the way it is moving
+    const A = ARENA(), u = cl01(F.t / F.dur);
+    if (F.mode === 'orbit') { const a = F.ph + F.t * 1.7 * F.dir; // round and round you, out of reach, dipping and rising
+      return [clamp(P.x + Math.cos(a) * 200, A.l, A.r), clamp(P.y + Math.sin(a) * 60, A.top, A.bot), 90 + 22 * Math.sin(a * 2 + 1), 5, 660]; }
+    if (F.mode === 'sweep') { const q = sm(u); return [lerp(F.x0, F.tx, q), lerp(F.y0, F.ty, q), lerp(F.z0, 84, q) + 70 * Math.sin(q * Math.PI), 12, 1000]; }
+    if (F.mode === 'blink') return [e.x, e.y, F.jumped ? F.tz : e.z, 4, 200];
+    return [F.tx, F.ty, F.tz, 9, F.mode === 'dash' ? 1100 : 560];
+  }
+  // where it goes while it winds up each attack (its targets are fixed when the wind-up starts): [x, y, z, chase, top]
+  const WIND_GO_M = {
+    w4beam: (e) => { const T = beamT(e); return [T.sx, T.y, 40, 7, 1200]; }, // to the end of your lane
+    w4bite: (e) => { const T = biteT(e), s = Math.sign(e.x - T.x) || 1; return [T.x + s * 70, T.y, 112, 5, 900]; }, // up over you
+    w4slash: (e) => { const L = slashT(e); return [L.x0, L.y0, L.z0, 8, 1200]; }, // to the start of its dive
+    w4ring: (e) => [P.x + (Math.sign(e.x - P.x) || 1) * 60, P.y, 150, 4, 800], // high over you
+    w4split: (e) => [clamp(P.x + (Math.sign(e.x - P.x) || 1) * 150, ARENA().l, ARENA().r), P.y, 80, 4, 600],
+    w4clap: (e) => [clamp(P.x + (Math.sign(e.x - P.x) || 1) * 180, ARENA().l, ARENA().r), clamp(P.y - 20, ARENA().top, ARENA().bot), 80, 3, 500],
+  };
   function maskUpd(e, dt) {
     e.closeCd = 99;
-    if (e.state === 'w4act') e.w4lastA = e.w4a; else if (e.w4lastA) { if (OPEN_AFTER[e.w4lastA]) openMask(e, OPEN_AFTER[e.w4lastA]); e.w4lastA = null; }
+    if (e.state === 'w4act') e.w4lastA = e.w4a; // spent, after each attack: solid for a while
+    else if (e.w4lastA) { if (e.state !== 'wind') openMask(e, OPEN_AFTER[e.w4lastA] ?? SPENT); e.w4lastA = null; e.w4atk = 0; }
+    else if (e.w4atk && e.state === 'recover') { openMask(e, SPENT); e.w4atk = 0; }
+    const was = maskOpen(e);
     if (e.w4openT > 0) e.w4openT -= dt;
-    const near = Math.abs(P.x - e.x) < e.hw + 74 && Math.abs(P.y - e.y) < 36 && P.z < 70 && P.state !== 'dead' && (e.state === 'idle' || e.state === 'recover');
-    if (e.w4breathCd > 0) e.w4breathCd -= dt;
-    e.w4crowd = near ? (e.w4crowd || 0) + dt : Math.max(0, (e.w4crowd || 0) - dt * .6);
-    const z0 = e.z;
+    if (e.w4evCd > 0) e.w4evCd -= dt;
+    const idle = e.state === 'idle' && e.plan !== 'roar', x0 = e.x, y0 = e.y, z0 = e.z, cd = e.cd;
+    if (idle) e.cd = 99; // the shared walk-in never starts its attacks: it picks its moment on the wing
     _upd(e, dt);
-    if (e.dead || e.phase !== 3) return;
-    if (e.state === 'wind' && OPEN_WIND[e.plan] && 1 - e.t / e.windMax > OPEN_WIND[e.plan]) openMask(e, .15); // its mouth unseals as the attack gathers
-    if (e.state === 'wind' && e.plan === 'w4bite') { const k = 1 - e.t / e.windMax; e.z = z0 + (80 - z0) * Math.min(1, dt * 4); e.w4pose = { tilt: -.35 * k }; } // it rears up and back
+    if (e.cd > 50) e.cd = cd - (99 - e.cd);
+    if (e.dead || e.phase !== 3 || e.state === 'dying') return;
+    if (stillT > 0) return;
+    if (e.state !== 'down') { e.x = x0; e.y = y0; e.z = z0; }
     e.w4open = (e.w4open ?? 0) + ((maskOpen(e) ? 1 : 0) - (e.w4open ?? 0)) * Math.min(1, dt * 9);
+    e.w4crack = e.state === 'wind' && e.plan === 'w4split' ? 1 - e.t / e.windMax : e.state === 'w4act' && e.w4a === 'split' ? 1 : Math.max(0, (e.w4crack || 0) - dt * 1.6);
     if (e.w4shift > 0) { e.w4open = 1; return; }
-    e.w4idleT = e.state === 'idle' ? (e.w4idleT || 0) + dt : 0;
-    if (e.state !== 'idle' || e.plan === 'roar' || P.state === 'dead') return;
-    if (e.w4crowd > 2.6 && !(e.w4breathCd > 0)) { e.w4crowd = 0; e.w4breathCd = 7; e.plan = 'w4breath'; e.w4T = null; wind(e, .8); return; }
-    // it need not line itself up: if you keep on top of it, it attacks from where it is (up close, as often as not with the bite)
-    if (e.cd <= 0 && e.w4idleT > 1.1) { if (!e.plan) e.plan = pick(e.def.p3); if (Math.abs(P.x - e.x) < e.hw + 60 && Math.random() < .4) e.plan = 'w4bite'; e.w4T = null; wind(e, e.def.wind); }
+    if (e.frozen > 0 || e.state === 'down') { openMask(e, .3); e.z += (6 - e.z) * Math.min(1, dt * 6); return; } // frozen or staggered it drops, solid
+    if (e.state !== 'w4act' && !(e.w4mf && e.w4mf.mode === 'blink') && (e.w4vis ?? 1) < 1) e.w4vis = Math.min(1, e.w4vis + dt * 6);
+    const A = ARENA();
+    if (e.state === 'wind') {
+      if (e.plan !== 'roar') e.w4atk = 1;
+      const k = 1 - e.t / e.windMax, g = WIND_GO_M[e.plan] && WIND_GO_M[e.plan](e);
+      if (OPEN_WIND[e.plan] && k > OPEN_WIND[e.plan]) openMask(e, .15); // its mouth unseals as the attack gathers: a quick punish
+      if (g) steer(e, g[0], g[1], g[2], g[3], g[4], dt); else e.z += (Math.min(76, zCap(e.y)) - e.z) * Math.min(1, dt * 3);
+      if (e.plan === 'w4bite') e.w4pose = { tilt: -.35 * k }; // it rears up and back
+      e.facing = Math.sign(P.x - e.x) || e.facing;
+      return;
+    }
+    if (e.state !== 'idle' && e.state !== 'recover') return; // (its attacks fly it themselves)
+    e.w4pose = null;
+    if (maskOpen(e)) { // spent: it hangs low and still, solid
+      if (!was && !(e.w4exT > performance.now())) { e.w4exT = performance.now() + 1500; floatText(e.x, e.y, e.z + e.hh + 26, 'EXPOSED!', '#FFE08A', 15); }
+      e.w4roam = 0; if (e.w4mf) e.w4mf.mode = null;
+      e.z += (14 - e.z) * Math.min(1, dt * 5); e.x += (clamp(e.x, A.l, A.r) - e.x) * Math.min(1, dt * 3); e.y = clamp(e.y, A.top, A.bot);
+      e.facing = Math.sign(P.x - e.x) || e.facing;
+      return;
+    }
+    if (P.state === 'dead') { e.z += (90 - e.z) * Math.min(1, dt * 2); return; }
+    // on the wing: a fresh figure each time; out of its opening it first gets away from you
+    const fresh = !(e.w4roam > 0); e.w4roam = (e.w4roam || 0) + dt;
+    let F = e.w4mf && e.w4mf.mode ? e.w4mf : maskNext(e, fresh ? pick(['blink', 'sweep', 'dash', 'rise']) : null);
+    F.t += dt; if (F.t >= F.dur) F = maskNext(e);
+    const near = Math.abs(P.x - e.x) < e.hw + 86 && Math.abs(P.y - e.y) < 44;
+    if (near && !(e.w4evCd > 0) && F.mode !== 'blink' && F.mode !== 'rise') { e.w4evCd = 1.1; F = maskNext(e, e.z < 70 || Math.random() < .5 ? 'blink' : pick(['dash', 'rise'])); } // come close and it slips away
+    if (F.mode === 'blink') {
+      if (F.t < .2) e.w4vis = 1 - F.t / .2;
+      else if (!F.jumped) { F.jumped = true; smokePuff(e.x, e.y, Math.max(0, e.z - 10), 18); e.x = F.tx; e.y = F.ty; e.z = Math.min(F.tz, zCap(F.ty)); e.w4H = null; e.w4tr = null; smokePuff(e.x, e.y, Math.max(0, e.z - 10), 18); bsx(e, 'blink', 'whoosh'); }
+      else e.w4vis = Math.min(1, (F.t - .2) / .22);
+    }
+    const [gx, gy, gz, k, top] = maskGoal(e, F); steer(e, gx, gy, gz, k, top, dt); e.facing = Math.sign(P.x - e.x) || e.facing;
+    if (e.state === 'idle' && e.cd <= 0 && e.w4roam > (e.w4need || 1.5) && F.mode !== 'blink' && F.t > .25) {
+      if (!e.plan) e.plan = pick(e.def.p3);
+      if (Math.abs(P.x - e.x) < e.hw + 70 && Math.random() < .4) e.plan = 'w4bite';
+      e.w4need = rand(1.2, 2.2); F.mode = null; e.w4T = null; e.w4vis = 1; wind(e, e.def.wind);
+    }
   }
   updateEnemy = function (e, dt) {
     if (!isTy(e) || e.dead) return _upd(e, dt);
@@ -2040,14 +2177,15 @@
       }
       return r;
     }
-    // the Mask: never flinches; warded, a blow barely marks it
+    // the Mask: never flinches; phased, a blow passes through it and barely marks it
     m = Object.assign({}, m, { noStun: 1, launch: 0, kb: (m.kb || 0) * .15, bounce: 0, spike: 0 });
-    if (maskOpen(e)) base *= 1.8; // its eyes and mouth open: the weak points
+    if (maskOpen(e)) { base *= 1.8; if (!echo) e.w4hitN = (e.w4hitN || 0) + 1; } // solid, its eyes and mouth open: the weak points
     else {
-      base *= m.trump ? .35 : .1; m.crit = 0;
-      const now = performance.now(); if (!(e.w4ping > now)) { e.w4ping = now + 220; floatIcon(e.x, e.y, e.z + e.hh * .7, 'shield', 15); sfx('hit-crystal', .25);
-        burst(e.x - dir * e.hw * .5, e.y, e.z + e.hh * .6, ['#E8E0FF', '#C8B8FF', '#FFFFFF'], 7, 'spark', -dir); }
-      cue(e, 'WARDED', '#D8C8FF');
+      base *= m.trump ? .35 : .05; m.crit = 0;
+      const now = performance.now(); if (!(e.w4ping > now)) { e.w4ping = now + 220; sfx('hit-crystal', .18); // the blow goes through it like a hand through smoke
+        fx.push({ kind: 'ring', x: e.x, y: e.y, z: e.z + e.hh * .6, t: .3, max: .3, r: 44, col: '#B89CFF' });
+        for (let i = 0; i < 6; i++) parts.push({ x: e.x + rand(-14, 14), y: e.y, z: e.z + e.hh * rand(.3, .9), vx: dir * rand(160, 300), vy: rand(-10, 10), vz: rand(-20, 30), life: .35, max: .35, col: pick(['rgba(190,160,255,.7)', 'rgba(120,80,190,.6)']), size: rand(2, 3.4), shape: 'streak', rot: 0, vr: 0 }); }
+      cue(e, 'PHASED', '#D8C8FF');
     }
     return _strike(e, base, dir, m, echo);
   };
@@ -2174,13 +2312,15 @@
   // ---------------- THE MASK'S MOUTH: BEAM (mask): its mouth unseals and fills with light; a beam pours out of it onto the
   // lane you stand in and runs along it to the wall. Step out of the lane, or jump the beam as it runs under you ----------------
   const mouthAt = (e) => { const s = e.size; return [e.x + e.facing * 6 * s, e.y, e.z + 43 * s]; };
-  const beamT = (e) => targets(e, () => { const d = Math.sign(P.x - e.x) || 1, l = laneOf(P.y); return { d, l, y: laneY(l), x0: e.x + d * 40, x1: d > 0 ? rightWall() - 8 : leftWall() + 8 }; });
+  const beamT = (e) => targets(e, () => { const A = ARENA(), sx = P.x - A.l > A.r - P.x ? A.l : A.r, d = Math.sign(P.x - sx) || 1, l = laneOf(P.y); // (it flies to the far end of your lane to pour it)
+    return { d, l, sx, y: laneY(l), x0: sx + d * 40, x1: d > 0 ? rightWall() - 8 : leftWall() + 8 }; });
   TELL_FX.w4beam = (e, t, k) => { const T = beamT(e), lo = Math.min(T.x0, T.x1), hi = Math.max(T.x0, T.x1), hw = LH() * .55; ctx.save();
     ctx.fillStyle = tellCol(k, .9); rrect(lo, T.y - hw, hi - lo, hw * 2, hw * .8); ctx.fill(); ctx.strokeStyle = tellLine(k); ctx.lineWidth = 1.6; ctx.stroke();
     ctx.lineWidth = 2; for (let i = 0; i < 10; i++) { const q = cl01(k * 1.5 - i * .08), x = T.x0 + T.d * (20 + i * (hi - lo - 30) / 9); if (q <= 0) break; ctx.strokeStyle = `rgba(255,236,170,${.2 + .7 * q})`; ctx.beginPath(); ctx.moveTo(x - T.d * 4, T.y - 6); ctx.lineTo(x + T.d * 3, T.y); ctx.lineTo(x - T.d * 4, T.y + 6); ctx.stroke(); }
     const [mx, my, mz] = mouthAt(e); glowAt(mx, my - mz, 10 + 22 * k, SULF, .3 + .5 * k); ctx.restore(); };
   PLAN_FX.w4beam = (e) => {
     const T = beamT(e); e.w4T = null; sfx('charge', 2); openMask(e, 1); const RUN = .85, HOLD = .3;
+    if (Math.abs(e.x - T.sx) > 30 || Math.abs(e.y - T.y) > 16) { smokePuff(e.x, e.y, e.z, 10); e.x = T.sx; e.y = T.y; e.z = Math.min(40, e.z); smokePuff(e.x, e.y, e.z, 10); } // (if it is not there yet, it steps through Shadow to it)
     act(e, 'beam', (h, dt, e) => {
       openMask(e, 1.9); e.facing = T.d;
       h.front = lerp(T.x0, T.x1, sm(cl01(h.el / RUN)));
