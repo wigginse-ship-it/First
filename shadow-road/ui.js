@@ -62,8 +62,8 @@ const endingsSeen = () => Object.keys(save.endings || {}).filter(k => save.endin
     if (save.started) persist();
   }
 }
-// where he fell: dying sends him back only to the start of the place (the area) he fell in, not the start of the world;
-// kept on the save so Try again, the forge's Walk on and Continue all take him back there
+// where he fell: Try again (and Continue) sends him back only to the start of the place (the area) he fell in; choosing
+// the forge instead forgets it, so the forge's Walk on starts the world over from its beginning
 const resumeZone = (i) => { const f = save.fallenAt; return f && f.stage === i && (f.cycle | 0) === (save.cycle | 0) && ZONES[i] && ZONES[i].zones[f.zone] ? f.zone : 0; };
 function play(i, zone = 0) {
   save.fallenAt = null;
@@ -75,7 +75,7 @@ function play(i, zone = 0) {
 function pauseGame() { if (mode !== 'play') return; mode = 'pause'; showOnly('pauseOv'); if (typeof invBtnText === 'function') $('#invBtn').textContent = invBtnText(); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); $('#moveTitle').textContent = WEAPONS[P.w].name + ' moves'; $('#moveList').innerHTML = moveListHtml(P.w); $('#sfxBtn').textContent = 'Sound: ' + (sfxOn ? 'on' : 'off'); }
 function resume() { mode = 'play'; clearInput(); showOnly(null); }
 function gameOver() {
-  save.fallenAt = { stage: stageIdx, zone: stageIdx === 0 ? 0 : typeof retryZone === 'number' ? retryZone : 0, cycle: save.cycle | 0 }; // (the first world sends him back to its very start)
+  save.fallenAt = { stage: stageIdx, zone: typeof retryZone === 'number' ? retryZone : 0, cycle: save.cycle | 0 }; // (Try again: back to the start of the area he fell in)
   mode = 'over'; persist();
   $('#overText').textContent = `${stage.name} got the better of you this time. You keep everything you picked up: ${runShards} shards and ${runSigils} sigil${runSigils === 1 ? '' : 's'}. Spend them at the forge, or jump straight back in.`;
   showOnly('overOv'); playMusic('fallen');
@@ -325,7 +325,7 @@ $('#sfxBtn').addEventListener('click', () => { setTimeout(refreshMute); sfxOn = 
 $('#quitBtn').addEventListener('click', () => { persist(); mode = 'title'; refreshTitle(); showOnly('titleOv'); playMusic('title'); });
 $('#musicBtn').addEventListener('click', () => { setTimeout(refreshMute); setMusic(!musicOn); $('#musicBtn').textContent = 'Music: ' + (musicOn ? 'on' : 'off'); });
 $('#retryBtn').addEventListener('click', () => play(roadStage(), resumeZone(roadStage())));
-$('#overForgeBtn').addEventListener('click', () => openForge('REGROUP AND REFORGE'));
+$('#overForgeBtn').addEventListener('click', () => { save.fallenAt = null; persist(); openForge('REGROUP AND REFORGE'); }); // (going to the forge after a fall: the world starts over from its beginning)
 $('#cycleBtn').addEventListener('click', () => { // a new cycle: the road from the start, and the choice on the Rim to make again
   save.cycle++; save.stage = 0; save.branch = null; save.done = false; save.atChoice = false;
   if (save.silverArm) { save.owned.fists = true; save.weapon = 'fists'; } // (it starts with Benedict's silver arm on, once it is won)
