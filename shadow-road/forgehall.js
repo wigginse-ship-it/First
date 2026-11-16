@@ -674,16 +674,79 @@
     [['llewella', 'Dworkin, what is the sea made of?'], ['dworkin', 'Blue. And then more blue. I ran out, you see.']],
     [['random', 'Ganelon, how much for the helmet?'], ['ganelon', 'More than you have.'], ['random', 'Everybody says that.']],
     [['fiona', 'The black road is wider than last time.'], ['julian', 'Then shoot straighter.'], ['gerard', 'Then hit harder.']],
+    [["gerard", "Who moved my tongs?"], ["random", "Define moved."], ["gerard", "Random."], ["random", "They were lonely."]],
+    [["julian", "Something hunts the road tonight."], ["fiona", "Something always hunts the road."], ["julian", "Then I will hunt it first."]],
+    [["dworkin", "I have lost a door."], ["llewella", "Where did you leave it?"], ["dworkin", "Open, I think."]],
+    [["random", "Fiona, what does this card mean?"], ["fiona", "That you should not have drawn it."], ["random", "It was already in my hand."], ["fiona", "Worse."]],
+    [["ganelon", "Your blades are too pretty, smith."], ["gerard", "They cut the same."], ["ganelon", "Pretty ones get stolen."]],
+    [["llewella", "Rebma is quieter than this."], ["gerard", "Rebma is underwater."], ["llewella", "Exactly."]],
+    [["julian", "Dworkin, draw my hounds faster."], ["dworkin", "I drew them standing still. They ran off the card."]],
+    [["fiona", "Gérard, you are singing."], ["gerard", "I am not."], ["fiona", "You are. To the anvil."], ["gerard", "...it likes it."]],
+    [["random", "I could play the drums on that anvil."], ["gerard", "You could try."], ["random", "I will wait until you are asleep."]],
+    [["dworkin", "The Pattern needs dusting."], ["julian", "It is made of light."], ["dworkin", "Dusty light."]],
+    [["ganelon", "I was a traitor once, you know."], ["random", "Only once?"], ["ganelon", "Only once that counted."]],
+    [["llewella", "Julian, your arrows smell of wet dog."], ["julian", "My hounds carry them."], ["llewella", "Of course they do."]],
+    [["fiona", "Do you feel that? The road shifted."], ["dworkin", "It does that when no one is watching."], ["fiona", "I was watching."], ["dworkin", "Then it was being rude."]],
+    [["gerard", "Eat something, Random."], ["random", "I ate yesterday."], ["gerard", "Eat something today."]],
+    [["random", "Who wants to hear a song?"], ["julian", "No one."], ["fiona", "No one."], ["random", "A short song, then."]],
+    [["dworkin", "I painted a card of this room."], ["gerard", "Can we step into it?"], ["dworkin", "You are standing in it now."]],
+    [["julian", "The Unicorn left tracks by the door."], ["llewella", "She wants to be followed."], ["julian", "Or wants us to think so."]],
+    [["ganelon", "Avalon had better ale."], ["gerard", "Avalon had better everything."], ["ganelon", "Except company."]],
+    [["fiona", "Llewella, lend me a pearl."], ["llewella", "For a spell?"], ["fiona", "For an earring. Spells can wait."]],
+    [["random", "Ganelon, arm wrestle?"], ["ganelon", "With which arm?"], ["random", "...yours. Definitely yours."]],
+    [["dworkin", "Gérard, you are very large."], ["gerard", "Thank you?"], ["dworkin", "It was an observation. You are welcome."]],
+    [["llewella", "The tide is turning somewhere."], ["julian", "There is no sea here."], ["llewella", "Not yet."]],
+    [["gerard", "This sword wants a name."], ["random", "Call it Gerald."], ["gerard", "No."], ["random", "Gerard the Second."]],
+    [["fiona", "The curse likes the smell of iron."], ["gerard", "Then it will love my shop."], ["fiona", "That is what worries me."]],
+    [["julian", "Ganelon, you limp."], ["ganelon", "It was a long war."], ["julian", "Which one?"], ["ganelon", "All of them."]],
+    [["dworkin", "Random, give me back my moon."], ["random", "I do not have your moon."], ["dworkin", "Check your other pocket."], ["random", "...ah."]],
+    [["llewella", "Fiona, your hair is on fire."], ["fiona", "It is meant to look like that."], ["llewella", "It is actually on fire."], ["fiona", "...oh."]],
+    [["gerard", "Julian, help me lift this."], ["julian", "I do not lift."], ["gerard", "You lift a bow."], ["julian", "Elegantly."]],
+    [["random", "I bet the prince comes back richer."], ["ganelon", "I bet he comes back bleeding."], ["random", "Why not both?"]],
+    [["dworkin", "Who drew the line on the floor?"], ["fiona", "You did."], ["dworkin", "Then I must have meant it."]],
+    [["fiona", "Julian, your hounds are staring at me."], ["julian", "They like you."], ["fiona", "They are drooling."], ["julian", "They like you a lot."]],
+    [["ganelon", "Llewella, can the sea mend armour?"], ["llewella", "It can rust it."], ["ganelon", "That is the opposite."]],
+    [["gerard", "Dworkin, what are you painting?"], ["dworkin", "You. Hammering."], ["gerard", "I am not hammering."], ["dworkin", "You will be. I am early."]],
+    [["random", "My drum is out of tune."], ["fiona", "Your drum was never in tune."], ["random", "It has its own tune."]],
+    [["julian", "A bird flew through the Pattern."], ["dworkin", "Which way did it come out?"], ["julian", "Both."]],
+    [["llewella", "Ganelon, do you ever swim?"], ["ganelon", "In armour?"], ["llewella", "Ah. Briefly, then."]],
+    [["fiona", "Gérard, do not quench that in my bowl."], ["gerard", "It is a bucket."], ["fiona", "It is a scrying bowl."], ["gerard", "It is a bucket now."]],
+    [["dworkin", "I dreamed of Amber last night."], ["random", "Was it nice?"], ["dworkin", "It was upside down. Very nice."]],
+    [["random", "Ganelon, is that a new scar?"], ["ganelon", "Old scar. New story."]],
+    [["julian", "The wind smells of Chaos."], ["gerard", "The wind smells of my forge."], ["julian", "Same thing."]],
+    [["llewella", "Dworkin, paint me a door to the sea."], ["dworkin", "I did. You were standing on it."], ["llewella", "That explains the wet feet."]],
+    [["gerard", "Fiona, stop enchanting my nails."], ["fiona", "They wanted to be more."], ["gerard", "They are nails."]],
+    [["random", "Who keeps winning at cards?"], ["dworkin", "I do."], ["random", "You do not play."], ["dworkin", "And yet."]],
+    [["ganelon", "Julian, teach me the bow."], ["julian", "No."], ["ganelon", "Teach me to say no like that, then."]],
+    [["fiona", "Something under the floor is humming."], ["dworkin", "That is the Pattern."], ["fiona", "It is humming badly."], ["dworkin", "It is learning."]],
+    [["julian", "Llewella, your mirror showed me a fish."], ["llewella", "It shows what you are."], ["julian", "...a large fish, at least."]],
+    [["gerard", "I could shoe the Unicorn."], ["fiona", "She would kill you."], ["gerard", "Gently, I think."]],
+    [["dworkin", "Ganelon, you were someone else once."], ["ganelon", "Weren't we all."], ["dworkin", "Some of us twice."]],
+    [["random", "Llewella, how deep is Rebma?"], ["llewella", "Deeper than your pockets."], ["random", "So, not very."]],
+    [["fiona", "The prince carries the curse well."], ["ganelon", "He carries it like a sack of nails."], ["fiona", "As I said."]],
+    [["julian", "My best hound ran into the Shadow."], ["random", "He will come back."], ["julian", "He came back twice. Different colours."]],
+    [["gerard", "Dworkin, please stop drawing on the anvil."], ["dworkin", "It was blank. It looked sad."]],
+    [["llewella", "Random, play something gentle."], ["random", "I only know loud."], ["llewella", "Play loud gently."]],
+    [["ganelon", "Fiona, will this hex wash out?"], ["fiona", "Eventually."], ["ganelon", "How eventually?"], ["fiona", "Generations."]],
+    [["dworkin", "Count the stalls, Julian."], ["julian", "Seven."], ["dworkin", "I count eight."], ["julian", "Who is the eighth?"], ["dworkin", "Shh."]],
+    [["random", "Gérard, how many swords is enough?"], ["gerard", "One more."]],
+    [["fiona", "Do you ever sleep, Dworkin?"], ["dworkin", "Once. I did not care for it."]],
+    [["julian", "Gérard, your fire spat at my hound."], ["gerard", "Your hound bit my fire first."]],
+    [["llewella", "I hear singing from the road."], ["ganelon", "That is the dead."], ["llewella", "They are off-key."], ["ganelon", "They are dead."]],
+    [["random", "I put a card in every one of your pockets."], ["gerard", "Why?"], ["random", "Practice."]]
   ];
+  // (the last few dozen heard are remembered from visit to visit, so coming back to the forge brings new ones first)
+  let CHAT_RECENT = []; try { CHAT_RECENT = JSON.parse(localStorage.getItem('shadowroad-chats') || '[]'); } catch (e) {}
   function chatTick(dt) {
     if (H.panel || H.leaving || !H.on) return;
-    if (H.chat) { const C = H.chat; C.t -= dt; if (C.t > 0) return; const line = C.lines[C.i++]; if (!line) { H.chat = null; H.chatT = rand(14, 24); return; }
+    if (H.chat) { const C = H.chat; C.t -= dt; if (C.t > 0) return; const line = C.lines[C.i++]; if (!line) { H.chat = null; H.chatT = rand(8, 14); return; }
       const v = H.cast.find(q => q.id === line[0]); if (v) { say(v, line[1], 3.6 + line[1].length * .06); if (!v.act) act(v, 'glance', 1.6); C.t = Math.max(3.2, 2.2 + line[1].length * .075); } else C.t = 0; return; } // (each line stays up a good while, still showing as the answer comes)
-    H.chatT = (H.chatT ?? rand(5, 9)) - dt; if (H.chatT > 0) return;
+    H.chatT = (H.chatT ?? rand(3, 6)) - dt; if (H.chatT > 0) return;
     const here = new Set(H.cast.map(v => v.id)), seen = H.chatSeen || (H.chatSeen = new Set());
     const ok = CHAT.map((c, i) => [c, i]).filter(([c, i]) => !seen.has(i) && c.every(l => here.has(l[0])));
     if (!ok.length) { H.chatT = 30; return; }
-    const [c, i] = pick(ok); seen.add(i); H.chat = { lines: c, i: 0, t: 0 };
+    const fresh = ok.filter(([c, i]) => !CHAT_RECENT.includes(i)), [c, i] = pick(fresh.length ? fresh : ok); seen.add(i); H.chat = { lines: c, i: 0, t: 0 };
+    CHAT_RECENT = CHAT_RECENT.filter(q => q !== i).concat([i]).slice(-Math.floor(CHAT.length * .6)); try { localStorage.setItem('shadowroad-chats', JSON.stringify(CHAT_RECENT)); } catch (e) {}
   }
   function life(dt) {
     chatTick(dt);
