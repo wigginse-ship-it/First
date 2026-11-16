@@ -170,7 +170,9 @@ const cyc = () => 1 + .5 * (save.cycle || 0);
 const PEARL_XT = 4; // the reforged Pearl takes four more tempers past the others' six, dearer each time, and each worth more (data.js DEEP_TEMPER)
 const WMAX = (id) => save.cycle > 0 ? wLearn(id) + 6 + (id === 'pearlw' ? PEARL_XT : 0) : wLearn(id); // past level 7 (new cycles only) each level is a plain damage bump
 // tuned so a world pays for one or two upgrades, no more
-const wCost = (lvl, id) => { const L = wLearn(id), cy = 1 + .25 * (save.cycle || 0);
+// the last level a weapon can take (its cap this walk of the road) costs much more than the one before it
+const wCost = (lvl, id) => { const c = wCost0(lvl, id); return lvl === WMAX(id) - 1 ? { s: Math.round(c.s * 1.8), g: Math.round(c.g * 1.8) } : c; };
+const wCost0 = (lvl, id) => { const L = wLearn(id), cy = 1 + .25 * (save.cycle || 0);
   if (lvl >= WLEARN && lvl < L) return { s: Math.round(1850 * cyc()), g: Math.round(12 * cyc()) }; // the rapier's eighth level: Grayswandir revealed
   if (lvl < WLEARN) return { s: Math.round([0, 120, 250, 430, 680, 990, 1370][lvl] * cyc()), g: Math.round([0, 1, 2, 3, 5, 7, 9][lvl] * cyc()) };
   const t = lvl - L; // tempering (new cycles): about a world's pickings for each, the cycle making it only a little dearer; past six, the Pearl's deep tempers
