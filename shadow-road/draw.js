@@ -759,7 +759,7 @@ function drawScene(t) {
   for (const k of loot) list.push([k.y, () => drawLoot(k, t)]);
   // a crowd: with many foes on screen they leave out their finest shading (LITE), which keeps a big fight smooth on a phone
   { let n = 0; for (const e of enemies) if (!e.dead && e.x > camX - 40 && e.x < camX + VW + 40) n++; CROWD = PAINT_LITE || n >= (CROWD ? 5 : 7); } // (in the lighter paint, always)
-  for (const e of enemies) list.push([e.y, () => { LITE = CROWD && !e.boss; try { drawEnemy(e, t); } finally { LITE = false; } }]);
+  for (const e of enemies) list.push([e.type === 'w5reflect' && !e.dead && Math.abs(e.x - P.x) < 46 && Math.abs(e.y - P.y) < 26 ? Math.min(e.y, P.y - .2) : e.y, () => { LITE = CROWD && !e.boss; try { drawEnemy(e, t); } finally { LITE = false; } }]); // (the Reflection, close by him, is always drawn behind him: it wears his shape and would hide him)
   // afterimages are light, not ink, so they are painted straight onto the page
   for (const g of ghosts) list.push([g.y - .1, () => onMain(() => { // light afterimages glow; shadow ones are dark doubles of him
     g.pose.noCloak = 1; // (afterimages leave the cloak out: its dark mass, many times over, would only smear the trail)

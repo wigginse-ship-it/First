@@ -1184,7 +1184,7 @@
     floatText(e.x, e.y, e.hh + 26, 'YOUR ' + (m.name || 'CUT').toUpperCase(), '#DDE6F4', 12); sfx('swing');
     act(e, 'mimic', (h, dt, e) => {
       const k = h.el / .42; e.w5k = cl01(k * 1.6); if (m.around) e.w5spin = k * TAU;
-      if (k < .5) e.x += e.facing * Math.min(260, (m.lunge || 0) * .7) * dt;
+      if (k < .5 && !(Math.abs(P.y - e.y) < 26 && (P.x - e.x) * e.facing > 0 && (P.x - e.x) * e.facing < 30)) e.x += e.facing * Math.min(260, (m.lunge || 0) * .7) * dt; // (its lunge stops short of him: it never steps into his own place)
       const n = Math.floor(k * hits * 1.25);
       if (k > .3 && h.n !== n && n < hits) { h.n = n; const dx = P.x - e.x, fwd = dx * e.facing;
         if ((m.around ? Math.abs(dx) < reach : fwd > -8 && fwd < reach) && Math.abs(P.y - e.y) < 20 && P.z < 44) { hitP(Math.round(edmg(e) * (m.power === 2 ? 1.25 : 1) * (hits > 1 ? .45 : 1)), e.x, m.power === 2); }
