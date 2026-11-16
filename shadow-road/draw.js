@@ -430,6 +430,50 @@ function drawCorpse(c, t, lite) {
   }
   ctx.save(); if (c.fade < 1) ctx.globalAlpha *= c.fade; ctx.drawImage(K2.cv, x0, y0, w, h); ctx.restore();
 }
+// THE BOWSTAFF'S DENT: the body, as it died, is painted once onto its own canvas; each frame it is laid down again in thin
+// rows, the rows about the blow squeezed in toward the far side, so the side the staff struck is stove in deep. Then the
+// hollow is shaded, its lips caught by the light, and creases run out from it.
+let DENT_T = null;
+const dentH = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+function dentCache(e, draw) {
+  if (e.dentC) return e.dentC;
+  const m = ctx.getTransform(), S = clamp(Math.hypot(m.a, m.b), 1, 4), X0 = e.hw + 90, top = e.hh + 90, bot = 34;
+  const W = Math.ceil(2 * X0 * S), H = Math.ceil((top + bot) * S), c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'); g.setTransform(S, 0, 0, S, X0 * S, top * S);
+  const prev = ctx, fl = FLASH; ctx = g; FLASH = false;
+  try { draw(); } catch (err) { console.error(err); } finally { ctx = prev; FLASH = fl; }
+  return (e.dentC = { c, S, X0, top, W, H });
+}
+function drawDented(e, C, K, s, grow) {
+  const { c, S, X0, top, W, H } = C;
+  if (C.done) { ctx.drawImage(C.done, 0, 0, W, H, -X0, -top, W / S, H / S); return; } // (once the dent is made it stays as it is)
+  if (!DENT_T || DENT_T.width < W || DENT_T.height < H) { const n = document.createElement('canvas'); n.width = Math.max(W, DENT_T ? DENT_T.width : 0); n.height = Math.max(H, DENT_T ? DENT_T.height : 0); DENT_T = n; }
+  const g = DENT_T.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
+  const hw = Math.max(8, e.hw), yc = -e.hh * K.y, wy = Math.max(6, e.hh * K.w), D = hw * K.d * grow, xaPx = (-s * hw + X0) * S, step = Math.max(1, Math.round(S));
+  for (let py = 0; py < H; py += step) { // (each row squeezed toward the far side: deepest at the blow, easing off above and below)
+    const y = (py + step / 2) / S - top, u = (y - yc) / wy, sh = K.sh || 1.4, u2 = K.two ? (y - yc - K.two.y * e.hh) / (wy * .8) : 9;
+    const d = Math.max(D * Math.exp(-Math.pow(Math.abs(u), sh > 1.8 ? 1.3 : 2) * sh), K.two ? D * K.two.d * Math.exp(-u2 * u2 * 1.6) : 0), f = Math.max(.28, 1 - d / (2 * hw)); // (each its own: a broad cave-in or a sharp notch, and now and then a second blow beside the first)
+    if (d < .04) g.drawImage(c, 0, py, W, step, 0, py, W, step); else g.drawImage(c, 0, py, W, step, xaPx * (1 - f) - s * d * .55 * S, py, W * f, step); // (squeezed, and pushed over: the struck side caves in, the far side bulges)
+  }
+  if (grow > .02) {
+    g.save(); g.globalCompositeOperation = 'source-atop'; g.setTransform(S, 0, 0, S, X0 * S, top * S);
+    const cx = s * (hw - D * 1.25), R = Math.max(wy, D) * 1.3;
+    const rg = g.createRadialGradient(cx, yc, 0, cx, yc, R); rg.addColorStop(0, `rgba(12,5,14,${(.85 * grow).toFixed(3)})`); rg.addColorStop(.45, `rgba(12,5,14,${(.5 * grow).toFixed(3)})`); rg.addColorStop(1, 'rgba(12,5,14,0)');
+    g.fillStyle = rg; g.fillRect(-X0, -top, X0 * 2, top + 40);
+    g.lineCap = 'round';
+    for (let i = 0; i < 6; i++) { // creases running out of the hollow
+      const r1 = .5 + dentH(K.seed + i) * .4, a = (i / 6) * Math.PI * 1.4 - Math.PI * .7 + (dentH(K.seed + i * 3) - .5) * .4, L = R * (.7 + dentH(K.seed + i * 7) * .6);
+      const x0 = cx + s * Math.cos(a) * -R * .25, y0 = yc + Math.sin(a) * R * .25, x1 = cx - s * Math.cos(a) * L, y1 = yc + Math.sin(a) * L * .8;
+      g.strokeStyle = `rgba(10,4,12,${(.55 * grow).toFixed(3)})`; g.lineWidth = .9 + r1; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo((x0 + x1) / 2 + (dentH(K.seed + i * 5) - .5) * 6, (y0 + y1) / 2, x1, y1); g.stroke();
+      g.strokeStyle = `rgba(255,246,230,${(.22 * grow).toFixed(3)})`; g.lineWidth = .6; g.beginPath(); g.moveTo(x0 + .8, y0 - .8); g.quadraticCurveTo((x0 + x1) / 2 + .8, (y0 + y1) / 2 - .8, x1 + .8, y1 - .8); g.stroke();
+    }
+    for (const sd of [-1, 1]) { // the lips of the dent, above and below, caught by the light
+      g.strokeStyle = `rgba(255,248,236,${(.45 * grow).toFixed(3)})`; g.lineWidth = 1.4; g.beginPath(); g.ellipse(cx + s * D * .35, yc + sd * wy * .55, D * .55 + 3, wy * .35, 0, sd > 0 ? Math.PI * 1.05 : .1, sd > 0 ? Math.PI * 1.9 : Math.PI * .95); g.stroke(); }
+    g.restore();
+  }
+  if (grow >= 1) { const d = document.createElement('canvas'); d.width = W; d.height = H; d.getContext('2d').drawImage(DENT_T, 0, 0, W, H, 0, 0, W, H); C.done = d; C.c = null; }
+  ctx.drawImage(DENT_T, 0, 0, W, H, -X0, -top, W / S, H / S);
+}
 function drawDeath(e, t) {
   const el = e.corpse ? (e.dmax || 1) : e.dmax - e.t, dl = (e.dir || 1) * e.facing; // dl: knock direction in the enemy's own facing space
   const a = { walk: 0, t: e.deadAt || t, wind: 0, atk: false, hurt: true }; // the clock stops: no whirring rotors or flapping wings
@@ -473,11 +517,10 @@ function drawDeath(e, t) {
     };
     piece(false); piece(true);
   } else if (e.death === 'crumple') {
-    // one motion: it buckles and goes over together, crumpling as it falls (no pause, no fold drawn as a cut)
-    // the same height as in life: no squash. It goes over and folds at the middle, the upper body bent at an angle where the
-    // staff caught it (two pieces meeting at the bend, overlapping so no seam shows; no line drawn across it)
-    const q = Math.min(1, el / .45), c = 1 - (1 - q) * (1 - q), wide = e.boss || e.hw > e.hh * .7; // (a wide beast or a boss slumps where it stands instead of tipping over)
-    const K = e.crk || { k: .8, y: .5, r: 1.2 };
+    // the bowstaff: it is thrown and tumbles, and where the staff caught it the body is stove in, one great dent, shaded
+    // and creased (a wide beast or a boss slumps where it stands)
+    const q = Math.min(1, el / .45), c = 1 - (1 - q) * (1 - q), wide = e.boss || e.hw > e.hh * .7;
+    const K = e.crk || { y: .5, r: 1.2, w: .22, d: .7, seed: 1 };
     if (wide) ctx.rotate(dl * c * .1 * K.r);
     else { // thrown: it pops up off the blow and tumbles over about its middle (now and then a whole turn more), comes down, rocks, and settles flat
       const T = K.T || .8, turns = K.n || 0, rest = K.rest || 1.55, hop = K.hop || 22, u = Math.min(1, el / T), spinK = 1 - Math.pow(1 - u, 2.6);
@@ -487,15 +530,9 @@ function drawDeath(e, t) {
       const lie = 1 - Math.pow(1 - Math.min(1, el / (T * .9)), 2), ph = lerp(e.hh * .5, Math.max(6, e.hw * .55), lie);
       ctx.translate(0, -ph - up); ctx.rotate(ang); ctx.translate(0, e.hh * .5);
     }
-    const ky = -e.hh * K.y, kink = -dl * c * (wide ? .44 * K.k : K.k);
-    ctx.save(); ctx.beginPath(); ctx.rect(-400, ky - 1, 800, 400); ctx.clip(); draw(); ctx.restore();
-    ctx.save(); ctx.translate(0, ky); ctx.rotate(kink); ctx.translate(0, -ky); ctx.beginPath(); ctx.rect(-400, ky - 400, 800, 400 + 3); ctx.clip(); draw(); ctx.restore();
+    if (el < .06) draw(); // (the instant of the blow, in its flash)
+    else { FLASH = false; const g = Math.min(1, (el - .06) / .1); drawDented(e, dentCache(e, draw), K, -Math.sign(dl || 1), 1 - Math.pow(1 - g, 3)); }
     FLASH = false;
-    for (const d of e.dents) { // dents and bends where the staff landed
-      const x = d.x * e.hw, y = -d.y * e.hh;
-      ctx.strokeStyle = 'rgba(30,20,35,.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, d.r, .3, Math.PI - .3); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y - 1.5, d.r, Math.PI + .5, TAU - .5); ctx.stroke();
-    }
   } else if (e.death === 'pierce') { // run through by Grayswandir
     FLASH = false;
     const fold = el < .5 ? 0 : Math.min(1, (el - .5) / .55), tremble = el < .45 ? Math.sin(el * 70) * .03 : 0;

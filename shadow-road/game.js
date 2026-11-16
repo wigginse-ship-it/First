@@ -495,8 +495,7 @@ function killEnemy(e, dir, m) {
       fx.push({ kind: 'slash', x: e.x, y: e.y, z: cy, ang: -e.cut, t: .3, max: .3, size: 46 + e.hw, col: '#FFFFFF' });
       sfx('slice');
     } else if (e.death === 'crumple') {
-      e.dents = [0, 1, 2].map(() => ({ x: rand(-.6, .6), y: rand(.25, .85), r: rand(3, 6) }));
-      e.crk = { k: rand(.3, 2.95), y: rand(.32, .66), r: rand(.85, 1.45), T: rand(.65, 1.0), n: Math.random() < .4 ? 1 : 0, rest: Math.random() < .5 ? rand(1.35, 1.75) : rand(-1.75, -1.4) + TAU, hop: rand(14, 34) }; // (each one folds its own way: how sharply (from a slight bend all the way to folded flat over on itself), where, and how far over)
+      e.crk = { k: 0, w: rand(.15, .3), d: rand(.65, .95), sh: rand(.7, 2.6), two: Math.random() < .35 ? { y: rand(-.35, .35), d: rand(.45, .7) } : null, seed: Math.random() * 99, y: rand(.3, .72), r: rand(.85, 1.45), T: rand(.65, 1.0), n: Math.random() < .4 ? 1 : 0, rest: Math.random() < .5 ? rand(1.35, 1.75) : rand(-1.75, -1.4) + TAU, hop: rand(14, 34) }; // (each one folds its own way: how sharply (from a slight bend all the way to folded flat over on itself), where, and how far over)
       burst(e.x, e.y, cy, cols, 14, e.def.mat === 'flesh' ? 'rock' : e.def.mat, dir);
       sfx('crunch'); shakeMag = Math.max(shakeMag, 5);
     } else if (e.death === 'splat') {
