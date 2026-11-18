@@ -1578,7 +1578,7 @@
       m.edge += ((ph >= 4 && !e.dead && e.state !== 'w5morph' ? 58 : 0) - m.edge) * Math.min(1, dt * 1.2);
       if (m.edge > 8 && P.state !== 'dead') { const L = leftWall() + m.edge, R = rightWall() - m.edge;
         if ((P.x < L || P.x > R) && P.z < 10) { m.tick -= dt; if (m.tick <= 0) { m.tick = .5; hitP(Math.max(4, Math.round(maxHp() * .045)), P.x < L ? P.x - 50 : P.x + 50, false); if (P.state === 'hurt') P.vx = P.x < L ? 260 : -260; floatText(P.x, P.y, 90, 'THE DAWN BURNS', '#FFD8C0', 13); } } }
-      if (e.dead && !m.arm && e.w5armDrop) m.arm = e.w5armDrop; // the silver arm, left lying where he fell (benedict.js lays it down)
+      if (e.dead && !m.arm && !m.armTaken && e.w5armDrop) { m.arm = e.w5armDrop; if (W5.startPick) W5.startPick(m); } // the silver arm, left lying where he fell (benedict.js lays it down); he goes to pick it up
       for (const p of parts) if (!p.w5 && p.shape === 'star' && p.max === 1.6 && (p.col === '#D8A0E8' || p.col === '#9FD8E0' || p.col === '#FFF0C0')) { p.w5 = 1; p.col = pick(['#EEF2FA', '#C8D4EC', '#9AAAD0']); } // the arena's weather, silver here
     },
     boxes(m, box) { if (m.arm) box(m.arm.x, m.arm.y, 0, 40, 40); },
@@ -1719,6 +1719,41 @@
   const _ml = mechList; mechList = function (list, t) { _ml(list, t); for (const h of hazards) if (HZ[h.kind] && HZ[h.kind].ups && h.t > -.4) HZ[h.kind].ups(h, list, t); };
   // the silver arm, carried down out of the sky: from then on his hands are silver
   const _look = heroLook; heroLook = function () { const L = _look(); if (save.silverArm) { L.glove = '#C8D0DE'; L.gauntPlate = 1; } return L; };
+  // ---------------- PICKING UP THE ARM: when Benedict has fallen he walks over to where the silver arm lies, kneels, takes
+  // it up, and holds it high; the moonlight runs down it into him, and from then on his hand is silver. Until he has it,
+  // his hands are his own (W5.armUnheld, set as Benedict falls: benedict.js) ----------------
+  const PICK = { on: false, done: false }; W5.pick = PICK; W5.armUnheld = false;
+  const _look2 = heroLook; heroLook = function () { const L = _look2(); if (W5.armUnheld) { const B = buildHeroLook(save.gear.eq); L.glove = B.glove; L.gauntPlate = B.gauntPlate || 0; } return L; };
+  W5.startPick = function (m) { if (PICK.on || PICK.done) return; Object.assign(PICK, { on: true, ph: 'wait', t: 0, m, a: m.arm }); W5.armUnheld = true; };
+  const PK = { wait: .5, kneel: .55, lift: .75, raise: 1.25, stand: .45 };
+  function pickStep(dt) {
+    const K = PICK; K.t += dt; clearT = Math.max(clearT, .5); // (the world waits for him)
+    for (const k in input) if (typeof input[k] === 'boolean') input[k] = false; input.mx = input.my = 0; for (const k in pressed) pressed[k] = false;
+    const a = K.a, side = Math.sign(P.x - a.x) || -1, tx = clamp(a.x + side * 34, leftWall() + 16, rightWall() - 16), ty = a.y;
+    if (K.ph === 'wait') { if (K.t > PK.wait && P.z <= 0 && ['idle', 'walk', 'run'].includes(P.state)) { K.ph = 'walk'; K.t = 0; } return; }
+    if (K.ph === 'walk') { const dx = tx - P.x, dy = ty - P.y, d = Math.hypot(dx, dy), sp = 120 * dt;
+      if (d > 2) { P.x += dx / d * Math.min(d, sp); P.y += dy / d * Math.min(d, sp * .7); P.walk = (P.walk || 0) + dt * 9; P.facing = Math.sign(a.x - P.x) || P.facing; }
+      if (d <= 2 || K.t > 4) { P.x = tx; P.y = ty; P.facing = Math.sign(a.x - P.x) || P.facing; K.ph = 'kneel'; K.t = 0; P.walk = 0; } return; }
+    if (K.ph === 'kneel' && K.t >= PK.kneel) { K.ph = 'lift'; K.t = 0; K.m.armTaken = true; K.m.arm = null; sfx('pick'); sfx('hit-crystal', .5);
+      for (let i = 0; i < 14; i++) parts.push({ x: a.x + rand(-14, 14), y: a.y + rand(-3, 3), z: rand(2, 12), vx: rand(-30, 30), vy: 0, vz: rand(30, 90), life: .8, max: .8, col: pick(['#FFFFFF', '#E6ECF6', '#C8D4EC']), size: rand(1.5, 3), shape: 'star', rot: 0, vr: 3 }); return; }
+    if (K.ph === 'lift' && K.t >= PK.lift) { K.ph = 'raise'; K.t = 0; return; }
+    if (K.ph === 'raise') {
+      if (K.t > .55 && !K.fused) { K.fused = true; W5.armUnheld = false; flashT = Math.max(flashT, .18); sfx('learned'); sfx('trump', .6); shakeMag = Math.max(shakeMag, 3);
+        fx.push({ kind: 'ring', x: P.x, y: P.y, z: 2, t: .6, max: .6, r: 90, col: '#E8F0FF', flat: 1 });
+        for (let i = 0; i < 30; i++) parts.push({ x: P.x + P.facing * rand(-4, 10), y: P.y + rand(-4, 4), z: rand(50, 110), vx: rand(-90, 90), vy: 0, vz: rand(-40, 120), life: 1, max: 1, col: pick(['#FFFFFF', '#E6ECF6', '#C8D4EC', '#FFF0C0']), size: rand(1.5, 3.2), shape: 'star', rot: 0, vr: 4 });
+        banner('The Silver Arm', 'IT IS YOURS NOW · FIGHT BARE-HANDED TO WIELD IT', 3); }
+      if (K.t >= PK.raise) { K.ph = 'stand'; K.t = 0; } return; }
+    if (K.ph === 'stand' && K.t >= PK.stand) { K.on = false; K.done = true; W5.armUnheld = false; clearT = 1.8; }
+  }
+  { const _up2 = updatePlayer; updatePlayer = function (dt) { if (PICK.on) { for (const k in input) if (typeof input[k] === 'boolean') input[k] = false; input.mx = input.my = 0; } _up2(dt); if (PICK.on && P.state !== 'dead') pickStep(dt); }; }
+  { const _ss = startStage; startStage = function (i) { PICK.on = false; PICK.done = false; W5.armUnheld = false; return _ss(i); }; }
+  { const _pp = playerPose; playerPose = function () { const pose = _pp(); if (!PICK.on) return pose; const K = PICK, ease = (x) => sm(cl01(x));
+      if (K.ph === 'walk') { pose.walk = P.walk || 0; return pose; }
+      if (K.ph === 'kneel') { const k = ease(K.t / PK.kneel); pose.crouch = 1; pose.crouchK = 16 * k; pose.lean = .35 * k; pose.arm = lerp(.3, 1.25, k); pose.backArm = lerp(.4, 1.6, k); pose.walk = 0; return pose; }
+      if (K.ph === 'lift') { const k = ease(K.t / PK.lift); Object.assign(pose, { weapon: 'benArm', crouch: 1, crouchK: 16 * (1 - k), lean: .35 * (1 - k), arm: lerp(1.25, .9, k), grip: -.6, armA: lerp(.2, 2.6, k), armBend: 1.6, walk: 0 }); return pose; }
+      if (K.ph === 'raise') { const k = ease(K.t / .45), d = ease((K.t - .9) / .35); Object.assign(pose, { weapon: K.fused ? (d > .5 ? pose.weapon : WEAPONS.fists.look) : 'benArm', arm: lerp(.9, -2.7, k) * (1 - d) + .3 * d, grip: -.6, armA: lerp(2.6, 1.55, k), armBend: lerp(1.6, .2, k), lean: -.12 * k * (1 - d), walk: 0 });
+        if (!K.fused) pose.glow = '#E8F0FF'; return pose; }
+      return pose; }; }
   // the ending: the last world's boss does not go straight to the win screen
   W5.hookEnding();
   };
@@ -1825,7 +1860,7 @@
     }
   }
   W5.startEnding = (sc) => {
-    END = { t: 0, last: performance.now(), sc, orig: W5.origDraw }; W5.ending = true; mode = 'ending';
+    END = { t: 0, last: performance.now(), sc, orig: W5.origDraw }; W5.ending = true; mode = 'ending'; W5.armUnheld = false; if (W5.pick) W5.pick.on = false;
     save.silverArm = true; persist(); clearInput();
     $('#hud').hidden = true; $('#bossbar').hidden = true; app.classList.add('nocontrols'); app.classList.remove('playing');
     if (TRACKS.w5dawn) playMusic('w5dawn');

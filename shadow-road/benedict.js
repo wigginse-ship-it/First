@@ -135,7 +135,7 @@
   };
   function deathStep(e, dt) {
     if (!e.w5die) { e.w5die = .001; e.state = 'dying'; e.t = 99; e.air = true; e.spin = 0; e.rotA = 0; e.vz = 0; e.z = 0; e.vx = 0; clearT = Math.max(clearT, 5.2); hazards = hazards.filter(h => !KINDS.has(h.kind) && !(h.kind === 'w5ctl' && h.e === e)); projs = projs.filter(p => p.owner !== 'e');
-      save.silverArm = true; if (typeof persist === 'function') persist(); } // the arm is his to keep whatever comes after
+      save.silverArm = true; if (typeof persist === 'function') persist(); if (window.W5) W5.armUnheld = true; } // the arm is his to keep whatever comes after (his hand turns silver only once he has picked it up: art_w5.js)
     e.w5die += dt; e.flash = 0; e.state = 'dying'; e.t = 99; e.z = 0; e.vz = 0; e.vx = 0; e.air = true; e.death = 'pop'; e.rotA = 0; e.spin = 0; // (held upright: the drawing does the dying)
     const u = e.w5die / 3;
     if (u > .25 && !e.d1) { e.d1 = 1; sfx('crunch'); shakeMag = 10; for (let i = 0; i < 24; i++) parts.push({ x: e.x + rand(-50, 50), y: e.y + rand(-8, 8), z: rand(30, 110), vx: rand(-160, 160), vy: 0, vz: rand(60, 260), life: 1.2, max: 1.2, col: pick(['#FFFFFF', '#E6ECF6', '#B6C2D8']), size: rand(2, 4), shape: 'shard', rot: rand(0, 6), vr: rand(-10, 10) }); }
@@ -144,7 +144,7 @@
     if (u > .5 && !e.d4) { e.d4 = 1; sfx('slice'); sfx('hit-crystal', .6); const sz = e.size || 1; // the silver arm lets go of the glaive, which breaks; the arm comes away
       for (let i = 0; i < 16; i++) parts.push({ x: e.x + e.facing * (80 + rand(0, 70)) * sz, y: e.y + rand(-6, 6), z: rand(10, 70), vx: rand(-60, 60) + e.facing * 40, vy: 0, vz: rand(40, 180), life: 1, max: 1, col: pick(['#FFFFFF', '#E6ECF6', '#DDE6FF']), size: rand(2, 4), shape: 'shard', rot: rand(0, 6), vr: rand(-10, 10) }); }
     if (u > .72 && !e.d2) { e.d2 = 1; sfx('hit-crystal'); flashT = .15; e.w5armDrop = { x: e.x + e.facing * MDROP * (e.size || 1), y: e.y + 2 }; }
-    if (u > .72 && !e.d3 && u > .95) { e.d3 = 1; e.remove = true; banner('The Silver Arm', 'IT IS YOURS NOW · FIGHT BARE-HANDED TO WIELD IT', 3); }
+    if (u > .72 && !e.d3 && u > .95) { e.d3 = 1; e.remove = true; if (!(window.W5 && W5.pick)) banner('The Silver Arm', 'IT IS YOURS NOW · FIGHT BARE-HANDED TO WIELD IT', 3); } // (the banner comes when he picks it up: art_w5.js)
   }
 
   // ======================================================================================================

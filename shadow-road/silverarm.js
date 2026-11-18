@@ -23,7 +23,7 @@
   if (typeof WEAPONS === 'undefined' || !WEAPONS.fists || !window.W5 || !W5.kit) return;
   const K = W5.kit, BN = K.BN;
   const SA = window.SA = { objs: [], wrist: null, Mw: null };
-  SA.on = () => !!(typeof save !== 'undefined' && save && save.silverArm && P && P.w === 'fists');
+  SA.on = () => !!(typeof save !== 'undefined' && save && save.silverArm && P && P.w === 'fists' && !(window.W5 && W5.armUnheld)); // (not until he has picked it up)
   window.silverArm = (on = true) => { save.silverArm = !!on; if (on) { save.owned.fists = true; if (P) { P.w = 'fists'; save.weapon = 'fists'; P.seq = ''; } } if (typeof persist === 'function') persist(); if (typeof refreshHud === 'function' && P) refreshHud(true); return on ? 'the silver arm is yours: fight bare-handed' : 'the arm is put away'; };
   const f = () => P.facing;
   const ST = () => (typeof stage !== 'undefined' ? stage : null);
