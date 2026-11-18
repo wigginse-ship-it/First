@@ -167,10 +167,10 @@
   function crane(x, sy, vx, vy, s, dir) { if (cranesN() < 22) addObj({ kind: 'crane', x, sy, vx, vy, s, dir, t: 0, max: rand(.7, 1.1), ph: rand(0, 6), nobox: 1 }); }
   function jkThrow(m, big, fall) {
     const dir = f(), seed = Math.random() * 99;
-    if (m.jk === 'rock') addObj({ kind: 'meteor', x: P.x + dir * 62, y: P.y, z: 300, dir, t: 0, fall: Math.max(.05, fall), big, seed, s: big ? 1.05 : .62 });
+    if (m.jk === 'rock') addObj({ kind: 'meteor', x: P.x + dir * 62, y: P.y, z: 300, dir, t: 0, fall: Math.max(.05, fall), big, seed, s: big ? 1.25 : .82 });
     if (m.jk === 'paper') { addObj({ kind: 'tide', x0: P.x + dir * 18, front: P.x + dir * 18, y: P.y, dir, t: 0, v: 0, m, hit: new Set(), hitP: new Set(), cr: 0, seed, nobox: 1 });
       flashT = Math.max(flashT, .05); hitstop = Math.max(hitstop, .05); sfx('whoosh'); sfx('learned', .5); sfx('hit-crystal', .5); }
-    if (m.jk === 'scissors') addObj({ kind: 'shears', x: P.x + dir * 58, y: P.y, z: 44, dir, t: 0, m, cuts: (m.cuts || [.05, .25]).slice(), done: [], seed, bw: 120, bh: 130 });
+    if (m.jk === 'scissors') addObj({ kind: 'shears', x: P.x + dir * 44, y: P.y, z: 44, dir, t: 0, m, cuts: (m.cuts || [.05, .25]).slice(), done: [], seed, bw: 120, bh: 130 });
   }
   // the fist out of the sky has landed: the street breaks under it
   function rockLand(o) {
@@ -178,7 +178,6 @@
     sfx('slam'); sfx('crunch'); sfx(big ? 'break' : 'hit-metal', big ? 1 : .6); shakeMag = Math.max(shakeMag, big ? 18 : 12); zoom = Math.max(zoom, big ? .08 : .06); flashT = Math.max(flashT, big ? .12 : .04); shakeDir = 0;
     if (big) slowmo = Math.max(slowmo, .22);
     silverBurst(x, y, 6, big ? 26 : 16); burst(x, y, 4, ['#8A8478', '#5E5A54', '#C9C2B4', '#3E3A36'], big ? 22 : 13, 'rock', 0, true); dust(x - 30, y, 7); dust(x + 30, y, 7); if (big) { dust(x - 70, y, 6); dust(x + 70, y, 6); }
-    fx.push({ kind: 'ring', x, y, z: 2, t: .45, max: .45, r: big ? 230 : 150, col: SA.black() ? '#FF9AAA' : SA.pure() ? '#FFF4D0' : '#EEF2FA', flat: 1 });
     if (big) fx.push({ kind: 'ring', x, y, z: 2, t: .8, max: .8, r: 320, col: SA.black() ? '#FF5A7A' : SA.pure() ? '#FFE9A8' : '#C8D4EC', flat: 1 });
     addObj({ kind: 'quake', x, y, t: 0, max: big ? 1.5 : 1.05, R: big ? 150 : 100, n: big ? 11 : 7, big, seed: o.seed, nobox: 1 });
   }
@@ -193,7 +192,8 @@
   const _me = moveExtras;
   moveExtras = function (m, k, dt, air) { if (_me(m, k, dt, air)) return true; return m.arm ? armExtras(m, k, dt, air) : false; };
   function armExtras(m, k, dt, air) {
-    const once = (key, at, fn) => { if (k >= at && P.armDone !== P.moveId + key) { P.armDone = P.moveId + key; fn(); } };
+    if (P.armDoneId !== P.moveId) { P.armDoneId = P.moveId; P.armDone = new Set(); }
+    const once = (key, at, fn) => { if (k >= at && !P.armDone.has(key)) { P.armDone.add(key); fn(); } }; // (each beat of a move fires once, however many it has)
     if (m.janken && !m.jk) { const d = jkDef(P.ct || 0), s = d === 'rock2' ? 'rock' : d; P.move = Object.assign({}, m, JANKEN[d], { jk: s }); floatText(P.x, P.y, 96, JANKEN[d].name.toUpperCase(), d === 'rock2' ? '#FFE08A' : '#EEF2FA', d === 'rock2' ? 22 : 18); sfx('learned'); if (d === 'rock2') { sfx('crit'); shakeMag = Math.max(shakeMag, 6); } return false; }
     if (m.jk) { const big = m.name === 'Rock!!';
       if (m.thrown) { for (const e of enemies) if (!P.hits.has(e)) P.hits.set(e, -9); for (const p of props) if (!P.hits.has(p)) P.hits.set(p, -9); } // (what it throws does the hitting: see jkThrow)
@@ -315,7 +315,7 @@
     } else if (o.kind === 'quake') { if (o.t > o.max) o.gone = true;
     } else if (o.kind === 'tide') { // Paper: the palm drives the pages down the street, the whole height of it, to past the far edge of the view
       const far = o.dir > 0 ? camX + VW + 90 : camX - 90, m = o.m;
-      if (!o.end) { const prev = o.front; o.v = Math.min(1500, 420 + o.t * 3600); o.front += o.dir * o.v * dt;
+      if (!o.end) { const prev = o.front; o.v = Math.min(1150, 360 + o.t * 2600); o.front += o.dir * o.v * dt;
         for (const e of foes()) { if (o.hit.has(e) || (e.x - o.front) * o.dir > e.hw + 6 || (e.x - o.x0) * o.dir < -e.hw - 12) continue;
           o.hit.add(e); hitE(e, m.dmg, o.dir, m, { kb: 720, launch: 170, wall: 1, power: 2 });
           if (parts.length < 400) for (let i = 0; i < 6; i++) parts.push({ x: e.x + rand(-8, 8), y: e.y + rand(-3, 3), z: e.z + rand(10, e.hh), vx: o.dir * rand(120, 320), vy: 0, vz: rand(60, 220), life: .55, max: .55, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(3, 5.5), shape: 'plate', rot: rand(0, 6), vr: rand(-14, 14) }); }
@@ -324,12 +324,13 @@
         if (Math.random() < dt * 34 && parts.length < 380) parts.push({ x: o.front - o.dir * rand(0, 40), y: rand(FLOOR_TOP + 6, FLOOR_BOT), z: rand(0, 200), vx: o.dir * rand(60, 260), vy: 0, vz: rand(20, 160), life: .6, max: .6, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(3, 6), shape: 'plate', rot: rand(0, 6), vr: rand(-12, 12) });
         o.ct = (o.ct || 0) - dt; if (o.ct <= 0 && o.cr < 9) { o.ct = .055; o.cr++; crane(o.front - o.dir * rand(10, 50), rand(Y_OFF + 20, FLOOR_BOT - 20), o.dir * rand(90, 260), rand(-140, -40), rand(.9, 1.4), o.dir); }
         o.wt = (o.wt || 0) - dt; if (o.wt <= 0) { o.wt = .14; sfx('whoosh', .5); }
+        { const xs = o.x0 + o.dir * Math.min(Math.abs(o.front - o.x0), Math.max(0, o.t - .12) * 620); if (o.t > .15 && Math.random() < dt * 40 && parts.length < 380) parts.push({ x: xs, y: rand(FLOOR_TOP + 4, FLOOR_BOT), z: rand(0, 190), vx: o.dir * rand(-30, 60), vy: 0, vz: rand(40, 140), life: .7, max: .7, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(2.5, 5), shape: 'plate', rot: rand(0, 6), vr: rand(-8, 8) }); } // (the turned page crumbling away from the hand side)
         if ((o.front - far) * o.dir >= 0 || o.t > 1.6) { o.end = true; o.et = o.t; sfx('learned', .35); sfx('whoosh');
           for (let i = 0; i < 8; i++) crane(far - o.dir * rand(60, 160), rand(Y_OFF + 30, FLOOR_BOT - 10), -o.dir * rand(30, 160), rand(-260, -120), rand(1.1, 1.7), -o.dir); } }
       else if (o.t - o.et > .5) o.gone = true;
     } else if (o.kind === 'crane') { o.x += o.vx * dt; o.sy += o.vy * dt; o.vy -= 60 * dt; o.vx *= Math.pow(.6, dt); if (o.t > o.max) o.gone = true;
     } else if (o.kind === 'shears') { // Scissors: the shears open in front of him and snap shut, down, then up: each a cut on all within reach
-      const m = o.m; o.x = P.x + o.dir * 58; o.y = P.y; o.bx = P.x + o.dir * 80;
+      const m = o.m; o.x = P.x + o.dir * 44; o.y = P.y; o.bx = P.x + o.dir * 80;
       for (let i = 0; i < o.cuts.length; i++) if (!o.done[i] && o.t >= o.cuts[i]) { o.done[i] = 1; const last = i === o.cuts.length - 1; (o.at || (o.at = []))[i] = [o.x, o.y - o.z];
         if (i && typeof hsGroup !== 'undefined') hsGroup.id = -3; // (the second cut is a blow of its own: it gets a hit freeze of its own)
         sfx('slice'); sfx('hit-metal', last ? 1.4 : .8); shakeMag = Math.max(shakeMag, last ? 9 : 6); zoom = Math.max(zoom, .04); shakeDir = o.dir; if (last) flashT = Math.max(flashT, .04);
@@ -340,7 +341,7 @@
         if (n) hitstop = Math.max(hitstop, last ? .1 : .06);
         for (const p of props) if (!p.broken && Math.abs(p.x - P.x - o.dir * 70) < 80 && Math.abs(p.y - P.y) < m.depth) hitProp(p, m);
         if (window.__corpsesNear && corpses.length) window.__corpsesNear(o, P.x + o.dir * 80, P.y, 60); }
-      if (o.t > o.cuts[o.cuts.length - 1] + .5) o.gone = true;
+      if (o.t > o.cuts[o.cuts.length - 1] + .7) o.gone = true;
     } else if (o.kind === 'sky') { if (!o.landed) { o.x = P.x + P.facing * 40; o.y = P.y; if (o.t > 2) o.gone = true; } else if (o.t > .55) o.gone = true; }
     else if (o.t > o.max) o.gone = true;
   }
@@ -511,8 +512,8 @@
         for (let k = 1; k <= 4; k++) { const ak = an + (r() - .5) * .55, q = .3 + .7 * k / 4; pts.push([o.x + Math.cos(ak) * L * q / .9, o.y + 2 + Math.sin(ak) * L * q * .32]); }
         segs.push(pts); if (r() < .6) { const b = pts[2], ab = an + (r() < .5 ? .7 : -.7); segs.push([b, [b[0] + Math.cos(ab) * L * .3, b[1] + Math.sin(ab) * L * .3 * .32]]); } }
       const path = () => { ctx.beginPath(); for (const p of segs) { ctx.moveTo(p[0][0], p[0][1]); for (let k = 1; k < p.length; k++) ctx.lineTo(p[k][0], p[k][1]); } };
-      path(); ctx.strokeStyle = `rgba(16,12,22,${(.8 * a).toFixed(3)})`; ctx.lineWidth = 3.4; ctx.stroke();
-      ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${C_.glow},${((.55 + .3 * Math.sin(o.t * 24)) * a).toFixed(3)})`; ctx.lineWidth = 1.3; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+      path(); ctx.strokeStyle = `rgba(30,22,26,${(.35 * a).toFixed(3)})`; ctx.lineWidth = 6; ctx.stroke(); ctx.strokeStyle = `rgba(12,8,14,${(.9 * a).toFixed(3)})`; ctx.lineWidth = 2.6; ctx.stroke();
+      const gl = Math.max(0, 1 - o.t / (o.max * .6)); if (gl > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${C_.glow},${(gl * .8 * a).toFixed(3)})`; ctx.lineWidth = 1; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; } }
     if (o.big && o.t < 1) { const q = o.t, w = 54 * Math.pow(1 - q, .6), A = (1 - q) * a; ctx.globalCompositeOperation = 'lighter';
       const lg = ctx.createLinearGradient(o.x - w, 0, o.x + w, 0); lg.addColorStop(0, `rgba(${C_.glow},0)`); lg.addColorStop(.5, `rgba(${C_.edge},${(.9 * A).toFixed(3)})`); lg.addColorStop(1, `rgba(${C_.glow},0)`);
       ctx.fillStyle = lg; ctx.fillRect(o.x - w, Y_OFF - 10, w * 2, o.y - Y_OFF + 12);
@@ -520,31 +521,46 @@
     ctx.restore(); }); }
   // Paper: the open palm of the moon, as tall as the street is deep, and behind it a folding screen of silver pages
   // unfolding panel by panel down the street, written over, fading behind it; its leading edge a bright crest
+  // Paper: a page of the moon's own book turning over the whole street. The curl, a rolling edge of silver paper as tall
+  // as the view, runs from his hand to past the far edge; behind it the turned page lies on the air, its back written over
+  // in the Pattern's script with the Pattern itself inked large, and crumbles away into shreds from the hand side.
   function drawTide(o, t) { onMain(() => {
-    const C_ = JP(), d = o.dir, F = o.front, top = Y_OFF - 8, bot = VH + 8, H = bot - top, fin = o.end ? Math.min(1, (o.t - o.et) / .5) : 0, a = Math.min(1, o.t / .04) * (1 - fin);
-    if (a <= 0) return;
-    const pw = 42, reach = 330, done = Math.abs(F - o.x0); ctx.save();
-    { const g = ctx.createLinearGradient(F, 0, F - d * reach, 0); g.addColorStop(0, `rgba(${C_.glow},${(.36 * a).toFixed(3)})`); g.addColorStop(1, `rgba(${C_.glow},0)`); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(Math.min(F, F - d * reach), top, reach, H); ctx.globalCompositeOperation = 'source-over'; }
-    ctx.lineJoin = 'round';
-    for (let kk = Math.max(0, Math.floor((done - reach) / pw)); kk < Math.ceil(done / pw); kk++) {
-      const xa = o.x0 + d * kk * pw, xf = o.x0 + d * (kk + 1) * pw, xb = (xf - F) * d > -10 ? F - d * 10 : xf;
-      if ((xb - xa) * d <= 1) continue;
-      const al = a * Math.pow(Math.max(0, 1 - Math.abs(F - (xa + xb) / 2) / reach), .7); if (al <= .02) continue;
-      const ia = kk % 2 ? 14 : 0, ib = kk % 2 ? 0 : 14, lit = kk % 2 === 0, rr = mulberry(((o.seed * 100) | 0) + kk * 31); // (the creases stand alternately near and far: a folding screen)
-      ctx.globalAlpha = al * .92; ctx.beginPath(); ctx.moveTo(xa, top + ia); ctx.lineTo(xb, top + ib); ctx.lineTo(xb, bot - ib); ctx.lineTo(xa, bot - ia); ctx.closePath();
-      const g = ctx.createLinearGradient(xa, 0, xb, 0); g.addColorStop(0, lit ? C_.lite : C_.fold); g.addColorStop(1, lit ? C_.paper : shade(C_.fold, -.12)); ctx.fillStyle = g; ctx.fill();
-      ctx.strokeStyle = C_.ink; ctx.lineWidth = 1.2; ctx.stroke();
-      ctx.strokeStyle = C_.script; ctx.lineWidth = 1.2; ctx.beginPath(); // (lines of a hand no one in the street can read)
-      for (let j = 0; j < 10; j++) { const yy = top + 30 + j * (H - 54) / 10 + rr() * 4, l0 = .14 + rr() * .1, l1 = .45 + rr() * .42, sl = (ib - ia) / 140 * (yy - (top + bot) / 2) / (H / 2) * -1;
-        ctx.moveTo(lerp(xa, xb, l0), yy + sl * l0 * 40); ctx.lineTo(lerp(xa, xb, l1), yy + sl * l1 * 40); if (rr() < .3) { ctx.moveTo(lerp(xa, xb, l1 + .05), yy); ctx.lineTo(lerp(xa, xb, Math.min(.9, l1 + .15)), yy); } }
-      ctx.stroke(); }
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-    const crest = () => { ctx.beginPath(); for (let y = top; y <= bot; y += 10) { const x = F - d * 6 + d * 16 * Math.sin((y - top) / H * Math.PI) + d * 2.5 * Math.sin(y * .09 + o.t * 40); if (y === top) ctx.moveTo(x, y); else ctx.lineTo(x, y); } };
-    crest(); ctx.strokeStyle = `rgba(${C_.glow},${(.45 * a).toFixed(3)})`; ctx.lineWidth = 16; ctx.stroke(); ctx.strokeStyle = `rgba(${C_.edge},${(.95 * a).toFixed(3)})`; ctx.lineWidth = 3.4; ctx.stroke();
-    { const rr = mulberry((o.t * 40) | 0); ctx.strokeStyle = `rgba(${C_.edge},${(.55 * a).toFixed(3)})`; ctx.lineWidth = 1.3; ctx.beginPath(); for (let i = 0; i < 9; i++) { const y = top + 16 + rr() * (H - 30), x = F + d * (14 + rr() * 30); ctx.moveTo(x, y); ctx.lineTo(x + d * (30 + rr() * 70), y); } ctx.stroke(); }
+    const C_ = JP(), d = o.dir, F = o.front, X0 = o.x0, top = Y_OFF - 8, bot = FLOOR_BOT + 10, H = bot - top, lean = 40 * d, W = 46;
+    const fade = o.end ? Math.max(0, 1 - (o.t - o.et) / .45) : Math.min(1, o.t / .06), span = Math.abs(F - X0);
+    const xs = X0 + d * Math.min(span, Math.max(0, o.t - .12) * 620); // (the crumbling edge, chasing the curl)
+    ctx.save(); ctx.globalAlpha *= fade;
+    // the turned page lying behind the curl
+    if (Math.abs(F - xs) > 8) {
+      const pa = [[xs, bot], [F - d * W * .4, bot], [F - d * W * .4 + lean, top], [xs + lean, top]];
+      ctx.save(); ctx.beginPath(); pa.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath();
+      const g = ctx.createLinearGradient(xs, 0, F, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.2, C_.paper + '70'); g.addColorStop(1, C_.paper + 'D8');
+      ctx.fillStyle = g; ctx.fill(); ctx.clip();
+      // the script, row on row, and the Pattern inked large across the page (fixed to the street, so it is uncovered as the page turns)
+      ctx.fillStyle = C_.script; for (let y = top + 18, r = 0; y < bot - 10; y += 13, r++) { const sk = (y - top) / H * lean; for (let k = 0; k < 40; k++) { const x = X0 + d * (k * 26 + dentHsh(o.seed + r * 7 + k) * 10); if ((x - xs) * d < 0 || (x - F) * d > -W) continue; ctx.fillRect(x + sk - (1 - (y - top) / H) * 0, y, 10 + dentHsh(o.seed + k * 3 + r) * 12, 2); } }
+      const cx = X0 + d * 300, cy = top + H * .52, R = H * .4; ctx.strokeStyle = C_.script; ctx.lineWidth = 3; ctx.beginPath(); for (let a = 0; a < Math.PI * 7; a += .12) { const r2 = R * (1 - a / (Math.PI * 7)); ctx.lineTo(cx + Math.cos(a) * r2 * d, cy + Math.sin(a) * r2 * .8); } ctx.stroke();
+      ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(cx, cy, R * 1.05, R * .84, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+      // its torn back edge, catching the light
+      ctx.strokeStyle = `rgba(${C_.edge},.7)`; ctx.lineWidth = 1.4; ctx.beginPath(); for (let y = bot, k = 0; y >= top; y -= 9, k++) { const x = xs + (1 - (y - top) / H) * 0 + ((y - top) / H) * lean * 0 + (bot - y) / H * lean + d * (dentHsh(o.seed + k + Math.floor(o.t * 20)) * 8); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    }
+    // its shadow on the street, under the curl
+    ctx.fillStyle = 'rgba(10,8,20,.28)'; ctx.beginPath(); ctx.ellipse(F + d * 6, bot - 14, W * 1.6, 9, 0, 0, Math.PI * 2); ctx.fill();
+    // the curl: a roll of paper as tall as the night, lit along its leading edge
+    { const q = [[F - d * W, bot], [F, bot], [F + lean, top], [F - d * W + lean, top]];
+      ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath();
+      const g = ctx.createLinearGradient(F - d * W, 0, F, 0); g.addColorStop(0, C_.fold); g.addColorStop(.35, C_.paper); g.addColorStop(.62, C_.lite); g.addColorStop(.85, C_.paper); g.addColorStop(1, C_.fold);
+      ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = C_.ink; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.strokeStyle = C_.fold; ctx.lineWidth = .8; for (let k = 1; k < 4; k++) { const fx2 = F - d * W * k / 4; ctx.beginPath(); ctx.moveTo(fx2, bot); ctx.lineTo(fx2 + lean, top); ctx.stroke(); } // (the turns of the roll)
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gl = ctx.createLinearGradient(F, 0, F + d * 26, 0); gl.addColorStop(0, `rgba(${C_.glow},.75)`); gl.addColorStop(1, `rgba(${C_.glow},0)`); ctx.fillStyle = gl;
+      ctx.beginPath(); ctx.moveTo(F, bot); ctx.lineTo(F + d * 26, bot); ctx.lineTo(F + d * 26 + lean, top); ctx.lineTo(F + lean, top); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(${C_.edge},.95)`; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(F, bot); ctx.lineTo(F + lean, top); ctx.stroke(); ctx.restore(); }
+    // the air it pushes ahead of it
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${C_.edge},.35)`; ctx.lineWidth = 1.2;
+    for (let k = 0; k < 9; k++) { const y = top + 20 + dentHsh(o.seed + k * 5) * (H - 40), x = F + (y - top) / H * 0 + (bot - y) / H * lean + d * (14 + dentHsh(k + Math.floor(o.t * 30)) * 40); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + d * (30 + 30 * dentHsh(k * 3)), y); ctx.stroke(); }
     ctx.restore();
-    ctx.save(); ctx.globalAlpha *= a; ctx.translate(F - d * 36, FLOOR_BOT + 30); ctx.scale(d, 1); RIG('paper', { s: 1.3, rot: -Math.PI / 2 + .12, t }); ctx.restore(); }); }
-  // a paper crane folded out of the pages, flapping off
+    ctx.restore();
+  }); }
+  const dentHsh = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
   function drawCrane(o) { onMain(() => {
     const C_ = JP(), a = Math.min(1, o.t / .08) * Math.min(1, (o.max - o.t) / .25), fl = Math.sin(o.t * 22 + o.ph); if (a <= 0) return;
     ctx.save(); ctx.globalAlpha *= a; ctx.translate(o.x, o.sy); ctx.scale(o.dir * o.s, o.s); ctx.rotate(-.12 - .1 * fl); ctx.lineJoin = 'round'; ctx.lineWidth = .9; ctx.strokeStyle = C_.ink;
@@ -558,12 +574,12 @@
   function drawShears(o, t) { onMain(() => {
     const C_ = JP(), d = o.dir, cuts = o.cuts, angs = [.42, -.42], last = cuts[cuts.length - 1];
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (let i = 0; i < cuts.length; i++) { const u = o.t - cuts[i]; if (u < 0 || u > .5 || !o.at || !o.at[i]) continue;
-      const q = u / .5, a = 1 - q * q, op = Math.min(1, u / .14) * 6; ctx.save(); ctx.translate(o.at[i][0], o.at[i][1]); ctx.scale(d, 1); ctx.rotate(angs[i % 2]);
-      const lens = (h, x0 = -60, x1 = 120) => { ctx.beginPath(); ctx.moveTo(x0, 0); ctx.quadraticCurveTo((x0 + x1) / 2, -h, x1, 0); ctx.quadraticCurveTo((x0 + x1) / 2, h, x0, 0); ctx.closePath(); };
+    for (let i = 0; i < cuts.length; i++) { const u = o.t - cuts[i]; if (u < 0 || u > .65 || !o.at || !o.at[i]) continue;
+      const q = u / .65, a = 1 - q * q, op = Math.min(1, u / .14) * 6; ctx.save(); ctx.translate(o.at[i][0], o.at[i][1]); ctx.scale(d, 1); ctx.rotate(angs[i % 2]);
+      const lens = (h, x0 = -70, x1 = 130) => { ctx.beginPath(); ctx.moveTo(x0, 0); ctx.quadraticCurveTo((x0 + x1) / 2, -h, x1, 0); ctx.quadraticCurveTo((x0 + x1) / 2, h, x0, 0); ctx.closePath(); };
       ctx.fillStyle = `rgba(10,6,14,${(.6 * a).toFixed(3)})`; lens(op + 1); ctx.fill();
       ctx.globalCompositeOperation = 'lighter';
-      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-60, 0); ctx.quadraticCurveTo(30, sd * (op + 1) * 2, 120, 0); ctx.strokeStyle = `rgba(${C_.glow},${(.5 * a).toFixed(3)})`; ctx.lineWidth = 7 * (1 - q * .6); ctx.stroke(); ctx.strokeStyle = `rgba(${C_.edge},${a.toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); }
+      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-70, 0); ctx.quadraticCurveTo(30, sd * (op + 1) * 2, 130, 0); ctx.strokeStyle = `rgba(${C_.glow},${(.5 * a).toFixed(3)})`; ctx.lineWidth = 7 * (1 - q * .6); ctx.stroke(); ctx.strokeStyle = `rgba(${C_.edge},${a.toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); }
       if (u < .12) { ctx.fillStyle = `rgba(${C_.edge},${(1 - u / .12).toFixed(3)})`; lens(9 * (1 - u / .12) + 2, -90, 160); ctx.fill(); }
       ctx.restore(); }
     if (o.at && o.at[1] && o.t - cuts[1] < .3) { const u = o.t - cuts[1], A = 1 - u / .3, [cx, cy] = o.at[1], R = 70 * (.5 + u * 2); ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -573,7 +589,7 @@
     if (ba > 0) { let i = cuts.findIndex((c, j) => !o.done[j]); if (i < 0) i = cuts.length - 1; const T = cuts[i], S = i ? cuts[i - 1] + .04 : -.03, snap = .04;
       let th, an; if (o.done[i]) { th = 0; an = angs[i % 2]; } else if (o.t < T - snap) { const g = sst((o.t - S) / Math.max(.01, T - snap - S)); th = .95 * g; an = i ? lerp(angs[0], angs[1], g) : angs[0]; } else { const g = (o.t - (T - snap)) / snap; th = .95 * (1 - g * g); an = angs[i % 2]; }
       const drift = o.t > last ? (o.t - last) * 60 : 0, px = o.x + d * drift, py = o.y - o.z;
-      ctx.save(); ctx.globalAlpha *= ba; ctx.translate(px, py); ctx.scale(d, 1); ctx.rotate(an);
+      ctx.save(); ctx.globalAlpha *= ba; ctx.translate(px, py); ctx.scale(d * 1.25, 1.25); ctx.rotate(an);
       { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(40, 0, 4, 40, 0, 90); g.addColorStop(0, `rgba(${C_.glow},.35)`); g.addColorStop(1, `rgba(${C_.glow},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(40, 0, 90, 50, 0, 0, Math.PI * 2); ctx.fill();
         if (!o.done[i] && o.t >= T - snap) for (const j of [-1, 1]) { ctx.fillStyle = `rgba(${C_.edge},.32)`; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 100, j * th, j * Math.min(1.2, th + .55), j < 0); ctx.closePath(); ctx.fill(); } // (the swish of the closing blades)
         ctx.globalCompositeOperation = 'source-over'; }
