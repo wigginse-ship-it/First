@@ -63,9 +63,16 @@
   const JANKEN = { // what Rock, Paper, Scissors turns into when you let go
     // (the longer it is held, the harder it lands: rock, then paper, then scissors; the first rock it comes back round to
     // is the hardest of all; held on past that, it goes round the ordinary three again)
+    // rock: a silver fist the size of a cart falls out of the sky where his own comes down, and the street breaks under it
     rock:     { name: 'Rock!', dmg: 19, kb: 200, launch: 300, x1: 90, depth: 40, shock: 140, bounce: 1, h: [.42, .6] },
-    paper:    { name: 'Paper!', dmg: 43, kb: 720, x1: 150, depth: 44, wall: 1, multi: 0, h: [.38, .62] },
-    scissors: { name: 'Scissors!', dmg: 30, kb: 160, x1: 210, depth: 40, multi: .14, h: [.36, .7] },
+    // paper: thrown, not struck (thrown: the hand itself hits no one). The open palm of the moon drives a tide of
+    // unfolding silver pages down the whole street, top to bottom, to past the far edge of the view; everyone it passes,
+    // at any depth, is hit once (dmg each) and swept off, and at the edge the pages fold into a flock of paper cranes
+    paper:    { name: 'Paper!', dmg: 36, kb: 720, launch: 170, x1: 150, depth: 44, wall: 1, multi: 0, h: [.38, .62], thrown: 1 },
+    // scissors: thrown too. A pair of silver shears as long as a man opens in front of him and snaps shut twice, a cut
+    // down and a cut up, each one a hit (dmg each) on all within x1; the two cuts leave a hanging X that tears open
+    scissors: { name: 'Scissors!', dmg: 30, kb: 160, x1: 140, depth: 40, multi: 0, h: [.36, .7], thrown: 1, cuts: [.05, .25] },
+    // rock2: the moon behind it, the fist twice the size, a crater, and a column of moonlight up out of it
     rock2:    { name: 'Rock!!', dmg: 63, kb: 260, launch: 420, x1: 104, depth: 46, shock: 190, bounce: 1, crit: 1, h: [.42, .6] },
   };
   const JK = ['rock', 'paper', 'scissors'], jkIdx = (ct) => Math.max(0, Math.floor((ct - .45) / .42)), jkOf = (ct) => JK[jkIdx(ct) % 3];
@@ -149,6 +156,32 @@
     if (m.jk === 'scissors') SA.objs.push({ kind: 'rend', x: P.x + dir * 110, y, dir, t: 0, max: .55, w: 1.6 });
     if (big) { SA.objs.push({ kind: 'eclipse', x: fx0, y, t: 0, max: 1.3 }); flashT = Math.max(flashT, .08); shakeMag = Math.max(shakeMag, 12); sfx('roar', .5); }
   }
+  // ---------------- Rock, Paper, Scissors, let go: what each shape throws out (the hitting for paper and scissors) ----------------
+  // the colours of all of it: moonlit silver paper and steel; the Dawn Knuckles' warm vellum and white gold; the Black
+  // Knuckles' black paper and iron edged in crimson
+  const JP = () => SA.black() ? { paper: '#2E2232', fold: '#170E1A', lite: '#4A3A50', ink: 'rgba(6,2,8,.92)', edge: '255,70,100', glow: '190,30,70', script: 'rgba(255,70,100,.55)', blade: '#3E3448', bladeDk: '#120A16', bladeLt: '#8A7A9A', gilt: '#B01030' }
+    : SA.pure() ? { paper: '#FBF4E0', fold: '#E0CA98', lite: '#FFFFFF', ink: 'rgba(80,56,20,.85)', edge: '255,250,228', glow: '255,222,150', script: 'rgba(150,108,40,.5)', blade: '#FFF2CC', bladeDk: '#B8903A', bladeLt: '#FFFFFF', gilt: '#E8B850' }
+    : { paper: '#E4E9F3', fold: '#A4B0C8', lite: '#FFFFFF', ink: 'rgba(26,28,50,.88)', edge: '255,255,255', glow: '200,215,255', script: 'rgba(40,52,96,.42)', blade: '#D6DDEA', bladeDk: '#6E7A98', bladeLt: '#FFFFFF', gilt: BN.gilt };
+  const addObj = (o) => { if (SA.objs.length < 90) SA.objs.push(o); return o; }; // (a hard cap: nothing the arm throws can flood the street)
+  const cranesN = () => { let n = 0; for (const o of SA.objs) if (o.kind === 'crane') n++; return n; };
+  function crane(x, sy, vx, vy, s, dir) { if (cranesN() < 22) addObj({ kind: 'crane', x, sy, vx, vy, s, dir, t: 0, max: rand(.7, 1.1), ph: rand(0, 6), nobox: 1 }); }
+  function jkThrow(m, big, fall) {
+    const dir = f(), seed = Math.random() * 99;
+    if (m.jk === 'rock') addObj({ kind: 'meteor', x: P.x + dir * 62, y: P.y, z: 300, dir, t: 0, fall: Math.max(.05, fall), big, seed, s: big ? 1.05 : .62 });
+    if (m.jk === 'paper') { addObj({ kind: 'tide', x0: P.x + dir * 18, front: P.x + dir * 18, y: P.y, dir, t: 0, v: 0, m, hit: new Set(), hitP: new Set(), cr: 0, seed, nobox: 1 });
+      flashT = Math.max(flashT, .05); hitstop = Math.max(hitstop, .05); sfx('whoosh'); sfx('learned', .5); sfx('hit-crystal', .5); }
+    if (m.jk === 'scissors') addObj({ kind: 'shears', x: P.x + dir * 58, y: P.y, z: 44, dir, t: 0, m, cuts: (m.cuts || [.05, .25]).slice(), done: [], seed, bw: 120, bh: 130 });
+  }
+  // the fist out of the sky has landed: the street breaks under it
+  function rockLand(o) {
+    const big = o.big, x = o.x, y = o.y; o.landed = true; o.lt = o.t;
+    sfx('slam'); sfx('crunch'); sfx(big ? 'break' : 'hit-metal', big ? 1 : .6); shakeMag = Math.max(shakeMag, big ? 18 : 12); zoom = Math.max(zoom, big ? .08 : .06); flashT = Math.max(flashT, big ? .12 : .04); shakeDir = 0;
+    if (big) slowmo = Math.max(slowmo, .22);
+    silverBurst(x, y, 6, big ? 26 : 16); burst(x, y, 4, ['#8A8478', '#5E5A54', '#C9C2B4', '#3E3A36'], big ? 22 : 13, 'rock', 0, true); dust(x - 30, y, 7); dust(x + 30, y, 7); if (big) { dust(x - 70, y, 6); dust(x + 70, y, 6); }
+    fx.push({ kind: 'ring', x, y, z: 2, t: .45, max: .45, r: big ? 230 : 150, col: SA.black() ? '#FF9AAA' : SA.pure() ? '#FFF4D0' : '#EEF2FA', flat: 1 });
+    if (big) fx.push({ kind: 'ring', x, y, z: 2, t: .8, max: .8, r: 320, col: SA.black() ? '#FF5A7A' : SA.pure() ? '#FFE9A8' : '#C8D4EC', flat: 1 });
+    addObj({ kind: 'quake', x, y, t: 0, max: big ? 1.5 : 1.05, R: big ? 150 : 100, n: big ? 11 : 7, big, seed: o.seed, nobox: 1 });
+  }
   // the charged hand's kills die as its shape says: a rock flattens them as the hammer does, scissors cut them in two as the
   // great sword does (only the charged shapes, and only while the arm is on)
   { const _ke = killEnemy; killEnemy = function (e, dir, m) {
@@ -162,11 +195,12 @@
   function armExtras(m, k, dt, air) {
     const once = (key, at, fn) => { if (k >= at && P.armDone !== P.moveId + key) { P.armDone = P.moveId + key; fn(); } };
     if (m.janken && !m.jk) { const d = jkDef(P.ct || 0), s = d === 'rock2' ? 'rock' : d; P.move = Object.assign({}, m, JANKEN[d], { jk: s }); floatText(P.x, P.y, 96, JANKEN[d].name.toUpperCase(), d === 'rock2' ? '#FFE08A' : '#EEF2FA', d === 'rock2' ? 22 : 18); sfx('learned'); if (d === 'rock2') { sfx('crit'); shakeMag = Math.max(shakeMag, 6); } return false; }
-    if (m.jk) { once('j', m.h[0], () => { sfx('slam'); shakeMag = Math.max(shakeMag, 9); zoom = Math.max(zoom, .05);
-      if (m.jk === 'rock') { silverBurst(P.x + f() * 60, P.y, 6, 24); fx.push({ kind: 'ring', x: P.x + f() * 60, y: P.y, z: 2, t: .45, max: .45, r: 150, col: '#EEF2FA', flat: 1 }); }
-      if (m.jk === 'paper') SA.objs.push({ kind: 'gust', x: P.x + f() * 40, y: P.y, dir: f(), t: 0, max: .45 });
-      if (m.jk === 'scissors') SA.objs.push({ kind: 'snip', x: P.x + f() * 112, y: P.y, dir: f(), t: 0, max: .3 });
-      if (SA.black()) jkCurse(m, m.name === 'Rock!!'); }); }
+    if (m.jk) { const big = m.name === 'Rock!!';
+      if (m.thrown) { for (const e of enemies) if (!P.hits.has(e)) P.hits.set(e, -9); for (const p of props) if (!P.hits.has(p)) P.hits.set(p, -9); } // (what it throws does the hitting: see jkThrow)
+      if (m.jk === 'rock') once('m', Math.max(0, m.h[0] - .14), () => jkThrow(m, big, (m.h[0] - k) * m.dur)); // (the fist out of the sky starts down a moment early, to land as his own does)
+      once('j', m.h[0], () => { sfx('slam'); shakeMag = Math.max(shakeMag, 9); zoom = Math.max(zoom, .05);
+        if (m.jk !== 'rock') jkThrow(m, big, 0);
+        if (SA.black()) jkCurse(m, big); }); }
     if (m.rocket) once('r', m.h[0], () => { SA.objs.push({ kind: 'rocket', x: P.x + f() * 24, y: P.y, z: P.z + 44, dir: f(), d: 0, out: m.grab ? 300 : 340, back: false, hit: new Set(), m, grab: m.grab, born: P.moveId }); sfx('whoosh'); sfx('shoot'); });
     if (m.titan) once('t', m.h[0], () => { const e = nearestAhead(110 + (P.z > 0 ? 0 : 0), 34); sfx('charge', 2);
       SA.objs.push({ kind: 'titan', e: e || null, t: 0, dir: f(), m, done: {} }); if (!e) floatText(P.x, P.y, 90, 'NOTHING TO GRAB', '#C8D4EC', 11); });
@@ -273,6 +307,40 @@
         if (e && !e.dead) hitE(e, 14, o.dir, o.m, { kb: 60, launch: 220, power: 2, crit: 1 });
         burst(o.x, o.y, z, ['#FF3A5A', '#1A0A14', '#FF9AAA'], 14, 'spark', 0, true); sfx('shoot', .6); shakeMag = Math.max(shakeMag, 4); }
       if (o.t > o.max) o.gone = true;
+    } else if (o.kind === 'meteor') { // Rock: the fist falls out of the sky, down and forward, onto the place his own comes down
+      if (!o.landed) { const q = Math.min(1, o.t / o.fall), e2 = q * q; o.cx = o.x - o.dir * 190 * (1 - e2); o.z = 300 * (1 - e2); o.bx = o.cx; o.bw = 150 * o.s; o.bh = 170 * o.s;
+        if (Math.random() < .5 && parts.length < 400) parts.push({ x: o.cx + rand(-14, 14), y: o.y + rand(-4, 4), z: o.z + rand(10, 50), vx: -o.dir * rand(40, 120), vy: 0, vz: rand(40, 160), life: .35, max: .35, col: pick(['#FFFFFF', '#DDE6FF', '#C8D4EC']), size: rand(1.5, 2.6), shape: 'star', rot: 0, vr: 4 });
+        if (o.t >= o.fall) { o.cx = o.x; o.z = 0; rockLand(o); } }
+      else if (o.t - o.lt > .55) o.gone = true;
+    } else if (o.kind === 'quake') { if (o.t > o.max) o.gone = true;
+    } else if (o.kind === 'tide') { // Paper: the palm drives the pages down the street, the whole height of it, to past the far edge of the view
+      const far = o.dir > 0 ? camX + VW + 90 : camX - 90, m = o.m;
+      if (!o.end) { const prev = o.front; o.v = Math.min(1500, 420 + o.t * 3600); o.front += o.dir * o.v * dt;
+        for (const e of foes()) { if (o.hit.has(e) || (e.x - o.front) * o.dir > e.hw + 6 || (e.x - o.x0) * o.dir < -e.hw - 12) continue;
+          o.hit.add(e); hitE(e, m.dmg, o.dir, m, { kb: 720, launch: 170, wall: 1, power: 2 });
+          if (parts.length < 400) for (let i = 0; i < 6; i++) parts.push({ x: e.x + rand(-8, 8), y: e.y + rand(-3, 3), z: e.z + rand(10, e.hh), vx: o.dir * rand(120, 320), vy: 0, vz: rand(60, 220), life: .55, max: .55, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(3, 5.5), shape: 'plate', rot: rand(0, 6), vr: rand(-14, 14) }); }
+        for (const p of props) { if (p.broken || o.hitP.has(p) || (p.x - o.front) * o.dir > 16 || (p.x - o.x0) * o.dir < -16) continue; o.hitP.add(p); hitProp(p, m); }
+        if (window.__corpsesNear && corpses.length) window.__corpsesNear(o, o.front, P.y, 30);
+        if (Math.random() < dt * 34 && parts.length < 380) parts.push({ x: o.front - o.dir * rand(0, 40), y: rand(FLOOR_TOP + 6, FLOOR_BOT), z: rand(0, 200), vx: o.dir * rand(60, 260), vy: 0, vz: rand(20, 160), life: .6, max: .6, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(3, 6), shape: 'plate', rot: rand(0, 6), vr: rand(-12, 12) });
+        o.ct = (o.ct || 0) - dt; if (o.ct <= 0 && o.cr < 9) { o.ct = .055; o.cr++; crane(o.front - o.dir * rand(10, 50), rand(Y_OFF + 20, FLOOR_BOT - 20), o.dir * rand(90, 260), rand(-140, -40), rand(.9, 1.4), o.dir); }
+        o.wt = (o.wt || 0) - dt; if (o.wt <= 0) { o.wt = .14; sfx('whoosh', .5); }
+        if ((o.front - far) * o.dir >= 0 || o.t > 1.6) { o.end = true; o.et = o.t; sfx('learned', .35); sfx('whoosh');
+          for (let i = 0; i < 8; i++) crane(far - o.dir * rand(60, 160), rand(Y_OFF + 30, FLOOR_BOT - 10), -o.dir * rand(30, 160), rand(-260, -120), rand(1.1, 1.7), -o.dir); } }
+      else if (o.t - o.et > .5) o.gone = true;
+    } else if (o.kind === 'crane') { o.x += o.vx * dt; o.sy += o.vy * dt; o.vy -= 60 * dt; o.vx *= Math.pow(.6, dt); if (o.t > o.max) o.gone = true;
+    } else if (o.kind === 'shears') { // Scissors: the shears open in front of him and snap shut, down, then up: each a cut on all within reach
+      const m = o.m; o.x = P.x + o.dir * 58; o.y = P.y; o.bx = P.x + o.dir * 80;
+      for (let i = 0; i < o.cuts.length; i++) if (!o.done[i] && o.t >= o.cuts[i]) { o.done[i] = 1; const last = i === o.cuts.length - 1; (o.at || (o.at = []))[i] = [o.x, o.y - o.z];
+        if (i && typeof hsGroup !== 'undefined') hsGroup.id = -3; // (the second cut is a blow of its own: it gets a hit freeze of its own)
+        sfx('slice'); sfx('hit-metal', last ? 1.4 : .8); shakeMag = Math.max(shakeMag, last ? 9 : 6); zoom = Math.max(zoom, .04); shakeDir = o.dir; if (last) flashT = Math.max(flashT, .04);
+        burst(o.x, o.y, o.z, [JP().lite, JP().blade, 'rgb(' + JP().glow + ')'], 14, 'spark', o.dir, true);
+        let n = 0; for (const e of foes()) { const dx = (e.x - P.x) * o.dir; if (dx < -12 - e.hw || dx > m.x1 + e.hw || Math.abs(e.y - P.y) > m.depth + e.hw * .3 || e.z > 150) continue;
+          n++; hitE(e, m.dmg, o.dir, m, last ? { kb: 300, launch: 160, power: 2 } : { kb: 50, launch: 0, power: 2 });
+          fx.push({ kind: 'slash', x: e.x, y: e.y, z: e.z + e.hh * .5, ang: i ? -.6 : .6, t: .22, max: .22, size: 38 + e.hw, col: '#FFFFFF' }); }
+        if (n) hitstop = Math.max(hitstop, last ? .1 : .06);
+        for (const p of props) if (!p.broken && Math.abs(p.x - P.x - o.dir * 70) < 80 && Math.abs(p.y - P.y) < m.depth) hitProp(p, m);
+        if (window.__corpsesNear && corpses.length) window.__corpsesNear(o, P.x + o.dir * 80, P.y, 60); }
+      if (o.t > o.cuts[o.cuts.length - 1] + .5) o.gone = true;
     } else if (o.kind === 'sky') { if (!o.landed) { o.x = P.x + P.facing * 40; o.y = P.y; if (o.t > 2) o.gone = true; } else if (o.t > .55) o.gone = true; }
     else if (o.t > o.max) o.gone = true;
   }
@@ -352,7 +420,7 @@
     return pose;
   };
   { const _ml = mechList; mechList = function (list, t) { _ml(list, t); SA.Mw = ctx.getTransform(); for (const o of SA.objs) drawObj(o, list, t); }; }
-  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); for (const o of SA.objs) { const q = o.e || o; if (Number.isFinite(q.x) && Number.isFinite(q.y)) box(q.x, q.y, q.z || 0, 90, 150); } if (SA.on()) box(P.x, P.y, P.z, 170, 170); }; }
+  { const _mb = mechBoxes; mechBoxes = function (box) { _mb(box); for (const o of SA.objs) { if (o.nobox) continue; const q = o.e || o, x = o.bx ?? q.x; if (Number.isFinite(x) && Number.isFinite(q.y)) box(x, q.y, q.z || 0, o.bw || 90, o.bh || 150); } if (SA.on()) box(P.x, P.y, P.z, 170, 170); }; }
   function drawObj(o, list, t) {
     if (o.kind === 'rocket') list.push([o.y + .2, () => { // the fist in flight, and the chain back to his wrist
       const w = SA.wrist; if (w) K.leafLine(() => { ctx.moveTo(w.x, w.y); ctx.lineTo(o.x - o.dir * 6, o.y - o.z); }, 1.3, .9);
@@ -404,10 +472,120 @@
         ctx.restore(); })]);
     else if (o.kind === 'crescent') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(o.x, o.y - 30); ctx.scale(o.dir, 1);
       for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(${i ? LT('200,215,255') : LT('255,255,255')},${a * (.9 - i * .25)})`; ctx.lineWidth = 5 - i * 1.4; ctx.beginPath(); ctx.ellipse(-i * 10, 0, 14, 34, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke(); } ctx.restore(); })]);
-    else if (o.kind === 'gust') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('225,235,255')},${a * .8})`; ctx.lineWidth = 2; for (let i = 0; i < 7; i++) { const y = o.y - 10 - i * 9, x = o.x + o.dir * o.t * 500; ctx.beginPath(); ctx.moveTo(x - o.dir * 60, y); ctx.lineTo(x + o.dir * (20 + i % 2 * 20), y); ctx.stroke(); } ctx.restore(); })]);
-    else if (o.kind === 'snip') list.push([o.y, () => onMain(() => { const a = 1 - o.t / o.max; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${LT('245,248,255')},${a})`; ctx.lineWidth = 4; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(o.x - o.dir * 100, o.y - 40 + s * 32); ctx.lineTo(o.x + o.dir * 100, o.y - 40 - s * 32); ctx.stroke(); } ctx.restore(); })]);
+    else if (o.kind === 'meteor') drawMeteor(o, list, t);
+    else if (o.kind === 'quake') list.push([o.y - 40, () => drawQuake(o)]);
+    else if (o.kind === 'tide') list.push([FLOOR_BOT + 60, () => drawTide(o, t)]);
+    else if (o.kind === 'crane') list.push([FLOOR_BOT + 61, () => drawCrane(o)]);
+    else if (o.kind === 'shears') list.push([o.y + .3, () => drawShears(o, t)]);
     else if (o.kind === 'sky') list.push([o.y + .1, () => { const z = o.landed ? 0 : Math.max(0, P.z + 60), q = o.landed ? Math.max(0, 1 - o.t / .55) : 1; ctx.save(); ctx.globalAlpha *= o.landed ? q : Math.min(1, o.t * 4); ctx.translate(o.x, o.y - z - 96 - (o.landed ? 0 : 30)); ctx.scale(o.dir, 1); RIG('paper', { s: .9, rot: Math.PI / 2, t, stump: 1 }); ctx.restore(); }]);
   }
+
+  // Rock: the fist out of the sky (in the ink, so it is painted like everything else), its streak of moonlight, and for
+  // Rock!! the full moon it fell out of
+  function drawMeteor(o, list, t) {
+    const d = o.dir, s = o.s, C_ = JP(), ang = Math.atan2(300, 190), fade = o.landed ? Math.max(0, 1 - (o.t - o.lt) / .55) : 1, cx = o.landed ? o.x : (o.cx ?? o.x - d * 190), z = o.landed ? -4 : o.z;
+    list.push([o.y + .25, () => {
+      onMain(() => { ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        if (o.big) { const ma = Math.min(1, o.t / .1) * fade, mx = o.x - d * 150, my = Y_OFF + 64, g = ctx.createRadialGradient(mx, my, 10, mx, my, 120);
+          g.addColorStop(0, `rgba(${C_.edge},${(.5 * ma).toFixed(3)})`); g.addColorStop(.42, `rgba(${C_.glow},${(.32 * ma).toFixed(3)})`); g.addColorStop(.46, `rgba(${C_.glow},${(.1 * ma).toFixed(3)})`); g.addColorStop(1, `rgba(${C_.glow},0)`);
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 120, 0, Math.PI * 2); ctx.fill(); }
+        const tk = o.landed ? Math.max(0, 1 - (o.t - o.lt) / .22) : 1;
+        if (tk > 0) { const sx = o.x - d * 190 - d * 60, sy = o.y - 300 - 95, ex = cx, ey = o.y - z - 26 * s, dx = ex - sx, dy = ey - sy, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, W = 40 * s;
+          const g = ctx.createLinearGradient(sx, sy, ex, ey); g.addColorStop(0, `rgba(${C_.glow},0)`); g.addColorStop(.7, `rgba(${C_.glow},${(.4 * tk).toFixed(3)})`); g.addColorStop(1, `rgba(${C_.edge},${(.85 * tk).toFixed(3)})`);
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex + nx * W, ey + ny * W); ctx.quadraticCurveTo(ex + dx / L * W * 1.3, ey + dy / L * W * 1.3, ex - nx * W, ey - ny * W); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = `rgba(${C_.edge},${(.7 * tk).toFixed(3)})`; ctx.lineWidth = 1.4; ctx.beginPath();
+          for (const k of [-.7, -.25, .35, .8]) { ctx.moveTo(sx + nx * W * k * .3 + dx * .3, sy + ny * W * k * .3 + dy * .3); ctx.lineTo(ex + nx * W * k, ey + ny * W * k); } ctx.stroke(); }
+        ctx.restore(); });
+      if (fade <= 0) return;
+      ctx.save(); ctx.globalAlpha *= fade; ctx.translate(cx - d * Math.cos(ang) * 54 * s, o.y - z - Math.sin(ang) * 54 * s - 6 * s); ctx.scale(d, 1); RIG('rock', { s, rot: ang, t }); ctx.restore();
+      K.glowAt(cx, o.y - z - 20 * s, 60 * s, LT('230,238,255'), .45 * fade); }]);
+  }
+  // where it landed: a crater, the street cracked out from it in lines of light, and from the great one a column of moonlight
+  function drawQuake(o) { onMain(() => {
+    const C_ = JP(), a = Math.min(1, o.t / .05) * (1 - Math.max(0, (o.t - o.max * .5) / (o.max * .5))), r = mulberry((o.seed * 1000) | 0), R = o.R;
+    if (a <= 0) return; ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.fillStyle = `rgba(14,10,18,${(.5 * a).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(o.x, o.y + 2, R * .42, R * .13, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(${C_.edge},${(.55 * a).toFixed(3)})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(o.x, o.y + 2, R * .42, R * .13, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+    if (!SA.black()) { const grow = Math.min(1, o.t / .1); // (the Black Knuckles crack it in crimson instead: jkCurse)
+      const segs = []; for (let i = 0; i < o.n; i++) { const an = (i + r() * .6) / o.n * Math.PI * 2, L = R * (.55 + .45 * r()) * grow, pts = [[o.x + Math.cos(an) * R * .3, o.y + 2 + Math.sin(an) * R * .1]];
+        for (let k = 1; k <= 4; k++) { const ak = an + (r() - .5) * .55, q = .3 + .7 * k / 4; pts.push([o.x + Math.cos(ak) * L * q / .9, o.y + 2 + Math.sin(ak) * L * q * .32]); }
+        segs.push(pts); if (r() < .6) { const b = pts[2], ab = an + (r() < .5 ? .7 : -.7); segs.push([b, [b[0] + Math.cos(ab) * L * .3, b[1] + Math.sin(ab) * L * .3 * .32]]); } }
+      const path = () => { ctx.beginPath(); for (const p of segs) { ctx.moveTo(p[0][0], p[0][1]); for (let k = 1; k < p.length; k++) ctx.lineTo(p[k][0], p[k][1]); } };
+      path(); ctx.strokeStyle = `rgba(16,12,22,${(.8 * a).toFixed(3)})`; ctx.lineWidth = 3.4; ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${C_.glow},${((.55 + .3 * Math.sin(o.t * 24)) * a).toFixed(3)})`; ctx.lineWidth = 1.3; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }
+    if (o.big && o.t < 1) { const q = o.t, w = 54 * Math.pow(1 - q, .6), A = (1 - q) * a; ctx.globalCompositeOperation = 'lighter';
+      const lg = ctx.createLinearGradient(o.x - w, 0, o.x + w, 0); lg.addColorStop(0, `rgba(${C_.glow},0)`); lg.addColorStop(.5, `rgba(${C_.edge},${(.9 * A).toFixed(3)})`); lg.addColorStop(1, `rgba(${C_.glow},0)`);
+      ctx.fillStyle = lg; ctx.fillRect(o.x - w, Y_OFF - 10, w * 2, o.y - Y_OFF + 12);
+      const rg = ctx.createRadialGradient(o.x, o.y, 4, o.x, o.y, R); rg.addColorStop(0, `rgba(${C_.edge},${(.7 * A).toFixed(3)})`); rg.addColorStop(1, `rgba(${C_.glow},0)`); ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(o.x, o.y, R, R * .32, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore(); }); }
+  // Paper: the open palm of the moon, as tall as the street is deep, and behind it a folding screen of silver pages
+  // unfolding panel by panel down the street, written over, fading behind it; its leading edge a bright crest
+  function drawTide(o, t) { onMain(() => {
+    const C_ = JP(), d = o.dir, F = o.front, top = Y_OFF - 8, bot = VH + 8, H = bot - top, fin = o.end ? Math.min(1, (o.t - o.et) / .5) : 0, a = Math.min(1, o.t / .04) * (1 - fin);
+    if (a <= 0) return;
+    const pw = 42, reach = 330, done = Math.abs(F - o.x0); ctx.save();
+    { const g = ctx.createLinearGradient(F, 0, F - d * reach, 0); g.addColorStop(0, `rgba(${C_.glow},${(.36 * a).toFixed(3)})`); g.addColorStop(1, `rgba(${C_.glow},0)`); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(Math.min(F, F - d * reach), top, reach, H); ctx.globalCompositeOperation = 'source-over'; }
+    ctx.lineJoin = 'round';
+    for (let kk = Math.max(0, Math.floor((done - reach) / pw)); kk < Math.ceil(done / pw); kk++) {
+      const xa = o.x0 + d * kk * pw, xf = o.x0 + d * (kk + 1) * pw, xb = (xf - F) * d > -10 ? F - d * 10 : xf;
+      if ((xb - xa) * d <= 1) continue;
+      const al = a * Math.pow(Math.max(0, 1 - Math.abs(F - (xa + xb) / 2) / reach), .7); if (al <= .02) continue;
+      const ia = kk % 2 ? 14 : 0, ib = kk % 2 ? 0 : 14, lit = kk % 2 === 0, rr = mulberry(((o.seed * 100) | 0) + kk * 31); // (the creases stand alternately near and far: a folding screen)
+      ctx.globalAlpha = al * .92; ctx.beginPath(); ctx.moveTo(xa, top + ia); ctx.lineTo(xb, top + ib); ctx.lineTo(xb, bot - ib); ctx.lineTo(xa, bot - ia); ctx.closePath();
+      const g = ctx.createLinearGradient(xa, 0, xb, 0); g.addColorStop(0, lit ? C_.lite : C_.fold); g.addColorStop(1, lit ? C_.paper : shade(C_.fold, -.12)); ctx.fillStyle = g; ctx.fill();
+      ctx.strokeStyle = C_.ink; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.strokeStyle = C_.script; ctx.lineWidth = 1.2; ctx.beginPath(); // (lines of a hand no one in the street can read)
+      for (let j = 0; j < 10; j++) { const yy = top + 30 + j * (H - 54) / 10 + rr() * 4, l0 = .14 + rr() * .1, l1 = .45 + rr() * .42, sl = (ib - ia) / 140 * (yy - (top + bot) / 2) / (H / 2) * -1;
+        ctx.moveTo(lerp(xa, xb, l0), yy + sl * l0 * 40); ctx.lineTo(lerp(xa, xb, l1), yy + sl * l1 * 40); if (rr() < .3) { ctx.moveTo(lerp(xa, xb, l1 + .05), yy); ctx.lineTo(lerp(xa, xb, Math.min(.9, l1 + .15)), yy); } }
+      ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    const crest = () => { ctx.beginPath(); for (let y = top; y <= bot; y += 10) { const x = F - d * 6 + d * 16 * Math.sin((y - top) / H * Math.PI) + d * 2.5 * Math.sin(y * .09 + o.t * 40); if (y === top) ctx.moveTo(x, y); else ctx.lineTo(x, y); } };
+    crest(); ctx.strokeStyle = `rgba(${C_.glow},${(.45 * a).toFixed(3)})`; ctx.lineWidth = 16; ctx.stroke(); ctx.strokeStyle = `rgba(${C_.edge},${(.95 * a).toFixed(3)})`; ctx.lineWidth = 3.4; ctx.stroke();
+    { const rr = mulberry((o.t * 40) | 0); ctx.strokeStyle = `rgba(${C_.edge},${(.55 * a).toFixed(3)})`; ctx.lineWidth = 1.3; ctx.beginPath(); for (let i = 0; i < 9; i++) { const y = top + 16 + rr() * (H - 30), x = F + d * (14 + rr() * 30); ctx.moveTo(x, y); ctx.lineTo(x + d * (30 + rr() * 70), y); } ctx.stroke(); }
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha *= a; ctx.translate(F - d * 36, FLOOR_BOT + 30); ctx.scale(d, 1); RIG('paper', { s: 1.3, rot: -Math.PI / 2 + .12, t }); ctx.restore(); }); }
+  // a paper crane folded out of the pages, flapping off
+  function drawCrane(o) { onMain(() => {
+    const C_ = JP(), a = Math.min(1, o.t / .08) * Math.min(1, (o.max - o.t) / .25), fl = Math.sin(o.t * 22 + o.ph); if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha *= a; ctx.translate(o.x, o.sy); ctx.scale(o.dir * o.s, o.s); ctx.rotate(-.12 - .1 * fl); ctx.lineJoin = 'round'; ctx.lineWidth = .9; ctx.strokeStyle = C_.ink;
+    const poly = (pts, col) => { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.stroke(); };
+    poly([[-2, -2], [4, -2], [3, -2 - 12 * fl]], C_.fold);
+    poly([[-13, -7], [-4, 0], [0, 2], [4, 0], [10, -9], [13, -8], [11, -11], [3, -3], [-4, -2]], C_.paper);
+    poly([[-4, -1], [3, -1], [-1 + 2 * fl, -1 - 14 * fl]], C_.lite);
+    ctx.restore(); }); }
+  // Scissors: the shears (two long silver blades, gilt at the rivet, their bows behind) opening and snapping shut, and
+  // the cuts they leave hanging in the air, each opening like a tear; the two together an X
+  function drawShears(o, t) { onMain(() => {
+    const C_ = JP(), d = o.dir, cuts = o.cuts, angs = [.42, -.42], last = cuts[cuts.length - 1];
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = 0; i < cuts.length; i++) { const u = o.t - cuts[i]; if (u < 0 || u > .5 || !o.at || !o.at[i]) continue;
+      const q = u / .5, a = 1 - q * q, op = Math.min(1, u / .14) * 6; ctx.save(); ctx.translate(o.at[i][0], o.at[i][1]); ctx.scale(d, 1); ctx.rotate(angs[i % 2]);
+      const lens = (h, x0 = -60, x1 = 120) => { ctx.beginPath(); ctx.moveTo(x0, 0); ctx.quadraticCurveTo((x0 + x1) / 2, -h, x1, 0); ctx.quadraticCurveTo((x0 + x1) / 2, h, x0, 0); ctx.closePath(); };
+      ctx.fillStyle = `rgba(10,6,14,${(.6 * a).toFixed(3)})`; lens(op + 1); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-60, 0); ctx.quadraticCurveTo(30, sd * (op + 1) * 2, 120, 0); ctx.strokeStyle = `rgba(${C_.glow},${(.5 * a).toFixed(3)})`; ctx.lineWidth = 7 * (1 - q * .6); ctx.stroke(); ctx.strokeStyle = `rgba(${C_.edge},${a.toFixed(3)})`; ctx.lineWidth = 2; ctx.stroke(); }
+      if (u < .12) { ctx.fillStyle = `rgba(${C_.edge},${(1 - u / .12).toFixed(3)})`; lens(9 * (1 - u / .12) + 2, -90, 160); ctx.fill(); }
+      ctx.restore(); }
+    if (o.at && o.at[1] && o.t - cuts[1] < .3) { const u = o.t - cuts[1], A = 1 - u / .3, [cx, cy] = o.at[1], R = 70 * (.5 + u * 2); ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(cx + d * 30, cy, 2, cx + d * 30, cy, R); g.addColorStop(0, `rgba(${C_.edge},${(.9 * A).toFixed(3)})`); g.addColorStop(1, `rgba(${C_.glow},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx + d * 30, cy, R, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    // the shears: which cut they are on, how far open, and the angle they lie at
+    const ba = o.t > last ? Math.max(0, 1 - (o.t - last) / .28) : Math.min(1, o.t / .03);
+    if (ba > 0) { let i = cuts.findIndex((c, j) => !o.done[j]); if (i < 0) i = cuts.length - 1; const T = cuts[i], S = i ? cuts[i - 1] + .04 : -.03, snap = .04;
+      let th, an; if (o.done[i]) { th = 0; an = angs[i % 2]; } else if (o.t < T - snap) { const g = sst((o.t - S) / Math.max(.01, T - snap - S)); th = .95 * g; an = i ? lerp(angs[0], angs[1], g) : angs[0]; } else { const g = (o.t - (T - snap)) / snap; th = .95 * (1 - g * g); an = angs[i % 2]; }
+      const drift = o.t > last ? (o.t - last) * 60 : 0, px = o.x + d * drift, py = o.y - o.z;
+      ctx.save(); ctx.globalAlpha *= ba; ctx.translate(px, py); ctx.scale(d, 1); ctx.rotate(an);
+      { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(40, 0, 4, 40, 0, 90); g.addColorStop(0, `rgba(${C_.glow},.35)`); g.addColorStop(1, `rgba(${C_.glow},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(40, 0, 90, 50, 0, 0, Math.PI * 2); ctx.fill();
+        if (!o.done[i] && o.t >= T - snap) for (const j of [-1, 1]) { ctx.fillStyle = `rgba(${C_.edge},.32)`; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 100, j * th, j * Math.min(1.2, th + .55), j < 0); ctx.closePath(); ctx.fill(); } // (the swish of the closing blades)
+        ctx.globalCompositeOperation = 'source-over'; }
+      for (const j of [-1, 1]) { ctx.save(); ctx.rotate(j * th);
+        ctx.strokeStyle = C_.ink; ctx.lineWidth = 6.5; ctx.beginPath(); ctx.ellipse(-36, 9 * j, 12, 7.5, j * .3, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = C_.blade; ctx.lineWidth = 4; ctx.stroke(); // (the bow)
+        ctx.beginPath(); ctx.moveTo(-26, 6 * j); ctx.lineTo(-6, 6 * j); ctx.quadraticCurveTo(40, 6.5 * j, 100, .5 * j); ctx.lineTo(103, 0); ctx.lineTo(0, -1.2 * j); ctx.lineTo(-26, 2 * j); ctx.closePath();
+        const g = ctx.createLinearGradient(0, 6 * j, 0, -1 * j); g.addColorStop(0, C_.bladeDk); g.addColorStop(.55, C_.blade); g.addColorStop(1, C_.bladeLt); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = C_.ink; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${C_.edge},.9)`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(2, -.6 * j); ctx.lineTo(100, .2 * j); ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
+        ctx.restore(); }
+      ctx.fillStyle = C_.gilt; ctx.beginPath(); ctx.arc(0, 0, 4.6, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = C_.ink; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(-1.2, -1.4, 1.2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore(); }
+    ctx.restore(); }); }
 
   // ---------------- the poses ----------------
   const span = (k, a, b) => clamp((k - a) / (b - a), 0, 1), sst = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
@@ -443,7 +621,8 @@
     'arm:HC'(pose, m, k) { const s = m.jk || 'rock', g = sst(span(k, 0, m.h[0])), r = 1 - span(k, .8, 1); pose.armShape = s; pose.armBig = (2.2 + .8 * g) * (.4 + .6 * r) + .0; pose.trail = 0; pose.streak = null; delete pose.sweep; pose.flat = null;
       if (s === 'rock') { pose.arm = lerp(-2.4, 1.3, g); pose.elbow = .2; pose.lean = lerp(-.2, .6, g); pose.sink = 8 * g; pose.legs = { f: 13, b: -12, fk: 9, bk: 3 }; }
       else if (s === 'paper') { pose.arm = -.05; pose.elbow = lerp(1.4, 0, g); pose.ext = g; pose.lean = .45 * g; pose.legs = { f: 15, b: -15, fk: 7, bk: 1, bh: .7 }; pose.sink = 6; pose.armRot = -1.4; }
-      else { pose.arm = lerp(-1.2, .6, g) + Math.sin(k * 40) * .2 * g; pose.elbow = .3; pose.lean = .3 * g; pose.armRot = -.2; pose.legs = { f: 12, b: -12, fk: 6, bk: 3 }; pose.sink = 4; } },
+      else { const c = (m.cuts || [.05, .25]).map(x => m.h[0] + x / m.dur), g1 = sst(span(k, .16, c[0])), bk = sst(span(k, c[0] + .04, c[1] - .07)), g2 = sst(span(k, c[1] - .07, c[1])); // (scissors: the arm cuts down with the first snap and up with the second)
+        pose.arm = -1.2 + 1.75 * g1 + .3 * bk - 1.95 * g2; pose.elbow = .3 - .2 * g2; pose.ext = .5 * (g1 + g2) / 2; pose.lean = .3 * g1 - .1 * g2; pose.armRot = -.2; pose.legs = { f: 12, b: -12, fk: 6, bk: 3 }; pose.sink = 4 + 2 * bk; } },
     'arm:AH'(pose, m, k) { pose.arm = 1.5; pose.elbow = .2; pose.armShape = 'paper'; pose.armBig = 1.6; pose.armRot = 1.4; },
   });
 })();
