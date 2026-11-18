@@ -70,9 +70,10 @@
     // unfolding silver pages down the whole street, top to bottom, to past the far edge of the view; everyone it passes,
     // at any depth, is hit once (dmg each) and swept off, and at the edge the pages fold into a flock of paper cranes
     paper:    { name: 'Paper!', dmg: 36, kb: 720, launch: 170, x1: 150, depth: 44, wall: 1, multi: 0, h: [.38, .62], thrown: 1 },
+    // (both cuts together, 52, stay under a single Rock!!, 63 and always a crit)
     // scissors: thrown too. A pair of silver shears as long as a man opens in front of him and snaps shut twice, a cut
     // down and a cut up, each one a hit (dmg each) on all within x1; the two cuts leave a hanging X that tears open
-    scissors: { name: 'Scissors!', dmg: 30, kb: 160, x1: 140, depth: 40, multi: 0, h: [.36, .7], thrown: 1, cuts: [.05, .25] },
+    scissors: { name: 'Scissors!', dmg: 26, kb: 160, x1: 140, depth: 40, multi: 0, h: [.36, .7], thrown: 1, cuts: [.05, .25] },
     // rock2: the moon behind it, the fist twice the size, a crater, and a column of moonlight up out of it
     rock2:    { name: 'Rock!!', dmg: 63, kb: 260, launch: 420, x1: 104, depth: 46, shock: 190, bounce: 1, crit: 1, h: [.42, .6] },
   };
