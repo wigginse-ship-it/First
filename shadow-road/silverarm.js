@@ -316,17 +316,17 @@
     } else if (o.kind === 'tide') { // Paper: the palm drives the pages down the street, the whole height of it, to past the far edge of the view
       const far = o.dir > 0 ? camX + VW + 90 : camX - 90, m = o.m;
       if (!o.end) { const prev = o.front; o.v = Math.min(1150, 360 + o.t * 2600); o.front += o.dir * o.v * dt;
-        for (const e of foes()) { if (o.hit.has(e) || (e.x - o.front) * o.dir > e.hw + 6 || (e.x - o.x0) * o.dir < -e.hw - 12) continue;
+        for (const e of foes()) { if (o.hit.has(e) || (e.x - o.front) * o.dir > e.hw + 6 || (e.x - o.x0) * o.dir < -e.hw - 12 || Math.abs(e.y - o.y) > 30 + e.hw * .2) continue; // (only what is in his lane)
           o.hit.add(e); hitE(e, m.dmg, o.dir, m, { kb: 720, launch: 170, wall: 1, power: 2 });
           if (parts.length < 400) for (let i = 0; i < 6; i++) parts.push({ x: e.x + rand(-8, 8), y: e.y + rand(-3, 3), z: e.z + rand(10, e.hh), vx: o.dir * rand(120, 320), vy: 0, vz: rand(60, 220), life: .55, max: .55, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(3, 5.5), shape: 'plate', rot: rand(0, 6), vr: rand(-14, 14) }); }
         for (const p of props) { if (p.broken || o.hitP.has(p) || (p.x - o.front) * o.dir > 16 || (p.x - o.x0) * o.dir < -16) continue; o.hitP.add(p); hitProp(p, m); }
         if (window.__corpsesNear && corpses.length) window.__corpsesNear(o, o.front, P.y, 30);
-        if (Math.random() < dt * 34 && parts.length < 380) parts.push({ x: o.front - o.dir * rand(0, 40), y: rand(FLOOR_TOP + 6, FLOOR_BOT), z: rand(0, 200), vx: o.dir * rand(60, 260), vy: 0, vz: rand(20, 160), life: .6, max: .6, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(3, 6), shape: 'plate', rot: rand(0, 6), vr: rand(-12, 12) });
-        o.ct = (o.ct || 0) - dt; if (o.ct <= 0 && o.cr < 9) { o.ct = .055; o.cr++; crane(o.front - o.dir * rand(10, 50), rand(Y_OFF + 20, FLOOR_BOT - 20), o.dir * rand(90, 260), rand(-140, -40), rand(.9, 1.4), o.dir); }
+        if (Math.random() < dt * 34 && parts.length < 380) parts.push({ x: o.front - o.dir * rand(0, 40), y: o.y + rand(-6, 6), z: rand(0, 130), vx: o.dir * rand(60, 260), vy: 0, vz: rand(20, 160), life: .6, max: .6, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(3, 6), shape: 'plate', rot: rand(0, 6), vr: rand(-12, 12) });
+        o.ct = (o.ct || 0) - dt; if (o.ct <= 0 && o.cr < 9) { o.ct = .055; o.cr++; crane(o.front - o.dir * rand(10, 50), o.y - rand(20, 120), o.dir * rand(90, 260), rand(-140, -40), rand(.9, 1.4), o.dir); }
         o.wt = (o.wt || 0) - dt; if (o.wt <= 0) { o.wt = .14; sfx('whoosh', .5); }
-        { const xs = o.x0 + o.dir * Math.min(Math.abs(o.front - o.x0), Math.max(0, o.t - .12) * 620); if (o.t > .15 && Math.random() < dt * 40 && parts.length < 380) parts.push({ x: xs, y: rand(FLOOR_TOP + 4, FLOOR_BOT), z: rand(0, 190), vx: o.dir * rand(-30, 60), vy: 0, vz: rand(40, 140), life: .7, max: .7, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(2.5, 5), shape: 'plate', rot: rand(0, 6), vr: rand(-8, 8) }); } // (the turned page crumbling away from the hand side)
+        { const xs = o.x0 + o.dir * Math.min(Math.abs(o.front - o.x0), Math.max(0, o.t - .12) * 620); if (o.t > .15 && Math.random() < dt * 40 && parts.length < 380) parts.push({ x: xs, y: o.y + rand(-6, 6), z: rand(0, 130), vx: o.dir * rand(-30, 60), vy: 0, vz: rand(40, 140), life: .7, max: .7, col: pick([JP().paper, JP().fold, JP().lite]), size: rand(2.5, 5), shape: 'plate', rot: rand(0, 6), vr: rand(-8, 8) }); } // (the turned page crumbling away from the hand side)
         if ((o.front - far) * o.dir >= 0 || o.t > 1.6) { o.end = true; o.et = o.t; sfx('learned', .35); sfx('whoosh');
-          for (let i = 0; i < 8; i++) crane(far - o.dir * rand(60, 160), rand(Y_OFF + 30, FLOOR_BOT - 10), -o.dir * rand(30, 160), rand(-260, -120), rand(1.1, 1.7), -o.dir); } }
+          for (let i = 0; i < 8; i++) crane(far - o.dir * rand(60, 160), o.y - rand(20, 130), -o.dir * rand(30, 160), rand(-260, -120), rand(1.1, 1.7), -o.dir); } }
       else if (o.t - o.et > .5) o.gone = true;
     } else if (o.kind === 'crane') { o.x += o.vx * dt; o.sy += o.vy * dt; o.vy -= 60 * dt; o.vx *= Math.pow(.6, dt); if (o.t > o.max) o.gone = true;
     } else if (o.kind === 'shears') { // Scissors: the shears open in front of him and snap shut, down, then up: each a cut on all within reach
@@ -521,11 +521,11 @@
     ctx.restore(); }); }
   // Paper: the open palm of the moon, as tall as the street is deep, and behind it a folding screen of silver pages
   // unfolding panel by panel down the street, written over, fading behind it; its leading edge a bright crest
-  // Paper: a page of the moon's own book turning over the whole street. The curl, a rolling edge of silver paper as tall
-  // as the view, runs from his hand to past the far edge; behind it the turned page lies on the air, its back written over
+  // Paper: a page of the moon's own book turning over down his lane. The curl, a rolling edge of silver paper as tall
+  // as a man, runs from his hand to past the far edge of the view, flinging what stands in that lane; behind it the turned page lies on the air, its back written over
   // in the Pattern's script with the Pattern itself inked large, and crumbles away into shreds from the hand side.
   function drawTide(o, t) { onMain(() => {
-    const C_ = JP(), d = o.dir, F = o.front, X0 = o.x0, top = Y_OFF - 8, bot = FLOOR_BOT + 10, H = bot - top, lean = 40 * d, W = 46;
+    const C_ = JP(), d = o.dir, F = o.front, X0 = o.x0, top = o.y - 132, bot = o.y + 12, H = bot - top, lean = 26 * d, W = 40; // (a page as tall as a man, down his own lane)
     const fade = o.end ? Math.max(0, 1 - (o.t - o.et) / .45) : Math.min(1, o.t / .06), span = Math.abs(F - X0);
     const xs = X0 + d * Math.min(span, Math.max(0, o.t - .12) * 620); // (the crumbling edge, chasing the curl)
     ctx.save(); ctx.globalAlpha *= fade;
@@ -537,7 +537,7 @@
       ctx.fillStyle = g; ctx.fill(); ctx.clip();
       // the script, row on row, and the Pattern inked large across the page (fixed to the street, so it is uncovered as the page turns)
       ctx.fillStyle = C_.script; for (let y = top + 18, r = 0; y < bot - 10; y += 13, r++) { const sk = (y - top) / H * lean; for (let k = 0; k < 40; k++) { const x = X0 + d * (k * 26 + dentHsh(o.seed + r * 7 + k) * 10); if ((x - xs) * d < 0 || (x - F) * d > -W) continue; ctx.fillRect(x + sk - (1 - (y - top) / H) * 0, y, 10 + dentHsh(o.seed + k * 3 + r) * 12, 2); } }
-      const cx = X0 + d * 300, cy = top + H * .52, R = H * .4; ctx.strokeStyle = C_.script; ctx.lineWidth = 3; ctx.beginPath(); for (let a = 0; a < Math.PI * 7; a += .12) { const r2 = R * (1 - a / (Math.PI * 7)); ctx.lineTo(cx + Math.cos(a) * r2 * d, cy + Math.sin(a) * r2 * .8); } ctx.stroke();
+      const cx = X0 + d * 240, cy = top + H * .5, R = H * .42; ctx.strokeStyle = C_.script; ctx.lineWidth = 3; ctx.beginPath(); for (let a = 0; a < Math.PI * 7; a += .12) { const r2 = R * (1 - a / (Math.PI * 7)); ctx.lineTo(cx + Math.cos(a) * r2 * d, cy + Math.sin(a) * r2 * .8); } ctx.stroke();
       ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(cx, cy, R * 1.05, R * .84, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
       // its torn back edge, catching the light
