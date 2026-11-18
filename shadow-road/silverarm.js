@@ -63,7 +63,8 @@
   const JANKEN = { // what Rock, Paper, Scissors turns into when you let go
     // (the longer it is held, the harder it lands: rock, then paper, then scissors; the first rock it comes back round to
     // is the hardest of all; held on past that, it goes round the ordinary three again)
-    // rock: a silver fist the size of a cart falls out of the sky where his own comes down, and the street breaks under it
+    // rock: one hard silver punch; Rock!! (the first rock come round again): a silver fist the size of a cart falls out of
+    // the sky where his own comes down, and the street breaks under it
     rock:     { name: 'Rock!', dmg: 19, kb: 200, launch: 300, x1: 90, depth: 40, shock: 140, bounce: 1, h: [.42, .6] },
     // paper: thrown, not struck (thrown: the hand itself hits no one). The open palm of the moon drives a tide of
     // unfolding silver pages down the whole street, top to bottom, to past the far edge of the view; everyone it passes,
@@ -197,9 +198,10 @@
     if (m.janken && !m.jk) { const d = jkDef(P.ct || 0), s = d === 'rock2' ? 'rock' : d; P.move = Object.assign({}, m, JANKEN[d], { jk: s }); floatText(P.x, P.y, 96, JANKEN[d].name.toUpperCase(), d === 'rock2' ? '#FFE08A' : '#EEF2FA', d === 'rock2' ? 22 : 18); sfx('learned'); if (d === 'rock2') { sfx('crit'); shakeMag = Math.max(shakeMag, 6); } return false; }
     if (m.jk) { const big = m.name === 'Rock!!';
       if (m.thrown) { for (const e of enemies) if (!P.hits.has(e)) P.hits.set(e, -9); for (const p of props) if (!P.hits.has(p)) P.hits.set(p, -9); } // (what it throws does the hitting: see jkThrow)
-      if (m.jk === 'rock') once('m', Math.max(0, m.h[0] - .14), () => jkThrow(m, big, (m.h[0] - k) * m.dur)); // (the fist out of the sky starts down a moment early, to land as his own does)
+      if (m.jk === 'rock' && big) once('m', Math.max(0, m.h[0] - .14), () => jkThrow(m, big, (m.h[0] - k) * m.dur)); // (Rock!! only: the fist out of the sky starts down a moment early, to land as his own does)
       once('j', m.h[0], () => { sfx('slam'); shakeMag = Math.max(shakeMag, 9); zoom = Math.max(zoom, .05);
         if (m.jk !== 'rock') jkThrow(m, big, 0);
+        else if (!big) { const x = P.x + f() * 62; sfx('hit-metal', .7); silverBurst(x, P.y, 30, 18); fx.push({ kind: 'ring', x, y: P.y, z: 2, t: .45, max: .45, r: 130, col: SA.black() ? '#FF5A7A' : SA.pure() ? '#FFE9A8' : '#EEF2FA', flat: 1 }); dust(x - 20, P.y, 5); dust(x + 20, P.y, 5); } // (a plain Rock: one hard silver punch)
         if (SA.black()) jkCurse(m, big); }); }
     if (m.rocket) once('r', m.h[0], () => { SA.objs.push({ kind: 'rocket', x: P.x + f() * 24, y: P.y, z: P.z + 44, dir: f(), d: 0, out: m.grab ? 300 : 340, back: false, hit: new Set(), m, grab: m.grab, born: P.moveId }); sfx('whoosh'); sfx('shoot'); });
     if (m.titan) once('t', m.h[0], () => { const e = nearestAhead(110 + (P.z > 0 ? 0 : 0), 34); sfx('charge', 2);
