@@ -82,7 +82,7 @@
   const base = WEAPONS.fists.tree, baseName = WEAPONS.fists.name, baseDesc = WEAPONS.fists.desc;
   Object.defineProperty(WEAPONS.fists, 'tree', { get() { return SA.on() ? ARM : base; }, configurable: true });
   Object.defineProperty(WEAPONS.fists, 'name', { get() { return SA.on() ? 'The Silver Arm' : baseName; }, configurable: true });
-  Object.defineProperty(WEAPONS.fists, 'desc', { get() { return SA.on() ? 'Benedict\'s arm, out of Tir-na Nog\'th. It flies, it grows, it grabs.' : baseDesc; }, configurable: true });
+  Object.defineProperty(WEAPONS.fists, 'desc', { get() { const g = window.W5 && W5.saGrow ? W5.saGrow() : 0; return SA.on() ? 'Benedict\'s arm, out of Tir-na Nog\'th. It flies, it grows, it grabs.' + (g ? ` Stronger for every world since: +${Math.round(g * 100)}% damage.` : '') : baseDesc; }, configurable: true });
   SA.tree = ARM;
 
   // ---------------- the Black Knuckles: when the fists in hand are cursed (cursedw.js), all the arm throws out is theirs ----------------

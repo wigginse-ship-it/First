@@ -135,7 +135,7 @@
   };
   function deathStep(e, dt) {
     if (!e.w5die) { e.w5die = .001; e.state = 'dying'; e.t = 99; e.air = true; e.spin = 0; e.rotA = 0; e.vz = 0; e.z = 0; e.vx = 0; clearT = Math.max(clearT, 5.2); hazards = hazards.filter(h => !KINDS.has(h.kind) && !(h.kind === 'w5ctl' && h.e === e)); projs = projs.filter(p => p.owner !== 'e');
-      save.silverArm = true; if (typeof persist === 'function') persist(); if (window.W5) W5.armUnheld = true; } // the arm is his to keep whatever comes after (his hand turns silver only once he has picked it up: art_w5.js)
+      if (!save.silverArm) save.saFresh = true; save.silverArm = true; if (typeof persist === 'function') persist(); if (window.W5) W5.armUnheld = true; } // the arm is his to keep whatever comes after (his hand turns silver only once he has picked it up: art_w5.js)
     e.w5die += dt; e.flash = 0; e.state = 'dying'; e.t = 99; e.z = 0; e.vz = 0; e.vx = 0; e.air = true; e.death = 'pop'; e.rotA = 0; e.spin = 0; // (held upright: the drawing does the dying)
     const u = e.w5die / 3;
     if (u > .25 && !e.d1) { e.d1 = 1; sfx('crunch'); shakeMag = 10; for (let i = 0; i < 24; i++) parts.push({ x: e.x + rand(-50, 50), y: e.y + rand(-8, 8), z: rand(30, 110), vx: rand(-160, 160), vy: 0, vz: rand(60, 260), life: 1.2, max: 1.2, col: pick(['#FFFFFF', '#E6ECF6', '#B6C2D8']), size: rand(2, 4), shape: 'shard', rot: rand(0, 6), vr: rand(-10, 10) }); }

@@ -1748,7 +1748,11 @@
   { const _up2 = updatePlayer; updatePlayer = function (dt) { if (PICK.on) { for (const k in input) if (typeof input[k] === 'boolean') input[k] = false; input.mx = input.my = 0; } _up2(dt); if (PICK.on && P.state !== 'dead') pickStep(dt); }; }
   { const _ss = startStage; startStage = function (i) { PICK.on = false; PICK.done = false; W5.armUnheld = false; return _ss(i); }; }
   // the silver arm bites deeper: every blow it lands, on anything, is a fifth harder (silverarm.js: SA.on)
-  { const _st = strike; strike = function (e, base, dir, m, echo) { if (e && window.SA && SA.on() && !(m && m.trump)) base *= 1.2; return _st(e, base, dir, m, echo); }; }
+  // and it grows stronger with every world cleared after it was won (the cursed Black Knuckles and the Dawn Knuckles too):
+  // +5% a world, up to +75% (save.saLv; the world it was won in does not count: save.saFresh, set as Benedict falls)
+  W5.saGrow = () => .05 * Math.min(15, save.saLv | 0);
+  { const _sc = stageClear; stageClear = function () { if (save.silverArm) { if (save.saFresh) save.saFresh = false; else save.saLv = (save.saLv | 0) + 1; if (typeof persist === 'function') persist(); } return _sc(); }; }
+  { const _st = strike; strike = function (e, base, dir, m, echo) { if (e && window.SA && SA.on() && !(m && m.trump)) base *= 1.2 * (1 + W5.saGrow()); return _st(e, base, dir, m, echo); }; }
   { const _pp = playerPose; playerPose = function () { const pose = _pp(); if (!PICK.on) return pose; const K = PICK, ease = (x) => sm(cl01(x));
       if (K.ph === 'walk') { pose.walk = P.walk || 0; return pose; }
       if (K.ph === 'kneel') { const k = ease(K.t / PK.kneel); pose.crouch = 1; pose.crouchK = 16 * k; pose.lean = .35 * k; pose.arm = lerp(.3, 1.25, k); pose.backArm = lerp(.4, 1.6, k); pose.walk = 0; return pose; }
